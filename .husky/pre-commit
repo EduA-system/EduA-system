@@ -1,0 +1,10 @@
+cd fe || exit 1
+
+echo "[husky] FE lint..."
+npm run lint || exit 1
+
+echo "[husky] FE typecheck..."
+npm run typecheck || exit 1
+
+echo "[husky] FE build..."
+npm run build || exit 1
