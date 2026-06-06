@@ -24,7 +24,7 @@ npm run typecheck  # tsc --noEmit
 
 ```bash
 cd be
-./mvnw spring-boot:run   # macOS/Linux
+./mvnw spring-boot:run    # macOS/Linux
 mvnw.cmd spring-boot:run  # Windows
 ```
 
@@ -41,10 +41,30 @@ Repo dùng [husky](https://typicode.github.io/husky/) ở **root** để chặn 
   Script `prepare` sẽ tự set `core.hooksPath` về `.husky/`.
 
 - **pre-commit** (`.husky/pre-commit`) chạy cho FE trước mỗi commit:
-  1. `npm run lint` — kiểm tra syntax/eslint
-  2. `npm run typecheck` — kiểm tra type
-  3. `npm run build` — đảm bảo build thành công
+  1. `npm run lint` - kiểm tra syntax/eslint
+  2. `npm run typecheck` - kiểm tra type
+  3. `npm run build` - đảm bảo build thành công
 
-  Nếu bước nào fail, commit bị chặn. Hook áp dụng cho mọi commit trong repo (kể cả thay đổi trong `be/`).
+  Nếu bước nào fail, commit bị chặn. Hook áp dụng cho mọi commit trong repo, kể cả thay đổi trong `be/`.
 
 > Husky chỉ là lớp kiểm tra sớm ở local, không thay thế CI (`.github/workflows/ci.yml`).
+
+## Commit convention
+
+Giữ commit message ngắn, rõ, và chỉ mô tả một ý chính.
+
+- Viết subject theo dạng `Verb + object`, ví dụ: `Add login form validation`
+- Dùng động từ mệnh lệnh như `Add`, `Fix`, `Update`, `Remove`, `Refactor`
+- Không dùng message quá chung chung như `update code`, `fix bug`, `done`
+- Mỗi commit nên gói một thay đổi chính, không trộn nhiều việc không liên quan
+- Nếu muốn rõ phạm vi hơn, có thể dùng prefix như `feat(fe):`, `fix(be):`, `chore:`
+
+Ví dụ:
+
+```text
+Add CI workflow for frontend quality checks
+Fix JWT authentication flow
+feat(fe): add course detail page
+fix(be): handle null user profile
+chore: add husky pre-commit hook
+```
