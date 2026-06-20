@@ -1,5 +1,7 @@
-package com.edua.beeduasystem.controller;
+package com.edua.beeduasystem.presentation.controller;
 
+import com.edua.beeduasystem.presentation.dto.HealthResponse;
+import com.edua.beeduasystem.service.HealthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,6 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Health", description = "Basic service health endpoints")
 public class HealthController {
 
+    private final HealthService healthService;
+
+    public HealthController(HealthService healthService) {
+        this.healthService = healthService;
+    }
+
     @GetMapping
     @Operation(
             summary = "Get application health",
@@ -27,9 +35,6 @@ public class HealthController {
             }
     )
     public HealthResponse health() {
-        return new HealthResponse("UP", "be-edua-system");
-    }
-
-    public record HealthResponse(String status, String service) {
+        return HealthResponse.from(healthService.getHealth());
     }
 }
