@@ -11,7 +11,7 @@ flowchart TB
     PRE["presentation<br/><small>controller · request/response · advice</small>"]
     SER["service<br/><small>business use cases · orchestration</small>"]
     DOM["domain<br/><small>model · business rules · exception</small>"]
-    REP["repository<br/><small>repository interfaces</small>"]
+    REP["repository<br/><small>repositories · gateways</small>"]
     INF["infrastructure<br/><small>JPA · AI · R2 · Wikimedia · STOMP</small>"]
     CFG["config<br/><small>Spring beans · security · WebSocket</small>"]
 
@@ -94,9 +94,14 @@ com.example.eduasystem
 │   └── exception/
 │
 ├── repository/
-│   ├── ExperimentRepository.java
-│   ├── LessonPlanRepository.java
-│   └── Model3dRepository.java
+│   ├── repositories/
+│   │   ├── ExperimentRepository.java
+│   │   ├── LessonPlanRepository.java
+│   │   └── Model3dRepository.java
+│   └── gateways/
+│       ├── AiClient.java
+│       ├── StorageClient.java
+│       └── MessagePublisher.java
 │
 ├── infrastructure/
 │   ├── persistence/
@@ -186,7 +191,12 @@ Domain không import controller, service, AI SDK hoặc Spring Web. Có thể gi
 
 ### `repository/`
 
-Chứa interface truy cập dữ liệu mà service cần.
+Chứa các interface mà tầng `service` phụ thuộc vào, chia thành hai sub-package
+theo Report4 SDS (§1.2 Package Diagram, Table IV-4):
+
+#### `repository/repositories/`
+
+Interface persistence thuần (truy cập dữ liệu).
 
 ```java
 public interface LessonPlanRepository {
@@ -195,9 +205,16 @@ public interface LessonPlanRepository {
 }
 ```
 
-Service phụ thuộc interface này. Implementation JPA nằm trong `infrastructure/persistence`.
+Service phụ thuộc interface này. Implementation JPA nằm trong
+`infrastructure/persistence/repository`.
 
-Các interface kỹ thuật dùng chung như `AiClient`, `StorageClient` và `MessagePublisher` cũng có thể đặt tại đây để giữ cấu trúc ít package. Nếu muốn tên chính xác hơn, đổi folder thành `gateway/`.
+#### `repository/gateways/`
+
+Interface cho năng lực kỹ thuật dùng chung — `AiClient`, `StorageClient`,
+`MessagePublisher` (cùng `LessonPlanStreamPort`, `LessonPlanEvent`).
+Đây là các cổng (port) ra dịch vụ ngoài, không phụ thuộc transport cụ thể.
+Implementation nằm trong `infrastructure/ai`, `infrastructure/storage`,
+`infrastructure/messaging`.
 
 ### `infrastructure/`
 
