@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.repository;
+package com.edua.beeduasystem.repository.gateways;
 
 public interface AiClient {
 

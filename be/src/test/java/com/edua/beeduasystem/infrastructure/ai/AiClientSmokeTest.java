@@ -1,7 +1,7 @@
 package com.edua.beeduasystem.infrastructure.ai;
 
 import com.edua.beeduasystem.infrastructure.ai.config.AiClientConfig;
-import com.edua.beeduasystem.repository.AiClient;
+import com.edua.beeduasystem.repository.gateways.AiClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;

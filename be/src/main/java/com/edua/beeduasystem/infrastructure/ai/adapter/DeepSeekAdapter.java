@@ -1,6 +1,6 @@
 package com.edua.beeduasystem.infrastructure.ai.adapter;
 
-import com.edua.beeduasystem.repository.AiClient;
+import com.edua.beeduasystem.repository.gateways.AiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
