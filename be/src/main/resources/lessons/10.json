@@ -1,0 +1,3784 @@
+{
+  "b14": {
+    "id": "b14",
+    "title": "Định luật 1 Newton",
+    "grade": 10,
+    "pageRange": [
+      60,
+      62
+    ],
+    "summary": "Bài học giới thiệu định luật 1 Newton về quán tính của vật, giải thích khi nào một vật sẽ duy trì trạng thái chuyển động hay đứng yên. Định luật này là nền tảng để hiểu cách lực tác dụng lên vật thể.",
+    "learningObjectives": [
+      "Hiểu khái niệm lực và chuyển động",
+      "Phát biểu và áp dụng định luật 1 Newton",
+      "Giải thích quán tính của vật",
+      "Vận dụng quy tắc hình bình hành để tìm hợp lực"
+    ],
+    "sections": [
+      {
+        "heading": "I. Lực và chuyển động",
+        "bullets": [
+          "Lực có phải là nguyên nhân làm cho một vật chuyển động và duy trì chuyển động đó hay không?",
+          "Theo nhà khoa học Hy Lạp Aristotle (384-322 TCN), khi một người còn chưa biết đến ma sát, thì người đó sẽ trả lời câu hỏi như thế nào?",
+          "Galilei bổ sung thí nghiệm như Hình 14.1, rõ tả hơn bị lần xuống theo mặt nghiêng 1. Ống nhận thấy hơn bị lần ngược lên mặt 2 đến một độ cao thấp hơn độ cao ban đầu.",
+          "Khi hai thấp độ nghiêng của mặt 2, ống thấy hơn bị lần trên mặt 2 được một đoạn dài hơn. Ống cho rằng hơn bị không lần được đến độ cao ban đầu là vì có ma sát. Ống tiến đoán rằng nếu không có ma sát và nếu mặt và nếu vật tốc không đối (độ lớn, hướng), thì vật sẽ tiếp tục chuyển động thẳng đều với vận tốc không đổi."
+        ]
+      },
+      {
+        "heading": "II. Định luật 1 Newton",
+        "bullets": [
+          "Năm 1687, nhà vật lý người Anh Newton đã khai quát kết quả nghiên cứu của mình, dòng thời phát triển các ý tưởng của Galilei thành một định luật chuyển động, sau này được gọi là định luật 1 Newton",
+          "Nếu một vật không chịu tác dụng của lực nào hoặc chịu tác dụng của các lực có hợp lực bằng không, thì vật đang yên sẽ tiếp tục đứng yên, đang chuyển động sẽ tiếp tục chuyển động thẳng đều.",
+          "Định luật 1 Newton còn được gọi là định luật quán tính"
+        ]
+      },
+      {
+        "heading": "III. Quán tính",
+        "bullets": [
+          "Tính chất bảo toàn trạng thái yên hay chuyển động của vật, gọi là quán tính của vật",
+          "Do có quán tính mà mọi vật có xu hướng bảo toàn vận tốc cả về hướng và độ lớn",
+          "Giải thích tại sao khi xe trượt xuống dốc và bị cản lại ở cuối độc thì vật nhỏ đặt trên xe lăn, vật chân (có thể dùng quyên sách đây) (Hình 14.3)",
+          "Đặt các vật nhỏ lên xe lăn. Ghi các vật và xe dùng yên trên định mặt phẳng nghiêng",
+          "Thả cho xe trượt xuống độc, độc theo mặt phẳng nghiêng",
+          "Quan sát hiện tượng xảy ra đối với xe và các vật trên xe",
+          "Giải thích tại sao khi xe trượt xuống dốc và bị cản lại ở cuối độc thì vật nhỏ đặt trên xe lăn vật chân sẽ lăn lên phía trước"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Lực",
+        "definition": "Nguyên nhân làm cho một vật chuyển động và duy trì chuyển động đó hay không"
+      },
+      {
+        "term": "Quán tính",
+        "definition": "Tính chất bảo toàn trạng thái yên hay chuyển động của vật, mọi vật có xu hướng bảo toàn vận tốc cả về hướng và độ lớn"
+      },
+      {
+        "term": "Hợp lực",
+        "definition": "Lực có tác dụng như tất cả các lực tác dụng lên vật"
+      },
+      {
+        "term": "Định luật 1 Newton",
+        "definition": "Nếu một vật không chịu tác dụng của lực nào hoặc chịu tác dụng của các lực có hợp lực bằng không, thì vật đang yên sẽ tiếp tục đứng yên, đang chuyển động sẽ tiếp tục chuyển động thẳng đều"
+      }
+    ],
+    "formulas": [],
+    "examples": [
+      {
+        "prompt": "Một tà và giải thích điều gì xảy ra đối với một hành khách ngồi trong ô tô ở các tính huống sau: a) Xe đột ngột tăng tốc. b) Xe phanh gập. c) Xe rẽ nhanh sang trái.",
+        "solution": "a) Khi xe tăng tốc, do quán tính, hành khách có xu hướng giữ nguyên vận tốc nên cảm thấy bị đẩy lùi. b) Khi xe phanh, hành khách do quán tính có xu hướng tiếp tục chuyển động nên cảm thấy bị đẩy về phía trước. c) Khi xe rẽ nhanh, hành khách do quán tính tiếp tục chuyển động thẳng nên cảm thấy bị đẩy về phía bên phải."
+      },
+      {
+        "prompt": "Một vật đang chuyển động với vận tốc 3 m/s dưới tác dụng của các lực. Nếu bông nhiễu các lực này mất đi thì: A. Vật đứng lại ngay. B. Vật đổi hướng chuyển động. C. Vật chuyển động chậm dần rồi dừng lại. D. Vật tiếp tục chuyển động theo hướng cũ với vận tốc 3 m/s.",
+        "solution": "Đáp án D. Theo định luật 1 Newton, nếu vật không chịu tác dụng của lực nào (hoặc hợp lực bằng 0), vật đang chuyển động sẽ tiếp tục chuyển động thẳng đều với vận tốc 3 m/s."
+      },
+      {
+        "prompt": "Một vật đang nằm yên trên mặt bàn nằm ngang. Tại sao ta có thể kháng định rằng bàn đã tác dụng một lực lên vật?",
+        "solution": "Vì vật đang yên trên bàn, theo định luật 1 Newton, vật chịu tác dụng của hợp lực bằng 0. Vật chịu tác dụng của trọng lực hướng xuống, do đó bàn phải tác dụng một lực pháp tuyến hướng lên có độ lớn bằng trọng lực để hợp lực bằng 0."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f14.1",
+        "caption": "Hình 14.1. Minh họa thí nghiệm của Galilei",
+        "description": "Hình vẽ minh họa các quả cầu rơi trên mặt phẳng nghiêng và chuyển động trên các mặt phẳng ngang, cho thấy quả cầu tiếp tục chuyển động nếu không có ma sát"
+      },
+      {
+        "id": "f14.2",
+        "caption": "Hình 14.2",
+        "description": "a) Quả cầu được yên khi được treo vào một sợi dây. b) Người trượt văn chuyển động với vận tốc không đổi"
+      },
+      {
+        "id": "f14.3",
+        "caption": "Hình 14.3",
+        "description": "Thí nghiệm minh họa quán tính: vật nhỏ đặt trên xe lăn sẽ lăn lên phía trước khi xe bị cản lại đột ngột"
+      }
+    ]
+  },
+  "b1": {
+    "id": "b1",
+    "title": "LÀM QUEN VỚI VẬT LÍ",
+    "grade": 10,
+    "pageRange": [
+      7,
+      11
+    ],
+    "summary": "Bài học giới thiệu về khoa học Vật lí, lịch sử phát triển từ thời cổ đại đến hiện đại, và các phương pháp nghiên cứu khoa học. Vật lí liên quan đến mọi ngành khoa học và công nghệ, giúp con người hiểu biết và ứng dụng các hiện tượng tự nhiên.",
+    "learningObjectives": [
+      "Hiểu được khái niệm về vật lí và lịch sử phát triển của khoa học vật lí",
+      "Nhận biết được vai trò của vật lí đối với khoa học, kỹ thuật và công nghệ",
+      "Làm quen với phương pháp thực nghiệm và phương pháp khoa học"
+    ],
+    "sections": [
+      {
+        "heading": "I. ĐỐI TƯỢNG NGHIÊN CỨU CỦA VẬT LÍ VÀ MỤC TIÊU CỦA MÔN VẬT LÍ",
+        "bullets": [
+          "Vật lí là ngành khoa học tự nhiên nghiên cứu về các tính chất, quy luật chuyển động và tương tác của vật chất",
+          "Vật lí nghiên cứu từ các hiện tượng tự nhiên nhỏ (Cơ học, Điện học, Quang học) đến các lĩnh vực lớn (Nhiệt học, Vật lí hiện đại)",
+          "Mục tiêu của môn vật lí là phát triển năng lực với các biểu hiện chính sau: có được những kiến thức cơ bản về vật lí; vận dụng kiến thức để khám phá các vấn đề có liên quan; nhận biết được năng lực, sở trường của bản thân"
+        ]
+      },
+      {
+        "heading": "II. QUÁ TRÌNH PHÁT TRIỂN CỦA VẬT LÍ",
+        "bullets": [
+          "Giai đoạn từ 350 TCN: Aristotle nghiên cứu và phân loại các vật năng và rối nhanh hơn vật",
+          "Giai đoạn 1600-1687: Galilei làm thí nghiệm công bố các nguyên lý toán học của Triết học tự nhiên; Newton tìm ra các định luật về động lực học",
+          "Giai đoạn 1687-1785: Joule khám phá mối liên hệ giữa nhiệt và công; Faraday tìm ra hiện tượng cảm ứng điện từ",
+          "Giai đoạn 1831-1900: Planck phát triển lý thuyết lượng tử",
+          "Giai đoạn 1905-1958: Einstein xây dựng thuyết tương đối; ra đời lí thuyết và thực hành mạch IC"
+        ]
+      },
+      {
+        "heading": "III. VAI TRÒ CỦA VẬT LÍ ĐỐI VỚI KHOA HỌC, KỸ THUẬT VÀ CÔNG NGHỆ",
+        "bullets": [
+          "Vật lí có quan hệ mật thiết với mọi ngành khoa học và thường được coi là cơ sở của khoa học tự nhiên",
+          "Vật lí là cơ sở của công nghệ; có thể khoảng định là không có các thành tựu nghiên cứu của vật lí thì không có công nghệ",
+          "Ứng dụng của vật lí rất rộng: từ những thiết bị hàng ngày như máy hơi nước đến những công nghệ hiện đại như robot, internet, năng lượng tái tạo, công nghệ vật liệu siêu nhân",
+          "Vật lí giúp ứng dụng vào công nghệ không chỉ mang lại lợi ích cho nhân loại mà còn có thể tạo ra nhiều vấn đề về môi trường sống"
+        ]
+      },
+      {
+        "heading": "IV. PHƯƠNG PHÁP NGHIÊN CỨU VẬT LÍ",
+        "bullets": [
+          "Phương pháp thực nghiệm là phương pháp quan trọng trong vật lí",
+          "Từ việc quan sát sự rơi của các vật nặng nhất Aristotle, một nhà bác học rất có uy tín, nên chắng ai nghi ngờ ý kiến của ông",
+          "Galilei đã làm những thí nghiệm để kiểm tra lại các ý kiến của Aristotle và phát hiện rằng vật nặng gấp 4 lần một vật khác vẫn rơi nhanh hơn gấp 4 lần, chứng tỏ Aristotle sai",
+          "Quá trình khoa học lần thứ ba bắt đầu vào những năm 70 của thế kỷ XX với đặc trưng là sử dụng máy tính để xử lý dữ liệu"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Vật lí",
+        "definition": "Ngành khoa học tự nhiên nghiên cứu các tính chất, quy luật chuyển động và tương tác của vật chất"
+      },
+      {
+        "term": "Phương pháp thực nghiệm",
+        "definition": "Phương pháp nghiên cứu khoa học liên quan đến việc thực hiện các thí nghiệm để kiểm tra các giả thuyết"
+      },
+      {
+        "term": "Kiến thức cơ bản",
+        "definition": "Những kiến thức nền tảng về vật lí mà học sinh cần nắm vững"
+      }
+    ],
+    "formulas": [],
+    "examples": [
+      {
+        "prompt": "Hãy kể tên các lĩnh vực vật lí mà em đã được học ở cấp Trung học cơ sở",
+        "solution": "Cơ học, Điện học, Quang học, Nhiệt học, Vật lí hiện đại"
+      },
+      {
+        "prompt": "Em thích nhất lĩnh vực nào của Vật lí? Tại sao?",
+        "solution": "Câu hỏi mở, học sinh tự lựa chọn dựa trên sở thích cá nhân"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f1-1-1",
+        "caption": "Hình 1.1. Máy hơi nước của James Watt",
+        "description": "Hình ảnh minh họa một trong những phát minh quan trọng trong lịch sử công nghệ, thể hiện vai trò của vật lí trong phát triển công nghệ"
+      },
+      {
+        "id": "f1-1-2",
+        "caption": "Hình 1.2. Nhà máy thuỷ điện Hòa Bình",
+        "description": "Hình ảnh thực tế một ứng dụng của vật lí trong sản xuất năng lượng"
+      },
+      {
+        "id": "f1-1-3",
+        "caption": "Hình 1.3. Dây chuyền sản xuất ô tô",
+        "description": "Hình ảnh minh họa ứng dụng vật lí trong công nghệ sản xuất hiện đại"
+      },
+      {
+        "id": "f1-1-4",
+        "caption": "Hình 1.4. Robot và máy tính",
+        "description": "Các ứng dụng công nghệ hiện đại dựa trên kiến thức vật lí"
+      },
+      {
+        "id": "f1-1-5",
+        "caption": "Hình 1.5. Khí thải từ nhà máy",
+        "description": "Minh họa tác động tiêu cực của công nghệ đến môi trường nếu không được sử dụng đúng phương pháp"
+      },
+      {
+        "id": "f1-1-6",
+        "caption": "Hình 1.6. Vụ nổ bom nguyên tử",
+        "description": "Minh họa hậu quả tiêu cực của vật lí nếu không được sử dụng đúng phương pháp"
+      },
+      {
+        "id": "f1-1-7",
+        "caption": "Hình 1.7. So sánh quan niệm, phương pháp nghiên cứu của Aristotle và Galilei",
+        "description": "Bảng so sánh hệ thống giữa hai nhà khoa học, cho thấy sự phát triển của phương pháp khoa học"
+      },
+      {
+        "id": "f1-1-8",
+        "caption": "Hình 1.8. Sơ đồ của phương pháp thực nghiệm",
+        "description": "Sơ đồ minh họa các bước của phương pháp thực nghiệm trong vật lí"
+      }
+    ]
+  },
+  "b2": {
+    "id": "b2",
+    "title": "Các quy tắc an toàn trong phòng thực hành vật lí",
+    "grade": 10,
+    "pageRange": [
+      12,
+      14
+    ],
+    "summary": "Bài học giới thiệu các quy tắc an toàn cần tuân thủ khi sử dụng thiết bị điện và quang học trong phòng thực hành vật lí, bao gồm việc sử dụng các thiết bị điện, thiết bị nhiệt và quang học một cách an toàn.",
+    "learningObjectives": [
+      "Hiểu các quy tắc an toàn khi sử dụng thiết bị thí nghiệm",
+      "Nắm rõ cách sử dụng các thiết bị điện, nhiệt và quang học",
+      "Biết cách bảo vệ an toàn cho bản thân và người khác khi thực hành"
+    ],
+    "sections": [
+      {
+        "heading": "I. AN TOÀN KHI SỬ DỤNG THIẾT BỊ THÍ NGHIỆM",
+        "bullets": [
+          "Sử dụng các thiết bị điện trong số các thí nghiệm vật lí phổ thông có nguy cơ mất an toàn cao nhất",
+          "Cần quan sát kỹ các kí hiệu và nhãn thông số trên thiết bị để sử dụng đúng chức năng, đúng yêu cầu của thí nghiệm"
+        ]
+      },
+      {
+        "heading": "2. SỬ DỤNG CÁC THIẾT BỊ NHIỆT VÀ THUỶ TINH",
+        "bullets": [
+          "Các thiết bị dun nóng có thể gây bỏng với người sử dụng, gây nứt, vỡ các bộ phận làm bằng thuỷ tinh",
+          "Quan sát thiết bị thí nghiệm về nhiệt học ở Hình 2.2 và cho biết: đặc điểm của các dụng cụ thí nghiệm khi sử dụng và bảo quản thiết bị cần chú ý đến điều gì"
+        ]
+      },
+      {
+        "heading": "3. SỬ DỤNG CÁC THIẾT BỊ QUANG HỌC",
+        "bullets": [
+          "Các thiết bị quang học rất dễ móc, xước, nứt, vỡ và định buị bản, làm ảnh hưởng đến đường truyền tia sáng và sai lệch kết quả thí nghiệm",
+          "Quan sát thiết bị thí nghiệm quang hình (Hình 2.3) và cho biết: đặc điểm của các dụng cụ thí nghiệm khi sử dụng và bảo quản thiết bị cần chú ý đến điều gì"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Kí hiệu trên thiết bị điện",
+        "definition": "Các ký hiệu cảnh báo và thông tin về đặc tính của thiết bị điện để sử dụng an toàn"
+      },
+      {
+        "term": "Thiết bị nhiệt",
+        "definition": "Các dụng cụ dùng để tạo ra hoặc điều tiết nhiệt độ trong thí nghiệm vật lí"
+      },
+      {
+        "term": "Thiết bị quang học",
+        "definition": "Các dụng cụ dùng để quan sát hiện tượng quang học như lăng kính, thấu kính, gương"
+      }
+    ],
+    "formulas": [],
+    "examples": [],
+    "figures": [
+      {
+        "id": "f2.1",
+        "caption": "Hình 2.1. Hai loại thiết bị cung cấp nguồn điện",
+        "description": "Hình a) máy biến áp (máy biến thế) với các kết nối đầu vào và đầu ra; Hình b) bộ chuyển đổi điện áp với các ký hiệu chỉ định"
+      },
+      {
+        "id": "f2.2",
+        "caption": "Hình 2.2. Thí nghiệm độ nhiệt độ sôi của nước",
+        "description": "Hình thể hiện bộ thiết bị thí nghiệm nhiệt học với các thành phần: nhiệt kế, bình thuỷ tinh chứa nhiệt, đèn cồn và gương phẳng"
+      },
+      {
+        "id": "f2.3",
+        "caption": "Hình 2.3. Bộ thí nghiệm quang hình",
+        "description": "Hình thể hiện các thành phần của bộ thí nghiệm quang học bao gồm: đèn, thấu kính, màn ảnh, gương phẳng và các dụng cụ khác"
+      }
+    ]
+  },
+  "b3": {
+    "id": "b3",
+    "title": "Thực hành tính sai số trong phép đo. Ghi kết quả đo",
+    "grade": 10,
+    "pageRange": [
+      15,
+      20
+    ],
+    "summary": "Bài học hướng dẫn cách tính sai số của phép đo trực tiếp và phép đo gián tiếp, cách ghi kết quả đo với sai số, và các phương pháp xác định sai số phương pháp đo.",
+    "learningObjectives": [
+      "Biết phân loại sai số (sai số hệ thống và sai số ngẫu nhiên)",
+      "Nắm vững công thức tính sai số phương pháp đo và sai số của phép đo",
+      "Biết cách xác định sai số phép đo trực tiếp và phép đo gián tiếp",
+      "Biết cách ghi kết quả đo và tính sai số tỉ đối"
+    ],
+    "sections": [
+      {
+        "heading": "I. PHÉP ĐO TRỰC TIẾP VÀ PHÉP ĐO GIÁN TIẾP",
+        "bullets": [
+          "Phép đo trực tiếp: Dùng một dụng cụ để đo đại lượng vật lý cần tìm, kết quả được đọc trực tiếp trên dụng cụ",
+          "Phép đo gián tiếp: Một đại lượng không trực tiếp mà thông qua công thức liên hệ với các đại lượng khác, kết quả được tính toán từ các giá trị đo được"
+        ]
+      },
+      {
+        "heading": "II. SAI SỐ PHÉP ĐO",
+        "bullets": [
+          "Sai số hệ thống: Gây ra sai lệch đặc điểm và cấu tạo của dụng cụ, sai lệch này gọi là sai số hệ thống",
+          "Sai số ngẫu nhiên: Khi lập lại phép đo, ta nhận được các giá trị khác nhau, sai lệch này không có nguyên nhân rõ ràng nên gọi là sai số ngẫu nhiên"
+        ]
+      },
+      {
+        "heading": "1. Phân loại sai số",
+        "bullets": [
+          "Sai số hệ thống: Gây ra do cấu tạo và cấu tạo của dụng cụ gây ra, sai lệch này gọi là sai số hệ thống",
+          "Sai số ngẫu nhiên tuyệt đối: Là trị tuyệt đối của hiệu số giữa giá trị thực đúng và giá trị đo của một lần đo"
+        ]
+      },
+      {
+        "heading": "2. Cách xác định sai số phép đo",
+        "bullets": [
+          "Sai số ngẫu nhiên tuyệt đối của từng lần do là trị tuyệt đối của hiệu số giữa giá trị trung bình các lần đo và giá trị của mỗi lần đo",
+          "Sai số ngẫu nhiên tuyệt đối trung bình của n lần do được tính theo công thức",
+          "Sai số tuyệt đối của phép đo là tổng sai số ngẫu nhiên và sai số dụng cụ",
+          "Sai số tỉ đối của phép đo là tỉ lệ phần trăm giữa sai số tuyệt đối và giá trị trung bình của đại lượng đo"
+        ]
+      },
+      {
+        "heading": "3. Cách xác định sai số phép đo gián tiếp",
+        "bullets": [
+          "Để xác định sai số của phép đo gián tiếp, vận dụng quy tắc sau",
+          "Sai số tuyệt đối của một tổng hay hiệu bằng tổng các sai số tuyệt đối của các số hạng",
+          "Sai số tỉ đối của một tích hay thương bằng tổng các sai số tỉ đối của các thừa số",
+          "Từ sai số tỉ đối, có thể sử dụng công thức để tính được sai số tuyệt đối"
+        ]
+      },
+      {
+        "heading": "4. Cách ghi kết quả đo",
+        "bullets": [
+          "Kết quả đo đại lượng A được ghi dưới một khoảng giá trị",
+          "Quy tắc làm tròn số: Nếu chữ số ở hàng bỏ đi nhỏ hơn 5 thì chữ số bên trái vẫn giữ nguyên",
+          "Nếu chữ số hàng bỏ đi lớn hơn hoặc bằng 5 thì chữ số bên trái tăng thêm một đơn vị"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Sai số hệ thống",
+        "definition": "Sai lệch gây ra do cấu tạo và cấu tạo của dụng cụ đo"
+      },
+      {
+        "term": "Sai số ngẫu nhiên",
+        "definition": "Sai lệch không có nguyên nhân rõ ràng, xảy ra khi lập lại phép đo nhiều lần"
+      },
+      {
+        "term": "Sai số tuyệt đối",
+        "definition": "Trị tuyệt đối của hiệu số giữa giá trị thực đúng và giá trị đo"
+      },
+      {
+        "term": "Sai số tỉ đối",
+        "definition": "Tỉ lệ phần trăm giữa sai số tuyệt đối và giá trị trung bình của đại lượng đo"
+      },
+      {
+        "term": "Phép đo trực tiếp",
+        "definition": "Dùng dụng cụ đo để xác định trực tiếp đại lượng cần tìm"
+      },
+      {
+        "term": "Phép đo gián tiếp",
+        "definition": "Xác định đại lượng thông qua công thức liên hệ với các đại lượng khác"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "\\Delta A_i = |\\bar{A} - A_i|; \\Delta A_2 = |\\bar{A} - A_2|; ...; \\Delta A_n = |\\bar{A} - A_n|",
+        "meaning": "Sai số ngẫu nhiên tuyệt đối của từng lần đo"
+      },
+      {
+        "latex": "\\bar{A} = \\frac{A_1 + A_2 + ... + A_n}{n}",
+        "meaning": "Giá trị trung bình của n lần đo"
+      },
+      {
+        "latex": "\\overline{\\Delta A} = \\frac{\\Delta A_1 + \\Delta A_2 + ... + \\Delta A_n}{n}",
+        "meaning": "Sai số ngẫu nhiên tuyệt đối trung bình"
+      },
+      {
+        "latex": "\\Delta A = \\bar{\\Delta A} + \\Delta A_{dc}",
+        "meaning": "Sai số tuyệt đối của phép đo là tổng sai số ngẫu nhiên và sai số dụng cụ"
+      },
+      {
+        "latex": "\\delta A = \\frac{\\Delta A}{\\bar{A}} \\cdot 100\\%",
+        "meaning": "Sai số tỉ đối của phép đo"
+      },
+      {
+        "latex": "A = B + C; \\Delta A = \\Delta B + \\Delta C",
+        "meaning": "Sai số tuyệt đối của tổng bằng tổng các sai số tuyệt đối"
+      },
+      {
+        "latex": "A = B.C; \\delta A = \\delta B + \\delta C",
+        "meaning": "Sai số tỉ đối của tích bằng tổng các sai số tỉ đối"
+      },
+      {
+        "latex": "\\delta u = \\frac{\\Delta s}{s} \\cdot 100\\% + \\frac{\\Delta t}{t} \\cdot 100\\%",
+        "meaning": "Sai số tỉ đối của vận tốc theo công thức v = s/t"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Dùng một thước có ĐCNN là 1 mm và một đồng hồ đo thời gian có ĐCNN 0,01 s để do 5 lần thời gian chuyển động của chiếc xe ô tô chơi chạy bằng pin từ điểm A (vA = 0) đến điểm B. Ghi các giá trị vào Bảng 3.1 và trả lời các câu hỏi.",
+        "solution": "a) Xác định nguyên nhân gây ra sai khác giữa các lần đo, tính sai số tuyệt đối trung bình, sai số tỉ đối của phép đo. b) Viết kết quả quá đo với sai số tuyệt đối và sai số tỉ đối. c) Tính sai số tỉ đối và vẽ biểu đồ tương ứng."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f3-1",
+        "caption": "Hình 3.1. Thí nghiệm đo tốc độ đó",
+        "description": "Hình minh họa thí nghiệm đo tốc độ của chiếc xe ô tô chơi chạy từ điểm A đến điểm B"
+      },
+      {
+        "id": "f3-2",
+        "caption": "Hình 3.2. Biểu diễn sai số bằng đồ thị",
+        "description": "Biểu đồ thể hiện sai số tuyệt đối (ΔA, Δy) và khoảng giá trị của phép đo"
+      }
+    ]
+  },
+  "b4": {
+    "id": "b4",
+    "title": "Độ dịch chuyển và quãng đường đi được",
+    "grade": 10,
+    "pageRange": [
+      21,
+      25
+    ],
+    "summary": "Bài học giới thiệu khái niệm độ dịch chuyển và quãng đường đi được, cách phân biệt chúng thông qua hệ tọa độ địa lí, và ứng dụng trong các bài toán chuyển động thực tế.",
+    "learningObjectives": [
+      "Hiểu rõ định nghĩa và phân biệt độ dịch chuyển với quãng đường đi được",
+      "Xác định vị trí của vật dựa trên hệ tọa độ địa lí",
+      "Biểu diễn độ dịch chuyển bằng vector và tính toán độ lớn của nó",
+      "Vận dụng kiến thức vào các bài toán chuyển động thực tế"
+    ],
+    "sections": [
+      {
+        "heading": "I. VỊ TRÍ CỦA VẬT CHUYỂN ĐỘNG TẠI CÁC THỜI ĐIỂM",
+        "bullets": [
+          "Để xác định vị trị của vật, người ta dùng hệ tọa độ vuông góc có gốc là vị trí của vật mốc, trục hoành Ox và trục tung Oy",
+          "Các giá trị trên các trục tọa độ được xác định theo một tỉ lệ xác định",
+          "Nếu tỉ lệ là 1/1000, thì vị trị của điểm A trong hình 4.1 được xác định là A (x = 10 m; y = 20 m) và của điểm B là B (x = -10 m; y = 20 m)"
+        ]
+      },
+      {
+        "heading": "II. ĐỘ DỊCH CHUYỂN",
+        "bullets": [
+          "Độ dịch chuyển được biểu diễn bằng một mũi tên nối vị trí đầu và vị trí cuối của chuyển động, có độ dài lớn với độ lớn của độ dịch chuyển gọi là độ dịch chuyển",
+          "Một đại lượng vừa cho biết độ dài vừa cho biết hướng của sự thay đổi vị trị của vật gọi là độ dịch chuyển vector",
+          "Độ dịch chuyển được biểu diễn bằng một mũi tên nối vị trí đầu và vị trí cuối của chuyển động, có độ dài với độ lớn của độ dịch chuyển gọi là kí hiệu là d"
+        ]
+      },
+      {
+        "heading": "II. PHÂN BIỆT ĐỘ DỊCH CHUYỂN VÀ QUÃNG ĐƯỜNG ĐI ĐƯỢC",
+        "bullets": [
+          "Trong hình 4.6 người đi xe máy (1), người đi bộ (2), người đi ô tô (3) đều khởi hành từ siêu thị A để đi đến bưu điện B",
+          "Tùy thuộc vào đường đi (quãng đường) mà độ dịch chuyển và quãng đường có thể khác nhau"
+        ]
+      },
+      {
+        "heading": "IV. TỔNG HỢP ĐỘ DỊCH CHUYỂN",
+        "bullets": [
+          "Có thể dùng phép cộng vector để tổng hợp độ dịch chuyển của vật",
+          "Hai người đi xe đạp từ A đến C, người thứ nhất đi theo đường từ A đến B, rồi từ B đến C; người thứ hai đi thẳng từ A đến C",
+          "Quãng đường đi được của người thứ nhất: s₁ = AB + BC = 4 + 4 = 8 km",
+          "Vì ABC là tam giác vuông nên độ lớn của độ dịch chuyển AC của người thứ nhất được tính bằng công thức: d₁ = √(AB² + BC²) = √(4² + 4²) ≈ 5,7 km"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Độ dịch chuyển",
+        "definition": "Đại lượng vật lý biểu diễn sự thay đổi vị trị của vật, được biểu diễn bằng một vector nối vị trí đầu đến vị trị cuối của chuyển động"
+      },
+      {
+        "term": "Quãng đường đi được",
+        "definition": "Độ dài của toàn bộ đường mà vật đi được trong quá trình chuyển động"
+      },
+      {
+        "term": "Hệ tọa độ địa lí",
+        "definition": "Hệ thống xác định vị trị dựa trên trục Ox (hướng Đông-Bắc), trục Oy (hướng Nam-Bắc) với gốc O tại vị trị của vật mốc"
+      },
+      {
+        "term": "Vector độ dịch chuyển",
+        "definition": "Mũi tên biểu thị độ dịch chuyển, có điểm đầu tại vị trị ban đầu, điểm cuối tại vị trị cuối, độ dài biểu thị độ lớn của độ dịch chuyển"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "d_1 = \\sqrt{AB^2 + BC^2}",
+        "meaning": "Độ lớn của độ dịch chuyển tổng hợp khi chuyển động theo hai đoạn đường vuông góc, được tính bằng định lí Pytago"
+      },
+      {
+        "latex": "s_1 = AB + BC",
+        "meaning": "Quãng đường đi được bằng tổng độ dài các đoạn đường"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một ô tô đi từ nhà qua trạm xăng, tới siêu thị để mua đồ rồi quay về nhà cất dô, sau đó đi xe đến trường. Hãy xác định quãng đường đi được và độ dịch chuyển của bạn A khi đi từ trạm xăng tới siêu thị.",
+        "solution": "Dựa vào hình 4.7, xác định tọa độ của trạm xăng X và siêu thị S trên đường thẳng, tính quãng đường s = |s_XS| và độ dịch chuyển d = |d_XS| theo khoảng cách giữa hai điểm"
+      },
+      {
+        "prompt": "Hãy xác định các độ dịch chuyển mô tả ở hình 4.4 trong tọa độ địa lí.",
+        "solution": "Sử dụng hệ tọa độ với gốc O, trục ngang là hướng Đông, trục dọc là hướng Bắc, xác định vị trị ban đầu và cuối của chuyển động, vẽ vector độ dịch chuyển từ A đến B với góc 45° hướng Đông-Bắc"
+      },
+      {
+        "prompt": "Hai người đi xe đạp từ A đến C, người thứ nhất đi theo đường từ A đến B, rồi từ B đến C; người thứ hai đi thẳng từ A đến C. Biết AB = BC = 4 km và AB ⊥ BC. Hãy tính quãng đường đi được và độ lớn của độ dịch chuyển của mỗi người.",
+        "solution": "Người thứ nhất: quãng đường s₁ = 4 + 4 = 8 km, độ dịch chuyển d₁ = √(4² + 4²) ≈ 5,7 km. Người thứ hai: quãng đường s₂ = 5,7 km, độ dịch chuyển d₂ = 5,7 km (cùng phương cùng hướng)"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f4-1",
+        "caption": "Hình 4.1. Hệ tọa độ",
+        "description": "Biểu diễn hệ tọa độ vuông góc với gốc O, trục hoành (Tây-Đông) và trục tung (Nam-Bắc), điểm A và B được xác định bằng tọa độ (x, y)"
+      },
+      {
+        "id": "f4-2",
+        "caption": "Hình 4.2. Hệ tọa độ địa lí",
+        "description": "Hệ tọa độ địa lí với hướng Bắc-Nam (trục dọc) và Tây-Đông (trục ngang), điểm A nằm hướng 45° Đông-Bắc so với gốc O"
+      },
+      {
+        "id": "f4-3",
+        "caption": "Hình 4.3. Xác định vị trí của vật theo hệ quy chiếu",
+        "description": "Trục x (km) biểu thị vị trị của vật, với điểm khởi đầu tại t₀ = 8h, vật chuyển động qua các vị trí khác nhau trong khoảng thời gian 2h"
+      },
+      {
+        "id": "f4-4",
+        "caption": "Hình 4.4. Về vector độ dịch chuyển của ô tô trong bài toán nếu ở đầu bài",
+        "description": "Vector độ dịch chuyển được biểu diễn bằng mũi tên từ điểm O (gốc) đến điểm B, với tỉ lệ 1 cm ứng với 50 m"
+      },
+      {
+        "id": "f4-5",
+        "caption": "Hình 4.5. Xác định vị trí của vật theo hệ quy chiếu",
+        "description": "Hệ tọa độ với gốc O, trục d₁ (hướng Đông), trục d₂ (hướng Bắc), góc 45° giữa hướng đi và hướng Đông, tỉ lệ 1 cm ứng với 100 m"
+      },
+      {
+        "id": "f4-6",
+        "caption": "Hình 4.6. Sơ đồ một số tuyến đường đi được của người đi xe máy, người đi bộ và người đi ô tô",
+        "description": "Bản đồ thành phố với ba tuyến đường khác nhau từ siêu thị (điểm A) đến bưu điện (điểm B), cho thấy ba người khác nhau đi theo các đường khác nhau nhưng cùng đến một điểm"
+      },
+      {
+        "id": "f4-7",
+        "caption": "Hình 4.7",
+        "description": "Sơ đồ đường thẳng từ nhà N qua các điểm X (trạm xăng), S (siêu thị), T (bưu điện) với khoảng cách được đánh dấu (0, 200m, 400m, 600m, 800m, 1000m, 1200m)"
+      },
+      {
+        "id": "f4-8",
+        "caption": "Hình 4.8",
+        "description": "Tam giác vuông ABC với người thứ nhất từ A đến B rồi đến C, người thứ hai đi thẳng từ A đến C, AB = 4 km, BC = 4 km, AC ≈ 5,7 km"
+      }
+    ]
+  },
+  "b5": {
+    "id": "b5",
+    "title": "Tốc độ và vận tốc",
+    "grade": 10,
+    "pageRange": [
+      26,
+      29
+    ],
+    "summary": "Bài học trình bày khái niệm tốc độ trung bình, vận tốc trung bình và vận tốc tức thời, cũng như cách phân biệt và áp dụng chúng trong các bài toán chuyển động.",
+    "learningObjectives": [
+      "Hiểu và phân biệt giữa tốc độ trung bình và vận tốc trung bình",
+      "Nắm vững khái niệm vận tốc tức thời",
+      "Áp dụng các công thức tính tốc độ và vận tốc vào bài toán thực tế"
+    ],
+    "sections": [
+      {
+        "heading": "I. TỐC ĐỘ",
+        "bullets": [
+          "Tốc độ trung bình được xác định bằng quãng đường đi được chia cho thời gian",
+          "Công thức: v = s/t",
+          "Tốc độ được dùng để mô tả sự nhanh chậm của chuyển động",
+          "Tốc độ trung bình là đại lượng vô hướng"
+        ]
+      },
+      {
+        "heading": "1. Tốc độ trung bình",
+        "bullets": [
+          "Xác định bằng tỷ lệ giữa quãng đường đi được và thời gian di chuyển",
+          "Ký hiệu: v",
+          "Tốc độ trung bình = Quãng đường đi được / Thời gian",
+          "Ví dụ: Từ bảng 5.1, tốc độ chạy ba cự li khác nhau của vận động viên Nam Phi"
+        ]
+      },
+      {
+        "heading": "2. Tốc độ tức thời",
+        "bullets": [
+          "Tốc độ tức thời là tốc độ tại một thời điểm xác định",
+          "Trên xe máy và ô tô, đồng hồ tốc độ chỉ tốc độ tức thời",
+          "Được xác định bằng độ dịch chuyển trong khoảng thời gian rất nhỏ"
+        ]
+      },
+      {
+        "heading": "II. VẬN TỐC",
+        "bullets": [
+          "Vận tốc là đại lượng vectơ, có độ lớn và hướng",
+          "Vận tốc được dùng để mô tả đầy đủ chuyển động, bao gồm tốc độ và hướng",
+          "Biệt tốc độ và thời gian chuyển động nhưng chưa biết hướng chuyển động"
+        ]
+      },
+      {
+        "heading": "1. Vận tốc trung bình",
+        "bullets": [
+          "Là đại lượng vectơ biểu diễn sự dịch chuyển trong một khoảng thời gian",
+          "Được định nghĩa bằng độ dịch chuyển chia cho thời gian",
+          "Vectơ vận tốc có: gốc nằm trên vật chuyển động, hướng là hướng của độ dịch chuyển, độ dài tỷ lệ với độ lớn của vận tốc"
+        ]
+      },
+      {
+        "heading": "2. Vận tốc tức thời",
+        "bullets": [
+          "Vận tốc tức thời là vận tốc tại một thời điểm xác định",
+          "Được ký hiệu là v_t",
+          "Là đạo hàm của độ dịch chuyển theo thời gian"
+        ]
+      },
+      {
+        "heading": "3. Tổng hợp vận tốc",
+        "bullets": [
+          "Tổng hợp hai vận tốc cùng phương: cộng độ lớn nếu cùng chiều, trừ nếu ngược chiều",
+          "Ví dụ: Hành khách chuyển động trên tàu với vận tốc 1 m/s, tàu chuyển động với vận tốc 10 m/s",
+          "Vận tốc hành khách so với mặt đất = v_1,2 + v_2,3",
+          "Khi chuyển động trên đoàn tàu theo hướng chạy, vận tốc = 11 m/s"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Tốc độ trung bình",
+        "definition": "Đại lượng vô hướng được xác định bằng quãng đường đi được chia cho thời gian di chuyển"
+      },
+      {
+        "term": "Vận tốc trung bình",
+        "definition": "Đại lượng vectơ được xác định bằng độ dịch chuyển chia cho thời gian di chuyển"
+      },
+      {
+        "term": "Vận tốc tức thời",
+        "definition": "Vận tốc của vật tại một thời điểm xác định"
+      },
+      {
+        "term": "Tốc độ tức thời",
+        "definition": "Tốc độ tại một thời điểm xác định, là độ lớn của vận tốc tức thời"
+      },
+      {
+        "term": "Tổng hợp vận tốc",
+        "definition": "Quá trình xác định vận tốc của vật so với một hệ quy chiếu khi biết vận tốc của vật so với hệ quy chiếu khác"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "v = \\frac{s}{t}",
+        "meaning": "Tốc độ trung bình bằng quãng đường chia cho thời gian"
+      },
+      {
+        "latex": "\\bar{v} = \\frac{d}{t}",
+        "meaning": "Vận tốc trung bình bằng độ dịch chuyển chia cho thời gian"
+      },
+      {
+        "latex": "v_t = \\frac{\\Delta d}{\\Delta t}",
+        "meaning": "Vận tốc tức thời bằng độ dịch chuyển trong khoảng thời gian rất nhỏ chia cho khoảng thời gian đó"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Bố bạn A đưa A đi học bằng xe máy vào lúc 7 giờ. Sau 5 phút xe đạt tốc độ 30 km/h. Sau 10 phút nữa, xe tăng tốc độ lên thêm 15 km/h. Đến gần trường, xe giảm dần tốc độ và dừng trước cổng trường lúc 7 giờ 30 phút. a) Tính tốc độ trung bình của xe máy chở A khi đi từ nhà đến trường. Biết quãng đường từ nhà đến trường dài 15 km. b) Tính tốc độ của xe vào lúc 7 giờ 15 phút và 7 giờ 30 phút. Tốc độ này là tốc độ gì?",
+        "solution": "a) Thời gian chuyên động = 30 phút = 0,5 giờ. Tốc độ trung bình = 15 km / 0,5 giờ = 30 km/h. b) Vào lúc 7 giờ 15 phút, tốc độ ≈ 45 km/h (tốc độ tức thời). Vào lúc 7 giờ 30 phút, tốc độ = 0 km/h (tốc độ tức thời)."
+      },
+      {
+        "prompt": "Một người đi xe máy qua ngã tư theo tốc độ trung bình 30 km/h theo hướng Bắc. Sau 3 phút người đó đến vị trí nào trên hình?",
+        "solution": "Quãng đường đi được = 30 km/h × (3/60) giờ = 1,5 km. Người đó chuyển động theo hướng Bắc với tốc độ 30 km/h trung bình trong 3 phút."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f5-1",
+        "caption": "Bảng 5.1. Kỉ lục chạy ba cự li của một vận động viên người Nam Phi",
+        "description": "Bảng thống kê cự li chạy (m) và thời gian chạy (s) cho các quãng đường 100 m, 200 m, 400 m"
+      },
+      {
+        "id": "f5-2",
+        "caption": "Bảng 5.2. Thành tích của một nữ vận động viên Việt Nam",
+        "description": "Bảng thống kê các giải thi đấu, cự li chạy (m) và thời gian chạy (s) cho Diễn kinh quốc gia 2016, SEA Games 29 (2017), SEA Games 30 (2019)"
+      },
+      {
+        "id": "f5-3",
+        "caption": "Hình 5.1",
+        "description": "Sơ đồ cho thấy một người chuyển động với các điểm G, E, D, C, A, B trên một sơ đồ hướng Bắc-Nam và Tây-Đông, khoảng cách 0,5 km, minh họa cho khái niệm chuyển động theo hướng"
+      },
+      {
+        "id": "f5-4",
+        "caption": "Hình 5.2",
+        "description": "Hình vẽ minh họa một người di chuyển từ nhà đến trường theo lộ trình ABC, với quãng đường AB = 400 m (6 phút) và BC = 300 m (4 phút), cho thấy sự khác nhau giữa quãng đường và độ dịch chuyển"
+      },
+      {
+        "id": "f5-5",
+        "caption": "Hình 5.3",
+        "description": "Hình vẽ minh họa hành khách chuyển động trên tàu, thể hiện khái niệm tổng hợp vận tốc: hành khách chuyển động với vận tốc 1 m/s so với tàu, tàu chuyển động với vận tốc 10 m/s so với mặt đất"
+      }
+    ]
+  },
+  "b6": {
+    "id": "b6",
+    "title": "Thực hành: Đo tốc độ của vật chuyển động",
+    "grade": 10,
+    "pageRange": [
+      30,
+      33
+    ],
+    "summary": "Bài học hướng dẫn các phương pháp đo tốc độ chuyển động của vật sử dụng các dụng cụ như đồng hồ đo thời gian hiện số, công quang điện và thiết bị cần rung để xác định quãng đường và thời gian chuyển động.",
+    "learningObjectives": [
+      "Hiểu cách đo tốc độ chuyển động của vật bằng dụng cụ đo thời gian và quãng đường",
+      "Biết sử dụng đồng hồ đo thời gian hiện số MC964 để đo tốc độ",
+      "Biết sử dụng công quang điện để đo tốc độ chuyển động",
+      "Thực hiện được các thí nghiệm đo tốc độ và xác định các yếu tố ảnh hưởng"
+    ],
+    "sections": [
+      {
+        "heading": "I. Cách đo tốc độ trong phòng thí nghiệm",
+        "bullets": [
+          "Dùng đồng hồ đo thời gian hiện số và công quang điện để đo quãng đường và thời gian chuyển động của vật",
+          "Hỏi và trả lời câu hỏi: dụng cụ gì để đo quãng đường và thời gian; làm thế nào để được quãng đường đi được của vật trong một khoảng thời gian; thiết kế các phương án thí nghiệm và so sánh"
+        ]
+      },
+      {
+        "heading": "II. Giới thiệu dụng cụ đo thời gian",
+        "bullets": [
+          "Đồng hồ đo thời gian hiện số MC964: có thể đo thời gian chính xác đến phần nghìn giây",
+          "Có các chế độ làm việc khác nhau (MODE A, B, A+B, A↔B, T)",
+          "Sử dụng công quang điện để đo thời gian vật qua một vị trí",
+          "Có nút RESET để đặt lại chỉ số về 0000"
+        ]
+      },
+      {
+        "heading": "III. Thiết bị đo thời gian bằng cần rung",
+        "bullets": [
+          "Đồng hồ cần rung dùng để đánh dấu các chấm trên băng giấy gắn vào xe chuyển động",
+          "Do khoảng cách giữa các dấu chấm xác định được quãng đường đi được của xe trong 0,02 s"
+        ]
+      },
+      {
+        "heading": "IV. Thực hành đo tốc độ chuyển động",
+        "bullets": [
+          "Bộ trí thí nghiệm như Hình 6.6 với đồng hồ đo thời gian hiện số, công quang điện, viên bi thép",
+          "Nối vít hàm và đặt công quang điện E cách chân phân độc của măng nghiêng",
+          "Nối hai công quang điện E, F với hai ô cảm A, B ở mặt sau của đồng hồ",
+          "Cân nguồn điện của đồng hồ và bật công tắc nguồn"
+        ]
+      },
+      {
+        "heading": "V. Tiến hành thí nghiệm",
+        "bullets": [
+          "Thí nghiệm 1: Đo tốc độ trung bình",
+          "Thí nghiệm 2: Đo tốc độ tức thời",
+          "Ghi lại các giá trị thời gian hiện thị trên đồng hồ",
+          "Thực hiện lại các thao tác 4, 5, 6, 7 ba lần và ghi các giá trị thời gian t trương ứng vào Bảng 6.1"
+        ]
+      },
+      {
+        "heading": "VI. Kết quả thí nghiệm",
+        "bullets": [
+          "Bảng 6.1: Quãng đường s = ... (m); \\Delta s = ... (m) với các lần do lần 1, lần 2, lần 3",
+          "Bảng 6.2: Đường kính viên bi d = ... (m); \\Delta d = ... (m) với các lần do",
+          "Tính tốc độ trung bình v̄ = s̄/t̄",
+          "Tính tốc độ tức thời v̄₁ = d̄/t̄"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Tốc độ trung bình",
+        "definition": "Tốc độ của vật trên một đoạn đường xác định, tính bằng quãng đường chia cho thời gian đi hết quãng đường đó"
+      },
+      {
+        "term": "Tốc độ tức thời",
+        "definition": "Tốc độ của vật tại một thời điểm xác định, được xác định bằng quãng đường rất nhỏ chia cho thời gian rất nhỏ tương ứng"
+      },
+      {
+        "term": "Đồng hồ đo thời gian hiện số MC964",
+        "definition": "Dụng cụ đo thời gian chính xác đến 0,001 s hoặc 0,01 s, có các chế độ làm việc khác nhau phục vụ cho các thí nghiệm đo tốc độ"
+      },
+      {
+        "term": "Công quang điện",
+        "definition": "Dụng cụ phát hiện vật chuyển động qua một vị trí, sử dụng để xác định thời gian vật đi qua"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "v = \\frac{s}{t}",
+        "meaning": "Công thức tính tốc độ trung bình, trong đó s là quãng đường, t là thời gian"
+      },
+      {
+        "latex": "\\bar{v} = \\frac{\\bar{s}}{\\bar{t}}",
+        "meaning": "Công thức tính tốc độ trung bình từ các giá trị trung bình"
+      },
+      {
+        "latex": "\\bar{v_1} = \\frac{\\bar{d}}{\\bar{t}}",
+        "meaning": "Công thức tính tốc độ tức thời, trong đó d là đường kính viên bi"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Bài tập 2: Một máy bay đang bay theo hướng Bắc với vận tốc 200 m/s thì bị giớ từ hướng Tây thổi vào với vận tốc 20 m/s. Xác định vận tốc tổng hợp của máy bay lúc này.",
+        "solution": "Sử dụng quy tắc tổng hợp vận tốc: vận tốc tổng hợp là hợp véc tơ của hai vận tốc thành phần, áp dụng định lý Pythagore hoặc quy tắc hình bình hành để tìm độ lớn và hướng"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f6-1",
+        "caption": "Hình 6.1. Cấu tạo công quang điện",
+        "description": "Sơ đồ cấu tạo cơ bản của công quang điện để phát hiện vật chuyển động"
+      },
+      {
+        "id": "f6-2",
+        "caption": "Hình 6.2. Đồng hồ đo thời gian hiện số",
+        "description": "Mặt trước và mặt sau của đồng hồ đo thời gian hiện số MC964 với các phím điều khiển và ổ cắm kết nối"
+      },
+      {
+        "id": "f6-3",
+        "caption": "Hình 6.3. Đồng hồ cần rung",
+        "description": "Thiết bị dùng để đánh dấu trên băng giấy, bao gồm cần rung và băng giấy gắn vào xe chuyển động"
+      },
+      {
+        "id": "f6-4",
+        "caption": "Hình 6.4. Thí nghiệm đo tốc độ bằng đồng hồ cần rung",
+        "description": "Bộ trí thí nghiệm với xe chuyển động và đồng hồ cần rung để ghi nhận chuyển động"
+      },
+      {
+        "id": "f6-5",
+        "caption": "Hình 6.5. Những chấm mục trên băng giấy gắn vào xe chuyển động",
+        "description": "Ảnh chụp dãy các chấm trên băng giấy, thể hiện quãng đường đi được của xe trong các khoảng thời gian bằng nhau"
+      },
+      {
+        "id": "f6-6",
+        "caption": "Hình 6.6. Bộ thí nghiệm đo tốc độ chuyển động của viên bi thép",
+        "description": "Sơ đồ lắp ráp toàn bộ dụng cụ thí nghiệm gồm măng nghiêng, viên bi, công quang điện, đồng hồ đo thời gian"
+      }
+    ]
+  },
+  "b7": {
+    "id": "b7",
+    "title": "Độ thị độ dịch chuyển - Thời gian",
+    "grade": 10,
+    "pageRange": [
+      34,
+      36
+    ],
+    "summary": "Bài học về độ thị độ dịch chuyển - thời gian trong chuyển động thẳng, cách vẽ và đọc đồ thị, cũng như phân tích chuyển động thẳng đều và không đều từ các đồ thị.",
+    "learningObjectives": [
+      "Vẽ đúng đồ thị độ dịch chuyển - thời gian trong chuyển động thẳng",
+      "Đọc và phân tích thông tin từ đồ thị độ dịch chuyển - thời gian",
+      "Xác định vận tốc, tốc độ và tính chất chuyển động từ đồ thị",
+      "Phân biệt chuyển động thẳng đều và chuyển động thẳng không đều qua đồ thị"
+    ],
+    "sections": [
+      {
+        "heading": "I. Chuyển động thẳng",
+        "bullets": [
+          "Chuyển động thẳng là chuyển động thường gặp trong đời sống, có quỹ đạo chuyển động là đường thẳng",
+          "Khi vật chuyển động thẳng theo một chiều không đổi thì độ dịch chuyển và quãng đường đi được có độ lớn như nhau (d = s; vận tốc và tốc độ có độ lớn như nhau v = v̄)",
+          "Khi vật đang chuyển động thẳng theo chiều dương, nếu đổi chiều chuyển động thì trong khoảng thời gian chuyển động ngược chiều độ quãng đường đi được và độ dịch chuyển có giá trị dương còn vận tốc có giá trị âm (v = -v̄)",
+          "Công thức (5.1) và (5.2) cho phép xác định được quãng đường đi được, độ dịch chuyển, tốc độ và vận tốc của chuyển động"
+        ]
+      },
+      {
+        "heading": "II. Độ thị độ dịch chuyển - thời gian trong chuyển động thẳng đều",
+        "bullets": [
+          "Đồ thị độ dịch chuyển - thời gian của một chuyển động không nhưng cho phép mô tả được chuyển động, mà còn có thể cho biết nhiều thông tin khác nhau về chuyển động",
+          "Cách vẽ: vẽ bảng số liệu vào vở, trên trục tung (trục độ dịch chuyển) 1 cm ứng với 200 m; trên trục hoành (trục thời gian) 1 cm ứng với 50 s"
+        ]
+      },
+      {
+        "heading": "1. Cách về độ thị độ dịch chuyển - thời gian (d - t) trong chuyển động thẳng đều",
+        "bullets": [
+          "Độ thị đơn giản nhất là độ thị độ dịch chuyển - thời gian của chuyển động thẳng đều",
+          "Trong chuyển động thẳng đều thì d = v.t (với v là một hằng số). Biểu thức d = v.t có dạng giống biểu thức y = ax đã học trong môn Toán nên đường biểu diễn là một đoạn thẳng"
+        ]
+      },
+      {
+        "heading": "2. Sử dụng độ thị độ dịch chuyển - thời gian trong chuyển động thẳng",
+        "bullets": [
+          "Hình 7.2 là độ thị độ dịch chuyển - thời gian của một người đang bơi trong một bể bơi dài 50 m",
+          "Để biết được những gì về chuyển động của người đó, cần trả lời các câu hỏi về chuyển động, vận tốc, quãng đường và thời gian"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Chuyển động thẳng",
+        "definition": "Chuyển động thường gặp trong đời sống, có quỹ đạo chuyển động là đường thẳng"
+      },
+      {
+        "term": "Độ thị độ dịch chuyển - thời gian",
+        "definition": "Biểu diễn mối quan hệ giữa độ dịch chuyển và thời gian của một chuyển động, cho phép mô tả được chuyển động và cung cấp nhiều thông tin khác nhau về chuyển động"
+      },
+      {
+        "term": "Chuyển động thẳng đều",
+        "definition": "Chuyển động thẳng trong đó vận tốc không thay đổi, độ dịch chuyển d = v.t và đồ thị là một đoạn thẳng"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "d = v \\cdot t",
+        "meaning": "Độ dịch chuyển bằng vận tốc nhân với thời gian trong chuyển động thẳng đều"
+      },
+      {
+        "latex": "v = \\frac{d}{t}",
+        "meaning": "Vận tốc bằng độ dịch chuyển chia cho thời gian"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Hãy tính quãng đường đi được, độ dịch chuyển, tốc độ và vận tốc của bạn A khi đi từ nhà đến trường và khi đi từ trường đến siêu thị (Hình 7.1). Coi chuyển động của bạn A là chuyển động đều và biết cơt 100 m bạn A đi hết 25 s.",
+        "solution": "Từ hình 7.1, quãng đường từ nhà đến trường là 800 m, từ trường đến siêu thị là 200 m. Vận tốc = quãng đường / thời gian. Tính toán vận tốc cho từng đoạn dựa trên thông tin từ đồ thị vị trí và thời gian đã cho."
+      },
+      {
+        "prompt": "Từ đồ thị hình 7.2, xác định vận tốc và tốc độ của người bơi từ giây 45 đến giây 60 ở độ thị ở Hình 7.2.",
+        "solution": "Từ đồ thị, quan sát độ dịch chuyển từ t = 45s đến t = 60s, tính vận tốc = Δd/Δt. Phân tích đồ thị để xác định tính chất chuyển động trong khoảng thời gian này."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f7.1",
+        "caption": "Hình 7.1",
+        "description": "Sơ đồ vị trí của bạn A với nhà, siêu thị và trường học, thể hiện khoảng cách từ 0 m đến 1000 m trên trục ngang"
+      },
+      {
+        "id": "f7.2",
+        "caption": "Hình 7.2",
+        "description": "Đồ thị độ dịch chuyển - thời gian của một người bơi trong bể bơi 50 m, với các giai đoạn chuyển động khác nhau được biểu diễn bằng các đoạn thẳng có độ dốc khác nhau"
+      },
+      {
+        "id": "f7.3",
+        "caption": "Hình 7.3",
+        "description": "Hai đồ thị hàm số minh họa: a) y = ax (a > 0) biểu diễn chuyển động thẳng đều với vận tốc dương, b) y = ax + b (a < 0; b > 0) biểu diễn chuyển động thẳng đều với vận tốc âm"
+      }
+    ]
+  },
+  "b8": {
+    "id": "b8",
+    "title": "Chuyển động biến đổi. Gia tốc",
+    "grade": 10,
+    "pageRange": [
+      37,
+      39
+    ],
+    "summary": "Bài học trình bày khái niệm chuyển động biến đổi, gia tốc và cách xác định gia tốc của vật thông qua độ biến thiên vận tốc theo thời gian.",
+    "learningObjectives": [
+      "Xác định độ biến thiên vận tốc sau 8 s của chuyển động trên",
+      "Xác định độ biến thiên vận tốc sau mỗi giây của chuyển động trên trong 4 s đầu và trong 4 s cuối",
+      "Các đại lượng xác định được ở câu 2 cho ta biết điều gì về sự thay đổi vận tốc của chuyển động trên"
+    ],
+    "sections": [
+      {
+        "heading": "I. Chuyển động biến đổi",
+        "bullets": [
+          "Một ô tô đang chuyển động sẽ chuyển động nhanh dần (vận tốc tăng dần); khi đang chuyển động muốn dừng lại sẽ phát chuyển động chậm dần (vận tốc giảm dần)",
+          "Chuyển động có vận tốc thay đổi được gọi là chuyển động biến đổi"
+        ]
+      },
+      {
+        "heading": "II. Gia tốc của chuyển động biến đổi",
+        "bullets": [
+          "Khái niệm gia tốc: Để xác định được sự thay đổi vận tốc theo thời gian, phải biết vận tốc tức thời của chuyển động tại các thời điểm khác nhau. Các phương tiện giao thông như xe máy, ô tô được trang bị tốc kế là thiết bị do trục tiếp vận tốc trực tiếp. Do đó có thể dùng tốc kế trên xe máy hoặc ô tô để tìm hiểu sự thay đổi vận tốc của chuyển động biến đổi",
+          "Bằng dường dây ghi vân tốc tức thời do bội tốc kế của một ô tô sau các khoảng thời gian 2 s kế từ khi bắt đầu chạy trên đường thẳng"
+        ]
+      },
+      {
+        "heading": "III. Vận tốc và độ thị độ dịch chuyển - thời gian trong chuyển động thẳng tháng",
+        "bullets": [
+          "Từ độ thị độ dịch chuyển - thời gian có thể để dùng tính được giá trị của vận tốc",
+          "Dây chính là độ lớn (độ độc) của đường biểu diễn OA là: \\Delta d / \\Delta t = (50 - 20) / (25 - 10) = 30 / 15 = 2 m/s",
+          "Độ độc của độ thị độ dịch chuyển - thời gian trong chuyển động thẳng tháng cho biết độ lớn vận tốc chuyển động"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Chuyển động biến đổi",
+        "definition": "Chuyển động có vận tốc thay đổi theo thời gian"
+      },
+      {
+        "term": "Gia tốc",
+        "definition": "Đại lượng xác định sự thay đổi vận tốc theo thời gian, được tính bằng tỉ số độ biến thiên vận tốc và khoảng thời gian tương ứng"
+      },
+      {
+        "term": "Vận tốc tức thời",
+        "definition": "Vận tốc của vật tại một thời điểm xác định"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "a = \\frac{\\Delta v}{\\Delta t} = \\frac{v_t - v_0}{t - t_0}",
+        "meaning": "Công thức tính gia tốc, với a là gia tốc, Δv là độ biến thiên vận tốc, Δt là khoảng thời gian"
+      },
+      {
+        "latex": "\\vec{a} = \\frac{\\Delta \\vec{v}}{\\Delta t}",
+        "meaning": "Công thức véc tơ của gia tốc"
+      },
+      {
+        "latex": "a = 0.4 \\text{ m/s}^2",
+        "meaning": "Ví dụ tính gia tốc trong bài tập"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một xe máy đang chuyển động thẳng với vận tốc 10 m/s thì tăng tốc. Biết rằng sau 5 s kể từ khi tăng tốc, xe đạt vận tốc 12 m/s. a) Tính gia tốc của xe. b) Nếu sau khi đạt vận tốc 12 m/s, xe chuyển động chậm dần với gia tốc có độ lớn bằng gia tốc trên thì sau bao lâu xe sẽ dừng lại?",
+        "solution": "a) v₀ = 10 m/s, v = 12 m/s, Δt = 5 s. Gia tốc: a = Δv/Δt = (12-10)/5 = 0,4 m/s². b) v₀' = 12 m/s, v' = 0, a = -0,4 m/s². Thời gian: Δt' = Δv'/a = (0-12)/(-0,4) = 30 s. Xe dừng lại sau 30 s."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f8-1",
+        "caption": "Bảng chỉ số liệu vận tốc tức thời của một chuyển động",
+        "description": "Bảng thể hiện mối liên hệ giữa thời điểm (s) và vận tốc tức thời (km/h và m/s), cho thấy sự biến đổi của vận tốc theo thời gian trong chuyển động thẳng"
+      },
+      {
+        "id": "f7-4",
+        "caption": "Đồ thị độ dịch chuyển - thời gian trong chuyển động thẳng thang của một xe ô tô",
+        "description": "Đồ thị cho thấy sự thay đổi vị trí của xe theo thời gian, với trục tung là độ dịch chuyển d (m) và trục hoành là thời gian t (s), thể hiện các giai đoạn tăng tốc, chuyển động đều, và giảm tốc"
+      }
+    ]
+  },
+  "b9": {
+    "id": "b9",
+    "title": "Chuyển động thẳng biến đổi đều",
+    "grade": 10,
+    "pageRange": [
+      40,
+      43
+    ],
+    "summary": "Bài học về chuyển động thẳng biến đổi đều, trong đó vận tốc thay đổi đều theo thời gian. Học sinh sẽ tìm hiểu gia tốc, công thức vận tốc tức thời, đồ thị vận tốc-thời gian và các ứng dụng của chuyển động này.",
+    "learningObjectives": [
+      "Hiểu khái niệm gia tốc và chuyển động thẳng biến đổi đều",
+      "Nắm vững công thức vận tốc tức thời và phương trình chuyển động",
+      "Phân tích và vẽ đồ thị vận tốc-thời gian",
+      "Tính độ dịch chuyển dựa trên công thức và đồ thị"
+    ],
+    "sections": [
+      {
+        "heading": "I. Gia tốc của chuyển động thẳng biến đổi đều",
+        "bullets": [
+          "Chuyển động thẳng biến đổi đều là chuyển động có vận tốc thay đổi và độ lớn vận tốc tăng hoặc giảm đều theo thời gian",
+          "Gia tốc là đại lượng cho biết sự thay đổi nhanh chậm của vận tốc",
+          "Công thức gia tốc: a = ΔV/Δt = hằng số",
+          "Khi ã cùng chiều với v (a > 0): chuyển động nhanh dần; Khi ã ngược chiều với v (a < 0): chuyển động chậm dần",
+          "Đơn vị gia tốc: m/s² (m.s⁻²)"
+        ]
+      },
+      {
+        "heading": "II. Vận tốc tức thời của chuyển động thẳng biến đổi đều",
+        "bullets": [
+          "Gọi v₀ là vận tốc tại thời điểm ban đầu t₀, vt là vận tốc tại thời điểm t",
+          "Công thức: a = (vt - v₀)/(t - t₀) = Δv/Δt nên vt = v₀ + a.Δt",
+          "Nếu ở thời điểm ban đầu t₀ = 0 thì: vt = v₀ + a.t",
+          "Nếu ở thời điểm ban đầu t₀ = 0 vật mới bắt đầu chuyển động thì: v₀ = 0 và vt = a.t"
+        ]
+      },
+      {
+        "heading": "III. Đồ thị vận tốc - thời gian của chuyển động thẳng biến đổi đều",
+        "bullets": [
+          "Từ công thức (9.2) và (9.3), đồ thị (v - t) của chuyển động thẳng biến đổi đều có dạng như Hình 9.1",
+          "Hình 9.1a: chuyển động nhanh dần với v₀ > 0",
+          "Hình 9.1b: chuyển động nhanh dần với v₀ = 0",
+          "Hình 9.1c: chuyển động chậm dần"
+        ]
+      },
+      {
+        "heading": "IV. Độ dịch chuyển của chuyển động thẳng biến đổi đều",
+        "bullets": [
+          "Tính độ dịch chuyển bằng độ thị (v - t): diện tích dưới đồ thị (v - t) bằng độ dịch chuyển",
+          "Công thức tính độ dịch chuyển trong chuyển động thẳng biến đổi đều: d = v₀.t + ½.a.t²",
+          "Công thức liên hệ giữa vận tốc, gia tốc và độ dịch chuyển: vt² - v₀² = 2.a.d",
+          "Độ dịch chuyển trung bình trong thời gian Δt có độ lớn bằng diện tích hình thang với hai đáy là va, vb và chiều cao là Δt",
+          "Vận tốc trung bình: vc = (va + vb)/2"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Chuyển động thẳng biến đổi đều",
+        "definition": "Chuyển động thẳng mà vận tốc thay đổi đều theo thời gian, tức là gia tốc không đổi"
+      },
+      {
+        "term": "Gia tốc",
+        "definition": "Đại lượng đo sự thay đổi vận tốc theo thời gian, được tính bằng Δv/Δt"
+      },
+      {
+        "term": "Vận tốc tức thời",
+        "definition": "Vận tốc tại một thời điểm xác định, ký hiệu là vt"
+      },
+      {
+        "term": "Độ dịch chuyển",
+        "definition": "Đại lượng vectơ chỉ sự thay đổi vị trí của vật, bằng diện tích dưới đồ thị (v - t)"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "a = \\frac{\\Delta v}{\\Delta t}",
+        "meaning": "Gia tốc bằng độ thay đổi vận tốc chia cho thời gian thay đổi"
+      },
+      {
+        "latex": "v_t = v_0 + a.t",
+        "meaning": "Vận tốc tức thời bằng vận tốc ban đầu cộng tích của gia tốc và thời gian (khi t₀ = 0)"
+      },
+      {
+        "latex": "d = v_0.t + \\frac{1}{2}.a.t^2",
+        "meaning": "Độ dịch chuyển trong chuyển động thẳng biến đổi đều"
+      },
+      {
+        "latex": "v_t^2 - v_0^2 = 2.a.d",
+        "meaning": "Mối liên hệ giữa vận tốc, gia tốc và độ dịch chuyển"
+      },
+      {
+        "latex": "v_c = \\frac{v_a + v_b}{2}",
+        "meaning": "Vận tốc trung bình trong khoảng thời gian giữa hai thời điểm"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một con báo đang chạy với vận tốc 30 m/s thì chuyển động chậm dần khi tới gần một con suối. Trong 3 giây, vận tốc của nó giảm còn 9 m/s. Tính gia tốc của con báo.",
+        "solution": "Sử dụng công thức a = Δv/Δt = (9 - 30)/3 = -7 m/s². Gia tốc âm cho thấy chuyển động chậm dần."
+      },
+      {
+        "prompt": "Hãy tính độ dịch chuyển của chuyển động có độ thị (v - t) về ở Hình 9.3b. Biết mỗi cạnh ô vuông nhở trên trục Ov có độ dài là 2 m/s, trên trục hoành ứng với 1 s.",
+        "solution": "Độ dịch chuyển được tính bằng diện tích dưới đồ thị (v - t). S = 3.5 = 15 m"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f9-1",
+        "caption": "Hình 9.1: Các dạng đồ thị vận tốc – thời gian trong chuyển động thẳng biến đổi đều",
+        "description": "Ba đồ thị (v - t) tuyến tính: a) chuyển động nhanh dần từ v₀ > 0; b) chuyển động nhanh dần từ v₀ = 0; c) chuyển động chậm dần"
+      },
+      {
+        "id": "f9-2",
+        "caption": "Hình 9.2: Đồ thị vận tốc – thời gian của chuyển động trong siêu thị",
+        "description": "Đồ thị (v - t) của một chiếc xe di chuyển trong siêu thị, cho thấy các giai đoạn tăng tốc, chuyển động đều và giảm tốc"
+      },
+      {
+        "id": "f9-3",
+        "caption": "Hình 9.3: Độ thị (v - t) của chuyển động thẳng biến đổi đều",
+        "description": "Hai ví dụ đồ thị (v - t): a) độ dịch chuyển S = 3.5 = 15 m với các mốc thời gian rõ ràng; b) đồ thị với hình thang và các độ dịch chuyển tương ứng"
+      },
+      {
+        "id": "f9-4",
+        "caption": "Hình 9.4: Đồ thị vận tốc – thời gian cho bài tập",
+        "description": "Đồ thị (v - t) tuyến tính giảm dần từ 8 m/s xuống 0, biểu diễn chuyển động chậm dần đều trong 9 giây"
+      }
+    ]
+  },
+  "b10": {
+    "id": "b10",
+    "title": "Sự Rơi Tự Do",
+    "grade": 10,
+    "pageRange": [
+      44,
+      46
+    ],
+    "summary": "Bài học tìm hiểu về sự rơi tự do - chuyển động thẳng nhanh dần đều trong trường hấp dẫn của Trái Đất. Nội dung bao gồm khái niệm sự rơi tự do, đặc điểm và tính chất của chuyển động rơi tự do, cùng các ứng dụng thực tiễn.",
+    "learningObjectives": [
+      "Hiểu khái niệm sự rơi tự do và các điều kiện để xảy ra sự rơi tự do",
+      "Nắm vững đặc điểm, tính chất của chuyển động rơi tự do",
+      "Vận dụng kiến thức về sự rơi tự do để giải quyết các bài toán thực tiễn"
+    ],
+    "sections": [
+      {
+        "heading": "I. Sự Rơi Trong Không Khí",
+        "bullets": [
+          "Sự rơi của các vật trong không khí là chuyển động thẳng gặp ngoại lực từ không khí",
+          "Nếu vật rơi trong không khí mà do lớn của lực cản không đáng kể so với trọng lực thì sự rơi được coi là rơi tự do",
+          "Các thí nghiệm về sự rơi trong ống hút chân không (Hình 10.1) cho thấy sự rơi của các vật như nhau"
+        ]
+      },
+      {
+        "heading": "II. Sự Rơi Tự Do",
+        "bullets": [
+          "Sự rơi tự do là sự rơi chỉ dưới tác dụng của trọng lực",
+          "Nếu vật rơi trong không khí mà do lớn của lực cản không đáng kể so với trọng lực cùng cơi là rơi tự do"
+        ]
+      },
+      {
+        "heading": "1. Sự rơi tự do",
+        "bullets": [
+          "Sự rơi tự do là sự rơi chỉ dưới tác dụng của trọng lực",
+          "Nếu vật rơi trong không khí mà do lớn của lực cản không đáng kể so với trọng lực cùng cơi là rơi tự do"
+        ]
+      },
+      {
+        "heading": "2. Đặc điểm của chuyển động rơi tự do",
+        "bullets": [
+          "a) Phương và chiều của chuyển động rơi tự do: Vì trong lực có phương thẳng đứng, chiều từ trên xuống nên có thể dự đoán sự rơi chỉ dưới tác dụng của trong lực cùng có phương thẳng đứng, chiều từ trên xuống",
+          "b) Tính chất của chuyển động rơi tự do: Quan sát sự rơi tự do ta thấy độ là chuyển động thẳng nhanh dần. Tuy nhiên, để biết sự rơi tự do có phải là chuyển động thẳng nhanh dần đều hay không thì phải dựa vào nghiệm. Vì vật rơi tự do rất nhanh nên người ta thường dùng phương pháp chụp ảnh hoạt nghiệm (dùng máy ảnh đặc biệt chụp liên tiếp vật chuyển động sau những khoảng thời gian bằng nhau) để có thể đo quãng đường rơi được sau những khoảng thời gian bằng nhau"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Sự rơi tự do",
+        "definition": "Sự rơi chỉ dưới tác dụng của trọng lực, là một chuyển động thẳng nhanh dần đều"
+      },
+      {
+        "term": "Gia tốc rơi tự do",
+        "definition": "Gia tốc của chuyển động rơi tự do, thường ký hiệu là g, có giá trị xấp xỉ 9,8 m/s² hoặc 10 m/s²"
+      },
+      {
+        "term": "Lực cản không khí",
+        "definition": "Lực tác dụng của không khí lên vật rơi, cần phải nhỏ so với trọng lực để coi sự rơi là rơi tự do"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "s = \\frac{1}{2}gt^2",
+        "meaning": "Quãng đường rơi tự do theo thời gian từ kết quả chụp ảnh hoạt nghiệm"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Năm 1971, nhà du hành và trụ nhân Mỹ David Scott đã đóng thời thá rơi trên Mặt Trăng một chiếc lông chim và một chiếc búa có cùng một độ cao và nhân thấy cả hai đều rơi xuống như nhau. Em có suy nghi gì về hiện tương này?",
+        "solution": "Trên Mặt Trăng, do không có không khí nên không có lực cản không khí. Cả lông chim và búa đều rơi tự do dưới tác dụng của trọng lực Mặt Trăng, nên chúng rơi với cùng gia tốc và từ cùng độ cao nên thời gian rơi bằng nhau"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f10.1",
+        "caption": "Hình 10.1. Thí nghiệm về sự rơi tự do",
+        "description": "Hai hình ảnh so sánh: a) Trong ống có không khí - các vật rơi với tốc độ khác nhau; b) Trong ống không khí - các vật rơi cùng tốc độ"
+      },
+      {
+        "id": "f10.2",
+        "caption": "Hình 10.2",
+        "description": "Thiết bị thí nghiệm gồm quả nặng, dây đơi và giá đỡ, dùng để kiểm tra sự rơi tự do"
+      },
+      {
+        "id": "f10.3",
+        "caption": "Hình 10.3. Eke tam giác vuông cân",
+        "description": "Eke tam giác vuông cân dùng để kiểm tra xem sàn lớp minh có phẳng hay không"
+      }
+    ]
+  },
+  "b11": {
+    "id": "b11",
+    "title": "Thực hành: Đo gia tốc rơi tự do",
+    "grade": 10,
+    "pageRange": [
+      47,
+      48
+    ],
+    "summary": "Bài thực hành hướng dẫn cách đo gia tốc rơi tự do bằng dụng cụ thí nghiệm, từ đó xác định được giá trị gia tốc rơi tự do của trái đất tại một địa điểm cụ thể.",
+    "learningObjectives": [
+      "Xác định gia tốc rơi tự do của trụ thép theo công thức nào",
+      "Đề xuất định gia tốc rơi tự do của trụ thép cần độ các đại lượng nào",
+      "Làm thế nào để trụ thép rơi qua công quang điện",
+      "Cần đặt chế độ đo của đồng hồ ở vị trí nào để đo được đại lượng cần đo"
+    ],
+    "sections": [
+      {
+        "heading": "I. Dụng cụ thí nghiệm",
+        "bullets": [
+          "Măng dẫn, có gắn dây dẫn (1)",
+          "Vật băng thép hình trụ (2)",
+          "Nam châm điện N, dùng giữ và thả trụ thép (3)",
+          "Công quang điện E (4)",
+          "Giá đỡ có cốc ba chân, có vít chỉnh cân bằng và trụ thép (5)",
+          "Đồng hồ đo thời gian hiển số (6)",
+          "Công tắc kép (7)"
+        ]
+      },
+      {
+        "heading": "II. Thiết kế phương án thí nghiệm",
+        "bullets": [
+          "Thảo luận về phương án thí nghiệm dựa trên hoạt động sau: Thả trụ thép rơi qua công quang điện trên măng dẫn và trả lời câu hỏi",
+          "Xác định gia tốc rơi tự do của trụ thép theo công thức nào?",
+          "Để xác định gia tốc rơi tự do của trụ thép cần đo các đại lượng nào?",
+          "Làm thế nào để trụ thép rơi qua công quang điện?",
+          "Cần đặt chế độ đo của đồng hồ ở vị trí nào để đo được đại lượng cần đo?"
+        ]
+      },
+      {
+        "heading": "III. Tiến hành thí nghiệm",
+        "bullets": [
+          "Cắm nam châm điện vào ô A và công quang vào ô B ở mặt sau của động hộ đo thời gian hiển số (xem Hình 6.2)",
+          "Đặt MODE động hộ đo thời gian hiển số ở chế độ thích hợp",
+          "Đặt trụ thép tại vị trí xuất phát với nam châm điện N và bị giữ lại ở đó",
+          "Nhấn nút RESET của động hộ MC964 để chuyển các số hiển thị về giá trị ban đầu 0.000",
+          "Nhấn nút của hộp công tắc kép để ngắt điện vào nam châm điện: Trụ thép rơi xuống và chuyển động đi qua công quang điện",
+          "Ghi lại các giá trị thời gian hiển thị trên động hộ vào Bảng 11.1",
+          "Dịch chuyển công quang điện ra xa hơn so với vị trí ban đầu, thực hiện lại các tao 3, 4, 5, 6 bớn lần nữa. Ghi các giá trị thời gian t trong ứng với quãng đường s vào Bảng 11.1 trong báo cáo thực hành"
+        ]
+      },
+      {
+        "heading": "Lý thuyết liên quan",
+        "bullets": [
+          "Gia tốc rơi tự do có các công thức của chuyển động nhanh dần và đều không vận tốc ban đầu",
+          "Chuyển động rơi tự do là chuyển động thẳng nhanh dần đều theo phương thẳng đứng, chiều từ trên xuống",
+          "Tại một nơi nhất định trên Trái Đất và ở gần mặt đất, mọi vật đều rơi tự do với cùng gia tốc g. Gia tốc rơi tự do ở các nơi khác nhau trên Trái Đất thì khác nhau",
+          "Các công thức của gia tốc rơi tự do: Gia tốc a = g = hằng số; Vận tốc tức thời: v_t = g.t; Độ lớn của độ dịch chuyển = Quãng đường đi được: d = \\frac{1}{2}g.t^2 - \\frac{v_t^2}{2.g}"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Gia tốc rơi tự do",
+        "definition": "Gia tốc của vật rơi tự do, ký hiệu là g, giá trị của g phụ thuộc vào vị độ địa lí và độ cao. Ở gần bề mặt Trái Đất người ta thường lấy g = 9,8 m/s²"
+      },
+      {
+        "term": "Rơi tự do",
+        "definition": "Chuyển động rơi chỉ chịu tác dụng của trong lực gọi là rơi tự do"
+      },
+      {
+        "term": "Vận tốc tức thời",
+        "definition": "Vận tốc của vật tại một thời điểm nhất định, ký hiệu v_t"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "d = s = \\frac{1}{2}g.t^2",
+        "meaning": "Quãng đường rơi được trong thời điểm t (từ lúc bắt đầu rơi)"
+      },
+      {
+        "latex": "v_t = g.t",
+        "meaning": "Vận tốc tức thời tại thời điểm t"
+      },
+      {
+        "latex": "v_t^2 = 2.g.s",
+        "meaning": "Liên hệ giữa vận tốc và quãng đường đi được với gia tốc"
+      },
+      {
+        "latex": "a = g = \\text{hằng số}",
+        "meaning": "Gia tốc rơi tự do là hằng số tại một nơi nhất định"
+      },
+      {
+        "latex": "d = \\frac{1}{2}g.t^2 - \\frac{v_t^2}{2.g}",
+        "meaning": "Độ lớn của độ dịch chuyển bằng quãng đường đi được"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một người thả một hòn bi từ trên cao xuống và do được thời gian rơi là 3,1 s. Bỏ qua sức cản không khí. Lấy g = 9,8 m/s². a) Tính độ cao của hòn bi so với mặt đất và vận tốc lúc chạm đất. b) Tính quãng đường rơi được trong 0,5 s cuối trước khi chạm đất.",
+        "solution": "a) Sử dụng công thức d = \\frac{1}{2}g.t^2 để tính độ cao; v_t = g.t để tính vận tốc lúc chạm đất. b) Tính quãng đường rơi trong 2,6 s rồi trừ đi quãng đường rơi trong 3,1 s để được quãng đường rơi trong 0,5 s cuối cùng"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f11-1",
+        "caption": "Hình 11.1. Bộ dụng cụ thí nghiệm đo gia tốc rơi tự do",
+        "description": "Bộ dụng cụ gồm: măng dẫn (1), vật băng thép hình trụ (2), nam châm điện (3), công quang điện (4), giá đỡ (5), đồng hồ đo thời gian hiển số (6), công tắc kép (7). Các bộ phận được lắp ráp lại với nhau để tạo thành một hệ thống đo gia tốc rơi tự do hoàn chỉnh"
+      }
+    ]
+  },
+  "b12": {
+    "id": "b12",
+    "title": "Chuyển động nêm",
+    "grade": 10,
+    "pageRange": [
+      49,
+      59
+    ],
+    "summary": "Bài học về chuyển động nêm bao gồm hai loại: chuyển động nêm ngang (có vận tốc ban đầu theo phương ngang) và chuyển động nêm xiên (có vận tốc ban đầu theo phương xiên). Cung cấp công thức tính tầm cao, tầm xa và thời gian bay cho từng trường hợp.",
+    "learningObjectives": [
+      "Phân tích chuyển động nêm thành hai chuyển động thành phần: theo phương ngang (đều) và theo phương thẳng đứng (nhanh dần đều)",
+      "Xác định các đại lượng trong chuyển động nêm ngang và nêm xiên",
+      "Áp dụng công thức tính tầm cao, tầm xa cho chuyển động nêm"
+    ],
+    "sections": [
+      {
+        "heading": "I. Chuyển động nêm ngang",
+        "bullets": [
+          "Khái niệm: chuyển động có vận tốc ban đầu theo phương ngang và chuyển động dưới tác dụng của trọng lực",
+          "Phân tích: chuyển động thẳng đều theo phương ngang; chuyển động rơi tự do theo phương thẳng đứng",
+          "Công thức: H = (1/2)g.t² - t = √(2H/g); L = v₀.t = v₀√(2H/g)"
+        ]
+      },
+      {
+        "heading": "II. Chuyển động nêm xiên",
+        "bullets": [
+          "Khái niệm: chuyển động với vận tốc ban đầu theo phương xiên so với phương ngang",
+          "Phân tích: chuyển động thành phần theo hai phương như chuyển động nêm ngang",
+          "Công thức tầm cao: H = (v₀² sin²α)/(2g)",
+          "Công thức tầm xa: L = (v₀² sin 2α)/g"
+        ]
+      },
+      {
+        "heading": "III. Các lực cân bằng và không cân bằng",
+        "bullets": [
+          "Lực cân bằng: khi tổng hợp lực bằng 0, vật không đổi trạng thái chuyển động",
+          "Lực không cân bằng: khi tổng hợp lực khác 0, vật đổi vận tốc (thay đổi chuyển động)",
+          "Quy tắc hợp lực: lực thay thế các lực thành phần, có tác dụng tương tự"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Chuyển động nêm ngang",
+        "definition": "Chuyển động có vận tốc ban đầu theo phương ngang, chịu tác dụng của trọng lực theo phương thẳng đứng"
+      },
+      {
+        "term": "Chuyển động nêm xiên",
+        "definition": "Chuyển động có vận tốc ban đầu theo phương xiên với phương ngang, chịu tác dụng của trọng lực"
+      },
+      {
+        "term": "Tầm cao",
+        "definition": "Độ cao cực đại mà vật đạt được trong quá trình chuyển động nêm"
+      },
+      {
+        "term": "Tầm xa",
+        "definition": "Khoảng cách theo phương ngang từ vị trí phát động đến vị trí vật rơi xuống"
+      },
+      {
+        "term": "Lực cân bằng",
+        "definition": "Tổng hợp lực bằng 0, vật không đổi trạng thái chuyển động"
+      },
+      {
+        "term": "Lực không cân bằng",
+        "definition": "Tổng hợp lực khác 0, làm vật thay đổi vận tốc và trạng thái chuyển động"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "H = \\frac{1}{2}g.t^2",
+        "meaning": "Công thức tính độ cao trong chuyển động nêm ngang"
+      },
+      {
+        "latex": "t = \\sqrt{\\frac{2H}{g}}",
+        "meaning": "Thời gian rơi của vật trong chuyển động nêm ngang"
+      },
+      {
+        "latex": "L = v_0 \\sqrt{\\frac{2H}{g}}",
+        "meaning": "Tầm xa trong chuyển động nêm ngang (L = v₀.t)"
+      },
+      {
+        "latex": "H = \\frac{v_0^2 \\sin^2\\alpha}{2g}",
+        "meaning": "Tầm cao trong chuyển động nêm xiên"
+      },
+      {
+        "latex": "L = \\frac{v_0^2 \\sin 2\\alpha}{g}",
+        "meaning": "Tầm xa trong chuyển động nêm xiên"
+      },
+      {
+        "latex": "\\vec{F} = \\vec{F_1} + \\vec{F_2} + \\vec{F_3} + ...",
+        "meaning": "Quy tắc hợp lực vector"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một người nhảy xa từ một đài quan sát ven biển, nêm một hòn đá theo phương ngang với vận tốc 12 m/s. Biết độ cao của đài là 40 m. a) Sau bao lâu thì hòn đã chạm mặt biển? b) Tầm xa L của hòn đá là bao nhiêu?",
+        "solution": "a) Từ H = (1/2)g.t², với H = 40 m, g = 9,8 m/s²: t = √(2H/g) = √(80/9,8) = 2,86 s. b) L = v₀.t = 12 × 2,86 = 34,3 m"
+      },
+      {
+        "prompt": "Một người nhảy xa với vận tốc ban đầu 7,5 m/s theo phương xiên 30° với phương ngang. Bỏ qua sức cản của không khí, g = 9,8 m/s². a) Tính vận tốc theo thành phần ngang và thẳng đứng. b) Tính tầm cao H. c) Tính tầm xa L.",
+        "solution": "a) v₀ₓ = 7,5 cos 30° = 6,5 m/s; v₀ᵧ = 7,5 sin 30° = 3,75 m/s. b) H = (3,75²)/(2×9,8) = 0,717 m. c) L = (7,5² sin 60°)/9,8 = 4,98 m"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f12-1",
+        "caption": "Hình 12.1. Thí nghiệm về chuyển động nêm ngang",
+        "description": "Sơ đồ thí nghiệm với bàn đặp nhè B chuyển động rơi của vật theo phương ngang khối giả độ với vận tốc vₚ"
+      },
+      {
+        "id": "f12-2",
+        "caption": "Hình 12.2. Ảnh chụp hoạt nghiệm chuyển động của hai viên bi A và B",
+        "description": "Ảnh chụp nối tiếp cho thấy chuyển động thẳng đều theo phương ngang và chuyển động thẳng đều theo phương thẳng đứng"
+      },
+      {
+        "id": "f12-3",
+        "caption": "Hình 12.3. Phân tích chuyển động nêm ngang",
+        "description": "Sơ đồ vector vận tốc và quỹ đạo chuyển động, thể hiện thành phần ngang vₓ và thẳng đứng vᵧ, v"
+      },
+      {
+        "id": "f12-4",
+        "caption": "Hình 12.4. Đồ thị chuyển động nêm ngang",
+        "description": "Đồ thị độ cao H theo tầm xa L, là một đường parabol"
+      },
+      {
+        "id": "f12-5",
+        "caption": "Hình 12.5. Thí nghiệm kiểm tra công thức chuyển động nêm",
+        "description": "Sơ đồ thí nghiệm dùng thước kẻ giúp viên bị (sắt, thuỷ tinh và gỗ) cùng kích thước, trên một tấm thuỷ tinh đặt nghiêng"
+      },
+      {
+        "id": "f12-6",
+        "caption": "Hình 12.6. Ảnh chụp hoạt nghiệm chuyển động nêm xiên",
+        "description": "Ảnh chụp trái bóng tennis lên cao theo phương xiên tạo thành quỹ đạo parabolic"
+      },
+      {
+        "id": "f12-7",
+        "caption": "Hình 12.7. Phân tích chuyển động nêm xiên",
+        "description": "Đồ thị quỹ đạo chuyển động nêm xiên, thể hiện tầm cao H, tầm xa L, góc ném α, và vận tốc ban đầu v₀"
+      },
+      {
+        "id": "f12-8",
+        "caption": "Hình 12.8. Đồ thị chuyển động nêm xiên",
+        "description": "Đồ thị độ cao H theo tầm xa L cho chuyển động nêm xiên, là đường parabol"
+      },
+      {
+        "id": "f13-1",
+        "caption": "Hình 13.1. Ví dụ về tổng hợp lực",
+        "description": "Hai người kéo một chiếc hộp bằng hai lực F₁ và F₂ có tác dụng như một lực F"
+      },
+      {
+        "id": "f13-4",
+        "caption": "Hình 13.4. Hai lực F₁ và F₂ cân bằng nhau",
+        "description": "Sơ đồ hai lực bằng nhau, ngược chiều tác dụng lên vật, khi F = F₁ - F₂ = 0"
+      },
+      {
+        "id": "f13-5",
+        "caption": "Hình 13.5. Quan sát quyển sách trên mặt bàn",
+        "description": "Hình ảnh một cuốn sách đặt trên mặt bàn để minh họa các lực cân bằng"
+      },
+      {
+        "id": "f13-6",
+        "caption": "Hình 13.6. Ô tô chịu các lực không cân bằng",
+        "description": "Sơ đồ lực tác dụng lên ô tô với lực kéo về phía trước F₁ và lực cản ngược chiều"
+      },
+      {
+        "id": "f13-7",
+        "caption": "Hình 13.7. Quan sát động lực học",
+        "description": "Các hình ảnh minh họa: bàn chỉ nằm yên, dùng tay đẩy bàn chuyển động, quả bóng trên mặt bàn, quả bóng rơi dưới bàn"
+      }
+    ]
+  },
+  "b15": {
+    "id": "b15",
+    "title": "Định Luật 2 Newton",
+    "grade": 10,
+    "pageRange": [
+      63,
+      66
+    ],
+    "summary": "Định luật 2 Newton phát biểu mối liên hệ giữa lực tác dụng, khối lượng và gia tốc của vật. Khối lượng là đại lượng đặc trưng cho mức quán tính của vật.",
+    "learningObjectives": [
+      "Hiểu được nội dung định luật 2 Newton",
+      "Biết khối lượng là đại lượng quán tính",
+      "Vận dụng định luật 2 Newton để giải quyết các bài toán động lực học"
+    ],
+    "sections": [
+      {
+        "heading": "I. ĐỊNH LUẬT 2 NEWTON",
+        "bullets": [
+          "Từ những quan sát và thí nghiệm cho thấy lực tác dụng lên vật không chỉ phụ thuộc vào độ lớn mà còn phụ thuộc vào khối lượng của vật",
+          "Mối liên hệ giữa ba đại lượng: gia tốc, lực và khối lượng được Newton khái quát trong một phương trình vectơ gọi là định luật 2 Newton",
+          "Gia tốc của một vật cùng hướng với lực tác dụng lên vật",
+          "Độ lớn của gia tốc tỷ lệ thuận với độ lớn của lực và tỷ lệ nghịch với khối lượng của vật",
+          "Trong trường hợp vật chịu nhiều lực tác dụng, thì lực là hợp lực của các lực đó"
+        ]
+      },
+      {
+        "heading": "II. KHỐI LƯỢNG VÀ QUÁN TÍNH",
+        "bullets": [
+          "Khối lượng trong định luật 2 Newton được gọi là khối lượng quán tính",
+          "Khối lượng là đại lượng vô hướng, dương, không đổi với một vật và có tính chất cộng được",
+          "Khối lượng của vật là đại lượng đặc trưng cho mức quán tính lớn hơn",
+          "Nếu có nhiều vật khác nhau lần lượt chiếu tác dụng của cùng một lực không đổi, thì vật nào có khối lượng lớn hơn sẽ có gia tốc nhỏ hơn"
+        ]
+      },
+      {
+        "heading": "III. THÍ NGHIỆM MINH HỌA ĐỊNH LUẬT 2 NEWTON",
+        "bullets": [
+          "Một trượt có khối lượng M = 200 g được buộc vào một sợi dây qua rãnh của rồng rọc",
+          "Một hộp đựng 10 quả nặng giống nhau, có cùng khối lượng m = 50 g",
+          "Một máng trượt tâm khi với các lỗ nhỏ thời không khí",
+          "Bộ đếm thời gian gồm một đồng hồ điện tử, hai công quang đặt cách nhau 0,5 m và tấm chắn sáng dài 10 cm",
+          "Vật ở thí nghiệm này phải được hiểu là hệ vật gồm xe trượt và các quả nặng"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Định luật 2 Newton",
+        "definition": "Gia tốc của một vật cùng hướng với lực tác dụng lên vật và độ lớn của gia tốc tỷ lệ thuận với độ lớn của lực, tỷ lệ nghịch với khối lượng của vật"
+      },
+      {
+        "term": "Khối lượng quán tính",
+        "definition": "Khối lượng trong định luật 2 Newton, là đại lượng đặc trưng cho mức quán tính của vật"
+      },
+      {
+        "term": "Quán tính",
+        "definition": "Tính chất của vật thể cản lại sự thay đổi vận tốc của nó"
+      },
+      {
+        "term": "Gia tốc",
+        "definition": "Đại lượng vectơ biểu thị sự thay đổi vận tốc theo thời gian"
+      },
+      {
+        "term": "Lực",
+        "definition": "Đại lượng vectơ gây ra sự thay đổi vận tốc hoặc hình dáng của vật"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "\\vec{a} = \\frac{\\vec{F}}{m}",
+        "meaning": "Công thức định luật 2 Newton - gia tốc tỷ lệ thuận với lực và tỷ lệ nghịch với khối lượng"
+      },
+      {
+        "latex": "\\vec{F} = m\\vec{a}",
+        "meaning": "Dạng khác của định luật 2 Newton - lực bằng khối lượng nhân với gia tốc"
+      },
+      {
+        "latex": "1 \\text{ N} = 1 \\text{ kg} \\cdot 1 \\text{ m/s}^2",
+        "meaning": "Định nghĩa đơn vị Newton - lực tác dụng lên khối lượng 1 kg để tạo gia tốc 1 m/s²"
+      },
+      {
+        "latex": "s = v_0 t + \\frac{1}{2}at^2",
+        "meaning": "Công thức tính quãng đường chuyển động có gia tốc không đổi"
+      },
+      {
+        "latex": "a = \\frac{2s}{t^2}",
+        "meaning": "Công thức tính gia tốc khi vật bắt đầu từ trạng thái đứng yên"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Sử dụng bảng 15.1, hãy về độ thị chỉ sự phụ thuộc của gia tốc vào F khi m + M = 0,5 kg",
+        "solution": "Vẽ đồ thị với trục hoành là lực kéo F (N), trục tung là gia tốc a (m/s²), cho thấy mối quan hệ tỷ lệ thuận giữa F và a"
+      },
+      {
+        "prompt": "Vào F = 1 N, hãy về độ thị chỉ sự phụ thuộc của gia tốc vào 1/(m+M)",
+        "solution": "Vẽ đồ thị với trục hoành là 1/(m+M) (1/kg), trục tung là gia tốc a (m/s²), cho thấy mối quan hệ tỷ lệ thuận giữa a và 1/(m+M)"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f15-4",
+        "caption": "Hình 14.4",
+        "description": "Hình minh họa hai cách cầm búa xương: a) Đặp manh căn búa xương dặt như Hình 14.4a, b) Đặp manh đầu búa xương dặt như Hình 14.4b"
+      },
+      {
+        "id": "f15-1",
+        "caption": "Hình 15.1",
+        "description": "Đồ thị biểu diễn mối quan hệ giữa gia tốc a (m/s²) và lực F (N), cho thấy mối quan hệ tuyến tính giữa lực và gia tốc"
+      },
+      {
+        "id": "f15-2",
+        "caption": "Hình 15.2. Thí nghiệm minh hoạ định luật 2 Newton",
+        "description": "Bộ dụng cụ gồm: (1) Tấm chắn, (2) Máng trượt đâm khí, (3) Công quang đèn 1, (4) Công quang đèn 2, (5) Rồng rọc, (6) Các quả nặng, (7) Đồng hồ đo thời gian hiển số, (8) Cảm biến tử, (9) Bom khí"
+      },
+      {
+        "id": "f15-3",
+        "caption": "Hình 15.3",
+        "description": "Hai đồ thị: a) Đồ thị a theo F khi m+M = 0,5 kg, b) Đồ thị a theo 1/(m+M) khi F = 1 N"
+      }
+    ]
+  },
+  "b16": {
+    "id": "b16",
+    "title": "Định luật 3 Newton và Trọng lực, Lực căng",
+    "grade": 10,
+    "pageRange": [
+      67,
+      71
+    ],
+    "summary": "Bài học giới thiệu định luật 3 Newton về tác dụng và phản tác dụng giữa hai vật, cùng với các khái niệm về trọng lực và lực căng trong cuộc sống hàng ngày.",
+    "learningObjectives": [
+      "Hiểu và vận dụng định luật 3 Newton",
+      "Phân biệt trọng lực và lực căng",
+      "Xác định các cặp lực trong các tình huống khác nhau",
+      "Phân tích các lực tác dụng lên vật"
+    ],
+    "sections": [
+      {
+        "heading": "I. Định luật 3 Newton",
+        "bullets": [
+          "Lực tương tác giữa hai vật: Khi vật A tác dụng lên vật B một lực thì vật B cũng tác dụng trở lại vật A một lực",
+          "Hai lực này gọi là hai lực trực đối",
+          "Biểu thức: F̅_{AB} = -F̅_{BA}",
+          "Hai lực trực đối có cùng độ lớn, ngược chiều, cùng phương, đặt lên hai vật khác nhau"
+        ]
+      },
+      {
+        "heading": "1. Lực tương tác giữa hai vật",
+        "bullets": [
+          "Lực không tồn tại độc lập mà luôn xuất hiện thành từng cặp",
+          "Các lực huỷ hoại đẩy luôn xuất hiện thành cặp giữa hai vật"
+        ]
+      },
+      {
+        "heading": "2. Định luật 3 Newton",
+        "bullets": [
+          "Trong một trường hợp, khi vật A tác dụng lên vật B một lực thì vật B cũng tác dụng trở lại vật A một lực",
+          "Hai lực này tác dụng theo cùng một phương, cùng độ lớn, nhưng ngược chiều, điểm đặt lên hai vật khác nhau"
+        ]
+      },
+      {
+        "heading": "II. Các đặc điểm của lực và phân lực",
+        "bullets": [
+          "Cặp lực và phân lực có những đặc điểm gì?",
+          "Cặp lực và phân lực có phải là hai lực cần bằng hay không? Tại sao?"
+        ]
+      },
+      {
+        "heading": "I. Trọng lực",
+        "bullets": [
+          "Trọng lực là lực hấp dẫn do Trái Đất tác dụng lên vật gây ra cho vật gia tốc rơi tự do",
+          "Trong lực có kí hiệu là vector P",
+          "Ở gần Trái Đất trong lực có: Phương thẳng đứng, Chiều từ trên xuống, Điểm đặt gọi là trọng tâm của vật",
+          "Công thức của trọng lực: P̅ = mg",
+          "Áp dụng định luật 2 Newton vào trường hợp vật rơi tự do, ta tìm được công thức của trọng lực"
+        ]
+      },
+      {
+        "heading": "2. Trọng lượng",
+        "bullets": [
+          "Độ lớn của trọng lực tác dụng lên một vật gọi là trọng lượng của vật",
+          "Công thức tính trọng lượng: P = mg",
+          "Trọng lượng của một vật có thể do bảng lực kế hoặc cân lò xo (Hình 17.2)"
+        ]
+      },
+      {
+        "heading": "3. Phân biệt trong lượng và khối lượng",
+        "bullets": [
+          "Trọng lượng của một vật thay đổi khi đem đến một nơi khác có gia tốc rơi tự do khác",
+          "Khối lượng là số đo lượng chất của vật. Vì vậy, khối lượng của một vật không thay đổi khi ta chuyển nó từ nơi này đến nơi khác",
+          "Định nghĩa trong tâm của một vật phẳng, mỏng: Chuẩn bị: một số tấm bia các-tông ở Hình 17.3 và giải thích rõ cách làm của em",
+          "Nếu thêm một số vị dụ trong thực tế và thảo luận để kiểm chứng kết luận sau: 'Trong tâm của các vật phẳng, mỏng và có dạng hình học đối xứng nằm ở tâm đối xứng của vật'"
+        ]
+      },
+      {
+        "heading": "II. Lực căng",
+        "bullets": [
+          "Khi dùng hai tay kéo dãn một sợi dây cao su, ta thấy dây cao su cùng kéo trở lại hai tay",
+          "Khi một sợi dây bị kéo thì ở tại mọi điểm trên dây, kế cả hai đầu dây xuất hiện lực để chống lại sự kéo (Hình 17.4), lực này gọi là lực căng, kí hiệu là T̅"
+        ]
+      },
+      {
+        "heading": "1. Dựa vào Hình 17.4, hãy thảo luận và phân tích để làm sáng tổ các ý sau đây",
+        "bullets": [
+          "Những vật nào chịu lực căng của dây?",
+          "Lực căng có phương, chiều thế nào?",
+          "Từ đó, nếu những đặc điểm (về phương, chiều, điểm đặt) của lực căng"
+        ]
+      },
+      {
+        "heading": "2. Hãy chỉ ra điểm đặt, phương, chiều của lực căng trong Hình 17.5a và 17.5b",
+        "bullets": []
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Định luật 3 Newton",
+        "definition": "Khi vật A tác dụng lên vật B một lực thì vật B cũng tác dụng trở lại vật A một lực. Hai lực này có cùng độ lớn, ngược chiều, cùng phương và đặt lên hai vật khác nhau."
+      },
+      {
+        "term": "Trọng lực",
+        "definition": "Lực hấp dẫn do Trái Đất tác dụng lên vật, có phương thẳng đứng, chiều từ trên xuống, điểm đặt ở trọng tâm của vật."
+      },
+      {
+        "term": "Trọng lượng",
+        "definition": "Độ lớn của trọng lực tác dụng lên một vật, được tính bằng P = mg."
+      },
+      {
+        "term": "Lực căng",
+        "definition": "Lực xuất hiện tại mọi điểm trên một sợi dây khi bị kéo, có phương dọc theo dây và chiều kéo lại (chống lại sự kéo)."
+      },
+      {
+        "term": "Trọng tâm",
+        "definition": "Điểm đặt của trọng lực, là điểm mà lực tác dụng như để gây ra gia tốc rơi tự do."
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "\\vec{F}_{AB} = -\\vec{F}_{BA}",
+        "meaning": "Biểu thức định luật 3 Newton: lực tác dụng của vật A lên vật B bằng âm lực tác dụng của vật B lên vật A"
+      },
+      {
+        "latex": "\\vec{P} = m\\vec{g}",
+        "meaning": "Công thức tính trọng lực: trọng lực bằng khối lượng nhân với gia tốc rơi tự do"
+      },
+      {
+        "latex": "P = mg",
+        "meaning": "Công thức tính trọng lượng (độ lớn): trọng lượng bằng khối lượng nhân với gia tốc rơi tự do"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Lực kế trong Hình 17.2 đang chỉ ở vạch 1 N. a) Tính trọng lượng và khối lượng của vật bằng lực kế. Lấy g = 9,8 m/s².",
+        "solution": "Từ lực kế chỉ 1 N, ta suy ra trọng lượng P = 1 N. Dùng công thức P = mg, ta tính được khối lượng m = P/g = 1/9,8 ≈ 0,102 kg ≈ 102 g."
+      },
+      {
+        "prompt": "b) Biểu diễn các lực tác dụng lên vật (sem vật là chất điểm).",
+        "solution": "Các lực tác dụng lên vật gồm: trọng lực P hướng thẳng đứng xuống dưới, và lực căng T của dây hướng thẳng đứng lên trên."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f16-1",
+        "caption": "Hình 16.1 Thí nghiệm về sự tương tác giữa các vật",
+        "description": "Hình mô tả các thí nghiệm về lực tương tác: a) Thanh sắt và thanh nam chạm được treo, b) Xe lan 1 có khối lượng m1 và xe lan 2 có khối lượng m2 được kéo bởi một lò xo nằm giữa"
+      },
+      {
+        "id": "f16-2",
+        "caption": "Hình 16.2 Cặp lực và phân lực",
+        "description": "Hình mô tả hai trường hợp: a) Lực F_AB tác dụng lên vật A và F_BA tác dụng lên vật B theo cùng phương, ngược chiều, b) Lực F_BA và F_AB tác dụng lên cùng một vật"
+      },
+      {
+        "id": "f16-3",
+        "caption": "Hình 16.3 Các ứng dụng về lực",
+        "description": "Hình mô tả các tình huống: a) Sách nằm trên bàn, b) Búa đóng đinh vào gỗ, c) Thanh nằm trên hai giá đỡ"
+      },
+      {
+        "id": "f16-4",
+        "caption": "Hình 16.4 Một ô tô chuyển động trên một đường thẳng",
+        "description": "Hình mô tả một chiếc ô tô xanh với các lực tác dụng: lực do mặt đường đẩy ô tô về phía trước và lực do ô tô tác dụng lên mặt đường về phía sau"
+      },
+      {
+        "id": "f17-1",
+        "caption": "Hình 17.1 Trọng lực tác dụng lên vật",
+        "description": "Hình mô tả một cô gái cầm một quả cầu xanh. Mũi tên biểu diễn trọng lực hướng thẳng đứng xuống dưới"
+      },
+      {
+        "id": "f17-2",
+        "caption": "Hình 17.2 Đo trọng lượng của vật",
+        "description": "Hình mô tả một lực kế lò xo với một quả cầu đen treo ở dưới, đang chỉ vạch 1 N trên thang đo"
+      },
+      {
+        "id": "f17-3",
+        "caption": "Hình 17.3 Xác định trọng tâm",
+        "description": "Hình mô tả một mảnh bìa (có hình dạng không đều) được treo bằng một sợi dây và chịu tác dụng của trọng lực"
+      },
+      {
+        "id": "f17-4",
+        "caption": "Hình 17.4 Lực căng trong sợi dây",
+        "description": "Hình mô tả ba tình huống: a) Hai tay kéo căng một sợi dây cao su, b) Một sợi dây bị kéo tại một điểm với lực căng T, c) Một khối lập phương được treo bằng sợi dây với lực căng T"
+      },
+      {
+        "id": "f17-5",
+        "caption": "Hình 17.5 Lực căng trong các tình huống khác nhau",
+        "description": "Hình mô tả: a) Hai người kéo giãn một sợi dây, b) Một người kéo một thùng hàng bằng sợi dây"
+      }
+    ]
+  },
+  "b18": {
+    "id": "b18",
+    "title": "Lực ma sát",
+    "grade": 10,
+    "pageRange": [
+      72,
+      76
+    ],
+    "summary": "Bài học giới thiệu về lực ma sát, phân biệt giữa lực ma sát nghỉ và lực ma sát trượt, cùng các công thức tính toán và ứng dụng thực tiễn của chúng.",
+    "learningObjectives": [
+      "Hiểu khái niệm về lực ma sát nghỉ và lực ma sát trượt",
+      "Phân biệt được các loại lực ma sát",
+      "Áp dụng công thức tính lực ma sát trong các bài toán"
+    ],
+    "sections": [
+      {
+        "heading": "I. Lực ma sát nghỉ",
+        "bullets": [
+          "Lực ma sát nghỉ là lực ma sát tác dụng lên mặt tiếp xúc của vật, khi vật có xu hướng chuyển động nhưng chưa chuyển động",
+          "Lực ma sát nghỉ luôn xuất hiện ở bề mặt tiếp xúc giữa hai vật",
+          "Điều kiện để vật không trượt: lực ma sát nghỉ phải cân bằng với lực tác dụng"
+        ]
+      },
+      {
+        "heading": "II. Lực ma sát trượt",
+        "bullets": [
+          "Lực ma sát trượt là lực ma sát cần trở vật trượt trên bề mặt tiếp xúc",
+          "Lực ma sát trượt phụ thuộc vào lực ép vuông góc và bản chất hai bề mặt tiếp xúc",
+          "Hệ số ma sát trượt là tỉ số giữa độ lớn của lực ma sát trượt và áp lực N"
+        ]
+      },
+      {
+        "heading": "1. Đặc điểm của lực ma sát trượt",
+        "bullets": [
+          "Kiểm chứng độ lớn của lực ma sát phụ thuộc vào vật liệu và tính trạng của bề mặt tiếp xúc",
+          "Lực kế có điện tích lớn của khối gỗ lên bề mặt tiếp xúc",
+          "Ghi số chỉ của lực kế vào Bảng 18.1 để lấy giá trị trung bình"
+        ]
+      },
+      {
+        "heading": "3. Công thức của lực ma sát trượt",
+        "bullets": [
+          "Hệ số ma sát trượt là tỉ số giữa độ lớn của lực ma sát trượt Fms và áp lực N gọi là hệ số ma sát trượt",
+          "Công thức tính lực ma sát trượt: Fms = μN",
+          "Trong các điều kiện cùng áp lực N thì lực ma sát nghỉ tác dụng vào các vật lần nhỏ hơn lực ma sát trượt tác dụng lên các vật rất nhiều"
+        ]
+      },
+      {
+        "heading": "III. Bài tập ví dụ",
+        "bullets": [
+          "Một người đi xe đạp có khối lượng tổng cộng m = 86 kg đang chuyển động trên đường nằm ngang với vận tốc v0 = 4 m/s",
+          "Tính lực gây ra gia tốc cho xe và hệ số ma sát trượt giữa mặt đường và lốp xe"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Lực ma sát nghỉ",
+        "definition": "Lực ma sát tác dụng lên mặt tiếp xúc của vật, khi vật có xu hướng chuyển động nhưng chưa chuyển động"
+      },
+      {
+        "term": "Lực ma sát trượt",
+        "definition": "Lực ma sát cần trở vật trượt trên bề mặt tiếp xúc"
+      },
+      {
+        "term": "Hệ số ma sát trượt",
+        "definition": "Tỉ số giữa độ lớn của lực ma sát trượt và áp lực N"
+      },
+      {
+        "term": "Áp lực",
+        "definition": "Lực ép vuông góc tác dụng lên bề mặt tiếp xúc"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "F_{ms} = \\mu N",
+        "meaning": "Công thức tính lực ma sát trượt, trong đó Fms là lực ma sát trượt, μ là hệ số ma sát trượt, N là áp lực"
+      },
+      {
+        "latex": "\\mu = \\frac{F_{ms}}{N}",
+        "meaning": "Công thức tính hệ số ma sát trượt"
+      },
+      {
+        "latex": "a = \\frac{v_f^2 - v_0^2}{2s} = \\frac{0 - 16}{2.2} = -4 \\text{ m/s}^2",
+        "meaning": "Gia tốc của chuyển động được tính từ phương trình động học"
+      },
+      {
+        "latex": "F = m.a = 86(-4) = -344 \\text{ N}",
+        "meaning": "Lực ma sát trượt ngược chiều chuyển động"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một người đi xe đạp có khối lượng tổng cộng m = 86 kg đang chuyển động trên đường nằm ngang với vận tốc v0 = 4 m/s. Nếu người đi xe ngừng đạp và hãm phanh để gừ không cho các bánh xe quay, xe trượt đi một đoạn đường 2 m thì dừng lại. Lực nào đã gây ra gia tốc cho xe? Tính hệ số ma sát trượt giữa mặt đường và lốp xe. Lấy g = 10 m/s².",
+        "solution": "Gia tốc của chuyển động: a = (v² - v₀²)/(2s) = (0 - 16)/(2×2) = -4 m/s². Lực ma sát trượt: F = m.a = 86×(-4) = -344 N. Hệ số ma sát trượt: μ = F_ms/N = 344/(86×10) = 0,4"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f18-1",
+        "caption": "Hình 18.1",
+        "description": "Hình vẽ minh họa lực ma sát nghỉ tác dụng lên vật nằm trên bề mặt tiếp xúc, với vectơ lực F và biểu diễn tổng hợp lực"
+      },
+      {
+        "id": "f18-2",
+        "caption": "Hình 18.2",
+        "description": "Các trường hợp vật đặt trên bề mặt: a) vật đứng yên; b) vật bắt đầu chuyển động; c) vật hợp lực chuyển động"
+      },
+      {
+        "id": "f18-3",
+        "caption": "Hình 18.3",
+        "description": "Minh họa lực ma sát trượt tác dụng lên vật trên bề mặt tiếp xúc"
+      },
+      {
+        "id": "f18-4",
+        "caption": "Hình 18.4",
+        "description": "Thiết bị thí nghiệm đo lực ma sát trượt giữa khối gỗ và mặt tiếp xúc"
+      },
+      {
+        "id": "f18-5",
+        "caption": "Hình 18.5",
+        "description": "Hình vẽ biểu diễn các lực tác dụng lên xe chở hàng trong bài tập ví dụ"
+      }
+    ]
+  },
+  "b19": {
+    "id": "b19",
+    "title": "Lực cần và lực nâng",
+    "grade": 10,
+    "pageRange": [
+      77,
+      79
+    ],
+    "summary": "Bài học giới thiệu về lực cần của chất lưu (không khí, nước) tác dụng lên các vật chuyển động trong chất lưu và lực nâng được tạo ra nhờ sự chênh lệch lực cần. Đây là ứng dụng của nguyên lý Archimedes và động lực học chất lưu trong thực tế.",
+    "learningObjectives": [
+      "Hiểu khái niệm lực cần và lực nâng của chất lưu",
+      "Nắm được nguyên lý tạo ra lực nâng của chất lưu",
+      "Áp dụng lực Archimedes để tính lực nâng trong các tình huống thực tế",
+      "Phân tích tác dụng của lực cần trong chuyển động của vật trong chất lưu"
+    ],
+    "sections": [
+      {
+        "heading": "I. Lực cần của chất lưu",
+        "bullets": [
+          "Lực cần là lực mà chất lưu (không khí, nước) tác dụng lên các vật chuyển động trong nó",
+          "Lực cần luôn hướng ngược lại với hướng chuyển động của vật",
+          "Lực cần phụ thuộc vào vận tốc, hình dạng, kích thước của vật và tính chất của chất lưu",
+          "Ứng dụng: Lực cần của không khí ảnh hưởng đến chuyển động của tàu cao tốc, máy bay, môtô trên nước"
+        ]
+      },
+      {
+        "heading": "II. Lực nâng của chất lưu",
+        "bullets": [
+          "Khi vật chuyển động trong chất lưu thì ngoài lực cần còn chiếu tác dụng của lực nâng",
+          "Lực nâng xuất hiện khi có sự chênh lệch lực cần giữa hai mặt của vật",
+          "Máy bay có thể di chuyển trong không khí nhờ lực nâng (Hình 19.3)",
+          "Tàu thuyền có thể nổi và di chuyển được trên mặt nước nhờ lực nâng (Hình 19.4)",
+          "Khinh khí cầu lơ lửng trên không trung nhờ lực nâng (Hình 19.5a)",
+          "Nhiều sinh vật bay lướn để đặng trong không khí (Hình 19.5b)"
+        ]
+      },
+      {
+        "heading": "Lực đẩy Archimedes",
+        "bullets": [
+          "Lực đẩy Archimedes là trường hợp đặc biệt của lực nâng của chất lưu",
+          "Lực đẩy Archimedes tác dụng lên vật chiếm chỗ trong chất lưu",
+          "Công thức tính lực đẩy Archimedes: F_A = ρ.g.V"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Lực cần",
+        "definition": "Lực mà chất lưu (không khí hoặc nước) tác dụng lên vật chuyển động, có hướng ngược với hướng chuyển động"
+      },
+      {
+        "term": "Lực nâng",
+        "definition": "Lực xuất hiện do chênh lệch lực cần giữa hai mặt của vật, giúp vật nổi hoặc bay lên"
+      },
+      {
+        "term": "Lực đẩy Archimedes",
+        "definition": "Lực nâng của chất lưu bằng trọng lượng của chất lưu bị vật chiếm chỗ"
+      },
+      {
+        "term": "Chất lưu",
+        "definition": "Vật thể có khả năng chảy, bao gồm chất khí (như không khí) và chất lỏng (như nước)"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "F_A = \\rho.g.V",
+        "meaning": "Công thức tính lực đẩy Archimedes, trong đó ρ là khối lượng riêng của chất lưu, g là gia tốc trọng trường, V là thể tích phần chất lưu bị vật chiếm chỗ"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một hãng ô tô sử dụng cùng loại động cơ cho hai chiếc ô tô A và B có khối lượng như nhau. Khi cho hai ô tô này chạy thử nghiệm trên cùng quãng đường 100 km, với cùng tốc độ 72 km/h, các kỹ sư thấy rằng ô tô A tiêu thụ ít nhiên liệu hơn so với ô tô B. Tại sao lại có sự khác biệt như vậy?",
+        "solution": "Ô tô A có hình dáng khí động học tốt hơn, do đó lực cần của không khí tác dụng lên A nhỏ hơn B. Vì vậy ô tô A tiêu thụ ít nhiên liệu hơn để duy trì cùng vận tốc."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f19-1",
+        "caption": "Hình 19.1. Ví dụ về lực cần của chất lưu",
+        "description": "Hình minh họa lực cần của nước và không khí tác dụng lên tên lửa, người đi xe đạp, nhảy dù và tàu thuỷ đang chạy"
+      },
+      {
+        "id": "f19-2",
+        "caption": "Hình 19.2. Ví dụ về lực cần của nước phụ thuộc vào hình dạng và tốc độ của vật",
+        "description": "Hình thể hiện lực cần của nước phụ thuộc vào lực cần của nước phụ thuộc vào hình dạng và tốc độ của vật chuyển động trong nước: a) Tàu cao tốc, b) Môtô trên nước, c) Vận động viên bơi, d) Cá heo"
+      },
+      {
+        "id": "f19-3",
+        "caption": "Hình 19.3. Lực nâng tác dụng lên máy bay",
+        "description": "Sơ đồ minh họa các lực tác dụng lên máy bay khi bay: lực nâng, lực đẩy động cơ, lực cần của không khí, và trọng lực"
+      },
+      {
+        "id": "f19-4",
+        "caption": "Hình 19.4. Lực nâng tác dụng lên tàu thuyền",
+        "description": "Sơ đồ minh họa lực nâng của nước giúp tàu thuyền nổi trên mặt nước, với lực nâng hướng lên cân bằng với trọng lực hướng xuống"
+      }
+    ]
+  },
+  "b20": {
+    "id": "b20",
+    "title": "Một số ví dụ về cách giải các bài toán thuộc phần động lực học",
+    "grade": 10,
+    "pageRange": [
+      80,
+      82
+    ],
+    "summary": "Bài học hướng dẫn các bước giải chính để xác định gia tốc của vật khi biết lực tác dụng và cách áp dụng định luật 2 Newton trong các bài toán động lực học thực tế.",
+    "learningObjectives": [
+      "Nắm vững các bước giải chính để giải bài toán xác định gia tốc khi biết lực tác dụng",
+      "Phân tích lực và xác định lực hợp lệ tác dụng lên vật",
+      "Áp dụng định luật 2 Newton để giải các bài toán động lực học"
+    ],
+    "sections": [
+      {
+        "heading": "I. CÁC BƯỚC GIẢI CHÍNH",
+        "bullets": [
+          "Chọn vật khảo sát chuyển động. Biểu diễn các lực tác dụng lên vật, trong đó làm rõ phương, chiều và điểm đặt của từng lực",
+          "Chọn hai trục vuông góc Ox và Oy cùng hướng với chuyển động của vật hay cùng hướng với lực kéo hạt động yên. Phân tích các lực theo hai trục này. Áp dụng định luật 2 Newton theo hai trục tọa độ Ox và Oy",
+          "Giải hệ phương trình (1) và (2) để tìm gia tốc hay tìm lực, tuỳ từng bài toán"
+        ]
+      },
+      {
+        "heading": "II. CÁC LOẠI BÀI TOÁN",
+        "bullets": [
+          "Bài toán xác định gia tốc của vật khi biết lực tác dụng vào vật",
+          "Bài toán xác định lực tác dụng vào vật khi biết gia tốc"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Định luật 2 Newton",
+        "definition": "Gia tốc của một vật cùng phương và cùng chiều với lực tác dụng lên nó, có độ lớn tỉ lệ thuận với độ lớn của lực và tỉ lệ nghịch với khối lượng của vật"
+      },
+      {
+        "term": "Lực ma sát",
+        "definition": "Lực cản chuyển động giữa hai bề mặt tiếp xúc, có độ lớn bằng tích của hệ số ma sát và lực pháp tuyến"
+      },
+      {
+        "term": "Lực pháp tuyến",
+        "definition": "Lực tác dụng vuông góc với mặt tiếp xúc, thể hiện độ mạnh của sự ép của hai bề mặt vào nhau"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "\\begin{cases} Ox: F_x = F_{1x} + F_{2x} + \\ldots = m a_x \\\\ Oy: F_y = F_{1y} + F_{2y} + \\ldots = 0 \\end{cases}",
+        "meaning": "Phương trình định luật 2 Newton theo hai trục Ox và Oy"
+      },
+      {
+        "latex": "\\begin{cases} Ox: F_x = F - F_{ms} = m a_x = m a \\\\ Oy: F_y = N - P = 0 \\\\ F_{ms} = \\mu N \\end{cases}",
+        "meaning": "Hệ phương trình tính toán lực kéo và gia tốc của vật chịu tác dụng lực kéo, trọng lực, phản lực và ma sát"
+      },
+      {
+        "latex": "F = m(a + \\mu g)",
+        "meaning": "Công thức tính lực kéo cần thiết khi vật chuyển động với gia tốc a và hệ số ma sát μ"
+      },
+      {
+        "latex": "F_{ms} = \\mu N = \\mu m g",
+        "meaning": "Độ lớn lực ma sát tính theo hệ số ma sát, khối lượng và gia tốc trọng trường"
+      },
+      {
+        "latex": "a = \\frac{F - F_{ms}}{m} = \\frac{180 - 122.5}{50} = 1.15 \\text{ m/s}^2",
+        "meaning": "Cách tính gia tốc từ lực kéo và lực ma sát"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Ví dụ 1. Một người đẩy buộc để kéo một thùng gỗ theo phương nằm ngang bằng một lực F (Hình 20.2). Khối lượng của thùng là 35 kg, hệ số ma sát giữa sàn và dây thùng là 0,3. Lấy g = 9,8 m/s². Tính độ lớn của lực kéo trong hai trường hợp: a) Thùng trượt với gia tốc 0,2 m/s². b) Thùng trượt đều.",
+        "solution": "Phân tích các lực: trọng lực P = mg, lực kéo F, phản lực N, lực ma sát Fms. Áp dụng định luật 2 Newton: Oy: N = mg = 490 N; Fms = μN = 122,5 N. a) Với a = 0,2 m/s²: F = m(a + μg) = 35(0,2 + 0,3×9,8) = 109,9 N. b) Thùng trượt đều (a = 0): F = μmg = 0,3×35×9,8 = 102,9 N."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f20-1",
+        "caption": "Hình 20.1",
+        "description": "Sơ đồ lực tác dụng lên vật: trọng lực P, lực kéo F, phản lực N, lực ma sát Fms với các trục tọa độ Ox, Oy"
+      },
+      {
+        "id": "f20-2",
+        "caption": "Hình 20.2",
+        "description": "Hình vẽ minh họa: một người đẩy một thùng gỗ màu xanh trên sàn theo phương nằm ngang"
+      },
+      {
+        "id": "f20-3",
+        "caption": "Hình 20.3",
+        "description": "Sơ đồ lực chi tiết với biểu diễn các lực F, N, P, Fms và các trục tọa độ Ox, Oy"
+      }
+    ]
+  },
+  "b21": {
+    "id": "b21",
+    "title": "Moment lực. Cân bằng của vật rắn",
+    "grade": 10,
+    "pageRange": [
+      83,
+      85
+    ],
+    "summary": "Bài học giới thiệu khái niệm moment lực, điều kiện cân bằng của vật rắn và các quy tắc tính toán liên quan đến moment lực trong các bài toán thực tiễn.",
+    "learningObjectives": [
+      "Hiểu khái niệm moment lực và cách tính toán",
+      "Nắm vững quy tắc moment lực (điều kiện cân bằng)",
+      "Áp dụng kiến thức để giải quyết các bài toán về cân bằng vật rắn"
+    ],
+    "sections": [
+      {
+        "heading": "I. MOMENT LỰC",
+        "bullets": [
+          "Tác dụng làm quay của lực được gọi là moment lực",
+          "Cánh tay đòn của lực là khoảng cách từ trục quay đến giá của lực",
+          "Moment lực đối với trục quay là đại lượng đặc trưng cho tác dụng làm quay của lực, ký hiệu là M",
+          "Công thức: M = F.d, đơn vị là niutơn mét (N.m)",
+          "Moment lực phụ thuộc vào độ lớn của lực và cánh tay đòn"
+        ]
+      },
+      {
+        "heading": "II. QUY TẮC MOMENT LỰC",
+        "bullets": [
+          "Thí nghiệm: Dùng một địa trên có trục quay đi qua tâm O, trên mặt địa có những lỗ dùng để treo những quả cân",
+          "Khi đó moment của lực F₁ đặt bên trái cân bằng với moment của lực F₂ bên phải",
+          "Quy tắc moment lực (hay điều kiện cân bằng của một vật có trục quay có định): Tổng các moment lực tác dụng lên vật (đối với một điểm bất kỳ) bằng 0",
+          "Công thức: ∑M = 0 hoặc F₁.d₁ = F₂.d₂"
+        ]
+      },
+      {
+        "heading": "III. NGẪU LỰC",
+        "bullets": [
+          "Ngẫu lực là hệ hai lực song song, ngược chiều, có độ lớn bằng nhau và cùng đặt vào một vật",
+          "Ngẫu lực tác dụng làm cho vật quay chứ không tính tiến",
+          "Moment của ngẫu lực được xác định bởi công thức: M = F₁.d₁ + F₂.d₂ hay M = F.d",
+          "Trong đó F là độ lớn của mỗi lực, d là khoảng cách giữa hai giá của lực (cánh tay đòn của ngẫu lực)"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Cánh tay đòn",
+        "definition": "Khoảng cách vuông góc từ trục quay đến giá của lực"
+      },
+      {
+        "term": "Moment lực",
+        "definition": "Đại lượng đặc trưng cho tác dụng làm quay của lực đối với một trục quay, được xác định bằng tích của lực và cánh tay đòn"
+      },
+      {
+        "term": "Quy tắc moment lực",
+        "definition": "Điều kiện để vật có trục quay có định ở trạng thái cân bằng: tổng các moment lực tác dụng lên vật bằng 0"
+      },
+      {
+        "term": "Ngẫu lực",
+        "definition": "Hệ hai lực song song, ngược chiều, có độ lớn bằng nhau, cùng tác dụng vào một vật"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "M = F \\cdot d",
+        "meaning": "Moment lực bằng tích của độ lớn lực và cánh tay đòn"
+      },
+      {
+        "latex": "\\sum M = 0",
+        "meaning": "Điều kiện cân bằng: tổng các moment lực bằng 0"
+      },
+      {
+        "latex": "F_1 \\cdot d_1 = F_2 \\cdot d_2",
+        "meaning": "Quy tắc cân bằng: moment lực tác dụng theo chiều quay thuận bằng moment lực tác dụng theo chiều quay ngược"
+      },
+      {
+        "latex": "M = F_1 \\cdot d_1 + F_2 \\cdot d_2",
+        "meaning": "Moment của ngẫu lực khi có hai lực tác dụng"
+      },
+      {
+        "latex": "M = F \\cdot d",
+        "meaning": "Moment của ngẫu lực bằng tích của độ lớn lực và khoảng cách giữa hai giá của lực"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Hình 21.2: Một chiếc thước có thể quay quanh trục quay có định ở đầu O. Trên thước OA dài 50 cm, có thể quay quanh trục quay có định ở đầu O. a) Treo một quả cân 4 N tại đầu A. b) Treo một quả cân 2 N tại điểm cách O 50 cm theo chiều kim đồng hồ.",
+        "solution": "Tính moment lực trong cả hai trường hợp và so sánh. Trong trường hợp a): M = 4 × 0,5 = 2 N.m. Trong trường hợp b): M = 2 × 0,5 × cos(20°)"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f21-1",
+        "caption": "Hình 21.1: Dùng búa nhổ đinh",
+        "description": "Minh họa tác dụng làm quay của lực khi sử dụng búa để nhổ đinh, cho thấy cánh tay đòn và điểm tựa"
+      },
+      {
+        "id": "f21-2",
+        "caption": "Hình 21.2: Một chiếc thước mà tác một chiếc thước có đo",
+        "description": "Thước dài 50 cm có thể quay quanh trục quay ở đầu O, với các lực tác dụng tại các điểm khác nhau trên thước"
+      },
+      {
+        "id": "f21-3",
+        "caption": "Hình 21.3: Dùng tay vặn nước, dầu",
+        "description": "Hệ thống bánh xe và trục quay để minh họa quy tắc moment lực với các lực tác dụng"
+      },
+      {
+        "id": "f21-4",
+        "caption": "Hình 21.4: Hai em bé ngồi trên bập bênh",
+        "description": "Ví dụ thực tiễn về cân bằng moment lực với hai lực tác dụng tại các vị trí khác nhau"
+      },
+      {
+        "id": "f21-5",
+        "caption": "Hình 21.5: Dùng tay vặn nước, dầu khiến tay lại ở lõ, ta tác dụng vào một ngẫu lực",
+        "description": "Minh họa khái niệm ngẫu lực khi vặn một vật"
+      },
+      {
+        "id": "f21-6",
+        "caption": "Hình 21.6: Moment của ngẫu lực",
+        "description": "Sơ đồ thể hiện moment của ngẫu lực với hai lực song song, ngược chiều, cách nhau một khoảng d"
+      }
+    ]
+  },
+  "b22": {
+    "id": "b22",
+    "title": "THỰC HÀNH: TỔNG HỢP LỰC",
+    "grade": 10,
+    "pageRange": [
+      86,
+      89
+    ],
+    "summary": "Bài thực hành tổng hợp hai lực đồng quy và hai lực song song giúp học sinh xác định lực tổng hợp bằng phương pháp thí nghiệm, từ đó kiểm chứng quy tắc hình bình hành và các định luật liên quan.",
+    "learningObjectives": [
+      "Xác định lực tổng hợp của hai lực đồng quy bằng phương pháp thí nghiệm",
+      "Kiểm chứng quy tắc hình bình hành",
+      "Xác định lực tổng hợp của hai lực song song cùng chiều",
+      "Áp dụng định lý hình sin và công thức tính toán lực tổng hợp"
+    ],
+    "sections": [
+      {
+        "heading": "I. TỔNG HỢP HAI LỰC ĐỒNG QUY",
+        "bullets": [
+          "Dung cụ thí nghiệm: bảng thép, hai lực kế ống 5N, thước do góc, đề nam chăm, dây chi liên và dây cao su",
+          "Xác định hai lực thành phần F₁, F₂ bằng lực kế",
+          "Xác định lực tổng hợp Fm bằng thí nghiệm",
+          "Tính toán và so sánh kết quả thực nghiệm với lý thuyết",
+          "Kiểm chứng quy tắc hình bình hành"
+        ]
+      },
+      {
+        "heading": "II. TỔNG HỢP HAI LỰC SONG SONG",
+        "bullets": [
+          "Dung cụ thí nghiệm: bảng thép, hai lô xo được lực kéo tối đa 5N, thanh treo nhẹ cứng 400mm, các quả năng khối lượng 50g",
+          "Xác định lực tổng hợp của hai lực song song cùng chiều",
+          "Sử dụng quy tắc moment để tìm lực tổng hợp",
+          "Kiểm chứng điều kiện cân bằng và moment lực",
+          "Tính toán vị trí đặt lực tổng hợp"
+        ]
+      },
+      {
+        "heading": "Tiến hành thí nghiệm",
+        "bullets": [
+          "Gắn hai đề nam chăm lên bảng thép sau đó treo thanh kim loại lên hai đề nam chăm",
+          "Treo các quả năng vào hai con trượt có gắn móc treo lên thanh kim loại",
+          "Dùng bút đã dánh dấu vị trí và vị trí A, B lên bảng thép",
+          "Thảo một lực kế và bổ trí thí nghiệm như Hình 22.2b",
+          "Di chuyển lực kế sao cho đầu dây cao su trùng điểm A1 đã dánh dấu",
+          "Ghi các giá trị F tương ứng với trong lượng các quả năng",
+          "Do và ghi giá trị đó từ điểm O theo các quả năng tới A vào Bảng 22.2"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Lực tổng hợp",
+        "definition": "Lực duy nhất tạo ra tác dụng giống như tác dụng của hai hay nhiều lực cùng tác dụng lên một vật"
+      },
+      {
+        "term": "Quy tắc hình bình hành",
+        "definition": "Lực tổng hợp của hai lực đồng quy bằng đường chéo của hình bình hành có hai cạnh là hai lực thành phần"
+      },
+      {
+        "term": "Hai lực song song",
+        "definition": "Hai lực có phương song song, được xác định bởi điểm đặt, độ lớn và phương"
+      },
+      {
+        "term": "Moment lực",
+        "definition": "Tích của lực với cánh tay đòn, dùng để đánh giá tác dụng quay của lực"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "F = \\sqrt{F_1^2 + F_2^2 + 2F_1F_2\\cos\\alpha}",
+        "meaning": "Công thức tính lực tổng hợp của hai lực đồng quy, với α là góc giữa hai lực"
+      },
+      {
+        "latex": "\\frac{F_1}{F_2} = \\frac{d_2}{d_1} = \\frac{OB}{OA} = \\frac{AB - OA_{tn}}{OA_{tn}}",
+        "meaning": "Định lý hình sin áp dụng cho hai lực song song, liên hệ độ lớn lực với cánh tay đòn"
+      },
+      {
+        "latex": "M = F \\cdot d",
+        "meaning": "Moment lực bằng tích của lực với cánh tay đòn"
+      }
+    ],
+    "examples": [],
+    "figures": [
+      {
+        "id": "f22_1",
+        "caption": "Hình 22.1. Bộ thí nghiệm tổng hợp hai lực đồng quy",
+        "description": "Thiết bị gồm bảng thép có hai lực kế ống được gắn vào bảng, thước đo góc ở giữa, các dây cao su và đặc biệt là thiết bị để tạo hai lực thành phần"
+      },
+      {
+        "id": "f22_2a",
+        "caption": "Hình 22.2a. Thí nghiệm tổng hợp hai lực đồng quy (cách sắp xếp A, B)",
+        "description": "Hai lực kế được sắp xếp tạo ra hai lực có phương khác nhau tác dụng lên một điểm, dây cao su nối từ điểm đó đến thanh kim loại"
+      },
+      {
+        "id": "f22_2b",
+        "caption": "Hình 22.2b. Thí nghiệm tổng hợp hai lực đồng quy (cách sắp xếp khác)",
+        "description": "Cách sắp xếp khác của các lực kế để tạo ra hai lực với góc khác nhau giữa chúng"
+      },
+      {
+        "id": "f22_3",
+        "caption": "Hình 22.3. Bộ thí nghiệm tổng hợp hai lực song song cùng chiều",
+        "description": "Thiết bị gồm bảng thép ngang, thanh kim loại được treo bởi hai lô xo tại hai điểm A và B, các quả năng được treo để tạo lực"
+      },
+      {
+        "id": "f22_4a",
+        "caption": "Hình 22.4a. Thí nghiệm tổng hợp hai lực song song (sắp xếp A, B)",
+        "description": "Hai lô xo được sắp xếp tại hai vị trí A và B trên thanh kim loại để tạo hai lực song song"
+      },
+      {
+        "id": "f22_4b",
+        "caption": "Hình 22.4b. Thí nghiệm tổng hợp hai lực song song (sắp xếp khác)",
+        "description": "Cách sắp xếp khác với lô xo ở giữa (vị trí O) để xác định lực tổng hợp bằng thí nghiệm"
+      },
+      {
+        "id": "f22_5",
+        "caption": "Hình 22.5. Thiết kế chiếc cân đơn giản bằng các vật liệu",
+        "description": "Minh họa cách chế tạo một thiết bị cân bằng đơn giản từ thanh treo, dây và các quả năng để áp dụng quy tắc moment"
+      }
+    ]
+  },
+  "b23": {
+    "id": "b23",
+    "title": "NĂNG LƯỢNG, CÔNG, CÔNG SUẤT",
+    "grade": 10,
+    "pageRange": [
+      91,
+      95
+    ],
+    "summary": "Bài học về năng lượng, cơ học, công cơ học và công suất, bao gồm thực hiện công, công thức tính công và các ứng dụng thực tế của chúng.",
+    "learningObjectives": [
+      "Hiểu khái niệm năng lượng, công cơ học và sự chuyển hoá năng lượng",
+      "Nắm vững công thức tính công khi lực cùng hướng, vuông góc hoặc không cùng phương với chuyển dịch",
+      "Tính toán công suất và các bài toán ứng dụng thực tế"
+    ],
+    "sections": [
+      {
+        "heading": "I. NĂNG LƯỢNG",
+        "bullets": [
+          "Ở trường THCS các em đã biết: mọi hiện tượng xảy ra trong tự nhiên đều cần có năng lượng dưới các dạng khác nhau như: cơ năng, hoá năng, nhiệt năng, điện năng, năng lượng ánh sáng, năng lượng âm thanh, năng lượng hạt nhân, v.v.",
+          "Năng lượng có thể chuyển hoá từ dạng này sang dạng khác hoặc truyền từ vật này sang vật khác",
+          "Năng lượng không tự sinh ra hoặc tự mất đi mà chỉ chuyển hoá từ dạng này sang dạng khác hoặc truyền từ vật này sang vật khác"
+        ]
+      },
+      {
+        "heading": "II. CÔNG CƠ HỌC",
+        "bullets": [
+          "Thực hiện công: Năng lượng có thể truyền từ vật này sang vật khác"
+        ]
+      },
+      {
+        "heading": "1. Thực hiện công",
+        "bullets": [
+          "Năng lượng có thể truyền từ vật này sang vật khác",
+          "Khi đẩy cuốn sách, ta tác dụng lực vào nó làm nó chuyển từ trạng thái đứng yên (v = 0; Wd = 0) sang trạng thái chuyển động nhân được năng lượng tăng lên do sách đã nhân được năng lượng từ tay ta truyền sang (Hình 23.2)",
+          "Việc truyền năng lượng cho vật bằng cách tác dụng lực lên vật làm vật thay đổi trạng thái chuyển động như trên được gọi là thực hiện công cơ học (gọi tắt là thực hiện công)"
+        ]
+      },
+      {
+        "heading": "2. Công thức tính công",
+        "bullets": [
+          "Khi lực không đổi và cùng hướng với chuyển dịch",
+          "Khi lực không đổi và không cùng phương với chuyển dịch",
+          "Tuỳ thuộc vào góc α mà có thể xảy ra các trường hợp sau"
+        ]
+      },
+      {
+        "heading": "3. Bài tập ví dụ",
+        "bullets": [
+          "Bài tập ví dụ 1: Khi rửa gầm xe ô tô (Hình 23.6), người sử dụng máy nâng để nâng ô tô lên độ cao h = 160 cm so với mặt sân",
+          "Bài tập ví dụ 2: Một bạn học sinh có khối lượng 50 kg đi lên một cầu thang gồm 20 bậc, mỗi bậc cao 15 cm, dài 20 cm (Hình 23.7)"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Năng lượng",
+        "definition": "Khả năng thực hiện công của vật; có thể tồn tại dưới nhiều dạng khác nhau và có thể chuyển hoá giữa các dạng khác nhau"
+      },
+      {
+        "term": "Công cơ học",
+        "definition": "Việc truyền năng lượng cho vật bằng cách tác dụng lực lên vật làm vật thay đổi trạng thái chuyển động"
+      },
+      {
+        "term": "Công suất",
+        "definition": "Đại lượng đo công do một lực thực hiện được trong một đơn vị thời gian"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "A = F \\cdot s",
+        "meaning": "Công của lực khi lực cùng hướng với chuyển dịch, trong đó F là cường độ của lực tác dụng lên vật làm vật biến đổi chuyển động, đơn vị là niuton (N); s là quãng đường đi được của vật, đơn vị là mét (m)"
+      },
+      {
+        "latex": "A = F \\cdot d",
+        "meaning": "Công của lực khi lực cùng hướng với chuyển dịch bằng quãng đường đi được của vật"
+      },
+      {
+        "latex": "A = F_s \\cdot s = (F \\cos \\alpha) \\cdot s = F \\cdot s \\cos \\alpha",
+        "meaning": "Công của lực trong trường hợp chi có thành phần Fs làm vật chuyển động, nên công thức tính công của lực trong trường hợp này là"
+      },
+      {
+        "latex": "0 < \\alpha < 90°",
+        "meaning": "Thành phần Fs của F lên phương chuyển động cùng chiều với chiều chuyển động, công của lực được gọi là công phát động (A > 0)"
+      },
+      {
+        "latex": "\\alpha = 90°",
+        "meaning": "Lực vuông góc với phương chuyển động, khi đó lực không sinh công (A = 0)"
+      },
+      {
+        "latex": "90° < \\alpha \\leq 180°",
+        "meaning": "Thành phần Fs của F lên phương chuyển động ngược chiều với chiều chuyển động của vật, công của lực được gọi là công cản (A < 0)"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Khi rửa gầm xe ô tô (Hình 23.6), người sử dụng máy nâng để nâng ô tô lên độ cao h = 160 cm so với mặt sân. Cho biết khối lượng ô tô là m = 1,5 tấn và gia tốc trong trường là g = 10 m/s². Tính công tối thiểu mà máy nâng đã thực hiện.",
+        "solution": "Để nâng được ô tô lên thì máy nâng phải tác dụng lực vào ô tô lớn hơn hoặc bằng quang đường đi được của vật, nên công thức tính công của lực trong trường hợp này là: F_min = -P = m.g = 1,5.10³.10 = 1,5.10⁴ N. Công tối thiểu mà máy nâng đã thực hiện là: A = Fh = 24 000 J = 24 kJ."
+      },
+      {
+        "prompt": "Một bạn học sinh có khối lượng 50 kg đi lên một cầu thang gồm 20 bậc, mỗi bậc cao 15 cm, dài 20 cm (Hình 23.7). Tính công tối thiểu mà bạn ấy phải thực hiện. Coi lực mà học sinh tác dụng lên bậc thang là không đổi trong quá trình đi chuyển. Lấy gia tốc trong trường là g = 10 m/s².",
+        "solution": "Muốn lên cầu thang này bạn học sinh phải có lực nâng tối thiểu như Hình 23.8: F_min = -P → F_min = P = m.g. Độ dịch chuyển của bạn học sinh là: d = AB. Công tối thiểu mà bạn ấy phải thực hiện là: A_min = F_min d cos α = F_min d sin β = m.g.d.sin β = m.g.h = 50.10.20.0.15 = 1 500 J."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f23-1",
+        "caption": "Hình 23.1. Sơ đồ thí nghiệm minh hoạ định luật bảo toàn năng lượng",
+        "description": "Sơ đồ thí nghiệm về định luật bảo toàn năng lượng gồm: vật năng (1), dây nối (2), trục quay (3), cánh quạt (4), nhiệt kế (5)"
+      },
+      {
+        "id": "f23-2",
+        "caption": "Hình 23.2. Đẩy cuốn sách",
+        "description": "Hình ảnh minh hoạ việc đẩy cuốn sách trên mặt bàn để chuyển từ trạng thái đứng yên sang chuyển động"
+      },
+      {
+        "id": "f23-3",
+        "caption": "Hình 23.3. Động cơ điện đưa vật năng chuyển động được dặt lên cao",
+        "description": "Hình ảnh minh hoạ một hệ thống ròng rọc với động cơ điện, bao gồm xilanh, pittông, và cơ chế nâng vật"
+      },
+      {
+        "id": "f23-4",
+        "caption": "Hình 23.4. Lực không cùng phương với phương chuyển động",
+        "description": "Hình ảnh minh hoạ một người đẩy xe với lực F tạo góc α với phương chuyển động theo chiều x"
+      },
+      {
+        "id": "f23-5",
+        "caption": "Hình 23.5. Các trường hợp khác nhau của góc α",
+        "description": "Ba hình minh hoạ các trường hợp: a) lực hợp với phương chuyển động góc α < 90°; b) lực vuông góc với phương chuyển động; c) lực hợp với phương chuyển động góc α > 90°"
+      },
+      {
+        "id": "f23-6",
+        "caption": "Hình 23.6. Khi rửa gầm xe ô tô",
+        "description": "Hình ảnh người sử dụng máy nâng hydraulic để nâng xe ô tô lên độ cao h = 160 cm"
+      },
+      {
+        "id": "f23-7",
+        "caption": "Hình 23.7. Học sinh đi lên cầu thang",
+        "description": "Hình ảnh minh hoạ một học sinh đi lên cầu thang gồm 20 bậc, mỗi bậc cao 15 cm, dài 20 cm"
+      },
+      {
+        "id": "f23-8",
+        "caption": "Hình 23.8. Phân tích lực F_min",
+        "description": "Hình vẽ biểu diễn phân tích lực F_min thành các thành phần theo phương Ox và Oy, với góc α giữa F_min và phương ngang"
+      }
+    ]
+  },
+  "b24": {
+    "id": "b24",
+    "title": "Công suất",
+    "grade": 10,
+    "pageRange": [
+      96,
+      98
+    ],
+    "summary": "Bài học về công suất - đại lượng đo lường mức độ nhanh chóp của công thực hiện. Công suất được tính bằng công chia cho thời gian, có đơn vị là oát (W) và được ứng dụng rộng rãi trong đời sống.",
+    "learningObjectives": [
+      "Hiểu khái niệm công suất và ý nghĩa của nó",
+      "Nắm được công thức tính công suất trong các trường hợp khác nhau",
+      "Biết mối liên hệ giữa công suất với lực và tốc độ",
+      "Vận dụng kiến thức về công suất vào giải quyết các bài toán thực tế"
+    ],
+    "sections": [
+      {
+        "heading": "I. KHÁI NIỆM CÔNG SUẤT",
+        "bullets": [
+          "Công suất là đại lượng đặc trưng cho khả năng thực hiện công nhanh hay chậm của một công nhân hoặc thiết bị sinh công",
+          "Công suất được định nghĩa là tỉ số giữa công và thời gian thực hiện công đó",
+          "Hai anh công nhân đang ròng rọc để kéo xô vira lên các tầng cao của một công trình xây dựng. Dự án bằng số liệu dưới đây, hãy xác định xem ai là người thực hiện công nhanh hơn"
+        ]
+      },
+      {
+        "heading": "II. CÔNG THỨC TÍNH CÔNG SUẤT",
+        "bullets": [
+          "Nếu trong thời gian t, công thực hiện được là A thì tốc độ tính công suất là: P = A/t",
+          "Nếu A tính bằng jun (J), t tính bằng giây (s) thì P tính bằng oát (W)",
+          "Các bội của oát (W) là: 1 kilôoát = 1 kW = 10³ W và 1 mégaoát = 1 MW = 10⁶ W",
+          "Kilôoát giờ (kWh) không phải là đơn vị công suất mà là đơn vị công. 1 kWh là công của một thiết bị sinh công có công suất là 1 kW thực hiện trong 1 giờ"
+        ]
+      },
+      {
+        "heading": "III. LIÊN HỆ GIỮA CÔNG SUẤT VỚI LỰC VÀ TỐC ĐỘ",
+        "bullets": [
+          "Khi vật chuyển động cùng hướng với lực và lực không đổi thì công suất được tính bằng: P = A/t = F.s/t = F.v",
+          "Công thức (24.2) là công thức tính công suất trung bình. Công thức tính công suất tức thời là: P_t = F.v_t",
+          "Nếu u là tốc độ trung bình của vật thì P là công suất trung bình của lực làm vật chuyển động",
+          "Nếu v_t là tốc độ tức thời của vật thì P_t là công suất tức thời của lực làm vật chuyển động"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Công suất",
+        "definition": "Đại lượng đo lường mức độ nhanh chóp của công thực hiện, được tính bằng tỉ số giữa công và thời gian thực hiện công"
+      },
+      {
+        "term": "Oát (W)",
+        "definition": "Đơn vị đo công suất trong hệ SI, bằng 1 jun trên 1 giây"
+      },
+      {
+        "term": "Kilôoát giờ (kWh)",
+        "definition": "Đơn vị đo công (không phải công suất), bằng công của thiết bị sinh công 1 kW hoạt động trong 1 giờ"
+      },
+      {
+        "term": "Công suất trung bình",
+        "definition": "Công suất được tính dựa trên tổng công thực hiện chia cho tổng thời gian"
+      },
+      {
+        "term": "Công suất tức thời",
+        "definition": "Công suất được tính tại một thời điểm cụ thể dựa trên tốc độ tức thời"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "P = \\frac{A}{t}",
+        "meaning": "Công suất bằng công chia cho thời gian thực hiện công (công thức (24.1))"
+      },
+      {
+        "latex": "1\\text{ W} = \\frac{1\\text{ J}}{1\\text{ s}}",
+        "meaning": "Định nghĩa đơn vị oát"
+      },
+      {
+        "latex": "P = \\frac{A}{t} = \\frac{F.s}{t} = F.v",
+        "meaning": "Công suất tính theo lực và tốc độ (công thức (24.2))"
+      },
+      {
+        "latex": "P_t = F.v_t",
+        "meaning": "Công suất tức thời bằng tích của lực và tốc độ tức thời (công thức (24.3))"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một người kéo một thùng nước 15 kg giãeng sâu 8 m lên trong 10 s. Hãy tính công suất của người kéo. Biết thùng nước chuyển động đều và lấy g = 10 m/s²",
+        "solution": "Tốc độ chuyển động: v = s/t = 8/10 = 0,8 m/s. Lực kéo: F = P = m.g = 15.10 = 150 N. Công suất: P = F.v = 150.0,8 = 120 W"
+      },
+      {
+        "prompt": "Coi công suất trung bình của trái tim là 3 W. a) Trong một ngày - đêm trung bình trái tim thực hiện một công là bao nhiêu? b) Nếu một người sống 70 tuổi thì công của trái tim thực hiện là bao nhiêu? Một ô tô tải muốn thực hiện công này phải thực hiện trong thời gian bao lâu? Coi công suất của xe ô tô tải là 3.10⁵ W",
+        "solution": "a) Công suất = 3 W, thời gian = 1 ngày = 86400 s, công = 3 × 86400 = 259200 J. b) Trong 70 năm ≈ 25550 ngày, công tổng cộng = 259200 × 25550 ≈ 6,6 × 10⁹ J. Thời gian xe thực hiện: t = A/P = 6,6 × 10⁹ / 3 × 10⁵ ≈ 22000 s ≈ 6,1 giờ"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f24-1",
+        "caption": "Hình 24.1 Lip xe đạp thể thao",
+        "description": "Hình ảnh lip (bánh răng) của xe đạp thể thao, là một ví dụ minh họa về tác dụng của lực kéo trong việc thực hiện công"
+      },
+      {
+        "id": "f24-2",
+        "caption": "Hình 24.2 Hộp số xe máy",
+        "description": "Hình ảnh cắt ngang hộp số của xe máy, thể hiện cơ cấu truyền lực và mối quan hệ giữa lực, tốc độ trong quá trình chuyển động"
+      }
+    ]
+  },
+  "b25": {
+    "id": "b25",
+    "title": "Động năng, thế năng",
+    "grade": 10,
+    "pageRange": [
+      99,
+      101
+    ],
+    "summary": "Bài học về động năng và thế năng của vật, mối liên hệ giữa động năng với công của lực, và ứng dụng của chúng trong các hiện tượng thực tế.",
+    "learningObjectives": [
+      "Hiểu khái niệm động năng và cách tính động năng của vật",
+      "Hiểu khái niệm thế năng trong trường và mối liên hệ giữa động năng với công của lực",
+      "Vận dụng công thức tính động năng và thế năng để giải quyết các bài toán thực tế"
+    ],
+    "sections": [
+      {
+        "heading": "I. ĐỘNG NĂNG",
+        "bullets": [
+          "Động năng là năng lượng mà vật có được do chuyển động",
+          "Khối lượng m chuyển động với tốc độ v thì động năng: $W_d = \\frac{1}{2}m.v^2$",
+          "Đơn vị động năng là joule (J)",
+          "Động năng phụ thuộc vào khối lượng và tốc độ của vật"
+        ]
+      },
+      {
+        "heading": "1. Khái niệm động năng",
+        "bullets": [
+          "Động năng của vật là năng lượng mà vật có được do chuyển động",
+          "Công thức tính động năng: $W_d = \\frac{1}{2}m.v^2$",
+          "Động năng tăng khi vật chuyển động nhanh hơn hoặc có khối lượng lớn hơn"
+        ]
+      },
+      {
+        "heading": "2. Liên hệ giữa động năng và công của lực",
+        "bullets": [
+          "Khi một vật khối lượng m chuyển động thẳng biến đổi đều dưới tác dụng của lực, động năng thay đổi",
+          "Công của lực bằng độ biến thiên động năng: $W_d = A$ hay $\\frac{1}{2}m.v^2 = F.s$",
+          "Mối liên hệ này cho phép tính công dựa trên sự thay đổi động năng"
+        ]
+      },
+      {
+        "heading": "II. THẾ NĂNG",
+        "bullets": [
+          "Thế năng trong trường là năng lượng mà vật có được do vị trí của nó trong trường",
+          "Thế năng trong trường trọng lực: $W_t = P.h = m.g.h$",
+          "Thế năng được tính theo công thức, với h là độ cao so với mặt đất được chọn làm gốc tham chiếu"
+        ]
+      },
+      {
+        "heading": "1. Khái niệm thế năng trong trường",
+        "bullets": [
+          "Thế năng là năng lượng mà vật đó có được do vị trí của nó trong trường lực",
+          "Thế năng phụ thuộc vào vị trí và khối lượng của vật",
+          "Trong trường trọng lực, thế năng tính bằng: $W_t = m.g.h$",
+          "Độ lớn của thế năng phụ thuộc vào điểm chọn làm gốc tham chiếu"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Động năng",
+        "definition": "Năng lượng mà vật có được do chuyển động của nó, ký hiệu $W_d$ hay $E_k$"
+      },
+      {
+        "term": "Thế năng",
+        "definition": "Năng lượng mà vật có được do vị trí của nó trong trường lực"
+      },
+      {
+        "term": "Công của lực",
+        "definition": "Đại lượng vật lý đặc trưng cho tác dụng của lực làm vật thay đổi vị trí"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "W_d = \\frac{1}{2}m.v^2",
+        "meaning": "Động năng của vật có khối lượng m chuyển động với tốc độ v"
+      },
+      {
+        "latex": "W_t = m.g.h",
+        "meaning": "Thế năng của vật có khối lượng m ở độ cao h trong trường trọng lực"
+      },
+      {
+        "latex": "A = W_d = \\frac{1}{2}m.v^2",
+        "meaning": "Công của lực bằng độ biến thiên động năng"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một vận động viên quần vợt thực hiện cú giao bóng lúc nó dạt với tốc độ 196 km/h. Biết khối lượng quả bóng là 60 g. Tính động năng của quả bóng.",
+        "solution": "Chuyển đổi tốc độ: v = 196 km/h = 196/3,6 = 54,4 m/s ≈ 55 m/s. Tính động năng: $W_d = \\frac{1}{2} \\times 0,06 \\times (55)^2 = 90,75 \\approx 89 J$"
+      },
+      {
+        "prompt": "Máy động cơ có đầu búa nặng 0,5 tấn, được nâng lên độ cao 10 m so với mặt đất. Tính thế năng của đầu búa. Lấy g = 9,8 m/s².",
+        "solution": "Thế năng của đầu búa: $W_t = m.g.h = 500 \\times 9,8 \\times 10 = 49 000 J = 49 kJ$"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f25-1",
+        "caption": "Hình 25.1 Sông thần",
+        "description": "Hình ảnh về sông và sương mù, minh họa các hiện tượng có liên quan đến năng lượng tự nhiên"
+      },
+      {
+        "id": "f25-2",
+        "caption": "Hình 25.2 Hồ lớm do thiên thạch gây ra khi va vào Trái Đất",
+        "description": "Hình ảnh minh họa về năng lượng thực tế của vật chuyển động"
+      },
+      {
+        "id": "f25-3",
+        "caption": "Hình 25.3 Máy động cọc",
+        "description": "Máy động cọc được nâng lên để tạo ra công suất, minh họa ứng dụng của thế năng"
+      },
+      {
+        "id": "f25-4",
+        "caption": "Hình 25.4 Người cung thủ",
+        "description": "Hình minh họa về thế năng đàn hồi khi cung được kéo căng, và giurơng cung là ví dụ về các loại thế năng khác"
+      }
+    ]
+  },
+  "b26": {
+    "id": "b26",
+    "title": "Cơ năng và định luật bảo toàn cơ năng",
+    "grade": 10,
+    "pageRange": [
+      102,
+      105
+    ],
+    "summary": "Bài học giới thiệu sự chuyển hoá giữa động năng và thế năng, định luật bảo toàn cơ năng khi vật chuyển động trong trường trọng lực, và các ứng dụng thực tế của định luật này.",
+    "learningObjectives": [
+      "Hiểu sự chuyển hoá giữa động năng và thế năng",
+      "Nắm vững định luật bảo toàn cơ năng",
+      "Áp dụng định luật bảo toàn cơ năng để giải quyết các bài toán",
+      "Phân tích những hiểu lầm thường gặp về cơ năng"
+    ],
+    "sections": [
+      {
+        "heading": "I. Sự chuyển hoá giữa động năng và thế năng",
+        "bullets": [
+          "Cơ năng của một vật là tổng động năng và thế năng của nó",
+          "Khi vật chuyển động trong trường trọng lực thì cơ năng có dạng W = W_d + W_t = \\frac{1}{2}m v^2 + mgh",
+          "Động năng và thế năng có thể chuyển hoá qua lại lẫn nhau"
+        ]
+      },
+      {
+        "heading": "II. Định luật bảo toàn cơ năng",
+        "bullets": [
+          "Thí nghiệm về con lắc đơn: Khi vật chuyển hoá giữa động năng và thế năng trong dao động của con lắc đơn",
+          "Định luật: Khi một vật chuyển động trong trường trọng lực mà chỉ chiếu tác dụng của trọng lực thì cơ năng của vật được bảo toàn",
+          "Biểu thức: Khi vật chuyển động từ vị trí A có độ cao h_A xuống vị trí B có độ cao h_B, thì: A_{AB} = W_{dA} - W_{dB} = mgh_1 - mgh_2"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Cơ năng",
+        "definition": "Tổng động năng và thế năng của một vật, ký hiệu W"
+      },
+      {
+        "term": "Động năng",
+        "definition": "Năng lượng của vật do chuyển động, W_d = \\frac{1}{2}mv^2"
+      },
+      {
+        "term": "Thế năng",
+        "definition": "Năng lượng của vật do vị trí, W_t = mgh"
+      },
+      {
+        "term": "Định luật bảo toàn cơ năng",
+        "definition": "Khi vật chuyển động chỉ dưới tác dụng của trọng lực, cơ năng toàn phần không đổi"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "W_e = W_d + W_t = \\frac{1}{2}mv^2 + mgh",
+        "meaning": "Công thức tính cơ năng của vật"
+      },
+      {
+        "latex": "W_A = W_O \\Leftrightarrow W_{tA} + W_{dA} = W_{tO} + W_{dAO}",
+        "meaning": "Định luật bảo toàn cơ năng: cơ năng tại vị trí A bằng cơ năng tại vị trí O"
+      },
+      {
+        "latex": "v_O = \\sqrt{2g.\\ell(1-\\cos\\alpha)}",
+        "meaning": "Công thức tính vận tốc tại vị trí thấp nhất của con lắc"
+      },
+      {
+        "latex": "A_{AB} = W_{dA} - W_{dB} = mgh_1 - mgh_2",
+        "meaning": "Công thực hiện bởi trọng lực khi vật chuyển động từ A đến B"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một con lắc đơn có chiều dài ℓ = 0,6 m. Dưa vật năng lên điểm A có độ cao xác định h so với điểm O rồi thả cho vật chuyển động từ đó. Tại chỗ thấp nhất của cung (điểm B), vận tốc của vật là bao nhiêu? Biết g = 9,8 m/s². Hãy tính độ lớn vận tốc của vật tại vị trí O.",
+        "solution": "Chọn mốc tính thế năng tại vị trí thấp nhất O. Gọi cơ năng tại vị trí A và O lần lượt là W_A và W_O. Thế năng tại A: h_A = OC - CE = ℓ - ℓcos(α) = ℓ(1 - cos(α)). Áp dụng định luật bảo toàn cơ năng: W_A = W_O ⟹ m.g.ℓ(1 - cos(α)) = \\frac{1}{2}m.v_O^2 ⟹ v_O = \\sqrt{2g.ℓ(1-\\cos(30°))} ≈ 1,26 m/s"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f26-1",
+        "caption": "Hình 26.1",
+        "description": "Một phần đường của tàu lượn siêu tốc với các vòng cong khác nhau, minh họa sự chuyển hoá giữa động năng và thế năng"
+      },
+      {
+        "id": "f26-2a",
+        "caption": "Hình 26.2a",
+        "description": "Chiếc đồng hồ quả lắc truyền thống"
+      },
+      {
+        "id": "f26-2b",
+        "caption": "Hình 26.2b",
+        "description": "Sơ đồ con lắc đơn quả lắc với các điểm A, B, O và vectơ vận tốc v tại vị trí thấp nhất"
+      },
+      {
+        "id": "f26-3",
+        "caption": "Hình 26.3",
+        "description": "Một vận động viên trượt ván trong rãnh (half-pipe), minh họa sự bảo toàn cơ năng trong chuyển động"
+      },
+      {
+        "id": "f26-4",
+        "caption": "Hình 26.4",
+        "description": "Sơ đồ con lắc đơn với các điểm B, O, A, C và góc α, chiều dài ℓ"
+      },
+      {
+        "id": "f26-5",
+        "caption": "Hình 26.5",
+        "description": "Sơ đồ biểu diễn các độ cao h, h₁, h₂ của vật tại các vị trí A và B"
+      }
+    ]
+  },
+  "b28": {
+    "id": "b28",
+    "title": "Động lượng",
+    "grade": 10,
+    "pageRange": [
+      110,
+      112
+    ],
+    "summary": "Động lượng là đại lượng vectơ đặc trưng cho sự truyền chuyển động của vật trong tương tác với các vật khác. Bài học trình bày định nghĩa động lượng, xung lượng của lực và các ứng dụng của chúng.",
+    "learningObjectives": [
+      "Hiểu khái niệm động lượng và xung lượng của lực",
+      "Biết cách tính động lượng và xung lượng trong các tình huống thực tế",
+      "Áp dụng định luật bảo toàn động lượng để giải quyết các bài toán"
+    ],
+    "sections": [
+      {
+        "heading": "I. Động lượng",
+        "bullets": [
+          "Thực hiện các thí nghiệm sau để tìm hiểu về sự truyền chuyển động trong tương tác giữa các vật",
+          "Định nghĩa: Ba viên bi A, B, C được chọn sao cho B nặng hơn A và C",
+          "Mặn trưởi có thể dùng ống nhựa cắt dọc để tạo độ có ốc của mặn trưởi",
+          "Một vài vật (hộp giấy, quyển sách) để tạo độ ốc của mặn trưởi",
+          "Đặt viên bi C ngay dưới chân mặn trưởi như Hình 28.1",
+          "Tiến hành: Thí nghiệm 1 - Làm lrượt thả hai viên bi A, B chuyển động trên mặn trưởi. Quan sát và độ quảng đường dịch chuyển của viên bi C sau va chạm với mỗi lần thả",
+          "Thí nghiệm 2 - Bây giờ chỉ thả viên bi A lần xuống mặn trưởi nhưng tăng độ độc của mặn trưởi. Quan sát và độ quảng đường dịch chuyển của viên bi C sau va chạm với mỗi lần thả",
+          "Thảo luận: Trong thí nghiệm 1, vận tốc của hai viên bi A và B khi đến chân độc có giống nhau không? Viên bi nào đẩy viên bi C lạn xa hơn? Tại sao?",
+          "Trong thí nghiệm 2, trùng với độ độc nào thì viên bi A có vận tốc lớn hơn khi va chạm với C? Ở trường hợp nào, viên bi C lạn xa hơn? Tại sao?"
+        ]
+      },
+      {
+        "heading": "Từ hai thí nghiệm trên, ta thấy vật có khối lượng và vận tốc căng lên thì sự truyền chuyển động trong tương tác với các vật khác căng lên. Đại lượng đặc trưng cho khả năng truyền chuyển động của một vật khi trong tác với vật khác gọi là động lượng của vật.",
+        "bullets": [
+          "Động lượng của một vật khối lượng m dùng chuyển động với vận tốc $\\vec{v}$ là đại lượng được xác định bởi công thức: $\\vec{p} = m\\vec{v}$ (28.1)",
+          "Động lượng là một đại lượng vectơ có cùng hướng với vận tốc của vật",
+          "Đơn vị động lượng của lực là: kg.m/s"
+        ]
+      },
+      {
+        "heading": "II. Xung lượng của lực",
+        "bullets": [
+          "Khi một lực $\\vec{F}$ tác dụng lên một vật trong khoảng thời gian ngắn Δt thì tích $\\vec{F}\\Delta t$ được định nghĩa là xung lượng của lực $\\vec{F}$ trong khoảng thời gian Δt ấy (Lực $\\vec{F}$ được xem là không đổi trong khoảng thời gian tác dụng Δt)",
+          "Đơn vị xung lượng của lực là: N.s"
+        ]
+      },
+      {
+        "heading": "Các vị dụ và ứng dụng",
+        "bullets": [
+          "Trong các vị dụ sau, các vật da chiều tác dụng của các lực nào trong thời gian rất ngắn?",
+          "Cầu thủ thực hiện một cú đá về lề đã đưa được bóng vào lưới đối phương",
+          "Trong môn bi-a, quả bi-a dạng chuyển động thi va chạm vào thành bàn nên nó đối hướng",
+          "Trong môn chơi gôn, một quả bóng gôn đang nằm yên. Sau một cú đánh, quả bóng bay đi rất nhanh"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Động lượng",
+        "definition": "Đại lượng vectơ đặc trưng cho sự truyền chuyển động của vật, được định nghĩa bằng tích của khối lượng và vận tốc của vật"
+      },
+      {
+        "term": "Xung lượng của lực",
+        "definition": "Đại lượng đặc trưng cho tác dụng của lực trong một khoảng thời gian, bằng tích của lực và thời gian tác dụng"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "\\vec{p} = m\\vec{v}",
+        "meaning": "Động lượng bằng tích của khối lượng và vận tốc, là một đại lượng vectơ cùng hướng với vận tốc"
+      },
+      {
+        "latex": "\\vec{F}\\Delta t",
+        "meaning": "Xung lượng của lực, bằng tích của lực và khoảng thời gian tác dụng"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Tìm thêm ví dụ minh họa cho ý nghĩa vật lý trên của động lượng",
+        "solution": "Nếu định nghĩa và đơn vị của động lượng"
+      },
+      {
+        "prompt": "Động lượng của xe tải hỏ ô tô trong hình ở đầu bài lớn hơn?",
+        "solution": "Trong trường hợp sức phát 11 m, tại sao thì khó bắt bóng hơn nếu bóng có động lượng tăng?"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f28-1",
+        "caption": "Hình 28.1 - Thí nghiệm tìm hiểu về sự truyền chuyển động trong tương tác",
+        "description": "Mô tả thiết bị Newton's cradle (con lắc Newton) với các viên bi kim loại treo bằng dây, dùng để minh họa sự truyền động lượng giữa các vật"
+      },
+      {
+        "id": "f28-2",
+        "caption": "Hình 28.2 - Về vectơ động lượng của một quả bóng tennis vừa bật khỏi mặt vợt",
+        "description": "Hình minh họa vectơ động lượng của quả bóng tennis sau khi bật khỏi vợt, thể hiện hướng và độ lớn của động lượng"
+      }
+    ]
+  },
+  "b31": {
+    "id": "b31",
+    "title": "Động học của chuyển động tròn đều",
+    "grade": 10,
+    "pageRange": [
+      120,
+      122
+    ],
+    "summary": "Chuyên đề về động học của chuyển động tròn đều, bao gồm các đại lượng đặc trưng như góc quay, tốc độ dài, tốc độ góc, chu kỳ và tần số, cùng với mối liên hệ giữa chúng.",
+    "learningObjectives": [
+      "Hiểu rõ khái niệm và đặc điểm của chuyển động tròn đều",
+      "Nắm vững các đại lượng đặc trưng: góc quay, tốc độ dài, tốc độ góc, chu kỳ, tần số",
+      "Vận dụng các công thức mô tả chuyển động tròn đều",
+      "Hiểu mối liên hệ giữa các đại lượng trong chuyển động tròn đều"
+    ],
+    "sections": [
+      {
+        "heading": "I. Mô tả chuyển động tròn",
+        "bullets": [
+          "Chuyển động tròn là chuyển động theo quỹ đạo tròn",
+          "Để xác định vị trí của vật chuyển động tròn, ta dùng góc quay θ (tính từ vị trí ban đầu)",
+          "Trong toán học, ta đã biết mối quan hệ giữa góc đại cung với góc chắn tâm và bán kính đường tròn: θ = s/r",
+          "360° = 2π (rad)",
+          "180° = π (rad)",
+          "Khi vật chuyển động được 1 vòng tròn, ta có: θ = 2πr/r = 2π"
+        ]
+      },
+      {
+        "heading": "II. Chuyển động tròn đều. Tốc độ và tốc độ góc",
+        "bullets": [
+          "Chuyển động tròn đều là chuyển động theo quỹ đạo tròn có tốc độ không thay đổi",
+          "Tốc độ: v = s/t",
+          "Tốc độ góc: ω = θ/t (đơn vị: rad/s)",
+          "Mối liên hệ giữa tốc độ dài và tốc độ góc: v = ωr",
+          "Chu kỳ T và tần số f liên hệ: T = 1/f = 2π/ω",
+          "Khi vật quay hết một vòng, chu kỳ T là thời gian thực hiện một vòng quay"
+        ]
+      },
+      {
+        "heading": "III. Vận tốc trong chuyển động tròn đều",
+        "bullets": [
+          "Vận tốc tức thời được tính: v_i = Δd/Δt",
+          "Khi Δt rất nhỏ, vecto vận tốc luôn có phương tiếp tuyến với đường tròn",
+          "Vecto vận tốc có phương trùng với tiếp tuyến của đường tròn tại từng thời điểm"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Chuyển động tròn đều",
+        "definition": "Chuyển động theo quỹ đạo tròn với tốc độ không thay đổi"
+      },
+      {
+        "term": "Góc quay (θ)",
+        "definition": "Góc ở tâm chắn cung đi được, đơn vị tính là radian hoặc độ"
+      },
+      {
+        "term": "Tốc độ dài (v)",
+        "definition": "Quãng đường đi được trong một đơn vị thời gian, tính bằng m/s"
+      },
+      {
+        "term": "Tốc độ góc (ω)",
+        "definition": "Góc quay được trong một đơn vị thời gian, đơn vị rad/s"
+      },
+      {
+        "term": "Chu kỳ (T)",
+        "definition": "Thời gian để vật thực hiện một vòng quay hoàn toàn"
+      },
+      {
+        "term": "Tần số (f)",
+        "definition": "Số vòng quay thực hiện được trong một đơn vị thời gian, đơn vị Hz"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "\\theta = \\frac{s}{r}",
+        "meaning": "Góc quay bằng quãng đường chia cho bán kính"
+      },
+      {
+        "latex": "v = \\frac{s}{t}",
+        "meaning": "Tốc độ dài bằng quãng đường chia cho thời gian"
+      },
+      {
+        "latex": "\\omega = \\frac{\\theta}{t}",
+        "meaning": "Tốc độ góc bằng góc quay chia cho thời gian"
+      },
+      {
+        "latex": "v = \\omega r",
+        "meaning": "Mối liên hệ giữa tốc độ dài và tốc độ góc"
+      },
+      {
+        "latex": "T = \\frac{1}{f} = \\frac{2\\pi}{\\omega}",
+        "meaning": "Chu kỳ liên hệ với tần số và tốc độ góc"
+      },
+      {
+        "latex": "360^\\circ = 2\\pi \\text{ (rad)}",
+        "meaning": "Chuyển đổi giữa độ và radian"
+      },
+      {
+        "latex": "180^\\circ = \\pi \\text{ (rad)}",
+        "meaning": "Chuyển đổi giữa độ và radian"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Khi xe mô tô đua vào khúc của thì có những bộ phận nào của xe chuyển động tròn?",
+        "solution": "Các bánh xe, các chi tiết quay của động cơ, và các bộ phận khác quay xung quanh trục"
+      },
+      {
+        "prompt": "1. Biết chiều dài kim giờ và kim phút của một chiếc đồng hồ lần lượt là 4 cm và 5 cm. Hãy tính: a) Tỉ số chu kỳ quay của hai kim. b) Tỉ số tốc độ của đầu kim phút và đầu kim giờ.",
+        "solution": "a) Tỉ số chu kỳ: T_giờ/T_phút = 12/1 = 12 (kim giờ có chu kỳ gấp 12 lần kim phút). b) Tỉ số tốc độ: v_phút/v_giờ = (ω_phút × r_phút)/(ω_giờ × r_giờ) = (2π/3600 × 0.05)/(2π/43200 × 0.04) = 60"
+      },
+      {
+        "prompt": "2. Một điểm trên đường xích đạo của Trái Đất. Biết bán kính Trái Đất tại xích đạo là 6400 km. Hãy tính: a) Chu kỳ chuyển động của điểm đó. b) Tốc độ và tốc độ góc của điểm đó.",
+        "solution": "a) Chu kỳ T = 24 giờ = 86400 s. b) Tốc độ góc ω = 2π/T ≈ 7.27 × 10⁻⁵ rad/s. Tốc độ dài v = ωr ≈ 465 m/s"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f31_1",
+        "caption": "Hình 31.1. Quãng đường s và độ dịch chuyển góc θ",
+        "description": "Hình vẽ minh họa mối liên hệ giữa quãng đường s đi được trên cung tròn và góc quay θ tương ứng với bán kính r của đường tròn"
+      }
+    ]
+  },
+  "b33": {
+    "id": "b33",
+    "title": "Biến dạng của vật rắn",
+    "grade": 10,
+    "pageRange": [
+      128,
+      130
+    ],
+    "summary": "Bài học giới thiệu các loại biến dạng của vật rắn khi chịu tác dụng của ngoại lực, bao gồm biến dạng đàn hồi và định luật Hooke mô tả mối quan hệ giữa lực tác dụng và độ biến dạng.",
+    "learningObjectives": [
+      "Nhận biết các loại biến dạng của vật rắn (biến dạng kéo, nén, xoắn)",
+      "Hiểu định luật Hooke và áp dụng vào các bài toán thực tế",
+      "Phân tích ảnh hưởng của ngoại lực lên hình dạng và kích thước vật rắn"
+    ],
+    "sections": [
+      {
+        "heading": "I. BIẾN DẠNG ĐÀN HỒI. BIẾN DẠNG KÉO VÀ BIẾN DẠNG NÉN",
+        "bullets": [
+          "Khi không có ngoại lực tác dụng, vật rắn có kích thước và hình dạng xác định",
+          "Khi có ngoại lực tác dụng, vật rắn thay đổi hình dạng và kích thước được gọi là biến dạng",
+          "Biến dạng đàn hồi là biến dạng phục hồi được khi bỏ ngoại lực",
+          "Ép quả bóng cao su vào bức tường biểu diễn biến dạng nén",
+          "Nén lò xo theo trục của nó biểu diễn biến dạng nén",
+          "Kéo hai đầu lò xo theo trục của nó biểu diễn biến dạng kéo",
+          "Kéo cho vòng dây cao su dãn ra biểu diễn biến dạng kéo",
+          "Khi không còn tác dụng của ngoại lực, vật rắn lấy lại được hình dạng và kích thước ban đầu là biến dạng đàn hồi"
+        ]
+      },
+      {
+        "heading": "II. LỰC ĐÀN HỒI. ĐỊNH LUẬT HOOKE",
+        "bullets": [
+          "Lực đàn hồi của lò xo là lực phục hồi do độ biến dạng của lò xo",
+          "Các lực này ngược chiều với lực tác dụng vào lò xo",
+          "Lực đàn hồi chống lại nguyên nhân làm nó biến dạng",
+          "Định luật Hooke: Trong giới hạn đàn hồi, độ lớn của lực đàn hồi tỉ lệ với độ biến dạng",
+          "Công thức Hooke: F_đh = k|Δl|",
+          "Hệ số k được gọi là hệ số đàn hồi hay độ cứng của lò xo",
+          "Đơn vị của k là N/m"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Biến dạng",
+        "definition": "Sự thay đổi hình dạng hoặc kích thước của vật rắn khi chịu tác dụng của ngoại lực"
+      },
+      {
+        "term": "Biến dạng đàn hồi",
+        "definition": "Biến dạng có khả năng phục hồi được khi bỏ ngoại lực tác dụng"
+      },
+      {
+        "term": "Biến dạng kéo",
+        "definition": "Biến dạng xảy ra khi vật chịu lực kéo theo chiều dài"
+      },
+      {
+        "term": "Biến dạng nén",
+        "definition": "Biến dạng xảy ra khi vật chịu lực nén theo chiều dài"
+      },
+      {
+        "term": "Lực đàn hồi",
+        "definition": "Lực phục hồi xuất hiện trong vật rắn khi bị biến dạng, có chiều ngược với lực tác dụng"
+      },
+      {
+        "term": "Định luật Hooke",
+        "definition": "Trong giới hạn đàn hồi, độ lớn lực đàn hồi tỉ lệ với độ biến dạng của vật"
+      },
+      {
+        "term": "Hệ số đàn hồi (độ cứng)",
+        "definition": "Hệ số k trong công thức Hooke, phản ánh mức độ kháng biến dạng của vật, đơn vị N/m"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "F_{đh} = k|\\Delta l|",
+        "meaning": "Công thức định luật Hooke: lực đàn hồi bằng hệ số đàn hồi nhân với độ biến dạng tuyệt đối"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Trong mỗi thí nghiệm dưới đây, em hãy cho biết: Lực nào làm vật biến dạng? Biến dạng nào là biến dạng kéo? Biến dạng nào là biến dạng nén?",
+        "solution": "Cần phân tích từng trường hợp để xác định loại lực tác dụng (kéo/nén), xác định hướng của lực và hướng biến dạng"
+      },
+      {
+        "prompt": "Tìm thêm ví dụ về biến dạng nén và biến dạng kéo trong đời sống.",
+        "solution": "Liệt kê các ví dụ thực tế như: lò xo bị nén, dây bị kéo, cao su bị ép, v.v."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f33-1a",
+        "caption": "Hình 33.1a: Khi chưa bị biến dạng",
+        "description": "Vật rắn dưới dạng bình thường, chưa chịu tác dụng của ngoại lực"
+      },
+      {
+        "id": "f33-1b",
+        "caption": "Hình 33.1b: Khi bị biến dạng nén",
+        "description": "Vật rắn bị kéo theo hai đầu theo chiều ngang, biểu diễn biến dạng kéo"
+      },
+      {
+        "id": "f33-1c",
+        "caption": "Hình 33.1c: Khi bị biến dạng kéo",
+        "description": "Lò xo bị kéo dãn, thể hiện biến dạng kéo với khoảng cách giữa các vòng tăng lên"
+      },
+      {
+        "id": "f33-1d",
+        "caption": "Hình 33.1d: Biến dạng xoắn",
+        "description": "Hai tay kéo theo hai chiều ngược nhau, biểu diễn biến dạng xoắn"
+      },
+      {
+        "id": "f33-2b",
+        "caption": "Hình 33.2b: Khi bị biến dạng nén",
+        "description": "Vật rắn bị nén từ hai phía, chiều dài giảm"
+      },
+      {
+        "id": "f33-2c",
+        "caption": "Hình 33.2c: Khi bị biến dạng kéo",
+        "description": "Vật rắn bị kéo dãn, chiều dài tăng lên"
+      },
+      {
+        "id": "f33-3",
+        "caption": "Hình 33.3: Đồ thị biến dạn sự phụ thuộc lực đàn hồi vào độ biến dạng của lò xo",
+        "description": "Đồ thị tuyến tính thể hiện mối quan hệ tỉ lệ giữa lực đàn hồi F và độ biến dạng Δl theo định luật Hooke"
+      }
+    ]
+  },
+  "b27": {
+    "id": "b27",
+    "title": "Hiệu suất",
+    "grade": 10,
+    "pageRange": [
+      106,
+      109
+    ],
+    "summary": "Bài học giới thiệu khái niệm hiệu suất - tỷ lệ giữa năng lượng có ích và năng lượng toàn phần trong các quá trình chuyển hoá năng lượng. Hiệu suất được ứng dụng để đánh giá mức độ hiệu quả của các thiết bị và quá trình trong thực tế.",
+    "learningObjectives": [
+      "Hiểu khái niệm năng lượng có ích và năng lượng hao phí",
+      "Nắm vững công thức tính hiệu suất",
+      "Áp dụng hiệu suất để giải quyết các bài toán thực tế",
+      "Nhận thức được tầm quan trọng của hiệu suất trong các quá trình chuyển hoá năng lượng"
+    ],
+    "sections": [
+      {
+        "heading": "I. Năng lượng có ích và năng lượng hao phí",
+        "bullets": [
+          "Năng lượng được chuyển từ dạng này sang dạng khác, từ vật này sang vật khác, thì luôn có một phần bị hao phí",
+          "Trong các động cơ nhiệt thông thường có khoảng 60% đến 70% năng lượng bị hao phí",
+          "Trong các động cơ điện năng lượng hao phí thấp hơn, chỉ khoảng 10%, nhưng trong các pin mặt trời thì được lai, chỉ có khoảng 10% năng lượng của ảnh sáng được chuyển hoá thành điện năng, còn lại là năng lượng hao phí",
+          "Xác định năng lượng có ích và năng lượng hao phí khi chọi thế thao",
+          "Nếu chơi thể thao trong thời tiết lạnh thì nhiệt năng mà cơ thể tỏa ra có được xem là năng lượng có ích không? Vì sao?"
+        ]
+      },
+      {
+        "heading": "II. Hiệu suất",
+        "bullets": [
+          "Để đánh giá tỷ lệ giữa năng lượng có ích và năng lượng toàn phần, người ta dùng khái niệm hiệu suất",
+          "Hiệu suất được định nghĩa bằng tỷ số giữa năng lượng có ích và năng lượng toàn phần",
+          "Công thức tính hiệu suất: H = (W_ci / W_tp) × 100%",
+          "Hiệu suất của động cơ nhiệt được viết dưới dạng: H = (A / Q) × 100%, trong đó A là công cơ học thực hiện được, Q là nhiệt lượng mà động cơ nhận được từ nhiên liệu bị đốt cháy",
+          "Hiệu suất luôn nhỏ hơn 100% vì có năng lượng hao phí"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Năng lượng có ích",
+        "definition": "Phần năng lượng được chuyển hoá thành dạng mong muốn hoặc được sử dụng để thực hiện công việc có ích"
+      },
+      {
+        "term": "Năng lượng hao phí",
+        "definition": "Phần năng lượng bị mất đi dưới dạng nhiệt, tiếng động, ma sát hoặc các dạng năng lượng không mong muốn khác"
+      },
+      {
+        "term": "Hiệu suất",
+        "definition": "Tỷ lệ phần trăm giữa năng lượng có ích và năng lượng toàn phần được cung cấp"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "H = \\frac{W_{ci}}{W_{tp}} \\times 100\\%",
+        "meaning": "Hiệu suất bằng năng lượng có ích chia cho năng lượng toàn phần, nhân với 100%"
+      },
+      {
+        "latex": "H = \\frac{A}{Q} \\times 100\\%",
+        "meaning": "Hiệu suất của động cơ nhiệt bằng công cơ học thực hiện được chia cho nhiệt lượng nhận được, nhân với 100%"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một em bé nằng 20 kg chơi trượt từ trạng thái đứng yên ở đỉnh cầu trượt dài 4 m, nghiêng góc 40° so với phương nằm ngang. Khi đến chân cầu trượt, tốc độ của em bé là 3,2 m/s. Lấy gia tốc trong trường là 10 m/s².",
+        "solution": "a) Tính độ lơn lực ma sát tác dụng vào em bé: h = ℓ.sin(α) = 4.sin(40°) ≈ 2,57 m. Công của ma sát: A = m.g.h - (1/2)m.v² ≈ 411,6 J. Lực ma sát: F ≈ 102,9 N. b) Hiệu suất của quá trình chuyển thế năng thành động năng của em bé: Năng lượng toàn phần W_tp = m.g.h = 514 J. Năng lượng hao phí bằng độ lơn lực ma sát: W_cl = W_tp - A = 102,4 J. Hiệu suất: H = (W_cl / W_tp) × 100% ≈ 20%"
+      },
+      {
+        "prompt": "Phân tích sự tiêu hao năng lượng ở động cơ xăng của ô tô (Hình 27.3).",
+        "solution": "Tổng năng lượng do nhiên liệu bị đốt cháy cung cấp được phân bổ như sau: 41% đến các bánh xe, 30% bục xa (nhiệt) ra ngoài, 30% truyền cho hệ thống làm mát (nước, khí), 5% ra ngoài, 24% nhiệt sinh công trong hoạt động. Hiệu suất của động cơ xăng khoảng 25-30%."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f27-1",
+        "caption": "Hình 27.1 - Năng lượng có ích và năng lượng hao phí",
+        "description": "Biểu đồ mũi tên minh hoạ sự phân chia năng lượng toàn phần thành năng lượng có ích và năng lượng hao phí"
+      },
+      {
+        "id": "f27-2",
+        "caption": "Hình 27.2 - Em bé trượt trên cầu trượt",
+        "description": "Sơ đồ minh hoạ em bé trượt từ đỉnh cầu trượt dài ℓ, nghiêng góc α, với độ cao h so với mặt đất"
+      },
+      {
+        "id": "f27-3",
+        "caption": "Hình 27.3 - Sơ đồ phân bổ sự chuyển hoá năng lượng (cho động cơ xăng của ô tô)",
+        "description": "Biểu đồ phân bổ tỷ lệ năng lượng: 41% đến bánh xe, 30% bục xa ra ngoài, 30% truyền cho hệ thống làm mát, 5% ra ngoài theo khí thải, 24% nhiệt sinh công"
+      }
+    ]
+  },
+  "b34": {
+    "id": "b34",
+    "title": "Khối lượng riêng. Áp suất chất lỏng",
+    "grade": 10,
+    "pageRange": [
+      131,
+      137
+    ],
+    "summary": "Bài học trình bày khái niệm khối lượng riêng, áp lực và áp suất, đặc biệt là áp suất của chất lỏng và các ứng dụng thực tiễn của chúng.",
+    "learningObjectives": [
+      "Hiểu khái niệm khối lượng riêng và áp lực, áp suất",
+      "Nắm vững công thức tính áp suất chất lỏng",
+      "Áp dụng định luật Archimedes và nguyên lý Pascal",
+      "Giải quyết các bài toán về áp suất và khối lượng riêng"
+    ],
+    "sections": [
+      {
+        "heading": "I. Khối lượng riêng",
+        "bullets": [
+          "Khối lượng riêng là khối lượng của một đơn vị thể tích chất đó",
+          "Công thức: ρ = m/V, đơn vị kg/m³ hoặc g/cm³",
+          "1 g/cm³ = 1000 kg/m³",
+          "Khối lượng riêng là đặc tính của chất, không phụ thuộc vào hình dạng và kích thước"
+        ]
+      },
+      {
+        "heading": "II. Áp lực và Áp suất",
+        "bullets": [
+          "Áp lực là lực tác dụng vuông góc với mặt bị ép",
+          "Áp suất được định nghĩa là áp lực trên một đơn vị diện tích",
+          "Công thức: p = F_N / S, đơn vị Pa (N/m²)",
+          "1 Pa = 1 N/m²",
+          "Áp suất phụ thuộc vào áp lực và diện tích tác dụng"
+        ]
+      },
+      {
+        "heading": "III. Áp suất của chất lỏng",
+        "bullets": [
+          "Chất lỏng tác dụng áp suất lên đáy bình và thành bình",
+          "Áp suất chất lỏng phụ thuộc vào độ sâu và khối lượng riêng",
+          "Công thức: p = p_a + ρgh, trong đó p_a là áp suất khí quyển",
+          "Trên bề mặt chất lỏng có áp suất khí quyển p_a",
+          "Áp suất tăng theo độ sâu: Δp = ρgΔh"
+        ]
+      },
+      {
+        "heading": "Phương trình cơ bản của chất lưu dừng yên",
+        "bullets": [
+          "Có thể xác định áp suất tại các điểm khác nhau trong chất lỏng",
+          "Áp suất tại hai điểm M và N: p_M = p_a + ρgh₁ và p_N = p_a + ρgh₂",
+          "Hiệu áp suất: Δp = ρg(h₁ - h₂) = ρgΔh"
+        ]
+      },
+      {
+        "heading": "Hoạt động trải nghiệm",
+        "bullets": [
+          "Sử dụng các dụng cụ: một lực kế, một quả nặng hình trụ có móc treo, một bình chia độ dùng nước",
+          "Thiết kế phương án thí nghiệm minh hoạ cho phương trình cơ bản của chất lưu dừng yên"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Khối lượng riêng",
+        "definition": "Khối lượng của một đơn vị thể tích chất đó, ký hiệu ρ, công thức ρ = m/V"
+      },
+      {
+        "term": "Áp lực",
+        "definition": "Lực tác dụng vuông góc với mặt bị ép, ký hiệu F_N"
+      },
+      {
+        "term": "Áp suất",
+        "definition": "Áp lực tác dụng trên một đơn vị diện tích, ký hiệu p"
+      },
+      {
+        "term": "Pascal (Pa)",
+        "definition": "Đơn vị đo áp suất, 1 Pa = 1 N/m²"
+      },
+      {
+        "term": "Áp suất chất lỏng",
+        "definition": "Áp suất sinh ra bởi trọng lượng của chất lỏng, công thức p = p_a + ρgh"
+      },
+      {
+        "term": "Định luật Archimedes",
+        "definition": "Lực đẩy tác dụng lên một vật погруженный vào chất lỏng bằng trọng lượng chất lỏng bị vật chiếm chỗ"
+      },
+      {
+        "term": "Nguyên lý Pascal",
+        "definition": "Áp suất tác dụng lên chất lỏng được truyền nguyên vẹn đến mọi điểm trong chất lỏng"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "\\rho = \\frac{m}{V}",
+        "meaning": "Công thức tính khối lượng riêng, đơn vị kg/m³ hoặc g/cm³"
+      },
+      {
+        "latex": "1 \\text{ g/cm}^3 = 1000 \\text{ kg/m}^3",
+        "meaning": "Quy đổi đơn vị khối lượng riêng"
+      },
+      {
+        "latex": "p = \\frac{F_N}{S}",
+        "meaning": "Công thức tính áp suất, đơn vị Pa (N/m²)"
+      },
+      {
+        "latex": "1 \\text{ Pa} = 1 \\text{ N/m}^2",
+        "meaning": "Đơn vị của áp suất"
+      },
+      {
+        "latex": "p = p_a + \\rho gh",
+        "meaning": "Công thức tính áp suất chất lỏng tại độ sâu h"
+      },
+      {
+        "latex": "\\Delta p = \\rho g \\Delta h",
+        "meaning": "Phương trình cơ bản của chất lưu dừng yên, hiệu áp suất giữa hai điểm"
+      },
+      {
+        "latex": "F_N = P \\cos \\alpha",
+        "meaning": "Công thức tính thành phần lực vuông góc với bề mặt"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một khối hình lập phương có cạnh 0,30 m, khối lập phương đầy nước. Biết khối lượng riêng của nước là 1000 kg/m³. Tính áp suất của nước tác dụng lên mặt dưới của khối lập phương và xác định phương, chiều, độ lớn của lực này.",
+        "solution": "Tính thể tích khối lập phương V = 0,3³ = 0,027 m³. Tính khối lượng nước m = ρV = 1000 × 0,027 = 27 kg. Tính áp suất tại đáy: p = ρgh = 1000 × 10 × 0,3 = 3000 Pa. Lực tác dụng trên mặt dưới: F = pS = 3000 × 0,09 = 270 N, hướng thẳng đứng hướng lên."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f34-1",
+        "caption": "Hình 34.1",
+        "description": "Minh họa lực tác dụng lên bề mặt chất lỏng, phương vuông góc với mặt, chiều hướng vào trong"
+      },
+      {
+        "id": "f34-2",
+        "caption": "Hình 34.2",
+        "description": "Khái niệm áp lực phụ thuộc vào độ sâu trong chất lỏng"
+      },
+      {
+        "id": "f34-3",
+        "caption": "Hình 34.3",
+        "description": "Ví dụ thực tiễn: áp suất chất lỏng tác dụng lên cơ thể khi đẩy đồ vật"
+      },
+      {
+        "id": "f34-4",
+        "caption": "Hình 34.4",
+        "description": "Sơ đồ lực tác dụng trên bề mặt nghiêng một góc α"
+      },
+      {
+        "id": "f34-5",
+        "caption": "Hình 34.5",
+        "description": "So sánh áp suất trên các bề mặt khác nhau: xe tăng và ô tô"
+      },
+      {
+        "id": "f34-6",
+        "caption": "Hình 34.6",
+        "description": "Công cụ đo áp suất: xô múc nước và dụng cụ đo"
+      },
+      {
+        "id": "f34-7",
+        "caption": "Hình 34.7",
+        "description": "Thí nghiệm về áp suất chất lỏng: vòi phun nước từ các lỗ ở thành bình"
+      },
+      {
+        "id": "f34-8",
+        "caption": "Hình 34.8",
+        "description": "Minh họa chất lỏng trong bình, chiều cao h so với mặt thoáng"
+      },
+      {
+        "id": "f34-9",
+        "caption": "Hình 34.9",
+        "description": "Thí nghiệm nghiêm lại công thức tính áp suất của chất lỏng"
+      },
+      {
+        "id": "f34-10",
+        "caption": "Hình 34.10",
+        "description": "Sơ đồ thể hiện áp suất tại hai điểm M và N trong chất lỏng, với chiều cao h₁, h₂ và Δh"
+      },
+      {
+        "id": "f34-11",
+        "caption": "Hình 34.11",
+        "description": "Thí nghiệm làm vỡ thùng gỗ tô-nô của Pascal, minh họa nguyên lý Pascal"
+      }
+    ]
+  },
+  "b29": {
+    "id": "b29",
+    "title": "Định luật bảo toàn động lượng",
+    "grade": 10,
+    "pageRange": [
+      113,
+      119
+    ],
+    "summary": "Bài học trình bày định luật bảo toàn động lượng, mối liên hệ giữa xung lượng và độ biến thiên động lượng, cũng như các ứng dụng của định luật này thông qua va chạm đàn hồi và va chạm mềm.",
+    "learningObjectives": [
+      "Hiểu và vận dụng được mối liên hệ giữa xung lượng của lực và độ biến thiên động lượng",
+      "Nắm vững định luật bảo toàn động lượng và các điều kiện áp dụng",
+      "Phân tích được các hiện tượng va chạm đàn hồi và va chạm mềm"
+    ],
+    "sections": [
+      {
+        "heading": "I. Định luật bảo toàn động lượng",
+        "bullets": [
+          "Hệ kín là hệ khi không có ngoại lực tác dụng lên hệ hoặc các ngoại lực cân bằng nhau",
+          "Động lượng toàn phần của hệ kín bằng tổng các động lượng của từng vật trong hệ",
+          "Xét một hệ kín gồm hai vật tương tác với nhau, lực tác dụng giữa các vật tuân theo định luật 3 Newton"
+        ]
+      },
+      {
+        "heading": "II. Va chạm đàn hồi và va chạm mềm",
+        "bullets": [
+          "Va chạm đàn hồi là va chạm mà sau va chạm hai vật tách rời nhau, vận tốc sau va chạm thỏa mãn các điều kiện nhất định",
+          "Va chạm mềm là va chạm mà sau va chạm hai vật dính vào nhau và chuyển động với cùng vận tốc"
+        ]
+      },
+      {
+        "heading": "III. Tiến hành thí nghiệm",
+        "bullets": [
+          "Thí nghiệm 1: Va chạm mềm - hai xe chuyển động va chạm vào nhau, sau va chạm hai xe dính vào nhau",
+          "Thí nghiệm 2: Va chạm đàn hồi - hai xe chuyển động va chạm vào nhau, sau va chạm hai xe tách rời nhau"
+        ]
+      },
+      {
+        "heading": "IV. Kết quả thí nghiệm",
+        "bullets": [
+          "Sử dụng bảng đo khi, công quang và động hồ đo thời gian hiển số để tiến hành thí nghiệm xác định động lượng trước và sau va chạm",
+          "Để tiến hành thí nghiệm chính xác, cần đặt măng ngang và giảm ma sát it nhất có thể"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Xung lượng của lực",
+        "definition": "Đại lượng vectơ bằng tích của lực và thời gian tác dụng của nó, ký hiệu là \\vec{F}\\Delta t"
+      },
+      {
+        "term": "Động lượng",
+        "definition": "Đại lượng vectơ bằng tích của khối lượng và vận tốc, ký hiệu là \\vec{p} = m\\vec{v}"
+      },
+      {
+        "term": "Hệ kín",
+        "definition": "Hệ khi không có ngoại lực tác dụng lên hệ hoặc các ngoại lực cân bằng nhau"
+      },
+      {
+        "term": "Va chạm đàn hồi",
+        "definition": "Va chạm mà sau va chạm hai vật tách rời nhau"
+      },
+      {
+        "term": "Va chạm mềm",
+        "definition": "Va chạm mà sau va chạm hai vật dính vào nhau và chuyển động với cùng vận tốc"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "\\vec{F}\\Delta t = m\\vec{v_2} - m\\vec{v_1} = \\Delta\\vec{p}",
+        "meaning": "Xung lượng của lực bằng độ biến thiên động lượng của vật"
+      },
+      {
+        "latex": "\\vec{F} = -\\vec{F}",
+        "meaning": "Định luật 3 Newton: lực tác dụng và phản lực bằng nhau và ngược chiều"
+      },
+      {
+        "latex": "\\vec{F_1}\\Delta t = \\Delta\\vec{p_1}; \\vec{F_2}\\Delta t = \\Delta\\vec{p_2}",
+        "meaning": "Xung lượng của các lực tác dụng lên mỗi vật trong hệ kín"
+      },
+      {
+        "latex": "\\Delta\\vec{p_1} = -\\Delta\\vec{p_2} \\text{ hay } \\Delta\\vec{p_1} + \\Delta\\vec{p_2} = \\vec{0}",
+        "meaning": "Độ biến thiên động lượng của hai vật trong hệ kín cộng lại bằng không"
+      },
+      {
+        "latex": "\\vec{p} = \\vec{p_1} + \\vec{p_2}",
+        "meaning": "Động lượng toàn phần của hệ bằng tổng động lượng của các vật"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một quả bóng gồn có khối lượng 46 g đang nằm yên, sau một cú đánh quả bóng bay lên với tốc độ 70 m/s. Tính xung lượng của lực và độ lớn trung bình của lực tác dụng vào quả bóng. Biết thời gian tác dụng là 0,5·10⁻³ s.",
+        "solution": "Sử dụng công thức xung lượng \\Delta\\vec{p} = m(\\vec{v} - \\vec{v_0}) = 0,046 × 70 = 3,22 kg·m/s. Lực trung bình F = \\Delta p / \\Delta t = 3,22 / (0,5·10⁻³) = 6440 N"
+      },
+      {
+        "prompt": "Hai vật có khối lượng m₁ = 1 kg và m₂ = 2 kg, chuyển động với vận tốc có độ lớn lần lượt là v₁ = 3 m/s và v₂ = 2 m/s. a) Tính động lượng của mỗi vật. b) Vật nào khó dừng lại hơn? Vì sao?",
+        "solution": "a) Động lượng của vật 1: p₁ = m₁v₁ = 1 × 3 = 3 kg·m/s. Động lượng của vật 2: p₂ = m₂v₂ = 2 × 2 = 4 kg·m/s. b) Vật 2 khó dừng hơn vì có động lượng lớn hơn"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f29-1",
+        "caption": "Hình 29.1. Va chạm đàn hồi",
+        "description": "Mô tả hai xe A và B trước và sau va chạm đàn hồi. Trước va chạm, xe A chuyển động với vận tốc v_A = v, xe B đứng yên (v_B = 0). Sau va chạm, xe A đứng yên (v'_A = 0), xe B chuyển động với vận tốc v'_B = v"
+      },
+      {
+        "id": "f29-2",
+        "caption": "Hình 29.2. Va chạm mềm",
+        "description": "Mô tả hai xe A và B trước và sau va chạm mềm. Trước va chạm, xe A chuyển động với vận tốc v_A = v, xe B đứng yên (v_B = 0). Sau va chạm, cả hai xe dính vào nhau và chuyển động với vận tốc v_AB = v/2"
+      },
+      {
+        "id": "f29-3",
+        "caption": "Hình 29.3",
+        "description": "Mô tả ba con lắc (1), (2), (3) được treo từ một thanh ngang. Khi kéo con lắc (1) lên một độ cao h rồi thả ra, con lắc (1) va chạm với hai con lắc còn lại"
+      },
+      {
+        "id": "f30-1",
+        "caption": "Hình 30.1. Bộ dụng cụ thí nghiệm xác định động lượng trước và sau va chạm",
+        "description": "Mô tả các thiết bị sử dụng trong thí nghiệm: bằng đêm khi (1), động hồ đo thời gian hiển số (2), hai công quang điện (3), bom nén khí (4), hai xe trượt (5), hai tấm cản quang (6), cảm điện từ (7), một số quả nặng (8), lỏ xo hoặc thanh nhựa hình chữ U (9), chốt ghim (10), các dây nối (11)"
+      },
+      {
+        "id": "f30-2",
+        "caption": "Hình 30.2. Bộ trí thí nghiệm xác định động lượng trong trường hợp va chạm mềm",
+        "description": "Mô tả thiết lập thí nghiệm với hai xe chuyển động trên đường ray, được gắn với cảm biến để đo vận tốc, kết nối với đông hồ đo thời gian"
+      },
+      {
+        "id": "f30-3",
+        "caption": "Hình 30.3. Thí nghiệm xác định động lượng trong trường hợp va chạm đàn hồi",
+        "description": "Mô tả thiết lập thí nghiệm với hai xe chuyển động trên đường ray, được gắn với cảm biến để đo vận tốc trước và sau va chạm, kết nối với đông hồ đo thời gian"
+      },
+      {
+        "id": "f30-4",
+        "caption": "Hình 30.4. Thiết kế thí nghiệm xác định động lượng của hai viên bi trước và sau va chạm",
+        "description": "Mô tả hai viên bi với khối lượng khác nhau chuyển động và va chạm với nhau, được quan sát bằng công nghệ video"
+      }
+    ]
+  },
+  "b32": {
+    "id": "b32",
+    "title": "Lực hướng tâm và gia tốc hướng tâm",
+    "grade": 10,
+    "pageRange": [
+      123,
+      127
+    ],
+    "summary": "Bài học giới thiệu lực hướng tâm và gia tốc hướng tâm trong chuyển động tròn đều. Lực hướng tâm là lực gây ra chuyển động tròn đều, luôn hướng vào tâm quỹ đạo và có độ lớn không thay đổi.",
+    "learningObjectives": [
+      "Phân biệt tốc độ và vận tốc tức thời trong chuyển động tròn đều",
+      "Hiểu khái niệm gia tốc hướng tâm và lực hướng tâm",
+      "Áp dụng công thức tính gia tốc hướng tâm và lực hướng tâm"
+    ],
+    "sections": [
+      {
+        "heading": "I. Lực hướng tâm",
+        "bullets": [
+          "Dùng một sợi dây nhẹ không đan buộc vào một cái tấy để làm cái tấy chuyển động tròn trong mặt phẳng nằm ngang có tâm là dầu dây mà tay giữ",
+          "Lực tác dụng lên cái tấy là: lực căng dây hướng vào tâm quỹ đạo, lực cản của không khí, lực căng dây hướng vào tâm quỹ đạo",
+          "Nếu cái tấy đang chuyển động mà ta buông tay ra thì: cái tấy tiếp tục chuyển động tròn, cái tấy sẽ rơi xuống đất theo phương thẳng đứng, cái tấy vắng ra theo phương tiếp tuyến với quỹ đạo theo hướng vận tốc tại điểm đó",
+          "Lực (hay hợp lực) tác dụng lên vật chuyển động tròn đều hướng vào tâm nên gọi là lực hướng tâm"
+        ]
+      },
+      {
+        "heading": "II. Gia tốc hướng tâm",
+        "bullets": [
+          "Trong chuyển động tròn đều, lực hướng tâm gây gia tốc hướng vào tâm nên gia tốc này được gọi là gia tốc hướng tâm",
+          "Gia tốc hướng tâm được tính bằng công thức: a_{ht} = \\frac{v^2}{r} = \\omega^2 r"
+        ]
+      },
+      {
+        "heading": "III. Công thức độ lớn lực hướng tâm",
+        "bullets": [
+          "Theo định luật 2 Newton và công thức tính độ lớn của gia tốc hướng tâm ở trên có công thức tính độ lớn lực hướng tâm: F_{ht} = m.a_{ht} = \\frac{m.v^2}{r} = m.\\omega^2 r",
+          "Về hướng lực hướng tâm: một vật nhỏ buộc vào đầu một sợi dây, nếu quay đều và nhanh, sợi dây gắn như quay trong mặt phẳng nằm ngang. Nếu quay đều và chậm, sợi dây quết thành một mặt nón"
+        ]
+      },
+      {
+        "heading": "Em đã học",
+        "bullets": [
+          "Gia tốc trong chuyển động tròn đều luôn hướng vào tâm quỹ đạo và có độ lớn là: a_{ht} = \\frac{v^2}{r} = \\omega^2 r",
+          "Lực (hay hợp lực) của các lực tác dụng lên vật chuyển động tròn đều và gây ra cho vật gia tốc hướng tâm gọi là lực hướng tâm",
+          "Biểu thức của lực hướng tâm: F_{ht} = m.a_{ht} = \\frac{m.v^2}{r} = m.\\omega^2 r"
+        ]
+      },
+      {
+        "heading": "Em có thể",
+        "bullets": [
+          "Giải thích lí do vi sao trong thực tế người ta chỉ làm câu vồng lên chứ không làm câu vồng xuống",
+          "Giải thích vì sao trong môn xiếc mô tô bay, diễn viên xiếc có thể đi mô tô trong thành của một cái lồng quay tròn mà không bị rơi"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Lực hướng tâm",
+        "definition": "Lực (hay hợp lực) của các lực tác dụng lên vật chuyển động tròn đều và gây ra cho vật gia tốc hướng vào tâm quỹ đạo, luôn hướng vào tâm và có độ lớn không thay đổi"
+      },
+      {
+        "term": "Gia tốc hướng tâm",
+        "definition": "Gia tốc trong chuyển động tròn đều luôn hướng vào tâm quỹ đạo, có độ lớn bằng v²/r hoặc ω²r"
+      },
+      {
+        "term": "Radian",
+        "definition": "Góc ở tâm chắn cung có độ dài bằng bán kính đường tròn"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "a_{ht} = \\frac{v^2}{r} = \\omega^2 r",
+        "meaning": "Công thức tính gia tốc hướng tâm, trong đó v là tốc độ, r là bán kính, ω là tốc độ góc"
+      },
+      {
+        "latex": "F_{ht} = m.a_{ht} = \\frac{m.v^2}{r} = m.\\omega^2 r",
+        "meaning": "Công thức tính độ lớn lực hướng tâm, trong đó m là khối lượng vật"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Trong trường hợp ở Hình 32.4, dây dài 0,75 m. a) Ban A nói rằng: 'Tốc độ quay càng lớn thì góc lệch của dây so với phương thẳng đứng càng lớn'. Hãy chứng minh điều đó. b) Tính tần số quay để dây lệch góc α = 60° so với phương thẳng đứng, lấy g = 9,8 m/s².",
+        "solution": "a) Khi dây lệch góc α, lực hướng tâm F_ht = T.sin(α) phải cấp cho vật chuyển động tròn. Từ F_ht = mω²r = m(2πf)²r, khi tần số f tăng thì góc α phải tăng để F_ht tăng. b) Từ điều kiện cân bằng lực và công thức lực hướng tâm, tính được tần số quay tương ứng."
+      },
+      {
+        "prompt": "Hình 32.5 mô tả một về tính nhân tạo chuyển động tròn đều quanh Trái Đất (coi Mặt Trăng chuyển động tròn đều quanh Trái Đất). Biết khoảng cách từ Mặt Trăng đến tâm Trái Đất là 3,84.10⁸ m và chu kì quay là 27,2 ngày. Tính gia tốc hướng tâm của về tính so với mặt đất bằng tốc độ góc tự quay của Trái Đất quanh trục của nó.",
+        "solution": "Sử dụng công thức a_ht = ω²r. Tính ω từ chu kì T = 27,2 ngày = 2,35×10⁶ s, ω = 2π/T. Sau đó tính a_ht = ω²r với r = 3,84×10⁸ m."
+      },
+      {
+        "prompt": "Kim phút của một chiếc đồng hồ dài 8 cm. Tính gia tốc hướng tâm của đầu kim.",
+        "solution": "Chiếc đồng hồ quay với chu kì T = 60 phút = 3600 s. Tính ω = 2π/T, sau đó tính a_ht = ω²r với r = 0,08 m."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f32-1",
+        "caption": "Hình 31.2 - Vecto vận tốc trong chuyển động tròn",
+        "description": "Hình vẽ cho thấy một vật chuyển động tròn đều với các vecto vận tốc tại các điểm khác nhau trên quỹ đạo, hướng tiếp tuyến với đường tròn"
+      },
+      {
+        "id": "f32-2",
+        "caption": "Hình 31.3 - Chuyển động tròn đều của một vật",
+        "description": "Hình vẽ mô tả quỹ đạo tròn với hai điểm A và B, thể hiện khoảng cách từ A đến B theo chiều kim đồng hồ"
+      },
+      {
+        "id": "f32-3",
+        "caption": "Hình 32.1 - Lực hướng tâm",
+        "description": "Hình vẽ một người dùng một sợi dây nhẹ để làm cái tấy chuyển động tròn trong mặt phẳng nằm ngang"
+      },
+      {
+        "id": "f32-4",
+        "caption": "Hình 32.2 - Phân tích sự thay đổi vận tốc trong chuyển động tròn",
+        "description": "Hình vẽ về sự thay đổi vecto vận tốc giữa hai thời điểm, từ đó suy ra gia tốc hướng tâm"
+      },
+      {
+        "id": "f32-5",
+        "caption": "Hình 32.3 - Chuyển động tròn đều",
+        "description": "Hình vẽ mô tả chuyển động của vật trên quỹ đạo tròn với góc lệch α"
+      },
+      {
+        "id": "f32-6",
+        "caption": "Hình 32.4 - Hợp lực lực căng dây và trọng lực",
+        "description": "Hình vẽ về sự cân bằng lực trong chuyển động tròn theo phương thẳng đứng với dây lệch góc α so với phương thẳng đứng"
+      },
+      {
+        "id": "f32-7",
+        "caption": "Hình 32.5 - Lực hấp dẫn",
+        "description": "Hình vẽ minh họa về tính nhân tạo chuyển động tròn đều quanh Trái Đất"
+      },
+      {
+        "id": "f32-8",
+        "caption": "Hình 32.6 - Chuyển động tròn trên quỹ đạo",
+        "description": "Hình vẽ mô tả ô tô chuyển động trên quỹ đạo tròn trong hai trường hợp: mặt đường nằm ngang và mặt đường nghiêng góc θ"
+      },
+      {
+        "id": "f32-9",
+        "caption": "Hình 32.7 - Ứng dụng lực hướng tâm",
+        "description": "Hình vẽ về môn xiếc mô tô bay, diễn viên xiếc đi mô tô trong thành của một cái lồng quay tròn"
+      },
+      {
+        "id": "f32-10",
+        "caption": "Hình 32.8 - Chuyển động lí tâm",
+        "description": "Hình vẽ mô tả một vật đặt trên chiếc bàn quay, thể hiện lực hướng tâm cần thiết để giữ cho vật chuyển động tròn"
+      }
+    ]
+  }
+}

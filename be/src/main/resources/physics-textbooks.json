@@ -1,0 +1,208 @@
+{
+  "_meta": {
+    "publisher": "Nhà xuất bản Giáo dục Việt Nam",
+    "series": "Kết nối tri thức với cuộc sống",
+    "source": "Trích từ mục lục các file PDF trong sach_giao_khoa_vat_ly/ (10.pdf, 11.pdf, 12.pdf)."
+  },
+  "books": [
+    {
+      "id": "10",
+      "name": "Vật lí 10",
+      "grade": 10,
+      "source": "10.pdf",
+      "chapters": [
+        {
+          "id": "c1",
+          "name": "Chương I. Mở đầu",
+          "lessons": [
+            { "id": "b1", "name": "Bài 1. Làm quen với Vật lí", "page": 7 },
+            { "id": "b2", "name": "Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí", "page": 12 },
+            { "id": "b3", "name": "Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo", "page": 15 }
+          ]
+        },
+        {
+          "id": "c2",
+          "name": "Chương II. Động học",
+          "lessons": [
+            { "id": "b4", "name": "Bài 4. Độ dịch chuyển và quãng đường đi được", "page": 21 },
+            { "id": "b5", "name": "Bài 5. Tốc độ và vận tốc", "page": 26 },
+            { "id": "b6", "name": "Bài 6. Thực hành: Đo tốc độ của vật chuyển động", "page": 30 },
+            { "id": "b7", "name": "Bài 7. Đồ thị độ dịch chuyển – thời gian", "page": 34 },
+            { "id": "b8", "name": "Bài 8. Chuyển động biến đổi. Gia tốc", "page": 37 },
+            { "id": "b9", "name": "Bài 9. Chuyển động thẳng biến đổi đều", "page": 40 },
+            { "id": "b10", "name": "Bài 10. Sự rơi tự do", "page": 44 },
+            { "id": "b11", "name": "Bài 11. Thực hành: Đo gia tốc rơi tự do", "page": 47 },
+            { "id": "b12", "name": "Bài 12. Chuyển động ném", "page": 49 }
+          ]
+        },
+        {
+          "id": "c3",
+          "name": "Chương III. Động lực học",
+          "lessons": [
+            { "id": "b13", "name": "Bài 13. Tổng hợp và phân tích lực. Cân bằng lực" },
+            { "id": "b14", "name": "Bài 14. Định luật 1 Newton", "page": 60 },
+            { "id": "b15", "name": "Bài 15. Định luật 2 Newton", "page": 63 },
+            { "id": "b16", "name": "Bài 16. Định luật 3 Newton", "page": 67 },
+            { "id": "b17", "name": "Bài 17. Trọng lực và lực căng" },
+            { "id": "b18", "name": "Bài 18. Lực ma sát", "page": 72 },
+            { "id": "b19", "name": "Bài 19. Lực cản và lực nâng", "page": 77 },
+            { "id": "b20", "name": "Bài 20. Một số ví dụ về cách giải các bài toán thuộc phần động lực học", "page": 80 },
+            { "id": "b21", "name": "Bài 21. Moment lực. Cân bằng của vật rắn", "page": 83 },
+            { "id": "b22", "name": "Bài 22. Thực hành: Tổng hợp lực", "page": 86 }
+          ]
+        },
+        {
+          "id": "c4",
+          "name": "Chương IV. Năng lượng, công, công suất",
+          "lessons": [
+            { "id": "b23", "name": "Bài 23. Năng lượng. Công cơ học", "page": 91 },
+            { "id": "b24", "name": "Bài 24. Công suất", "page": 96 },
+            { "id": "b25", "name": "Bài 25. Động năng, thế năng", "page": 99 },
+            { "id": "b26", "name": "Bài 26. Cơ năng và định luật bảo toàn cơ năng", "page": 102 },
+            { "id": "b27", "name": "Bài 27. Hiệu suất", "page": 106 }
+          ]
+        },
+        {
+          "id": "c5",
+          "name": "Chương V. Động lượng",
+          "lessons": [
+            { "id": "b28", "name": "Bài 28. Động lượng", "page": 110 },
+            { "id": "b29", "name": "Bài 29. Định luật bảo toàn động lượng", "page": 113 },
+            { "id": "b30", "name": "Bài 30. Thực hành: Xác định động lượng của vật trước và sau va chạm" }
+          ]
+        },
+        {
+          "id": "c6",
+          "name": "Chương VI. Chuyển động tròn",
+          "lessons": [
+            { "id": "b31", "name": "Bài 31. Động học của chuyển động tròn đều", "page": 120 },
+            { "id": "b32", "name": "Bài 32. Lực hướng tâm và gia tốc hướng tâm", "page": 123 }
+          ]
+        },
+        {
+          "id": "c7",
+          "name": "Chương VII. Biến dạng của vật rắn. Áp suất chất lỏng",
+          "lessons": [
+            { "id": "b33", "name": "Bài 33. Biến dạng của vật rắn", "page": 128 },
+            { "id": "b34", "name": "Bài 34. Khối lượng riêng. Áp suất chất lỏng", "page": 131 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "name": "Vật lí 11",
+      "grade": 11,
+      "source": "11.pdf",
+      "chapters": [
+        {
+          "id": "c1",
+          "name": "Chương 1. Dao động",
+          "lessons": [
+            { "id": "b1", "name": "Bài 1. Dao động điều hoà", "page": 6 },
+            { "id": "b2", "name": "Bài 2. Mô tả dao động điều hoà", "page": 10 },
+            { "id": "b3", "name": "Bài 3. Vận tốc, gia tốc trong dao động điều hoà", "page": 14 },
+            { "id": "b4", "name": "Bài 4. Bài tập về dao động điều hoà", "page": 17 },
+            { "id": "b5", "name": "Bài 5. Động năng. Thế năng. Sự chuyển hoá năng lượng giữa động năng và thế năng trong dao động điều hoà", "page": 20 },
+            { "id": "b6", "name": "Bài 6. Dao động tắt dần. Dao động cưỡng bức. Hiện tượng cộng hưởng", "page": 24 },
+            { "id": "b7", "name": "Bài 7. Bài tập về sự chuyển hoá năng lượng trong dao động điều hoà", "page": 28 }
+          ]
+        },
+        {
+          "id": "c2",
+          "name": "Chương 2. Sóng",
+          "lessons": [
+            { "id": "b8", "name": "Bài 8. Mô tả sóng", "page": 32 },
+            { "id": "b9", "name": "Bài 9. Sóng ngang, sóng dọc, sự truyền năng lượng của sóng cơ", "page": 37 },
+            { "id": "b10", "name": "Bài 10. Thực hành: Đo tần số của sóng âm", "page": 41 },
+            { "id": "b11", "name": "Bài 11. Sóng điện từ", "page": 44 },
+            { "id": "b12", "name": "Bài 12. Giao thoa sóng", "page": 48 },
+            { "id": "b13", "name": "Bài 13. Sóng dừng", "page": 52 },
+            { "id": "b14", "name": "Bài 14. Bài tập về sóng", "page": 55 },
+            { "id": "b15", "name": "Bài 15. Thực hành: Đo tốc độ truyền âm", "page": 58 }
+          ]
+        },
+        {
+          "id": "c3",
+          "name": "Chương 3. Điện trường",
+          "lessons": [
+            { "id": "b16", "name": "Bài 16. Lực tương tác giữa hai điện tích", "page": 61 },
+            { "id": "b17", "name": "Bài 17. Khái niệm điện trường", "page": 65 },
+            { "id": "b18", "name": "Bài 18. Điện trường đều", "page": 71 },
+            { "id": "b19", "name": "Bài 19. Thế năng điện", "page": 76 },
+            { "id": "b20", "name": "Bài 20. Điện thế", "page": 79 },
+            { "id": "b21", "name": "Bài 21. Tụ điện", "page": 83 }
+          ]
+        },
+        {
+          "id": "c4",
+          "name": "Chương 4. Dòng điện. Mạch điện",
+          "lessons": [
+            { "id": "b22", "name": "Bài 22. Cường độ dòng điện", "page": 91 },
+            { "id": "b23", "name": "Bài 23. Điện trở. Định luật Ohm", "page": 95 },
+            { "id": "b24", "name": "Bài 24. Nguồn điện", "page": 102 },
+            { "id": "b25", "name": "Bài 25. Năng lượng điện và công suất điện", "page": 106 },
+            { "id": "b26", "name": "Bài 26. Thực hành: Đo suất điện động và điện trở trong của pin điện hoá", "page": 111 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "12",
+      "name": "Vật lí 12",
+      "grade": 12,
+      "source": "12.pdf",
+      "chapters": [
+        {
+          "id": "c1",
+          "name": "Chương I. Vật lí nhiệt",
+          "lessons": [
+            { "id": "b1", "name": "Bài 1. Cấu trúc của chất. Sự chuyển thể", "page": 6 },
+            { "id": "b2", "name": "Bài 2. Nội năng. Định luật I của nhiệt động lực học", "page": 10 },
+            { "id": "b3", "name": "Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế", "page": 15 },
+            { "id": "b4", "name": "Bài 4. Nhiệt dung riêng", "page": 20 },
+            { "id": "b5", "name": "Bài 5. Nhiệt nóng chảy riêng", "page": 24 },
+            { "id": "b6", "name": "Bài 6. Nhiệt hoá hơi riêng", "page": 27 },
+            { "id": "b7", "name": "Bài 7. Bài tập về vật lí nhiệt", "page": 30 }
+          ]
+        },
+        {
+          "id": "c2",
+          "name": "Chương II. Khí lí tưởng",
+          "lessons": [
+            { "id": "b8", "name": "Bài 8. Mô hình động học phân tử chất khí", "page": 34 },
+            { "id": "b9", "name": "Bài 9. Định luật Boyle", "page": 37 },
+            { "id": "b10", "name": "Bài 10. Định luật Charles", "page": 41 },
+            { "id": "b11", "name": "Bài 11. Phương trình trạng thái của khí lí tưởng", "page": 45 },
+            { "id": "b12", "name": "Bài 12. Áp suất khí theo mô hình động học phân tử. Quan hệ giữa động năng phân tử và nhiệt độ", "page": 49 },
+            { "id": "b13", "name": "Bài 13. Bài tập về khí lí tưởng", "page": 52 }
+          ]
+        },
+        {
+          "id": "c3",
+          "name": "Chương III. Từ trường",
+          "lessons": [
+            { "id": "b14", "name": "Bài 14. Từ trường", "page": 56 },
+            { "id": "b15", "name": "Bài 15. Lực từ tác dụng lên dây dẫn mang dòng điện. Cảm ứng từ", "page": 61 },
+            { "id": "b16", "name": "Bài 16. Từ thông. Hiện tượng cảm ứng điện từ", "page": 66 },
+            { "id": "b17", "name": "Bài 17. Máy phát điện xoay chiều", "page": 72 },
+            { "id": "b18", "name": "Bài 18. Ứng dụng hiện tượng cảm ứng điện từ", "page": 78 },
+            { "id": "b19", "name": "Bài 19. Điện từ trường. Mô hình sóng điện từ", "page": 82 },
+            { "id": "b20", "name": "Bài 20. Bài tập về từ trường", "page": 86 }
+          ]
+        },
+        {
+          "id": "c4",
+          "name": "Chương IV. Vật lí hạt nhân",
+          "lessons": [
+            { "id": "b21", "name": "Bài 21. Cấu trúc hạt nhân", "page": 91 },
+            { "id": "b22", "name": "Bài 22. Phản ứng hạt nhân và năng lượng liên kết", "page": 96 },
+            { "id": "b23", "name": "Bài 23. Hiện tượng phóng xạ", "page": 104 },
+            { "id": "b24", "name": "Bài 24. Công nghiệp hạt nhân", "page": 114 },
+            { "id": "b25", "name": "Bài 25. Bài tập về vật lí hạt nhân", "page": 119 }
+          ]
+        }
+      ]
+    }
+  ]
+}
