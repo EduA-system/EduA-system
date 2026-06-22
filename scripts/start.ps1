@@ -87,34 +87,42 @@ if (Test-Path $envFile) {
 # -- State -----------------------------------------------------------------
 $script:bgJobs      = @()
 $script:dockerStarted = $false
+$script:teardownDone  = $false
 
-# -- Ctrl+C handler --------------------------------------------------------
-try {
-    [Console]::TreatControlCAsInput = $false
-    $null = [Console]::add_CancelKeyPress({
-        param($s, $e)
-        $e.Cancel = $true
-        Write-Host ""
-        Write-Host "-------------------------------------------------------" -ForegroundColor Yellow
-        Write-Host "  Ctrl+C caught -- shutting down ..." -ForegroundColor Yellow
+# Ctrl+C is handled via the try/finally around the main body: PowerShell runs
+# finally blocks on Ctrl+C, which is far more reliable than a .NET
+# CancelKeyPress handler (that runs on a runspace-less thread and silently
+# fails). Make sure Ctrl+C breaks rather than being read as input.
+try { [Console]::TreatControlCAsInput = $false } catch { }
 
-        foreach ($proc in $script:bgJobs) {
-            if ($proc -and -not $proc.HasExited) {
+# -- Helpers ---------------------------------------------------------------
+# Kills the background BE/FE processes and tears down Docker. Guarded so it
+# runs at most once (abort path + finally must not double-teardown).
+function Invoke-Teardown {
+    if ($script:teardownDone) { return }
+    $script:teardownDone = $true
+
+    foreach ($proc in $script:bgJobs) {
+        if ($proc -and -not $proc.HasExited) {
+            # We launch BE/FE through cmd.exe, which spawns mvn/npm -> java/node
+            # grandchildren. Stop-Process only kills cmd.exe and orphans the
+            # rest (a stray node keeps holding port 3000). taskkill /T kills the
+            # whole tree.
+            taskkill /PID $proc.Id /T /F 2>$null | Out-Null
+            if (-not $proc.HasExited) {
                 Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
             }
         }
-        if ($script:dockerStarted) {
-            Write-Info "Stopping Docker containers ..."
-            docker compose -f (Join-Path $rootDir "docker-compose.yml") down 2>$null
-        }
-        Write-Ok "All stopped."
-        exit 0
-    })
-} catch {
-    # Console handle not available (non-interactive / piped) -- skip Ctrl+C handler
+    }
+    if ($script:dockerStarted) {
+        Write-Info "Stopping Docker containers ..."
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        docker compose -f (Join-Path $rootDir "docker-compose.yml") down 2>$null
+        $ErrorActionPreference = $prevEAP
+    }
 }
 
-# -- Helpers ---------------------------------------------------------------
 function Stop-All {
     param([array]$Jobs, [bool]$DockerWasUp, [string]$Reason)
     Write-Host ""
@@ -125,26 +133,19 @@ function Stop-All {
         Write-Host "  Shutting down ..." -ForegroundColor Yellow
     }
 
-    foreach ($proc in $Jobs) {
-        if ($proc -and -not $proc.HasExited) {
-            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-        }
-    }
-    if ($DockerWasUp) {
-        Write-Info "Stopping Docker containers ..."
-        $prevEAP = $ErrorActionPreference
-        $ErrorActionPreference = "Continue"
-        docker compose -f (Join-Path $rootDir "docker-compose.yml") down 2>$null
-        $ErrorActionPreference = $prevEAP
-    }
-
+    Invoke-Teardown
     Write-Ok "All stopped."
     exit 1
 }
 
 function Test-PortInUse([int]$port) {
+    # netstat is the source of truth: it sees listeners on every interface
+    # (IPv4/IPv6/LAN), unlike a Loopback-only bind which gives false negatives
+    # when something listens on a different interface.
+    if (@(Get-PortPids $port).Count -gt 0) { return $true }
+    # Fallback: try to grab the port on all interfaces.
     try {
-        $conn = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $port)
+        $conn = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, $port)
         $conn.Start()
         $conn.Stop()
         return $false   # port is free
@@ -173,6 +174,54 @@ function Get-PortProcessInfo([int]$port) {
     return "unknown"
 }
 
+function Get-PortPids([int]$port) {
+    $lines = netstat -ano | Select-String ":$port\s.*LISTENING"
+    $pids = @()
+    foreach ($line in $lines) {
+        $parts = ($line -split '\s+') | Where-Object { $_ -ne '' }
+        $pidStr = $parts[$parts.Length - 1]
+        if ($pidStr -match '^\d+$' -and [int]$pidStr -ne 0) {
+            $pids += [int]$pidStr
+        }
+    }
+    return ($pids | Select-Object -Unique)
+}
+
+# Prompts the user to kill whatever is holding $port. Returns $true if the
+# port ends up free, $false otherwise (declined / non-interactive / kill failed).
+function Confirm-KillPort([int]$port, [string]$name) {
+    $pids = @(Get-PortPids $port)
+    if ($pids.Count -eq 0) { return $false }
+
+    # Don't prompt when there's no console to read from.
+    try { if (-not [Environment]::UserInteractive) { return $false } } catch { return $false }
+
+    Write-Host ""
+    Write-Host "  Port $port ($name) is in use by:" -ForegroundColor Yellow
+    foreach ($procId in $pids) {
+        $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+        if ($proc) {
+            Write-Host "      PID $procId -- $($proc.ProcessName) ($($proc.Path))" -ForegroundColor Yellow
+        } else {
+            Write-Host "      PID $procId (process info unavailable)" -ForegroundColor Yellow
+        }
+    }
+
+    $answer = Read-Host "  Kill the process(es) above to free port $port? [y/N]"
+    if ($answer -notmatch '^\s*(y|yes)\s*$') { return $false }
+
+    foreach ($procId in $pids) {
+        try {
+            Stop-Process -Id $procId -Force -ErrorAction Stop
+            Write-Ok "Killed PID $procId"
+        } catch {
+            Write-Err "Failed to kill PID $procId -- $($_.Exception.Message)"
+        }
+    }
+    Start-Sleep -Milliseconds 500
+    return (-not (Test-PortInUse $port))
+}
+
 function Wait-ForUrl($url, $label, $timeoutSec = 120) {
     Write-Info "Waiting for $label ($url) ..."
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -199,8 +248,12 @@ if (-not $SkipFe) { $ports += @{Port=$fePort; Name="Frontend (Next.js)"} }
 $portErrors = @()
 foreach ($p in $ports) {
     if (Test-PortInUse $p.Port) {
-        $procInfo = Get-PortProcessInfo $p.Port
-        $portErrors += "  Port $($p.Port) ($($p.Name)) is already in use -- $procInfo"
+        if (Confirm-KillPort $p.Port $p.Name) {
+            Write-Ok "Port $($p.Port) ($($p.Name)) is now free"
+        } else {
+            $procInfo = Get-PortProcessInfo $p.Port
+            $portErrors += "  Port $($p.Port) ($($p.Name)) is already in use -- $procInfo"
+        }
     }
 }
 
@@ -438,6 +491,16 @@ try {
     Write-Err $_.Exception.Message
     Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "Unexpected error"
 } finally {
+    # Runs on normal exit, Ctrl+C, and after Stop-All. If teardown hasn't run
+    # yet, this is a Ctrl+C / interrupt -- do the shutdown here.
+    if (-not $script:teardownDone) {
+        Write-Host ""
+        Write-Host "-------------------------------------------------------" -ForegroundColor Yellow
+        Write-Host "  Shutting down ..." -ForegroundColor Yellow
+        Invoke-Teardown
+        Write-Ok "All stopped."
+    }
+
     # Cleanup stream event handlers
     foreach ($evtName in @('beOutEvent','beErrEvent','feOutEvent','feErrEvent')) {
         $evt = Get-Variable -Name $evtName -Scope Script -ErrorAction SilentlyContinue
