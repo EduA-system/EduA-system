@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.repository;
+package com.edua.beeduasystem.repository.gateways;
 
 import com.edua.beeduasystem.presentation.dto.lessonplan.Activity5512Dto;
 import com.edua.beeduasystem.presentation.dto.lessonplan.LessonPlan5512Dto;
@@ -9,8 +9,8 @@ import java.util.UUID;
 /**
  * Gateway contract để đẩy tiến trình sinh giáo án 5512 về client (qua STOMP).
  *
- * <p>Nằm ở tầng {@code repository/} cùng {@code AiClient} theo
- * {@code designs/layered-architecture.md}: interface thuần, không phụ thuộc
+ * <p>Nằm ở {@code repository/gateways/} cùng {@code AiClient} theo
+ * Report4 SDS (§1.2 Package Diagram): interface kỹ thuật thuần, không phụ thuộc
  * transport cụ thể. Implementation STOMP nằm ở
  * {@code infrastructure/messaging/}.
  *

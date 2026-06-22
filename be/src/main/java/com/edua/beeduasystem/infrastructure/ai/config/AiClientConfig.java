@@ -3,7 +3,7 @@ package com.edua.beeduasystem.infrastructure.ai.config;
 import com.edua.beeduasystem.infrastructure.ai.FallbackAiClient;
 import com.edua.beeduasystem.infrastructure.ai.adapter.DeepSeekAdapter;
 import com.edua.beeduasystem.infrastructure.ai.adapter.OpenAiAdapter;
-import com.edua.beeduasystem.repository.AiClient;
+import com.edua.beeduasystem.repository.gateways.AiClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;

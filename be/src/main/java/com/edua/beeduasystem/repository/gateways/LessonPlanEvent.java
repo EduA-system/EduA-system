@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.repository;
+package com.edua.beeduasystem.repository.gateways;
 
 import com.edua.beeduasystem.presentation.dto.lessonplan.Activity5512Dto;
 import com.edua.beeduasystem.presentation.dto.lessonplan.LessonPlan5512Dto;
@@ -12,8 +12,8 @@ import java.util.UUID;
  * Envelope sự kiện đẩy về client khi sinh giáo án 5512. Sealed interface với 5
  * biến thể, phân biệt bằng trường {@code type} khi serialize ra JSON.
  *
- * <p>Đặt ở {@code repository/} cùng {@link LessonPlanStreamPort} để envelope
- * thuộc gateway contract (không phụ thuộc implementation STOMP), dễ mock/test.
+ * <p>Đặt ở {@code repository/gateways/} cùng {@link LessonPlanStreamPort} để
+ * envelope thuộc gateway contract (không phụ thuộc implementation STOMP), dễ mock/test.
  *
  * <p>JSON discriminator: {@code "type": "FRAME_READY" | "ACTIVITY_READY" |
  * "ACTIVITY_FAILED" | "DONE" | "ERROR"}.

@@ -2,8 +2,8 @@ package com.edua.beeduasystem.infrastructure.messaging;
 
 import com.edua.beeduasystem.presentation.dto.lessonplan.Activity5512Dto;
 import com.edua.beeduasystem.presentation.dto.lessonplan.LessonPlan5512Dto;
-import com.edua.beeduasystem.repository.LessonPlanEvent;
-import com.edua.beeduasystem.repository.LessonPlanStreamPort;
+import com.edua.beeduasystem.repository.gateways.LessonPlanEvent;
+import com.edua.beeduasystem.repository.gateways.LessonPlanStreamPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
