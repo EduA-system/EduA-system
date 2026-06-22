@@ -1,5 +1,6 @@
 import { FeatureBlock, StickyCard } from "./_blocks";
 import { FadeIn } from "./FadeIn";
+import { HeaderBar } from "./HeaderBar";
 import { HeroSection } from "./_hero";
 import { COLOR, FEATURES, FRAME_WIDTH, HRule, ImgDecor, VRule, rubik, serif } from "./_shared";
 
@@ -9,9 +10,10 @@ export default function HomePage() {
 
   return (
     <div
-      className={`${rubik.className} h-full w-full overflow-auto`}
+      className={`${rubik.className} w-full`}
       style={{ backgroundColor: COLOR.pageBg, color: COLOR.ink }}
     >
+      <HeaderBar />
       <HeroSection />
 
       {/* ════ "For Teacher" headline — 3 chem L/R/L ════ */}
