@@ -1,0 +1,18 @@
+# API Designs
+
+Thiết kế endpoint, tách theo ranh giới **chung (hạ tầng dùng lại)** vs **riêng từng feature**.
+
+| File | Phạm vi | Ai làm |
+|------|---------|--------|
+| [`api-chung.md`](./api-chung.md) | Hạ tầng dùng chung: upload R2, catalog SGK, STOMP transport | Team hạ tầng/shared |
+| [`lesson-plan.md`](./lesson-plan.md) | Toàn bộ nghiệp vụ giáo án 5512 (UC-23/27/32) | Team lesson-plan |
+
+> Nguồn gốc: `sprints/lesson-plan-api-design.md`. Các file ở đây là bản tách chi tiết, dùng làm spec chính thức.
+
+## Quyết định nền tảng (áp cho mọi file)
+
+- **5512 là cấu trúc DUY NHẤT** cho mọi giáo án sinh ra (không phải tùy chọn) → chỉ một đường `/generate`, không hậu tố `-5512`.
+- **Generation bất đồng bộ + streaming** qua STOMP (`/ws`), pipeline đã có sẵn:
+  `FRAME_READY → (ACTIVITY_READY | ACTIVITY_FAILED)×4 → DONE | ERROR`.
+- `sessionId` do **client tự sinh** và gửi lên; client subscribe `/topic/lesson-plan/{sessionId}` TRƯỚC khi gọi generate để không miss event.
+- **Chưa làm auth** (BR-04 / BR-16 / SEC-04/07 để sau).
