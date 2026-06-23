@@ -7,7 +7,62 @@ Monorepo gồm hai app phát triển độc lập:
 | `fe/` | Next.js 16 (App Router), React 19, Tailwind v4, TypeScript | Frontend |
 | `be/` | Spring Boot (Maven) | Backend |
 
-Mỗi app build/run từ thư mục riêng của nó. Không có orchestration build/test ở cấp root.
+Mỗi app build/run từ thư mục riêng của nó. Để chạy nhanh toàn bộ stack một lượt, dùng script ở mục [Chạy nhanh toàn bộ stack](#chạy-nhanh-toàn-bộ-stack).
+
+## Chạy nhanh toàn bộ stack
+
+Script `scripts/start.ps1` (PowerShell) khởi động lần lượt **Backend (Spring Boot) → Frontend (Next.js)** và chờ từng service sẵn sàng trước khi chạy bước tiếp theo.
+
+Về database, script tự chọn: nếu **cloud DB** trong `DB_URL` (`.env`) kết nối được thì dùng cloud; nếu không (mất mạng / firewall chặn port) thì **tự dựng PostgreSQL local qua Docker** và trỏ backend sang đó.
+
+```powershell
+pwsh scripts\start.ps1
+```
+
+Khi chạy xong, các service lắng nghe ở:
+
+| Service | URL |
+|---------|-----|
+| PostgreSQL (chỉ khi fallback Docker) | `localhost:9118` |
+| Backend | http://localhost:8080 |
+| Frontend | http://localhost:3000 |
+| Swagger UI (local) | http://localhost:8080/swagger-ui/index.html |
+
+Nhấn **Ctrl+C** để dừng BE/FE. Container Postgres (nếu đã dựng) vẫn chạy nền — dừng bằng `docker compose down`.
+
+**Yêu cầu trước khi chạy:** JDK 21, Node.js, và **Docker Desktop** (chỉ cần khi không kết nối được cloud DB, để dựng Postgres local). Nếu một port đang bị chiếm, script sẽ hỏi có muốn kill tiến trình đó không.
+
+**Cấu hình:** copy `.env.example` → `.env` rồi điền secret (DB, AI providers, Cloudflare R2). Thiếu `.env` thì BE chạy bằng credential mặc định trong `application.properties`.
+
+**Tham số (chạy một phần stack):**
+
+```powershell
+pwsh scripts\start.ps1 -SkipFe   # chỉ chạy Backend (vẫn resolve DB)
+pwsh scripts\start.ps1 -SkipBe   # chỉ chạy Frontend (bỏ qua Backend + DB)
+```
+
+## Test API trên môi trường deploy (Swagger)
+
+Backend đã được deploy tại:
+
+```
+http://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io
+```
+
+Cách nhanh nhất để thử các API là mở **Swagger UI** trên server đó — liệt kê toàn bộ endpoint, cho phép gọi thử trực tiếp từ trình duyệt (nút **Try it out**):
+
+| Mục đích | URL |
+|----------|-----|
+| Swagger UI | http://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io/swagger-ui/index.html |
+| OpenAPI spec (JSON) | http://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io/v3/api-docs |
+| Health check | http://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io/api/health |
+
+Kiểm tra nhanh bằng `curl`:
+
+```bash
+curl http://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io/api/health
+# {"status":"UP","service":"be-edua-system"}
+```
 
 ## Frontend (`fe/`)
 
