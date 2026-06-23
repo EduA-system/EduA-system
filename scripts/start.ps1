@@ -1,33 +1,29 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    All-in-one startup: PostgreSQL (Docker) + Backend + Frontend
+    All-in-one startup: Backend + Frontend (database is managed by Aiven)
 
 .DESCRIPTION
-    1. Checks required ports (9118, 8080, 3000) -- aborts if any is in use.
-    2. Starts PostgreSQL via docker-compose (waits until healthy).
-    3. Installs npm deps for frontend (if needed).
-    4. Starts backend (Spring Boot) in background.
-    5. Waits for backend to be ready (HTTP /api/health).
-    6. Starts frontend dev server (Next.js) in foreground.
-
-.PARAMETER SkipDb
-    Skip starting PostgreSQL (assumes it's already running).
+    1. Checks required ports (8080, 3000) -- aborts if any is in use.
+    2. Installs npm deps for frontend (if needed).
+    3. Resolves the DB: uses the cloud DB in DB_URL if its host:port is
+       reachable; otherwise falls back to a local PostgreSQL started via
+       Docker Compose. Then starts backend (Spring Boot) against the chosen DB.
+    4. Waits for backend to be ready (HTTP /api/health).
+    5. Starts frontend dev server (Next.js) in foreground.
 
 .PARAMETER SkipBe
     Skip starting the backend.
 
 .PARAMETER SkipFe
-    Skip starting the frontend (only DB + BE).
+    Skip starting the frontend (only BE).
 
 .EXAMPLE
     pwsh scripts\start.ps1
-    pwsh scripts\start.ps1 -SkipDb
     pwsh scripts\start.ps1 -SkipFe
 #>
 
 param(
-    [switch]$SkipDb,
     [switch]$SkipBe,
     [switch]$SkipFe
 )
@@ -36,11 +32,9 @@ $ErrorActionPreference = "Stop"
 $rootDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
 # -- Config ---------------------------------------------------------------
-$dbPort    = 9118
 $bePort    = 8080
 $fePort    = 3000
 
-$dbUrl     = "localhost:$dbPort"
 $beUrl     = "http://localhost:$bePort"
 $feUrl     = "http://localhost:$fePort"
 
@@ -65,19 +59,16 @@ if (Test-Path $envFile) {
         if ($_ -match '^\s*([^#][^=]+)=(.*)\s*$') {
             $key = $matches[1].Trim()
             $val = $matches[2].Trim()
-            # Set the original key as env var (used by docker-compose)
+            # Set every key as an env var. DB_URL / DB_USERNAME / DB_PASSWORD
+            # are read directly by Spring Boot (application.properties).
             Set-Item "env:$key" $val
-            # Map POSTGRES_* -> DB_* for Spring Boot
-            if ($key -eq "POSTGRES_USER")     { $env:DB_USERNAME = $val }
-            elseif ($key -eq "POSTGRES_PASSWORD") { $env:DB_PASSWORD = $val }
-            elseif ($key -eq "POSTGRES_DB")    { $script:_envDbName = $val }
-            elseif ($key -eq "POSTGRES_PORT")  { $script:_envDbPort = $val }
         }
     }
-    # Build DB_URL if port/dbname were overridden
-    $dbName  = if ($script:_envDbName) { $script:_envDbName } else { "edua_system" }
-    $dbPort  = if ($script:_envDbPort) { [int]$script:_envDbPort } else { $dbPort }
-    $env:DB_URL = "jdbc:postgresql://localhost:$dbPort/$dbName"
+    if ($env:DB_URL) {
+        Write-Info "Cloud DB configured: $($env:DB_URL)"
+    } else {
+        Write-Host "  [WARN] DB_URL not set in .env -- backend will use defaults from application.properties." -ForegroundColor Yellow
+    }
 } else {
     Write-Host "  [WARN] .env file not found at $rootDir" -ForegroundColor Yellow
     Write-Host "    Copy .env.example to .env and fill in your secrets." -ForegroundColor Yellow
@@ -86,7 +77,6 @@ if (Test-Path $envFile) {
 
 # -- State -----------------------------------------------------------------
 $script:bgJobs      = @()
-$script:dockerStarted = $false
 $script:teardownDone  = $false
 
 # Ctrl+C is handled via the try/finally around the main body: PowerShell runs
@@ -96,8 +86,8 @@ $script:teardownDone  = $false
 try { [Console]::TreatControlCAsInput = $false } catch { }
 
 # -- Helpers ---------------------------------------------------------------
-# Kills the background BE/FE processes and tears down Docker. Guarded so it
-# runs at most once (abort path + finally must not double-teardown).
+# Kills the background BE/FE processes. Guarded so it runs at most once
+# (abort path + finally must not double-teardown).
 function Invoke-Teardown {
     if ($script:teardownDone) { return }
     $script:teardownDone = $true
@@ -114,17 +104,10 @@ function Invoke-Teardown {
             }
         }
     }
-    if ($script:dockerStarted) {
-        Write-Info "Stopping Docker containers ..."
-        $prevEAP = $ErrorActionPreference
-        $ErrorActionPreference = "Continue"
-        docker compose -f (Join-Path $rootDir "docker-compose.yml") down 2>$null
-        $ErrorActionPreference = $prevEAP
-    }
 }
 
 function Stop-All {
-    param([array]$Jobs, [bool]$DockerWasUp, [string]$Reason)
+    param([array]$Jobs, [string]$Reason)
     Write-Host ""
     Write-Host "-------------------------------------------------------" -ForegroundColor Yellow
     if ($Reason) {
@@ -237,11 +220,74 @@ function Wait-ForUrl($url, $label, $timeoutSec = 120) {
     return $false
 }
 
+# -- Database resolution helpers ------------------------------------------
+# TcpClient async-connect with an explicit timeout. Test-NetConnection works
+# but hangs ~20s on a blocked port, which is exactly the case we fall back on.
+function Test-TcpPort([string]$dbHost, [int]$port, [int]$timeoutMs = 3000) {
+    $client = [System.Net.Sockets.TcpClient]::new()
+    try {
+        $iar = $client.BeginConnect($dbHost, $port, $null, $null)
+        if (-not $iar.AsyncWaitHandle.WaitOne($timeoutMs)) { return $false }
+        $client.EndConnect($iar)   # throws if the connect failed
+        return $true
+    } catch {
+        return $false
+    } finally {
+        $client.Close()
+    }
+}
+
+# Pulls host/port out of a jdbc:postgresql://host:port/db?... URL.
+function Get-JdbcHostPort([string]$url) {
+    if ($url -match 'jdbc:postgresql://([^:/]+):(\d+)') {
+        return @{ DbHost = $matches[1]; Port = [int]$matches[2] }
+    }
+    if ($url -match 'jdbc:postgresql://([^:/]+)/') {
+        return @{ DbHost = $matches[1]; Port = 5432 }
+    }
+    return $null
+}
+
+function Test-DockerRunning {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { docker info *> $null; return ($LASTEXITCODE -eq 0) }
+    catch { return $false }
+    finally { $ErrorActionPreference = $prev }
+}
+
+# Brings up the local Postgres container (compose service "postgres", container
+# name "edua-postgres") and waits for its healthcheck to pass.
+function Start-LocalPostgres {
+    Write-Info "Starting local PostgreSQL via Docker Compose ..."
+    Push-Location $rootDir
+    # docker compose writes progress to stderr; with ErrorActionPreference=Stop
+    # that first line would be wrapped as a terminating NativeCommandError and
+    # kill the script even though the command is succeeding. Relax it locally.
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        docker compose up -d 2>&1 | ForEach-Object { Write-Info "$_" }
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $prevEAP
+        Pop-Location
+    }
+    if ($code -ne 0) { return $false }
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($sw.Elapsed.TotalSeconds -lt 60) {
+        $status = (docker inspect -f '{{.State.Health.Status}}' edua-postgres 2>$null)
+        if ($status -eq 'healthy') { return $true }
+        Start-Sleep -Seconds 2
+    }
+    return $false
+}
+
 # -- 1. Check ports --------------------------------------------------------
 Write-Step "Checking required ports"
 
 $ports = @()
-if (-not $SkipDb) { $ports += @{Port=$dbPort; Name="PostgreSQL (Docker)"} }
 if (-not $SkipBe) { $ports += @{Port=$bePort; Name="Backend (Spring Boot)"} }
 if (-not $SkipFe) { $ports += @{Port=$fePort; Name="Frontend (Next.js)"} }
 
@@ -266,93 +312,68 @@ if ($portErrors.Count -gt 0) {
 }
 Write-Ok "All ports are free ($(($ports | ForEach-Object { $_.Port }) -join ', '))"
 
-try {
+# -- Resolve database (cloud if reachable, else local Docker) --------------
+if (-not $SkipBe) {
+    Write-Step "Resolving database"
 
-    # -- 2. Start PostgreSQL (Docker) --------------------------------------
-    if (-not $SkipDb) {
-        Write-Step "Starting PostgreSQL via Docker (port $dbPort)"
-        $composeFile = Join-Path $rootDir "docker-compose.yml"
+    $useLocal = $false
+    $cloudUrl = $env:DB_URL
+    # Treat the .env.example placeholder (<host>/<port>) as "not configured".
+    $cloudConfigured = $cloudUrl -and ($cloudUrl -notmatch '<host>|<port>')
 
-        if (-not (Test-Path $composeFile)) {
-            Write-Err "docker-compose.yml not found at $rootDir"
-            exit 1
+    if ($cloudConfigured) {
+        $hp = Get-JdbcHostPort $cloudUrl
+        if ($hp -and (Test-TcpPort $hp.DbHost $hp.Port 3000)) {
+            Write-Ok "Cloud DB reachable ($($hp.DbHost):$($hp.Port)) -- using cloud."
+        } else {
+            $target = if ($hp) { "$($hp.DbHost):$($hp.Port)" } else { "DB_URL" }
+            Write-Host "  [WARN] Cloud DB not reachable ($target) -- falling back to local Docker." -ForegroundColor Yellow
+            $useLocal = $true
         }
-
-        if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-            Write-Err "Docker is not installed or not in PATH. Install Docker Desktop first."
-            exit 1
-        }
-
-        # Check Docker daemon is running
-        $dockerInfo = docker info 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Err "Docker daemon is not running. Start Docker Desktop first."
-            exit 1
-        }
-
-        # Docker outputs pull progress to stderr; use Continue so it
-        # doesn't trigger $ErrorActionPreference = "Stop".
-        $prevEAP = $ErrorActionPreference
-        $ErrorActionPreference = "Continue"
-        docker compose -f $composeFile up -d 2>&1 | ForEach-Object { Write-Info "$_" }
-        $ErrorActionPreference = $prevEAP
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Err "docker compose up failed (exit code $LASTEXITCODE)"
-            exit 1
-        }
-        $script:dockerStarted = $true
-        Write-Ok "Docker containers started"
-
-        # Wait for healthy
-        Write-Info "Waiting for PostgreSQL to be healthy ..."
-        $dbTimeout = [System.Diagnostics.Stopwatch]::StartNew()
-        $dbReady = $false
-        while ($dbTimeout.Elapsed.TotalSeconds -lt 60 -and -not $dbReady) {
-            Start-Sleep -Seconds 3
-            try {
-                $status = docker compose -f $composeFile ps --format json 2>$null | ConvertFrom-Json | Where-Object {
-                    $_.Service -eq "postgres"
-                }
-                if ($status -and $status.Health -eq "healthy") {
-                    $dbReady = $true
-                }
-                # Fallback: if no healthcheck support, check if container is running
-                if (-not $dbReady -and $status -and $status.State -eq "running" -and $dbTimeout.Elapsed.TotalSeconds -gt 15) {
-                    Write-Info "Container is running, checking port connectivity ..."
-                    try {
-                        $tcp = New-Object System.Net.Sockets.TcpClient("localhost", $dbPort)
-                        $tcp.Close()
-                        $dbReady = $true
-                    } catch {
-                        # port not yet open
-                    }
-                }
-            } catch {
-                # docker ps parse error -- ignore, retry
-            }
-        }
-        if (-not $dbReady) {
-            Write-Err "PostgreSQL did not become healthy within 60 seconds."
-            Write-Info "Check logs: docker compose logs postgres"
-            Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "PostgreSQL failed to start"
-        }
-        Write-Ok "PostgreSQL is healthy on port $dbPort"
+    } else {
+        Write-Info "No cloud DB_URL configured -- using local Docker."
+        $useLocal = $true
     }
 
-    # -- 3. Start Backend ---------------------------------------------------
+    if ($useLocal) {
+        if (-not (Test-DockerRunning)) {
+            Write-Err "Docker daemon is not running. Start Docker Desktop and retry (needed for the local fallback DB)."
+            exit 1
+        }
+        if (-not (Start-LocalPostgres)) {
+            Write-Err "Local PostgreSQL did not become healthy within 60s. Check 'docker compose logs postgres'."
+            exit 1
+        }
+
+        $pgPort = if ($env:POSTGRES_PORT)     { $env:POSTGRES_PORT }     else { "5432" }
+        $pgDb   = if ($env:POSTGRES_DB)       { $env:POSTGRES_DB }       else { "edua_system" }
+        $pgUser = if ($env:POSTGRES_USER)     { $env:POSTGRES_USER }     else { "postgres" }
+        $pgPass = if ($env:POSTGRES_PASSWORD) { $env:POSTGRES_PASSWORD } else { "postgres" }
+
+        # Override the DB_* vars that Spring Boot reads (and that the BE process
+        # inherits below). sslmode is omitted -- local Postgres has no TLS.
+        $env:DB_URL      = "jdbc:postgresql://localhost:$pgPort/$pgDb"
+        $env:DB_USERNAME = $pgUser
+        $env:DB_PASSWORD = $pgPass
+        Write-Ok "Local PostgreSQL ready -- $($env:DB_URL)"
+    }
+}
+
+try {
+
+    # -- 2. Start Backend ---------------------------------------------------
     $beProc = $null
     if (-not $SkipBe) {
         Write-Step "Starting Backend -- Spring Boot (port $bePort)"
 
         if (-not (Test-Path (Join-Path $beDir $beMvw))) {
             Write-Err "Maven wrapper not found at $beDir/$beMvw"
-            Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "mvnw not found"
+            Stop-All -Jobs $script:bgJobs -Reason "mvnw not found"
         }
 
         if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
             Write-Err "Java is not installed or not in PATH. Install JDK 21."
-            Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "Java not found"
+            Stop-All -Jobs $script:bgJobs -Reason "Java not found"
         }
         $prevEAP = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
@@ -396,18 +417,18 @@ try {
         if (-not (Wait-ForUrl "$beUrl/api/health" "Backend" 180)) {
             Write-Err "Backend did not start within 180 seconds."
             Write-Info "Check [BE] logs above for compilation/startup errors."
-            Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "Backend failed to start"
+            Stop-All -Jobs $script:bgJobs -Reason "Backend failed to start"
         }
     }
 
-    # -- 4. Start Frontend -------------------------------------------------
+    # -- 3. Start Frontend -------------------------------------------------
     $feProc = $null
     if (-not $SkipFe) {
         Write-Step "Starting Frontend -- Next.js dev (port $fePort)"
 
         if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
             Write-Err "npm is not installed or not in PATH. Install Node.js first."
-            Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "npm not found"
+            Stop-All -Jobs $script:bgJobs -Reason "npm not found"
         }
 
         # Install deps if needed
@@ -415,16 +436,23 @@ try {
         if (-not (Test-Path $nodeModules)) {
             Write-Info "Installing frontend dependencies ..."
             Push-Location $feDir
+            # npm prints progress/warnings to stderr; with ErrorActionPreference=Stop
+            # that first line is wrapped as a terminating NativeCommandError and kills
+            # the script even when install succeeds. Relax it locally.
+            $prevEAP = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
             try {
-                npm install 2>&1 | ForEach-Object { Write-Info $_ }
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Err "npm install failed (exit code $LASTEXITCODE)"
-                    Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "npm install failed"
-                }
-                Write-Ok "Frontend dependencies installed"
+                npm install 2>&1 | ForEach-Object { Write-Info "$_" }
+                $code = $LASTEXITCODE
             } finally {
+                $ErrorActionPreference = $prevEAP
                 Pop-Location
             }
+            if ($code -ne 0) {
+                Write-Err "npm install failed (exit code $code)"
+                Stop-All -Jobs $script:bgJobs -Reason "npm install failed"
+            }
+            Write-Ok "Frontend dependencies installed"
         }
 
         $fePsi = New-Object System.Diagnostics.ProcessStartInfo
@@ -455,17 +483,17 @@ try {
         if (-not (Wait-ForUrl $feUrl "Frontend" 60)) {
             Write-Err "Frontend did not start within 60 seconds."
             Write-Info "Check [FE] logs above for errors."
-            Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "Frontend failed to start"
+            Stop-All -Jobs $script:bgJobs -Reason "Frontend failed to start"
         }
     }
 
-    # -- 5. Summary ---------------------------------------------------------
+    # -- 4. Summary ---------------------------------------------------------
     Write-Host ""
     Write-Host "========================================================" -ForegroundColor Green
     Write-Host "  All services are running!" -ForegroundColor Green
     Write-Host "========================================================" -ForegroundColor Green
 
-    if (-not $SkipDb) { Write-Host "  PostgreSQL:   $dbUrl" -ForegroundColor White }
+    if ($env:DB_URL) { Write-Host "  Database:     $($env:DB_URL)" -ForegroundColor White }
     if (-not $SkipBe) { Write-Host "  Backend:      $beUrl" -ForegroundColor White }
     if (-not $SkipFe) { Write-Host "  Frontend:     $feUrl" -ForegroundColor White }
 
@@ -482,14 +510,14 @@ try {
                 if ($beProc -and $proc.Id -eq $beProc.Id) { $name = "Backend (Spring Boot)" }
                 elseif ($feProc -and $proc.Id -eq $feProc.Id) { $name = "Frontend (Next.js)" }
                 Write-Err "$name crashed (exit code $($proc.ExitCode))."
-                Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "$name crashed"
+                Stop-All -Jobs $script:bgJobs -Reason "$name crashed"
             }
         }
     }
 
 } catch {
     Write-Err $_.Exception.Message
-    Stop-All -Jobs $script:bgJobs -DockerWasUp $script:dockerStarted -Reason "Unexpected error"
+    Stop-All -Jobs $script:bgJobs -Reason "Unexpected error"
 } finally {
     # Runs on normal exit, Ctrl+C, and after Stop-All. If teardown hasn't run
     # yet, this is a Ctrl+C / interrupt -- do the shutdown here.
