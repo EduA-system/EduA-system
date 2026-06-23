@@ -23,6 +23,7 @@ export const roboto = Roboto({
 });
 
 export const FRAME_WIDTH = 1280;
+export const HEADER_HEIGHT = 68; // y of the header divider in the Figma hero frame
 export const HERO_FRAME_HEIGHT = 680;
 
 export const COLOR = {

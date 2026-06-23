@@ -32,3 +32,18 @@ Recent commits use short, imperative subjects such as `Add husky pre-commit hook
 
 ## Agent-Specific Notes
 Check `fe/AGENTS.md` before editing frontend code; it notes project-specific Next.js constraints. Keep changes surgical and avoid unrelated refactors.
+
+## Backend Layered Architecture Workflow
+For backend changes under `be/`, follow `designs/layered-architecture.md` and the project-local skill at `.codex/skills/edua-backend-layered-architecture/SKILL.md`.
+
+- Put REST controllers, request/response DTOs, and exception advice in `presentation/`.
+- Put use-case orchestration in `service/`.
+- Put core models, rules, and domain exceptions in `domain/`.
+- Put service-facing repository or gateway interfaces in `repository/`.
+- Put JPA, AI, storage, external API, and messaging implementations in `infrastructure/`.
+- Put Spring configuration and bean wiring in `config/`.
+- Keep dependency direction as `presentation -> service -> domain`, with services depending on repository/gateway interfaces and infrastructure implementing them.
+- Use constructor injection. Do not use field injection.
+- Keep controllers thin: receive request, call service, return response.
+- Keep HTTP concerns out of services and domain.
+- Run backend tests with `cd be && mvnw.cmd test` on Windows, or `cd be && ./mvnw test` on macOS/Linux, for backend code changes.

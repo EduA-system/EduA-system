@@ -1,2 +1,8 @@
 # Root-level deps (husky tooling)
 /node_modules/
+
+# Environment variables (credentials)
+.env
+
+# Windows reserved name artifacts (e.g. from `2>$null` redirections)
+nul
