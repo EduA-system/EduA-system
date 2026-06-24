@@ -3,8 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 
-const INTRO_END = 7;   // seconds — play once from 0 → 7
-const LOOP_START = 7;  // seconds — then loop 7 → 9 forever
+const LOOP_START = 7;  // seconds, then loop 7 to 9 forever
 const LOOP_END = 9;    // seconds
 
 export function HeroVideo({ style }: { style: CSSProperties }) {

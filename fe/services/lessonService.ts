@@ -5,7 +5,8 @@ import { lessonMock } from "@/data/lessonMock";
 // All functions currently use mock data and simulate async behavior.
 
 /** Fetch a lesson by id. TODO: replace with GET /api/lessons/:id */
-export async function fetchLesson(_id: string): Promise<Lesson> {
+export async function fetchLesson(id: string): Promise<Lesson> {
+  void id;
   await delay(150);
   return structuredClone(lessonMock);
 }
