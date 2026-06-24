@@ -1,2 +1,3 @@
 # Root-level deps (husky tooling)
 /node_modules/
+.env*
