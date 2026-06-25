@@ -61,7 +61,7 @@ export function EditorTools() {
   const ActiveAlignIcon = activeAlign.icon;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex min-w-0 items-center gap-1.5">
       <ToolButton onClick={() => exec("undo")} label="Undo"><UndoIcon /></ToolButton>
       <ToolButton onClick={() => exec("redo")} label="Redo"><RedoIcon /></ToolButton>
       <Divider />
@@ -72,7 +72,7 @@ export function EditorTools() {
         setOpenMenu={setOpenMenu}
         value={textStyle}
         options={[...TEXT_STYLES]}
-        widthClass="min-w-[116px]"
+        widthClass="w-[116px] min-w-[72px] shrink"
         onSelect={applyTextStyle}
       />
       <TextDropdown
@@ -82,7 +82,7 @@ export function EditorTools() {
         setOpenMenu={setOpenMenu}
         value={fontFamily}
         options={FONT_FAMILIES.map((font) => ({ label: font, value: font }))}
-        widthClass="min-w-[160px]"
+        widthClass="w-[150px] min-w-[84px] shrink"
         onSelect={applyFontFamily}
       />
       <TextDropdown
@@ -92,18 +92,21 @@ export function EditorTools() {
         setOpenMenu={setOpenMenu}
         value={fontSize}
         options={FONT_SIZES.map((size) => ({ label: String(size), value: size }))}
-        widthClass="min-w-[64px]"
+        widthClass="w-[60px] shrink-0"
         onSelect={applyFontSize}
       />
       <Divider />
       <ToolButton onClick={() => exec("bold")} label="Bold" strong>B</ToolButton>
       <ToolButton onClick={() => exec("italic")} label="Italic"><ItalicIcon /></ToolButton>
       <ToolButton onClick={() => exec("underline")} label="Underline"><UnderlineIcon /></ToolButton>
-      <ToolButton onClick={() => exec("foreColor", "#2b2926")} label="Text color"><TextColorIcon /></ToolButton>
-      <ToolButton onClick={() => exec("hiliteColor", "#f6eadf")} label="Highlight"><MarkerIcon /></ToolButton>
+      <span className="hidden items-center gap-1.5 @min-[1180px]:flex">
+        <Divider />
+        <ToolButton onClick={() => exec("foreColor", "#2b2926")} label="Text color"><TextColorIcon /></ToolButton>
+        <ToolButton onClick={() => exec("hiliteColor", "#f6eadf")} label="Highlight"><MarkerIcon /></ToolButton>
+      </span>
       <Divider />
       <ToolButton onClick={() => exec("insertUnorderedList")} label="Bullets"><BulletIcon /></ToolButton>
-      <div className="relative flex shrink-0 items-center justify-center">
+      <div className="relative hidden shrink-0 items-center justify-center @min-[1060px]:flex">
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
@@ -171,7 +174,7 @@ function TextDropdown<T extends string | number>({
   const isOpen = openMenu === menuId;
 
   return (
-    <div className={`relative shrink-0 ${widthClass}`}>
+    <div className={`relative ${widthClass}`}>
       <button
         type="button"
         onMouseDown={(event) => event.preventDefault()}

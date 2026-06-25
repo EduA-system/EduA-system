@@ -19,7 +19,7 @@ export function LessonEditDashboard() {
 
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
-            <div className="flex h-12 items-center gap-2 px-3">
+            <div className="@container flex h-12 items-center gap-2 px-3">
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed((current) => !current)}
@@ -80,14 +80,15 @@ function HeaderActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium shadow-sm transition ${
+      title={label}
+      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium shadow-sm transition @min-[1100px]:px-3 ${
         primary
           ? "border border-[#d97757] bg-[#d97757] text-white hover:bg-[#c96545]"
           : "border border-[#e8e2d9] bg-white text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
       }`}
     >
       {children}
-      <span>{label}</span>
+      <span className="hidden @min-[1100px]:inline">{label}</span>
     </button>
   );
 }
