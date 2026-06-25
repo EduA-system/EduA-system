@@ -84,3 +84,118 @@ body::-webkit-scrollbar {
   66%  { transform: rotate(-1deg) translateY(-3px); }
   100% { transform: rotate(-2deg) translateY(0px);  }
 }
+
+.edua-editable:empty::before {
+  content: attr(data-placeholder);
+  color: #9aa0a6;
+  pointer-events: none;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+}
+
+.lesson-document-editor {
+  font-size: 16px;
+  line-height: 1.72;
+  caret-color: #2b2926;
+  word-break: break-word;
+}
+
+.lesson-document-editor:focus {
+  outline: none;
+}
+
+.lesson-document-editor h1,
+.lesson-document-editor h2,
+.lesson-document-editor h3,
+.lesson-document-editor p,
+.lesson-document-editor ul,
+.lesson-document-editor ol {
+  margin: 0;
+}
+
+.lesson-document-editor h1 {
+  font-size: 36px;
+  line-height: 1.18;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: #2b2926;
+}
+
+.lesson-document-editor .document-meta {
+  margin-top: 12px;
+  padding-bottom: 34px;
+  border-bottom: 1px solid #ece6de;
+  color: #8a8178;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.lesson-document-editor section {
+  margin-top: 42px;
+}
+
+.lesson-document-editor h2 {
+  font-size: 22px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: #2b2926;
+}
+
+.lesson-document-editor h3 {
+  margin-top: 24px;
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: #3b3733;
+}
+
+.lesson-document-editor p {
+  margin-top: 14px;
+}
+
+.lesson-document-editor ul,
+.lesson-document-editor ol {
+  margin-top: 12px;
+  padding-left: 28px;
+}
+
+.lesson-document-editor li {
+  margin-top: 9px;
+  padding-left: 4px;
+}
+
+.lesson-document-editor ul {
+  list-style-type: disc;
+}
+
+.lesson-document-editor ol {
+  list-style-type: decimal;
+}
+
+.lesson-document-editor b,
+.lesson-document-editor strong {
+  font-weight: 650;
+}
+
+.lesson-document-editor a {
+  color: #9f5a3e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lesson-document-editor ::selection {
+  background: #f6d7c8;
+}
