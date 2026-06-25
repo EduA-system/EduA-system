@@ -16,9 +16,38 @@ export interface Lesson {
   grade: string;
   duration: string;
   sections: LessonSection[];
+  /** Rich-text body of the document, owned by the contenteditable canvas. */
+  contentHtml: string;
 }
 
-export const lessonMock: Lesson = {
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** Seed the document body from the structured sections (initial content only). */
+function seedContentHtml(lesson: Omit<Lesson, "contentHtml">): string {
+  const parts: string[] = [
+    `<h1>${escapeHtml(lesson.title)}</h1>`,
+    `<p class="doc-meta">${escapeHtml(lesson.subject)} · Lớp ${escapeHtml(lesson.grade)} · ${escapeHtml(lesson.duration)}</p>`,
+  ];
+
+  for (const section of lesson.sections) {
+    parts.push(`<h2>${escapeHtml(section.title)}</h2>`);
+    if (section.items.length > 0) {
+      const items = section.items.map((item) => `<li>${escapeHtml(item.text)}</li>`).join("");
+      parts.push(`<ul>${items}</ul>`);
+    } else {
+      parts.push("<p></p>");
+    }
+  }
+
+  return parts.join("");
+}
+
+const lessonSeed: Omit<Lesson, "contentHtml"> = {
   id: "mock-1",
   title: "Dao động điều hòa",
   subject: "Vật lý 11",
@@ -79,4 +108,9 @@ export const lessonMock: Lesson = {
       ],
     },
   ],
+};
+
+export const lessonMock: Lesson = {
+  ...lessonSeed,
+  contentHtml: seedContentHtml(lessonSeed),
 };
