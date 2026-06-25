@@ -1,16 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useEditor } from "@tiptap/react";
+import { lessonMock } from "@/data/lessonMock";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
 import { EditorTools } from "../LessonEditor";
 import { LessonEditor } from "../LessonEditor";
+import { editorExtensions } from "../LessonEditor/editorConfig";
 import { Ruler } from "../LessonEditor/Ruler";
 
 export function LessonEditDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiCollapsed, setAiCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
+  const editor = useEditor({
+    extensions: editorExtensions,
+    content: lessonMock.contentHtml,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: "lesson-document-editor min-h-[calc(100vh-188px)] text-[#2b2926] outline-none",
+      },
+    },
+  });
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
@@ -19,7 +32,7 @@ export function LessonEditDashboard() {
 
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
-            <div className="flex h-12 items-center gap-2 px-3">
+            <div className="@container flex h-12 items-center gap-2 px-3">
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed((current) => !current)}
@@ -39,7 +52,7 @@ export function LessonEditDashboard() {
               </div>
 
               <div className="flex min-w-0 flex-1 items-center justify-center px-2">
-                <EditorTools />
+                <EditorTools editor={editor} />
               </div>
 
               <button
@@ -55,7 +68,7 @@ export function LessonEditDashboard() {
           </header>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
-            <LessonEditor margins={margins} />
+            <LessonEditor margins={margins} editor={editor} />
           </div>
         </section>
 
@@ -80,14 +93,15 @@ function HeaderActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium shadow-sm transition ${
+      title={label}
+      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium shadow-sm transition @min-[1100px]:px-3 ${
         primary
           ? "border border-[#d97757] bg-[#d97757] text-white hover:bg-[#c96545]"
           : "border border-[#e8e2d9] bg-white text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
       }`}
     >
       {children}
-      <span>{label}</span>
+      <span className="hidden @min-[1100px]:inline">{label}</span>
     </button>
   );
 }
