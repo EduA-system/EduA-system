@@ -1,0 +1,4 @@
+interface:
+  display_name: "EDUA Backend Layers"
+  short_description: "Keep EDUA backend code layered"
+  default_prompt: "Use $edua-backend-layered-architecture when changing the Spring Boot backend."

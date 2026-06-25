@@ -1,0 +1,2794 @@
+{
+  "b8": {
+    "id": "b8",
+    "title": "Mô tả sóng",
+    "grade": 11,
+    "pageRange": [
+      32,
+      36
+    ],
+    "summary": "Bài học giới thiệu về hiện tượng sóng, cách tạo sóng mặt nước, phương trình và các đặc trưng cơ bản của sóng như biên độ, bước sóng, chu kì và tốc độ truyền sóng.",
+    "learningObjectives": [
+      "Hiểu được khái niệm về sóng và cơ chế tạo sóng",
+      "Nắm vững phương trình sóng hình sin",
+      "Xác định các đại lượng đặc trưng của sóng",
+      "Phân biệt sóng ngang và sóng dọc"
+    ],
+    "sections": [
+      {
+        "heading": "I. Thí nghiệm tạo sóng mặt nước",
+        "bullets": [
+          "Thiết bị tạo sóng mặt nước bằng kênh tạo sóng, để xuất cách do các tác dụng như: biên độ sóng, bước sóng, chu kì của sóng và tốc độ truyền sóng trên mặt nước",
+          "Tiến hành: Đặt một miếng xốp nhỏ C trên mặt nước, khi quay địa D làm cho vật tạo sóng O dao động lên xuống, thì dao động đó được truyền cho các phần từ nước từ gần ra xa",
+          "Quan sát qua thành kênh thẳng đứng, ta thấy mặt cắt của nước có dạng hình sin",
+          "Miếng xốp C dao động lên xuống tại chỗ, còn những biên dạng của mặt nước lan truyền đi từ nguồn sóng O ra xa cho ta hình ảnh về sóng có trên mặt nước",
+          "Độ thị sóng được mô tả như trên Hình 8.2"
+        ]
+      },
+      {
+        "heading": "II. Giải thích sự tạo thành sóng",
+        "bullets": [
+          "Trong thí nghiệm Hình 8.1, các phần từ nước sát nguồn O dao động theo phương thẳng đứng. Nếu có liên kết giữa các phần từ nước mà các phần từ nước ở điểm M lân cận điểm O dao động theo",
+          "Đến lượt các phần từ nước ở điểm N lân cận điểm M dao động. Ta nói có sự truyền dao động từ điểm này sang điểm khác tạo nên sóng mặt nước",
+          "Như vậy, có hai nguyên nhân tạo nên sóng truyền trong một môi trường: là nguồn dao động từ bên ngoài tác dụng lên môi trường tại điểm O và lực liên kết giữa các phần từ của một trường",
+          "Các phần từ một trường chỉ dao động trong một phạm vi không gian rất hẹp, trong khi sóng truyền đi rất xa"
+        ]
+      },
+      {
+        "heading": "III. Các đại lượng đặc trưng của sóng",
+        "bullets": [
+          "Biên độ sóng là độ lệch lớn nhất của phần từ sóng khỏi vị trí cân bằng. Sóng có biên độ càng lớn thì phần từ sóng dao động càng mạnh",
+          "Bước sóng là khoảng cách từ một phần từ môi trường bất kì trên phương truyền sóng đến phần từ gần nhất có trạng thái dao động hoàn toàn tương tự. Bước sóng được kí hiệu là λ, đơn vị là mét",
+          "Chu kì sóng chính bằng chu kì dao động của phần từ sóng. Chu kì kí hiệu là T, đơn vị là giây",
+          "Tần số sóng: đại lương f = \\frac{1}{T} được gọi là tần số sóng",
+          "Tốc độ truyền sóng là tốc độ lan truyền dao động trong không gian"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Sóng",
+        "definition": "Hiện tượng truyền dao động từ điểm này sang điểm khác trong một môi trường"
+      },
+      {
+        "term": "Biên độ sóng",
+        "definition": "Độ lệch lớn nhất của phần từ sóng khỏi vị trí cân bằng"
+      },
+      {
+        "term": "Bước sóng (λ)",
+        "definition": "Khoảng cách giữa hai phần từ gần nhất có trạng thái dao động hoàn toàn tương tự"
+      },
+      {
+        "term": "Chu kì sóng (T)",
+        "definition": "Thời gian để sóng truyền đi một bước sóng, bằng chu kì dao động của phần từ sóng"
+      },
+      {
+        "term": "Tần số sóng (f)",
+        "definition": "Số lần dao động trong một đơn vị thời gian, f = 1/T"
+      },
+      {
+        "term": "Tốc độ truyền sóng (v)",
+        "definition": "Tốc độ lan truyền dao động trong không gian"
+      },
+      {
+        "term": "Sóng ngang",
+        "definition": "Sóng mà phương dao động vuông góc với phương truyền sóng"
+      },
+      {
+        "term": "Sóng dọc",
+        "definition": "Sóng mà phương dao động cùng phương với phương truyền sóng"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "f = \\frac{1}{T}",
+        "meaning": "Tần số sóng bằng nghịch đảo của chu kì"
+      },
+      {
+        "latex": "v = \\frac{\\lambda}{T} = \\lambda f",
+        "meaning": "Tốc độ truyền sóng bằng bước sóng chia cho chu kì hoặc bwave số nhân với tần số"
+      }
+    ],
+    "examples": [],
+    "figures": [
+      {
+        "id": "f8-1",
+        "caption": "Hình 8.1",
+        "description": "Thiết bị tạo sóng mặt nước với kênh tạo sóng, cơ cầu chuyển động, miếng xốp nhỏ và vật tạo sóng"
+      },
+      {
+        "id": "f8-2",
+        "caption": "Hình 8.2 - Độ thị (u - x) của một sóng hình sin",
+        "description": "Biểu diễn sóng hình sin lan truyền trên mặt nước theo phương Ox, thể hiện ngọn sóng, lõm sóng, biên độ sóng, bước sóng λ"
+      },
+      {
+        "id": "f8-3",
+        "caption": "Hình 8.3 - Mô tả sự truyền sóng trên dây",
+        "description": "Minh họa sự truyền sóng với các vị trí M, N, P theo thời gian khác nhau, cho thấy sóng lan truyền với bước sóng λ"
+      }
+    ]
+  },
+  "b4": {
+    "id": "b4",
+    "title": "Bài tập về dao động điều hòa",
+    "grade": 11,
+    "pageRange": [
+      17,
+      19
+    ],
+    "summary": "Bài tập giúp học sinh áp dụng kiến thức về phương trình, vận tốc, gia tốc của dao động điều hòa để giải quyết các bài toán thực tế.",
+    "learningObjectives": [
+      "Xác định được biên độ, tần số, pha ban đầu của dao động điều hòa từ phương trình cho trước",
+      "Tính được vận tốc và gia tốc tại các thời điểm và vị trí cụ thể",
+      "Vẽ được đồ thị (x-t) của dao động điều hòa",
+      "Giải quyết các bài toán về dao động điều hòa có liên quan đến vận tốc và gia tốc"
+    ],
+    "sections": [
+      {
+        "heading": "I. BÀI TẬP VÍ DỤ",
+        "bullets": [
+          "Ví dụ 1: Xác định biên độ, tần số, pha ban đầu và tính li độ tại thời điểm cho trước từ phương trình x = 5cos(10πt + π/6) cm",
+          "Ví dụ 2: Từ các điều kiện ban đầu (biên độ, tần số, vận tốc ban đầu), xác định phương trình dao động và tính gia tốc cực đại"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Phương trình dao động điều hòa",
+        "definition": "x = Acos(ωt + φ) trong đó A là biên độ, ω là tần số góc, φ là pha ban đầu"
+      },
+      {
+        "term": "Vận tốc trong dao động điều hòa",
+        "definition": "v = -ωAsin(ωt + φ)"
+      },
+      {
+        "term": "Gia tốc trong dao động điều hòa",
+        "definition": "a = -ω²Acos(ωt + φ) = -ω²x"
+      },
+      {
+        "term": "Tần số",
+        "definition": "f = ω/(2π), đơn vị Hz"
+      },
+      {
+        "term": "Pha ban đầu",
+        "definition": "φ là giá trị pha tại thời điểm t = 0"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "x = A\\cos(\\omega t + \\varphi)",
+        "meaning": "Phương trình dao động điều hòa"
+      },
+      {
+        "latex": "v = -\\omega A\\sin(\\omega t + \\varphi)",
+        "meaning": "Vận tốc tức thời trong dao động điều hòa"
+      },
+      {
+        "latex": "a = -\\omega^2 A\\cos(\\omega t + \\varphi) = -\\omega^2 x",
+        "meaning": "Gia tốc tức thời trong dao động điều hòa"
+      },
+      {
+        "latex": "\\omega = 2\\pi f = \\frac{2\\pi}{T}",
+        "meaning": "Mối liên hệ giữa tần số góc, tần số và chu kỳ"
+      },
+      {
+        "latex": "v_0 = -\\omega A\\sin\\varphi",
+        "meaning": "Vận tốc ban đầu"
+      },
+      {
+        "latex": "x_0 = A\\cos\\varphi",
+        "meaning": "Li độ ban đầu"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Ví dụ 1: Cho phương trình dao động điều hòa x = 5cos(10πt + π/6) (cm). Xác định biên độ A, tần số f, pha ban đầu φ, và li độ x₁ tại thời điểm t₁ = 0,05 s.",
+        "solution": "Biên độ A = 5 cm; Tần số f = 10π/(2π) = 5 Hz; Pha ban đầu φ = π/6 rad; Li độ tại t = 0,05s: x₁ = 5cos(10π·0,05 + π/6) = 5cos(4π/6) = -2,5 cm"
+      },
+      {
+        "prompt": "Ví dụ 2: Một vật dao động điều hòa với tần số 2 Hz. Tại thời điểm ban đầu vật có li độ x = 5 cm và vận tốc v = -30 cm/s. Xác định: a) Biên độ và pha ban đầu của dao động; b) Gia tốc cực đại của vật.",
+        "solution": "a) Tần số góc ω = 2πf = 4π rad/s. Từ x₀ = Acosφ = 5 cm và v₀ = -ωAsinφ = -30 cm/s, tính được A = 10 cm, φ = π/3 rad; b) Gia tốc cực đại a_max = ω²A = (4π)²·10 = 160π² cm/s² ≈ 1579 cm/s²"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f3-3",
+        "caption": "Hình 3.3. Đồ thị (a-t) của một vật dao động điều hòa (φ = 0)",
+        "description": "Đồ thị gia tốc theo thời gian có dạng hình sin, biểu diễn gia tốc cực đại ω²A, cực tiểu -ω²A, với các thời điểm đặc biệt T/4, T/2, 3T/4, T"
+      },
+      {
+        "id": "f3-4",
+        "caption": "Hình 3.4. Đồ thị (x-t) của một vật dao động điều hòa trên trục Ox",
+        "description": "Đồ thị li độ theo thời gian có dạng hình sin, cho thấy quỹ đạo dao động từ +40 cm đến -40 cm trong khoảng thời gian từ 0 đến 3,0 s"
+      }
+    ]
+  },
+  "b3": {
+    "id": "b3",
+    "title": "Vận tốc, gia tốc trong dao động điều hòa",
+    "grade": 11,
+    "pageRange": [
+      14,
+      16
+    ],
+    "summary": "Bài học trình bày vận tốc và gia tốc của vật dao động điều hòa, cách xác định chúng từ phương trình li độ, và mối liên hệ giữa các đại lượng này.",
+    "learningObjectives": [
+      "Xác định vận tốc của vật dao động điều hòa từ phương trình li độ",
+      "Xác định gia tốc của vật dao động điều hòa từ phương trình li độ",
+      "Phân tích độ thị (x - t) và (v - t) của dao động điều hòa"
+    ],
+    "sections": [
+      {
+        "heading": "I. Vận tốc của vật dao động điều hòa",
+        "bullets": [
+          "Vận tốc tức thời được xác định bằng công thức: v = Δx/Δt (với Δt rất nhỏ)",
+          "Đối với dao động điều hòa có phương trình x = Acos(ωt + φ), vận tốc được tính bằng đạo hàm: v = x' = -ωAsin(ωt + φ)",
+          "Có thể biểu diễn vận tốc dưới dạng: v = ωA√(1 - cos²(ωt + φ)) hoặc v = ±ω√(A² - x²)",
+          "Vận tốc cực đại (vmax) = ωA, đạt được khi vật qua vị trí cân bằng",
+          "Vận tốc bằng 0 khi vật ở vị trí biên"
+        ]
+      },
+      {
+        "heading": "1. Phương trình của vận tốc",
+        "bullets": [
+          "Từ x = Acos(ωt + φ), đạo hàm theo thời gian ta được: v = -ωAsin(ωt + φ)",
+          "Công thức (3.1) cho thấy vận tốc cũng biến thiên điều hòa với tần số góc ω"
+        ]
+      },
+      {
+        "heading": "2. Độ thị của vận tốc",
+        "bullets": [
+          "Độ thị (v - t) là một đường sin với biên độ ωA",
+          "Độ thị này có pha khác với độ thị (x - t), thể hiện sự lệch pha giữa vận tốc và li độ"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Vận tốc tức thời",
+        "definition": "Là đạo hàm của li độ theo thời gian, biểu thị tốc độ thay đổi vị trí của vật tại một thời điểm"
+      },
+      {
+        "term": "Vận tốc cực đại",
+        "definition": "Giá trị lớn nhất của vận tốc, bằng ωA, đạt được khi vật qua vị trí cân bằng"
+      },
+      {
+        "term": "Gia tốc",
+        "definition": "Là đạo hàm của vận tốc theo thời gian, hoặc đạo hàm cấp hai của li độ theo thời gian"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "v = \\frac{\\Delta x}{\\Delta t}",
+        "meaning": "Công thức tính vận tốc tức thời (với Δt rất nhỏ)"
+      },
+      {
+        "latex": "v = x' = -\\omega A \\sin(\\omega t + \\varphi)",
+        "meaning": "Phương trình vận tốc của vật dao động điều hòa (3.1)"
+      },
+      {
+        "latex": "v = \\pm \\omega \\sqrt{A^2 - x^2}",
+        "meaning": "Công thức liên hệ giữa vận tốc và li độ (3.2)"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Xét một vật dao động điều hòa có độ thị (x - t) được mô tả trên Hình 3.1. Hãy xác định vận tốc tại các điểm khác nhau.",
+        "solution": "Từ độ thị li độ, ta có thể xác định vận tốc bằng cách tính độ dốc của đường cong tại mỗi điểm. Vận tốc cực đại tại các điểm cắt trục thời gian (vị trí cân bằng), vận tốc bằng 0 tại các điểm cực trị (vị trí biên)."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f3-1",
+        "caption": "Hình 3.1. Độ thị (x - t) của một vật dao động điều hòa (φ = 0)",
+        "description": "Độ thị hình sin biểu diễn li độ x theo thời gian t, với các điểm đặc trưng là vị trí biên (A và -A) và vị trí cân bằng (0)"
+      },
+      {
+        "id": "f3-2",
+        "caption": "Hình 3.2. Độ thị (v - t) của một vật dao động điều hòa (φ = 0)",
+        "description": "Độ thị hình sin biểu diễn vận tốc v theo thời gian t, với biên độ ωA, thể hiện sự lệch pha π/2 so với độ thị li độ"
+      }
+    ]
+  },
+  "b7": {
+    "id": "b7",
+    "title": "Bài tập về sự chuyển hoá năng lượng trong dao động điều hoà",
+    "grade": 11,
+    "pageRange": [
+      28,
+      31
+    ],
+    "summary": "Bài học tập trung vào các ví dụ và bài tập liên quan đến sự chuyển hoá năng lượng trong dao động điều hoà, bao gồm năng lượng toàn phần, năng lượng động và năng lượng thế.",
+    "learningObjectives": [
+      "Sử dụng định luật bảo toàn cơ năng để tìm li độ và vận tốc của vật dao động điều hoà",
+      "Nhận biết được sự lợi hay có hại của công hưởng và vận dụng nó vào cuộc sống",
+      "Hiểu rõ hiện tượng biến độ dao động cưỡng bức tăng lên giá trị cực đại khi tần số f của cưỡng bức tiến đến bằng tần số riêng f₀ của hệ dao động gọi là hiện tượng cộng hưởng"
+    ],
+    "sections": [
+      {
+        "heading": "I. CÁC VÍ DỤ",
+        "bullets": [
+          "Ví dụ 1: Con lắc đơn gồm vật nặng có kích thước nhỏ, khối lượng m, treo ở đầu một sợi dây mềm không giãn có độ dài l. Khi vật nặng ra khỏi vị trí cân bằng O sao cho dây treo hợp với QO một góc α₀ (α₀ ≤ 10°), rồi thả nhẹ cho con lắc dao động điều hoà trên cung tròn AOB.",
+          "Ví dụ 2: Một vật có khối lượng m = 200 g dao động điều hoà với tần số góc ω = 2π rad/s, biên độ A = 10 cm. Xác định thế năng của con lắc tại thời điểm vật có tốc độ v = 10 cm/s.",
+          "Ví dụ 3: Một con lắc lò xo có độ cứng k = 100 N/m dao động điều hoà. Gọi Wₜ, Wₐ lần lượt là thế năng của lò xo và động năng của vật, W₀ là cơ năng của con lắc lò xo. Độ thị biểu diễn sự phụ thuộc của thế năng Wₜ và động năng Wₐ của con lắc vào li độ x như Hình 7.2."
+        ]
+      },
+      {
+        "heading": "II. BÀI TẬP LUYỆN TẬP",
+        "bullets": [
+          "Hình 7.3 mô tả một máy do dạ chấn đơn giản hoạt động theo nguyên tắc sau đây: Khi xây ra đông đặt thì hệ gồm lò xo và vật nặng của máy do sẽ dao động theo tần số của dạ chấn. Búi đạ gắn với vật nặng sẽ ghi lại độ thị của dạ chấn trên cuốn giấy quay đều. Biết sóng dạ chấn có tần số nằm trong khoảng từ 30 Hz đến 40 Hz.",
+          "Hình 7.4 mô tả một liên hệ giữa gia tốc và li độ của một vật dao động điều hoà. Sử dụng số liệu trong đồ thị Hình 7.4 để tính tần số của dao động."
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Năng lượng toàn phần (W)",
+        "definition": "Tổng của năng lượng động và năng lượng thế của vật dao động điều hoà, W = Wₜ + Wₐ = hằng số"
+      },
+      {
+        "term": "Năng lượng động (Wₐ)",
+        "definition": "Năng lượng liên quan đến chuyển động của vật: Wₐ = ½mv²"
+      },
+      {
+        "term": "Năng lượng thế (Wₜ)",
+        "definition": "Năng lượng tích trữ trong lò xo hoặc trường hấp dẫn: Wₜ = ½kx² hoặc Wₜ = mgl(1 - cosα)"
+      },
+      {
+        "term": "Hiện tượng cộng hưởng",
+        "definition": "Biên độ dao động cưỡng bức tăng lên giá trị cực đại khi tần số f của cưỡng bức tiến đến bằng tần số riêng f₀ của hệ dao động"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "W_t = mg[1 - \\cos\\alpha_0] \\approx mg\\sin^2\\frac{\\alpha_0}{2} \\approx mg\\frac{\\alpha_0^2}{2}",
+        "meaning": "Thế năng của vật tại các vị trí A và B của con lắc đơn"
+      },
+      {
+        "latex": "W_d = 0",
+        "meaning": "Động năng tại vị trí cân bằng O"
+      },
+      {
+        "latex": "W_t = 0",
+        "meaning": "Thế năng tại vị trí cân bằng O"
+      },
+      {
+        "latex": "W_d = W_{tmax} = mg[1 - \\cos\\alpha_0] \\approx mg\\frac{\\alpha_0^2}{2}",
+        "meaning": "Động năng cực đại tại vị trí cân bằng O"
+      },
+      {
+        "latex": "W_t = mg(1 - \\cos\\alpha) \\approx mg\\frac{\\alpha^2}{2}",
+        "meaning": "Thế năng tại vị trí với góc α"
+      },
+      {
+        "latex": "W_d = W_{tmax} - W_t \\approx mg\\left(\\frac{\\alpha_0^2}{2} - \\frac{\\alpha^2}{2}\\right)",
+        "meaning": "Động năng tại vị trí với góc α"
+      },
+      {
+        "latex": "W = W_{tmax} = W_d + W_t = 2W_t \\Leftrightarrow mg\\frac{\\alpha_0^2}{2} = 2mg\\frac{\\alpha^2}{2} \\Rightarrow \\alpha = \\pm\\frac{\\alpha_0}{\\sqrt{2}}",
+        "meaning": "Điều kiện bảo toàn cơ năng"
+      },
+      {
+        "latex": "W_t = W - W_d = \\frac{m\\omega^2A^2}{2} - \\frac{mv^2}{2} = \\frac{m}{2}(\\omega^2A^2 - v^2) = \\frac{0.2}{2}(2^2\\pi^2(0.1)^2 - 1^2) = 0.038J",
+        "meaning": "Cách tính thế năng từ năng lượng toàn phần và động năng"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Ví dụ 1: Một con lắc đơn gồm vật nặng có kích thước nhỏ, khối lượng m, treo ở đầu một sợi dây mềm không giãn có độ dài l. Khi vật nặng ra khỏi vị trí cân bằng O sao cho dây treo hợp với QO một góc α₀ (α₀ ≤ 10°), rồi thả nhẹ cho con lắc dao động điều hoà trên cung tròn AOB. a) Tính thế năng của con lắc; động năng của vật ở các vị trí A, O, B và vị trí bất kì (lì độ góc α). b) Ở vị trí nào động năng bằng thế năng?",
+        "solution": "a) Chọn mốc để tính thế năng của vật là vị trí cân bằng O. Thế năng và động năng của vật tại các vị trí A và B: Wₜ = mg(1 - cosα₀) ≈ mg(sinα₀/2)² ≈ mgα₀²/2; Wₐ = 0. Thế năng và động năng tại vị trí O: Wₜ = 0; Wₐ = Wtmax = mgα₀²/2. Thế năng và động năng tại vị trí bất kì (lì độ góc α): Wₜ = mg(1 - cosα) ≈ mgα²/2; Wₐ = Wtmax - Wₜ ≈ mg(α₀² - α²)/2. b) Khi Wₐ = Wₜ, áp dụng định luật bảo toàn: W = Wtmax = Wₐ + Wₜ = 2Wₜ, suy ra α = ±α₀/√2. Vậy ở các vị trí có lì độ góc α = ±α₀/√2 thì động năng bằng thế năng."
+      },
+      {
+        "prompt": "Ví dụ 2: Một vật có khối lượng m = 200 g dao động điều hoà với tần số góc ω = 2π rad/s, biên độ A = 10 cm. Xác định thế năng của con lắc tại thời điểm vật có tốc độ v = 10 cm/s.",
+        "solution": "Ta đã biết trong dao động điều hoà cơ năng được bảo toàn W = Wₜ + Wₐ. Suy ra thế năng: Wₜ = W - Wₐ = (m ω²A²)/2 - (mv²)/2 = (m/2)(ω²A² - v²) = (0.2/2)(2²π²(0.1)² - 1²) = 0.038J."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f7_1",
+        "caption": "Hình 7.1",
+        "description": "Con lắc đơn gồm vật nặng treo ở đầu dây mềm, dao động trên cung tròn AOB giữa hai vị trí biên A và B, với vị trí cân bằng O ở giữa"
+      },
+      {
+        "id": "f7_2",
+        "caption": "Hình 7.2",
+        "description": "Đồ thị biểu diễn mối liên hệ giữa thế năng Wₜ (đường cong màu đỏ) và động năng Wₐ (đường cong màu xanh) của con lắc lò xo theo li độ x, cho thấy sự chuyển hoá năng lượng"
+      },
+      {
+        "id": "f7_3",
+        "caption": "Hình 7.3",
+        "description": "Máy do dạ chấn đơn giản với lò xo, vật nặng và búi đạ ghi lại độ thị trên giấy quay"
+      },
+      {
+        "id": "f7_4",
+        "caption": "Hình 7.4",
+        "description": "Đồ thị mô tả mối liên hệ giữa gia tốc (m/s²) trên trục tung và li độ (cm) trên trục hoành của một vật dao động điều hoà"
+      }
+    ]
+  },
+  "b6": {
+    "id": "b6",
+    "title": "DAO ĐỘNG TẮT DẦN. DAO ĐỘNG CƯỠNG BỨC. HIỆN TƯỢNG CỘNG HƯỞNG",
+    "grade": 11,
+    "pageRange": [
+      24,
+      27
+    ],
+    "summary": "Bài học giới thiệu về dao động tắt dần xảy ra khi có ma sát, dao động cưỡng bức do ngoại lực tác dụng, và hiện tượng cộng hưởng khi tần số ngoại lực bằng tần số riêng của hệ.",
+    "learningObjectives": [
+      "Hiểu khái niệm dao động tắt dần và nguyên nhân gây ra",
+      "Phân biệt dao động cưỡng bức với dao động tự do",
+      "Nhận biết hiện tượng cộng hưởng và ứng dụng của nó",
+      "Giải thích vai trò của biên độ dao động và tần số trong dao động cưỡng bức"
+    ],
+    "sections": [
+      {
+        "heading": "I. DAO ĐỘNG TẮT DẦN",
+        "bullets": [
+          "Dao động tắt dần là dao động mà biên độ giảm dần theo thời gian do tác dụng của lực cản",
+          "Lực ma sát và lực cản của không khí làm cho biên độ dao động giảm dần",
+          "Biên độ giảm dần là do lực cản của môi trường chuyển hóa dần năng lượng cơ học thành nhiệt"
+        ]
+      },
+      {
+        "heading": "1. Thí nghiệm dao động tắt dần",
+        "bullets": [
+          "Con lắc dao động với biên độ và tần số riêng không đổi",
+          "Khi kéo con lắc ra khỏi vị trí cân bằng rồi thả cho nó dao động thì biên độ của nó giảm dần",
+          "Dao động như vậy gọi là dao động tắt dần",
+          "Nhận xét về biên độ và chu kì dao động của con lắc trong thí nghiệm"
+        ]
+      },
+      {
+        "heading": "2. Ứng dụng",
+        "bullets": [
+          "Bộ phận giảm xóc của xe máy (Hình 6.2) là ứng dụng của dao động tắt dần",
+          "Khi xe máy đi qua chỗ mập mô, xe bị nảy lên và dao động, nếu dao động kéo dài làm người ngồi trên xe khó chịu",
+          "Bộ phận giảm xóc giúp làm tắt dao động nhanh chóng để tạo sự thoải mái cho người đi xe"
+        ]
+      },
+      {
+        "heading": "II. DAO ĐỘNG CƯỠNG BỨC",
+        "bullets": [
+          "Dao động cưỡng bức là dao động xảy ra dưới tác dụng của ngoại lực tuần hoàn có tần số f bất kì",
+          "Khi dao động ổn định tần số dao động cưỡng bức bằng tần số của ngoại lực"
+        ]
+      },
+      {
+        "heading": "1. Khái niệm dao động cưỡng bức",
+        "bullets": [
+          "Dao động cưỡng bức là dao động xảy ra dưới tác dụng của ngoại lực tuần hoàn có tần số f bất kì",
+          "Ví dụ: Khi đèn bên xe buýt, xe chi tam dừng nên không tắt máy, thần xe vận dao động, dao động đó là dao động cưỡng bức dưới tác dụng của lực cưỡng bức tuần hoàn gây ra bởi chuyển động của pit-tông trong xi lanh của vay nó"
+        ]
+      },
+      {
+        "heading": "2. Đặc điểm",
+        "bullets": [
+          "Dao động cưỡng bức khi ổn định có những đặc điểm sau:",
+          "Dao động cưỡng bức có biên độ không đổi và có tần số bằng tần số của lực cưỡng bức",
+          "Biên độ của dao động cưỡng bức không chi phụ thuộc vào biên độ của lực cưỡng bức mà còn phụ thuộc cả vào độ chênh lệch giữa tần số của lực cưỡng bức và tần số riêng của hệ, khi tần số của lực cưỡng bức càng gần tần số riêng thì biên độ dao động của hệ càng lớn"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Dao động tắt dần",
+        "definition": "Dao động mà biên độ giảm dần theo thời gian do tác dụng của lực cản từ môi trường"
+      },
+      {
+        "term": "Dao động cưỡng bức",
+        "definition": "Dao động xảy ra dưới tác dụng của ngoại lực tuần hoàn, có tần số bằng tần số của ngoại lực khi ổn định"
+      },
+      {
+        "term": "Hiện tượng cộng hưởng",
+        "definition": "Hiện tượng biên độ dao động cưỡng bức đạt cực đại khi tần số ngoại lực bằng tần số riêng của hệ"
+      },
+      {
+        "term": "Tần số riêng",
+        "definition": "Tần số dao động tự do của một hệ dao động"
+      },
+      {
+        "term": "Lực cưỡng bức",
+        "definition": "Ngoại lực tuần hoàn tác dụng lên hệ dao động"
+      }
+    ],
+    "formulas": [],
+    "examples": [
+      {
+        "prompt": "Tìm trong thực tế về dao động tắt dần và cho biết trong môi trường hợp thì dao động tắt dần là có lợi hay có hại",
+        "solution": "Ví dụ: Dao động tắt dần trong hệ thống giảm xóc của xe máy là có lợi vì giúp tắt dao động nhanh chóng, tạo sự thoải mái cho người đi xe. Tuy nhiên, dao động tắt dần có thể gây ra mất năng lượng trong các hệ thống cơ khí khác."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f6-1a",
+        "caption": "Hình ảnh kết quả thí nghiệm của dao động tắt dần",
+        "description": "Biểu đồ dao động tắt dần cho thấy biên độ giảm dần theo thời gian"
+      },
+      {
+        "id": "f6-1b",
+        "caption": "Bộ thí nghiệm khảo sát dao động tắt dần của con lắc đơn",
+        "description": "Thiết bị thí nghiệm để quan sát dao động tắt dần của con lắc, gồm nguồn điện, tấm nhựa chuyên động đều"
+      },
+      {
+        "id": "f6-2",
+        "caption": "Bộ phận giảm xóc của xe máy",
+        "description": "Ứng dụng của dao động tắt dần trong hệ thống treo của phương tiện giao thông"
+      }
+    ]
+  },
+  "b1": {
+    "id": "b1",
+    "title": "Dao động điều hoà",
+    "grade": 11,
+    "pageRange": [
+      6,
+      9
+    ],
+    "summary": "Bài học giới thiệu dao động điều hoà - một dạng chuyển động lặp lại của vật quanh vị trí cân bằng. Đây là dao động tuần hoàn có đặc điểm đặc biệt và được mô tả bằng hàm lượng giác.",
+    "learningObjectives": [
+      "Nhận biết các đặc điểm của dao động cơ",
+      "Hiểu khái niệm dao động điều hoà",
+      "Phân tích phương trình chuyển động của dao động điều hoà",
+      "Xác định các đại lượng: biên độ, pha, chu kỳ, tần số"
+    ],
+    "sections": [
+      {
+        "heading": "I. Những đặc điểm của dao động cơ",
+        "bullets": [
+          "Dao động cơ của một vật có thể là tuần hoàn hoặc không tuần hoàn",
+          "Vật chuyển động qua lại quanh vị trí cân bằng",
+          "Kéo vật lệch khỏi vị trí cân bằng, một lực khôi phục đưa vật trở lại",
+          "Xác định vị trí cân bằng của vật",
+          "Kéo vật lệch khỏi vị trí cân bằng rồi thả ra cho chuyển động"
+        ]
+      },
+      {
+        "heading": "Dao động cơ",
+        "bullets": [
+          "Vật chuyển động qua lại quanh vị trí cân bằng được gọi là dao động cơ",
+          "Dao động tuần hoàn có thể có múc độ phức tạp khác nhau",
+          "Nếu sau những khoảng thời gian bằng nhau, vật trở lại vị trí cũ với cùng vận tốc thì dao động của vật đó tuần hoàn",
+          "Dao động tuần hoàn đơn giản nhất là dao động điều hoà"
+        ]
+      },
+      {
+        "heading": "II. Dao động điều hoà",
+        "bullets": [
+          "Đồ thị dao động của một con lắc lò xo theo trục x theo thời gian có dạng hình sin",
+          "Đường cong trên Hình 1.2 là đồ thị dao động của con lắc",
+          "Trong ứng với đồ thị hình sin là hàm sin hoặc cosin"
+        ]
+      },
+      {
+        "heading": "Phương trình của dao động điều hoà",
+        "bullets": [
+          "Dao động được mô tả bằng phương trình x = A cos(ωt + φ)",
+          "Trong phương trình này, A là biên độ dao động",
+          "(ωt + φ) là pha của dao động ở thời điểm t",
+          "φ là pha ban đầu"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Dao động cơ",
+        "definition": "Chuyển động của vật qua lại quanh một vị trí cân bằng"
+      },
+      {
+        "term": "Dao động tuần hoàn",
+        "definition": "Dao động mà sau những khoảng thời gian bằng nhau, vật trở lại vị trí cũ với cùng vận tốc"
+      },
+      {
+        "term": "Dao động điều hoà",
+        "definition": "Dao động tuần hoàn đơn giản nhất, được mô tả bằng hàm sin hoặc cosin"
+      },
+      {
+        "term": "Biên độ (A)",
+        "definition": "Độ lệch cực đại của vật so với vị trí cân bằng"
+      },
+      {
+        "term": "Pha dao động",
+        "definition": "(ωt + φ), xác định trạng thái chuyển động của vật tại một thời điểm"
+      },
+      {
+        "term": "Pha ban đầu (φ)",
+        "definition": "Pha của dao động tại thời điểm t = 0"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "x = A\\cos(\\omega t + \\varphi)",
+        "meaning": "Phương trình dao động điều hoà, trong đó x là li độ, A là biên độ, ω là tần số góc, t là thời gian, φ là pha ban đầu"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một vật dao động điều hoà có phương trình x = 2cos(4πt + π/2) (cm). Xác định: a) Biên độ và pha ban đầu của dao động. b) Pha và li độ của dao động khi t = 2 s.",
+        "solution": "a) Biên độ A = 2 cm, pha ban đầu φ = π/2. b) Khi t = 2 s, pha = 4π·2 + π/2 = 8π + π/2, li độ được tính từ phương trình x = 2cos(8π + π/2)"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f1-1-1",
+        "caption": "Hình 1.1. Con lắc lò xo và con lắc đơn",
+        "description": "Mô tả hai ví dụ về hệ dao động: con lắc lò xo treo thẳng đứng và con lắc không dãn ta có con lắc hoàn con lắc đơn"
+      },
+      {
+        "id": "f1-1-2",
+        "caption": "Hình 1.2. Dao động của con lắc lò xo",
+        "description": "Đồ thị biểu diễn li độ x theo thời gian t của một con lắc lò xo, có dạng hình sin với các thời điểm khác nhau (t₀, t₁, t₂,...) và biên độ A"
+      }
+    ]
+  },
+  "b2": {
+    "id": "b2",
+    "title": "Mô tả dao động điều hoà",
+    "grade": 11,
+    "pageRange": [
+      10,
+      13
+    ],
+    "summary": "Bài học trình bày các đại lượng đặc trưng của dao động điều hoà như li độ, biên độ, chu kì, tần số, tần số góc và phương trình dao động. Ngoài ra, bài học cũng giới thiệu về pha ban đầu, độ lệch pha giữa hai dao động cùng chu kì.",
+    "learningObjectives": [
+      "Hiểu và xác định các đại lượng đặc trưng của dao động điều hoà",
+      "Viết được phương trình dao động điều hoà của một vật",
+      "Xác định pha ban đầu và độ lệch pha giữa hai dao động cùng chu kì",
+      "Phân tích mối liên hệ giữa dao động điều hoà và chuyển động tròn đều"
+    ],
+    "sections": [
+      {
+        "heading": "I. Các đại lượng đặc trưng của dao động điều hoà",
+        "bullets": [
+          "Li độ x là độ dịch chuyển từ vị trí cân bằng đến vị trí của vật tại thời điểm t",
+          "Biên độ A là độ dịch chuyển cực đại của vật tính từ vị trí cân bằng",
+          "Chu kì T là khoảng thời gian để vật thực hiện được một dao động, đơn vị là giây (s)",
+          "Tần số f là số dao động mà vật thực hiện được trong một giây, đơn vị là Hz",
+          "Tần số góc ω = 2π/T (rad/s)",
+          "Phương trình dao động điều hoà: x = A cos(ωt + φ), trong đó φ là pha ban đầu"
+        ]
+      },
+      {
+        "heading": "II. Pha ban đầu. Độ lệch pha",
+        "bullets": [
+          "Pha ban đầu φ xác định vị trí và hướng chuyển động của vật tại thời điểm ban đầu (t = 0)",
+          "Độ lệch pha giữa hai dao động cùng chu kì được xác định bằng hiệu pha của chúng",
+          "Nếu φ₁ > φ₂, dao động 1 sớm pha hơn dao động 2",
+          "Nếu φ₁ < φ₂, dao động 1 trễ pha hơn dao động 2",
+          "Nếu φ₁ = φ₂, hai dao động cùng pha",
+          "Nếu φ₁ = φ₂ ± π, hai dao động ngược pha"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Li độ",
+        "definition": "Độ dịch chuyển từ vị trí cân bằng đến vị trí của vật tại thời điểm t"
+      },
+      {
+        "term": "Biên độ",
+        "definition": "Độ dịch chuyển cực đại của vật tính từ vị trí cân bằng, ký hiệu A"
+      },
+      {
+        "term": "Chu kì",
+        "definition": "Khoảng thời gian để vật thực hiện được một dao động, ký hiệu T"
+      },
+      {
+        "term": "Tần số",
+        "definition": "Số dao động mà vật thực hiện được trong một giây, ký hiệu f, đơn vị Hz"
+      },
+      {
+        "term": "Tần số góc",
+        "definition": "Đại lượng ω = 2π/T hoặc ω = 2πf, đơn vị rad/s"
+      },
+      {
+        "term": "Pha ban đầu",
+        "definition": "Pha của dao động tại thời điểm t = 0, ký hiệu φ"
+      },
+      {
+        "term": "Độ lệch pha",
+        "definition": "Hiệu giữa các pha ban đầu của hai dao động cùng chu kì"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "f = \\frac{1}{T}",
+        "meaning": "Mối liên hệ giữa tần số và chu kì"
+      },
+      {
+        "latex": "\\omega = \\frac{2\\pi}{T} = 2\\pi f",
+        "meaning": "Tần số góc"
+      },
+      {
+        "latex": "x = A\\cos(\\omega t + \\varphi)",
+        "meaning": "Phương trình dao động điều hoà"
+      },
+      {
+        "latex": "x_1 = A\\cos(\\omega t) \\text{ với } \\varphi_1 = 0",
+        "meaning": "Phương trình dao động 1 có pha ban đầu bằng 0"
+      },
+      {
+        "latex": "x_2 = A\\cos(\\omega t - \\frac{\\pi}{2}) \\text{ với } \\varphi_2 = -\\frac{\\pi}{2}",
+        "meaning": "Phương trình dao động 2 có pha ban đầu bằng -π/2"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Từ đồ thị Hình 2.1, hãy xác định biên độ, chu kì, tần số và phương trình dao động của vật",
+        "solution": "Từ đồ thị: A = 0,1 m; T = 0,4 s; f = 2,5 Hz; ω = 2π/T = 5π rad/s. Phương trình: x = 0,1cos(5πt) m"
+      },
+      {
+        "prompt": "Hình 2.2 thể hiện hai dao động điều hoà cùng chu kì. Xác định độ lệch pha giữa chúng",
+        "solution": "Từ đồ thị, hai dao động có cùng chu kì T/4, biên độ bằng nhau. Dao động 1 đi trước dao động 2 một khoảng T/4, nên độ lệch pha là π/2 rad"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f2-1",
+        "caption": "Hình 2.1",
+        "description": "Đồ thị dao động điều hoà của một vật thể hiện mối quan hệ giữa li độ x và thời gian t"
+      },
+      {
+        "id": "f2-2",
+        "caption": "Hình 2.2",
+        "description": "Đồ thị của hai dao động điều hoà cùng chu kì, cho thấy sự khác biệt về pha ban đầu"
+      },
+      {
+        "id": "f2-3",
+        "caption": "Hình 2.3",
+        "description": "Đồ thị dao động điều hoà của một con lắc, thể hiện vị trí và hướng chuyển động"
+      },
+      {
+        "id": "f2-4",
+        "caption": "Hình 2.4",
+        "description": "Biểu diễn độ lệch pha giữa hai dao động cùng chu kì: a) hai dao động đồng pha, b) hai dao động ngược pha"
+      }
+    ]
+  },
+  "b13": {
+    "id": "b13",
+    "title": "Sóng dừng",
+    "grade": 11,
+    "pageRange": [
+      52,
+      54
+    ],
+    "summary": "Sóng dừng được tạo thành khi có sóng cùng biên độ, cùng tần số lan truyền theo hai hướng ngược nhau. Bài học trình bày cách tạo sóng dừng, đặc điểm và ứng dụng của sóng dừng.",
+    "learningObjectives": [
+      "Hiểu được cách tạo sóng dừng",
+      "Nhận biết các đặc điểm của sóng dừng",
+      "Phân biệt được nút và bụng sóng",
+      "Tính toán được các đại lượng liên quan đến sóng dừng"
+    ],
+    "sections": [
+      {
+        "heading": "I. Thí nghiệm tạo sóng dừng",
+        "bullets": [
+          "Bộ trí thí nghiệm gồm: giá thí nghiệm, dây đan hồi PQ, bộ rung, máy phát âm tần",
+          "Bước 1: Giữ cho dây căng, đầu P mắc vào rồng rộc, đầu rung mắc vào dây",
+          "Bước 2: Cho bộ rung hoạt động để rung đầu P. Điều chỉnh tần số của bộ rung cho đến khi trên dây xuất hiện những điểm dao động với biên độ cực đại và cực tiểu",
+          "Bước 3: Thay đổi tần số của bộ rung cho đến khi lại quan sát được những điểm dao động với biên độ cực đại và cực tiểu. Ghi lại tần số mới của bộ rung"
+        ]
+      },
+      {
+        "heading": "II. Giải thích sự tạo thành sóng dừng",
+        "bullets": [
+          "Sóng dừng được tạo thành khi có sóng cùng biên độ, cùng tần số lan truyền theo hai hướng ngược nhau",
+          "Hai sóng này gặp nhau, giao thoa nhau tạo nên sóng tổng hợp là sóng dừng",
+          "Những điểm tại đó hai sóng ngược pha thì không dao động được gọi là nút sóng",
+          "Những điểm tại đó hai sóng cùng pha thì dao động với biên độ cực đại được gọi là bụng sóng"
+        ]
+      },
+      {
+        "heading": "1. Đặc điểm của sóng dừng",
+        "bullets": [
+          "Sóng dừng được tạo thành khi có sóng cùng biên độ, cùng tần số lan truyền theo hai hướng ngược nhau",
+          "Hai sóng này gặp nhau, giao thoa nhau tạo nên sóng tổng hợp là sóng dừng",
+          "Những điểm tại đó hai sóng ngược pha thì không dao động được gọi là nút sóng",
+          "Những điểm tại đó hai sóng cùng pha thì dao động với biên độ cực đại được gọi là bụng sóng"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Sóng dừng",
+        "definition": "Sóng được tạo thành khi có sóng cùng biên độ, cùng tần số lan truyền theo hai hướng ngược nhau gặp nhau và giao thoa"
+      },
+      {
+        "term": "Nút sóng",
+        "definition": "Những điểm trên sóng dừng tại đó hai sóng ngược pha, không dao động"
+      },
+      {
+        "term": "Bụng sóng",
+        "definition": "Những điểm trên sóng dừng tại đó hai sóng cùng pha, dao động với biên độ cực đại"
+      }
+    ],
+    "formulas": [],
+    "examples": [
+      {
+        "prompt": "Khi võ tay dẫu trước miệng các ống của dàn Klông phát có độ dài khác nhau như hình bên, thấy âm phát ra ở các miệng ống trầm bổng khác nhau. Sóng âm lan truyền trong môi ống không phát là sóng chạy. Vậy đó là loại sóng gì và có những đặc điểm nào?",
+        "solution": "Đó là sóng dừng. Sóng âm lan truyền trong ống không phát là sóng chạy có những đặc điểm: có các điểm dao động với biên độ cực đại (bụng sóng) và các điểm không dao động (nút sóng); khoảng cách giữa hai nút sóng liên tiếp bằng nửa bước sóng."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f13-1",
+        "caption": "Hình 13.1. Bộ thí nghiệm tạo sóng dừng trên sợi dây",
+        "description": "Thiết bị gồm giá thí nghiệm, dây đan hồi PQ, bộ rung, máy phát âm tần dùng để tạo sóng dừng trên sợi dây"
+      }
+    ]
+  },
+  "b14": {
+    "id": "b14",
+    "title": "Bài tập về sóng",
+    "grade": 11,
+    "pageRange": [
+      55,
+      57
+    ],
+    "summary": "Bài tập tổng hợp về sóng cơ học, bao gồm các bài toán liên quan đến tần số, bước sóng, tốc độ truyền sóng và các hiện tượng sóng như giao thoa, cộng hưởng và sóng dừng.",
+    "learningObjectives": [
+      "Tính toán các đại lượng đặc trưng của sóng: tần số, bước sóng, tốc độ truyền sóng",
+      "Xác định điều kiện sóng dừng trên dây và trong ống khí",
+      "Giải quyết các bài toán liên quan đến giao thoa và cộng hưởng sóng"
+    ],
+    "sections": [
+      {
+        "heading": "I. Các ví dụ",
+        "bullets": [
+          "Ví dụ 1: Tính tốc độ truyền sóng, bước sóng khi biết tần số và khoảng cách truyền",
+          "Ví dụ 2: Tính bước sóng từ sự chênh lệch các vị trí có cùng biên độ trong giao thoa",
+          "Ví dụ 3: Phân tích sóng hình sin trên đồ thị, xác định các đại lượng sóng"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Tần số (f)",
+        "definition": "Số lần dao động trong một đơn vị thời gian, tính bằng Hz"
+      },
+      {
+        "term": "Bước sóng (λ)",
+        "definition": "Khoảng cách giữa hai điểm dao động cùng pha trên một sóng"
+      },
+      {
+        "term": "Tốc độ truyền sóng (v)",
+        "definition": "Quãng đường sóng truyền được trong một đơn vị thời gian"
+      },
+      {
+        "term": "Chu kỳ (T)",
+        "definition": "Thời gian để hoàn thành một dao động toàn phần"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "v = \\frac{s}{t}",
+        "meaning": "Tốc độ truyền sóng bằng quãng đường chia cho thời gian"
+      },
+      {
+        "latex": "v = \\lambda f",
+        "meaning": "Tốc độ truyền sóng bằng bước sóng nhân với tần số"
+      },
+      {
+        "latex": "\\lambda = \\frac{v}{f}",
+        "meaning": "Bước sóng bằng tốc độ chia cho tần số"
+      },
+      {
+        "latex": "T = \\frac{1}{f}",
+        "meaning": "Chu kỳ bằng nghịch đảo của tần số"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Ví dụ 1: Một sóng âm có tần số 192 Hz và truyền đi được quãng đường 91,4 m trong 0,27 s. Hãy tính: a) Tốc độ truyền sóng b) Bước sóng c) Nếu tần số sóng là 442 Hz thì bước sóng và chu kỳ là bao nhiêu?",
+        "solution": "a) v = s/t = 91,4/0,27 = 338,5 m/s b) λ = v/f = 338,5/192 = 1,76 m c) λ' = 338,5/442 = 0,77 m; T' = 1/442 = 0,002 s"
+      },
+      {
+        "prompt": "Ví dụ 2: Trong thí nghiệm giao thoa, hai gợn sóng liên tiếp lần lượt ở vị trí 12,4 cm và 14,3 cm. Tính bước sóng và tốc độ truyền sóng với v = 1 m/s.",
+        "solution": "λ = 14,3 - 12,4 = 1,90 cm; v = λf = 1,90 × 50 = 95 cm/s"
+      },
+      {
+        "prompt": "Ví dụ 3: Phân tích sóng hình sin lan truyền từ trái sang phải trên đồ thị, xác định bước sóng và các đại lượng đặc trưng với v = 1 m/s.",
+        "solution": "Từ đồ thị xác định λ, f, T, rồi tính v = λf và kiểm tra các điều kiện sóng dừng"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f14-1",
+        "caption": "Hình 14.1",
+        "description": "Đồ thị li độ (cm) theo vị trí (cm) của một sóng hình sin lan truyền, với các điểm P, Q, R đánh dấu trên sóng"
+      }
+    ]
+  },
+  "b10": {
+    "id": "b10",
+    "title": "Thực hành: Đo tần số của sóng âm",
+    "grade": 11,
+    "pageRange": [
+      41,
+      43
+    ],
+    "summary": "Bài thực hành hướng dẫn sử dụng dao động kí điện tử để đo và xác định tần số của sóng âm từ các nguồn âm khác nhau.",
+    "learningObjectives": [
+      "Nắm vững cách sử dụng dao động kí điện tử để đo tần số",
+      "Hiểu được nguyên lý hoạt động của dao động kí và cách đọc kết quả",
+      "Thực hành đo tần số của các sóng âm khác nhau"
+    ],
+    "sections": [
+      {
+        "heading": "I. Giới thiệu dao động kí điện tử",
+        "bullets": [
+          "Dao động kí là thiết bị dùng để hiển thị trên màn hình dạng tín hiệu đưa vào với độ chính xác cao",
+          "Khoảng tần số do được phụ thuộc vào từng loại dao động kí",
+          "Các tính năng cơ bản: đo cường độ của tín hiệu dao động điện, đo tần số, chu kì, khoảng thời gian của tín hiệu",
+          "Cách sử dụng dao động kí để đo tín hiệu: nối que do vào chân cắm tín hiệu vào, chọn dạng tín hiệu do AC hoặc DC, nối dao động kí với bộ nguồn và bật công tắc",
+          "Sử dụng nút TRIGGER để chế độ là Auto, nhấn nút VOLTS/DIV điều chỉnh biên độ dao động, nhấn nút SEC/DIV điều chỉnh giá trị tương ứng với một ô hiển thị trên màn hình, sử dụng nút điều chỉnh lên xuống độ thị tín hiệu"
+        ]
+      },
+      {
+        "heading": "II. Em đã học",
+        "bullets": [
+          "Sóng trong đó các phần tử của môi trường dao động theo phương vuông góc với phương truyền sóng là sóng ngang",
+          "Sóng trong đó các phần tử của môi trường dao động theo phương trùng với phương truyền sóng gọi là sóng dọc",
+          "Quá trình truyền sóng là quá trình truyền năng lượng",
+          "Nguồn sóng là nguồn năng lượng. Sóng mang năng lượng của nguồn đến mọi nơi trên phương truyền sóng",
+          "Mọi sóng mang năng lượng đi xa mà không mang các phần tử vật chất đi cùng. Đó là điểm khác biệt cần bàn giao chuyển động của sóng và chuyển động của hạt"
+        ]
+      },
+      {
+        "heading": "III. Em có thể",
+        "bullets": [
+          "Nếu được ví dụ trong thực tế chứng tỏ sóng truyền năng lượng",
+          "Nếu được ví dụ về sóng dọc và sóng ngang trong thực tiễn",
+          "Sử dụng mô hình sóng để giải thích được một số tính chất đơn giản của âm"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Dao động kí điện tử",
+        "definition": "Thiết bị dùng để hiển thị trên màn hình dạng tín hiệu đưa vào với độ chính xác cao, có khả năng đo cường độ của tín hiệu dao động điện, đo tần số, chu kì, khoảng thời gian"
+      },
+      {
+        "term": "Tần số",
+        "definition": "Số dao động hoàn toàn trong một đơn vị thời gian, đo bằng Hertz (Hz)"
+      },
+      {
+        "term": "Chu kì",
+        "definition": "Thời gian để hoàn thành một dao động toàn bộ"
+      }
+    ],
+    "formulas": [],
+    "examples": [
+      {
+        "prompt": "Quan sát màn hình hiển thị tín hiệu dao động điện trên dao động kí (Hình 10.2), hãy xác định tần số dao động của tín hiệu",
+        "solution": "Dựa vào mô phỏng trên màn hình, xác định một chu kì sóng, sử dụng nút SEC/DIV để đọc giá trị thời gian tương ứng với một ô, từ đó tính tần số bằng công thức f = 1/T"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f10.1",
+        "caption": "Hình 10.1. Máy dao động kí điện tử",
+        "description": "Hình ảnh của dao động kí điện tử với các nút điều khiển, màn hình hiển thị và que đo"
+      },
+      {
+        "id": "f10.2",
+        "caption": "Hình 10.2. Màn hình hiển thị tín hiệu dao động điện trên dao động kí",
+        "description": "Màn hình dao động kí hiển thị dạng sóng sin, cho thấy một số chu kì dao động hoàn chỉnh để có thể đo tần số"
+      }
+    ]
+  },
+  "b9": {
+    "id": "b9",
+    "title": "SÓNG NGANG. SÓNG DỌC. SỰ TRUYỀN NĂNG LƯỢNG CỦA SÓNG CƠ",
+    "grade": 11,
+    "pageRange": [
+      37,
+      40
+    ],
+    "summary": "Bài học giới thiệu về sóng ngang và sóng dọc, sự khác nhau giữa chúng và cách sóng cơ truyền năng lượng trong môi trường.",
+    "learningObjectives": [
+      "Hiểu được định nghĩa và đặc điểm của sóng ngang",
+      "Hiểu được định nghĩa và đặc điểm của sóng dọc",
+      "Phân biệt sóng ngang và sóng dọc",
+      "Hiểu cách sóng cơ truyền năng lượng trong môi trường"
+    ],
+    "sections": [
+      {
+        "heading": "I. SÓNG NGANG",
+        "bullets": [
+          "Sóng ngang là sóng mà các phần tử của môi trường dao động vuông góc với phương truyền sóng",
+          "Trong sóng ngang, các phần tử nước tại O dao động lên xuống theo phương thẳng đứng, trong khi sóng truyền từ O đến M theo phương ngang",
+          "Sóng trong các phần tử của một trường dao động theo phương vuông góc với phương truyền sóng gọi là sóng ngang"
+        ]
+      },
+      {
+        "heading": "II. SÓNG DỌC",
+        "bullets": [
+          "Đặt một lò xo ống dài và mềm trên mặt bàn nhẵn. Dùng tay cầm một đầu lò xo và cho bàn tay dao động theo truc của lò xo",
+          "Các vòng của lò xo ở sát bàn tay lần lượt bị nén rồi bị dãn",
+          "Nhờ có lực đàn hồi giữa các vòng lò xo mà các biến dạng nên dãn lần truyền đi xa do sóc (Hình 9.2)",
+          "Sóng trong các phần tử của một trường dao động theo phương trùng với phương truyền sóng gọi là sóng dọc"
+        ]
+      },
+      {
+        "heading": "III. QUÁ TRÌNH TRUYỀN NĂNG LƯỢNG BỞI SÓNG",
+        "bullets": [
+          "Trong thí nghiệm Hình 8.1, khi sóng lan truyền đến đầu thì các phần tử nước ở đấy dao động",
+          "Năng lượng dao động mà các phần tử nước này có được là do sóng mang năng lượng của nguồn đến cho chúng",
+          "Các phần tử nước chỉ dao động tại chỗ, quanh vị trí cân bằng của nó chứ không chuyển động theo sóng",
+          "Điều độ chứng tỏ sóng mang năng lượng mà không mang các phần tử nước đi theo",
+          "Đối với sóng dọc trên lò xo thì năng lượng được truyền đi bằng sự nén dãn liên tiếp của các vòng lò xo",
+          "Một sóng cơ khác như sóng âm đều mang năng lượng đi xa theo cách như vậy"
+        ]
+      },
+      {
+        "heading": "IV. SỬ DỤNG MÔ HÌNH SÓNG ĐỂ GIẢI THÍCH MỘT SỐ TÍNH CHẤT CỦA ÂM",
+        "bullets": [
+          "Sóng dọc chạy trên lò xo là mô hình giúp ta hiểu được sự lan truyền và một số tính chất của sóng âm",
+          "Nguồn âm dao động làm cho các phần tử không khí trên dao động theo phương truyền âm, các phần tử không khí lách pha nhau tạo nên các lớp không khí nén, dãn gồng nhau ở lò xo",
+          "Các nén, dãn này truyền đi tạo thành sóng âm theo một hướng trong không khí Hình 9.3 chỉ xét sóng âm truyền theo hướng Ox",
+          "Khi sóng âm truyền đến tai người làm cho màng nhĩ dao động, do đó ta nghe được âm thanh",
+          "Dù sóng âm không nhìn thấy nhưng lại có thể nghe được âm. Biên độ của sóng âm càng lớn thì biên độ dao động của màng nhĩ càng lớn, âm nghe càng to",
+          "Tần số của sóng âm càng lớn thì tần số dao động của màng nhĩ càng lớn, âm nghe càng cao"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Sóng ngang",
+        "definition": "Sóng mà các phần tử của môi trường dao động theo phương vuông góc với phương truyền sóng"
+      },
+      {
+        "term": "Sóng dọc",
+        "definition": "Sóng mà các phần tử của môi trường dao động theo phương trùng với phương truyền sóng"
+      },
+      {
+        "term": "Wavelength (Bước sóng)",
+        "definition": "Khoảng cách giữa hai ngọn sóng liên tiếp hay hai điểm dao động cùng pha"
+      },
+      {
+        "term": "Tần số sóng",
+        "definition": "Số dao động trong một đơn vị thời gian"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "\\lambda = vT = \\frac{v}{f}",
+        "meaning": "Công thức liên hệ giữa bước sóng, tần số, chu kì và tốc độ truyền sóng"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Trên mặt hồ yên lặng, một người làm cho con thuyền dao động tạo ra sóng trên mặt nước. Thuyền thực hiện được 24 dao động trong 40 s, mỗi dao động tạo một ngọn sóng cao 12 cm so với mặt hồ yên lặng và ngọn sóng tới bờ cách thuyền 10 m sau 5 s. Với số liệu này, hãy xác định: a) Chu kì dao động của thuyền, b) Tốc độ lan truyền của sóng, c) Bước sóng, d) Biên độ sóng.",
+        "solution": "a) Chu kì T = 40/24 = 5/3 s; b) Tốc độ v = 10/5 = 2 m/s; c) Bước sóng λ = vT = 2 × (5/3) ≈ 3,33 m; d) Biên độ A = 12/2 = 6 cm"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f9-1",
+        "caption": "Hình 9.1. Một sóng ngang truyền trên dây dân hôi",
+        "description": "Hình vẽ mô tả sóng ngang truyền trên một sợi dây, với các phần tử dao động theo phương thẳng đứng trong khi sóng truyền theo phương ngang"
+      },
+      {
+        "id": "f9-2",
+        "caption": "Hình 9.2. Một sóng dọc truyền trên lò xo",
+        "description": "Hình vẽ thể hiện sóng dọc truyền trên lò xo, với các vòng lò xo ở sát bàn tay bị nén rồi bị dãn, các nén và dãn truyền đi xa"
+      },
+      {
+        "id": "f9-3",
+        "caption": "Hình 9.3. Các lớp không khí nén - dãn lan truyền tạo thành sóng âm",
+        "description": "Hình vẽ mô tả cách sóng âm được tạo ra từ dao động của màng loa, với các lớp không khí nén và dãn truyền đi theo một hướng"
+      }
+    ]
+  },
+  "b11": {
+    "id": "b11",
+    "title": "SÓNG ĐIỆN TỬ",
+    "grade": 11,
+    "pageRange": [
+      44,
+      47
+    ],
+    "summary": "Bài học giới thiệu về sóng điện từ, thành phần cấu tạo, đặc điểm và phân loại các loại sóng điện từ dựa trên tần số và bước sóng.",
+    "learningObjectives": [
+      "Hiểu khái niệm sóng điện từ và nguồn gốc của nó",
+      "Nhận biết các loại sóng điện từ khác nhau trong thang sóng điện từ",
+      "Phân biệt các đặc điểm của ánh sáng nhìn thấy, tia hồng ngoại và tia tử ngoại"
+    ],
+    "sections": [
+      {
+        "heading": "I. SÓNG ĐIỆN TỬ",
+        "bullets": [
+          "Các thiết bị như ti vi, điện thoại di động, lò vi sóng đều sử dụng sóng điện từ",
+          "Faraday đã xây dựng lí thuyết điện từ, là nền tảng cho lí thuyết sóng điện từ hiện đại",
+          "Maxwell đã mở rộng lí thuyết này và dự đoán sóng điện từ truyền khắp không gian",
+          "Sóng điện từ là sóng truyền trong không gian, với vận tốc bằng 3×10^8 m/s",
+          "Tần số ảnh sáng trong chân không không có giá trị bằng 3×10^8 m/s, đây là cơ sở để ứng dụng sóng điện từ"
+        ]
+      },
+      {
+        "heading": "II. THANG SÓNG ĐIỆN TỬ",
+        "bullets": [
+          "Sự khác nhau về bước sóng (hay tần số) của các loại sóng điện từ dẫn đến sự khác nhau về tính chất và tác dụng của chúng",
+          "Toàn bộ thang sóng điện từ, từ sóng dài nhất (hàng chục km) đến sóng ngắn nhất (cỡ 10^-12 m đến 10^-15 m) được khám phá và sử dụng"
+        ]
+      },
+      {
+        "heading": "1. Ánh sáng nhìn thấy",
+        "bullets": [
+          "Dải bước sóng của ánh sáng nhìn thấy là một phần của thang sóng điện từ",
+          "Quang phổ của ánh sáng nhìn thấy là một dải màu biến thiên liên tục từ sóng của ánh sáng nhìn thấy nằm trong khoảng từ 0,38 μm đến 0,76 μm, trong đó ánh sáng đỏ có bước sóng dài nhất khoảng 0,76 μm, ánh sáng tím có bước sóng ngắn nhất khoảng 0,38 μm",
+          "Nguồn phát ra ánh sáng nhìn thấy như: Mặt Trời, một số loại đèn, tia chớp, ngọn lửa,..."
+        ]
+      },
+      {
+        "heading": "2. Tia hồng ngoại (IR)",
+        "bullets": [
+          "Tia hồng ngoại là sóng điện từ không nhìn thấy có bước sóng nằm trong khoảng từ 0,76 μm đến 1 mm",
+          "Nguồn phát tia hồng ngoại: Vật có nhiệt độ cao hơn môi trường xung quanh thì phát được tia hồng ngoại ra môi trường. Nguồn thông dụng là bóng đèn dây tóc, bếp gas, bếp than, dióp hồng ngoại,..."
+        ]
+      },
+      {
+        "heading": "3. Tia tử ngoại (UV)",
+        "bullets": [
+          "Tia tử ngoại là sóng điện từ không nhìn thấy có bước sóng ngắn hơn bước sóng nhìn thấy trong khoảng từ 10 nm đến 400 nm"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Sóng điện từ",
+        "definition": "Sóng điện từ là sóng truyền trong không gian, tạo thành từ các dao động của điện trường và từ trường, truyền khắp không gian với vận tốc 3×10^8 m/s"
+      },
+      {
+        "term": "Thang sóng điện từ",
+        "definition": "Toàn bộ phổ các loại sóng điện từ được sắp xếp theo bước sóng hay tần số, từ sóng dài nhất đến sóng ngắn nhất"
+      },
+      {
+        "term": "Ánh sáng nhìn thấy",
+        "definition": "Phần của thang sóng điện từ có bước sóng từ 0,38 μm đến 0,76 μm, mà mắt người có thể nhìn thấy"
+      },
+      {
+        "term": "Tia hồng ngoại (IR)",
+        "definition": "Sóng điện từ có bước sóng từ 0,76 μm đến 1 mm, không nhìn thấy được nhưng có thể cảm nhận được dưới dạng nhiệt"
+      },
+      {
+        "term": "Tia tử ngoại (UV)",
+        "definition": "Sóng điện từ có bước sóng từ 10 nm đến 400 nm, không nhìn thấy và có bước sóng ngắn hơn ánh sáng nhìn thấy"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "c = 3 \\times 10^8 \\text{ m/s}",
+        "meaning": "Vận tốc truyền sóng điện từ trong chân không"
+      },
+      {
+        "latex": "\\lambda \\in [0.38 \\text{ μm}, 0.76 \\text{ μm}]",
+        "meaning": "Khoảng bước sóng của ánh sáng nhìn thấy"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Bài toán tính toán thời gian truyền tín hiệu về tính địa tính chuyển động trên quỹ đạo xung quanh Trái Đất, quay cùng hướng và chu kỳ như chu kỳ của Trái Đất ở độ cao 36600 km so với đài phát hình trên mặt đất. Đài phát nằm trên đường thẳng nối về tính và tâm Trái Đất. Coi Trái Đất là một hình cầu có bán kính R = 6400 km. Về tính nhận sóng truyền hình từ đài phát rồi phát lại tức thời tin liệu độ về Trái Đất. Biết sóng có bước sóng λ = 0,5 m; tốc độ truyền sóng c = 3·10^8 m/s. Tính khoảng thời gian lớn nhất mà sóng truyền hình di từ đài phát đến một điểm trên mặt Trái Đất, về hình minh họa.",
+        "solution": "Bài toán liên quan đến tính toán độ trễ của sóng điện từ truyền từ vệ tinh đến Trái Đất dựa trên vận tốc truyền sóng và khoảng cách hình học"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f11-11-1",
+        "caption": "Michael Faraday (Mai-con Fa-ra-đây, 1791-1867), nhà vật lí người Anh",
+        "description": "Chân dung nhà khoa học Michael Faraday, người đã xây dựng lí thuyết điện từ cơ bản"
+      },
+      {
+        "id": "f11-11-2",
+        "caption": "James Clark Maxwell (Giêm-clo Mắc-xoen, 1831-1879), nhà vật lí người Anh",
+        "description": "Chân dung nhà khoa học James Clark Maxwell, người đã phát triển và mở rộng lí thuyết sóng điện từ"
+      },
+      {
+        "id": "f11-11-3",
+        "caption": "Thang sóng điện từ",
+        "description": "Biểu đồ thể hiện toàn bộ phổ sóng điện từ từ sóng có bước sóng dài nhất (hàng chục km) đến bước sóng ngắn nhất (10^-15 m), bao gồm các loại: Tia Gamma, Tia X, Tử ngoại, Ánh sáng nhìn thấy, Hồng ngoại, Vi ba, Sóng vô tuyến, với các tần số tương ứng từ 10^24 Hz đến 10^3 Hz"
+      }
+    ]
+  },
+  "b16": {
+    "id": "b16",
+    "title": "Lực tương tác giữa hai điện tích",
+    "grade": 11,
+    "pageRange": [
+      61,
+      64
+    ],
+    "summary": "Bài học giới thiệu lực tương tác giữa hai điện tích, định luật Coulomb và các ứng dụng trong việc hiểu các hiện tượng điện từ trong tự nhiên.",
+    "learningObjectives": [
+      "Hiểu lực hút và lực đẩy giữa các điện tích",
+      "Nắm vững định luật Coulomb",
+      "Vận dụng định luật Coulomb vào giải toán"
+    ],
+    "sections": [
+      {
+        "heading": "I. Lực hút và lực đẩy giữa các điện tích",
+        "bullets": [
+          "Hai điện tích trái dấu nhau đẩy lại do rối rúng len cơ xát một đầu của nó",
+          "Quan sát, mô phỏng và giải thích hiện tượng xảy ra khi dùng len cơ xát hoặc dùa cơ xát",
+          "Dùng len cơ xát một đầu thanh nhựa B rồi đưa lại gần đầu đã được cơ xát của thanh nhựa A (Hình 16.1a)",
+          "Dùng lua cơ xát một đầu thanh thuỷ tinh C rồi đưa lại gần đầu đã được cơ xát của thanh nhựa A (Hình 16.1b)",
+          "Các điện tích cùng loại đẩy nhau, các điện tích khác loại hút nhau",
+          "Lực hút, đẩy giữa các điện tích được gọi chung là lực tương tác giữa các điện tích (thường gọi tắt là lực điện)"
+        ]
+      },
+      {
+        "heading": "II. Định luật Coulomb (Cu-lông)",
+        "bullets": [
+          "Đơn vị điện tích, điện tích điểm: Người ta kí hiệu giá trị của điện tích bằng chữ 'q'. Trong hệ SI đơn vị do điện tích là Coulomb (C), lấy theo tên của nhà vật lí người Pháp Charles Coulomb (Sắc-lơ Cu-lông)",
+          "Định luật Coulomb: Coulomb cho rằng độ lớn của lực tương tác giữa hai điện tích phụ thuộc vào giá trị của các điện tích và khoảng cách giữa chúng",
+          "Các kết quả thí nghiệm được phát biểu thành định luật sau đây mang tên ông"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Điện tích",
+        "definition": "Tính chất vật lý của vật chất liên quan đến các tương tác điện từ"
+      },
+      {
+        "term": "Điện tích điểm",
+        "definition": "Một vật tích điện có kích thước nhỏ so với khoảng cách tới điểm ta xét"
+      },
+      {
+        "term": "Lực Coulomb",
+        "definition": "Lực tương tác giữa hai điện tích, tuân theo định luật Coulomb"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "F = k\\frac{|q_1 q_2|}{r^2}",
+        "meaning": "Định luật Coulomb: lực tương tác giữa hai điện tích điểm phụ thuộc vào giá trị của các điện tích và khoảng cách giữa chúng"
+      }
+    ],
+    "examples": [],
+    "figures": [
+      {
+        "id": "f16-1",
+        "caption": "Hình 16.1. Sự hút, đẩy của các điện tích",
+        "description": "Hai hình (a) và (b) minh họa sự hút đẩy giữa các điện tích: a) Dùng len cơ xát một đầu thanh nhựa B rồi đưa lại gần đầu đã được cơ xát của thanh nhựa A; b) Dùng lua cơ xát một đầu thanh thuỷ tinh C rồi đưa lại gần đầu đã được cơ xát của thanh nhựa A"
+      },
+      {
+        "id": "f16-2",
+        "caption": "Hình 16.2. Lực tương tác giữa hai điện tích",
+        "description": "Ba trường hợp vector lực giữa hai điện tích: a) Hai điện tích cùng loại (đẩy nhau); b) Hai điện tích khác loại (hút nhau); c) Các điện tích cùng loại đẩy nhau"
+      },
+      {
+        "id": "f16-3",
+        "caption": "Hình 16.3. Charles Coulomb (Sắc-lơ Cu-lông, 1736-1806)",
+        "description": "Chân dung nhà vật lí người Pháp Charles Coulomb, người phát hiện ra định luật lực tương tác giữa hai điện tích"
+      },
+      {
+        "id": "f16-4",
+        "caption": "Hình 16.4. Cân xoắn Coulomb",
+        "description": "Mô phỏng thiết bị cân xoắn Coulomb dùng để đo lực tương tác giữa hai điện tích"
+      }
+    ]
+  },
+  "b15": {
+    "id": "b15",
+    "title": "Thực hành: Đo tốc độ truyền âm",
+    "grade": 11,
+    "pageRange": [
+      58,
+      60
+    ],
+    "summary": "Bài thực hành hướng dẫn cách đo tốc độ truyền âm trong không khí bằng dụng cụ thí nghiệm đơn giản. Học sinh sẽ sử dụng máy phát tần số, ống trụ và pít-tông để xác định vị trí cộng hưởng và tính toán tốc độ truyền âm.",
+    "learningObjectives": [
+      "Hiểu nguyên lý đo tốc độ truyền âm bằng phương pháp cộng hưởng",
+      "Vận dụng kiến thức về sóng âm để xác định các vị trí cộng hưởng",
+      "Rèn luyện kỹ năng thí nghiệm và phân tích dữ liệu"
+    ],
+    "sections": [
+      {
+        "heading": "I. Dụng cụ thí nghiệm",
+        "bullets": [
+          "Ống trụ làm bằng thuỷ tinh hình trụ trong suốt, có đường kính trong 40 mm, dài 670 mm, có chia độ 0 ÷ 660 mm",
+          "Pít-tông làm bằng thép bọc nhua, có vach đầu, nối với đầy kéo và rống rọc, có thể di chuyển được dạng trong ống",
+          "Máy phát tần số phát ra tín hiệu có dạng sin",
+          "Một loa nhỏ",
+          "Giá đỡ ống trụ"
+        ]
+      },
+      {
+        "heading": "II. Thiết kế phương án thí nghiệm",
+        "bullets": [
+          "Lắp ống trụ đã được lồng pít-tông ở trong ống lên giá đỡ, ghép loa sát đầu dưới của ống trụ",
+          "Có thể sử dụng âm thanh La thay cho loa",
+          "Nối máy phát tần số với loa, bật công tắc nguồn của máy phát tần số, điều chỉnh biên độ và tần số để nghe rõ âm"
+        ]
+      },
+      {
+        "heading": "III. Tiến hành thí nghiệm",
+        "bullets": [
+          "Điều chỉnh máy phát tần số đến giá trị 500 Hz",
+          "Dùng đầy kéo pít-tông di chuyển trong ống thuỷ tinh, cho đến lúc âm thanh nghe được to nhất. Xác định vị trí âm thanh nghe được là lớn nhất lần 1. Do chiều dài côt khí l₁, ghi số liệu vào Bảng 15.1",
+          "Thực hiện thao tác thêm hai lần nữa"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Cộng hưởng âm thanh",
+        "definition": "Hiện tượng âm thanh phát ra từ loa gây cộng hưởng với cột khí trong ống, làm cho âm thanh trở nên to hơn"
+      },
+      {
+        "term": "Vị trí cộng hưởng",
+        "definition": "Các vị trí của pít-tông trong ống mà tại đó âm thanh đạt được cường độ cực đại"
+      },
+      {
+        "term": "Tốc độ truyền âm",
+        "definition": "Quãng đường mà âm thanh truyền đi được trong một đơn vị thời gian trong một môi trường"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "v = f \\lambda",
+        "meaning": "Tốc độ truyền sóng bằng tần số nhân với bước sóng"
+      },
+      {
+        "latex": "\\lambda = 2(l_{n+1} - l_n)",
+        "meaning": "Bước sóng bằng hai lần hiệu độ dài cột khí giữa hai vị trí cộng hưởng liên tiếp"
+      }
+    ],
+    "examples": [],
+    "figures": [
+      {
+        "id": "f15.1",
+        "caption": "Hình 15.1. Bộ thí nghiệm đo tốc độ truyền âm",
+        "description": "Bộ dụng cụ gồm ống trụ chứa pít-tông có thể di chuyển, loa phát âm, giá đỡ ống trụ, máy phát tần số"
+      },
+      {
+        "id": "f15.2",
+        "caption": "Hình 15.2. Máy phát tần số",
+        "description": "Thiết bị điện tử dùng để phát ra sóng âm có tần số xác định, có thể điều chỉnh tần số và biên độ"
+      }
+    ]
+  },
+  "b20": {
+    "id": "b20",
+    "title": "Điện thế",
+    "grade": 11,
+    "pageRange": [
+      79,
+      82
+    ],
+    "summary": "Bài học giới thiệu khái niệm điện thế tại một điểm trong điện trường, mối liên hệ giữa điện thế và cường độ điện trường, cũng như ứng dụng của điện thế trong các thiết bị điện cao thế.",
+    "learningObjectives": [
+      "Hiểu khái niệm điện thế tại một điểm trong điện trường",
+      "Nắm vững mối liên hệ giữa điện thế và cường độ điện trường",
+      "Áp dụng công thức tính điện thế trong các bài toán thực tế"
+    ],
+    "sections": [
+      {
+        "heading": "I. Điện thế tại một điểm trong điện trường",
+        "bullets": [
+          "Để đặt một điện tích q vào điểm M trong điện trường cần cung cấp thế năng W_M cho điện tích q",
+          "Điện thế được định nghĩa bằng công thức V = A/q, trong đó A là công của lực điện trường khi dịch chuyển điện tích từ vô cực về điểm M",
+          "Điện thế tại một điểm trong điện trường đặc trưng cho khả năng sinh công của điện trường tại điểm đó",
+          "Đơn vị của điện thế là vôn (V), kilovôn (kV): 1 kV = 1 000 V",
+          "Điện thế có giá trị đại số, dấu của điện thế phụ thuộc vào dấu của công A và điện tích q"
+        ]
+      },
+      {
+        "heading": "II. Mối liên hệ giữa điện thế và cường độ điện trường",
+        "bullets": [
+          "Để dịch chuyển một điện tích q từ điểm N tới điểm M, thế năng điện tích thay đổi",
+          "Công của lực điện trường khi dịch chuyển điện tích q từ điểm N đến điểm M: A_{MN} = (V_M - V_N)q = U_{MN}q",
+          "Điện thế là đại lượng gắn với điện trường, còn thế năng điện là đại lượng gắn với điện tích đặt trong điện trường",
+          "Để dịch chuyển một điện tích dương q ngược chiều điện trường từ điểm N tới điểm M cần cung cấp một lực ít nhất bằng với lực điện và ngược chiều"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Điện thế",
+        "definition": "Là đại lượng đặc trưng cho khả năng sinh công của điện trường tại một điểm, được xác định bằng tỉ số giữa công của lực điện trường và điện tích dương"
+      },
+      {
+        "term": "Cường độ điện trường",
+        "definition": "Là đại lượng đặc trưng cho tác dụng lực của điện trường tại một điểm"
+      },
+      {
+        "term": "Hiệu điện thế",
+        "definition": "Là hiệu giữa điện thế tại hai điểm trong điện trường, ký hiệu U_{MN} = V_M - V_N"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "V = \\frac{A}{q}",
+        "meaning": "Công thức định nghĩa điện thế tại một điểm, trong đó V là điện thế, A là công của lực điện trường, q là điện tích dương"
+      },
+      {
+        "latex": "A_{MN} = (V_M - V_N)q = U_{MN}q",
+        "meaning": "Công thức tính công của lực điện trường khi dịch chuyển điện tích q từ điểm N đến điểm M"
+      },
+      {
+        "latex": "W_M = Vq",
+        "meaning": "Công thức tính thế năng điện tích tại điểm M trong điện trường, W_M là thế năng, V là điện thế tại M"
+      },
+      {
+        "latex": "U_{MN} = V_M - V_N",
+        "meaning": "Định nghĩa hiệu điện thế giữa hai điểm M và N trong điện trường"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Để đặt một điện tích q vào điểm M trong điện trường chúng ta cần cung cấp thế năng W_M cho điện tích q. Điều này trong ứng với việc thực hiện một công A dịch chuyển điện tích q từ vô cực về điểm M. Hãy vận dụng công thức (19.4) và (19.5) để thu được công thức: V = A/q",
+        "solution": "Áp dụng công thức (19.4) W_M = Vq và (19.5) W_M = V_M q, từ đó suy ra V = A/q bằng cách xác định công A khi dịch chuyển điện tích từ vô cực (điểm có V = 0) đến điểm M"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f20-1",
+        "caption": "Cấu tạo của tế bảo quang điện chân không",
+        "description": "Hình vẽ minh họa cấu trúc của tế bảo quang điện chân không gồm hai cực: catod (K) được bao phủ một lớp phát xạ ánh sáng, và anod (A)"
+      }
+    ]
+  },
+  "b19": {
+    "id": "b19",
+    "title": "THẾ NĂNG ĐIỆN",
+    "grade": 11,
+    "pageRange": [
+      76,
+      78
+    ],
+    "summary": "Bài học trình bày về thế năng điện của một điện tích trong điện trường và cách tính toán công của lực điện khi điện tích chuyển động trong điện trường đều.",
+    "learningObjectives": [
+      "Hiểu khái niệm thế năng điện và công của lực điện",
+      "Tính toán công của lực điện trong quá trình chuyển động của điện tích",
+      "Áp dụng định luật bảo toàn năng lượng trong trường điện"
+    ],
+    "sections": [
+      {
+        "heading": "I. CÔNG CỦA LỰC ĐIỆN",
+        "bullets": [
+          "Một điện tích dương q dịch chuyển trong điện trường đều từ điểm M tới điểm N luôn chịu tác dụng của lực điện",
+          "Công của lực điện được tính bằng công thức A_MN = qEd, trong đó d là khoảng cách giữa hai điểm M và N theo phương của đường sức điện",
+          "Công của lực điện không phụ thuộc vào hình dạng đường đi mà chỉ phụ thuộc vào vị trí của điểm đầu M và điểm cuối N",
+          "Với điện trường bất kỳ, người ta chứng minh được rằng công của lực điện làm dịch chuyển điện tích q không phụ thuộc vào hình dạng của đường di mà chỉ phụ thuộc vào vị trí của điểm đầu M và vị trí của điểm cuối N"
+        ]
+      },
+      {
+        "heading": "II. THẾ NĂNG CỦA MỘT ĐIỆN TÍCH TRONG ĐIỆN TRƯỜNG",
+        "bullets": [
+          "Thế năng của một điện tích q trong điện trường đều được định nghĩa từ một điểm chuẩn gốc",
+          "Thế năng của một điện tích q trong điện trường đều bằng tích của điện tích q và thế điện của điểm đó trong điện trường",
+          "Số do thế năng của điện tích q trong điện trường đều phụ thuộc vào sự lựa chọn điểm gốc của thế năng"
+        ]
+      },
+      {
+        "heading": "1. Thế năng của một điện tích trong điện trường đều",
+        "bullets": [
+          "Thế năng của một điện tích q trong điện trường đều đặc trưng cho khả năng sinh công của điện trường đều khi đặt điện tích q tại điểm ta xét",
+          "Số do thế năng của điện tích q trong điện trường đều của một tự điện được tính bằng công mà điện trường đều có thể sinh ra khi dịch chuyển điện tích q từ điểm ta xét tới bản cực âm của tự điện"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Công của lực điện",
+        "definition": "Công do lực điện thực hiện khi điện tích chuyển động trong điện trường, không phụ thuộc vào đường đi mà chỉ phụ thuộc vào vị trí điểm đầu và điểm cuối"
+      },
+      {
+        "term": "Thế năng điện",
+        "definition": "Năng lượng tương ứng được lưu trữ khi một điện tích đặt tại một vị trí nào đó trong điện trường"
+      },
+      {
+        "term": "Điện trường đều",
+        "definition": "Điện trường có cường độ điện trường là hằng số tại mọi điểm trong không gian"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "A_{MN} = qEd",
+        "meaning": "Công của lực điện khi điện tích q chuyển từ M đến N, với d là khoảng cách theo phương đường sức"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Máy lọc không khí tạo ra chùm các ion âm OH⁻ (mỗi ion OH⁻ có khối lượng m = 2,833.10⁻²⁶ kg, điện tích q = -1,6.10⁻¹⁹ C) có vận tốc ban đầu từ 20 m/s đến 40 m/s theo phương song song với mặt đất và cách mặt đất 50 cm. Điện trường đều do được ở bề mặt Trái Đất là 114 V/m. Bỏ qua trọng lực và các loại lực khác. Hãy xác định quỹ đạo của chùm ion âm này.",
+        "solution": "Sử dụng công của lực điện và định luật bảo toàn năng lượng để xác định quỹ đạo chuyển động của ion âm trong điện trường đều"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f19-1",
+        "caption": "Hình 19.1. Chuyển động của điện tích dương q từ điểm M đến điểm N trong điện trường đều",
+        "description": "Hình vẽ minh họa quá trình một điện tích dương q chuyển động từ điểm M đến điểm N trong một điện trường đều đều, với lực điện F tác dụng lên điện tích theo hướng của đường sức điện, khoảng cách d giữa hai điểm M và N"
+      }
+    ]
+  },
+  "b17": {
+    "id": "b17",
+    "title": "Khái niệm điện trường",
+    "grade": 11,
+    "pageRange": [
+      65,
+      70
+    ],
+    "summary": "Bài học giới thiệu khái niệm điện trường, cường độ điện trường và cách tính cường độ điện trường do một điện tích hoặc hệ điện tích gây ra tại một điểm trong không gian.",
+    "learningObjectives": [
+      "Hiểu khái niệm điện trường và vai trò của nó trong tương tác giữa các điện tích",
+      "Nắm rõ định nghĩa cường độ điện trường và tính chất của nó",
+      "Tính cường độ điện trường do một điện tích điểm gây ra",
+      "Tính cường độ điện trường do hệ điện tích gây ra sử dụng nguyên lý chồng chất"
+    ],
+    "sections": [
+      {
+        "heading": "I. Khái niệm điện trường",
+        "bullets": [
+          "Có phải không khí đã truyền trong tác điện từ điện tích Q tới điện tích q không?",
+          "Vùng không gian bao quanh một điện tích có điện trường. Trong từ như vậy, vùng không gian bao quanh một điện tích có thể phát hiện sự tồn tại của điện trường bằng cách nào?",
+          "Xung quanh nam châm có từ trường, từ trường sẽ truyền trong tác từ nam châm khác. Tương tự như nam châm, xung quanh điện tích có một điện trường, điện trường sẽ truyền trong tác giữa các điện tích, đó là một trường lực",
+          "Điện trường được tạo ra bởi điện tích, là dạng vật chất tồn tại xung quanh xung quanh điện tích và truyền trong tác giữa các điện tích"
+        ]
+      },
+      {
+        "heading": "II. Cường độ điện trường",
+        "bullets": [
+          "Người ta sử dụng điện tích dương có điện tích nhỏ, được gọi là điện tích thử, để phát hiện điện tác dụng lên nó. Đại lượng đặc trưng cho độ mạnh yếu của điện trường được gọi là cường độ điện trường",
+          "Theo công thức (16.2), độ lớn của lực điện F tỉ lệ với độ lớn của điện tích q. Tỉ số F/q chính bằng độ lớn của cường độ điện trường tại điểm đặt điện tích thử q",
+          "Trong hệ SI, đơn vị của cường độ điện trường là vôn trên mét (V/m)",
+          "Vì lực là đại lượng vector, q là đại lượng vô hướng nên cường độ điện trường E là đại lượng vector. Vector cường độ điện trường E tại một điểm được xác định bằng tỉ số giữa vector lực điện F tác dụng lên một điện tích q đặt tại điểm đó và trị số của điện tích đó",
+          "Cường độ điện trường của điện tích Q được xác định bằng công thức E = |Q|/(4πε₀r²)",
+          "Từ công thức (16.2), ta xác định được độ lớn của cường độ điện trường do một điện tích điểm Q đặt trong chân không hoặc không khí gây ra tại một điểm cách nó một khoảng r có giá trị bằng: E = |Q|/(4πε₀r²)"
+        ]
+      },
+      {
+        "heading": "Nguyên lý chồng chất điện trường",
+        "bullets": [
+          "Nếu trong không gian có hai điện tích điểm Q₁ = Q₂ được đặt ở hai điểm B và C, một điện tích thử q được đặt tại một điểm A như Hình 17.4. Hãy mô tả bằng hình về lực điện tổng hợp do Q₁ và Q₂ tác dụng lên điện tích thử q",
+          "Muốn tính vector cường độ điện trường của hệ điện tích tại điểm A bất kỳ ta cùng có vector cường độ điện trường E₁ do Q₁ gây ra tại điểm A, vector cường độ điện trường E₂ do Q₂ gây ra tại điểm A,... tổng các vector cường độ điện trường E₁, E₂,... theo quy tắc tổng hợp vector ta sẽ có vector cường độ điện trường tổng hợp của hệ điện tích gây ra tại điểm A. Vector cường độ điện trường tổng hợp chính bằng thương số của vector lực điện tổng hợp chia cho trị số của điện tích q"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Điện trường",
+        "definition": "Là dạng vật chất tồn tại xung quanh xung quanh điện tích và truyền trong tác giữa các điện tích"
+      },
+      {
+        "term": "Cường độ điện trường",
+        "definition": "Là đại lượng vector được xác định bằng tỉ số giữa vector lực điện F tác dụng lên một điện tích thử q đặt tại điểm đó và trị số của điện tích đó"
+      },
+      {
+        "term": "Điện tích thử",
+        "definition": "Là điện tích dương có điện tích nhỏ được sử dụng để phát hiện điện trường tác dụng lên nó"
+      },
+      {
+        "term": "Nguyên lý chồng chất điện trường",
+        "definition": "Cường độ điện trường của hệ điện tích được tổng hợp từ cường độ điện trường do từng điện tích riêng lẻ gây ra theo quy tắc tổng hợp vector"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "E = \\frac{F}{q}",
+        "meaning": "Cường độ điện trường được xác định bằng tỉ số giữa lực điện và điện tích thử"
+      },
+      {
+        "latex": "\\vec{E} = \\frac{\\vec{F}}{q}",
+        "meaning": "Vector cường độ điện trường được xác định bằng tỉ số giữa vector lực điện và trị số của điện tích thử"
+      },
+      {
+        "latex": "E = \\frac{|Q|}{4\\pi\\varepsilon_0 r^2}",
+        "meaning": "Cường độ điện trường do một điện tích điểm Q gây ra tại khoảng cách r"
+      },
+      {
+        "latex": "\\vec{E} = \\vec{E_1} + \\vec{E_2} + \\vec{E_3} + ...",
+        "meaning": "Nguyên lý chồng chất: cường độ điện trường tổng hợp là tổng vector cường độ điện trường do từng điện tích gây ra"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Xét điện trường của điện tích Q = 6.10⁻¹³C đặt trong chân không. a) Xác định phương, chiều, độ lớn của cường độ điện trường do điện tích điểm gây ra tại một điểm cách nó một khoảng 1 cm, 2 cm, 3 cm. b) Nhận xét về cường độ điện trường ở những điểm gần điện tích Q và ở những điểm cách xa điện tích Q. c) Từ các nhận xét trên, em hãy mô tả cường độ điện trường do một điện tích điểm dương Q đặt trong chân không gây ra tại một điểm cách nó một khoảng r. Về hình minh họa.",
+        "solution": "Sử dụng công thức E = |Q|/(4πε₀r²). Khi r = 1 cm, 2 cm, 3 cm, tính giá trị E tương ứng. Nhận thấy E giảm khi r tăng. Cường độ điện trường hướng ra từ điện tích dương, độ lớn tỉ lệ nghịch với bình phương khoảng cách."
+      },
+      {
+        "prompt": "Đặt điện tích điểm Q₁ = 6.10⁻⁸C tại điểm A và điện tích điểm Q₂ = -2.10⁻⁸C tại điểm B cách A một khoảng bằng 3 cm (Hình 17.5). Hãy xác định những điểm mà cường độ điện trường tại đó bằng 0.",
+        "solution": "Tại điểm M trên đường thẳng AB, cường độ điện trường do Q₁ và Q₂ gây ra phải bằng nhau về độ lớn và ngược chiều để triệt tiêu lẫn nhau. Xác định vị trí M từ phương trình E₁ = E₂."
+      },
+      {
+        "prompt": "Cho tam giác ABC vuông tại A có AB = 3 cm và AC = 4 cm. Tại điểm B ta đặt điện tích Q₃ = 4,5.10⁻⁸C, tại điểm C ta đặt điện tích Q₂ = 2.10⁻⁸C. a) Tính độ lớn của cường độ điện trường do mỗi điện tích trên gây ra tại A. b) Tính cường độ điện trường tổng cộng tại A.",
+        "solution": "a) Tính E do Q₃ tại A: E₃ = kQ₃/AB². Tính E do Q₂ tại A: E₂ = kQ₂/AC². b) Vì hai vector cường độ điện trường vuông góc, cường độ điện trường tổng hợp E = √(E₃² + E₂²)."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f17-1",
+        "caption": "Hình 17.1. Tương tác giữa hai điện tích",
+        "description": "Hình minh họa hai điện tích điểm gây ra lực tương tác lên nhau. Biểu diễn vector lực F₁₂ do Q tác dụng lên q và F₂₁ do q tác dụng lên Q"
+      },
+      {
+        "id": "f17-2",
+        "caption": "Hình 17.2. Tương tác giữa hai nam châm",
+        "description": "Hình minh họa sơ đồ hai nam châm được xếp thẳng hàng. Biểu diễn vector lực F trên mỗi nam châm theo các trường hợp cùng chiều và ngược chiều"
+      },
+      {
+        "id": "f17-3",
+        "caption": "Hình 17.3. Điện trường tại N mạnh hơn điện trường tại M",
+        "description": "Hình minh họa một điện tích Q với hai điểm M và N, trong đó N gần Q hơn M. Biểu diễn vector cường độ điện trường E tại N lớn hơn tại M"
+      },
+      {
+        "id": "f17-4",
+        "caption": "Hình 17.4. Lực điện tác dụng lên điện tích thử q tại điểm A",
+        "description": "Hình minh họa hai điện tích Q₁ tại B và Q₂ tại C, điện tích thử q tại A. Biểu diễn các vector lực F₁ do Q₁ và F₂ do Q₂ gây ra tại A, cùng với vector lực tổng hợp F"
+      },
+      {
+        "id": "f17-5",
+        "caption": "Hình 17.5",
+        "description": "Hình minh họa ba điểm A, B, M thẳng hàng, biểu diễn cường độ điện trường tại các điểm"
+      }
+    ]
+  },
+  "b22": {
+    "id": "b22",
+    "title": "Cường độ dòng điện",
+    "grade": 11,
+    "pageRange": [
+      91,
+      92
+    ],
+    "summary": "Cường độ dòng điện là đại lượng đặc trưng cho tính chất nào của dòng điện. Bài học giới thiệu định nghĩa, công thức tính cường độ dòng điện và mối liên hệ với các đại lượng khác.",
+    "learningObjectives": [
+      "Hiểu khái niệm cường độ dòng điện",
+      "Nắm vững công thức tính cường độ dòng điện",
+      "Nhận biết mối liên hệ giữa cường độ dòng điện với điện lượng và thời gian",
+      "Vận dụng kiến thức vào giải bài tập"
+    ],
+    "sections": [
+      {
+        "heading": "I. CƯỜNG ĐỘ DÒNG ĐIỆN",
+        "bullets": [
+          "Cường độ dòng điện là gì và đặc trưng cho tính chất nào của dòng điện",
+          "Thí nghiệm 1: Chuẩn bị dụng cụ gồm ampe kế, biến trở, bóng đèn, nguồn điện, dây nối, khoá K, nam châm điện",
+          "Bố trí thí nghiệm như Hình 22.1a",
+          "Đóng khoá K, dịch chuyển con chạy của biến trở Rbt để số chỉ của ampe kế tăng dần",
+          "Thí nghiệm 2: Thay đèn D bằng nam châm điện N (Hình 22.1b)",
+          "Đóng khoá K, quan sát số lượng giấy bằng sắt mà nam châm hút được",
+          "Điều chỉnh biến trở để số chỉ ampe kế chi giá trị lớn hơn giá trị ban đầu",
+          "Quan sát số lượng giấy bằng sắt mà nam châm hút được tăng lên"
+        ]
+      },
+      {
+        "heading": "2. Công thức tính cường độ dòng điện",
+        "bullets": [
+          "Lượng điện tích chuyển qua tiết diện thẳng của một dây dẫn trong một đơn vị thời gian càng lớn thì dòng điện chạy qua dây dẫn càng mạnh",
+          "Trong vật lí, người ta gọi độ lớn của điện lượng chuyển qua tiết diện thẳng của một dây dẫn trong một đơn vị thời gian là cường độ dòng điện chạy qua dây dẫn",
+          "Được xác định bằng công thức (22.1)",
+          "Trong công thức trên, đơn vị của cường độ dòng điện là ampe (kí hiệu là A)",
+          "Của điện lượng Cu-lông (kí hiệu là C)",
+          "Của thời gian là giây (kí hiệu là s)",
+          "Từ công thức (22.1), ta rút ra: Δq = I.Δt",
+          "Công thức (22.2) cho thấy ý nghĩa của đơn vị điện lượng Cu-lông: 1 Cu-lông là tổng điện lượng của các hạt mang điện chạy qua tiết diện thẳng của dây dẫn trong 1 s bởi dòng điện có cường độ 1 A",
+          "Đơn vị của điện lượng: 1 C = 1 A·s"
+        ]
+      },
+      {
+        "heading": "II. LIÊN HỆ GIỮA CƯỜNG ĐỘ DÒNG ĐIỆN VỚI MẬT ĐỘ VÀ TỐC ĐỘ CỦA CÁC HẠT MANG ĐIỆN",
+        "bullets": [
+          "Trong kim loại tồn tại các electron không liên kết với nguyên tử, được gọi là electron tự do",
+          "Khi dây dẫn được nối với nguồn điện thì trong dây dẫn xuất hiện điện trường",
+          "Dưới tác dụng của lực điện trường, các electron mang điện âm dịch chuyển có hướng ngược chiều với chiều quay uốc của nguồn điện",
+          "Người ta quy ước chiều dòng điện trong mạch là chiều từ cực dương sang cực âm của nguồn điện",
+          "Trong kim loại các electron tạo ra dòng điện dịch chuyển ngược chiều với chiều quy ước của dòng điện"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Cường độ dòng điện",
+        "definition": "Độ lớn của điện lượng chuyển qua tiết diện thẳng của một dây dẫn trong một đơn vị thời gian"
+      },
+      {
+        "term": "Điện lượng",
+        "definition": "Tổng lượng điện tích chuyển qua một tiết diện"
+      },
+      {
+        "term": "Ampe (A)",
+        "definition": "Đơn vị đo cường độ dòng điện"
+      },
+      {
+        "term": "Cu-lông (C)",
+        "definition": "Đơn vị đo điện lượng"
+      },
+      {
+        "term": "Electron tự do",
+        "definition": "Các electron không liên kết với nguyên tử trong kim loại"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "I = \\frac{\\Delta q}{\\Delta t}",
+        "meaning": "Công thức tính cường độ dòng điện, trong đó I là cường độ dòng điện (A), Δq là điện lượng (C), Δt là thời gian (s)"
+      },
+      {
+        "latex": "\\Delta q = I.\\Delta t",
+        "meaning": "Công thức (22.2) biểu diễn mối liên hệ giữa điện lượng, cường độ dòng điện và thời gian"
+      },
+      {
+        "latex": "1 \\text{ C} = 1 \\text{ A}\\cdot\\text{s}",
+        "meaning": "Định nghĩa đơn vị Cu-lông: 1 Cu-lông là lượng điện tích chuyển qua tiết diện trong 1 giây khi có dòng điện 1 A"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Trên một thiết bị dùng để nạp điện cho điện thoại di động có ghi thông số 10 000 mA·h. Thông số 10 000 mA·h cho biết điều gì?",
+        "solution": "Thông số 10 000 mA·h cho biết dung lượng của pin, tức là tổng điện lượng mà pin có thể cung cấp được. Có thể chuyển đổi: 10 000 mA·h = 10 A·h = 36 000 A·s = 36 000 C"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f22-1",
+        "caption": "Hình 22.1. Sơ đồ thí nghiệm khảo sát độ mạnh yếu của dòng điện",
+        "description": "Hình 22.1a: Mạch điện gồm khoá K, biến trở Rbt, ampe kế A và bóng đèn D. Hình 22.1b: Mạch điện tương tự nhưng thay bóng đèn D bằng nam châm điện N để quan sát lực từ"
+      },
+      {
+        "id": "f22-2",
+        "caption": "Hình 22.2. Các điện tích dịch chuyển qua tiết diện thẳng với tiết diện vượng góc với tiết điện của vật dẫn",
+        "description": "Hình minh họa các điện tích chuyển động qua tiết diện (S) của một dây dẫn theo hướng vận tốc gốc"
+      },
+      {
+        "id": "f22-3",
+        "caption": "Hình 22.3. Sự tạo thành dòng điện trong kim loại",
+        "description": "Hình mô tả sự chuyển động của electron (tự do) trong mạng tinh thể ion dương, cho thấy electron dịch chuyển ngược chiều với chiều quy ước của dòng điện"
+      }
+    ]
+  },
+  "b18": {
+    "id": "b18",
+    "title": "Điện trường đều",
+    "grade": 11,
+    "pageRange": [
+      71,
+      75
+    ],
+    "summary": "Bài học về điện trường đều được tạo ra giữa hai bản phẳng song song, các đặc điểm và tác dụng của nó đối với chuyển động của điện tích trong điện trường.",
+    "learningObjectives": [
+      "Hiểu khái niệm điện trường đều",
+      "Biết các đặc điểm của điện trường đều giữa hai bản phẳng song song",
+      "Tính toán cường độ điện trường đều",
+      "Phân tích tác dụng của điện trường đều lên chuyển động của điện tích"
+    ],
+    "sections": [
+      {
+        "heading": "I. Khái niệm điện trường đều",
+        "bullets": [
+          "Điện trường đều là điện trường có cường độ điện trường tại mỗi điểm có giá trị bằng nhau về độ lớn, giống nhau về phương và chiều"
+        ]
+      },
+      {
+        "heading": "II. Điện trường đều giữa hai bản phẳng nhiễm điện đặt song song",
+        "bullets": [
+          "Chúng ta có thể tạo ra điện trường đều bằng cách sử dụng hai bản kim loại được đặt song song và cách nhau một khoảng d",
+          "Hai bản kim loại này có hình dạng và kích thước giống hệt nhau",
+          "Cường độ điện trường giữa hai bản phẳng song song cách đều và vuông góc với các bản phẳng, chứa xuất phát từ bản tích điện dương và kết thúc ở bản tích điện âm",
+          "Cường độ điện trường giữa hai bản phẳng nhiễm điện trái dấu đặt song song có độ lớn bằng tỉ số giữa hiệu điện thế giữa hai bản và khoảng cách giữa chúng"
+        ]
+      },
+      {
+        "heading": "III. Tác dụng của điện trường đều đối với chuyển động của một điện tích",
+        "bullets": [
+          "Giữa hai bản phẳng song song nhiễm điện có cường độ điện trường đều là E. Một điện tích q > 0 có khối lượng m bay vào trong điện trường đều theo phương vuông góc với đường sức điện",
+          "Lực điện tác dụng lên điện tích q > 0 sẽ cùng phương và cùng chiều với vector cường độ điện trường tức là cùng phương và cùng chiều với đường sức",
+          "Từ công thức \\vec{E} = \\frac{\\vec{F}}{q} ta tính được độ lớn của lực điện tác dụng lên hạt bụi",
+          "Trong lực là rất nhỏ so với phương thẳng đứng một góc không đổi tại mỗi điểm trong không gian giữa hai bản kim loại. Điều độ chứng tỏ điện trường giữa hai bản kim loại là đều",
+          "Các đường sức của điện trường giữa hai bản phẳng song song cách đều và vuông góc với các bản phẳng, chứa xuất phát từ bản tích điện dương và kết thúc ở bản tích điện âm"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Điện trường đều",
+        "definition": "Điện trường có cường độ điện trường tại mỗi điểm có giá trị bằng nhau về độ lớn, giống nhau về phương và chiều"
+      },
+      {
+        "term": "Cường độ điện trường",
+        "definition": "Độ lớn của cường độ điện trường giữa hai bản phẳng nhiễm điện trái dấu bằng tỉ số giữa hiệu điện thế giữa hai bản và khoảng cách giữa chúng"
+      },
+      {
+        "term": "Lực điện",
+        "definition": "Lực tác dụng lên điện tích trong điện trường, có phương và chiều cùng với vector cường độ điện trường đối với điện tích dương"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "E = \\frac{U}{d}",
+        "meaning": "Cường độ điện trường đều giữa hai bản phẳng song song bằng tỉ số hiệu điện thế U giữa hai bản và khoảng cách d giữa chúng. Trong đó U là hiệu điện thế (V), d là khoảng cách giữa hai bản phẳng (m), E là cường độ điện trường giữa hai bản phẳng (V/m)"
+      },
+      {
+        "latex": "\\vec{E} = \\frac{\\vec{F}}{q}",
+        "meaning": "Vector cường độ điện trường được xác định bằng tỉ số giữa vector lực F tác dụng lên một điện tích q đặt tại điểm đó và giá trị của điện tích đó"
+      },
+      {
+        "latex": "F = qE",
+        "meaning": "Lực điện tác dụng lên điện tích q trong điện trường đều"
+      },
+      {
+        "latex": "x = v_0 \\cdot t",
+        "meaning": "Phương trình chuyển động theo phương Ox (phương ngang)"
+      },
+      {
+        "latex": "y = \\frac{1}{2}a_y t^2 = \\frac{1}{2}\\frac{F}{m}t^2 = \\frac{1}{2}\\frac{qU}{md}t^2",
+        "meaning": "Phương trình chuyển động theo phương Oy (phương thẳng đứng)"
+      },
+      {
+        "latex": "y = \\frac{1}{2}\\frac{qU}{md}\\left(\\frac{x}{v_0}\\right)^2 = 4,395x^2 \\text{ (m)}",
+        "meaning": "Phương trình quỹ đạo của chuyển động (dạng parabol)"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Hai bản phẳng kim loại đặt song song, cách nhau một khoảng d = 20 cm. Đặt vào hai bản này một hiệu điện thế một chiều U = 1000 V. Một hạt bụi mịn pm 2,5 có điện tích q = 16.10^-19 C bay vào trong điện trường giữa hai bản phẳng. Hãy xác định phương, chiều và độ lớn của lực điện tác dụng lên hạt bụi đó.",
+        "solution": "Độ lớn của cường độ điện trường đều giữa hai bản phẳng là E = U/d = 1000/0,2 = 5000 (V/m). Vector cường độ điện trường có phương vuông góc với hai bản phẳng, chiều hướng từ bản tích điện dương đến bản tích điện âm. Lực điện tác dụng lên điện tích q > 0 sẽ cùng phương và cùng chiều với vector cường độ điện trường tức là cùng phương và cùng chiều với đường sức. Từ công thức E = F/q ta tính được độ lớn của lực điện tác dụng lên hạt bụi: F = qE = 16.10^-19.5000 = 8.10^-15 N."
+      },
+      {
+        "prompt": "Để chuẩn đoạn hình ảnh trong y học người ta thường sử dụng ống tia X (hay ống Roentgen) để chụp X quang và chụp CT. Cho rằng vùng điện trường giữa hai cực của ống tia X (Hình 18.2) là một điện trường đều. Khoảng cách giữa cực giữa hai cực là 2 cm, hiệu điện thế giữa hai cực là 120 KV. Hãy tính lực điện trường tác dụng lên electron.",
+        "solution": "Độ lớn của cường độ điện trường đều là E = U/d = 120000/0,02 = 6000000 (V/m) = 6.10^6 (V/m). Lực điện tác dụng lên electron có độ lớn là F = eE (trong đó e là độ lớn của điện tích electron)"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f18-1",
+        "caption": "Hình 18.1. Thí nghiệm về điện trường đều",
+        "description": "Hình vẽ thể hiện thiết bị thí nghiệm gồm hai bản phẳng song song được nối với nguồn điện, giữa hai bản là không gian điện trường đều"
+      },
+      {
+        "id": "f18-2",
+        "caption": "Hình 18.2. Cấu tạo ống phóng tia X",
+        "description": "Sơ đồ cấu tạo ống phóng tia X với hai cực (cathode K và anode A) tạo ra điện trường đều giữa chúng"
+      },
+      {
+        "id": "f18-3",
+        "caption": "Hình 18.3. Chuyển động của điện tích q vào trong điện trường đều theo phương vuông góc với đường sức điện",
+        "description": "Sơ đồ minh họa chuyển động của điện tích dương vào trong điện trường đều với lực điện tác dụng"
+      },
+      {
+        "id": "f18-4",
+        "caption": "Hình 18.4. Chuyển động nằm ngang của vật khối lượng m trong điện trường đều trong lực",
+        "description": "Sơ đồ minh họa chuyển động của hạt có khối lượng trong điện trường đều"
+      },
+      {
+        "id": "f18-5",
+        "caption": "Hình 18.5. Electron bay vào điện trường đều giữa hai bản phẳng nhiễm điện trái dấu",
+        "description": "Sơ đồ thể hiện electron bay vào giữa hai bản phẳng song song với hiệu điện thế U, khoảng cách d"
+      }
+    ]
+  },
+  "b23": {
+    "id": "b23",
+    "title": "Điện trở. Định luật Ôm",
+    "grade": 11,
+    "pageRange": [
+      95,
+      101
+    ],
+    "summary": "Bài học trình bày khái niệm điện trở, định luật Ôm và các ứng dụng của chúng trong mạch điện. Bao gồm các loại điện trở như điện trở suất, đặc trưng vôn-ampe và điện trở nhiệt.",
+    "learningObjectives": [
+      "Hiểu khái niệm điện trở và yếu tố ảnh hưởng đến nó",
+      "Nắm vững định luật Ôm cho đoạn mạch",
+      "Phân biệt điện trở suất và đặc trưng vôn-ampe của các loại điện trở",
+      "Giải thích nguyên nhân gây ra điện trở trong kim loại"
+    ],
+    "sections": [
+      {
+        "heading": "1. Thí nghiệm",
+        "bullets": [
+          "Thiết bị gồm: ampe kế, vôn kế, nguồn điều chỉnh, hai vật dẫn X và Y, dây nối, khóa K",
+          "Mắc mạch điện theo sơ đồ Hình 23.1",
+          "Đóng khóa K để điều chỉnh hiệu điện thế qua vật dẫn X, đo dòng điện qua X bằng ampe kế",
+          "Thay vật dẫn Y vào mạch và lặp lại thí nghiệm"
+        ]
+      },
+      {
+        "heading": "2. Định nghĩa điện trở",
+        "bullets": [
+          "Tỉ số U/I của một vật dẫn ứng với mỗi vật dẫn là hằng số",
+          "Hằng số này gọi là điện trở R của vật dẫn: R = U/I",
+          "Kí hiệu: Ω (ôm)",
+          "1 kΩ = 1000 Ω; 1 MΩ = 1000 kΩ = 1 000 000 Ω"
+        ]
+      },
+      {
+        "heading": "3. Đường đặc trưng vôn-ampe",
+        "bullets": [
+          "Là đồ thị biểu diễn mối liên hệ giữa hiệu điện thế U và cường độ dòng điện I",
+          "Đường đặc trưng vôn-ampe là đường thẳng đi qua gốc tọa độ",
+          "Độ dốc của đường thẳng là 1/R, trong đó R là điện trở",
+          "Độ dốc càng lớn thì cường độ dòng điện I càng tăng"
+        ]
+      },
+      {
+        "heading": "II. Định luật Ôm",
+        "bullets": [
+          "Được phát biểu bởi George Simon Ohm (1789-1854)",
+          "Cường độ dòng điện chạy qua vật dẫn kim loại tỉ lệ thuận với hiệu điện thế ở hai đầu vật dẫn",
+          "Biểu thức: I = U/R",
+          "Trong đó: I là cường độ dòng điện (A), U là hiệu điện thế (V), R là điện trở (Ω)"
+        ]
+      },
+      {
+        "heading": "III. Nguyên nhân gây ra điện trở và ảnh hưởng của nhiệt độ lên điện trở",
+        "bullets": [
+          "1. Nguyên nhân gây ra điện trở trong vật dẫn kim loại: các electron tự do chuyển động và va chạm với các ion, gây cản trở chuyển động",
+          "Các ion do chuyển động nhiệt tạo ra vật cản cho chuyển động electron",
+          "2. Điện trở nhiệt (thermistor) - linh kiện có điện trở thay đổi theo nhiệt độ",
+          "Điện trở NTC: điện trở giảm khi nhiệt độ tăng",
+          "Được sử dụng trong các thiết bị đo nhiệt độ, khóa tự động"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Điện trở",
+        "definition": "Đại lượng đặc trưng cho khả năng cản trở dòng điện của một vật dẫn, định nghĩa bởi R = U/I"
+      },
+      {
+        "term": "Ôm",
+        "definition": "Đơn vị đo điện trở, kí hiệu Ω, định nghĩa là điện trở của một vật dẫn khi có hiệu điện thế 1V và dòng điện 1A chạy qua"
+      },
+      {
+        "term": "Định luật Ôm",
+        "definition": "Cường độ dòng điện chạy qua vật dẫn kim loại tỉ lệ thuận với hiệu điện thế và tỉ lệ nghịch với điện trở của nó"
+      },
+      {
+        "term": "Đường đặc trưng vôn-ampe",
+        "definition": "Đồ thị biểu diễn mối liên hệ giữa hiệu điện thế U và cường độ dòng điện I của một vật dẫn"
+      },
+      {
+        "term": "Điện trở suất",
+        "definition": "Đại lượng đặc trưng cho khả năng cản trở dòng điện của vật liệu, kí hiệu ρ, có đơn vị Ω·m"
+      },
+      {
+        "term": "Điện trở nhiệt (Thermistor)",
+        "definition": "Linh kiện có điện trở thay đổi theo nhiệt độ, bao gồm loại NTC (điện trở giảm khi nhiệt độ tăng)"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "R = \\frac{U}{I}",
+        "meaning": "Định nghĩa điện trở của vật dẫn, trong đó U là hiệu điện thế (V), I là cường độ dòng điện (A), R là điện trở (Ω)"
+      },
+      {
+        "latex": "I = \\frac{U}{R}",
+        "meaning": "Định luật Ôm: cường độ dòng điện tỉ lệ thuận với hiệu điện thế và tỉ lệ nghịch với điện trở"
+      },
+      {
+        "latex": "I = kU",
+        "meaning": "Phương trình đường đặc trưng vôn-ampe, trong đó k = 1/R là hằng số không đổi"
+      },
+      {
+        "latex": "R = \\rho \\frac{l}{S}",
+        "meaning": "Công thức tính điện trở của vật dẫn, trong đó ρ là điện trở suất (Ω·m), l là chiều dài (m), S là tiết diện (m²)"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Một dây dẫn bằng kim loại, tiết diện tròn, có đường kính d = 2 mm, có dòng điện I = 5 A chạy qua. Biết mật độ electron tự do là n = 8,45·10²⁸ electron/m³. Hãy tính tốc độ dịch chuyển có hướng của các electron trong dây dẫn.",
+        "solution": "Áp dụng công thức I = Snve: v = I/(nSe) = 4I/(nπd²e) ≈ 1,2·10⁻⁴ m/s = 0,12 mm/s"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f23-1",
+        "caption": "Hình 23.1. Sơ đồ thí nghiệm do cường độ dòng điện với các vật dẫn khác nhau",
+        "description": "Mạch điện gồm nguồn điện U, ampe kế A, vôn kế V, vật dẫn X, khóa K sắp xếp để đo U và I"
+      },
+      {
+        "id": "f23-2",
+        "caption": "Hình 23.2. Đường đặc trưng vôn-ampe của hai điện trở R₁ và R₂",
+        "description": "Đồ thị I-U của hai điện trở, hai đường thẳng đi qua gốc tọa độ, độ dốc khác nhau biểu thị R₁ > R₂"
+      },
+      {
+        "id": "f23-3",
+        "caption": "Hình 23.3. Đường đặc trưng vôn-ampe của điện trở R₁",
+        "description": "Đồ thị I-U với góc α, độ dốc k = tan α thể hiện mối liên hệ I = kU"
+      },
+      {
+        "id": "f23-4",
+        "caption": "Hình 23.4. Mô hình nguyên nhân gây ra điện trở trong kim loại",
+        "description": "Ba hình (a, b, c) mô tả chuyển động của electron và ion trong kim loại, sự va chạm giữa electron và ion dẫn đến điện trở"
+      },
+      {
+        "id": "f23-5",
+        "caption": "Hình 23.5. Đường đặc trưng vôn-ampe của điện trở đây tốc bóng đèn",
+        "description": "Đồ thị I-U không phải đường thẳng, thể hiện sự phụ thuộc của điện trở vào nhiệt độ"
+      },
+      {
+        "id": "f23-6",
+        "caption": "Hình 23.6. Điện trở nhiệt",
+        "description": "Hình ảnh các loại điện trở nhiệt NTC (Negative Temperature Coefficient)"
+      },
+      {
+        "id": "f23-7",
+        "caption": "Hình 23.7. Sơ đồ thí nghiệm khảo sát sự phụ thuộc nhiệt độ của điện trở nhiệt",
+        "description": "Mạch điện để khảo sát sự thay đổi điện trở của NTC theo nhiệt độ nước"
+      },
+      {
+        "id": "f23-8",
+        "caption": "Hình 23.8. Đường đặc trưng vôn-ampe của nhiệt điện trở NTC",
+        "description": "Đồ thị R-t°C menunjukkan điện trở giảm khi nhiệt độ tăng"
+      }
+    ]
+  },
+  "b24": {
+    "id": "b24",
+    "title": "Nguồn điện",
+    "grade": 11,
+    "pageRange": [
+      102,
+      105
+    ],
+    "summary": "Bài học giới thiệu khái niệm nguồn điện, suất điện động, điện trở trong của nguồn và ứng dụng của chúng trong mạch điện. Nguồn điện là thiết bị tạo ra và duy trì hiệu điện thế, cung cấp năng lượng điện cho mạch ngoài.",
+    "learningObjectives": [
+      "Hiểu khái niệm nguồn điện và suất điện động",
+      "Nắm được điều kiện duy trì dòng điện trong mạch",
+      "Tìm hiểu về điện trở trong của nguồn và ảnh hưởng của nó",
+      "Phân biệt NTC và PTC của các vật liệu trong nguồn điện"
+    ],
+    "sections": [
+      {
+        "heading": "I. Nguồn điện. Suất điện động của nguồn điện",
+        "bullets": [
+          "Nguồn điện là thiết bị để tạo ra và duy trì hiệu điện thế, nhằm duy trì dòng điện trong mạch",
+          "Một nguồn điện đều có hai cực: cực dương (+) và cực âm (-)",
+          "Hiệu điện thế giữa hai cực của nguồn được xác định bởi: U_AB = V_A - V_B",
+          "Khi nối hai cực của nguồn điện bằng một sợi dây kim loại dưới tác dụng của lực điện các electron từ cực B sang cực A tạo thành dòng điện trong mạch",
+          "Dòng điện không tồn tại lâu dài nếu chỉ tồn tại điện trường từ cực âm đến cực dương mà không có lực không điện"
+        ]
+      },
+      {
+        "heading": "2. Nguồn điện",
+        "bullets": [
+          "Nguồn điện là thiết bị để tạo ra và duy trì hiệu điện thế, nhằm duy trị dòng điện trong mạch",
+          "Mỗi nguồn điện đều có hai cực là cực dương (+) và cực âm (-)",
+          "Hiệu điện thế được duy trì ngay tại khi có dòng điện chạy qua các vật dẫn nối liền giữa hai cực của nguồn điện được duy trị",
+          "Để tạo ra các dòng điện như vậy, trong nguồn điện phải có lực thực hiện công để tách các electron ra khỏi nguyên tử sau đó chuyển các electron hoặc ion dương được tạo thành như để ra khỏi mỗi cực. Khi đó một cực thừa electron hoặc thiếu electron hơn cực kia gọi là cực la"
+        ]
+      },
+      {
+        "heading": "3. Suất điện động của nguồn điện",
+        "bullets": [
+          "Khi nối hai cực của nguồn điện bằng một vật dẫn tạo thành mạch kín thì trong mạch có dòng điện",
+          "Nếu vật dẫn làm bằng kim loại thì chỉ có sự dịch chuyển của các electron từ do từ cực âm, qua vật dẫn đến cực dương",
+          "Bên trong nguồn điện, dưới tác dụng của lực la, các hạt tải điện dương lại dịch chuyển ngược chiều điện trường từ cực âm đến cực dương. Khi đó, lực la thực hiện một công thắng công của trường tính điện bên trong nguồn điện",
+          "Để độc trưng cho khả năng thực hiện công của nguồn điện người ta đưa ra đại lượng gọi là suất điện động của nguồn điện, kí hiệu là ℰ"
+        ]
+      },
+      {
+        "heading": "II. Ảnh hưởng của điện trở trong của nguồn điện lên hiệu điện thế giữa hai cực của nguồn",
+        "bullets": [
+          "Trong mạch điện kín, dòng điện chạy qua mạch ngoài và bên trong nguồn điện",
+          "Như vậy, nguồn điện cũng là một vật dẫn và cũng có một điện trở. Điện trở này được gọi là điện trở trong của nguồn điện",
+          "Vì vậy, mỗi nguồn điện được đặc trưng bằng suất điện động ℰ và điện trở trong r"
+        ]
+      },
+      {
+        "heading": "1. Điện trở trong của nguồn",
+        "bullets": [
+          "Trong mạch điện kín, dòng điện chạy qua mạch ngoài và bên trong nguồn điện",
+          "Nguồn điện cũng là một vật dẫn và cũng có một điện trở gọi là điện trở trong của nguồn điện",
+          "Vì vậy, mỗi nguồn điện được đặc trưng bằng suất điện động ℰ và điện trở trong r ở trong r của nó"
+        ]
+      },
+      {
+        "heading": "2. Ảnh hưởng của điện trở trong của nguồn điện lên hiệu điện thế giữa hai cực của nguồn",
+        "bullets": [
+          "Để dễ hình dung, ta tưởng tượng tách điện trở trong của nguồn ra bên ngoài, khi đó nguồn điện được xem là lý tưởng không có điện trở trong",
+          "Nguồn điện lúc này được xem như một mắc cùng một điện trở r như mô tả ở trong phần đường dẫn thẳng"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Nguồn điện",
+        "definition": "Thiết bị để tạo ra và duy trì hiệu điện thế, nhằm duy trì dòng điện trong mạch"
+      },
+      {
+        "term": "Suất điện động (ℰ)",
+        "definition": "Đại lượng đặc trưng cho khả năng thực hiện công của nguồn điện, là công do lực không điện thực hiện trên một đơn vị điện tích"
+      },
+      {
+        "term": "Điện trở trong (r)",
+        "definition": "Điện trở của chính nguồn điện, được tính vào tổng điện trở của mạch"
+      },
+      {
+        "term": "Cực dương",
+        "definition": "Cực có thừa điện tích dương hoặc thiếu điện tích âm"
+      },
+      {
+        "term": "Cực âm",
+        "definition": "Cực có thừa điện tích âm hoặc thiếu điện tích dương"
+      },
+      {
+        "term": "Hiệu điện thế (U)",
+        "definition": "Sự chênh lệch về điện thế giữa hai điểm trong mạch điện"
+      },
+      {
+        "term": "NTC (Negative Temperature Coefficient)",
+        "definition": "Loại điện trở có điện trở giảm khi nhiệt độ tăng"
+      },
+      {
+        "term": "PTC (Positive Temperature Coefficient)",
+        "definition": "Loại điện trở có điện trở tăng khi nhiệt độ tăng"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "U_{AB} = V_A - V_B",
+        "meaning": "Hiệu điện thế giữa hai điểm A và B bằng hiệu của điện thế tại A và điện thế tại B"
+      },
+      {
+        "latex": "\\mathcal{E} = \\frac{A}{q}",
+        "meaning": "Suất điện động bằng công của lực không điện chia cho độ lớn của điện tích được dịch chuyển"
+      },
+      {
+        "latex": "R = R_0[1 + \\alpha(t - t_0)]",
+        "meaning": "Công thức tính điện trở của vật dẫn theo nhiệt độ, trong đó α là hệ số nhiệt điện trở"
+      }
+    ],
+    "examples": [],
+    "figures": [
+      {
+        "id": "f24-1",
+        "caption": "Sự tạo thành dòng điện giữa hai quả cầu mang điện tích",
+        "description": "Hình minh họa cách tạo thành dòng điện khi nối hai cực của một nguồn điện, bao gồm cực dương A và cực âm B, với ba trường hợp: a) hai quả cầu riêng biệt không nối, b) hai quả cầu nối bằng dây dẫn, c) hai quả cầu ở cùng điện thế"
+      },
+      {
+        "id": "f24-2",
+        "caption": "Kí hiệu nguồn điện",
+        "description": "Ký hiệu của một nguồn điện gồm hai đường thẳng dài (dương) và ngắn (âm)"
+      },
+      {
+        "id": "f24-3",
+        "caption": "Sự dịch chuyển của các điện tích dương và electron bên trong nguồn điện",
+        "description": "Hình minh họa sự dịch chuyển của các điện tích dương và electron bên trong nguồn điện, với lực la và lực điện chỉ rõ hướng dịch chuyển"
+      },
+      {
+        "id": "f24-4",
+        "caption": "Đường đặc trưng volt-ampe của điện trở đầu vào và điện trở dây tốc bộn dẫn",
+        "description": "Đồ thị thể hiện mối quan hệ giữa hiệu điện thế (U) và cường độ dòng điện (I) của hai loại điện trở khác nhau, với đường cong X (dây tốc bộn dẫn) và Y (dây kim loại)"
+      }
+    ]
+  },
+  "b21": {
+    "id": "b21",
+    "title": "TỤ ĐIỆN",
+    "grade": 11,
+    "pageRange": [
+      83,
+      90
+    ],
+    "summary": "Tụ điện là một thiết bị điện tử có khả năng tích lũy điện tích và năng lượng điện. Bài học giới thiệu cấu tạo, điện dung, cách tính điện tích và nàng lượng của tụ điện cũng như ứng dụng của chúng trong đời sống.",
+    "learningObjectives": [
+      "Hiểu khái niệm tụ điện và các đặc trưng của nó",
+      "Nắm vững công thức tính điện dung, điện tích và nàng lượng của tụ điện",
+      "Biết cách ghép nối tiếp và song song các tụ điện",
+      "Ứng dụng tụ điện trong các thiết bị điện tử",
+      "Tính toán các đại lượng liên quan đến tụ điện trong mạch điện"
+    ],
+    "sections": [
+      {
+        "heading": "I. TỤ ĐIỆN",
+        "bullets": [
+          "Tụ điện được sử dụng trong các thiết bị điện như quạt điện, đông cơ nông, rung và có âm thanh bất thường, thi nguyên nhân mà chúng ta cần xem xét là hồng tụ điện",
+          "Tụ điện là một loại linh kiện điện tử gồm hai vật dẫn đặt gần nhau và ngăn cách nhau bởi một môi trường chất điện môi",
+          "Mặt độ điện tích tư do trong điện môi rất nhỏ do độ điện môi là những chất không dẫn điện. Khi điện trường ngoài đặt vào điện môi lớn hơn một giới hạn nhất định thì các liên kết giữa các điện tích trái dấu trong nguyên từ của chất điện môi sẽ bị phá vỡ, điện tích tự do xuất hiện. Lức này điện môi trở thành dẫn điện (điện môi bị đánh thủng)",
+          "Khi về mạch điện, tụ điện được ký hiệu như Hình 21.2"
+        ]
+      },
+      {
+        "heading": "II. ĐIỆN DUNG CỦA TỤ ĐIỆN",
+        "bullets": [
+          "Dùng một nguồn có hiệu điện thế U để tích điện cho một số tụ điện khác nhau. Kết quả cho thấy độ lớn điện tích mà các tụ điện này tích được là không giống nhau, nghĩa là khả năng tích điện của chúng là khác nhau",
+          "Với mỗi tụ điện nhất định người ta đã chứng minh được: độ lớn điện tích Q tư điện được tỉ lệ thuận với hiệu điện thế đặt vào hai bản của nó",
+          "Điện dung của tụ điện là đại lượng đặc trưng cho khả năng tích điện của tụ điện ở một hiệu điện thế xác định và được gọi là điện dung của tụ điện",
+          "Fara là điện dung của một tụ điện mà nếu đặt hiệu điện thế 1 V vào hai bản tụ điện thì điện tích của tụ điện là 1 C",
+          "Chủ ý rằng, tụ điện được sử dụng trong thực tế thường có điện dung cơ khoảng từ 10⁻¹² F đến 10⁻⁶ F nên người ta cung thường dùng các đơn vị:",
+          "+ 1 micrôfara (kí hiệu là μF) = 10⁻⁶ F",
+          "+ 1 nanôfara (kí hiệu là nF) = 10⁻⁹ F",
+          "+ 1 picôfara (kí hiệu là pF) = 10⁻¹² F"
+        ]
+      },
+      {
+        "heading": "III. NĂNG LƯỢNG CỦA TỤ ĐIỆN",
+        "bullets": [
+          "Khi sử dụng nguồn điện để tích điện cho tụ, nguồn điện đã thực hiện công A để dịch chuyển các electron từ bản cực nối với cực dương sang bản cực nối với cực âm của tụ điện. Công A này đã chuyển thành thế năng điện của các electron trên bản nhiem điện âm hay nói cách khác, tư điện đã tích lũy được.",
+          "Quá trình tích điện cho tụ điện C diễn ra trong một khoảng thời gian và hiệu điện thế sẽ tăng tỉ lệ thuận với lượng điện tích đã tích được trên tụ như Hình 21.9",
+          "Ban đầu ta tích điện cho tụ điện tới điện tích q₁ = q bổi một hiệu điện thế U₁ = 1/C · q · Tiếp tục tích điện thêm cho tụ điện tới điện tích q₂ = q₁ + Δq bổi hiệu điện thế U₂ = (q + Δq)/C",
+          "Công của nguồn điện chuyển một điện tích nhỏ Δq từ bản cực này tới bản cực kia bằng ΔA = Fd = Δq·Ed = Δq·U",
+          "Khi điện tích Δq rất nhỏ, có thể coi U là trung bình cộng của U₁ và U₂, vì vậy ΔA = (U₁ + U₂)/2 · Δq",
+          "Công để tích điện cho tụ điện đến điện tích Q bằng tổng các điện tích nhỏ Δq là A bằng tổng các công nhỏ ΔA hay tổng các điện tích hình thang trong trường. Công A mà nguồn điện thực hiện chính bằng điện tích hình tam giác OQM: A = QU/2",
+          "Vậy nàng lượng của tụ điện khi được tích điện với điện tích Q: W = QU/2 = Q²/2C = CU²/2"
+        ]
+      },
+      {
+        "heading": "IV. ỨNG DỤNG CỦA TỤ ĐIỆN TRONG CUỘC SỐNG",
+        "bullets": [
+          "Tích trữ năng lượng là chức năng quan trọng nhất của tụ điện và được sử dụng trong rất nhiều thiết bị điện như động cơ máy, máy hàn dùng công nghệ phòng điện của tụ (Hình 21.10), mạch khuếch đại...",
+          "Ngoài ra, tụ điện còn có một số chức năng khác nữa loại tụ điện xoay, một loại tụ điện có thể thay đổi được điện dung"
+        ]
+      },
+      {
+        "heading": "2. Điện dung của bộ tụ điện",
+        "bullets": [
+          "Trong thực tế muốn có tụ điện với điện dung thích hợp hay hiệu điện thế cần thiết người ta phát ghép các tụ điện thành bộ tụ điện",
+          "a) Ghép nối tiếp: Ghép nối tiếp n tụ điện chứa tích điện có điện dung C₁, C₂, ..., Cₙ với nhau rồi mắc vào nguồn điện có hiệu điện thế U (Hình 21.7). Hiệu điện thế, điện tích và điện dung của bộ tụ sẽ có mối liên hệ với các đại lượng trong ứng của mỗi tụ theo các công thức sau: U = U₁ + U₂ + ... + Uₙ; Q = Q₁ = Q₂ = ... = Qₙ; 1/C = 1/C₁ + 1/C₂ + ... + 1/Cₙ",
+          "b) Ghép song song: Ghép n tụ điện chứa tích điện có điện dung C₁, C₂, ..., Cₙ song song với nhau rồi mắc vào nguồn điện có hiệu điện thế U (Hình 21.8). Hiệu điện thế, điện tích và điện dung của bộ tụ sẽ có mối liên hệ với các đại lượng trong ứng của mỗi tụ theo các công thức sau: U = U₁ = U₂ = ... = Uₙ; Q = Q₁ + Q₂ + ... + Qₙ; C = C₁ + C₂ + ... + Cₙ"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Tụ điện",
+        "definition": "Một thiết bị điện tử gồm hai vật dẫn (bản cực) đặt gần nhau và ngăn cách nhau bởi một chất điện môi, có khả năng tích lũy điện tích và năng lượng điện"
+      },
+      {
+        "term": "Điện dung",
+        "definition": "Đại lượng đặc trưng cho khả năng tích điện của tụ điện ở một hiệu điện thế xác định, được định nghĩa là tỉ số giữa điện tích tích trữ trên tụ và hiệu điện thế đặt vào hai bản của nó"
+      },
+      {
+        "term": "Fara",
+        "definition": "Đơn vị của điện dung, là điện dung của một tụ điện mà nếu đặt hiệu điện thế 1 V vào hai bản tụ điện thì điện tích của tụ điện là 1 C"
+      },
+      {
+        "term": "Chất điện môi",
+        "definition": "Chất không dẫn điện được sử dụng để ngăn cách hai bản của tụ điện, giúp tăng điện dung của tụ"
+      },
+      {
+        "term": "Nàng lượng của tụ điện",
+        "definition": "Năng lượng được tích lũy trong tụ điện khi nó được tích điện, bằng công mà nguồn điện thực hiện để tích điện cho tụ"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "C = \\frac{Q}{U}",
+        "meaning": "Công thức định nghĩa điện dung, Q là điện tích, U là hiệu điện thế"
+      },
+      {
+        "latex": "Q = CU",
+        "meaning": "Công thức tính điện tích tích trữ trên tụ điện"
+      },
+      {
+        "latex": "U = U_1 + U_2 + ... + U_n",
+        "meaning": "Công thức tính hiệu điện thế tổng khi ghép nối tiếp"
+      },
+      {
+        "latex": "\\frac{1}{C} = \\frac{1}{C_1} + \\frac{1}{C_2} + ... + \\frac{1}{C_n}",
+        "meaning": "Công thức tính điện dung tương đương khi ghép nối tiếp"
+      },
+      {
+        "latex": "U = U_1 = U_2 = ... = U_n",
+        "meaning": "Công thức tính hiệu điện thế khi ghép song song (hiệu điện thế như nhau)"
+      },
+      {
+        "latex": "C = C_1 + C_2 + ... + C_n",
+        "meaning": "Công thức tính điện dung tương đương khi ghép song song"
+      },
+      {
+        "latex": "W = \\frac{QU}{2} = \\frac{Q^2}{2C} = \\frac{CU^2}{2}",
+        "meaning": "Công thức tính năng lượng tích lũy trong tụ điện"
+      },
+      {
+        "latex": "1 \\text{ μF} = 10^{-6} \\text{ F}",
+        "meaning": "1 micrôfara bằng 10⁻⁶ fara"
+      },
+      {
+        "latex": "1 \\text{ nF} = 10^{-9} \\text{ F}",
+        "meaning": "1 nanôfara bằng 10⁻⁹ fara"
+      },
+      {
+        "latex": "1 \\text{ pF} = 10^{-12} \\text{ F}",
+        "meaning": "1 picôfara bằng 10⁻¹² fara"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Có hai chiếc tụ điện, tụ điện D có thông số cơ bản được ghi là 2 mF - 450 V; tụ điện E có thông số cơ bản ghi là 2,5 μF - 350 V. Khi các điện trên được tích điện tới mức tối đa cho phép, hãy tính nàng lượng của mỗi tụ điện.",
+        "solution": "Với tụ điện D: W_D = CU²/2 = (2 × 10⁻³ × 450²)/2. Với tụ điện E: W_E = CU²/2 = (2,5 × 10⁻⁶ × 350²)/2."
+      },
+      {
+        "prompt": "Có 3 tụ điện với điện dung lần lượt là C₁ = 2 μF, C₂ = 3 μF, C₃ = 4 μF. a) Tính điện dung của bộ tụ điện khi ba tụ ghép nối tiếp? b) Tính điện dung của bộ tụ điện khi ba tụ ghép song song? Hãy so sánh để thấy cách ghép nào cho khả năng tích điện tốt hơn?",
+        "solution": "a) Sử dụng công thức (21.5) cho bộ tụ điện ghép nối tiếp: 1/C_nt = 1/C₁ + 1/C₂ + 1/C₃ = 1/2 + 1/3 + 1/4. Thay số vào ta có điện dung của bộ tụ điện: C_nt = 12/13 μF. b) Sử dụng công thức (21.8) cho bộ tụ điện ghép song song: C_ss = C₁ + C₂ + C₃ = 2 + 3 + 4 = 9 μF. Kết quả C_ss > C_nt cho thấy bộ tụ điện ghép song song có khả năng tích điện tốt hơn."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f11-21-1",
+        "caption": "Hình 21.1. Một số tụ điện",
+        "description": "Hình ảnh ba loại tụ điện: tụ điện phẳng (CBB61), tụ điện cuộn (loại phim), và tụ điện hình trụ (nhôm), thể hiện các dạng tụ điện được sử dụng phổ biến"
+      },
+      {
+        "id": "f11-21-2",
+        "caption": "Hình 21.2. Kí hiệu tụ điện trong sơ đồ mạch điện",
+        "description": "Ký hiệu hai bản song song của tụ điện trong sơ đồ mạch điện"
+      },
+      {
+        "id": "f11-21-3",
+        "caption": "Hình 21.3. Tích điện cho tụ điện",
+        "description": "Sơ đồ mạch điện cho thấy quá trình tích điện cho tụ điện từ một nguồn điện với hiệu điện thế U, bao gồm các thành phần: nguồn điện, chuyển mạch, và tụ điện được tích điện"
+      },
+      {
+        "id": "f11-21-4",
+        "caption": "Hình 21.4. Cấu tạo của tụ điện phẳng",
+        "description": "Hình thể hiện cấu tạo của tụ điện phẳng với các bản cực kim loại, lớp chất điện môi giữa chúng, và các bệ cố định"
+      },
+      {
+        "id": "f11-21-5",
+        "caption": "Hình 21.5. Cấu tạo của tụ điện hình trụ",
+        "description": "Hình cắt ngang của tụ điện hình trụ showing 2 chân tụ, lớp điện môi, 2 lớp kim loại, vỏ nhôm và vỏ ngoài"
+      },
+      {
+        "id": "f11-21-6",
+        "caption": "Hình 21.6. Tụ xoay",
+        "description": "Hình ảnh tụ xoay được sử dụng trong công nghệ và cuộc sống, cho phép thay đổi điện dung bằng cách quay một bộ phận"
+      },
+      {
+        "id": "f11-21-7",
+        "caption": "Hình 21.7. Bộ tụ điện ghép nối tiếp",
+        "description": "Sơ đồ mạch điện thể hiện cách ghép nối tiếp n tụ điện C₁, C₂, ..., Cₙ với nhau rồi mắc vào một nguồn điện"
+      },
+      {
+        "id": "f11-21-8",
+        "caption": "Hình 21.8. Bộ tụ điện ghép song song",
+        "description": "Sơ đồ mạch điện thể hiện cách ghép song song n tụ điện C₁, C₂, ..., Cₙ với nhau rồi mắc vào một nguồn điện"
+      },
+      {
+        "id": "f11-21-9",
+        "caption": "Hình 21.9. Sự biến thiên của hiệu điện thế theo điện tích của tụ điện trong quá trình tích điện",
+        "description": "Đồ thị U(V) theo Q(C) thể hiện mối quan hệ tuyến tính giữa hiệu điện thế và điện tích trong quá trình tích điện, từ điểm O đến điểm M, với các điểm A, B, D, G được đánh dấu để minh họa quá trình tích điện"
+      },
+      {
+        "id": "f11-21-10",
+        "caption": "Hình 21.10. Ứng dụng của tụ điện trong cuộc sống",
+        "description": "Hình ảnh thể hiện một số ứng dụng của tụ điện trong các thiết bị điện tử và công nghệ"
+      }
+    ]
+  },
+  "b12": {
+    "id": "b12",
+    "title": "Giao thoa sóng",
+    "grade": 11,
+    "pageRange": [
+      48,
+      51
+    ],
+    "summary": "Bài học về hiện tượng giao thoa sóng, nguyên lý giao thoa của hai sóng mặt nước và thí nghiệm Young về giao thoa ánh sáng.",
+    "learningObjectives": [
+      "Hiểu hiện tượng giao thoa của hai sóng mặt nước",
+      "Nắm được điều kiện xảy ra giao thoa sóng",
+      "Hiểu thí nghiệm Young về giao thoa ánh sáng",
+      "Áp dụng công thức giao thoa để giải các bài toán"
+    ],
+    "sections": [
+      {
+        "heading": "I. Hiện tượng giao thoa của hai sóng mặt nước",
+        "bullets": [
+          "Thí nghiệm: Sử dụng hai cần rung giống nhau dao động đồng bộ tạo ra hai sóng mặt nước",
+          "Khi hai sóng gặp nhau tạo nên hiện tượng giao thoa - những dãy sóng hình hypebol",
+          "Một số điểm dao động với biên độ cực đại (vân sáng), một số điểm không dao động (vân tối)"
+        ]
+      },
+      {
+        "heading": "2. Giải thích hiện tượng giao thoa",
+        "bullets": [
+          "Khi hai nguồn sóng phát ra hai sóng với các gợn sóng là những đường tròn đồng tâm",
+          "Tại những điểm mà hai sóng gặp nhau cùng pha sẽ tạo nên cực đại (vân sáng)",
+          "Tại những điểm mà hai sóng gặp nhau ngược pha sẽ tạo nên cực tiểu (vân tối)",
+          "Hiện tượng giao thoa là kết quả của sự chồng chất của hai sóng"
+        ]
+      },
+      {
+        "heading": "3. Điều kiện để xảy ra giao thoa",
+        "bullets": [
+          "Dao động cùng phương, cùng tần số",
+          "Có độ lệch pha không đổi theo thời gian",
+          "Hai nguồn như vậy gọi là hai nguồn kết hợp"
+        ]
+      },
+      {
+        "heading": "II. Thí nghiệm của Young về giao thoa ánh sáng",
+        "bullets": [
+          "Ánh sáng phát ra từ nguồn S chiếu vào hai khe hẹp F₁, F₂",
+          "Hai khe hẹp hoạt động như hai nguồn sáng kết hợp",
+          "Trên màn quan sát thu được các vân sáng và vân tối xen kẽ"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Giao thoa sóng",
+        "definition": "Hiện tượng hai sóng chồng chất tạo nên cường độ sóng được tăng cường hoặc giảm yếu tại các vị trí khác nhau"
+      },
+      {
+        "term": "Hai nguồn kết hợp",
+        "definition": "Hai nguồn sóng dao động cùng phương, cùng tần số và có độ lệch pha không đổi"
+      },
+      {
+        "term": "Vân sáng",
+        "definition": "Những điểm hoặc đường nơi các sóng gặp nhau cùng pha, tạo nên biên độ dao động cực đại"
+      },
+      {
+        "term": "Vân tối",
+        "definition": "Những điểm hoặc đường nơi các sóng gặp nhau ngược pha, tạo nên biên độ dao động cực tiểu"
+      }
+    ],
+    "formulas": [],
+    "examples": [],
+    "figures": [
+      {
+        "id": "f12.1",
+        "caption": "Hình 12.1. Thí nghiệm tạo ra sự giao thoa của hai sóng nước",
+        "description": "Sơ đồ thí nghiệm với hai cần rung có gân một quả cầu, quan sát hình ảnh sóng giao thoa trên mặt nước với các dãy gợn xen kẽ"
+      },
+      {
+        "id": "f12.2",
+        "caption": "Hình 12.2. Sự giao thoa của hai sóng mặt nước",
+        "description": "Hình mô tả sự giao thoa của hai sóng từ hai nguồn S₁ và S₂, cho thấy các đường giao thoa hình hypebol xen kẽ giữa các vân sáng và vân tối"
+      },
+      {
+        "id": "f12.3",
+        "caption": "Hình 12.3. Thí nghiệm Young về giao thoa ánh sáng",
+        "description": "Sơ đồ thí nghiệm Young với nguồn sáng S, hai khe hẹp F₁ và F₂ đóng vai trò là hai nguồn sáng kết hợp, và màn quan sát hiện tượng giao thoa"
+      }
+    ]
+  },
+  "b25": {
+    "id": "b25",
+    "title": "Năng lượng và công suất điện",
+    "grade": 11,
+    "pageRange": [
+      106,
+      108
+    ],
+    "summary": "Bài học giới thiệu về năng lượng điện tiêu thụ của các thiết bị điện và công suất điện, cùng với cách tính toán chi phí tiền điện dựa trên lượng điện năng sử dụng.",
+    "learningObjectives": [
+      "Hiểu khái niệm năng lượng điện tiêu thụ và công thức tính toán",
+      "Biết cách tính công suất điện của thiết bị",
+      "Áp dụng công thức để giải quyết các bài toán về tiêu thụ điện năng và chi phí",
+      "Nhận thức được tầm quan trọng của tiết kiệm năng lượng"
+    ],
+    "sections": [
+      {
+        "heading": "I. Năng lượng điện",
+        "bullets": [
+          "Năng lượng điện tiêu thụ được tính theo công thức A = qU, là năng lượng điện mà thiết bị nhận được từ nguồn điện",
+          "Khi có dòng điện chạy qua thiết bị với cường độ I = q/t, công suất điện là A = UIt",
+          "Năng lượng điện tiêu thụ của thiết bị bằng công của lực điện khi di chuyển các điện tích",
+          "Các thiết bị điện thường chuyển hóa năng lượng điện thành các dạng năng lượng khác như nhiệt, ánh sáng, chuyển động"
+        ]
+      },
+      {
+        "heading": "II. Công suất điện",
+        "bullets": [
+          "Công suất tiêu thụ năng lượng điện (gọi tắt là công suất điện) của một thiết bị là năng lượng điện tiêu thụ trong một đơn vị thời gian",
+          "Đơn vị của công suất điện là Oat (W)",
+          "Công suất điện được tính theo công thức P = U²/R = UI"
+        ]
+      },
+      {
+        "heading": "Tính toán chi phí tiền điện",
+        "bullets": [
+          "Sử dụng đơn vị kilôwat-giờ (kWh) để đo năng lượng điện tiêu thụ",
+          "1 kWh = 3,6.10⁶ kJ",
+          "Công tơ điện dùng để đo lượng điện năng tiêu thụ theo đơn vị kWh"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Năng lượng điện",
+        "definition": "Năng lượng mà các thiết bị điện tiêu thụ khi có dòng điện chạy qua, được tính bằng tích của hiệu điện thế, cường độ dòng điện và thời gian"
+      },
+      {
+        "term": "Công suất điện",
+        "definition": "Năng lượng điện tiêu thụ trong một đơn vị thời gian, phản ánh mức độ nhanh hay chậm của việc tiêu thụ điện năng"
+      },
+      {
+        "term": "Kilôwat-giờ (kWh)",
+        "definition": "Đơn vị đo năng lượng điện, bằng năng lượng tiêu thụ bởi thiết bị công suất 1 kW hoạt động trong 1 giờ"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "A = qU",
+        "meaning": "Năng lượng điện tiêu thụ bằng tích của điện tích và hiệu điện thế"
+      },
+      {
+        "latex": "A = UIt",
+        "meaning": "Năng lượng điện tiêu thụ bằng tích của hiệu điện thế, cường độ dòng điện và thời gian"
+      },
+      {
+        "latex": "W = A = UIt",
+        "meaning": "Công suất điện tiêu thụ năng lượng điện bằng tích U, I và t"
+      },
+      {
+        "latex": "P = \\frac{U^2}{R} = UI",
+        "meaning": "Công suất điện của thiết bị bằng bình phương hiệu điện thế chia cho điện trở, hoặc tích của hiệu điện thế và cường độ dòng điện"
+      },
+      {
+        "latex": "Q = I^2Rt = \\frac{U^2}{R}t",
+        "meaning": "Nhiệt lượng tỏa ra từ thiết bị điện khi có dòng điện chạy qua"
+      },
+      {
+        "latex": "1 \\text{ kWh} = 3,6 \\times 10^6 \\text{ kJ}",
+        "meaning": "Chuyển đổi đơn vị giữa kilôwat-giờ và kilojoule"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Trên hoá đơn GTGT (tiền điện) ở đầu bài học, tiền điện được tính lũy tiến (căng dùng điện nhiều thì đơn giá của 1 kWh điện càng tăng). Em hãy cho biết ý nghĩa của các số liệu trong bảng.",
+        "solution": "Bảng giới thiệu các mức tiêu thụ điện khác nhau (50, 50, 100, 72 kWh) với đơn giá tương ứng (1.549, 1.600, 1.858, 2.340 đồng/kWh). Tổng cộng 511.730 đồng cộng với thuế GTGT 10% là 51.173 đồng, thành tiền 562.903 đồng."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f11-25-1",
+        "caption": "Hình 25.1. Một số thiết bị dùng điện",
+        "description": "Hình minh họa các thiết bị điện thông dụng bao gồm: a) Xe đạp điện, b) Ấm đun nước, c) Bóng đèn sợi đốt, d) Bóng đèn LED"
+      },
+      {
+        "id": "f11-25-2",
+        "caption": "Hình 25.2. Công tơ điện",
+        "description": "Hình ảnh công tơ điện được sử dụng để đo lượng điện năng tiêu thụ theo đơn vị kWh"
+      }
+    ]
+  },
+  "b5": {
+    "id": "b5",
+    "title": "Động năng. Thế năng. Sự chuyển hoá năng lượng trong dao động điều hoà",
+    "grade": 11,
+    "pageRange": [
+      20,
+      23
+    ],
+    "summary": "Bài học giới thiệu về động năng và thế năng trong dao động điều hoà, sự chuyển hoá năng lượng giữa chúng, cũng như cơ năng và các ứng dụng thực tiễn của dao động điều hoà.",
+    "learningObjectives": [
+      "Hiểu được công thức tính động năng của vật dao động điều hoà",
+      "Hiểu được công thức tính thế năng của vật dao động điều hoà",
+      "Nắm vững sự chuyển hoá năng lượng giữa động năng và thế năng",
+      "Áp dụng định luật bảo toàn năng lượng trong dao động điều hoà"
+    ],
+    "sections": [
+      {
+        "heading": "I. Động năng",
+        "bullets": [
+          "Động năng của vật dao động điều hoà được xác định bởi công thức: W_d = \\frac{1}{2}mv^2",
+          "Khi v = -\\omega A\\sin(\\omega t + \\varphi), động năng được biểu diễn: W_d = \\frac{1}{2}m\\omega^2 A^2 \\sin^2(\\omega t + \\varphi)",
+          "Biểu thức khác: W_d = \\frac{1}{2}m\\omega^2(A^2 - x^2)",
+          "Động năng tối đa: W_{d\\text{max}} = \\frac{1}{2}m\\omega^2 A^2 khi x = 0"
+        ]
+      },
+      {
+        "heading": "II. Thế năng",
+        "bullets": [
+          "Theo định luật bảo toàn năng lượng, thế năng được xác định: W_t = \\frac{1}{2}W_{d\\text{max}} - W_{d(x)} = \\frac{1}{2}m\\omega^2 x^2",
+          "Độ thị biểu diễn thế năng theo li độ x là một đường parabola với bề lõm hướng lên",
+          "Thế năng tối đa: W_{t\\text{max}} = W_{d\\text{max}} = \\frac{1}{2}m\\omega^2 A^2 khi x = \\pm A"
+        ]
+      },
+      {
+        "heading": "III. Cơ năng",
+        "bullets": [
+          "Cơ năng của vật dao động điều hoà là tổng động năng và thế năng: W = W_d + W_t = \\frac{1}{2}m\\omega^2 A^2",
+          "Cơ năng không đổi theo thời gian, luôn có giá trị: W = \\frac{1}{2}m\\omega^2 A^2",
+          "Động năng và thế năng thay đổi nhưng tổng của chúng luôn không đổi"
+        ]
+      },
+      {
+        "heading": "IV. Cơ năng của con lắc đơn và con lắc lò xo",
+        "bullets": [
+          "Con lắc lò xo: nếu bộ qua ma sát thì dao động của con lắc lò xo là dao động điều hoà",
+          "Thế năng của con lắc lò xo khi bị biến dạng: W_t = \\frac{1}{2}kx^2",
+          "So sánh với (5.2) suy ra: \\omega = \\sqrt{\\frac{k}{m}} và chu kì: T = 2\\pi\\sqrt{\\frac{m}{k}}"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Động năng",
+        "definition": "Năng lượng mà vật có được do chuyển động, trong dao động điều hoà được tính bằng W_d = \\frac{1}{2}mv^2"
+      },
+      {
+        "term": "Thế năng",
+        "definition": "Năng lượng mà vật có được do vị trí hoặc biến dạng của nó, trong dao động điều hoà được tính bằng W_t = \\frac{1}{2}m\\omega^2 x^2"
+      },
+      {
+        "term": "Cơ năng",
+        "definition": "Tổng động năng và thế năng của vật, trong dao động điều hoà không đổi theo thời gian"
+      },
+      {
+        "term": "Sự chuyển hoá năng lượng",
+        "definition": "Quá trình mà động năng và thế năng thay đổi tương ứng sao cho tổng cơ năng luôn không đổi"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "W_d = \\frac{1}{2}mv^2",
+        "meaning": "Công thức tính động năng của vật dao động"
+      },
+      {
+        "latex": "W_d = \\frac{1}{2}m\\omega^2 A^2 \\sin^2(\\omega t + \\varphi)",
+        "meaning": "Động năng biểu diễn theo thời gian trong dao động điều hoà"
+      },
+      {
+        "latex": "W_d = \\frac{1}{2}m\\omega^2(A^2 - x^2)",
+        "meaning": "Động năng biểu diễn theo li độ x"
+      },
+      {
+        "latex": "W_t = \\frac{1}{2}m\\omega^2 x^2",
+        "meaning": "Công thức tính thế năng theo li độ x"
+      },
+      {
+        "latex": "W = W_d + W_t = \\frac{1}{2}m\\omega^2 A^2",
+        "meaning": "Cơ năng của vật dao động điều hoà, đại lượng bảo toàn"
+      },
+      {
+        "latex": "W_t = \\frac{1}{2}kx^2",
+        "meaning": "Thế năng của con lắc lò xo khi bị biến dạng"
+      },
+      {
+        "latex": "\\omega = \\sqrt{\\frac{k}{m}}",
+        "meaning": "Tần số góc của con lắc lò xo"
+      },
+      {
+        "latex": "T = 2\\pi\\sqrt{\\frac{m}{k}}",
+        "meaning": "Chu kì của con lắc lò xo"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Hình 5.3 là đồ thị của động năng và thế năng của một vật dao động điều hoà theo li độ. Hãy phân tích sự chuyển hoá giữa động năng và thế năng bằng độ thị.",
+        "solution": "Động năng đạt cực đại tại x = 0 (vị trí cân bằng), thế năng đạt cực đại tại x = ±A (biên độ). Tổng W_d + W_t luôn bằng W (cơ năng) không đổi. Khi vật ở vị trí cân bằng, động năng lớn nhất, thế năng nhỏ nhất. Khi vật ở biên, động năng bằng 0, thế năng lớn nhất."
+      },
+      {
+        "prompt": "Hình 5.4 là đồ thị của động năng, thế năng và cơ năng của một vật dao động điều hoà theo thời gian. Xác định các mối quan hệ giữa chúng.",
+        "solution": "Động năng và thế năng dao động với tần số gấp đôi tần số dao động của vật (tần số 2ω). Cơ năng W là hằng số và bằng giá trị cực đại của cả động năng và thế năng. Tại các thời điểm: t = 0, t = T/4, t = T/2, t = 3T/8, động năng và thế năng có giá trị như thế nào (tính theo W)."
+      }
+    ],
+    "figures": [
+      {
+        "id": "f5.1",
+        "caption": "Hình 5.1. Sự biến thiên của động năng W_d theo li độ x",
+        "description": "Đồ thị biểu diễn động năng dạng parabol có bề lõm hướng xuống, đạt cực đại W_{d\\text{max}} tại x = 0"
+      },
+      {
+        "id": "f5.2",
+        "caption": "Hình 5.2. Sự biến thiên của thế năng W_t theo li độ x",
+        "description": "Đồ thị biểu diễn thế năng dạng parabol có bề lõm hướng lên, đạt cực tiểu tại x = 0 và cực đại W_{t\\text{max}} = W_{d\\text{max}} tại x = ±A"
+      },
+      {
+        "id": "f5.3",
+        "caption": "Hình 5.3. Sự biểu diễn của động năng W_d, thế năng W_t và cơ năng W theo li độ x",
+        "description": "Đồ thị kết hợp cả ba đại lượng, cho thấy W_d + W_t = W (không đổi) tại mọi vị trí x"
+      },
+      {
+        "id": "f5.4",
+        "caption": "Hình 5.4. Sự biểu diễn của động năng W_d, thế năng W_t và cơ năng W theo thời gian",
+        "description": "Đồ thị biểu diễn theo thời gian cho thấy W_d và W_t dao động với tần số 2ω, W là hằng số"
+      },
+      {
+        "id": "f5.5",
+        "caption": "Hình 5.5. Con lắc lò xo",
+        "description": "Hình vẽ minh họa con lắc lò xo treo thẳng đứng, cho thấy cấu trúc và hướng chuyển động"
+      }
+    ]
+  },
+  "b26": {
+    "id": "b26",
+    "title": "Thực hành: Đo suất điện động và điện trở trong của pin điện hoá",
+    "grade": 11,
+    "pageRange": [
+      111,
+      117
+    ],
+    "summary": "Bài thực hành giúp học sinh đo suất điện động và điện trở trong của pin điện hoá thông qua các phép đo điện áp và dòng điện với các thiết bị thí nghiệm khác nhau. Học sinh sẽ xác định mối liên hệ giữa suất điện động, điện trở trong với sự thay đổi của dòng điện.",
+    "learningObjectives": [
+      "Sử dụng được đồng hồ do điện đa năng để đo trực tiếp suất điện động của nguồn điện và điện trở trong của nguồn",
+      "Xác định suất điện động và điện trở trong của pin hoặc từ đồ thị quan hệ U và I",
+      "Thiết kế phương án thí nghiệm để đo suất điện động và điện trở trong của pin điện hoá"
+    ],
+    "sections": [
+      {
+        "heading": "I. DỤNG CỤ THÍ NGHIỆM",
+        "bullets": [
+          "Hai pin điện hoá loại 1,5 V (một pin cũ đã sử dụng gần hết điện, một pin mới chưa sử dụng)",
+          "Một biến trở 100 Ω",
+          "Hai đồng hồ do điện đa năng hiển số",
+          "Dây nối",
+          "Công tắc điện K",
+          "Điện trở bảo vệ R₀",
+          "Bảng lập mạch điện"
+        ]
+      },
+      {
+        "heading": "II. THIẾT KẾ PHƯƠNG ÁN THÍ NGHIỆM",
+        "bullets": [
+          "Trả lời các câu hỏi: Có thể sử dụng đồng hồ do điện đa năng để đo trực tiếp suất điện động của nguồn điện và điện trở trong của nguồn không? Tại sao?",
+          "Để xác định suất điện động và điện trở trong của pin cần do các đại lượng nào?",
+          "Thiết kế phương án thí nghiệm để đo suất điện động và điện trở trong của pin điện hoá"
+        ]
+      },
+      {
+        "heading": "III. TIẾN HÀNH THÍ NGHIỆM",
+        "bullets": [
+          "Bố trí thí nghiệm như Hình 26.2",
+          "Điều chỉnh biến trở đến giá trị 100 Ω",
+          "Đóng khoá K, bật động hộ do hiển số và cường độ dòng điện",
+          "Ghi giá trị hiển số U và cường độ dòng điện I vào bảng 26.1. Ngắt khoá K",
+          "Lặp lại 4 lần các bước 2, 3, 4 với giá trị R giảm dần",
+          "Đặn dấu các điểm thực nghiệm lên hệ trục tọa độ và vẽ đường thẳng gần nhất các điểm thực nghiệm",
+          "Kéo dài đường độ thị cắt trục tung tại U₀",
+          "Xác định suất điện động ℰ của pin là giá trị U₀",
+          "Chọn hai điểm M, N trên độ thị xác định các giá trị U, I trong từng và xác định điện trở trong theo công thức: r = (U_M - U_N)/(I_N - I_M)",
+          "Ước lượng sai số bằng độ thị"
+        ]
+      },
+      {
+        "heading": "IV. KẾT QUẢ THÍ NGHIỆM",
+        "bullets": [
+          "Nhận xét về dạng độ thị và mối quan hệ U và I đối với pin cũ và pin mới",
+          "Em có thể để xuất một phương án thí nghiệm khác để có thể đo suất điện động và điện trở"
+        ]
+      }
+    ],
+    "keyConcepts": [
+      {
+        "term": "Suất điện động (ℰ)",
+        "definition": "Độ lệch điện thế giữa hai cực của pin khi không có dòng điện chạy qua"
+      },
+      {
+        "term": "Điện trở trong (r)",
+        "definition": "Điện trở của chính nguồn điện làm giảm hiệu điện thế khi có dòng điện chạy qua"
+      },
+      {
+        "term": "Biến trở",
+        "definition": "Thiết bị điện có thể thay đổi giá trị điện trở để điều chỉnh dòng điện trong mạch"
+      },
+      {
+        "term": "Đồng hồ do điện đa năng",
+        "definition": "Thiết bị đo đa chức năng có thể đo điện áp, dòng điện, điện trở"
+      }
+    ],
+    "formulas": [
+      {
+        "latex": "U = \\mathcal{E} - Ir",
+        "meaning": "Quan hệ giữa hiệu điện thế (U), suất điện động (ℰ), dòng điện (I) và điện trở trong (r)"
+      },
+      {
+        "latex": "r = \\frac{U_M - U_N}{I_N - I_M}",
+        "meaning": "Công thức xác định điện trở trong từ hai điểm M, N trên đồ thị U-I"
+      }
+    ],
+    "examples": [
+      {
+        "prompt": "Trên nhãn của một ấm điện có ghi 220 V – 1 000 W. Sử dụng ấm điện này ở hiệu điện thế 200 V để đun nói 2 lít nước từ nhiệt độ 20°C. Tính thời gian đun nước. Biết hiệu suất của ấm là 90%, nhiệt dung riêng của nước là 4 190 J/kg.K, coi điện trở của ấm điện không thay đổi so với khi hoạt động ở chế độ bình thường.",
+        "solution": "Nhiệt lượng cần để đun nói 2 lít nước từ 20°C: Q = mc.ΔT = 2,4 × 190 × (100 - 20) = 670 400 J. Hiệu suất của ấm H = 90% nên năng lượng điện tiêu thụ: A = Q/H = 670 400/0,9 ≈ 744 889 J. Điện trở của ấm: R = U²ₐₘ/P = 220²/1000 = 48,4 Ω. Thời gian đun nước: t = A.R/U² = (744 889 × 48,4)/200² ≈ 901 s"
+      }
+    ],
+    "figures": [
+      {
+        "id": "f26-1",
+        "caption": "Hình 26.1. Bộ thí nghiệm đo suất điện động và điện trở trong của pin điện hoá",
+        "description": "Hình hiển thị các dụng cụ bao gồm: hai đồng hồ do điện đa năng hiển số (3), một biến trở 100 Ω (2), hai pin 1,5 V (1), điện trở bảo vệ R₀ (6), công tắc điện K (5), dây nối (4), và bảng lập mạch điện (7)"
+      },
+      {
+        "id": "f26-2",
+        "caption": "Hình 26.2. Sơ đồ mạch điện thí nghiệm đo suất điện động và điện trở trong của pin điện hoá",
+        "description": "Sơ đồ mạch điện cho thí nghiệm với pin điện hoá, biến trở R, điện trở bảo vệ R₀, công tắc K, hai đồng hồ đo điện áp (V) và dòng điện (A)"
+      },
+      {
+        "id": "f26-3",
+        "caption": "Hình 26.3. Độ thị quan hệ U và I với pin mới",
+        "description": "Đồ thị biểu diễn mối quan hệ tuyến tính giữa hiệu điện thế U (trục tung) và dòng điện I (trục hoành), cho thấy cách xác định suất điện động U₀ từ giao điểm với trục tung và điện trở trong r từ độ dốc của đường thẳng"
+      }
+    ]
+  }
+}
