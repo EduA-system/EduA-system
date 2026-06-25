@@ -166,6 +166,13 @@ body::-webkit-scrollbar {
   margin-top: 14px;
 }
 
+.lesson-document-editor .activity-sub-title {
+  margin-top: 18px;
+  margin-left: 18px;
+  font-size: 15px;
+  color: #3b3733;
+}
+
 .lesson-document-editor ul,
 .lesson-document-editor ol {
   margin-top: 12px;
