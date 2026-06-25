@@ -7,10 +7,19 @@ const assistantChips = [
   { label: "Tạo câu hỏi", icon: "chipQuestion" },
 ];
 
-export function AssistantPanel() {
+interface AssistantPanelProps {
+  collapsed?: boolean;
+}
+
+export function AssistantPanel({ collapsed = false }: AssistantPanelProps) {
   return (
-    <aside className="hidden h-screen w-[320px] shrink-0 overflow-y-auto border-l border-[#d9d9d9] bg-white xl:flex xl:flex-col">
-      <div className="flex-1 px-5 py-4">
+    <aside
+      className={`hidden h-full shrink-0 overflow-y-auto border-l border-[#d9d9d9] bg-white transition-[width,opacity] duration-300 xl:flex xl:flex-col ${
+        collapsed ? "w-0 opacity-0" : "w-[320px] opacity-100"
+      }`}
+      aria-hidden={collapsed}
+    >
+      <div className="min-w-[320px] flex-1 px-5 py-4">
         <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#6b6b6b]">
           <span className="flex size-4 items-center justify-center rounded-[5px] border border-[#ff9571]/25 bg-[#fff0ea] text-[#e8724a]">
             <DashboardIcon name="aiBadge" className="size-[9px]" />
@@ -22,7 +31,7 @@ export function AssistantPanel() {
           tinh gọn nội dung, bổ sung hoạt động nhóm hoặc tạo câu hỏi kiểm tra.
         </div>
       </div>
-      <div className="flex flex-wrap gap-1.5 px-5 py-2">
+      <div className="min-w-[320px] flex flex-wrap gap-1.5 px-5 py-2">
         {assistantChips.map((chip) => (
           <button key={chip.label} className="flex items-center gap-1.5 rounded-full border border-[#ff9571] bg-[#fff0ea] px-3 py-1.5 text-[11px] font-medium text-[#ff9571]">
             <DashboardIcon name={chip.icon} className="size-2.5" />
@@ -30,7 +39,7 @@ export function AssistantPanel() {
           </button>
         ))}
       </div>
-      <div className="px-5 pb-5 pt-3">
+      <div className="min-w-[320px] px-5 pb-5 pt-3">
         <div className="flex items-center gap-2 rounded-[12px] border border-[#d8d1c9] bg-[#faf7f4] px-[15px] py-[11px]">
           <span className="flex-1 text-[13px] text-[#171717]/50">Nhập yêu cầu chỉnh sửa...</span>
           <button className="flex size-7 items-center justify-center rounded-lg bg-[#d8d1c9] text-white" aria-label="Gửi yêu cầu">
