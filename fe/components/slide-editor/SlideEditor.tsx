@@ -25,7 +25,7 @@ export const dragRefGlobal = {
   current: null as DragState | null,
 };
 
-export function SlideEditor() {
+export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomMode, setZoomMode] = useState<"fit" | number>("fit");
   const [lockAspect, setLockAspect] = useState(false);
@@ -49,8 +49,9 @@ export function SlideEditor() {
     [clearSelection]
   );
 
-  // Nạp slides đã lưu + auto-save (debounce) qua subscribe để không re-render khi kéo.
+  // Nạp slides đã lưu (bỏ qua khi đang stream deck mới).
   useEffect(() => {
+    if (skipInitialLoad) return;
     const saved = loadSlides();
     if (saved) {
       useEditorStore.setState({
@@ -60,6 +61,10 @@ export function SlideEditor() {
         history: { past: [], future: [] },
       });
     }
+  }, [skipInitialLoad]);
+
+  // Auto-save (debounce) qua subscribe để không re-render khi kéo.
+  useEffect(() => {
     let t: ReturnType<typeof setTimeout> | null = null;
     const unsub = useEditorStore.subscribe((state, prev) => {
       if (state.slides === prev.slides) return;

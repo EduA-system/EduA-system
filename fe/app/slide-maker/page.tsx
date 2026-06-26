@@ -1,15 +1,16 @@
-import { Sidebar } from "@/components/layout/Sidebar";
-import { SlideEditor } from "@/components/slide-editor/SlideEditor";
+import { Suspense } from "react";
+import { SlideMakerClient } from "@/components/slide-maker/SlideMakerClient";
 
 export default function SlideMakerPage() {
   return (
-    <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] text-[#171717]">
-      <div className="flex h-full w-full">
-        <Sidebar activeHref="/slide-create" />
-        <section className="min-w-0 flex-1 overflow-hidden">
-          <SlideEditor />
-        </section>
-      </div>
-    </main>
+    <Suspense
+      fallback={
+        <main className="flex h-screen items-center justify-center bg-[#f5f1ec] text-sm text-[#5c5b6e]">
+          Đang tải trình soạn slide…
+        </main>
+      }
+    >
+      <SlideMakerClient />
+    </Suspense>
   );
 }
