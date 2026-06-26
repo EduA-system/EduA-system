@@ -1,17 +1,27 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Sidebar } from "../layout/Sidebar";
 import { DashboardIcon } from "../ui/DashboardIcon";
-import { lessons, type LessonCard } from "./slideData";
+import {
+  buildInlinePlan,
+  lessons,
+  STYLE_OPTIONS,
+  type LessonCard,
+} from "./slideData";
+import { writeSlideCreateSession } from "@/lib/slide-create/session";
 
 type Tab = "library" | "upload";
 
 export function SlideCreateDashboard() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("library");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "Vật lý" | "Hóa học">("all");
   const [selectedId, setSelectedId] = useState<string>("newton-2");
+  const [slideCount, setSlideCount] = useState(12);
+  const [styleHint, setStyleHint] = useState<string>(STYLE_OPTIONS[0]);
 
   const visible = useMemo<LessonCard[]>(() => {
     return lessons.filter((lesson) => {
@@ -26,6 +36,21 @@ export function SlideCreateDashboard() {
 
   const selected =
     lessons.find((lesson) => lesson.id === selectedId) ?? null;
+
+  function handleCreateSlide() {
+    if (!selected) return;
+    writeSlideCreateSession({
+      lessonCardId: selected.id,
+      lessonTitle: selected.title,
+      lessonSummary: selected.description,
+      subject: selected.subject,
+      grade: selected.grade,
+      styleHint,
+      slideCount,
+      inlinePlan: buildInlinePlan(selected),
+    });
+    router.push("/slide-create/outline");
+  }
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f9f8f3] text-[#1a1a2e]">
@@ -103,7 +128,14 @@ export function SlideCreateDashboard() {
           </div>
 
           {/* Right config panel */}
-          <ConfigPanel selected={selected} />
+          <ConfigPanel
+            selected={selected}
+            slideCount={slideCount}
+            styleHint={styleHint}
+            onSlideCountChange={setSlideCount}
+            onStyleChange={setStyleHint}
+            onCreate={handleCreateSlide}
+          />
         </div>
       </section>
     </main>
@@ -325,7 +357,21 @@ function UploadPanel() {
   );
 }
 
-function ConfigPanel({ selected }: { selected: LessonCard | null }) {
+function ConfigPanel({
+  selected,
+  slideCount,
+  styleHint,
+  onSlideCountChange,
+  onStyleChange,
+  onCreate,
+}: {
+  selected: LessonCard | null;
+  slideCount: number;
+  styleHint: string;
+  onSlideCountChange: (value: number) => void;
+  onStyleChange: (value: string) => void;
+  onCreate: () => void;
+}) {
   return (
     <aside className="hidden w-[340px] shrink-0 flex-col overflow-y-auto border-l border-[rgba(26,26,46,0.07)] bg-[#f9f8f3] xl:flex">
       <div className="flex items-center gap-1.5 px-6 pb-3 pt-6 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#aeacb8]">
@@ -364,7 +410,7 @@ function ConfigPanel({ selected }: { selected: LessonCard | null }) {
         <div className="mt-5">
           <FieldLabel>Số slide dự kiến</FieldLabel>
           <div className="mt-2">
-            <StepperField defaultValue={12} />
+            <StepperField value={slideCount} onChange={onSlideCountChange} />
           </div>
         </div>
 
@@ -372,7 +418,7 @@ function ConfigPanel({ selected }: { selected: LessonCard | null }) {
         <div className="mt-5">
           <FieldLabel>Phong cách thiết kế</FieldLabel>
           <div className="mt-2">
-            <ConfigSelect options={["Tối giản", "Học thuật", "Sống động", "Truyền cảm hứng"]} />
+            <ConfigSelect options={[...STYLE_OPTIONS]} value={styleHint} onChange={onStyleChange} />
           </div>
         </div>
 
@@ -399,6 +445,7 @@ function ConfigPanel({ selected }: { selected: LessonCard | null }) {
         <button
           type="button"
           disabled={!selected}
+          onClick={onCreate}
           className="flex h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#1c1b2e] text-[13px] font-medium text-[#f9f8f3] transition enabled:hover:bg-[#2a2940] disabled:cursor-not-allowed disabled:bg-[rgba(26,26,46,0.15)] disabled:text-[#aeacb8]"
         >
           <DashboardIcon name="createSlide" className="size-4" />
@@ -418,13 +465,20 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ConfigSelect({ options }: { options: string[] }) {
-  const [value, setValue] = useState(options[0]);
+function ConfigSelect({
+  options,
+  value,
+  onChange,
+}: {
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <div className="relative">
       <select
         value={value}
-        onChange={(event) => setValue(event.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         className="h-[40px] w-full cursor-pointer appearance-none rounded-xl border border-[rgba(26,26,46,0.09)] bg-white px-3 text-[12px] font-medium text-[#1a1a2e] focus:outline-none"
       >
         {options.map((option) => (
@@ -440,13 +494,18 @@ function ConfigSelect({ options }: { options: string[] }) {
   );
 }
 
-function StepperField({ defaultValue }: { defaultValue: number }) {
-  const [value, setValue] = useState(defaultValue);
+function StepperField({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
   return (
     <div className="flex h-[40px] items-center justify-between rounded-xl border border-[rgba(26,26,46,0.09)] bg-white px-2">
       <button
         type="button"
-        onClick={() => setValue((v) => Math.max(1, v - 1))}
+        onClick={() => onChange(Math.max(1, value - 1))}
         className="flex size-8 items-center justify-center rounded-lg text-[#5c5b6e] transition hover:bg-[rgba(26,26,46,0.05)]"
         aria-label="Giảm"
       >
@@ -457,7 +516,7 @@ function StepperField({ defaultValue }: { defaultValue: number }) {
       <span className="text-[13px] font-semibold text-[#1a1a2e]">{value}</span>
       <button
         type="button"
-        onClick={() => setValue((v) => Math.min(60, v + 1))}
+        onClick={() => onChange(Math.min(60, value + 1))}
         className="flex size-8 items-center justify-center rounded-lg text-[#5c5b6e] transition hover:bg-[rgba(26,26,46,0.05)]"
         aria-label="Tăng"
       >

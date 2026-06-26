@@ -351,7 +351,7 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
         ) : null}
 
         {openMenu === "table" ? (
-          <Popup align="right">
+          <Popup align="right" widthClass="w-max">
             <TableGrid
               onPick={(rows, cols) => {
                 setOpenMenu(null);
@@ -555,7 +555,10 @@ function TableGrid({ onPick }: { onPick: (rows: number, cols: number) => void })
       <div className="mb-1.5 text-center text-[12px] text-[#6b625a]">
         {hover.rows > 0 ? `${hover.rows} × ${hover.cols}` : "Chọn kích thước"}
       </div>
-      <div className="grid grid-cols-8 gap-0.5" onMouseLeave={() => setHover({ rows: 0, cols: 0 })}>
+      <div
+        className="grid w-max shrink-0 grid-cols-8 gap-0.5"
+        onMouseLeave={() => setHover({ rows: 0, cols: 0 })}
+      >
         {Array.from({ length: maxRows * maxCols }).map((_, index) => {
           const row = Math.floor(index / maxCols) + 1;
           const col = (index % maxCols) + 1;
@@ -567,7 +570,7 @@ function TableGrid({ onPick }: { onPick: (rows: number, cols: number) => void })
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={() => setHover({ rows: row, cols: col })}
               onClick={() => onPick(row, col)}
-              className={`size-5 rounded-[3px] border transition ${
+              className={`size-5 shrink-0 rounded-[3px] border transition ${
                 filled ? "border-[#d97757] bg-[#f6eadf]" : "border-[#e8e2d9] bg-white"
               }`}
             />
