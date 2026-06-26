@@ -99,6 +99,7 @@ function lessonPlan5512ToHtml(plan: LessonPlan5512) {
 
 interface LessonEditorProps {
   margins: { left: number; right: number };
+  editor: Editor | null;
 }
 
 export function LessonEditor({ margins }: LessonEditorProps) {
@@ -145,8 +146,6 @@ export function LessonEditor({ margins }: LessonEditorProps) {
             paddingLeft: margins.left,
             paddingRight: margins.right,
           }}
-          dangerouslySetInnerHTML={{ __html: initialHtml }}
-          onInput={handleInput}
         />
       </div>
     </div>

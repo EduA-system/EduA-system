@@ -1,16 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useEditor } from "@tiptap/react";
+import { lessonMock } from "@/data/lessonMock";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
 import { EditorTools } from "../LessonEditor";
 import { LessonEditor } from "../LessonEditor";
+import { editorExtensions } from "../LessonEditor/editorConfig";
 import { Ruler } from "../LessonEditor/Ruler";
 
 export function LessonEditDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiCollapsed, setAiCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
+  const editor = useEditor({
+    extensions: editorExtensions,
+    content: lessonMock.contentHtml,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: "lesson-document-editor min-h-[calc(100vh-188px)] text-[#2b2926] outline-none",
+      },
+    },
+  });
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
@@ -39,7 +52,7 @@ export function LessonEditDashboard() {
               </div>
 
               <div className="flex min-w-0 flex-1 items-center justify-center px-2">
-                <EditorTools />
+                <EditorTools editor={editor} />
               </div>
 
               <button
@@ -55,7 +68,7 @@ export function LessonEditDashboard() {
           </header>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
-            <LessonEditor margins={margins} />
+            <LessonEditor margins={margins} editor={editor} />
           </div>
         </section>
 
