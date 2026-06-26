@@ -19,7 +19,7 @@ export function SlideCreateDashboard() {
   const [tab, setTab] = useState<Tab>("library");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "Vật lý" | "Hóa học">("all");
-  const [selectedId, setSelectedId] = useState<string>("newton-2");
+  const [selectedId, setSelectedId] = useState<string>("bai-19-toc-do-phan-ung");
   const [slideCount, setSlideCount] = useState(12);
   const [styleHint, setStyleHint] = useState<string>(STYLE_OPTIONS[0]);
 

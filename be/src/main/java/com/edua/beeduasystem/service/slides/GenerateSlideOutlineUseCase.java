@@ -57,7 +57,8 @@ public class GenerateSlideOutlineUseCase {
                             s.path("title").asText(),
                             textOrNull(s, "kind"),
                             textOrNull(s, "pedagogicalRole"),
-                            textOrNull(s, "layoutHint")
+                            textOrNull(s, "layoutHint"),
+                            textOrNull(s, "content")
                     ));
                 }
                 parts.add(new PartDto(p.path("id").asText(), p.path("title").asText(), slides));

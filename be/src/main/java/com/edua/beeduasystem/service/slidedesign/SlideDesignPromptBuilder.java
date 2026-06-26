@@ -793,7 +793,7 @@ public class SlideDesignPromptBuilder {
 
               &lt;span data-layer="content"
                     style="margin-top:4px; font-family:Inter,sans-serif;
-                           font-size:13px; font-weight:600;
+                           font-size:9px; font-weight:600;
                            letter-spacing:0.10em;
                            text-transform:uppercase;
                            color:[readable on dashed debug bg];
@@ -826,7 +826,7 @@ public class SlideDesignPromptBuilder {
                   &lt;h1 data-layer="content"
                        style="margin:6px 0 0;
                               font-family:Inter,sans-serif;
-                              font-size:[40–72px]; font-weight:800;
+                              font-size:[24–42px]; font-weight:800;
                               letter-spacing:-0.02em; line-height:1.05;
                               color:[mood-dark or mood-light];
                               z-index:70;"&gt;…&lt;/h1&gt;
@@ -838,7 +838,7 @@ public class SlideDesignPromptBuilder {
                   &lt;ul data-layer="content"
                        style="margin:6px 0 0; padding-left:18px;
                               font-family:Inter,sans-serif;
-                              font-size:[16–20px]; font-weight:400;
+                              font-size:[11–13px]; font-weight:400;
                               line-height:1.5; color:[mood-color];
                               z-index:65;"&gt;
                     &lt;li&gt;…&lt;/li&gt;
@@ -866,7 +866,7 @@ public class SlideDesignPromptBuilder {
                               border:1px dashed #94a3b8;
                               display:flex; align-items:center;
                               justify-content:center; color:#64748b;
-                              font-size:13px; font-style:italic;
+                              font-size:9px; font-style:italic;
                               font-family:Inter,sans-serif;
                               z-index:65;"&gt;
                     [Sơ đồ: short Vietnamese caption]
@@ -882,7 +882,7 @@ public class SlideDesignPromptBuilder {
                   &lt;small data-layer="content"
                           style="margin:6px 0 0;
                                  font-family:Inter,sans-serif;
-                                 font-size:[12–14px]; font-weight:500;
+                                 font-size:[9–10px]; font-weight:500;
                                  color:[mood-muted]; line-height:1.4;
                                  z-index:65;"&gt;…&lt;/small&gt;
                   Short caption text, ≤ data-max-chars.
@@ -891,7 +891,7 @@ public class SlideDesignPromptBuilder {
                 → APPEND ONE
                   &lt;span data-layer="content"
                          style="margin:6px 0 0;
-                                font-size:[24–40px];
+                                font-size:[16–26px];
                                 color:[mood-color]; z-index:65;"&gt;
                     \\( formula \\)
                   &lt;/span&gt;
@@ -1036,6 +1036,9 @@ public class SlideDesignPromptBuilder {
         user.append("Every new body structural child and every new body zone you emit ");
         user.append("MUST have y ≥ ").append(bodyTop).append(" (the header above and its ");
         user.append("bottom gap are immutable).\n\n");
+        user.append("Outline ở trên chứa NỘI DUNG THẬT giáo viên đã soạn cho slide này. ");
+        user.append("Ước lượng lượng chữ thật đó để chọn số zone và đặt data-max-chars/data-max-lines ");
+        user.append("vừa khít — đủ chỗ cho toàn bộ nội dung, không tạo zone thừa, không bỏ sót ý.\n\n");
         user.append("Pick ONE body layout pattern consistent with the existing skin. ");
         user.append("Emit the COMPLETE updated HTML: PRIOR_HTML preserved byte-for-byte ");
         user.append("(background + decoration + header), then 0–3 body structural children, ");
@@ -1075,6 +1078,9 @@ public class SlideDesignPromptBuilder {
         user.append("Fill each body zone with real Vietnamese content drawn from ");
         user.append("the outline, mapping zones (hero/body/aside/caption/formula) ");
         user.append("according to their data-zone id and data-content-hint.\n\n");
+        user.append("QUAN TRỌNG: Outline ở trên là NỘI DUNG THẬT giáo viên đã soạn cho slide này. ");
+        user.append("Dùng ĐÚNG nội dung đó (câu hỏi, ví dụ, số liệu, các bước, đáp án) — giữ nguyên chi tiết quan trọng. ");
+        user.append("TUYỆT ĐỐI KHÔNG bịa ví dụ/bài tập khác, KHÔNG đưa nội dung lệch chủ đề so với outline.\n\n");
         user.append("PRESERVE the dashed outline + two legend spans on EVERY header ");
         user.append("and zone div — append content as ADDITIONAL children AFTER ");
         user.append("those legend spans. Do not modify any opening tag, inline ");

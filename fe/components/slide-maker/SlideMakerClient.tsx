@@ -46,7 +46,7 @@ export function SlideMakerClient() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const replaceSlides = useEditorStore((s) => s.replaceSlides);
-  const generationRef = useRef<{ sessionId: string; apiStarted: boolean } | null>(null);
+  const generationRef = useRef<{ sessionId: string; designStarted: boolean } | null>(null);
   const disconnectRef = useRef<(() => void) | null>(null);
   const activeRef = useRef<ActiveGeneration | null>(null);
 
@@ -99,20 +99,23 @@ export function SlideMakerClient() {
 
     const isNewSession = generationRef.current?.sessionId !== active.sessionId;
     if (isNewSession) {
-      generationRef.current = { sessionId: active.sessionId, apiStarted: false };
+      generationRef.current = { sessionId: active.sessionId, designStarted: false };
       replaceSlides(skeletonSlidesFromParts(active.parts));
     }
 
+    let cancelled = false;
+
     // ── Design mode: client-side 3-step HTML pipeline (no STOMP) ──
+    // Không dùng cancelled ở đây: Strict Mode chạy effect 2 lần nhưng pipeline lần 1
+    // vẫn chạy nền; designStarted chỉ chặn khởi động trùng.
     if (active.mode === "design") {
-      if (!generationRef.current?.apiStarted) {
-        generationRef.current = { sessionId: active.sessionId, apiStarted: true };
+      if (!generationRef.current?.designStarted) {
+        generationRef.current = { sessionId: active.sessionId, designStarted: true };
         logSlideApi("start design pipeline", {
           sessionId: active.sessionId,
           topic: active.topic,
           slideCount: countSlides(active),
         });
-        let fatal = false;
         void runDesignPipeline(
           {
             topic: active.topic,
@@ -121,6 +124,15 @@ export function SlideMakerClient() {
             parts: active.parts,
           },
           {
+            onSkinReady: (skin) => {
+              useEditorStore.setState((state) => ({
+                slides: state.slides.map((s) =>
+                  s.elements.length === 0
+                    ? { ...s, bg: skin.bg, elements: skin.elements.map((e) => ({ ...e })) }
+                    : s,
+                ),
+              }));
+            },
             onSlideReady: (slideId, result, title) => {
               upsertSlide({
                 id: slideId,
@@ -131,7 +143,6 @@ export function SlideMakerClient() {
             },
             onProgress: (ready, total) => setProgress({ ready, total }),
             onError: (message) => {
-              fatal = true;
               setStreaming(false);
               setErrorMessage(message);
               clearActiveGeneration();
@@ -139,7 +150,6 @@ export function SlideMakerClient() {
             },
           },
         ).then(() => {
-          if (fatal) return;
           setStreaming(false);
           setDoneMessage("Sinh slide xong.");
           clearActiveGeneration();
@@ -152,6 +162,7 @@ export function SlideMakerClient() {
     const { disconnect } = connectSlideStream({
       topic: active.topic,
       onEvent: (event) => {
+        if (cancelled) return;
         const current = activeRef.current;
         if (current) handleEvent(event, current);
       },
@@ -161,36 +172,32 @@ export function SlideMakerClient() {
     });
     disconnectRef.current = disconnect;
 
-    if (!generationRef.current?.apiStarted) {
-      generationRef.current = {
-        sessionId: active.sessionId,
-        apiStarted: true,
-      };
-      logSlideApi("start generate-parts", {
-        sessionId: active.sessionId,
-        topic: active.topic,
-        slideCount: countSlides(active),
-        parts: active.parts,
-      });
+    logSlideApi("start generate-parts", {
+      sessionId: active.sessionId,
+      topic: active.topic,
+      slideCount: countSlides(active),
+      parts: active.parts,
+    });
 
-      void generateParts({
-        sessionId: active.sessionId,
-        lessonId: active.lessonId,
-        lessonTitle: active.lessonTitle,
-        lessonSummary: active.lessonSummary,
-        grade: active.grade,
-        styleHint: active.styleHint,
-        parts: active.parts,
-      }).catch((err) => {
-        console.error("[EDUA slide] [API] generate-parts failed", err);
-        setStreaming(false);
-        setErrorMessage(err instanceof Error ? err.message : String(err));
-        clearActiveGeneration();
-        router.replace("/slide-maker");
-      });
-    }
+    void generateParts({
+      sessionId: active.sessionId,
+      lessonId: active.lessonId,
+      lessonTitle: active.lessonTitle,
+      lessonSummary: active.lessonSummary,
+      grade: active.grade,
+      styleHint: active.styleHint,
+      parts: active.parts,
+    }).catch((err) => {
+      if (cancelled) return;
+      console.error("[EDUA slide] [API] generate-parts failed", err);
+      setStreaming(false);
+      setErrorMessage(err instanceof Error ? err.message : String(err));
+      clearActiveGeneration();
+      router.replace("/slide-maker");
+    });
 
     return () => {
+      cancelled = true;
       disconnectRef.current?.();
       disconnectRef.current = null;
     };

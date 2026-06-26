@@ -1,4 +1,9 @@
 import type { InlineLessonPlan } from "@/lib/api/slides";
+import {
+  BAI19_LESSON_ID,
+  bai19InlinePlan,
+  bai19LessonCard,
+} from "./bai19SlideLesson";
 
 export type LessonCard = {
   id: string;
@@ -12,6 +17,7 @@ export type LessonCard = {
 };
 
 export const lessons: LessonCard[] = [
+  bai19LessonCard,
   {
     id: "newton-2",
     title: "Định luật II Newton",
@@ -107,6 +113,9 @@ export function parseGradeLevel(grade: string): number {
 }
 
 export function buildInlinePlan(lesson: LessonCard): InlineLessonPlan {
+  if (lesson.id === BAI19_LESSON_ID) {
+    return bai19InlinePlan;
+  }
   return {
     lessonTitle: lesson.title,
     gradeLevel: parseGradeLevel(lesson.grade),

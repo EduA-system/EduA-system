@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
 import { generateOutline, type OutlinePart } from "@/lib/api/slides";
@@ -57,11 +57,9 @@ export default function SlideOutlinePage() {
   const [confirming, setConfirming] = useState(false);
 
   const { session, status, parts, error, needsOutline } = pageState;
-  const outlineRequestedRef = useRef(false);
 
   useEffect(() => {
-    if (!needsOutline || !session || outlineRequestedRef.current) return;
-    outlineRequestedRef.current = true;
+    if (!needsOutline || !session) return;
 
     let cancelled = false;
 

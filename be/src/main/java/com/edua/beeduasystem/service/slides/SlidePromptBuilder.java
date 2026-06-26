@@ -83,9 +83,15 @@ public class SlidePromptBuilder {
                 Mỗi slide là một màn 16:9 độc lập, nội dung súc tích.
 
                 Với mỗi slide, hãy trả về:
+                - `title`: tiêu đề ngắn gọn của slide.
                 - `pedagogicalRole`: hook | explain | derive | demonstrate | practice | recap.
                 - `layoutHint`: title | bullets | formula | image-focus | comparison | worked-example.
                 - `kind`: alias tương thích ngược (intro/concept/formula/example/summary) suy ra từ role nếu có.
+                - `content`: NỘI DUNG THẬT của slide, TRÍCH TỪ giáo án ở trên (câu hỏi, ví dụ, số liệu,
+                  các bước, đáp án...). PHÂN BỔ nội dung của mỗi hoạt động vào các slide thuộc phần đó —
+                  mỗi slide lấy đúng phần nội dung của nó, không trùng lặp. TUYỆT ĐỐI KHÔNG bịa nội dung
+                  ngoài giáo án, KHÔNG tóm tắt làm mất chi tiết quan trọng. Giữ nguyên câu hỏi/số liệu/đáp án.
+                  Dùng văn bản thuần, xuống dòng (\\n) để phân ý.
 
                 TRẢ LỜI ĐÚNG ĐỊNH DẠNG JSON sau, KHÔNG markdown fence, KHÔNG text ngoài JSON:
                 {
@@ -95,8 +101,8 @@ public class SlidePromptBuilder {
                       "id": "p1",
                       "title": "Tên phần (= tên hoạt động trong giáo án)",
                       "slides": [
-                        {"id": "p1s1", "title": "Tên slide 1", "pedagogicalRole": "hook", "layoutHint": "title", "kind": "intro"},
-                        {"id": "p1s2", "title": "Tên slide 2", "pedagogicalRole": "explain", "layoutHint": "bullets", "kind": "concept"}
+                        {"id": "p1s1", "title": "Tên slide 1", "pedagogicalRole": "hook", "layoutHint": "title", "kind": "intro", "content": "Nội dung thật trích từ hoạt động cho slide này"},
+                        {"id": "p1s2", "title": "Tên slide 2", "pedagogicalRole": "explain", "layoutHint": "bullets", "kind": "concept", "content": "..."}
                       ]
                     }
                   ]

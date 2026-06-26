@@ -13,6 +13,12 @@ import {
 
 const HANDLE_SIZE = 8;
 const ROTATE_HANDLE_OFFSET = 24;
+const SELECTION_LAYER_Z_INDEX = 15000;
+
+// Chỉ 4 góc mới scale cỡ chữ; handle cạnh chỉ resize khung.
+const CORNER_HANDLES = new Set(["nw", "ne", "sw", "se"]);
+// Làm chậm tốc độ tăng cỡ chữ so với khung (0..1, càng nhỏ càng chậm).
+const FONT_SCALE_DAMPING = 0.5;
 
 const HANDLES = [
   { id: "nw", cursor: "nw-resize", x: 0, y: 0 },
@@ -97,11 +103,13 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
             w: newRect.w,
             h: newRect.h,
           };
-          // Text: scale cỡ chữ theo tỉ lệ chiều cao.
-          if (startEl.type === "text" && startEl.h > 0) {
+          // Text: chỉ scale cỡ chữ khi kéo handle góc, và làm chậm tốc độ tăng.
+          if (startEl.type === "text" && startEl.h > 0 && CORNER_HANDLES.has(handleId)) {
+            const rawScale = newRect.h / startEl.h;
+            const dampedScale = 1 + (rawScale - 1) * FONT_SCALE_DAMPING;
             patch.fontSize = Math.max(
               6,
-              Math.min(200, Math.round(startEl.fontSize * (newRect.h / startEl.h)))
+              Math.min(200, Math.round(startEl.fontSize * dampedScale))
             );
           }
           return { id: startEl.id, patch };
@@ -192,7 +200,15 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
     const el = single as LineElement;
     return (
       <svg
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible", pointerEvents: "none" }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          overflow: "visible",
+          pointerEvents: "none",
+          zIndex: SELECTION_LAYER_Z_INDEX,
+        }}
       >
         <circle
           cx={el.x1}
@@ -227,6 +243,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
         width: bbox.w,
         height: bbox.h,
         pointerEvents: "none",
+        zIndex: SELECTION_LAYER_Z_INDEX,
       }}
     >
       <div
