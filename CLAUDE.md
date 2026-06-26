@@ -52,13 +52,13 @@ npm install                     # installs husky and activates Git hooks
 - **App Router** lives in `fe/app/`. Routes are folders under `app/`.
   - `/` → re-exports `fe/app/home/page.tsx`
   - `/home` → landing page (hero, ticker, video blocks)
-  - `/lesson-create`, `/lesson-edit`, `/homepage`
+  - `/lesson-create`, `/lesson-edit`, `/homepage`, `/slide-maker`
 - **Import alias:** `@/*` maps to the `fe/` root (e.g. `@/app/...`).
 - **Tailwind v4** is wired through PostCSS (`@tailwindcss/postcss`), **not** a `tailwind.config.js`.
 - **Fonts:** Inter (Google Fonts, Latin + Vietnamese) + SVN-Linux Libertine (local TTF). Loaded in `app/layout.tsx`.
 - **Language:** `lang="vi"` on `<html>`.
 - **Metadata:** title "EDUA", description "AI assistant system for educators".
-- **Components:** Shared components under `fe/components/` (LessonEditor, dashboard, layout, ui).
+- **Components:** Shared components under `fe/components/` (LessonEditor, lesson-plan, dashboard, layout, ui).
 - **Static assets:** `fe/public/` (dashboard icons, home page SVGs/videos, screenshots).
 
 ### Critical: Next.js 16 Has Breaking Changes
