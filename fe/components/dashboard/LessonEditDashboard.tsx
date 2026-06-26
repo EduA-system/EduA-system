@@ -23,8 +23,8 @@ export function LessonEditDashboard() {
           <EditorToolbar>
             <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
               {/* HÀNG TRÊN: toggle + Lưu + tiêu đề + (format hàng trên) + AI toggle */}
-              <div className="@container flex h-11 items-center gap-2 px-3">
-                {/* Nhóm trái: toggle + Lưu + tiêu đề (lệch trái) */}
+              <div className="relative flex h-11 items-center px-3">
+                {/* Nhóm trái: toggle + Lưu + tiêu đề */}
                 <div className="flex min-w-0 shrink items-center gap-2">
                   <button
                     type="button"
@@ -49,15 +49,15 @@ export function LessonEditDashboard() {
                   />
                 </div>
 
-                {/* Nhóm giữa: công cụ (căn giữa phần còn lại của hàng) */}
-                <div className="flex min-w-0 flex-1 items-center justify-center">
-                  <div className="hidden shrink-0 items-center md:flex">
+                {/* Nhóm giữa: công cụ – tuyệt đối căn giữa header */}
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="pointer-events-auto hidden shrink-0 items-center md:flex">
                     <EditorTopTools />
                   </div>
                 </div>
 
                 {/* Nhóm phải: AI toggle */}
-                <div className="flex shrink-0 items-center">
+                <div className="ml-auto flex shrink-0 items-center">
                   <button
                     type="button"
                     onClick={() => setAiCollapsed((current) => !current)}

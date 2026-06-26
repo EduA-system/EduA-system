@@ -23,6 +23,13 @@ const ALIGN_OPTIONS = [
   { command: "justifyFull", label: "Justify", icon: AlignJustifyIcon },
 ] as const;
 
+const SPECIAL_SYMBOLS = [
+  "×", "÷", "±", "∓", "√", "∛", "≈", "≠", "≤", "≥",
+  "°", "′", "″", "∞", "∝", "∑", "∏", "∫", "∂", "∇",
+  "α", "β", "γ", "δ", "θ", "λ", "μ", "π", "ρ", "σ",
+  "τ", "φ", "ω", "Δ", "Ω", "→", "←", "↔", "⇌", "·",
+];
+
 type TextStyleValue = (typeof TEXT_STYLES)[number]["value"];
 type FontFamilyValue = (typeof FONT_FAMILIES)[number];
 type AlignCommand = (typeof ALIGN_OPTIONS)[number]["command"];
@@ -34,14 +41,14 @@ interface ToolbarState {
   alignCommand: AlignCommand;
   openMenu: string | null;
   setOpenMenu: React.Dispatch<React.SetStateAction<string | null>>;
-  exec: (command: string, value?: string) => void;
+  exec: (command: string, value?: string) => boolean;
+  insertHtml: (html: string) => void;
   applyTextStyle: (value: TextStyleValue) => void;
   applyFontFamily: (value: FontFamilyValue) => void;
   applyFontSize: (value: number) => void;
   applyAlign: (command: AlignCommand) => void;
   applyLink: () => void;
   applyImage: () => void;
-  comingSoon: (feature: string) => void;
 }
 
 const ToolbarStateContext = createContext<ToolbarState | null>(null);
@@ -65,10 +72,17 @@ export function EditorToolbar({ children }: { children: React.ReactNode }) {
   const [fontSize, setFontSize] = useState(14);
   const [alignCommand, setAlignCommand] = useState<AlignCommand>("justifyLeft");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
 
   const exec = useCallback((command: string, value?: string) => {
-    document.execCommand(command, false, value ?? undefined);
+    restoreEditorSelection(savedRangeRef.current);
+    return document.execCommand(command, false, value ?? undefined);
   }, []);
+
+  const insertHtml = useCallback((html: string) => {
+    if (exec("insertHTML", html)) return;
+    insertHtmlAtSelection(html, savedRangeRef.current);
+  }, [exec]);
 
   const applyTextStyle = useCallback(
     (next: TextStyleValue) => {
@@ -123,9 +137,6 @@ export function EditorToolbar({ children }: { children: React.ReactNode }) {
     if (url) exec("insertImage", url);
   }, [exec]);
 
-  const comingSoon = useCallback((feature: string) => {
-    window.alert(`Tính năng "${feature}" đang được phát triển.`);
-  }, []);
 
   // Đóng menu khi click ngoài hoặc nhấn Escape.
   useEffect(() => {
@@ -150,6 +161,27 @@ export function EditorToolbar({ children }: { children: React.ReactNode }) {
     };
   }, [openMenu]);
 
+  useEffect(() => {
+    const saveSelection = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+
+      const range = selection.getRangeAt(0);
+      if (isRangeInsideLessonEditor(range)) {
+        savedRangeRef.current = range.cloneRange();
+      }
+    };
+
+    document.addEventListener("selectionchange", saveSelection);
+    document.addEventListener("keyup", saveSelection);
+    document.addEventListener("mouseup", saveSelection);
+    return () => {
+      document.removeEventListener("selectionchange", saveSelection);
+      document.removeEventListener("keyup", saveSelection);
+      document.removeEventListener("mouseup", saveSelection);
+    };
+  }, []);
+
   const value: ToolbarState = {
     textStyle,
     fontFamily,
@@ -158,13 +190,13 @@ export function EditorToolbar({ children }: { children: React.ReactNode }) {
     openMenu,
     setOpenMenu,
     exec,
+    insertHtml,
     applyTextStyle,
     applyFontFamily,
     applyFontSize,
     applyAlign,
     applyLink,
     applyImage,
-    comingSoon,
   };
 
   return <ToolbarStateContext.Provider value={value}>{children}</ToolbarStateContext.Provider>;
@@ -230,15 +262,17 @@ export function EditorBottomTools() {
     openMenu,
     setOpenMenu,
     exec,
+    insertHtml,
     applyTextStyle,
     applyAlign,
     applyImage,
-    comingSoon,
   } = state;
 
   const activeAlign = ALIGN_OPTIONS.find((option) => option.command === alignCommand) ?? ALIGN_OPTIONS[0];
   const ActiveAlignIcon = activeAlign.icon;
   const alignTriggerRef = useRef<HTMLButtonElement>(null);
+  const tableTriggerRef = useRef<HTMLButtonElement>(null);
+  const mathTriggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="flex items-center gap-1.5">
@@ -328,12 +362,74 @@ export function EditorBottomTools() {
         <SubscriptIcon />
       </ToolButton>
       <Divider />
-      <ToolButton onClick={() => comingSoon("Ký hiệu Toán")} label="Math symbol">
-        <MathSymbolIcon />
-      </ToolButton>
-      <ToolButton onClick={() => comingSoon("Bảng")} label="Insert table">
-        <TableIcon />
-      </ToolButton>
+      <div className="relative flex shrink-0 items-center justify-center">
+        <button
+          ref={mathTriggerRef}
+          type="button"
+          data-toolbar-trigger
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => setOpenMenu((current) => (current === "math" ? null : "math"))}
+          title="Math symbol"
+          aria-label="Math symbol"
+          aria-expanded={openMenu === "math"}
+          className="flex size-8 shrink-0 items-center justify-center rounded transition text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
+        >
+          <MathSymbolIcon />
+        </button>
+        {openMenu === "math" ? (
+          <MenuPortal triggerRef={mathTriggerRef} align="left">
+            <div className="grid grid-cols-10 gap-0.5">
+              {SPECIAL_SYMBOLS.map((symbol) => (
+                <button
+                  key={symbol}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setOpenMenu(null);
+                    insertHtml(symbol);
+                  }}
+                  title={symbol}
+                  className="flex size-7 items-center justify-center rounded text-[15px] text-[#3b3733] transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
+                >
+                  {symbol}
+                </button>
+              ))}
+            </div>
+          </MenuPortal>
+        ) : null}
+      </div>
+      <div className="relative flex shrink-0 items-center justify-center">
+        <button
+          ref={tableTriggerRef}
+          type="button"
+          data-toolbar-trigger
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => setOpenMenu((current) => (current === "table" ? null : "table"))}
+          title="Insert table"
+          aria-label="Insert table"
+          aria-expanded={openMenu === "table"}
+          className="flex size-8 shrink-0 items-center justify-center rounded transition text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
+        >
+          <TableIcon />
+        </button>
+        {openMenu === "table" ? (
+          <MenuPortal triggerRef={tableTriggerRef} align="left">
+            <TableGrid
+              onPick={(rows, cols) => {
+                setOpenMenu(null);
+                const header = Array.from({ length: cols }, (_, i) =>
+                  `<th style="border:1px solid #e8e2d9;padding:6px 10px;background:#f7f3ee;min-width:60px;text-align:center">Cột ${i + 1}</th>`
+                ).join("");
+                const cell = `<td style="border:1px solid #e8e2d9;padding:6px 10px;">&nbsp;</td>`;
+                const rowHtml = `<tr>${Array.from({ length: cols }, () => cell).join("")}</tr>`;
+                const bodyHtml = Array.from({ length: rows }, () => rowHtml).join("");
+                const tableHtml = `<table style="border-collapse:collapse;width:100%;margin:8px 0"><thead><tr>${header}</tr></thead><tbody>${bodyHtml}</tbody></table><p><br></p>`;
+                insertHtml(tableHtml);
+              }}
+            />
+          </MenuPortal>
+        ) : null}
+      </div>
       <ToolButton onClick={applyImage} label="Insert image">
         <ImageIcon />
       </ToolButton>
@@ -341,10 +437,53 @@ export function EditorBottomTools() {
   );
 }
 
+function insertHtmlAtSelection(html: string, savedRange: Range | null) {
+  const editor = document.querySelector<HTMLElement>(".lesson-document-editor");
+  if (!editor) return;
+
+  const selection = window.getSelection();
+  const range = savedRange?.cloneRange() ?? document.createRange();
+  if (!savedRange) {
+    range.selectNodeContents(editor);
+    range.collapse(false);
+  }
+
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const fragment = template.content;
+  const lastNode = fragment.lastChild;
+  range.deleteContents();
+  range.insertNode(fragment);
+
+  if (lastNode) {
+    const nextRange = document.createRange();
+    nextRange.setStartAfter(lastNode);
+    nextRange.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(nextRange);
+  }
+
+  editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertHTML", data: html }));
+}
+
+function restoreEditorSelection(range: Range | null) {
+  if (!range) return;
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
+function isRangeInsideLessonEditor(range: Range) {
+  const editor = document.querySelector(".lesson-document-editor");
+  return Boolean(editor && editor.contains(range.commonAncestorContainer));
+}
+
 /**
- * Render menu ra document.body qua portal để thoát mọi overflow clip ở tổ tiên
- * (hàng toolbar có overflow-x-auto, section có overflow-hidden). Tự định vị theo
- * toạ độ trigger (getBoundingClientRect) và canh lề theo `align`.
+ * Render menu ra document.body qua portal de thoat overflow clip o toolbar/editor.
+ * Tu dinh vi theo trigger va canh le theo `align`.
  */
 function MenuPortal({
   triggerRef,
@@ -497,6 +636,41 @@ function ToolButton({
 
 function Divider({ className = "" }: { className?: string }) {
   return <div className={`mx-1.5 h-5 w-px shrink-0 bg-[#e8e2d9] ${className}`} />;
+}
+
+function TableGrid({ onPick }: { onPick: (rows: number, cols: number) => void }) {
+  const [hover, setHover] = useState({ rows: 0, cols: 0 });
+  const maxRows = 6;
+  const maxCols = 8;
+  return (
+    <div>
+      <div className="mb-1.5 text-center text-[12px] text-[#6b625a]">
+        {hover.rows > 0 ? `${hover.rows} × ${hover.cols}` : "Chọn kích thước bảng"}
+      </div>
+      <div
+        className="grid grid-cols-8 gap-0.5"
+        onMouseLeave={() => setHover({ rows: 0, cols: 0 })}
+      >
+        {Array.from({ length: maxRows * maxCols }).map((_, index) => {
+          const row = Math.floor(index / maxCols) + 1;
+          const col = (index % maxCols) + 1;
+          const filled = row <= hover.rows && col <= hover.cols;
+          return (
+            <button
+              key={index}
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={() => setHover({ rows: row, cols: col })}
+              onClick={() => onPick(row, col)}
+              className={`size-5 rounded-[3px] border transition ${
+                filled ? "border-[#d97757] bg-[#f6eadf]" : "border-[#e8e2d9] bg-white"
+              }`}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /* ---------- Icons (currentColor, 16px, strokeWidth ~1.7) ---------- */
