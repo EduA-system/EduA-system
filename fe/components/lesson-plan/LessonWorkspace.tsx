@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { homework, kpis, materials, methods, objectives, timeline } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { WorkspaceSection } from "../ui/WorkspaceSection";
@@ -111,10 +112,13 @@ export function LessonWorkspace() {
           <DashboardIcon name="save" />
           Lưu giáo án
         </button>
-        <button className="flex h-[42px] items-center gap-2 rounded-[12px] bg-[#e8724a] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(232,114,74,0.28)]">
+        <Link
+          href="/slide-create"
+          className="flex h-[42px] items-center gap-2 rounded-[12px] bg-[#e8724a] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(232,114,74,0.28)]"
+        >
           <DashboardIcon name="createSlide" />
           Tạo slide
-        </button>
+        </Link>
       </div>
     </div>
   );

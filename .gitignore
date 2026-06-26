@@ -2,7 +2,7 @@
 /node_modules/
 
 # Environment variables (credentials)
-.env
+.env*
 
 # Windows reserved name artifacts (e.g. from `2>$null` redirections)
 nul
