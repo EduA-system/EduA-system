@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.presentation.dto.lessonplan;
+package com.edua.beeduasystem.domain.model.lessonplan;
 
 import java.util.List;
 

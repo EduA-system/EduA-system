@@ -33,6 +33,11 @@ export interface Worksheet {
   content: string;
 }
 
+export interface EquipmentAndMaterials {
+  equipment: string[];
+  worksheets: Worksheet[];
+}
+
 /** Phần I. MỤC TIÊU — khớp DTO `Objectives` của backend. */
 export interface Objectives {
   knowledge: string[];

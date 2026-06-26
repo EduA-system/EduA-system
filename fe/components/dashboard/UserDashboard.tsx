@@ -10,9 +10,11 @@ import { Sidebar } from "../layout/Sidebar";
 import {
   fetchTextbookCatalog,
   generateLessonPlan,
+  generateMaterials,
   storeGeneratedLessonPlan,
   type CatalogBook,
 } from "@/services/lessonPlanService";
+import type { EquipmentAndMaterials } from "@/data/lessonPlan5512Mock";
 
 export function UserDashboard() {
   const router = useRouter();
@@ -76,13 +78,25 @@ export function UserDashboard() {
     setGenerating(true);
     setGenerateError(null);
     try {
-      const plan = await generateLessonPlan({
+      const req = {
         bookId,
         chapterId,
         lessonId,
         userPrompt: userPrompt.trim() || undefined,
-      });
-      storeGeneratedLessonPlan(plan);
+      };
+
+      const plan = await generateLessonPlan(req);
+
+      // Gọi thêm phần II. Thiết bị dạy học và học liệu
+      let equipmentAndMaterials: EquipmentAndMaterials | undefined;
+      try {
+        const materialsRes = await generateMaterials(req);
+        equipmentAndMaterials = materialsRes.equipmentAndMaterials;
+      } catch {
+        // Không block nếu phần II lỗi — vẫn có phần I để soạn.
+      }
+
+      storeGeneratedLessonPlan({ ...plan, equipmentAndMaterials });
       router.push("/lesson-edit");
     } catch (error: unknown) {
       setGenerateError(error instanceof Error ? error.message : "Tạo giáo án thất bại.");

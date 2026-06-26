@@ -105,7 +105,7 @@ export function LessonEditor({ margins }: LessonEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Khởi tạo bằng mock; sau khi mount, nạp giáo án vừa sinh (nếu có) từ
-  // /lesson-create — hiện BE mới sinh phần I. Mục tiêu nên chỉ thay objectives,
+  // /lesson-create — BE sinh phần I và II nên thay objectives & equipmentAndMaterials,
   // các mục còn lại giữ placeholder của khung 5512.
   const [plan, setPlan] = useState<LessonPlan5512>(lessonPlan5512Mock);
 
@@ -114,12 +114,13 @@ export function LessonEditor({ margins }: LessonEditorProps) {
     // bằng mock rồi cập nhật ở đây để render SSR/hydrate khớp nhau, tránh
     // hydration mismatch.
     const generated = readGeneratedLessonPlan();
-    if (generated?.objectives) {
+    if (generated) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time external-store sync
       setPlan((current) => ({
         ...current,
         title: generated.title ?? current.title,
-        objectives: generated.objectives,
+        objectives: generated.objectives ?? current.objectives,
+        equipmentAndMaterials: generated.equipmentAndMaterials ?? current.equipmentAndMaterials,
       }));
     }
   }, []);

@@ -1,7 +1,7 @@
 package com.edua.beeduasystem.infrastructure.messaging;
 
-import com.edua.beeduasystem.presentation.dto.lessonplan.Activity5512Dto;
-import com.edua.beeduasystem.presentation.dto.lessonplan.LessonPlan5512Dto;
+import com.edua.beeduasystem.domain.model.lessonplan.Activity5512;
+import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
 import com.edua.beeduasystem.repository.gateways.LessonPlanEvent;
 import com.edua.beeduasystem.repository.gateways.LessonPlanStreamPort;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +27,12 @@ public class StompLessonPlanStreamAdapter implements LessonPlanStreamPort {
     private final SimpMessagingTemplate messagingTemplate;
 
     @Override
-    public void publishFrameReady(String sessionId, LessonPlan5512Dto frame) {
+    public void publishFrameReady(String sessionId, LessonPlan5512 frame) {
         send(sessionId, new LessonPlanEvent.FrameReady(sessionId, frame));
     }
 
     @Override
-    public void publishActivityReady(String sessionId, String activityId, Activity5512Dto activity) {
+    public void publishActivityReady(String sessionId, String activityId, Activity5512 activity) {
         send(sessionId, new LessonPlanEvent.ActivityReady(sessionId, activityId, activity));
     }
 

@@ -1,8 +1,9 @@
 package com.edua.beeduasystem.service.lessonplan;
 
+import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
+import com.edua.beeduasystem.domain.model.lessonplan.Materials;
+import com.edua.beeduasystem.domain.model.lessonplan.Objectives;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanRequest;
-import com.edua.beeduasystem.presentation.dto.lessonplan.LessonPlan5512Dto;
-import com.edua.beeduasystem.presentation.dto.lessonplan.Objectives;
 import com.edua.beeduasystem.repository.gateways.AiClient;
 import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,11 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Sinh giáo án 5512 — hiện chỉ phần I. MỤC TIÊU (đồng bộ, chưa lưu DB).
+ * Sinh giáo án 5512 — hiện có phần I. MỤC TIÊU và II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
+ * (đồng bộ, mỗi phần một call, chưa lưu DB).
  *
  * <p>Luồng: lấy {@code knowledge_json} của bài → dựng prompt → gọi {@link AiClient}
- * → parse JSON thành {@link Objectives} → trả về. Lỗi input map 400; lỗi AI/parse
- * map 502 qua {@code GlobalExceptionHandler}.
+ * → parse JSON thành DTO → trả về. Lỗi input map 400; lỗi AI/parse map 502 qua
+ * {@code GlobalExceptionHandler}.
  */
 @Slf4j
 @Service
@@ -36,25 +38,41 @@ public class LessonPlanService {
     }
 
     /** Sinh phần I. MỤC TIÊU cho bài đã chọn. */
-    public LessonPlan5512Dto generateObjectives(GenerateLessonPlanRequest request) {
-        validate(request);
+    public LessonPlan5512 generateObjectives(GenerateLessonPlanRequest request) {
+        String knowledge = loadKnowledge(request);
+        String prompt = promptBuilder.buildObjectivesPrompt(knowledge, request.userPrompt());
+        String raw = generate(prompt, "AI không sinh được mục tiêu giáo án.");
 
-        String knowledge = catalogRepository
+        Objectives objectives = parseJson(raw, Objectives.class, "Kết quả AI không đúng định dạng mục tiêu.");
+        return new LessonPlan5512(null, objectives, null);
+    }
+
+    /** Sinh phần II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU cho bài đã chọn. */
+    public LessonPlan5512 generateMaterials(GenerateLessonPlanRequest request) {
+        String knowledge = loadKnowledge(request);
+        String prompt = promptBuilder.buildMaterialsPrompt(knowledge, request.userPrompt());
+        String raw = generate(prompt, "AI không sinh được thiết bị và học liệu.");
+
+        Materials materials = parseJson(raw, Materials.class, "Kết quả AI không đúng định dạng thiết bị và học liệu.");
+        return new LessonPlan5512(null, null, materials);
+    }
+
+    /** Validate request và lấy nội dung SGK số hóa của bài. */
+    private String loadKnowledge(GenerateLessonPlanRequest request) {
+        validate(request);
+        return catalogRepository
                 .findLessonKnowledge(request.bookId(), request.chapterId(), request.lessonId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Bài học chưa có nội dung số hóa (knowledge_json) để sinh giáo án."));
+    }
 
-        String prompt = promptBuilder.buildObjectivesPrompt(knowledge, request.userPrompt());
-
-        String raw;
+    /** Gọi AI, bọc lỗi runtime thành {@link LessonPlanGenerationException} (→ 502). */
+    private String generate(String prompt, String errorMessage) {
         try {
-            raw = aiClient.generate(prompt);
+            return aiClient.generate(prompt);
         } catch (RuntimeException e) {
-            throw new LessonPlanGenerationException("AI không sinh được mục tiêu giáo án.", e);
+            throw new LessonPlanGenerationException(errorMessage, e);
         }
-
-        Objectives objectives = parseObjectives(raw);
-        return new LessonPlan5512Dto(null, objectives);
     }
 
     private void validate(GenerateLessonPlanRequest request) {
@@ -63,13 +81,14 @@ public class LessonPlanService {
         }
     }
 
-    private Objectives parseObjectives(String raw) {
+    /** Parse output AI thành DTO; lỗi định dạng map 502 với thông điệp riêng từng phần. */
+    private <T> T parseJson(String raw, Class<T> type, String errorMessage) {
         String json = stripJsonFence(raw);
         try {
-            return objectMapper.readValue(json, Objectives.class);
+            return objectMapper.readValue(json, type);
         } catch (Exception e) {
-            log.warn("Parse objectives thất bại. Output AI: {}", raw);
-            throw new LessonPlanGenerationException("Kết quả AI không đúng định dạng mục tiêu.", e);
+            log.warn("Parse {} thất bại. Output AI: {}", type.getSimpleName(), raw);
+            throw new LessonPlanGenerationException(errorMessage, e);
         }
     }
 

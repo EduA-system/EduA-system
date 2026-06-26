@@ -1,4 +1,4 @@
-import type { Objectives } from "@/data/lessonPlan5512Mock";
+import type { EquipmentAndMaterials, Objectives } from "@/data/lessonPlan5512Mock";
 
 // API client cho luồng tạo giáo án 5512. Gọi qua same-origin `/api/*`
 // (proxy tới backend cấu hình ở next.config.ts) nên không vướng CORS.
@@ -37,10 +37,11 @@ export interface GenerateLessonPlanRequest {
   userPrompt?: string;
 }
 
-/** Phản hồi hiện tại của BE: mới có title + phần I. Mục tiêu. */
+/** Phản hồi hiện tại của BE: title + phần I. Mục tiêu + phần II. Thiết bị và học liệu. */
 export interface GeneratedLessonPlan {
   title: string | null;
   objectives: Objectives;
+  equipmentAndMaterials?: EquipmentAndMaterials;
 }
 
 export async function fetchTextbookCatalog(): Promise<TextbookCatalog> {
@@ -61,6 +62,28 @@ export async function generateLessonPlan(
   });
   if (!res.ok) {
     let message = `Tạo giáo án thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+// ---- Generate Materials (POST /api/lesson-plans/generate-materials) -------
+export async function generateMaterials(
+  req: GenerateLessonPlanRequest,
+): Promise<{ equipmentAndMaterials: EquipmentAndMaterials }> {
+  const res = await fetch("/api/lesson-plans/generate-materials", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Tạo phần thiết bị dạy học thất bại (HTTP ${res.status}).`;
     try {
       const body = (await res.json()) as { message?: string };
       if (body?.message) message = body.message;

@@ -1,7 +1,7 @@
 package com.edua.beeduasystem.presentation.controller;
 
+import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanRequest;
-import com.edua.beeduasystem.presentation.dto.lessonplan.LessonPlan5512Dto;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,13 +33,32 @@ public class LessonPlanController {
                     @ApiResponse(
                             responseCode = "200",
                             description = "Giáo án với phần Mục tiêu đã sinh",
-                            content = @Content(schema = @Schema(implementation = LessonPlan5512Dto.class))
+                            content = @Content(schema = @Schema(implementation = LessonPlan5512.class))
                     ),
                     @ApiResponse(responseCode = "400", description = "Thiếu bookId/chapterId/lessonId hoặc bài chưa có nội dung số hóa"),
                     @ApiResponse(responseCode = "502", description = "AI lỗi hoặc trả về sai định dạng")
             }
     )
-    public LessonPlan5512Dto generate(@RequestBody GenerateLessonPlanRequest request) {
+    public LessonPlan5512 generate(@RequestBody GenerateLessonPlanRequest request) {
         return lessonPlanService.generateObjectives(request);
+    }
+
+    @PostMapping("/generate-materials")
+    @Operation(
+            summary = "Sinh phần II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU của giáo án 5512",
+            description = "Đồng bộ: lấy nội dung SGK theo bookId/chapterId/lessonId, gọi AI "
+                    + "sinh thiết bị/dụng cụ và phiếu học tập rồi trả về. Chưa lưu DB.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Giáo án với phần Thiết bị dạy học và học liệu đã sinh",
+                            content = @Content(schema = @Schema(implementation = LessonPlan5512.class))
+                    ),
+                    @ApiResponse(responseCode = "400", description = "Thiếu bookId/chapterId/lessonId hoặc bài chưa có nội dung số hóa"),
+                    @ApiResponse(responseCode = "502", description = "AI lỗi hoặc trả về sai định dạng")
+            }
+    )
+    public LessonPlan5512 generateMaterials(@RequestBody GenerateLessonPlanRequest request) {
+        return lessonPlanService.generateMaterials(request);
     }
 }
