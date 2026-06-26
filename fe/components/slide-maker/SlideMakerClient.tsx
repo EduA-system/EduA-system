@@ -14,6 +14,7 @@ import {
 } from "@/lib/slide-create/session";
 import { connectSlideStream, type SlideEvent } from "@/lib/ws/slide-client";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
+import { runDesignPipeline } from "@/lib/slide-create/run-design-pipeline";
 import { useEditorStore } from "@/stores/slide-editor-store";
 
 function countSlides(active: ActiveGeneration) {
@@ -102,6 +103,52 @@ export function SlideMakerClient() {
       replaceSlides(skeletonSlidesFromParts(active.parts));
     }
 
+    // ── Design mode: client-side 3-step HTML pipeline (no STOMP) ──
+    if (active.mode === "design") {
+      if (!generationRef.current?.apiStarted) {
+        generationRef.current = { sessionId: active.sessionId, apiStarted: true };
+        logSlideApi("start design pipeline", {
+          sessionId: active.sessionId,
+          topic: active.topic,
+          slideCount: countSlides(active),
+        });
+        let fatal = false;
+        void runDesignPipeline(
+          {
+            topic: active.topic,
+            subject: active.subject,
+            styleHint: active.styleHint,
+            parts: active.parts,
+          },
+          {
+            onSlideReady: (slideId, result, title) => {
+              upsertSlide({
+                id: slideId,
+                bg: result.bg,
+                elements: result.elements,
+                aiPrompt: title,
+              });
+            },
+            onProgress: (ready, total) => setProgress({ ready, total }),
+            onError: (message) => {
+              fatal = true;
+              setStreaming(false);
+              setErrorMessage(message);
+              clearActiveGeneration();
+              router.replace("/slide-maker");
+            },
+          },
+        ).then(() => {
+          if (fatal) return;
+          setStreaming(false);
+          setDoneMessage("Sinh slide xong.");
+          clearActiveGeneration();
+          router.replace("/slide-maker");
+        });
+      }
+      return;
+    }
+
     const { disconnect } = connectSlideStream({
       topic: active.topic,
       onEvent: (event) => {
@@ -147,7 +194,7 @@ export function SlideMakerClient() {
       disconnectRef.current?.();
       disconnectRef.current = null;
     };
-  }, [generating, handleEvent, initialBootstrap.active, replaceSlides, router]);
+  }, [generating, handleEvent, initialBootstrap.active, replaceSlides, router, upsertSlide]);
 
   useEffect(() => {
     if (!doneMessage) return;

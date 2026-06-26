@@ -63,8 +63,6 @@ export default function SlideOutlinePage() {
     if (!needsOutline || !session || outlineRequestedRef.current) return;
     outlineRequestedRef.current = true;
 
-    let cancelled = false;
-
     void (async () => {
       logSlideApi("outline page: generating outline…", {
         lessonId: session.lessonCardId,
@@ -79,7 +77,6 @@ export default function SlideOutlinePage() {
           plan: session.inlinePlan,
           styleHint: session.styleHint,
         });
-        if (cancelled) return;
 
         patchSlideCreateSession({
           sessionId: res.sessionId,
@@ -99,7 +96,6 @@ export default function SlideOutlinePage() {
           needsOutline: false,
         });
       } catch (err) {
-        if (cancelled) return;
         console.error("[EDUA slide] outline page error", err);
         setPageState((prev) => ({
           ...prev,
@@ -109,10 +105,6 @@ export default function SlideOutlinePage() {
         }));
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [needsOutline, session]);
 
   const handleConfirm = useCallback(
@@ -127,7 +119,9 @@ export default function SlideOutlinePage() {
         lessonSummary: session.lessonSummary,
         grade: session.grade,
         styleHint: session.styleHint,
+        subject: session.subject,
         parts: editedParts,
+        mode: "design",
       });
       patchSlideCreateSession({ outlineParts: editedParts });
       router.push("/slide-maker?generating=1");
