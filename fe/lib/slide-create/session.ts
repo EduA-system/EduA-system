@@ -47,7 +47,10 @@ export type ActiveGeneration = {
   lessonSummary: string;
   grade: string;
   styleHint: string;
+  subject?: string;
   parts: import("@/lib/api/slides").OutlinePart[];
+  /** Generation mechanism. Absent = "stomp" (legacy generate-parts stream). */
+  mode?: "stomp" | "design";
 };
 
 export function readActiveGeneration(): ActiveGeneration | null {

@@ -127,7 +127,9 @@ export default function SlideOutlinePage() {
         lessonSummary: session.lessonSummary,
         grade: session.grade,
         styleHint: session.styleHint,
+        subject: session.subject,
         parts: editedParts,
+        mode: "design",
       });
       patchSlideCreateSession({ outlineParts: editedParts });
       router.push("/slide-maker?generating=1");
