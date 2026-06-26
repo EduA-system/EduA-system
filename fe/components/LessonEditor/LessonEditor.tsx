@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect } from "react";
+import { EditorContent, type Editor } from "@tiptap/react";
 import { lessonPlan5512Mock } from "@/data/lessonPlan5512Mock";
 import type { Activity5512, LessonPlan5512 } from "@/data/lessonPlan5512Mock";
 import { readGeneratedLessonPlan } from "@/services/lessonPlanService";
@@ -53,7 +54,7 @@ function activityHtml(activity: Activity5512, isSub = false): string {
 }
 
 /** Sinh khung Kế hoạch bài dạy 5512 (Phụ lục IV, kiểu KNTT) thành HTML. */
-function lessonPlan5512ToHtml(plan: LessonPlan5512) {
+export function lessonPlan5512ToHtml(plan: LessonPlan5512) {
   const { metadata, objectives, equipmentAndMaterials, activities } = plan;
 
   const meta = `${escapeHtml(metadata.subject)} · ${escapeHtml(metadata.grade)} · ${escapeHtml(metadata.duration)}`;
@@ -102,51 +103,38 @@ interface LessonEditorProps {
   editor: Editor | null;
 }
 
-export function LessonEditor({ margins }: LessonEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
-
-  // Khởi tạo bằng mock; sau khi mount, nạp giáo án vừa sinh (nếu có) từ
-  // /lesson-create — BE sinh phần I và II nên thay objectives & equipmentAndMaterials,
-  // các mục còn lại giữ placeholder của khung 5512.
-  const [plan, setPlan] = useState<LessonPlan5512>(lessonPlan5512Mock);
-
+export function LessonEditor({ margins, editor }: LessonEditorProps) {
+  // Sau khi sinh ở /lesson-create, BE trả phần I (objectives) và phần II
+  // (equipmentAndMaterials) qua sessionStorage. Ghép lên khung 5512 (mock) — các
+  // mục còn lại (metadata, III. Tiến trình dạy học) giữ placeholder để GV điền
+  // sau — rồi đổ vào editor. Không có giáo án sinh thì giữ nguyên khung mặc định.
   useEffect(() => {
-    // Đọc một lần sau mount từ sessionStorage (external store). Cố tình khởi tạo
-    // bằng mock rồi cập nhật ở đây để render SSR/hydrate khớp nhau, tránh
-    // hydration mismatch.
+    if (!editor) return;
     const generated = readGeneratedLessonPlan();
-    if (generated) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time external-store sync
-      setPlan((current) => ({
-        ...current,
-        title: generated.title ?? current.title,
-        objectives: generated.objectives ?? current.objectives,
-        equipmentAndMaterials: generated.equipmentAndMaterials ?? current.equipmentAndMaterials,
-      }));
-    }
-  }, []);
+    if (!generated) return;
 
-  const initialHtml = useMemo(() => lessonPlan5512ToHtml(plan), [plan]);
-
-  const handleInput = () => {
-    // Keep the handler for future autosave hooks without making typing controlled.
-  };
+    const merged: LessonPlan5512 = {
+      ...lessonPlan5512Mock,
+      title: generated.title ?? lessonPlan5512Mock.title,
+      objectives: generated.objectives ?? lessonPlan5512Mock.objectives,
+      equipmentAndMaterials:
+        generated.equipmentAndMaterials ?? lessonPlan5512Mock.equipmentAndMaterials,
+    };
+    editor.commands.setContent(lessonPlan5512ToHtml(merged));
+  }, [editor]);
 
   return (
     <div className="pb-10">
       <div className="mx-auto w-full max-w-[816px]">
         <div
-          key={plan === lessonPlan5512Mock ? "mock" : "generated"}
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          spellCheck={false}
-          className="lesson-document-editor min-h-[calc(100vh-188px)] bg-white py-14 text-[#2b2926] shadow-[0_1px_2px_rgba(43,41,38,0.06),0_4px_14px_rgba(43,41,38,0.05)] outline-none"
+          className="bg-white py-14 shadow-[0_1px_2px_rgba(43,41,38,0.06),0_4px_14px_rgba(43,41,38,0.05)]"
           style={{
             paddingLeft: margins.left,
             paddingRight: margins.right,
           }}
-        />
+        >
+          <EditorContent editor={editor} />
+        </div>
       </div>
     </div>
   );

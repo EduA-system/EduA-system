@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useEditor } from "@tiptap/react";
-import { lessonMock } from "@/data/lessonMock";
+import { lessonPlan5512Mock } from "@/data/lessonPlan5512Mock";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
 import { EditorTools } from "../LessonEditor";
-import { LessonEditor } from "../LessonEditor";
+import { LessonEditor, lessonPlan5512ToHtml } from "../LessonEditor";
 import { editorExtensions } from "../LessonEditor/editorConfig";
 import { Ruler } from "../LessonEditor/Ruler";
 
@@ -16,7 +16,7 @@ export function LessonEditDashboard() {
   const [margins, setMargins] = useState({ left: 80, right: 80 });
   const editor = useEditor({
     extensions: editorExtensions,
-    content: lessonMock.contentHtml,
+    content: lessonPlan5512ToHtml(lessonPlan5512Mock),
     immediatelyRender: false,
     editorProps: {
       attributes: {
