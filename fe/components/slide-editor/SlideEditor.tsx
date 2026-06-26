@@ -33,6 +33,8 @@ export function SlideEditor() {
   const [drawColor, setDrawColor] = useState("#1e293b");
   const [drawSize, setDrawSize] = useState(6);
   const [showLayers, setShowLayers] = useState(false);
+  const [showTray, setShowTray] = useState(true);
+  const [currentScale, setCurrentScale] = useState(1);
 
   const clearSelection = useEditorStore((s) => s.clearSelection);
 
@@ -223,12 +225,19 @@ export function SlideEditor() {
             activeTool={activeTool}
             drawColor={drawColor}
             drawSize={drawSize}
+            onScaleChange={setCurrentScale}
           />
-          <SlideTray />
+          {showTray && <SlideTray />}
         </div>
         {showLayers && <LayersPanel />}
       </div>
-      <BottomBar />
+      <BottomBar
+        zoomMode={zoomMode}
+        onZoomModeChange={setZoomMode}
+        currentScale={currentScale}
+        showTray={showTray}
+        onToggleTray={() => setShowTray((v) => !v)}
+      />
     </div>
   );
 }

@@ -172,7 +172,6 @@ export function ContextualToolbar() {
   const updateMany = useEditorStore((s) => s.updateMany);
   const alignElements = useEditorStore((s) => s.alignElements);
   const distribute = useEditorStore((s) => s.distribute);
-  const setSlideBackground = useEditorStore((s) => s.setSlideBackground);
 
   const single =
     selectedIds.length === 1
@@ -180,6 +179,9 @@ export function ContextualToolbar() {
       : null;
 
   const upd: Upd = (patch) => updateMany(selectedIds, patch);
+
+  // Không chọn gì → ẩn hẳn thanh; chỉ hiện khi có phần tử được chọn.
+  if (selectedIds.length === 0) return null;
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center px-4">
@@ -204,13 +206,7 @@ export function ContextualToolbar() {
             <TypeControls el={single} upd={upd} />
           </>
         )
-      ) : (
-        <>
-          <span className="mr-1 text-[10px] text-[#777]">Nền slide:</span>
-          <ColorPicker value={slide?.bg ?? "#ffffff"} onChange={(v) => setSlideBackground(v)} />
-          <span className="ml-2 text-xs text-[#999]">Chọn phần tử để chỉnh sửa</span>
-        </>
-      )}
+      ) : null}
       </div>
     </div>
   );
