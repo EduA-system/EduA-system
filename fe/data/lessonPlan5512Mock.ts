@@ -33,8 +33,17 @@ export interface Worksheet {
   content: string;
 }
 
+/**
+ * Bảng thiết bị 2 cột (mục II). `columns` có đúng 2 tiêu đề do AI đặt theo môn/bài;
+ * mỗi dòng trong `rows` có đúng 2 ô khớp 2 cột.
+ */
+export interface EquipmentTable {
+  columns: string[];
+  rows: string[][];
+}
+
 export interface EquipmentAndMaterials {
-  equipment: string[];
+  equipment: EquipmentTable;
   worksheets: Worksheet[];
 }
 
@@ -59,10 +68,7 @@ export interface LessonPlan5512 {
     duration: string;
   };
   objectives: Objectives;
-  equipmentAndMaterials: {
-    equipment: string[];
-    worksheets: Worksheet[];
-  };
+  equipmentAndMaterials: EquipmentAndMaterials;
   activities: Activity5512[];
 }
 
@@ -102,10 +108,13 @@ export const lessonPlan5512Mock: LessonPlan5512 = {
     ],
   },
   equipmentAndMaterials: {
-    equipment: [
-      "Máy tính, máy chiếu.",
-      "Dụng cụ và hóa chất/vật liệu phục vụ thí nghiệm (nếu có).",
-    ],
+    equipment: {
+      columns: ["Thiết bị, dụng cụ", "Ghi chú"],
+      rows: [
+        ["Máy tính, máy chiếu.", "Trình chiếu nội dung bài học."],
+        ["Dụng cụ và vật liệu phục vụ thí nghiệm (nếu có).", "Chuẩn bị theo nội dung bài."],
+      ],
+    },
     worksheets: [
       {
         name: "Phiếu học tập số 1",

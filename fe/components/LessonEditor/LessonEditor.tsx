@@ -3,7 +3,12 @@
 import { useEffect } from "react";
 import { EditorContent, type Editor } from "@tiptap/react";
 import { lessonPlan5512Mock } from "@/data/lessonPlan5512Mock";
-import type { Activity5512, LessonPlan5512 } from "@/data/lessonPlan5512Mock";
+import type {
+  Activity5512,
+  EquipmentTable,
+  LessonPlan5512,
+  Worksheet,
+} from "@/data/lessonPlan5512Mock";
 import { readGeneratedLessonPlan } from "@/services/lessonPlanService";
 
 function escapeHtml(value: string) {
@@ -19,6 +24,48 @@ function escapeHtml(value: string) {
 function bulletList(items: string[]) {
   if (items.length === 0) return "";
   return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+/** Tách chuỗi nhiều dòng thành các <p>; rỗng → một <p> trống để ô bảng không sập. */
+function paragraphs(text: string) {
+  const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 0) return "<p></p>";
+  return lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
+}
+
+/**
+ * Mục II — bảng thiết bị 2 cột (tiêu đề cột do AI đặt). Defensive: chấp nhận cả dạng
+ * cũ `string[]` (dữ liệu sessionStorage cũ) và bỏ qua nếu không có dòng nào.
+ */
+function equipmentTableHtml(equipment: EquipmentTable | string[] | undefined) {
+  if (Array.isArray(equipment)) {
+    return bulletList(equipment);
+  }
+  const rows = equipment?.rows?.filter((row) => row.some((cell) => cell?.trim())) ?? [];
+  if (rows.length === 0) return "";
+
+  const columns = equipment?.columns ?? [];
+  const colCount = Math.max(columns.length, ...rows.map((row) => row.length), 1);
+  const head = columns.length
+    ? `<tr>${Array.from({ length: colCount })
+        .map((_, i) => `<th>${escapeHtml(columns[i] ?? "")}</th>`)
+        .join("")}</tr>`
+    : "";
+  const body = rows
+    .map(
+      (row) =>
+        `<tr>${Array.from({ length: colCount })
+          .map((_, i) => `<td>${paragraphs(row[i] ?? "")}</td>`)
+          .join("")}</tr>`,
+    )
+    .join("");
+
+  return `<table><tbody>${head}${body}</tbody></table>`;
+}
+
+/** Mỗi phiếu học tập đóng khung trong một bảng 1 ô (giống mẫu Bai-19). */
+function worksheetBoxHtml(worksheet: Worksheet) {
+  return `<table><tbody><tr><td><p><b>${escapeHtml(worksheet.name)}</b></p>${paragraphs(worksheet.content)}</td></tr></tbody></table>`;
 }
 
 /** Mục d) Tổ chức thực hiện — 4 bước chuẩn. */
@@ -60,10 +107,7 @@ export function lessonPlan5512ToHtml(plan: LessonPlan5512) {
   const meta = `${escapeHtml(metadata.subject)} · ${escapeHtml(metadata.grade)} · ${escapeHtml(metadata.duration)}`;
 
   const worksheetsHtml = equipmentAndMaterials.worksheets
-    .map(
-      (worksheet) =>
-        `<p><b>${escapeHtml(worksheet.name)}:</b> ${escapeHtml(worksheet.content)}</p>`,
-    )
+    .map((worksheet) => worksheetBoxHtml(worksheet))
     .join("");
 
   const activitiesHtml = activities.map((activity) => activityHtml(activity)).join("");
@@ -87,7 +131,7 @@ export function lessonPlan5512ToHtml(plan: LessonPlan5512) {
 
     <section>
       <h2>II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU</h2>
-      ${bulletList(equipmentAndMaterials.equipment)}
+      ${equipmentTableHtml(equipmentAndMaterials.equipment)}
       ${worksheetsHtml}
     </section>
 
