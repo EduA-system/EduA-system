@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { lessonPlan5512Mock } from "@/data/lessonPlan5512Mock";
 import type { Activity5512, LessonPlan5512 } from "@/data/lessonPlan5512Mock";
+import { readGeneratedLessonPlan } from "@/services/lessonPlanService";
 
 function escapeHtml(value: string) {
   return value
@@ -102,7 +103,28 @@ interface LessonEditorProps {
 
 export function LessonEditor({ margins }: LessonEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const initialHtml = useMemo(() => lessonPlan5512ToHtml(lessonPlan5512Mock), []);
+
+  // Khởi tạo bằng mock; sau khi mount, nạp giáo án vừa sinh (nếu có) từ
+  // /lesson-create — hiện BE mới sinh phần I. Mục tiêu nên chỉ thay objectives,
+  // các mục còn lại giữ placeholder của khung 5512.
+  const [plan, setPlan] = useState<LessonPlan5512>(lessonPlan5512Mock);
+
+  useEffect(() => {
+    // Đọc một lần sau mount từ sessionStorage (external store). Cố tình khởi tạo
+    // bằng mock rồi cập nhật ở đây để render SSR/hydrate khớp nhau, tránh
+    // hydration mismatch.
+    const generated = readGeneratedLessonPlan();
+    if (generated?.objectives) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time external-store sync
+      setPlan((current) => ({
+        ...current,
+        title: generated.title ?? current.title,
+        objectives: generated.objectives,
+      }));
+    }
+  }, []);
+
+  const initialHtml = useMemo(() => lessonPlan5512ToHtml(plan), [plan]);
 
   const handleInput = () => {
     // Keep the handler for future autosave hooks without making typing controlled.
@@ -112,6 +134,7 @@ export function LessonEditor({ margins }: LessonEditorProps) {
     <div className="pb-10">
       <div className="mx-auto w-full max-w-[816px]">
         <div
+          key={plan === lessonPlan5512Mock ? "mock" : "generated"}
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning

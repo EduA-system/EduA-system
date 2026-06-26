@@ -33,6 +33,16 @@ export interface Worksheet {
   content: string;
 }
 
+/** Phần I. MỤC TIÊU — khớp DTO `Objectives` của backend. */
+export interface Objectives {
+  knowledge: string[];
+  competencies: {
+    general: string[];
+    specific: string[];
+  };
+  qualities: string[];
+}
+
 export interface LessonPlan5512 {
   title: string;
   metadata: {
@@ -43,14 +53,7 @@ export interface LessonPlan5512 {
     grade: string;
     duration: string;
   };
-  objectives: {
-    knowledge: string[];
-    competencies: {
-      general: string[];
-      specific: string[];
-    };
-    qualities: string[];
-  };
+  objectives: Objectives;
   equipmentAndMaterials: {
     equipment: string[];
     worksheets: Worksheet[];
