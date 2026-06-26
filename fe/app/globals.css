@@ -134,7 +134,7 @@ body::-webkit-scrollbar {
   color: #2b2926;
 }
 
-.lesson-document-editor h1 + p {
+.lesson-document-editor .document-meta {
   margin-top: 12px;
   padding-bottom: 34px;
   border-bottom: 1px solid #ece6de;
@@ -143,8 +143,11 @@ body::-webkit-scrollbar {
   line-height: 1.6;
 }
 
-.lesson-document-editor h2 {
+.lesson-document-editor section {
   margin-top: 42px;
+}
+
+.lesson-document-editor h2 {
   font-size: 22px;
   line-height: 1.35;
   font-weight: 600;
@@ -195,65 +198,4 @@ body::-webkit-scrollbar {
 
 .lesson-document-editor ::selection {
   background: #f6d7c8;
-}
-
-.lesson-document-editor .tableWrapper {
-  margin-top: 16px;
-  overflow-x: auto;
-}
-
-.lesson-document-editor table {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-  margin: 0;
-}
-
-.lesson-document-editor th,
-.lesson-document-editor td {
-  position: relative;
-  min-width: 3em;
-  padding: 6px 10px;
-  border: 1px solid #d9d2c7;
-  vertical-align: top;
-}
-
-.lesson-document-editor th {
-  background: #f6f1ea;
-  font-weight: 600;
-  text-align: left;
-}
-
-.lesson-document-editor td > *,
-.lesson-document-editor th > * {
-  margin-top: 0;
-}
-
-.lesson-document-editor .selectedCell::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(217, 119, 87, 0.12);
-  pointer-events: none;
-}
-
-.lesson-document-editor .column-resize-handle {
-  position: absolute;
-  top: 0;
-  right: -2px;
-  bottom: -2px;
-  width: 4px;
-  background: #d97757;
-  pointer-events: none;
-}
-
-.lesson-document-editor img {
-  max-width: 100%;
-  height: auto;
-  margin-top: 12px;
-  border-radius: 6px;
-}
-
-.lesson-document-editor img.ProseMirror-selectednode {
-  outline: 2px solid #d97757;
 }
