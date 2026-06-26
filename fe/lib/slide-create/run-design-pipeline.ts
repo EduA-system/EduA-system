@@ -12,8 +12,12 @@ export type DesignPipelineInput = {
 };
 
 export type DesignPipelineCallbacks = {
-  /** Step 1 (deck skin) finished — reusable bg + decoration + header. */
-  onSkinReady?: (skinHtml: string) => void;
+  /**
+   * Step 1 (deck skin) finished and was converted once — reusable bg +
+   * decoration. Used to stamp a preview onto all skeleton slides before
+   * per-slide content fills in.
+   */
+  onSkinReady?: (skin: { bg: string; elements: SlideElement[] }) => void;
   /** A slide finished steps 2+3 and was converted to editor elements. */
   onSlideReady: (
     slideId: string,
@@ -25,11 +29,18 @@ export type DesignPipelineCallbacks = {
   onError?: (message: string) => void;
 };
 
-/** Build the per-slide outline text from the only data we have: the slide title + role. */
+/**
+ * Build the per-slide outline text fed to step 2 + step 3. Beyond title + role,
+ * we include the real lesson content bound to this slide at the outline step
+ * (cách B) so the design AI fills the slide from the teacher's plan instead of
+ * inventing unrelated examples.
+ */
 function slideOutlineText(slide: SlideItem): string {
   const role = slideRoleLabel(slide);
   const title = slide.title.trim();
-  return role && role !== title ? `${title} (${role})` : title;
+  const head = role && role !== title ? `${title} (${role})` : title;
+  const body = slide.content?.trim();
+  return body ? `${head}\n\nNội dung giáo án cho slide này:\n${body}` : head;
 }
 
 function flattenSlides(parts: OutlinePart[]): SlideItem[] {
@@ -95,10 +106,23 @@ export async function runDesignPipeline(
       return;
     }
     skinHtml = step1.html;
-    cb.onSkinReady?.(skinHtml);
   } catch (e) {
     cb.onError?.(e instanceof Error ? e.message : String(e));
     return;
+  }
+
+  // Convert the skin once and hand it to the client so it can stamp a
+  // bg + decoration preview onto every still-empty skeleton slide.
+  try {
+    const { bg, elements, skipped } = await htmlToSlideElements(skinHtml);
+    if (skipped.length > 0) {
+      logSlideApi("design pipeline: skin skipped elements", { skipped });
+    }
+    cb.onSkinReady?.({ bg, elements });
+  } catch (e) {
+    logSlideApi("design pipeline: skin convert failed", {
+      message: e instanceof Error ? e.message : String(e),
+    });
   }
 
   // ── Steps 2+3 per slide (parallel, bounded) ─────────────────

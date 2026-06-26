@@ -8,6 +8,8 @@ export type SlideItem = {
   kind: string;
   pedagogicalRole?: string;
   layoutHint?: string;
+  /** Nội dung thật của slide, trích từ giáo án ở bước outline (cách B). */
+  content?: string;
 };
 
 export type OutlinePart = { id: string; title: string; slides: SlideItem[] };
