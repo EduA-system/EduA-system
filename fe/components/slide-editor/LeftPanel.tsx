@@ -11,7 +11,7 @@ import { SHAPE_LIBRARY } from "./lib/shapes";
 import { ColorPicker } from "./ColorPicker";
 import type { ActiveTool } from "./Canvas";
 
-type Tab = null | "shapes" | "text" | "upload" | "tools";
+type Tab = null | "shapes" | "text" | "upload" | "tools" | "bg";
 
 const SHORTCUTS: [string, string][] = [
   ["Xóa phần tử", "Delete"],
@@ -65,6 +65,17 @@ const ICON_TABS: { id: Exclude<Tab, null>; label: string; icon: ReactNode }[] = 
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
         <rect x="3" y="6" width="18" height="12" rx="2" />
         <path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    id: "bg",
+    label: "Nền",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 15l5-5 4 4 3-3 6 6" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="9" cy="8" r="1.4" />
       </svg>
     ),
   },
@@ -127,6 +138,11 @@ interface LeftPanelProps {
   onDrawSizeChange: (n: number) => void;
 }
 
+const BG_PRESETS = [
+  "#ffffff", "#f8fafc", "#f1f5f9", "#fef3c7", "#fee2e2", "#dcfce7",
+  "#dbeafe", "#ede9fe", "#1e293b", "#0f172a", "#000000", "#fafaf9",
+];
+
 const DRAW_TOOLS: { id: ActiveTool; label: string }[] = [
   { id: "brush", label: "Cọ vẽ" },
   { id: "pencil", label: "Bút chì" },
@@ -145,6 +161,8 @@ export function LeftPanel({
   const [urlInput, setUrlInput] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const addElement = useEditorStore((s) => s.addElement);
+  const slideBg = useEditorStore((s) => s.slides.find((sl) => sl.id === s.currentSlideId)?.bg ?? "#ffffff");
+  const setSlideBackground = useEditorStore((s) => s.setSlideBackground);
 
   function addImageSized(src: string) {
     const img = new Image();
@@ -381,6 +399,32 @@ export function LeftPanel({
                     </kbd>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {tab === "bg" && (
+            <div className="space-y-3 p-3">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#777]">Nền slide</div>
+              <div className="flex items-center justify-between rounded-lg bg-black/[0.03] p-2.5">
+                <span className="text-[11px] text-[#5f6368]">Màu nền</span>
+                <ColorPicker value={slideBg} onChange={(v) => setSlideBackground(v)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-[10px] uppercase text-[#777]">Màu nhanh</div>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {BG_PRESETS.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setSlideBackground(c)}
+                      title={c}
+                      className={`aspect-square rounded-md border transition-transform hover:scale-110 ${
+                        slideBg === c ? "border-[#1f1f1f] ring-1 ring-[#1f1f1f]" : "border-black/15"
+                      }`}
+                      style={{ background: c }}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           )}

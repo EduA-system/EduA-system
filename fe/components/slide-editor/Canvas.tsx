@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
 import { CANVAS_W, CANVAS_H, type Slide, type SlideElement, type ElementPatch } from "./types";
 import { ElementView } from "./ElementView";
@@ -40,6 +40,7 @@ export function Canvas({
   activeTool = "select",
   drawColor = "#1e293b",
   drawSize = 6,
+  onScaleChange,
 }: {
   dragRef: DragRef;
   zoomMode: "fit" | number;
@@ -47,6 +48,7 @@ export function Canvas({
   activeTool?: ActiveTool;
   drawColor?: string;
   drawSize?: number;
+  onScaleChange?: (scale: number) => void;
 }) {
   const slide = useEditorStore((s) =>
     s.slides.find((sl) => sl.id === s.currentSlideId)
@@ -75,6 +77,11 @@ export function Canvas({
   useLayoutEffect(() => {
     scaleRef.current = scale;
   }, [scale]);
+
+  // Báo tỉ lệ render thật lên cha (để BottomBar hiển thị % và đặt vị trí slider).
+  useEffect(() => {
+    onScaleChange?.(scale);
+  }, [scale, onScaleChange]);
 
   useLayoutEffect(() => {
     if (zoomMode !== "fit") return;
@@ -386,17 +393,15 @@ export function Canvas({
   return (
     <div
       ref={areaRef}
-      className={`flex min-h-0 flex-1 ${
-        zoomMode === "fit"
-          ? "items-center justify-center overflow-hidden"
-          : "items-start justify-start overflow-auto p-[40px]"
-      }`}
+      className="min-h-0 flex-1 overflow-auto"
       style={{
         background: "#edeff2",
         backgroundImage: "radial-gradient(circle, #d7dbe0 1px, transparent 1px)",
         backgroundSize: "20px 20px",
       }}
     >
+      {/* Bọc canvas: căn giữa khi vừa khung, chỉ cuộn từ mép khi phóng to tràn khung. */}
+      <div className="flex w-max min-w-full min-h-full items-center justify-center p-[40px]">
       <div
         style={{ width: CANVAS_W * scale, height: CANVAS_H * scale }}
         className="shrink-0 overflow-hidden rounded-[6px] shadow-[0_10px_34px_rgba(15,23,42,0.14)]"
@@ -491,6 +496,7 @@ export function Canvas({
             />
           )}
         </div>
+      </div>
       </div>
 
       {ctxMenu && (
