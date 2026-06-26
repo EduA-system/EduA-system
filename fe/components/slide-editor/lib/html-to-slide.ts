@@ -110,23 +110,43 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
       const g = geom(el);
       if (g.w < 2 || g.h < 2) return;
       const s = cs(el);
+      const fontSize = Math.round(parseFloat(s.fontSize)) || 24;
+      // Carry the metrics the editor would otherwise default differently
+      // (line-height 1.2, no letter-spacing, page font) so its re-render
+      // matches the geometry we measured here — otherwise tighter
+      // line-height/letter-spacing text overflows its fixed, clipped box.
+      const lhPx = parseFloat(s.lineHeight);
+      const lineHeight =
+        Number.isFinite(lhPx) && fontSize > 0
+          ? Math.round((lhPx / fontSize) * 100) / 100
+          : undefined;
+      const lsPx = parseFloat(s.letterSpacing);
+      const letterSpacing = Number.isFinite(lsPx) && lsPx !== 0 ? lsPx : undefined;
+      // The editor caps font-weight to 400/700 and uses its own page font, so
+      // re-rendered text can be a hair wider than measured and wrap one extra
+      // line into the clipped box (notably weight-600 labels rounded up to
+      // 700). Pad the width to absorb that without forcing the re-wrap.
+      const padW = Math.min(28, Math.ceil(g.w * 0.06) + 2);
       const textEl: TextElement = {
         id: uid(),
         type: "text",
         x: g.x,
         y: g.y,
-        w: g.w,
-        h: g.h,
+        w: g.w + padW,
+        h: g.h + 2, // headroom against sub-pixel rounding in the editor render
         rotation: 0,
         zIndex: z++,
         opacity: parseFloat(s.opacity) || 1,
         locked: false,
         text: t,
-        fontSize: Math.round(parseFloat(s.fontSize)) || 24,
+        fontSize,
         bold: (parseInt(s.fontWeight, 10) || 400) >= 600,
         italic: s.fontStyle === "italic",
         color: s.color || "#1e293b",
         align: alignOf(s),
+        fontFamily: s.fontFamily || undefined,
+        lineHeight,
+        letterSpacing,
       };
       elements.push(textEl);
     };

@@ -793,7 +793,7 @@ public class SlideDesignPromptBuilder {
 
               &lt;span data-layer="content"
                     style="margin-top:4px; font-family:Inter,sans-serif;
-                           font-size:7px; font-weight:600;
+                           font-size:9px; font-weight:600;
                            letter-spacing:0.10em;
                            text-transform:uppercase;
                            color:[readable on dashed debug bg];
@@ -826,7 +826,7 @@ public class SlideDesignPromptBuilder {
                   &lt;h1 data-layer="content"
                        style="margin:6px 0 0;
                               font-family:Inter,sans-serif;
-                              font-size:[20–36px]; font-weight:800;
+                              font-size:[24–42px]; font-weight:800;
                               letter-spacing:-0.02em; line-height:1.05;
                               color:[mood-dark or mood-light];
                               z-index:70;"&gt;…&lt;/h1&gt;
@@ -838,7 +838,7 @@ public class SlideDesignPromptBuilder {
                   &lt;ul data-layer="content"
                        style="margin:6px 0 0; padding-left:18px;
                               font-family:Inter,sans-serif;
-                              font-size:[8–10px]; font-weight:400;
+                              font-size:[11–13px]; font-weight:400;
                               line-height:1.5; color:[mood-color];
                               z-index:65;"&gt;
                     &lt;li&gt;…&lt;/li&gt;
@@ -866,7 +866,7 @@ public class SlideDesignPromptBuilder {
                               border:1px dashed #94a3b8;
                               display:flex; align-items:center;
                               justify-content:center; color:#64748b;
-                              font-size:7px; font-style:italic;
+                              font-size:9px; font-style:italic;
                               font-family:Inter,sans-serif;
                               z-index:65;"&gt;
                     [Sơ đồ: short Vietnamese caption]
@@ -882,7 +882,7 @@ public class SlideDesignPromptBuilder {
                   &lt;small data-layer="content"
                           style="margin:6px 0 0;
                                  font-family:Inter,sans-serif;
-                                 font-size:[6–7px]; font-weight:500;
+                                 font-size:[9–10px]; font-weight:500;
                                  color:[mood-muted]; line-height:1.4;
                                  z-index:65;"&gt;…&lt;/small&gt;
                   Short caption text, ≤ data-max-chars.
@@ -891,7 +891,7 @@ public class SlideDesignPromptBuilder {
                 → APPEND ONE
                   &lt;span data-layer="content"
                          style="margin:6px 0 0;
-                                font-size:[12–20px];
+                                font-size:[16–26px];
                                 color:[mood-color]; z-index:65;"&gt;
                     \\( formula \\)
                   &lt;/span&gt;
