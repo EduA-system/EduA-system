@@ -1,16 +1,25 @@
 package com.edua.beeduasystem.infrastructure.ai;
 
 import com.edua.beeduasystem.repository.gateways.AiClient;
-import lombok.RequiredArgsConstructor;
+import com.edua.beeduasystem.repository.gateways.AiDiagnosticsListener;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
 @Slf4j
-@RequiredArgsConstructor
 public class FallbackAiClient implements AiClient {
 
     private final List<AiClient> clients;
+    private final AiDiagnosticsListener diagnostics;
+
+    public FallbackAiClient(List<AiClient> clients) {
+        this(clients, AiDiagnosticsListener.NO_OP);
+    }
+
+    public FallbackAiClient(List<AiClient> clients, AiDiagnosticsListener diagnostics) {
+        this.clients = clients;
+        this.diagnostics = diagnostics;
+    }
 
     @Override
     public String generate(String prompt) {
@@ -25,10 +34,15 @@ public class FallbackAiClient implements AiClient {
     private String execute(AiOperation operation) {
         Exception lastException = null;
         for (AiClient client : clients) {
+            String provider = client.getClass().getSimpleName();
+            diagnostics.onProviderAttempt(provider);
             try {
-                return operation.apply(client);
+                String result = operation.apply(client);
+                diagnostics.onProviderSucceeded(provider);
+                return result;
             } catch (Exception e) {
-                log.warn("AI provider {} failed: {}", client.getClass().getSimpleName(), e.getMessage());
+                log.warn("AI provider {} failed: {}", provider, e.getMessage());
+                diagnostics.onProviderFailed(provider, e.getMessage());
                 lastException = e;
             }
         }
