@@ -8,23 +8,27 @@
 
 ## 0. Mục tiêu
 
-- [ ] Bổ sung các chức năng định dạng cơ bản còn thiếu (bảng, link, thụt lề, xóa định dạng...).
-- [ ] Bổ sung chức năng phục vụ công thức KHTN (chỉ số trên/dưới, ký hiệu đặc biệt).
-- [ ] Sửa các bug định dạng hiện có.
-- [ ] Giữ thanh công cụ responsive, không chồng chất ở màn hẹp.
+- [x] Bổ sung các chức năng định dạng cơ bản còn thiếu (bảng, link, thụt lề, xóa định dạng...).
+- [x] Bổ sung chức năng phục vụ công thức KHTN (chỉ số trên/dưới, ký hiệu đặc biệt).
+- [x] Sửa các bug định dạng hiện có.
+- [x] Giữ thanh công cụ responsive, không chồng chất ở màn hẹp.
 
 ---
 
 ## 1. Hiện trạng đã có
 
-- [x] Undo / Redo.
-- [x] Text style: Normal text / Title / Heading / Subheading (`formatBlock`).
-- [x] Font family (`fontName`).
-- [x] Font size (UI có, nhưng **đang bug**, xem mục 4).
+> **Đã migrate toàn bộ editor sang Tiptap v3** (xem mục 5). Mọi nút dưới đây chạy
+> qua `editor.chain()...` thay cho `document.execCommand`, trạng thái đọc ngược
+> từ selection qua `useEditorState`.
+
+- [x] Undo / Redo (có disable khi không undo/redo được).
+- [x] Text style: Normal text / Title / Heading / Subheading (`setParagraph`/`setHeading`).
+- [x] Font family (`setFontFamily`).
+- [x] Font size (`setFontSize` — đã sửa bug, xem mục 4).
 - [x] Bold / Italic / Underline.
-- [x] Màu chữ (`foreColor`) và highlight (`hiliteColor`).
+- [x] Màu chữ (`setColor`) và highlight (`toggleHighlight`).
 - [x] Bullet list / Numbered list.
-- [x] Căn lề: trái / giữa / phải / đều.
+- [x] Căn lề: trái / giữa / phải / đều (`setTextAlign`).
 - [x] Responsive container-query: dropdown co + truncate, ẩn dần nhóm phụ khi hẹp.
 
 ---
@@ -33,24 +37,24 @@
 
 ### 2.1 Ưu tiên cao
 
-- [ ] **Chèn bảng** (tạo bảng): popup chọn số hàng/cột → chèn `<table>` vào editor.
-  - [ ] Lưu ý: `insertTable` **không** thuộc `execCommand` → phải tự chèn HTML `<table>` vào contentEditable.
-  - [ ] Style mặc định cho bảng (border, padding) trong `globals.css`.
-- [ ] **Chèn link** (hyperlink): popup nhập URL → `createLink`; có nút bỏ link (`unlink`).
-- [ ] **Tăng / giảm thụt lề** (indent / outdent).
-- [ ] **Xóa định dạng** (clear formatting): `removeFormat`.
+- [x] **Chèn bảng** (tạo bảng): popup lưới chọn số hàng/cột → `insertTable` (Tiptap), có header row.
+  - [x] Dùng `@tiptap/extension-table` (TableKit) — không cần thao tác DOM thủ công.
+  - [x] Style mặc định cho bảng (border, padding, header, resize handle) trong `globals.css`.
+- [x] **Chèn link** (hyperlink): popup nhập URL → `setLink`; có nút bỏ link (`unsetLink`); prefill URL hiện tại.
+- [x] **Tăng / giảm thụt lề** (indent / outdent) — qua `sinkListItem`/`liftListItem` (áp dụng cho list).
+- [x] **Xóa định dạng** (clear formatting): `unsetAllMarks().clearNodes()`.
 
 ### 2.2 Phục vụ KHTN (vật lí/hóa)
 
-- [ ] **Chỉ số trên / chỉ số dưới** (superscript / subscript) — cần cho H₂O, v², m/s².
-- [ ] **Chèn ký hiệu đặc biệt**: √, ±, ×, ÷, °, α, β, Δ, π...
+- [x] **Chỉ số trên / chỉ số dưới** (superscript / subscript) — cho H₂O, v², m/s².
+- [x] **Chèn ký hiệu đặc biệt**: lưới 40 ký hiệu (√ ± × ÷ ° α β Δ π ∑ ∫ → ⇌ …).
 - [ ] (Sau) Chèn công thức toán (cân nhắc KaTeX/MathLive nếu cần công thức phức tạp).
 
 ### 2.3 Ưu tiên thấp / nice-to-have
 
-- [ ] Gạch ngang (strikethrough).
-- [ ] Chèn ảnh.
-- [ ] Giãn dòng (line spacing).
+- [x] Gạch ngang (strikethrough).
+- [x] Chèn ảnh (qua URL).
+- [ ] Giãn dòng (line spacing). _(LineHeight có sẵn trong TextStyleKit — chưa gắn nút.)_
 - [ ] Phóng to / thu nhỏ (zoom) vùng soạn thảo.
 - [ ] In (print).
 
@@ -58,24 +62,30 @@
 
 ## 3. UI thanh công cụ
 
-- [ ] Sắp xếp nhóm nút mới vào thanh công cụ hợp lý (gom theo nhóm như hiện tại).
-- [ ] Cập nhật ngưỡng container-query khi thêm nút để vẫn không chồng chất ở màn hẹp.
-- [ ] Cân nhắc menu "More" (...) gom các nút ít dùng khi không gian hẹp.
-- [ ] Đảm bảo các popup (bảng, link, ký hiệu) không bị cắt bởi vùng cuộn của thanh công cụ.
+- [x] Sắp xếp nhóm nút mới vào thanh công cụ hợp lý (gom theo nhóm).
+- [x] Giữ ngưỡng container-query: màu chữ/highlight ẩn <1180px, căn lề ẩn <1060px.
+- [x] Menu **"More" (…)** luôn hiển thị, gom các nút phụ (gạch ngang, super/subscript, thụt lề, xóa định dạng, chèn bảng/link/ảnh/ký hiệu) → vẫn truy cập được ở mọi độ rộng.
+- [x] Popup (bảng, link, ký hiệu, ảnh) nằm trong vùng section, không bị cắt; đóng khi click ra ngoài.
 
 ---
 
 ## 4. Bug cần sửa
 
-- [ ] **Font size không tác dụng**: `applyFontSize` luôn truyền `exec("fontSize", "3")` thay vì cỡ chữ người dùng chọn (`EditorTools.tsx`, ~dòng 51). `execCommand("fontSize")` chỉ nhận 1–7; cần map px → 1–7 hoặc bọc `<span style="font-size">`.
-- [ ] **Font size / font family chỉ là state hiển thị, không phản ánh định dạng tại vị trí con trỏ** (không đọc ngược từ selection).
+- [x] **Font size không tác dụng** → đã sửa: dùng `setFontSize("${px}px")` (TextStyle FontSize), áp đúng cỡ người dùng chọn.
+- [x] **Font size / font family / mọi nút không phản ánh định dạng tại con trỏ** → đã sửa: trạng thái toolbar đọc trực tiếp từ editor qua `useEditorState` (`isActive`/`getAttributes`).
 
 ---
 
 ## 5. Ghi chú kỹ thuật
 
-- Toàn bộ nút hiện dựa trên `document.execCommand(...)` — API này **đã deprecated**. Vẫn chạy trên trình duyệt hiện tại nhưng:
-  - Không có lệnh chèn bảng → phải tự thao tác DOM/Range.
-  - Hành vi khác nhau giữa trình duyệt, khó kiểm soát output HTML.
-- **Quyết định cần chốt:** tiếp tục vá trên contentEditable + execCommand, hay chuyển sang editor framework (**Tiptap/ProseMirror**) để có sẵn bảng, link, undo/redo ổn định, schema HTML sạch. Nếu danh sách chức năng còn dài (bảng, công thức, ảnh...) thì Tiptap đáng cân nhắc sớm.
-- File liên quan: `fe/components/LessonEditor/EditorTools.tsx`, `LessonEditor.tsx`, `fe/app/globals.css`.
+- ✅ **Đã chốt: chuyển sang Tiptap v3** (ProseMirror). Bỏ hoàn toàn `document.execCommand`.
+  - Editor tạo bằng `useEditor` ở `LessonEditDashboard` (`immediatelyRender: false` để
+    tránh hydration mismatch trên Next 16), truyền instance xuống `EditorTools` và `LessonEditor`.
+  - Extension dùng chung khai báo ở `editorConfig.ts` (StarterKit + TextStyleKit +
+    Highlight + TextAlign + Sub/Superscript + TableKit + Image).
+  - Seed nội dung lấy từ `lessonMock.contentHtml` (cấu trúc phẳng h1/p/h2/ul — hợp schema Tiptap).
+  - `<section>` và class `.doc-meta` bị Tiptap loại bỏ → CSS chuyển sang
+    `.lesson-document-editor h2` (margin) và `h1 + p` (meta) trong `globals.css`.
+- **Còn lại / cân nhắc sau:** line spacing (LineHeight đã có sẵn), zoom, print, công thức KaTeX/MathLive.
+- File liên quan: `fe/components/LessonEditor/EditorTools.tsx`, `LessonEditor.tsx`,
+  `editorConfig.ts`, `fe/components/dashboard/LessonEditDashboard.tsx`, `fe/app/globals.css`.
