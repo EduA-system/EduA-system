@@ -13,6 +13,7 @@ import {
 
 const HANDLE_SIZE = 8;
 const ROTATE_HANDLE_OFFSET = 24;
+const SELECTION_LAYER_Z_INDEX = 15000;
 
 const HANDLES = [
   { id: "nw", cursor: "nw-resize", x: 0, y: 0 },
@@ -192,7 +193,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
     const el = single as LineElement;
     return (
       <svg
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible", pointerEvents: "none" }}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible", pointerEvents: "none", zIndex: SELECTION_LAYER_Z_INDEX }}
       >
         <circle
           cx={el.x1}
@@ -227,6 +228,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
         width: bbox.w,
         height: bbox.h,
         pointerEvents: "none",
+        zIndex: SELECTION_LAYER_Z_INDEX,
       }}
     >
       <div
