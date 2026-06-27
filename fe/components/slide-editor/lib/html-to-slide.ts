@@ -30,6 +30,12 @@ export type ConvertOptions = {
   bgImageUrl?: string | null;
   /** Small decorative icon URLs scattered in the canvas corners (z=0, faint). */
   decoIconUrls?: string[];
+  /**
+   * Stamp each step-2 body zone (data-layer="zone") as a bordered rect frame
+   * (transparent fill) so the layout is previewable before content fills in.
+   * Off for the final step-3 conversion (zones carry real content by then).
+   */
+  includeZoneFrames?: boolean;
 };
 
 let idCounter = 0;
@@ -216,6 +222,40 @@ export async function htmlToSlideElements(
       elements.push(imgEl);
     };
 
+    // Step-2 preview: stamp each body zone as a bordered frame (transparent
+    // fill) so the layout is visible before content fills in. The zone div's
+    // own dashed outline color/width becomes a solid stroke (the editor's
+    // ShapeElement has no dashed style).
+    const pushZoneFrame = (el: HTMLElement) => {
+      const g = geom(el);
+      if (g.w < 2 || g.h < 2) return;
+      const s = cs(el);
+      const ow = parseFloat(s.outlineWidth) || 2;
+      const oc =
+        s.outlineColor && s.outlineColor !== "transparent"
+          ? s.outlineColor
+          : "rgba(15, 23, 42, 0.45)";
+      const brPx = parseFloat(s.borderTopLeftRadius) || 0;
+      const frameEl: ShapeElement = {
+        id: uid(),
+        type: "shape",
+        shape: "rect",
+        x: g.x,
+        y: g.y,
+        w: g.w,
+        h: g.h,
+        rotation: 0,
+        zIndex: z++,
+        opacity: 1,
+        locked: false,
+        fill: "transparent",
+        stroke: oc,
+        strokeW: Math.max(1, Math.round(ow)),
+        borderRadius: Math.round(brPx),
+      };
+      elements.push(frameEl);
+    };
+
     // 1) L1 decoration (flat: text numerals + geometric shapes)
     root.querySelectorAll<HTMLElement>('[data-layer="deco"]').forEach((el) => {
       if (el.getAttribute("data-slide-el") === "text")
@@ -227,6 +267,13 @@ export async function htmlToSlideElements(
     root
       .querySelectorAll<HTMLElement>('[data-layer="struct"][data-region="body"]')
       .forEach((el) => pushShape(el));
+
+    // 2b) Step-2 preview only: bordered zone frames (no content yet)
+    if (opts?.includeZoneFrames) {
+      root
+        .querySelectorAll<HTMLElement>('[data-layer="zone"][data-region="body"]')
+        .forEach((el) => pushZoneFrame(el));
+    }
 
     // 3) Header content label (SUBJECT · TOPIC)
     root

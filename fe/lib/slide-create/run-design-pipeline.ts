@@ -19,6 +19,14 @@ export type DesignPipelineCallbacks = {
    * per-slide content fills in.
    */
   onSkinReady?: (skin: { bg: string; elements: SlideElement[] }) => void;
+  /**
+   * Step 2 done for a slide: bordered zone frames stamped as a layout preview.
+   * Replaced by onSlideReady once step 3 fills the content.
+   */
+  onSlideFrames?: (
+    slideId: string,
+    result: { bg: string; elements: SlideElement[] },
+  ) => void;
   /** A slide finished steps 2+3 and was converted to editor elements. */
   onSlideReady: (
     slideId: string,
@@ -144,6 +152,22 @@ export async function runDesignPipeline(
         step: "structural",
         priorHtml: skinHtml,
       });
+      // Preview the step-2 layout: stamp bordered zone frames before content.
+      if (cb.onSlideFrames) {
+        try {
+          const frames = await htmlToSlideElements(step2.html, {
+            bgImageUrl,
+            decoIconUrls,
+            includeZoneFrames: true,
+          });
+          cb.onSlideFrames(slide.id, { bg: frames.bg, elements: frames.elements });
+        } catch (e) {
+          logSlideApi("design pipeline: frame preview failed", {
+            slide: slide.id,
+            message: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
       const step3 = await generateSlideHtmlDesign({
         topic,
         outline,
