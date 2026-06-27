@@ -24,6 +24,14 @@ const DOC_HEAD = `<script src="https://cdn.tailwindcss.com"></script>
 
 export type ConvertResult = { bg: string; elements: SlideElement[]; skipped: string[] };
 
+/** Optional deck-level options applied during conversion. */
+export type ConvertOptions = {
+  /** Full-canvas background image (e.g. a slide-asset pattern) placed at z=0. */
+  bgImageUrl?: string | null;
+  /** Small decorative icon URLs scattered in the canvas corners (z=0, faint). */
+  decoIconUrls?: string[];
+};
+
 let idCounter = 0;
 function uid() {
   return `h2s-${Date.now()}-${++idCounter}`;
@@ -50,7 +58,10 @@ function isLatex(el: HTMLElement): boolean {
   return /\\\(|\\\[|\$\$/.test(t);
 }
 
-export async function htmlToSlideElements(html: string): Promise<ConvertResult> {
+export async function htmlToSlideElements(
+  html: string,
+  opts?: ConvertOptions,
+): Promise<ConvertResult> {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
   iframe.style.cssText =
@@ -180,7 +191,11 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
       elements.push(shapeEl);
     };
 
-    const pushImage = (el: HTMLElement) => {
+    const pushImage = (
+      el: HTMLElement,
+      src: string,
+      fit: ImageElement["fit"],
+    ) => {
       const g = geom(el);
       if (g.w < 2 || g.h < 2) return;
       const imgEl: ImageElement = {
@@ -194,8 +209,8 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
         zIndex: z++,
         opacity: 1,
         locked: false,
-        src: PLACEHOLDER_IMAGE,
-        fit: "cover",
+        src,
+        fit,
         borderRadius: 0,
       };
       elements.push(imgEl);
@@ -223,9 +238,12 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
       const tag = el.tagName.toLowerCase();
       const slideEl = el.getAttribute("data-slide-el");
       if (slideEl === "image" || el.hasAttribute("data-image-prompt")) {
+        // The real illustration is added manually / in a later step. Keep a
+        // gray placeholder here and log the prompt so that step knows what
+        // image to insert. Decorative icons are NOT used as content images.
         const prompt = el.getAttribute("data-image-prompt");
         if (prompt) skipped.push(`image-prompt(unstored): ${prompt.slice(0, 60)}`);
-        pushImage(el);
+        pushImage(el, PLACEHOLDER_IMAGE, "cover");
         return;
       }
       if (isLatex(el)) {
@@ -241,6 +259,56 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
       }
       pushText(el, el.innerText ?? el.textContent ?? "");
     });
+
+    // Deck-level decorative icons: a few faint science icons scattered in the
+    // canvas corners (doodle style). z=0 + low opacity so they sit above the
+    // background pattern but behind all content (content z ≥ 1) — they peek out
+    // in the margins and never cover text. Locked. Unshifted BEFORE the
+    // background so the background ends up at array index 0 (bottom-most).
+    const DECO_SLOTS = [
+      { x: 24, y: 430, w: 86, h: 86, rotation: -8 }, // bottom-left
+      { x: 850, y: 442, w: 80, h: 80, rotation: 6 }, // bottom-right
+      { x: 854, y: 96, w: 78, h: 78, rotation: 10 }, // top-right
+    ];
+    (opts?.decoIconUrls ?? []).slice(0, DECO_SLOTS.length).forEach((src, i) => {
+      const slot = DECO_SLOTS[i];
+      elements.unshift({
+        id: uid(),
+        type: "image",
+        x: slot.x,
+        y: slot.y,
+        w: slot.w,
+        h: slot.h,
+        rotation: slot.rotation,
+        zIndex: 0,
+        opacity: 0.16,
+        locked: true,
+        src,
+        fit: "contain",
+        borderRadius: 0,
+      });
+    });
+
+    // Deck-level decorative background pattern: a full-canvas image under
+    // everything (z=0). The pattern SVG is transparent so the mood color (bg)
+    // still shows through. Locked so the user does not drag it by accident.
+    if (opts?.bgImageUrl) {
+      elements.unshift({
+        id: uid(),
+        type: "image",
+        x: 0,
+        y: 0,
+        w: 960,
+        h: 540,
+        rotation: 0,
+        zIndex: 0,
+        opacity: 1,
+        locked: true,
+        src: opts.bgImageUrl,
+        fit: "cover",
+        borderRadius: 0,
+      });
+    }
 
     return { bg, elements, skipped };
   } finally {

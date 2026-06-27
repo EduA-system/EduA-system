@@ -1,6 +1,7 @@
 import { generateSlideHtmlDesign } from "@/lib/api/slide-design";
 import { slideRoleLabel, type OutlinePart, type SlideItem } from "@/lib/api/slides";
 import { htmlToSlideElements } from "@/components/slide-editor/lib/html-to-slide";
+import { pickBackground, pickDecoIcons } from "@/lib/slide-assets/resolve";
 import type { SlideElement } from "@/components/slide-editor/types";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 
@@ -91,6 +92,12 @@ export async function runDesignPipeline(
   const total = slides.length;
   let ready = 0;
 
+  // Decorative chrome for the whole deck (stable per topic) so every slide
+  // shares it: one background pattern + a few faint corner icons. Stamped
+  // under all content during conversion.
+  const bgImageUrl = pickBackground(topic);
+  const decoIconUrls = pickDecoIcons(topic);
+
   // ── Step 1: deck skin (once) ────────────────────────────────
   let skinHtml: string;
   try {
@@ -114,7 +121,7 @@ export async function runDesignPipeline(
   // Convert the skin once and hand it to the client so it can stamp a
   // bg + decoration preview onto every still-empty skeleton slide.
   try {
-    const { bg, elements, skipped } = await htmlToSlideElements(skinHtml);
+    const { bg, elements, skipped } = await htmlToSlideElements(skinHtml, { bgImageUrl, decoIconUrls });
     if (skipped.length > 0) {
       logSlideApi("design pipeline: skin skipped elements", { skipped });
     }
@@ -145,7 +152,7 @@ export async function runDesignPipeline(
         step: "content_fill",
         priorHtml: step2.html,
       });
-      const { bg, elements, skipped } = await htmlToSlideElements(step3.html);
+      const { bg, elements, skipped } = await htmlToSlideElements(step3.html, { bgImageUrl, decoIconUrls });
       if (skipped.length > 0) {
         logSlideApi("design pipeline: skipped elements", { slide: slide.id, skipped });
       }
