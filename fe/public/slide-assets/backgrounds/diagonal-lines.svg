@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" preserveAspectRatio="none">
+  <defs>
+    <pattern id="diagonal-lines" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="22" stroke="#cbd5e1" stroke-width="1" opacity="0.4"/>
+    </pattern>
+  </defs>
+  <rect width="960" height="540" fill="url(#diagonal-lines)"/>
+</svg>

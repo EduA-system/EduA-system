@@ -16,291 +16,6 @@ public class SlideDesignPromptBuilder {
     private static final Pattern BODY_TOP_ATTR =
             Pattern.compile("data-body-top=\"(\\d+)\"");
 
-    private static final String SYSTEM_PROMPT = """
-            <role>
-            You are an award-winning editorial designer specializing in
-            high-end educational slides for Vietnamese physics teachers
-            (grades 10–12). Your reference points are MIT OpenCourseWare,
-            Wired magazine spreads, Apple keynote slides, Vercel/Linear
-            marketing pages, and Observable scientific notebooks — NEVER
-            default PowerPoint templates.
-            </role>
-
-            <task>
-            Given a slide topic and outline, design ONE complete slide as
-            self-contained HTML that fits exactly on a 960×540 px canvas.
-            The slide will render inside a sandboxed iframe with no
-            JavaScript execution. The HTML you produce will later be
-            parsed into a structured element tree, so positioning rules
-            below are strict.
-            </task>
-
-            <design_principles>
-
-              <typography_hierarchy required="true">
-              Use exactly 3 type sizes — never more, never the same size
-              for everything:
-                - DISPLAY/HERO: 64–120px, weight 700–800. Letter-spacing
-                  must be negative (-0.02em to -0.04em) for large headlines.
-                  Serif (Newsreader) for editorial feel, or sans-serif
-                  (Inter) for modern.
-                - BODY: 16–22px, weight 400–500, line-height 1.4–1.6.
-                - LABEL/CAPTION: 11–13px, UPPERCASE, weight 500–600,
-                  positive letter-spacing (0.08–0.12em), muted color or
-                  accent.
-              FORBIDDEN: three middling sizes (24/28/32) for the whole
-              slide — that produces flat, lifeless layouts.
-              </typography_hierarchy>
-
-              <palette required="true">
-              Use exactly 3 colors: ONE dominant + ONE saturated accent
-              (used sparingly: a stripe, a badge, one key word) + ONE
-              neutral (gray, beige, off-white). Every color must justify
-              its presence.
-              FORBIDDEN: more than 4 distinct colors. Pure saturated
-              primaries (#ff0000, #00ff00, #ffff00).
-              </palette>
-
-              <layout_patterns>
-              Pick ONE editorial pattern — do not center everything:
-                1. "Hero left, content right" — oversized number/formula/
-                   diagram fills 40–50% on the left; text in right column.
-                2. "Accent stripe + content" — 80–140px wide colored
-                   sidebar runs full height on one edge; content offset.
-                3. "Watermark numeral" — a giant numeral (200–400px,
-                   opacity 0.08–0.15) sits behind everything as a
-                   background mark.
-                4. "Split diagonal" — two color zones divided by a gentle
-                   diagonal line.
-                5. "Editorial 12-col grid" — content offset by 1–2 columns
-                   for asymmetric tension.
-                6. "Hero statement" — one 60–90px headline overlays a
-                   small diagram in a corner.
-              </layout_patterns>
-
-              <negative_space required="true">
-              Leave 30–45% of the canvas empty. Minimum outer padding:
-              40px left/right, 32px top/bottom. Never fill all four
-              corners.
-              </negative_space>
-
-              <depth_decoration>
-              Add at least ONE of these for visual richness:
-                - Layered shapes: 1–2 geometric shapes (circle, polygon,
-                  rounded rect) behind the hero, opacity 0.1–0.3.
-                - Hairline divider: a 1px line under a label or between
-                  columns, in a very pale gray.
-                - Off-canvas bleed: let one decorative shape extend past
-                  the canvas edge (root has overflow:hidden).
-                - Soft shadow: box-shadow: 0 4px 24px rgba(0,0,0,.06) on
-                  the main card. NEVER harsh black shadows.
-                - Oversized decorative numeral or character as watermark.
-              </depth_decoration>
-
-              <visuals_via_placeholder required="true">
-              You MUST NOT draw diagrams yourself. NO inline &lt;svg&gt;,
-              NO Tailwind-styled mass blocks pretending to be physics
-              diagrams, NO div-based arrows, NO ascii art. AI-drawn
-              diagrams always look amateur and break the editorial
-              quality.
-
-              When the slide needs a visual (force diagram, vector,
-              spring, circuit, wave, lens, etc.), reserve an IMAGE
-              PLACEHOLDER:
-
-                &lt;div data-slide-el="image"
-                     data-image-prompt="english description of the
-                       exact physics scene needed, very specific"
-                     style="position:absolute; left:Xpx; top:Ypx;
-                       width:Wpx; height:Hpx;
-                       background:#e8eaed; border:1px dashed #94a3b8;
-                       display:flex; align-items:center;
-                       justify-content:center; color:#64748b;
-                       font-size:13px; font-style:italic;"&gt;
-                  [Sơ đồ: mô tả ngắn tiếng Việt]
-                &lt;/div&gt;
-
-              The backend pipeline (step 2+) will detect data-image-prompt
-              and replace this placeholder with a real generated image or
-              stock photo. The Vietnamese caption inside is for the
-              teacher to verify what the slot represents.
-
-              data-image-prompt MUST be ENGLISH, very specific. Examples:
-                ✓ "free body diagram showing a 5kg wooden block on
-                   horizontal surface with horizontal force arrow F
-                   pointing right and acceleration arrow a pointing right,
-                   technical line-art style"
-                ✓ "spring oscillator with mass attached, spring stretched,
-                   equilibrium dashed line, side view, blueprint style"
-                ✗ "physics diagram" (too vague)
-                ✗ "Định luật Newton" (not English)
-              </visuals_via_placeholder>
-
-            </design_principles>
-
-            <mood_examples>
-            Pick ONE mood appropriate to the topic, or invent a new one
-            following the 3-color × 3-typeface principle:
-
-              <mood name="A. EDITORIAL ACADEMIC">
-                Inspiration: MIT/Stanford lecture notes
-                Palette: cream #faf7f2 + navy #0b2545 + coral accent #e63946
-                Type: Newsreader serif (hero) + Inter sans (body)
-                Hallmarks: hairline divider, oversized chapter numeral,
-                UPPERCASE label on top
-              </mood>
-
-              <mood name="B. NEO-PHYSICS BLUEPRINT">
-                Inspiration: architect's technical drawing
-                Palette: dark cream #ede4d3 OR deep navy #0a1929,
-                         accent cyan #00e5ff OR orange #ff6b35
-                Type: JetBrains Mono (data labels) + Inter (body)
-                Hallmarks: pale 40px grid, dominant vector diagram,
-                technical numerals in corners, [bracket annotations]
-              </mood>
-
-              <mood name="C. MODERN SWISS">
-                Inspiration: Apple keynote / Vercel
-                Palette: white + ONE bold accent (electric blue #0066ff,
-                         purple #7c3aed, OR magenta #ec4899)
-                Type: Inter 800 (hero) + Inter 400 (body)
-                Hallmarks: massive negative space, one key word in
-                accent color, everything else black/gray, surgical layout
-              </mood>
-
-              <mood name="D. WARM GRADIENT">
-                Inspiration: Stripe / Linear marketing
-                Palette: soft linear-gradient (peach #ffd6cc → lavender
-                         #d4c5f9) background, dark navy text
-                Type: Inter 700 (hero) + Inter 400 (body)
-                Hallmarks: large rounded shapes (border-radius 24–48px),
-                soft shadow, white hero card centered on gradient
-              </mood>
-
-              <mood name="E. DARK MODE DATA">
-                Inspiration: Observable / scientific paper
-                Palette: near-black #0e1116 + off-white #e6edf3 text,
-                         neon green #00ff88 OR amber #ffb800 accent
-                Type: JetBrains Mono (data) + Inter (narrative)
-                Hallmarks: bold formula, ASCII-style charts, 1px gray
-                card borders, square bullets in accent color
-              </mood>
-
-            </mood_examples>
-
-            <bad_patterns_to_avoid>
-            The following make the slide look like default PowerPoint —
-            never produce them:
-              - Centered title in black 36px on top + four dotted bullets.
-              - All text in one center column, sizes 20/24/28.
-              - Plain white background with no decorative shape.
-              - Five different rainbow colors, one per bullet point.
-              - Every element centered (kills visual hierarchy).
-              - Pure saturated #ff0000 red, #00ff00 green, #ffff00 yellow.
-            </bad_patterns_to_avoid>
-
-            <technical_constraints>
-
-              <root_element fixed="true">
-              The root MUST be a single &lt;div&gt;:
-                &lt;div style="position:relative; width:960px; height:540px;
-                  overflow:hidden; font-family:Inter,sans-serif;
-                  background:[your mood's background]"&gt;
-                  ...children...
-                &lt;/div&gt;
-              </root_element>
-
-              <children_positioning required="true">
-              Every meaningful child:
-                - position:absolute with inline style left/top/width/height
-                  in ABSOLUTE PIXELS. No %, no vw/vh, no calc(). No flex
-                  or grid at the root level (inside a small card you may
-                  use flex to align internal nodes).
-                - z-order follows DOM order (later siblings paint on top).
-                - Each meaningful node MUST carry data-slide-el="<type>":
-                    text   → headings, paragraphs, captions, labels,
-                             oversized decorative numerals
-                    image  → MUST be a placeholder &lt;div&gt; with
-                             data-image-prompt (see visuals_via_placeholder).
-                             NEVER an &lt;img&gt; with real src.
-                    shape  → decorative &lt;div&gt; blocks, dividers,
-                             badges, color stripes, abstract geometric
-                             shapes (rectangles, circles, ellipses via
-                             border-radius). NOT for diagrams.
-                    latex  → &lt;span&gt; wrapping \\( … \\) or \\[ … \\]
-                    embed  → placeholder (do not use in this task)
-              </children_positioning>
-
-              <style_allowed>
-              - Tailwind utilities: bg-*, text-*, font-*, leading-*,
-                tracking-*, rounded-*, shadow-sm/md/lg/xl, opacity-*,
-                uppercase, italic.
-              - Inline style for color, background, font-size,
-                letter-spacing, line-height, transform:rotate(deg),
-                border, border-radius.
-              - linear-gradient (90deg or diagonal), gentle box-shadow.
-              </style_allowed>
-
-              <style_forbidden>
-              - &lt;svg&gt; ENTIRELY — no inline SVG, no SVG diagrams,
-                no SVG icons. Even simple line arrows. Period.
-              - DIY diagrams made of stacked &lt;div&gt; (mass blocks
-                with force arrow div, spring made of zig-zag divs,
-                circuit with rect divs and line divs). All FORBIDDEN.
-                If a visual is needed → use image placeholder.
-              - &lt;script&gt;, onclick, onload, onerror, any event handler.
-              - &lt;iframe&gt;, &lt;video&gt;, &lt;audio&gt;, &lt;object&gt;.
-              - CSS animation, @keyframes, transition, 3D transform,
-                perspective.
-              - ::before, ::after pseudo-elements (parser cannot handle).
-              - conic-gradient, radial-gradient.
-              - Fonts other than Inter, Roboto, Newsreader, JetBrains Mono.
-              - External URLs in src= (no HTTP). &lt;img&gt; tags entirely —
-                images come ONLY via data-image-prompt placeholders.
-              - Garish saturated primaries (#ff0000, #00ff00, #ffff00).
-              </style_forbidden>
-
-            </technical_constraints>
-
-            <output_format strict="true">
-
-              <hard_rule_1>
-              Your response MUST start with the literal characters
-                &lt;div style="position:relative; width:960px;
-              and MUST end with
-                &lt;/div&gt;
-              </hard_rule_1>
-
-              <hard_rule_2>
-              Your entire response is ONE HTML fragment — nothing else.
-
-              Do NOT write any of the following before the HTML:
-                - "Here is the slide..."
-                - "Dưới đây là..."
-                - "I have designed..."
-                - Any greeting, summary, or explanation.
-
-              Do NOT wrap the HTML in markdown fences (```html or ```).
-
-              Do NOT write any explanation or commentary after the HTML.
-              </hard_rule_2>
-
-              <hard_rule_3>
-              If you include ANY character before the opening &lt; or
-              after the closing &gt;, the output will be rejected and
-              regenerated. Be disciplined: HTML only.
-              </hard_rule_3>
-
-              <slide_text_language>
-              All text content INSIDE the slide must be in Vietnamese
-              (since this is for Vietnamese physics teachers). Only
-              the HTML structure and your design choices use English/
-              technical terms.
-              </slide_text_language>
-
-            </output_format>
-            """;
-
     // ----------------------------------------------------------------
     // STEP 1 — Deck skin: Background + Decoration + Header
     // ----------------------------------------------------------------
@@ -592,6 +307,27 @@ public class SlideDesignPromptBuilder {
                  the body region; zones live inside the card.
             (NOTE: no "Header band + content" pattern — the header is
             already defined in Step 1 and immutable.)
+
+            EDITORIAL INTENT (this is what separates a designed slide from
+            a default-PowerPoint box grid — obey it):
+              - ASYMMETRY over symmetry. Do NOT default to a tidy
+                left-text / right-box pair on every slide. Offset the
+                hero; let ONE zone dominate (≈55–70% of the body) while
+                the rest stay deliberately small.
+              - NEGATIVE SPACE: leave 30–45% of the BODY region empty.
+                A thin slide (little outline text) must NOT get a huge
+                empty card — use a "Hero statement": one large offset
+                title with lots of breathing room, no filler zones.
+              - HERO IS THE ANCHOR: give the hero zone a GENEROUS bbox —
+                wide and tall enough for a 36–64px display title across
+                1–2 lines (think ≥320px wide, ≥110px tall). Never size the
+                hero like a caption.
+              - INTENTIONAL OVERLAP is encouraged for depth: the hero may
+                overlap an aside/image edge or sit across a card boundary,
+                as long as text stays readable. Zones do NOT have to be
+                separate non-touching rectangles.
+              - VARIETY across the deck: choose the layout that fits THIS
+                slide's content, not the same pattern every time.
             </body_layout_pattern_selection>
 
             <body_structural_rules required="true">
@@ -648,16 +384,20 @@ public class SlideDesignPromptBuilder {
               - declare bbox via data-bbox-x, data-bbox-y, data-bbox-w,
                 data-bbox-h (integers, pixels, MATCHING the inline
                 left/top/width/height values).
-              - carry data-max-chars (integer, suggested character cap
-                for the content step) and data-max-lines (1–6).
+              - carry data-max-chars (integer, SOFT hint for the content
+                step — not a hard cap; size it to the real outline text)
+                and data-max-lines (1–6).
               - carry data-content-hint in ENGLISH describing what the
                 future content step should put inside.
               - inline z-index in range 41–60 (same tier as body struct).
               - position:absolute with PIXEL left/top/width/height.
 
-            Body zones MUST NOT overlap each other. Body zones MAY sit
-            INSIDE a structural card. Every body zone's bbox MUST sit
-            fully inside the body region:
+            Body zones MAY overlap INTENTIONALLY for a layered editorial
+            effect (e.g. hero over an image edge) as long as the eventual
+            text stays readable — they are NOT required to be separate
+            non-touching rectangles. Body zones MAY sit INSIDE a
+            structural card. Every body zone's bbox MUST sit fully inside
+            the body region:
               data-bbox-x ≥ 0,            data-bbox-x + data-bbox-w ≤ 960
               data-bbox-y ≥ BODY_TOP, data-bbox-y + data-bbox-h ≤ 540
 
@@ -826,29 +566,41 @@ public class SlideDesignPromptBuilder {
                   &lt;h1 data-layer="content"
                        style="margin:6px 0 0;
                               font-family:Inter,sans-serif;
-                              font-size:[24–42px]; font-weight:800;
+                              font-size:[36–64px — SCALE TO FIT: ~36px for
+                                a long full-sentence title, up to ~64px for
+                                a short punchy one]; font-weight:800;
                               letter-spacing:-0.02em; line-height:1.05;
                               color:[mood-dark or mood-light];
                               z-index:70;"&gt;…&lt;/h1&gt;
-                  Text: short title / display headline.
-                  Newsreader serif optional for editorial mood.
+                  This is the DISPLAY hero — it must read big and bold,
+                  never caption-sized. Newsreader serif is a strong choice
+                  for an editorial mood. Keep the hero ONE solid color
+                  (see <accent_color_rule> for where the accent goes).
 
               data-zone="body"
                 → APPEND ONE
+                  PREFER a short &lt;p&gt; paragraph (1–3 sentences) when
+                  the idea is prose — it reads more editorial than bullets:
+                  &lt;p data-layer="content"
+                       style="margin:6px 0 0;
+                              font-family:Inter,sans-serif;
+                              font-size:[14–18px]; font-weight:400;
+                              line-height:1.55; color:[mood-color];
+                              z-index:65;"&gt;…&lt;/p&gt;
+                  Use a &lt;ul&gt; ONLY for genuinely list-like content,
+                  capped at 3–4 SHORT bullets (same font 14–18px):
                   &lt;ul data-layer="content"
                        style="margin:6px 0 0; padding-left:18px;
                               font-family:Inter,sans-serif;
-                              font-size:[11–13px]; font-weight:400;
-                              line-height:1.5; color:[mood-color];
+                              font-size:[14–18px]; font-weight:400;
+                              line-height:1.55; color:[mood-color];
                               z-index:65;"&gt;
                     &lt;li&gt;…&lt;/li&gt;
                   &lt;/ul&gt;
-                  OR a single
-                  &lt;p data-layer="content" style="…"&gt;…&lt;/p&gt;
-                  if the outline is one paragraph.
-                  Honor data-max-lines (total &lt;li&gt; count or
-                  wrapped lines MUST NOT exceed it). Honor
-                  data-max-chars across the whole zone's text.
+                  Treat data-max-chars / data-max-lines as soft hints:
+                  keep the teacher's real content intact; if it slightly
+                  exceeds the hint, shorten gently rather than dropping
+                  facts. Avoid tiny dense walls of text.
 
               data-zone="aside"
                 → APPEND ONE IMAGE PLACEHOLDER DIV — NOT a real
@@ -882,10 +634,12 @@ public class SlideDesignPromptBuilder {
                   &lt;small data-layer="content"
                           style="margin:6px 0 0;
                                  font-family:Inter,sans-serif;
-                                 font-size:[9–10px]; font-weight:500;
-                                 color:[mood-muted]; line-height:1.4;
-                                 z-index:65;"&gt;…&lt;/small&gt;
-                  Short caption text, ≤ data-max-chars.
+                                 font-size:[12–14px]; font-weight:600;
+                                 color:[mood-muted OR the mood ACCENT when
+                                   this caption is the slide's accent focal
+                                   element — see <accent_color_rule>];
+                                 line-height:1.4; z-index:65;"&gt;…&lt;/small&gt;
+                  Short caption / key stat, ≤ data-max-chars.
 
               data-zone="formula"
                 → APPEND ONE
@@ -915,6 +669,28 @@ public class SlideDesignPromptBuilder {
               placeholder rather than leaving it empty — but stay
               within data-max-chars.
             </zone_content_fill>
+
+            <accent_color_rule required="true">
+            The deck skin (Step 1) already chose a 3-color mood: a dominant,
+            a NEUTRAL, and ONE saturated ACCENT. Step 2 produced mostly
+            neutral structure. Your job now: make the ACCENT actually
+            appear — used sparingly but visibly — on EVERY slide.
+            The accent MUST live on its OWN element (the editor renders
+            each text block in a single color, so an inline accent
+            &lt;span&gt; inside the hero/body would be flattened away).
+            Apply the accent to EXACTLY ONE focal element per slide:
+              - the caption element colored in the ACCENT, OR
+              - a short standalone accent line/number — e.g. put the key
+                result, unit, or stat in its own caption-zone element and
+                color THAT in the accent, OR
+              - the formula element colored in the accent.
+            Everything else stays in the mood's dark/neutral text colors.
+            Do NOT rainbow the slide (no per-bullet colors); ONE accent
+            focal element only. Infer the accent hex from the existing
+            skin background/decoration colors in PRIOR_HTML — keep it
+            consistent with the mood, never a pure saturated primary
+            (#ff0000, #00ff00, #ffff00).
+            </accent_color_rule>
 
             <constraints>
               - Vietnamese text inside the slide. English ONLY for
@@ -948,35 +724,6 @@ public class SlideDesignPromptBuilder {
             PRIOR_HTML RIGHT NOW.
             </output_format>
             """;
-
-    public String buildHtmlDesignPrompt(SlideHtmlDesignRequest req) {
-        String subject = (req.subject() == null || req.subject().isBlank())
-                ? "Vật lý"
-                : req.subject().strip();
-        String topic = req.topic() == null ? "" : req.topic().strip();
-        String outline = req.outline() == null ? "" : req.outline().strip();
-        String styleHint = req.styleHint() == null ? "" : req.styleHint().strip();
-
-        StringBuilder user = new StringBuilder();
-        user.append("<request>\n");
-        user.append("  <subject>").append(subject).append("</subject>\n");
-        user.append("  <topic>").append(topic.isEmpty() ? "(not provided)" : topic).append("</topic>\n");
-        user.append("  <outline>\n");
-        user.append(outline.isEmpty() ? "    (not provided)" : indent(outline, "    "));
-        user.append("\n  </outline>\n");
-        if (!styleHint.isEmpty()) {
-            user.append("  <teacher_style_hint>").append(styleHint).append("</teacher_style_hint>\n");
-        }
-        user.append("</request>\n\n");
-        user.append("Pick a mood (A–E or invent one) and a layout pattern. ");
-        user.append("Design ONE editorial-quality 960×540 slide. ");
-        user.append("Apply the 3-tier typography, 3-color palette, asymmetric layout, ");
-        user.append("30–45% negative space, and at least one depth/decoration element.\n\n");
-        user.append("Begin your response with `<div style=\"position:relative; width:960px;` ");
-        user.append("RIGHT NOW. No preamble. No fence. HTML only.");
-
-        return SYSTEM_PROMPT + "\n\n" + user;
-    }
 
     public String buildStep1BgDecoPrompt(SlideHtmlDesignRequest req) {
         String subject = (req.subject() == null || req.subject().isBlank())

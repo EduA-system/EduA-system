@@ -24,6 +24,20 @@ const DOC_HEAD = `<script src="https://cdn.tailwindcss.com"></script>
 
 export type ConvertResult = { bg: string; elements: SlideElement[]; skipped: string[] };
 
+/** Optional deck-level options applied during conversion. */
+export type ConvertOptions = {
+  /** Full-canvas background image (e.g. a slide-asset pattern) placed at z=0. */
+  bgImageUrl?: string | null;
+  /** Small decorative icon URLs scattered in the canvas corners (z=0, faint). */
+  decoIconUrls?: string[];
+  /**
+   * Stamp each step-2 body zone (data-layer="zone") as a bordered rect frame
+   * (transparent fill) so the layout is previewable before content fills in.
+   * Off for the final step-3 conversion (zones carry real content by then).
+   */
+  includeZoneFrames?: boolean;
+};
+
 let idCounter = 0;
 function uid() {
   return `h2s-${Date.now()}-${++idCounter}`;
@@ -50,7 +64,10 @@ function isLatex(el: HTMLElement): boolean {
   return /\\\(|\\\[|\$\$/.test(t);
 }
 
-export async function htmlToSlideElements(html: string): Promise<ConvertResult> {
+export async function htmlToSlideElements(
+  html: string,
+  opts?: ConvertOptions,
+): Promise<ConvertResult> {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
   iframe.style.cssText =
@@ -180,7 +197,11 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
       elements.push(shapeEl);
     };
 
-    const pushImage = (el: HTMLElement) => {
+    const pushImage = (
+      el: HTMLElement,
+      src: string,
+      fit: ImageElement["fit"],
+    ) => {
       const g = geom(el);
       if (g.w < 2 || g.h < 2) return;
       const imgEl: ImageElement = {
@@ -194,11 +215,45 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
         zIndex: z++,
         opacity: 1,
         locked: false,
-        src: PLACEHOLDER_IMAGE,
-        fit: "cover",
+        src,
+        fit,
         borderRadius: 0,
       };
       elements.push(imgEl);
+    };
+
+    // Step-2 preview: stamp each body zone as a bordered frame (transparent
+    // fill) so the layout is visible before content fills in. The zone div's
+    // own dashed outline color/width becomes a solid stroke (the editor's
+    // ShapeElement has no dashed style).
+    const pushZoneFrame = (el: HTMLElement) => {
+      const g = geom(el);
+      if (g.w < 2 || g.h < 2) return;
+      const s = cs(el);
+      const ow = parseFloat(s.outlineWidth) || 2;
+      const oc =
+        s.outlineColor && s.outlineColor !== "transparent"
+          ? s.outlineColor
+          : "rgba(15, 23, 42, 0.45)";
+      const brPx = parseFloat(s.borderTopLeftRadius) || 0;
+      const frameEl: ShapeElement = {
+        id: uid(),
+        type: "shape",
+        shape: "rect",
+        x: g.x,
+        y: g.y,
+        w: g.w,
+        h: g.h,
+        rotation: 0,
+        zIndex: z++,
+        opacity: 1,
+        locked: false,
+        fill: "transparent",
+        stroke: oc,
+        strokeW: Math.max(1, Math.round(ow)),
+        borderRadius: Math.round(brPx),
+      };
+      elements.push(frameEl);
     };
 
     // 1) L1 decoration (flat: text numerals + geometric shapes)
@@ -213,6 +268,13 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
       .querySelectorAll<HTMLElement>('[data-layer="struct"][data-region="body"]')
       .forEach((el) => pushShape(el));
 
+    // 2b) Step-2 preview only: bordered zone frames (no content yet)
+    if (opts?.includeZoneFrames) {
+      root
+        .querySelectorAll<HTMLElement>('[data-layer="zone"][data-region="body"]')
+        .forEach((el) => pushZoneFrame(el));
+    }
+
     // 3) Header content label (SUBJECT · TOPIC)
     root
       .querySelectorAll<HTMLElement>('[data-region="header"] [data-layer="content"]')
@@ -223,9 +285,12 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
       const tag = el.tagName.toLowerCase();
       const slideEl = el.getAttribute("data-slide-el");
       if (slideEl === "image" || el.hasAttribute("data-image-prompt")) {
+        // The real illustration is added manually / in a later step. Keep a
+        // gray placeholder here and log the prompt so that step knows what
+        // image to insert. Decorative icons are NOT used as content images.
         const prompt = el.getAttribute("data-image-prompt");
         if (prompt) skipped.push(`image-prompt(unstored): ${prompt.slice(0, 60)}`);
-        pushImage(el);
+        pushImage(el, PLACEHOLDER_IMAGE, "cover");
         return;
       }
       if (isLatex(el)) {
@@ -241,6 +306,56 @@ export async function htmlToSlideElements(html: string): Promise<ConvertResult> 
       }
       pushText(el, el.innerText ?? el.textContent ?? "");
     });
+
+    // Deck-level decorative icons: a few faint science icons scattered in the
+    // canvas corners (doodle style). z=0 + low opacity so they sit above the
+    // background pattern but behind all content (content z ≥ 1) — they peek out
+    // in the margins and never cover text. Locked. Unshifted BEFORE the
+    // background so the background ends up at array index 0 (bottom-most).
+    const DECO_SLOTS = [
+      { x: 24, y: 430, w: 86, h: 86, rotation: -8 }, // bottom-left
+      { x: 850, y: 442, w: 80, h: 80, rotation: 6 }, // bottom-right
+      { x: 854, y: 96, w: 78, h: 78, rotation: 10 }, // top-right
+    ];
+    (opts?.decoIconUrls ?? []).slice(0, DECO_SLOTS.length).forEach((src, i) => {
+      const slot = DECO_SLOTS[i];
+      elements.unshift({
+        id: uid(),
+        type: "image",
+        x: slot.x,
+        y: slot.y,
+        w: slot.w,
+        h: slot.h,
+        rotation: slot.rotation,
+        zIndex: 0,
+        opacity: 0.16,
+        locked: true,
+        src,
+        fit: "contain",
+        borderRadius: 0,
+      });
+    });
+
+    // Deck-level decorative background pattern: a full-canvas image under
+    // everything (z=0). The pattern SVG is transparent so the mood color (bg)
+    // still shows through. Locked so the user does not drag it by accident.
+    if (opts?.bgImageUrl) {
+      elements.unshift({
+        id: uid(),
+        type: "image",
+        x: 0,
+        y: 0,
+        w: 960,
+        h: 540,
+        rotation: 0,
+        zIndex: 0,
+        opacity: 1,
+        locked: true,
+        src: opts.bgImageUrl,
+        fit: "cover",
+        borderRadius: 0,
+      });
+    }
 
     return { bg, elements, skipped };
   } finally {

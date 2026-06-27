@@ -133,6 +133,15 @@ export function SlideMakerClient() {
                 ),
               }));
             },
+            onSlideFrames: (slideId, result) => {
+              useEditorStore.setState((state) => ({
+                slides: state.slides.map((s) =>
+                  s.id === slideId
+                    ? { ...s, bg: result.bg, elements: result.elements.map((e) => ({ ...e })) }
+                    : s,
+                ),
+              }));
+            },
             onSlideReady: (slideId, result, title) => {
               upsertSlide({
                 id: slideId,

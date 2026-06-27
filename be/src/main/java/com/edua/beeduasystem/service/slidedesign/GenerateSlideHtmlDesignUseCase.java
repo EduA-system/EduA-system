@@ -71,8 +71,11 @@ public class GenerateSlideHtmlDesignUseCase {
                 stepLabel = "step3-content-fill";
             }
             default -> {
-                prompt = promptBuilder.buildHtmlDesignPrompt(req);
-                stepLabel = "full";
+                return new SlideHtmlDesignResponse(
+                        "",
+                        0,
+                        modelLabel,
+                        "Unknown step '" + step + "' — expected bg_deco | structural | content_fill");
             }
         }
         log.info("slide-design.html step={} prompt length={}", stepLabel, prompt.length());
