@@ -9,8 +9,8 @@ export type SlideHtmlDesignRequest = {
   outline: string;
   styleHint?: string;
   subject?: string;
-  /** When omitted, BE returns a single-call full design (legacy behaviour). */
-  step?: SlideDesignStep;
+  /** Required: the BE only supports the 3-step pipeline (no single-call design). */
+  step: SlideDesignStep;
   /** Required when step === "structural" or "content_fill": prior step's HTML. */
   priorHtml?: string;
 };
@@ -26,7 +26,7 @@ export async function generateSlideHtmlDesign(
   req: SlideHtmlDesignRequest,
 ): Promise<SlideHtmlDesignResponse> {
   logSlideApi("POST /api/slide-design/generate-html", {
-    step: req.step ?? "full",
+    step: req.step,
     topic: req.topic,
     priorHtmlChars: req.priorHtml?.length ?? 0,
   });
@@ -43,7 +43,7 @@ export async function generateSlideHtmlDesign(
   }
   const data = (await res.json()) as SlideHtmlDesignResponse;
   logSlideApi("generate-html OK", {
-    step: req.step ?? "full",
+    step: req.step,
     htmlChars: data.html.length,
     latencyMs: data.latencyMs,
     warning: data.warning ?? null,
