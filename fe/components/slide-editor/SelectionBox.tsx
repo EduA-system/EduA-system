@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
-import type { ElementPatch, LineElement } from "./types";
+import { isSlideLockedForGeneration, type ElementPatch, type LineElement } from "./types";
 import {
   computeBoundingBox,
   applyResize,
@@ -66,7 +66,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
   const single = selectedElements.length === 1 ? selectedElements[0] : null;
   const isLine = single?.type === "line" || single?.type === "arrow";
   const isDraw = single?.type === "draw";
-  const locked = selectedElements.some((el) => el.locked);
+  const locked = isSlideLockedForGeneration(slide) || selectedElements.some((el) => el.locked);
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent, handleId: string) => {

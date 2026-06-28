@@ -5,7 +5,7 @@
 
 import type { ReactElement } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
-import type { SlideElement } from "./types";
+import { isSlideLockedForGeneration, type SlideElement } from "./types";
 
 const TYPE_ICONS: Record<string, ReactElement> = {
   text: (
@@ -88,6 +88,7 @@ export function LayersPanel() {
 
   const elements = slide?.elements ?? [];
   const sorted = [...elements].sort((a, b) => b.zIndex - a.zIndex);
+  const slideLocked = isSlideLockedForGeneration(slide);
 
   return (
     <div className="flex w-[200px] shrink-0 flex-col border-l border-black/10 bg-white">
@@ -110,10 +111,12 @@ export function LayersPanel() {
           return (
             <div
               key={el.id}
-              onClick={() => select([el.id])}
-              className={`group flex cursor-pointer items-center gap-2 border-l-2 px-2.5 py-[7px] transition-colors ${
+              onClick={() => {
+                if (!slideLocked) select([el.id]);
+              }}
+              className={`group flex items-center gap-2 border-l-2 px-2.5 py-[7px] transition-colors ${
                 isSelected ? "border-[#3b82f6] bg-[#eff6ff]" : "border-transparent hover:bg-black/5"
-              } ${el.hidden ? "opacity-40" : ""}`}
+              } ${slideLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${el.hidden ? "opacity-40" : ""}`}
             >
               <span className={`shrink-0 ${isSelected ? "text-[#3b82f6]" : "text-[#999]"}`}>
                 {TYPE_ICONS[el.type] ?? TYPE_ICONS.shape}
@@ -127,8 +130,10 @@ export function LayersPanel() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (slideLocked) return;
                   updateElement(el.id, { hidden: !el.hidden });
                 }}
+                disabled={slideLocked}
                 title={el.hidden ? "Hiện" : "Ẩn"}
                 className={`shrink-0 rounded p-0.5 transition-colors hover:text-[#3b82f6] ${
                   el.hidden ? "text-[#777]" : "text-[#bbb] opacity-0 group-hover:opacity-100"
@@ -139,8 +144,10 @@ export function LayersPanel() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (slideLocked) return;
                   updateElement(el.id, { locked: !el.locked });
                 }}
+                disabled={slideLocked}
                 title={el.locked ? "Mở khóa" : "Khóa"}
                 className={`shrink-0 rounded p-0.5 transition-colors hover:text-[#3b82f6] ${
                   el.locked ? "text-[#555]" : "text-[#bbb] opacity-0 group-hover:opacity-100"

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
-import type { Slide } from "./types";
+import { isSlideLockedForGeneration, type Slide } from "./types";
 
 const ZOOM_PRESETS = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 3];
 
@@ -146,6 +146,10 @@ export function TopBar({
   const redo = useEditorStore((s) => s.redo);
   const history = useEditorStore((s) => s.history);
   const selectedCount = useEditorStore((s) => s.selectedIds.length);
+  const currentSlideLocked = useEditorStore((s) =>
+    isSlideLockedForGeneration(s.slides.find((sl) => sl.id === s.currentSlideId)),
+  );
+  const hasLockedSlides = useEditorStore((s) => s.slides.some(isSlideLockedForGeneration));
 
   const [menu, setMenu] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -154,13 +158,19 @@ export function TopBar({
     zoomMode === "fit" ? "Fit" : `${Math.round(zoomMode * 100)}%`;
 
   function deleteSelected() {
+    if (currentSlideLocked) return;
     const store = useEditorStore.getState();
     if (store.selectedIds.length > 0) store.removeElements(store.selectedIds);
   }
 
   function exportJSON() {
     const state = useEditorStore.getState();
-    const json = JSON.stringify({ slides: state.slides }, null, 2);
+    const slides = state.slides.map((slide) => {
+      const clean = { ...slide };
+      delete clean.generationStatus;
+      return clean;
+    });
+    const json = JSON.stringify({ slides }, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -180,6 +190,7 @@ export function TopBar({
         // Regenerate id để tránh trùng khi import vào phiên hiện tại.
         const fresh = slides.map((s, si) => ({
           ...s,
+          generationStatus: undefined,
           id: `slide-imp-${Date.now()}-${si}`,
           elements: s.elements.map((el, ei) => ({
             ...el,
@@ -202,17 +213,17 @@ export function TopBar({
 
       <Divider />
 
-      <ToolButton onClick={undo} disabled={history.past.length === 0} title="Undo (Ctrl+Z)">
+      <ToolButton onClick={undo} disabled={history.past.length === 0 || hasLockedSlides} title="Undo (Ctrl+Z)">
         <UndoSvg />
       </ToolButton>
-      <ToolButton onClick={redo} disabled={history.future.length === 0} title="Redo (Ctrl+Shift+Z)">
+      <ToolButton onClick={redo} disabled={history.future.length === 0 || hasLockedSlides} title="Redo (Ctrl+Shift+Z)">
         <RedoSvg />
       </ToolButton>
 
       <Divider />
 
       <ToolButton onClick={onToggleLayers} active={showLayers} title="Bảng Layers" label="▦" />
-      <ToolButton onClick={deleteSelected} disabled={selectedCount === 0} title="Xóa (Delete)" label="🗑" />
+      <ToolButton onClick={deleteSelected} disabled={selectedCount === 0 || currentSlideLocked} title="Xóa (Delete)" label="🗑" />
       <ToolButton
         onClick={onToggleLockAspect}
         active={lockAspect}

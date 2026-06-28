@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
-import { CANVAS_W, CANVAS_H, type Slide, type SlideElement, type ElementPatch } from "./types";
+import {
+  CANVAS_W,
+  CANVAS_H,
+  isSlideLockedForGeneration,
+  type Slide,
+  type SlideElement,
+  type ElementPatch,
+} from "./types";
 import { ElementView } from "./ElementView";
 import { SelectionBox } from "./SelectionBox";
 import { InlineTextEditor } from "./InlineTextEditor";
@@ -73,6 +80,7 @@ export function Canvas({
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
 
   const scale = zoomMode === "fit" ? fitScale : zoomMode;
+  const slideLocked = isSlideLockedForGeneration(slide);
 
   useLayoutEffect(() => {
     scaleRef.current = scale;
@@ -115,7 +123,7 @@ export function Canvas({
     (e: React.MouseEvent, el: SlideElement) => {
       if (e.button !== 0) return;
       e.stopPropagation();
-      if (editingId) return;
+      if (slideLocked || editingId) return;
       if (el.locked) return;
 
       if (e.shiftKey) {
@@ -215,12 +223,13 @@ export function Canvas({
       window.addEventListener("mousemove", handleMove);
       window.addEventListener("mouseup", handleUp);
     },
-    [editingId, selectedIds, select, toggleSelect, toCanvas, dragRef]
+    [editingId, selectedIds, select, slideLocked, toggleSelect, toCanvas, dragRef]
   );
 
   const handleCanvasMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
+      if (slideLocked) return;
       // Chỉ xử lý khi bấm trúng nền canvas (không phải element con).
       if (e.target !== canvasInnerRef.current) return;
       e.stopPropagation();
@@ -260,13 +269,14 @@ export function Canvas({
       window.addEventListener("mousemove", handleMove);
       window.addEventListener("mouseup", handleUp);
     },
-    [select, toCanvas]
+    [select, slideLocked, toCanvas]
   );
 
   // Vẽ tay (brush/pencil/eraser): mỗi nét là 1 element "draw" + 1 bước history.
   const startDraw = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
+      if (slideLocked) return;
       e.stopPropagation();
       e.preventDefault();
       const p = toCanvas(e.clientX, e.clientY);
@@ -304,10 +314,11 @@ export function Canvas({
       window.addEventListener("mousemove", handleMove);
       window.addEventListener("mouseup", handleUp);
     },
-    [activeTool, drawColor, drawSize, toCanvas]
+    [activeTool, drawColor, drawSize, slideLocked, toCanvas]
   );
 
   const handleDoubleClick = useCallback((el: SlideElement) => {
+    if (slideLocked) return;
     if (el.type !== "text" || el.locked) return;
     const store = useEditorStore.getState();
     editSnapRef.current = {
@@ -316,11 +327,12 @@ export function Canvas({
       originalText: el.text,
     };
     setEditingId(el.id);
-  }, []);
+  }, [slideLocked]);
 
   const handleTextChange = useCallback((id: string, text: string) => {
+    if (slideLocked) return;
     useEditorStore.getState().transientUpdate([{ id, patch: { text } }]);
-  }, []);
+  }, [slideLocked]);
 
   const handleTextCommit = useCallback(() => {
     const store = useEditorStore.getState();
@@ -340,13 +352,15 @@ export function Canvas({
     (e: React.MouseEvent, el: SlideElement | null) => {
       e.preventDefault();
       e.stopPropagation();
+      if (slideLocked) return;
       if (el && !selectedIds.includes(el.id)) select([el.id]);
       setCtxMenu({ x: e.clientX, y: e.clientY, isCanvas: el === null });
     },
-    [selectedIds, select]
+    [selectedIds, select, slideLocked]
   );
 
   const handleCtxAction = useCallback((action: string) => {
+    if (slideLocked) return;
     const store = useEditorStore.getState();
     const ids = store.selectedIds;
     switch (action) {
@@ -383,7 +397,7 @@ export function Canvas({
         break;
       }
     }
-  }, []);
+  }, [slideLocked]);
 
   const editingEl =
     editingId && slide
@@ -482,7 +496,7 @@ export function Canvas({
 
           <SelectionBox toCanvas={toCanvas} lockAspect={lockAspect} />
 
-          {activeTool !== "select" && (
+          {activeTool !== "select" && !slideLocked && (
             <div
               onMouseDown={startDraw}
               style={{
@@ -494,6 +508,15 @@ export function Canvas({
                 zIndex: 20000,
               }}
             />
+          )}
+
+          {slideLocked && (
+            <div
+              className="absolute inset-0 z-[30000] flex items-center justify-center bg-white/35 backdrop-blur-[1px]"
+              style={{ width: CANVAS_W, height: CANVAS_H }}
+            >
+              <span className="size-11 animate-spin rounded-full border-[5px] border-[#8200db] border-t-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.55)]" />
+            </div>
           )}
         </div>
       </div>

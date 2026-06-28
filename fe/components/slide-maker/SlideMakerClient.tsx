@@ -29,6 +29,17 @@ function readGenerationBootstrap(generating: boolean) {
   return { active, total: active ? countSlides(active) : 0 };
 }
 
+function markGeneratingSlidesFailed() {
+  useEditorStore.setState((state) => ({
+    slides: state.slides.map((slide) =>
+      slide.generationStatus === "pending" || slide.generationStatus === "framing"
+        ? { ...slide, generationStatus: "failed" }
+        : slide,
+    ),
+    selectedIds: [],
+  }));
+}
+
 export function SlideMakerClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -53,6 +64,7 @@ export function SlideMakerClient() {
   const upsertSlide = useCallback((slide: Slide) => {
     useEditorStore.setState((state) => ({
       slides: state.slides.map((s) => (s.id === slide.id ? slide : s)),
+      selectedIds: state.currentSlideId === slide.id ? [] : state.selectedIds,
     }));
   }, []);
 
@@ -68,6 +80,12 @@ export function SlideMakerClient() {
         upsertSlide(mapped);
         setProgress((p) => ({ ...p, ready: p.ready + 1 }));
       } else if (event.type === "SLIDE_PART_FAILED") {
+        useEditorStore.setState((state) => ({
+          slides: state.slides.map((s) =>
+            s.id === event.partId ? { ...s, generationStatus: "failed" } : s,
+          ),
+          selectedIds: state.currentSlideId === event.partId ? [] : state.selectedIds,
+        }));
         setProgress((p) => ({ ...p, ready: p.ready + 1 }));
       } else if (event.type === "LOG") {
         /* logged in slide-client */
@@ -79,6 +97,7 @@ export function SlideMakerClient() {
       } else if (event.type === "ERROR") {
         setStreaming(false);
         setErrorMessage(event.message);
+        markGeneratingSlidesFailed();
         clearActiveGeneration();
         router.replace("/slide-maker");
       }
@@ -110,6 +129,7 @@ export function SlideMakerClient() {
     // vẫn chạy nền; designStarted chỉ chặn khởi động trùng.
     if (active.mode === "design") {
       if (!generationRef.current?.designStarted) {
+        let pipelineErrored = false;
         generationRef.current = { sessionId: active.sessionId, designStarted: true };
         logSlideApi("start design pipeline", {
           sessionId: active.sessionId,
@@ -137,9 +157,15 @@ export function SlideMakerClient() {
               useEditorStore.setState((state) => ({
                 slides: state.slides.map((s) =>
                   s.id === slideId
-                    ? { ...s, bg: result.bg, elements: result.elements.map((e) => ({ ...e })) }
+                    ? {
+                        ...s,
+                        bg: result.bg,
+                        elements: result.elements.map((e) => ({ ...e })),
+                        generationStatus: "framing",
+                      }
                     : s,
                 ),
+                selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,
               }));
             },
             onSlideReady: (slideId, result, title) => {
@@ -148,17 +174,29 @@ export function SlideMakerClient() {
                 bg: result.bg,
                 elements: result.elements,
                 aiPrompt: title,
+                generationStatus: "ready",
               });
+            },
+            onSlideFailed: (slideId) => {
+              useEditorStore.setState((state) => ({
+                slides: state.slides.map((s) =>
+                  s.id === slideId ? { ...s, generationStatus: "failed" } : s,
+                ),
+                selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,
+              }));
             },
             onProgress: (ready, total) => setProgress({ ready, total }),
             onError: (message) => {
+              pipelineErrored = true;
               setStreaming(false);
               setErrorMessage(message);
+              markGeneratingSlidesFailed();
               clearActiveGeneration();
               router.replace("/slide-maker");
             },
           },
         ).then(() => {
+          if (pipelineErrored) return;
           setStreaming(false);
           setDoneMessage("Sinh slide xong.");
           clearActiveGeneration();
@@ -201,6 +239,7 @@ export function SlideMakerClient() {
       console.error("[EDUA slide] [API] generate-parts failed", err);
       setStreaming(false);
       setErrorMessage(err instanceof Error ? err.message : String(err));
+      markGeneratingSlidesFailed();
       clearActiveGeneration();
       router.replace("/slide-maker");
     });

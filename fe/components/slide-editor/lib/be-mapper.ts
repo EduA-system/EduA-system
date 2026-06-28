@@ -163,6 +163,7 @@ export function mapBeSlide(
     bg,
     elements: mapBeElements(elements),
     aiPrompt: title,
+    generationStatus: "ready",
   };
 }
 
@@ -175,6 +176,7 @@ export function skeletonSlidesFromParts(
       bg: "#ffffff",
       elements: [],
       aiPrompt: sl.title,
+      generationStatus: "pending" as const,
     })),
   );
 }

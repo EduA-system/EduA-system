@@ -6,7 +6,7 @@
 
 import { Fragment, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
-import { CANVAS_W, CANVAS_H, type Slide } from "./types";
+import { CANVAS_W, CANVAS_H, isSlideLockedForGeneration, type Slide } from "./types";
 import { ElementView } from "./ElementView";
 
 const THUMB_W = 132;
@@ -18,6 +18,7 @@ function Thumbnail({
   index,
   active,
   canDelete,
+  structureLocked,
   dragging,
   dropBefore,
   dropAfter,
@@ -33,6 +34,7 @@ function Thumbnail({
   index: number;
   active: boolean;
   canDelete: boolean;
+  structureLocked: boolean;
   dragging: boolean;
   dropBefore: boolean;
   dropAfter: boolean;
@@ -44,9 +46,12 @@ function Thumbnail({
   onDragEnd: () => void;
   onDrop: () => void;
 }) {
+  const locked = isSlideLockedForGeneration(slide);
+  const actionsDisabled = locked || structureLocked;
+
   return (
     <div
-      draggable
+      draggable={!actionsDisabled}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
@@ -86,20 +91,31 @@ function Thumbnail({
           {slide.elements.map((el) => (
             <ElementView key={el.id} el={el} />
           ))}
+          {locked && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/45">
+              <span className="size-6 animate-spin rounded-full border-[3px] border-[#8200db] border-t-transparent" />
+            </div>
+          )}
+          {slide.generationStatus === "failed" && (
+            <div className="absolute right-1 top-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              !
+            </div>
+          )}
         </div>
       </button>
 
       <div className="pointer-events-none absolute right-1 top-1 flex gap-1 opacity-0 transition group-hover:opacity-100">
         <button
           onClick={onDuplicate}
+          disabled={actionsDisabled}
           title="Nhân bản slide"
-          className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded bg-white/90 text-[11px] text-[#555] shadow ring-1 ring-black/10 hover:bg-white"
+          className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded bg-white/90 text-[11px] text-[#555] shadow ring-1 ring-black/10 hover:bg-white disabled:pointer-events-none disabled:opacity-30"
         >
           ⧉
         </button>
         <button
           onClick={onDelete}
-          disabled={!canDelete}
+          disabled={!canDelete || actionsDisabled}
           title="Xóa slide"
           className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded bg-white/90 text-[11px] text-[#d11] shadow ring-1 ring-black/10 hover:bg-white disabled:opacity-30"
         >
@@ -119,13 +135,17 @@ function Thumbnail({
 }
 
 // Khe giữa 2 thumbnail: hover hiện vạch dọc + nút "+" để chèn slide trống vào giữa.
-function InsertGap({ onInsert }: { onInsert: () => void }) {
+function InsertGap({ disabled = false, onInsert }: { disabled?: boolean; onInsert: () => void }) {
   return (
     <div
-      onClick={onInsert}
+      onClick={() => {
+        if (!disabled) onInsert();
+      }}
       title="Chèn slide trống vào đây"
       style={{ width: 26, height: THUMB_H }}
-      className="group/insert relative flex shrink-0 cursor-pointer items-center justify-center self-start"
+      className={`group/insert relative flex shrink-0 items-center justify-center self-start ${
+        disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
+      }`}
     >
       <span className="pointer-events-none absolute inset-y-1.5 left-1/2 w-0.5 -translate-x-1/2 rounded bg-[#3c4043] opacity-0 transition group-hover/insert:opacity-100" />
       <span className="relative flex h-5 w-5 items-center justify-center rounded-full bg-[#3c4043] text-sm leading-none text-white opacity-0 shadow transition group-hover/insert:opacity-100">
@@ -143,6 +163,7 @@ export function SlideTray() {
   const duplicateSlide = useEditorStore((s) => s.duplicateSlide);
   const deleteSlide = useEditorStore((s) => s.deleteSlide);
   const reorderSlides = useEditorStore((s) => s.reorderSlides);
+  const hasLockedSlides = slides.some(isSlideLockedForGeneration);
 
   // dragIndex: thumbnail đang kéo; overIndex + after: vị trí sẽ thả vào.
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -156,6 +177,7 @@ export function SlideTray() {
   };
 
   const handleDrop = () => {
+    if (hasLockedSlides) return resetDrag();
     if (dragIndex === null || overIndex === null) return resetDrag();
     // Vị trí chèn trong mảng gốc, trước khi gỡ phần tử đang kéo.
     let target = after ? overIndex + 1 : overIndex;
@@ -175,14 +197,19 @@ export function SlideTray() {
               index={i}
               active={slide.id === currentSlideId}
               canDelete={slides.length > 1}
+              structureLocked={hasLockedSlides}
               dragging={dragIndex === i}
               dropBefore={showIndicator && !after}
               dropAfter={showIndicator && after}
               onClick={() => setCurrentSlide(slide.id)}
               onDuplicate={() => duplicateSlide(slide.id)}
               onDelete={() => deleteSlide(slide.id)}
-              onDragStart={() => setDragIndex(i)}
+              onDragStart={() => {
+                if (hasLockedSlides || isSlideLockedForGeneration(slide)) return;
+                setDragIndex(i);
+              }}
               onDragOver={(e) => {
+                if (hasLockedSlides) return;
                 e.preventDefault();
                 if (dragIndex === null) return;
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -194,7 +221,7 @@ export function SlideTray() {
               onDrop={handleDrop}
             />
             {i < slides.length - 1 && (
-              <InsertGap onInsert={() => addBlankSlide(slide.id)} />
+              <InsertGap disabled={hasLockedSlides} onInsert={() => addBlankSlide(slide.id)} />
             )}
           </Fragment>
         );
@@ -202,9 +229,10 @@ export function SlideTray() {
 
       <button
         onClick={() => addBlankSlide(currentSlideId)}
+        disabled={hasLockedSlides}
         title="Thêm slide"
         style={{ height: THUMB_H }}
-        className="ml-3 flex w-10 shrink-0 items-center justify-center self-start rounded-lg bg-white text-xl text-[#9aa0a6] ring-1 ring-black/10 transition hover:text-[#1f1f1f] hover:ring-black/20"
+        className="ml-3 flex w-10 shrink-0 items-center justify-center self-start rounded-lg bg-white text-xl text-[#9aa0a6] ring-1 ring-black/10 transition hover:text-[#1f1f1f] hover:ring-black/20 disabled:pointer-events-none disabled:opacity-40"
       >
         +
       </button>
