@@ -5,6 +5,7 @@ public record GenerateOutlineRequest(
         String lessonTitle,
         String lessonSummary,
         String grade,
+        String subject,
         InlineLessonPlanDto plan,
         String userPrompt,
         String styleHint

@@ -8,6 +8,7 @@ import {
   type OutlinePart,
   type SlideItem,
 } from "@/lib/api/slides";
+import { SlideDetailModal } from "@/components/outline-editor/SlideDetailModal";
 
 function createDefaultSlide(id: string): SlideItem {
   return {
@@ -19,29 +20,43 @@ function createDefaultSlide(id: string): SlideItem {
   };
 }
 
+function contentPreview(content?: string): string {
+  if (!content) return "";
+  return content.replace(/\s+/g, " ").trim();
+}
+
 export function OutlineEditor({
   lessonTitle,
-  initialParts,
+  parts,
+  onChange,
   onConfirm,
   confirming = false,
+  expandingPartIds = [],
 }: {
   lessonTitle: string;
-  initialParts: OutlinePart[];
+  parts: OutlinePart[];
+  onChange: (parts: OutlinePart[]) => void;
   onConfirm: (parts: OutlinePart[]) => void;
   confirming?: boolean;
+  expandingPartIds?: string[];
 }) {
-  const [parts, setParts] = useState<OutlinePart[]>(initialParts);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{ partId: string; slideId: string } | null>(null);
   const dragPartIndex = useRef<number | null>(null);
 
   const totalSlides = parts.reduce((sum, p) => sum + (p.slides?.length ?? 0), 0);
+  const expanding = expandingPartIds.length > 0;
+
+  function update(next: OutlinePart[]) {
+    onChange(next);
+  }
 
   function updatePartTitle(partId: string, title: string) {
-    setParts((prev) => prev.map((p) => (p.id === partId ? { ...p, title } : p)));
+    update(parts.map((p) => (p.id === partId ? { ...p, title } : p)));
   }
 
   function deletePart(partId: string) {
-    setParts((prev) => prev.filter((p) => p.id !== partId));
+    update(parts.filter((p) => p.id !== partId));
   }
 
   function addPart() {
@@ -50,7 +65,7 @@ export function OutlineEditor({
       title: "Phần mới",
       slides: [createDefaultSlide(`p-${Date.now()}-s1`)],
     };
-    setParts((prev) => [...prev, newPart]);
+    update([...parts, newPart]);
     setEditingId(newPart.id);
   }
 
@@ -65,28 +80,28 @@ export function OutlineEditor({
     const [moved] = next.splice(from, 1);
     next.splice(index, 0, moved);
     dragPartIndex.current = index;
-    setParts(next);
+    update(next);
   }
   function onPartDragEnd() {
     dragPartIndex.current = null;
   }
 
-  function updateSlideTitle(partId: string, slideId: string, title: string) {
-    setParts((prev) =>
-      prev.map((p) =>
+  function updateSlide(partId: string, slideId: string, patch: Partial<SlideItem>) {
+    update(
+      parts.map((p) =>
         p.id !== partId
           ? p
           : {
               ...p,
-              slides: p.slides.map((s) => (s.id === slideId ? { ...s, title } : s)),
+              slides: p.slides.map((s) => (s.id === slideId ? { ...s, ...patch } : s)),
             },
       ),
     );
   }
 
   function deleteSlide(partId: string, slideId: string) {
-    setParts((prev) =>
-      prev.map((p) =>
+    update(
+      parts.map((p) =>
         p.id !== partId ? p : { ...p, slides: p.slides.filter((s) => s.id !== slideId) },
       ),
     );
@@ -94,11 +109,13 @@ export function OutlineEditor({
 
   function addSlide(partId: string) {
     const newSlide = createDefaultSlide(`${partId}-s${Date.now()}`);
-    setParts((prev) =>
-      prev.map((p) => (p.id !== partId ? p : { ...p, slides: [...p.slides, newSlide] })),
-    );
-    setEditingId(newSlide.id);
+    update(parts.map((p) => (p.id !== partId ? p : { ...p, slides: [...p.slides, newSlide] })));
+    setDetail({ partId, slideId: newSlide.id });
   }
+
+  const detailSlide = detail
+    ? parts.find((p) => p.id === detail.partId)?.slides.find((s) => s.id === detail.slideId)
+    : undefined;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
@@ -116,107 +133,123 @@ export function OutlineEditor({
         </div>
 
         <div className="divide-y divide-[rgba(26,26,46,0.06)]">
-          {parts.map((part, partIndex) => (
-            <div
-              key={part.id}
-              draggable
-              onDragStart={() => onPartDragStart(partIndex)}
-              onDragOver={(e) => onPartDragOver(e, partIndex)}
-              onDragEnd={onPartDragEnd}
-              className="px-4 py-3"
-            >
-              <div className="flex items-center gap-2.5">
-                <span className="cursor-grab text-[#aeacb8] select-none active:cursor-grabbing">⋮⋮</span>
-                <div className="min-w-0 flex-1">
-                  {editingId === part.id ? (
-                    <input
-                      autoFocus
-                      value={part.title}
-                      onChange={(e) => updatePartTitle(part.id, e.target.value)}
-                      onBlur={() => setEditingId(null)}
-                      onKeyDown={(e) => e.key === "Enter" && setEditingId(null)}
-                      className="w-full rounded-md border border-[#c27aff]/40 px-2 py-0.5 text-sm font-semibold text-[#1a1a2e] outline-none focus:ring-1 focus:ring-[#8200db]"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setEditingId(part.id)}
-                      className="block w-full truncate text-left text-sm font-semibold text-[#1a1a2e] hover:text-[#8200db]"
-                    >
-                      {part.title}
-                    </button>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => deletePart(part.id)}
-                  className="shrink-0 rounded-lg p-1 text-[#aeacb8] transition hover:bg-red-50 hover:text-red-500"
-                  aria-label="Xóa phần"
-                >
-                  ×
-                </button>
-              </div>
-
-              <ul className="mt-2 space-y-1 pl-6">
-                {(part.slides ?? []).map((slide) => {
-                  const metadata = resolveSlideMetadata(slide);
-                  const label = slideRoleLabel({
-                    kind: metadata.kind,
-                    pedagogicalRole: metadata.pedagogicalRole,
-                  });
-                  const tone = slideRoleTone({
-                    kind: metadata.kind,
-                    pedagogicalRole: metadata.pedagogicalRole,
-                  });
-                  return (
-                    <li key={slide.id} className="flex items-center gap-2">
-                      <span className="text-[#d8d1c9]">└</span>
-                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${tone}`}>
-                        {label}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        {editingId === slide.id ? (
-                          <input
-                            autoFocus
-                            value={slide.title}
-                            onChange={(e) => updateSlideTitle(part.id, slide.id, e.target.value)}
-                            onBlur={() => setEditingId(null)}
-                            onKeyDown={(e) => e.key === "Enter" && setEditingId(null)}
-                            className="w-full rounded border border-[#c27aff]/40 px-2 py-0.5 text-xs text-[#1a1a2e] outline-none focus:ring-1 focus:ring-[#8200db]"
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(slide.id)}
-                            className="block w-full truncate text-left text-xs text-[#5c5b6e] hover:text-[#1a1a2e]"
-                          >
-                            {slide.title}
-                          </button>
-                        )}
-                      </div>
+          {parts.map((part, partIndex) => {
+            const partExpanding = expandingPartIds.includes(part.id);
+            return (
+              <div
+                key={part.id}
+                draggable
+                onDragStart={() => onPartDragStart(partIndex)}
+                onDragOver={(e) => onPartDragOver(e, partIndex)}
+                onDragEnd={onPartDragEnd}
+                className="px-4 py-3"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="cursor-grab text-[#aeacb8] select-none active:cursor-grabbing">⋮⋮</span>
+                  <div className="min-w-0 flex-1">
+                    {editingId === part.id ? (
+                      <input
+                        autoFocus
+                        value={part.title}
+                        onChange={(e) => updatePartTitle(part.id, e.target.value)}
+                        onBlur={() => setEditingId(null)}
+                        onKeyDown={(e) => e.key === "Enter" && setEditingId(null)}
+                        className="w-full rounded-md border border-[#c27aff]/40 px-2 py-0.5 text-sm font-semibold text-[#1a1a2e] outline-none focus:ring-1 focus:ring-[#8200db]"
+                      />
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => deleteSlide(part.id, slide.id)}
-                        className="shrink-0 text-[#aeacb8] hover:text-red-500"
-                        aria-label="Xóa slide"
+                        onClick={() => setEditingId(part.id)}
+                        className="block w-full truncate text-left text-sm font-semibold text-[#1a1a2e] hover:text-[#8200db]"
                       >
-                        ×
+                        {part.title}
                       </button>
-                    </li>
-                  );
-                })}
-                <li>
+                    )}
+                  </div>
+                  {partExpanding ? (
+                    <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-[#9998be]">
+                      <span className="size-3 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
+                      đang soạn…
+                    </span>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={() => addSlide(part.id)}
-                    className="pl-5 text-xs text-[#9998be] transition hover:text-[#8200db]"
+                    onClick={() => deletePart(part.id)}
+                    className="shrink-0 rounded-lg p-1 text-[#aeacb8] transition hover:bg-red-50 hover:text-red-500"
+                    aria-label="Xóa phần"
                   >
-                    + Thêm slide
+                    ×
                   </button>
-                </li>
-              </ul>
-            </div>
-          ))}
+                </div>
+
+                <ul className="mt-2 space-y-1 pl-6">
+                  {(part.slides ?? []).map((slide) => {
+                    const metadata = resolveSlideMetadata(slide);
+                    const label = slideRoleLabel({
+                      kind: metadata.kind,
+                      pedagogicalRole: metadata.pedagogicalRole,
+                    });
+                    const tone = slideRoleTone({
+                      kind: metadata.kind,
+                      pedagogicalRole: metadata.pedagogicalRole,
+                    });
+                    const preview = contentPreview(slide.content);
+                    return (
+                      <li key={slide.id} className="flex items-start gap-2">
+                        <span className="mt-1 text-[#d8d1c9]">└</span>
+                        <span
+                          className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${tone}`}
+                        >
+                          {label}
+                        </span>
+                        {slide.aiNote ? (
+                          <span
+                            title={slide.aiNote}
+                            className="mt-0.5 shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                          >
+                            AI
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => setDetail({ partId: part.id, slideId: slide.id })}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <span className="block truncate text-xs text-[#5c5b6e] hover:text-[#1a1a2e]">
+                            {slide.title}
+                          </span>
+                          {preview ? (
+                            <span className="block truncate text-[11px] text-[#aeacb8]">{preview}</span>
+                          ) : (
+                            <span className="block text-[11px] text-[#c9c6d6]">
+                              {partExpanding ? "đang soạn nội dung…" : "bấm để soạn nội dung"}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteSlide(part.id, slide.id)}
+                          className="mt-0.5 shrink-0 text-[#aeacb8] hover:text-red-500"
+                          aria-label="Xóa slide"
+                        >
+                          ×
+                        </button>
+                      </li>
+                    );
+                  })}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => addSlide(part.id)}
+                      className="pl-5 text-xs text-[#9998be] transition hover:text-[#8200db]"
+                    >
+                      + Thêm slide
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            );
+          })}
         </div>
 
         <div className="border-t border-[rgba(26,26,46,0.07)] px-4 py-3">
@@ -233,13 +266,25 @@ export function OutlineEditor({
           <button
             type="button"
             onClick={() => onConfirm(parts)}
-            disabled={totalSlides === 0 || confirming}
+            disabled={totalSlides === 0 || confirming || expanding}
             className="flex h-[44px] w-full items-center justify-center rounded-xl bg-[#1c1b2e] text-sm font-medium text-[#f9f8f3] transition enabled:hover:bg-[#2a2940] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {confirming ? "Đang bắt đầu sinh slide…" : `Tạo ${totalSlides} slides →`}
+            {confirming
+              ? "Đang bắt đầu sinh slide…"
+              : expanding
+                ? "Đang soạn nội dung…"
+                : `Tạo ${totalSlides} slides →`}
           </button>
         </div>
       </div>
+
+      {detail && detailSlide ? (
+        <SlideDetailModal
+          slide={detailSlide}
+          onChange={(updated) => updateSlide(detail.partId, detail.slideId, updated)}
+          onClose={() => setDetail(null)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
 import { generateOutline, type OutlinePart } from "@/lib/api/slides";
+import { connectOutlineStream, type OutlineEvent } from "@/lib/ws/outline-client";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 import {
   patchSlideCreateSession,
@@ -16,15 +17,14 @@ import {
 
 type Status = "loading" | "outlining" | "ready" | "error";
 
-type OutlinePageState = {
+type OutlineBoot = {
   session: SlideGenerationSession | null;
   status: Status;
   parts: OutlinePart[];
   error?: string;
-  needsOutline: boolean;
 };
 
-function loadOutlinePageState(): OutlinePageState {
+function loadOutlineBoot(): OutlineBoot {
   const stored = readSlideCreateSession();
   if (!stored) {
     return {
@@ -32,39 +32,57 @@ function loadOutlinePageState(): OutlinePageState {
       status: "error",
       parts: [],
       error: "Chưa có giáo án. Hãy chọn bài từ trang Tạo Slide.",
-      needsOutline: false,
     };
   }
   if (stored.outlineParts && stored.sessionId && stored.topic) {
-    return {
-      session: stored,
-      status: "ready",
-      parts: stored.outlineParts,
-      needsOutline: false,
-    };
+    // Đã có outline (quay lại) — không cần stream.
+    return { session: stored, status: "ready", parts: stored.outlineParts };
   }
-  return {
-    session: stored,
-    status: "outlining",
-    parts: [],
-    needsOutline: true,
-  };
+  return { session: stored, status: "outlining", parts: [] };
 }
 
 export default function SlideOutlinePage() {
   const router = useRouter();
-  const [pageState, setPageState] = useState<OutlinePageState>(loadOutlinePageState);
+  const [boot] = useState(loadOutlineBoot);
+  const [session, setSession] = useState<SlideGenerationSession | null>(boot.session);
+  const [status, setStatus] = useState<Status>(boot.status);
+  const [parts, setParts] = useState<OutlinePart[]>(boot.parts);
+  const [error, setError] = useState<string | undefined>(boot.error);
+  const [expandingPartIds, setExpandingPartIds] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
 
-  const { session, status, parts, error, needsOutline } = pageState;
+  const disconnectRef = useRef<(() => void) | null>(null);
 
+  const handleOutlineEvent = useCallback((event: OutlineEvent) => {
+    if (event.type === "OUTLINE_PART_READY") {
+      setParts((prev) =>
+        prev.map((p) =>
+          p.id !== event.partId
+            ? p
+            : {
+                ...p,
+                slides: p.slides.map((s) => {
+                  const filled = event.slides.find((x) => x.id === s.id);
+                  return filled ? { ...s, ...filled } : s;
+                }),
+              },
+        ),
+      );
+      setExpandingPartIds((prev) => prev.filter((id) => id !== event.partId));
+    } else if (event.type === "OUTLINE_PART_FAILED") {
+      setExpandingPartIds((prev) => prev.filter((id) => id !== event.partId));
+    } else if (event.type === "DONE" || event.type === "ERROR") {
+      setExpandingPartIds([]);
+    }
+  }, []);
+
+  // Sinh khung (pha 1) + subscribe stream (pha 2) một lần.
   useEffect(() => {
-    if (!needsOutline || !session) return;
-
+    if (status !== "outlining" || !session) return;
     let cancelled = false;
 
     void (async () => {
-      logSlideApi("outline page: generating outline…", {
+      logSlideApi("outline page: generating structure…", {
         lessonId: session.lessonCardId,
         lessonTitle: session.lessonTitle,
       });
@@ -74,6 +92,7 @@ export default function SlideOutlinePage() {
           lessonTitle: session.lessonTitle,
           lessonSummary: session.lessonSummary,
           grade: session.grade,
+          subject: session.subject,
           plan: session.inlinePlan,
           styleHint: session.styleHint,
         });
@@ -84,34 +103,74 @@ export default function SlideOutlinePage() {
           topic: res.topic,
           outlineParts: res.outline.parts,
         });
+        setSession((prev) =>
+          prev
+            ? { ...prev, sessionId: res.sessionId, topic: res.topic, outlineParts: res.outline.parts }
+            : prev,
+        );
+        setParts(res.outline.parts);
+        setExpandingPartIds(res.outline.parts.map((p) => p.id));
+        setStatus("ready");
 
-        setPageState({
-          session: {
-            ...session,
-            sessionId: res.sessionId,
-            topic: res.topic,
-            outlineParts: res.outline.parts,
+        const { disconnect } = connectOutlineStream({
+          topic: res.outlineTopic,
+          onEvent: handleOutlineEvent,
+          onClose: () => {
+            disconnectRef.current = null;
           },
-          status: "ready",
-          parts: res.outline.parts,
-          needsOutline: false,
         });
+        disconnectRef.current = disconnect;
       } catch (err) {
         if (cancelled) return;
         console.error("[EDUA slide] outline page error", err);
-        setPageState((prev) => ({
-          ...prev,
-          status: "error",
-          error: err instanceof Error ? err.message : String(err),
-          needsOutline: false,
-        }));
+        setStatus("error");
+        setError(err instanceof Error ? err.message : String(err));
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [needsOutline, session]);
+  }, [status, session, handleOutlineEvent]);
+
+  // Ngắt kết nối khi rời trang.
+  useEffect(() => () => disconnectRef.current?.(), []);
+
+  // DEBUG: log toàn bộ nội dung outline mỗi khi thay đổi.
+  useEffect(() => {
+    console.log(
+      "[EDUA slide] OUTLINE FULL",
+      JSON.stringify(
+        {
+          status,
+          partCount: parts.length,
+          slideCount: parts.reduce((sum, p) => sum + p.slides.length, 0),
+          parts: parts.map((p) => ({
+            id: p.id,
+            title: p.title,
+            slides: p.slides.map((s) => ({
+              id: s.id,
+              title: s.title,
+              kind: s.kind,
+              pedagogicalRole: s.pedagogicalRole,
+              layoutHint: s.layoutHint,
+              durationMinutes: s.durationMinutes,
+              content: s.content,
+            })),
+          })),
+        },
+        null,
+        2,
+      ),
+    );
+  }, [parts, status]);
+
+  // Lưu outline (khung + nội dung stream + sửa tay) vào session để giữ khi quay lại.
+  useEffect(() => {
+    if (status === "ready" && parts.length > 0) {
+      patchSlideCreateSession({ outlineParts: parts });
+    }
+  }, [parts, status]);
 
   const handleConfirm = useCallback(
     async (editedParts: OutlinePart[]) => {
@@ -153,7 +212,7 @@ export default function SlideOutlinePage() {
           {status === "outlining" ? (
             <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
               <div className="size-8 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
-              <p className="text-sm text-[#5c5b6e]">AI đang tạo đề cương slide…</p>
+              <p className="text-sm text-[#5c5b6e]">AI đang tạo khung đề cương slide…</p>
             </div>
           ) : null}
 
@@ -172,9 +231,11 @@ export default function SlideOutlinePage() {
           {status === "ready" && session ? (
             <OutlineEditor
               lessonTitle={session.lessonTitle}
-              initialParts={parts}
+              parts={parts}
+              onChange={setParts}
               onConfirm={handleConfirm}
               confirming={confirming}
+              expandingPartIds={expandingPartIds}
             />
           ) : null}
         </div>

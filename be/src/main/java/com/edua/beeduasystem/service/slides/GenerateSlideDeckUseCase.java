@@ -6,6 +6,7 @@ import com.edua.beeduasystem.domain.model.slide.SlideElement;
 import com.edua.beeduasystem.domain.model.slide.SlideItem;
 import com.edua.beeduasystem.domain.model.slide.SlideOutline;
 import com.edua.beeduasystem.domain.model.slide.SlidePart;
+import com.edua.beeduasystem.domain.model.slide.SlideVisual;
 import com.edua.beeduasystem.infrastructure.messaging.SlideAiDiagnosticsBridge;
 import com.edua.beeduasystem.presentation.dto.slides.GeneratePartsRequest;
 import com.edua.beeduasystem.presentation.dto.slides.PartDto;
@@ -88,9 +89,13 @@ public class GenerateSlideDeckUseCase {
                                 .toList());
 
                 for (SlideItemDto slideDto : section.slides()) {
+                    SlideVisual visual = slideDto.visual() == null
+                            ? null
+                            : new SlideVisual(slideDto.visual().type(), slideDto.visual().spec());
                     SlideItem slide = new SlideItem(
                             slideDto.id(), slideDto.title(), slideDto.kind(),
-                            slideDto.pedagogicalRole(), slideDto.layoutHint());
+                            slideDto.pedagogicalRole(), slideDto.layoutHint(),
+                            slideDto.content(), visual);
                     slideSessionExecutor.submit(() -> aiDiagnostics.runInContext(req.sessionId(), slide.id(), () -> {
                         try {
                             slideStream.publishLog(
