@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
 import { EditorContent, type Editor } from "@tiptap/react";
-import { lessonPlan5512Mock } from "@/data/lessonPlan5512Mock";
 import type {
   Activity5512,
   EquipmentTable,
   LessonPlan5512,
   Worksheet,
 } from "@/data/lessonPlan5512Mock";
-import { readGeneratedLessonPlan } from "@/services/lessonPlanService";
 
-function escapeHtml(value: string) {
+function escapeHtml(value: string | null | undefined) {
+  if (!value) return "";
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -68,9 +66,15 @@ function worksheetBoxHtml(worksheet: Worksheet) {
   return `<table><tbody><tr><td><p><b>${escapeHtml(worksheet.name)}</b></p>${paragraphs(worksheet.content)}</td></tr></tbody></table>`;
 }
 
-/** Mục d) Tổ chức thực hiện — 4 bước chuẩn. */
+/**
+ * Mục d) Tổ chức thực hiện — 4 bước chuẩn. Ở bước DÀN Ý (khung) thì organization còn
+ * null/trống → ẩn cả block để giáo viên (hoặc call sau) điền.
+ */
 function organizationHtml(activity: Activity5512) {
-  const { transfer, perform, report, conclude } = activity.organization;
+  const org = activity.organization;
+  if (!org) return "";
+  const { transfer, perform, report, conclude } = org;
+  if (![transfer, perform, report, conclude].some((step) => step && step.trim())) return "";
   return `
     <p><b>d) Tổ chức thực hiện:</b></p>
     <ul>
@@ -82,27 +86,98 @@ function organizationHtml(activity: Activity5512) {
   `;
 }
 
-/** Một hoạt động/tiểu hoạt động với 4 ô a/b/c/d, đệ quy cho subActivities. */
-function activityHtml(activity: Activity5512, isSub = false): string {
-  const heading = isSub
-    ? `<p class="activity-sub-title"><b>${escapeHtml(activity.name)}</b>${activity.duration ? ` (${escapeHtml(activity.duration)})` : ""}</p>`
-    : `<h3>${escapeHtml(activity.name)}${activity.duration ? ` (${escapeHtml(activity.duration)})` : ""}</h3>`;
+/**
+ * Mục d) Tổ chức thực hiện rút thành các đoạn (4 bước) để đặt vào ô "Hoạt động của GV
+ * và HS" của bảng tiểu hoạt động. Bước nào trống thì bỏ qua.
+ */
+function organizationStepsHtml(org: Activity5512["organization"]) {
+  if (!org) return "";
+  const steps: [string, string | null | undefined][] = [
+    ["Giao nhiệm vụ học tập:", org.transfer],
+    ["Thực hiện nhiệm vụ:", org.perform],
+    ["Báo cáo, thảo luận:", org.report],
+    ["Kết luận, nhận định:", org.conclude],
+  ];
+  return steps
+    .filter(([, value]) => value && value.trim())
+    .map(([label, value]) => `<p><b>${label}</b> ${escapeHtml(value)}</p>`)
+    .join("");
+}
 
-  const subs = activity.subActivities.map((sub) => activityHtml(sub, true)).join("");
+/**
+ * Tiểu hoạt động của HĐ2: tiêu đề + Mục tiêu/Nội dung là đoạn văn ĐỨNG TRƯỚC bảng, rồi
+ * bảng 2 cột chuẩn KNTT (mẫu Bai-19):
+ *   [ "Hoạt động của GV và HS"      | "Sản phẩm dự kiến" ]
+ *   [ d) Tổ chức thực hiện (4 bước) | c) Sản phẩm        ]
+ * Bảng giữ đúng cấu trúc bảng mục II (KHÔNG colspan) để `insertContentAt` lúc fill
+ * streaming không nuốt bảng. Ô trống dùng `<p></p>` để bảng không sập khi đang ở dàn ý.
+ */
+function subActivityTableHtml(sub: Activity5512) {
+  const title = `<p class="activity-sub-title"><b>${escapeHtml(sub.name)}</b>${sub.duration ? ` (${escapeHtml(sub.duration)})` : ""}</p>`;
+  const intro =
+    (sub.objective?.trim() ? `<p><b>Mục tiêu:</b> ${escapeHtml(sub.objective)}</p>` : "") +
+    (sub.content?.trim() ? `<p><b>Nội dung:</b> ${escapeHtml(sub.content)}</p>` : "");
+
+  const left = organizationStepsHtml(sub.organization) || "<p></p>";
+  const right = sub.product?.trim() ? paragraphs(sub.product) : "<p></p>";
+  const table = `<table><tbody><tr><th>Hoạt động của GV và HS</th><th>Sản phẩm dự kiến</th></tr><tr><td>${left}</td><td>${right}</td></tr></tbody></table>`;
+
+  return `${title}${intro}${table}`;
+}
+
+/**
+ * Một hoạt động Phần III. Tiểu hoạt động (nhánh `isSub`, chỉ có ở HĐ2) đóng thành bảng
+ * 2 cột; hoạt động cấp 1 (HĐ1/3/4) giữ đoạn văn a/b/c/d. Khi có tiểu HĐ, kết thúc bằng
+ * một `<p></p>` để bảng cuối không bị `insertContentAt` cắt mất (open-end) và để con trỏ
+ * đặt được dưới bảng.
+ */
+export function activityHtml(activity: Activity5512, isSub = false): string {
+  if (isSub) return subActivityTableHtml(activity);
+
+  const heading = `<h3>${escapeHtml(activity.name)}${activity.duration ? ` (${escapeHtml(activity.duration)})` : ""}</h3>`;
+
+  const field = (label: string, value: string | null | undefined) =>
+    value && value.trim() ? `<p><b>${label}</b> ${escapeHtml(value)}</p>` : "";
+
+  const subActivities = activity.subActivities ?? [];
+  const subs = subActivities.map((sub) => activityHtml(sub, true)).join("");
+  const trailing = subActivities.length > 0 ? "<p></p>" : "";
 
   return `
     ${heading}
-    <p><b>a) Mục tiêu:</b> ${escapeHtml(activity.objective)}</p>
-    <p><b>b) Nội dung:</b> ${escapeHtml(activity.content)}</p>
-    <p><b>c) Sản phẩm:</b> ${escapeHtml(activity.product)}</p>
+    ${field("a) Mục tiêu:", activity.objective)}
+    ${field("b) Nội dung:", activity.content)}
+    ${field("c) Sản phẩm:", activity.product)}
     ${organizationHtml(activity)}
     ${subs}
+    ${trailing}
   `;
 }
 
-/** Sinh khung Kế hoạch bài dạy 5512 (Phụ lục IV, kiểu KNTT) thành HTML. */
-export function lessonPlan5512ToHtml(plan: LessonPlan5512) {
+/**
+ * Block "⏳ Đang soạn…" cho một hoạt động Phần III chưa về (luồng streaming). Khớp node
+ * `pendingActivity` (atom, khoá) ở {@link ./pendingActivityNode}; fill xong sẽ bị thay.
+ */
+export function pendingActivityHtml(activity: Activity5512) {
+  return (
+    `<div data-pending-activity data-order="${activity.order}"` +
+    ` data-name="${escapeHtml(activity.name)}"` +
+    ` data-duration="${escapeHtml(activity.duration ?? "")}"></div>`
+  );
+}
+
+/**
+ * Sinh khung Kế hoạch bài dạy 5512 (Phụ lục IV, kiểu KNTT) thành HTML.
+ *
+ * @param opts.pendingOrders tập `order` các hoạt động Phần III đang chờ soạn (streaming) —
+ *   các hoạt động này render dưới dạng block "đang soạn" thay vì nội dung.
+ */
+export function lessonPlan5512ToHtml(
+  plan: LessonPlan5512,
+  opts?: { pendingOrders?: Set<number> },
+) {
   const { metadata, objectives, equipmentAndMaterials, activities } = plan;
+  const pending = opts?.pendingOrders;
 
   const meta = `${escapeHtml(metadata.subject)} · ${escapeHtml(metadata.grade)} · ${escapeHtml(metadata.duration)}`;
 
@@ -110,7 +185,11 @@ export function lessonPlan5512ToHtml(plan: LessonPlan5512) {
     .map((worksheet) => worksheetBoxHtml(worksheet))
     .join("");
 
-  const activitiesHtml = activities.map((activity) => activityHtml(activity)).join("");
+  const activitiesHtml = activities
+    .map((activity) =>
+      pending?.has(activity.order) ? pendingActivityHtml(activity) : activityHtml(activity),
+    )
+    .join("");
 
   return `
     <h1>${escapeHtml(plan.title)}</h1>
@@ -148,25 +227,8 @@ interface LessonEditorProps {
 }
 
 export function LessonEditor({ margins, editor }: LessonEditorProps) {
-  // Sau khi sinh ở /lesson-create, BE trả phần I (objectives) và phần II
-  // (equipmentAndMaterials) qua sessionStorage. Ghép lên khung 5512 (mock) — các
-  // mục còn lại (metadata, III. Tiến trình dạy học) giữ placeholder để GV điền
-  // sau — rồi đổ vào editor. Không có giáo án sinh thì giữ nguyên khung mặc định.
-  useEffect(() => {
-    if (!editor) return;
-    const generated = readGeneratedLessonPlan();
-    if (!generated) return;
-
-    const merged: LessonPlan5512 = {
-      ...lessonPlan5512Mock,
-      title: generated.title ?? lessonPlan5512Mock.title,
-      objectives: generated.objectives ?? lessonPlan5512Mock.objectives,
-      equipmentAndMaterials:
-        generated.equipmentAndMaterials ?? lessonPlan5512Mock.equipmentAndMaterials,
-    };
-    editor.commands.setContent(lessonPlan5512ToHtml(merged));
-  }, [editor]);
-
+  // Nội dung được đổ/fill vào editor bởi hook streaming `useLessonPlanStream`
+  // (gắn ở LessonEditDashboard). Component này chỉ render khung editor.
   return (
     <div className="pb-10">
       <div className="mx-auto w-full max-w-[816px]">
