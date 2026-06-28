@@ -6,44 +6,144 @@ import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineResponse;
 import com.edua.beeduasystem.presentation.dto.slides.OutlineDto;
 import com.edua.beeduasystem.presentation.dto.slides.PartDto;
 import com.edua.beeduasystem.presentation.dto.slides.SlideItemDto;
+import com.edua.beeduasystem.presentation.dto.slides.VisualDto;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.repository.gateways.OutlineStreamPort;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class GenerateSlideOutlineUseCase {
 
     private static final ObjectMapper LENIENT_MAPPER = new ObjectMapper()
             .configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true);
 
+    /** Số phần expand chạy song song tối đa (khớp SLIDE_CONCURRENCY=4 ở FE). */
+    private static final int EXPAND_CONCURRENCY = 4;
+
     private final AiClient aiClient;
     private final SlidePromptBuilder promptBuilder;
+    private final OutlineStreamPort outlineStream;
+    private final ExecutorService executor;
+
+    public GenerateSlideOutlineUseCase(
+            AiClient aiClient,
+            SlidePromptBuilder promptBuilder,
+            OutlineStreamPort outlineStream,
+            @Qualifier("slideSessionExecutor") ExecutorService executor) {
+        this.aiClient = aiClient;
+        this.promptBuilder = promptBuilder;
+        this.outlineStream = outlineStream;
+        this.executor = executor;
+    }
 
     public GenerateOutlineResponse execute(GenerateOutlineRequest req) {
         LessonContext lesson = SlideLessonContextFactory.fromOutlineRequest(req);
-        String prompt = promptBuilder.outlineFromPlanPrompt(
-                lesson, req.plan(), req.userPrompt(), req.styleHint());
-
-        log.info("slide outline prompt length={}", prompt.length());
-        String raw = aiClient.generate(prompt);
-        OutlineDto outline = parseOutline(lesson, raw);
-
         String sessionId = UUID.randomUUID().toString();
         String topic = "/topic/slides/" + sessionId;
-        return new GenerateOutlineResponse(sessionId, topic, outline);
+        String outlineTopic = "/topic/outline/" + sessionId;
+
+        // PHA 1 — khung (sync, 1 call nhẹ).
+        String structurePrompt = promptBuilder.outlineStructurePrompt(
+                lesson, req.plan(), req.userPrompt(), req.styleHint(), req.subject());
+        log.info("slide outline structure prompt length={}", structurePrompt.length());
+        String rawSkeleton = aiClient.generate(structurePrompt);
+
+        ParsedSkeleton skeleton = parseSkeleton(lesson, rawSkeleton);
+        GenerateOutlineResponse response =
+                new GenerateOutlineResponse(sessionId, topic, outlineTopic, skeleton.outline());
+
+        // PHA 2 — expand từng phần (nền, stream qua STOMP). Trả response pha 1 trước.
+        startExpansion(sessionId, lesson, req, skeleton);
+        return response;
     }
 
-    private OutlineDto parseOutline(LessonContext lesson, String raw) {
+    private void startExpansion(
+            String sessionId, LessonContext lesson, GenerateOutlineRequest req, ParsedSkeleton skeleton) {
+        List<PartDto> parts = skeleton.outline().parts();
+        if (skeleton.fallback() || parts.isEmpty()) {
+            // Pha 1 lỗi (đã fallback) hoặc không có phần → không expand, báo xong ngay để FE thôi loading.
+            outlineStream.publishDone(sessionId, 0);
+            return;
+        }
+
+        AtomicInteger remaining = new AtomicInteger(parts.size());
+        AtomicInteger failures = new AtomicInteger(0);
+        Semaphore gate = new Semaphore(EXPAND_CONCURRENCY);
+
+        for (PartDto part : parts) {
+            executor.submit(() -> {
+                try {
+                    gate.acquire();
+                    try {
+                        String prompt = promptBuilder.expandPartPrompt(
+                                lesson, req.plan(), skeleton.skeletonJson(), part.id(), part.title(), req.subject());
+                        String raw = aiClient.generate(prompt);
+                        List<SlideItemDto> filled = mergeExpanded(part, raw);
+                        outlineStream.publishPartReady(sessionId, part.id(), filled);
+                    } finally {
+                        gate.release();
+                    }
+                } catch (Exception e) {
+                    failures.incrementAndGet();
+                    log.warn("Expand part {} failed: {}", part.id(), e.getMessage());
+                    outlineStream.publishPartError(sessionId, part.id(), e.getMessage());
+                } finally {
+                    if (remaining.decrementAndGet() == 0) {
+                        outlineStream.publishDone(sessionId, failures.get());
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Ghép nội dung pha 2 vào khung pha 1 theo {@code slide.id}. Chỉ điền content/notes/duration cho
+     * các slide CÓ SẴN trong khung — bỏ qua id lạ (chống drift). Slide thiếu nội dung giữ nguyên khung.
+     */
+    private List<SlideItemDto> mergeExpanded(PartDto part, String raw) {
+        java.util.Map<String, JsonNode> byId = new java.util.HashMap<>();
+        try {
+            JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(raw));
+            for (JsonNode s : root.path("slides")) {
+                String id = s.path("id").asText(null);
+                if (id != null && !id.isBlank()) byId.put(id, s);
+            }
+        } catch (Exception e) {
+            log.warn("Expand parse failed for part {}, keeping skeleton: {}", part.id(), e.getMessage());
+        }
+
+        List<SlideItemDto> result = new ArrayList<>();
+        for (SlideItemDto s : part.slides()) {
+            JsonNode node = byId.get(s.id());
+            if (node == null) {
+                result.add(s);
+                continue;
+            }
+            result.add(new SlideItemDto(
+                    s.id(), s.title(), s.kind(), s.pedagogicalRole(), s.layoutHint(),
+                    textOrNull(node, "content"),
+                    intOrNull(node, "durationMinutes"),
+                    visualOrNull(node.path("visual")),
+                    textOrNull(node, "aiNote")
+            ));
+        }
+        return result;
+    }
+
+    private ParsedSkeleton parseSkeleton(LessonContext lesson, String raw) {
         try {
             String json = SlidePromptBuilder.stripFences(raw);
             JsonNode root = LENIENT_MAPPER.readTree(json);
@@ -55,23 +155,22 @@ public class GenerateSlideOutlineUseCase {
                     slides.add(new SlideItemDto(
                             s.path("id").asText(),
                             s.path("title").asText(),
-                            textOrNull(s, "kind"),
+                            null,
                             textOrNull(s, "pedagogicalRole"),
-                            textOrNull(s, "layoutHint"),
-                            textOrNull(s, "content")
+                            textOrNull(s, "layoutHint")
                     ));
                 }
                 parts.add(new PartDto(p.path("id").asText(), p.path("title").asText(), slides));
             }
             boolean hasSlides = parts.stream().anyMatch(p -> !p.slides().isEmpty());
             if (!parts.isEmpty() && hasSlides) {
-                return new OutlineDto(lesson.id(), lessonTitle, parts);
+                return new ParsedSkeleton(new OutlineDto(lesson.id(), lessonTitle, parts), json, false);
             }
-            log.warn("Outline parsed but has no slides — using fallback");
+            log.warn("Outline structure parsed but has no slides — using fallback");
         } catch (Exception e) {
-            log.warn("Outline parse failed, using fallback: {}", e.getMessage());
+            log.warn("Outline structure parse failed, using fallback: {}", e.getMessage());
         }
-        return fallbackOutline(lesson);
+        return new ParsedSkeleton(fallbackOutline(lesson), "", true);
     }
 
     private static OutlineDto fallbackOutline(LessonContext lesson) {
@@ -93,5 +192,23 @@ public class GenerateSlideOutlineUseCase {
         if (value.isMissingNode() || value.isNull()) return null;
         String text = value.asText();
         return text == null || text.isBlank() ? null : text;
+    }
+
+    private static VisualDto visualOrNull(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull() || !node.isObject()) return null;
+        String type = textOrNull(node, "type");
+        String spec = textOrNull(node, "spec");
+        if (type == null && spec == null) return null;
+        return new VisualDto(type, spec);
+    }
+
+    private static Integer intOrNull(JsonNode node, String fieldName) {
+        JsonNode value = node.path(fieldName);
+        if (value.isMissingNode() || value.isNull() || !value.canConvertToInt()) return null;
+        return value.asInt();
+    }
+
+    /** Khung pha 1 đã parse + chuỗi JSON gốc (chứa brief) để làm context cho pha 2. */
+    private record ParsedSkeleton(OutlineDto outline, String skeletonJson, boolean fallback) {
     }
 }

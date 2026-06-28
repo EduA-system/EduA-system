@@ -52,6 +52,7 @@ public class AiClientConfig {
                 .openAiApi(deepseekApi)
                 .defaultOptions(OpenAiChatOptions.builder()
                         .model(deepseekModel)
+                        .maxTokens(8192)
                         .build())
                 .build();
 
@@ -73,7 +74,7 @@ public class AiClientConfig {
                 .build();
         var model = OpenAiChatModel.builder()
                 .openAiApi(api)
-                .defaultOptions(OpenAiChatOptions.builder().model(deepseekModel).build())
+                .defaultOptions(OpenAiChatOptions.builder().model(deepseekModel).maxTokens(8192).build())
                 .build();
         return new DeepSeekAdapter(model);
     }

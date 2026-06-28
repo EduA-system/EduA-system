@@ -2,6 +2,11 @@ import { logSlideApi } from "@/lib/ws/slide-debug-log";
 
 const BE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+export type SlideVisual = {
+  type: "image" | "formula" | "table" | "none";
+  spec: string;
+};
+
 export type SlideItem = {
   id: string;
   title: string;
@@ -10,6 +15,12 @@ export type SlideItem = {
   layoutHint?: string;
   /** Nội dung thật của slide, trích từ giáo án ở bước outline (cách B). */
   content?: string;
+  /** Thời lượng dự kiến của slide (phút). */
+  durationMinutes?: number;
+  /** Đặc tả phần trực quan slide cần (ảnh/công thức/bảng) — pha 3 dàn theo đây. */
+  visual?: SlideVisual;
+  /** Câu ghi chú phần AI bổ sung ngoài giáo án để GV duyệt; rỗng nếu bám 100% giáo án. */
+  aiNote?: string;
 };
 
 export type OutlinePart = { id: string; title: string; slides: SlideItem[] };
@@ -39,6 +50,8 @@ export type InlineLessonPlan = {
 export type GenerateOutlineResponse = {
   sessionId: string;
   topic: string;
+  /** Topic STOMP để nhận nội dung từng phần (pha 2 expand). */
+  outlineTopic: string;
   outline: OutlineData;
 };
 
@@ -137,6 +150,7 @@ export async function generateOutline(request: {
   lessonTitle: string;
   lessonSummary?: string;
   grade?: string;
+  subject?: string;
   plan: InlineLessonPlan;
   userPrompt?: string;
   styleHint?: string;
