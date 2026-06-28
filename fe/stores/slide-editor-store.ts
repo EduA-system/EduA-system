@@ -1,11 +1,12 @@
 "use client";
 
 import { create } from "zustand";
-import type {
-  Slide,
-  SlideElement,
-  ElementPatch,
-  AlignDir,
+import {
+  isSlideLockedForGeneration,
+  type Slide,
+  type SlideElement,
+  type ElementPatch,
+  type AlignDir,
 } from "@/components/slide-editor/types";
 import { computeBoundingBox } from "@/components/slide-editor/lib/geometry";
 import { seedSlides } from "@/components/slide-editor/seed";
@@ -154,6 +155,14 @@ function reindexSlides(slides: Slide[]): Slide[] {
   }));
 }
 
+function isCurrentSlideLocked(state: EditorState): boolean {
+  return isSlideLockedForGeneration(state.slides.find((s) => s.id === state.currentSlideId));
+}
+
+function hasLockedGenerationSlide(slides: Slide[]): boolean {
+  return slides.some(isSlideLockedForGeneration);
+}
+
 export const useEditorStore = create<EditorState>((set, get) => ({
   slides: normalizedSeedSlides,
   currentSlideId: normalizedSeedSlides[0].id,
@@ -184,6 +193,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   addBlankSlide: (afterId) =>
     set((state) => {
+      if (hasLockedGenerationSlide(state.slides)) return state;
       const newSlide: Slide = {
         id: slideId(),
         bg: "#ffffff",
@@ -199,6 +209,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   duplicateSlide: (id) =>
     set((state) => {
+      if (hasLockedGenerationSlide(state.slides)) return state;
       const src = state.slides.find((s) => s.id === id);
       if (!src) return state;
       const newSlide: Slide = {
@@ -214,6 +225,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   deleteSlide: (id) =>
     set((state) => {
+      if (hasLockedGenerationSlide(state.slides)) return state;
       if (state.slides.length <= 1) return state;
       const idx = state.slides.findIndex((s) => s.id === id);
       const slides = state.slides.filter((s) => s.id !== id);
@@ -226,16 +238,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   reorderSlides: (from, to) =>
     set((state) => {
+      if (hasLockedGenerationSlide(state.slides)) return state;
       const slides = [...state.slides];
       const [moved] = slides.splice(from, 1);
       slides.splice(to, 0, moved);
       return { ...pushHistory(state), slides };
     }),
 
-  select: (ids) => set((state) => ({ selectedIds: filterSelection(state, ids) })),
+  select: (ids) =>
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return { selectedIds: [] };
+      return { selectedIds: filterSelection(state, ids) };
+    }),
 
   toggleSelect: (id) =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return { selectedIds: [] };
       const allowed = visibleIds(state.slides.find((s) => s.id === state.currentSlideId));
       if (!allowed.has(id)) return state;
       const selected = state.selectedIds.includes(id)
@@ -248,6 +266,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   addElement: (el) =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       const id = el.id || uid();
       const newElement = { ...el, id, zIndex: 0, hidden: false } as SlideElement;
       return {
@@ -262,6 +281,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   updateElement: (id, patch) =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       const slides = withCurrentSlide(state, (slide) => ({
         ...slide,
         elements: slide.elements.map((el) =>
@@ -277,6 +297,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   updateMany: (ids, patch) =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       const slides = withCurrentSlide(state, (slide) => ({
         ...slide,
         elements: slide.elements.map((el) =>
@@ -291,17 +312,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }),
 
   removeElements: (ids) =>
-    set((state) => ({
-      ...pushHistory(state),
-      slides: withCurrentSlide(state, (slide) => ({
-        ...slide,
-        elements: slide.elements.filter((el) => !ids.includes(el.id)),
-      })),
-      selectedIds: state.selectedIds.filter((id) => !ids.includes(id)),
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        ...pushHistory(state),
+        slides: withCurrentSlide(state, (slide) => ({
+          ...slide,
+          elements: slide.elements.filter((el) => !ids.includes(el.id)),
+        })),
+        selectedIds: state.selectedIds.filter((id) => !ids.includes(id)),
+      };
+    }),
 
   duplicateElements: (ids) =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       const slide = state.slides.find((s) => s.id === state.currentSlideId);
       if (!slide) return state;
       const selected = slide.elements.filter((el) => ids.includes(el.id));
@@ -331,91 +356,113 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }),
 
   bringForward: (id) =>
-    set((state) => ({
-      ...pushHistory(state),
-      slides: withCurrentSlide(state, (slide) => {
-        const els = [...slide.elements];
-        const idx = els.findIndex((el) => el.id === id);
-        if (idx < 0 || idx >= els.length - 1) return slide;
-        [els[idx], els[idx + 1]] = [els[idx + 1], els[idx]];
-        return { ...slide, elements: els };
-      }),
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        ...pushHistory(state),
+        slides: withCurrentSlide(state, (slide) => {
+          const els = [...slide.elements];
+          const idx = els.findIndex((el) => el.id === id);
+          if (idx < 0 || idx >= els.length - 1) return slide;
+          [els[idx], els[idx + 1]] = [els[idx + 1], els[idx]];
+          return { ...slide, elements: els };
+        }),
+      };
+    }),
 
   sendBackward: (id) =>
-    set((state) => ({
-      ...pushHistory(state),
-      slides: withCurrentSlide(state, (slide) => {
-        const els = [...slide.elements];
-        const idx = els.findIndex((el) => el.id === id);
-        if (idx <= 0) return slide;
-        [els[idx - 1], els[idx]] = [els[idx], els[idx - 1]];
-        return { ...slide, elements: els };
-      }),
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        ...pushHistory(state),
+        slides: withCurrentSlide(state, (slide) => {
+          const els = [...slide.elements];
+          const idx = els.findIndex((el) => el.id === id);
+          if (idx <= 0) return slide;
+          [els[idx - 1], els[idx]] = [els[idx], els[idx - 1]];
+          return { ...slide, elements: els };
+        }),
+      };
+    }),
 
   bringToFront: (id) =>
-    set((state) => ({
-      ...pushHistory(state),
-      slides: withCurrentSlide(state, (slide) => {
-        const idx = slide.elements.findIndex((el) => el.id === id);
-        if (idx < 0 || idx === slide.elements.length - 1) return slide;
-        const els = [...slide.elements];
-        const [moved] = els.splice(idx, 1);
-        els.push(moved);
-        return { ...slide, elements: els };
-      }),
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        ...pushHistory(state),
+        slides: withCurrentSlide(state, (slide) => {
+          const idx = slide.elements.findIndex((el) => el.id === id);
+          if (idx < 0 || idx === slide.elements.length - 1) return slide;
+          const els = [...slide.elements];
+          const [moved] = els.splice(idx, 1);
+          els.push(moved);
+          return { ...slide, elements: els };
+        }),
+      };
+    }),
 
   sendToBack: (id) =>
-    set((state) => ({
-      ...pushHistory(state),
-      slides: withCurrentSlide(state, (slide) => {
-        const idx = slide.elements.findIndex((el) => el.id === id);
-        if (idx <= 0) return slide;
-        const els = [...slide.elements];
-        const [moved] = els.splice(idx, 1);
-        els.unshift(moved);
-        return { ...slide, elements: els };
-      }),
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        ...pushHistory(state),
+        slides: withCurrentSlide(state, (slide) => {
+          const idx = slide.elements.findIndex((el) => el.id === id);
+          if (idx <= 0) return slide;
+          const els = [...slide.elements];
+          const [moved] = els.splice(idx, 1);
+          els.unshift(moved);
+          return { ...slide, elements: els };
+        }),
+      };
+    }),
 
   batchUpdate: (updates) =>
-    set((state) => ({
-      ...pushHistory(state),
-      slides: withCurrentSlide(state, (slide) => ({
-        ...slide,
-        elements: slide.elements.map((el) => {
-          const update = updates.find((u) => u.id === el.id);
-          return update ? ({ ...el, ...update.patch } as SlideElement) : el;
-        }),
-      })),
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        ...pushHistory(state),
+        slides: withCurrentSlide(state, (slide) => ({
+          ...slide,
+          elements: slide.elements.map((el) => {
+            const update = updates.find((u) => u.id === el.id);
+            return update ? ({ ...el, ...update.patch } as SlideElement) : el;
+          }),
+        })),
+      };
+    }),
 
   // Cập nhật live khi đang kéo (move/resize/rotate/endpoint) — KHÔNG ghi history.
   transientUpdate: (updates) =>
-    set((state) => ({
-      slides: withCurrentSlide(state, (slide) => ({
-        ...slide,
-        elements: slide.elements.map((el) => {
-          const update = updates.find((u) => u.id === el.id);
-          return update ? ({ ...el, ...update.patch } as SlideElement) : el;
-        }),
-      })),
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        slides: withCurrentSlide(state, (slide) => ({
+          ...slide,
+          elements: slide.elements.map((el) => {
+            const update = updates.find((u) => u.id === el.id);
+            return update ? ({ ...el, ...update.patch } as SlideElement) : el;
+          }),
+        })),
+      };
+    }),
 
   // Đẩy snapshot chụp TRƯỚC khi kéo vào history (gọi 1 lần ở mouseup nếu có thay đổi).
   // Trạng thái sau-kéo đã nằm trong store qua transientUpdate, nên undo về đúng vị trí gốc.
   pushSnapshot: (snap) =>
-    set((state) => ({
-      history: {
-        past: [...state.history.past, snap].slice(-MAX_HISTORY),
-        future: [],
-      },
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        history: {
+          past: [...state.history.past, snap].slice(-MAX_HISTORY),
+          future: [],
+        },
+      };
+    }),
 
   alignElements: (dir) =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       const ids = state.selectedIds;
       if (ids.length < 2) return state;
       const slide = state.slides.find((s) => s.id === state.currentSlideId);
@@ -452,6 +499,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   // Phân bố đều khoảng cách giữa các element (giữ nguyên element đầu & cuối).
   distribute: (dir) =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       const ids = state.selectedIds;
       if (ids.length < 3) return state;
       const slide = state.slides.find((s) => s.id === state.currentSlideId);
@@ -487,6 +535,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   groupSelected: () =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       const ids = state.selectedIds;
       if (ids.length < 2) return state;
       const gid = `grp-${Date.now()}-${++idCounter}`;
@@ -503,6 +552,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   ungroupSelected: () =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       const ids = state.selectedIds;
       if (ids.length === 0) return state;
       return {
@@ -517,24 +567,31 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }),
 
   setSlideBackground: (bg) =>
-    set((state) => ({
-      ...pushHistory(state),
-      slides: withCurrentSlide(state, (slide) => ({ ...slide, bg })),
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        ...pushHistory(state),
+        slides: withCurrentSlide(state, (slide) => ({ ...slide, bg })),
+      };
+    }),
 
   toggleLock: (ids) =>
-    set((state) => ({
-      ...pushHistory(state),
-      slides: withCurrentSlide(state, (slide) => ({
-        ...slide,
-        elements: slide.elements.map((el) =>
-          ids.includes(el.id) ? ({ ...el, locked: !el.locked } as SlideElement) : el
-        ),
-      })),
-    })),
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      return {
+        ...pushHistory(state),
+        slides: withCurrentSlide(state, (slide) => ({
+          ...slide,
+          elements: slide.elements.map((el) =>
+            ids.includes(el.id) ? ({ ...el, locked: !el.locked } as SlideElement) : el
+          ),
+        })),
+      };
+    }),
 
   copySelected: () =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       const slide = state.slides.find((s) => s.id === state.currentSlideId);
       if (!slide) return state;
       const clipboard = slide.elements
@@ -545,6 +602,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   paste: () =>
     set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
       if (state.clipboard.length === 0) return state;
       const slide = state.slides.find((s) => s.id === state.currentSlideId);
       if (!slide) return state;
@@ -575,6 +633,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   undo: () =>
     set((state) => {
+      if (hasLockedGenerationSlide(state.slides)) return state;
       if (state.history.past.length === 0) return state;
       const prev = state.history.past[state.history.past.length - 1];
       const current: Snapshot = {
@@ -594,6 +653,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   redo: () =>
     set((state) => {
+      if (hasLockedGenerationSlide(state.slides)) return state;
       if (state.history.future.length === 0) return state;
       const next = state.history.future[0];
       const current: Snapshot = {

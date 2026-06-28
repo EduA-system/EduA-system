@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
+import { isSlideLockedForGeneration } from "./types";
 import { TopBar } from "./TopBar";
 import { ContextualToolbar } from "./ContextualToolbar";
 import { LeftPanel } from "./LeftPanel";
@@ -96,13 +97,18 @@ export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boo
         return;
       }
 
+      const slideLocked = isSlideLockedForGeneration(store.currentSlide());
+      const hasLockedSlides = store.slides.some(isSlideLockedForGeneration);
+
       if (e.key === "g" && (e.ctrlKey || e.metaKey)) {
+        if (slideLocked) return;
         e.preventDefault();
         if (e.shiftKey) store.ungroupSelected();
         else store.groupSelected();
       }
 
       if (e.key === "Delete" || e.key === "Backspace") {
+        if (slideLocked) return;
         if (store.selectedIds.length > 0) {
           e.preventDefault();
           store.removeElements(store.selectedIds);
@@ -110,21 +116,25 @@ export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boo
       }
 
       if (e.key === "c" && (e.ctrlKey || e.metaKey)) {
+        if (slideLocked) return;
         e.preventDefault();
         store.copySelected();
       }
 
       if (e.key === "v" && (e.ctrlKey || e.metaKey)) {
+        if (slideLocked) return;
         e.preventDefault();
         store.paste();
       }
 
       if (e.key === "l" && (e.ctrlKey || e.metaKey)) {
+        if (slideLocked) return;
         e.preventDefault();
         if (store.selectedIds.length > 0) store.toggleLock(store.selectedIds);
       }
 
       if (e.key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        if (hasLockedSlides) return;
         e.preventDefault();
         store.undo();
       }
@@ -133,11 +143,13 @@ export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boo
         (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) ||
         (e.key === "y" && (e.ctrlKey || e.metaKey))
       ) {
+        if (hasLockedSlides) return;
         e.preventDefault();
         store.redo();
       }
 
       if (e.key === "d" && (e.ctrlKey || e.metaKey)) {
+        if (slideLocked) return;
         e.preventDefault();
         if (store.selectedIds.length > 0) {
           store.duplicateElements(store.selectedIds);
@@ -145,6 +157,7 @@ export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boo
       }
 
       if (e.key === "a" && (e.ctrlKey || e.metaKey)) {
+        if (slideLocked) return;
         e.preventDefault();
         const slide = store.currentSlide();
         if (slide) {
@@ -153,6 +166,7 @@ export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boo
       }
 
       if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        if (slideLocked) return;
         if (store.selectedIds.length > 0) {
           e.preventDefault();
           const step = e.shiftKey ? 10 : 1;
@@ -172,6 +186,7 @@ export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boo
       }
 
       if (e.key === "]") {
+        if (slideLocked) return;
         e.preventDefault();
         if (store.selectedIds.length === 1) {
           store.bringForward(store.selectedIds[0]);
@@ -179,6 +194,7 @@ export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boo
       }
 
       if (e.key === "[") {
+        if (slideLocked) return;
         e.preventDefault();
         if (store.selectedIds.length === 1) {
           store.sendBackward(store.selectedIds[0]);

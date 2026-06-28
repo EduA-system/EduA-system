@@ -5,7 +5,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
-import { CANVAS_W, CANVAS_H, type ElementPatch } from "./types";
+import { CANVAS_W, CANVAS_H, isSlideLockedForGeneration, type ElementPatch } from "./types";
 import { makeByType, makeImage, makePoly, type AddType } from "./lib/factory";
 import { SHAPE_LIBRARY } from "./lib/shapes";
 import { ColorPicker } from "./ColorPicker";
@@ -162,9 +162,14 @@ export function LeftPanel({
   const fileRef = useRef<HTMLInputElement>(null);
   const addElement = useEditorStore((s) => s.addElement);
   const slideBg = useEditorStore((s) => s.slides.find((sl) => sl.id === s.currentSlideId)?.bg ?? "#ffffff");
+  const currentSlideLocked = useEditorStore((s) =>
+    isSlideLockedForGeneration(s.slides.find((sl) => sl.id === s.currentSlideId)),
+  );
   const setSlideBackground = useEditorStore((s) => s.setSlideBackground);
+  const visibleTab = currentSlideLocked ? null : tab;
 
   function addImageSized(src: string) {
+    if (currentSlideLocked) return;
     const img = new Image();
     img.onload = () => {
       const r = img.naturalHeight / img.naturalWidth;
@@ -178,6 +183,7 @@ export function LeftPanel({
   }
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    if (currentSlideLocked) return;
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -187,6 +193,7 @@ export function LeftPanel({
   }
 
   function addImageFromUrl() {
+    if (currentSlideLocked) return;
     const src = urlInput.trim();
     if (!src) return;
     addImageSized(src);
@@ -202,10 +209,11 @@ export function LeftPanel({
         {ICON_TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(tab === t.id ? null : t.id)}
+            disabled={currentSlideLocked}
+            onClick={() => setTab(visibleTab === t.id ? null : t.id)}
             title={t.label}
-            className={`flex w-12 flex-col items-center gap-0.5 rounded-[8px] py-2 text-[10px] transition-colors ${
-              tab === t.id ? "bg-[#eef0f3] text-[#1f1f1f]" : "text-[#5f6368] hover:bg-black/5"
+            className={`flex w-12 flex-col items-center gap-0.5 rounded-[8px] py-2 text-[10px] transition-colors disabled:pointer-events-none disabled:opacity-40 ${
+              visibleTab === t.id ? "bg-[#eef0f3] text-[#1f1f1f]" : "text-[#5f6368] hover:bg-black/5"
             }`}
           >
             {t.icon}
@@ -215,9 +223,9 @@ export function LeftPanel({
       </nav>
 
       {/* FLYOUT */}
-      {tab && (
+      {visibleTab && (
         <div className="w-[240px] shrink-0 overflow-y-auto border-l border-black/10">
-          {tab === "shapes" && (
+          {visibleTab === "shapes" && (
             <div className="p-3">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#777]">Hình cơ bản</div>
               <div className="grid grid-cols-3 gap-2">
@@ -268,7 +276,7 @@ export function LeftPanel({
             </div>
           )}
 
-          {tab === "text" && (
+          {visibleTab === "text" && (
             <div className="space-y-2 p-3">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#777]">Kiểu chữ</div>
               {TEXT_PRESETS.map((t, i) => (
@@ -301,7 +309,7 @@ export function LeftPanel({
             </div>
           )}
 
-          {tab === "upload" && (
+          {visibleTab === "upload" && (
             <div className="space-y-3 p-3">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#777]">Tải ảnh lên</div>
               <button
@@ -335,7 +343,7 @@ export function LeftPanel({
             </div>
           )}
 
-          {tab === "tools" && (
+          {visibleTab === "tools" && (
             <div className="p-3">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#777]">Vẽ tay</div>
               <div className="mb-3 grid grid-cols-4 gap-1.5">
@@ -403,7 +411,7 @@ export function LeftPanel({
             </div>
           )}
 
-          {tab === "bg" && (
+          {visibleTab === "bg" && (
             <div className="space-y-3 p-3">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#777]">Nền slide</div>
               <div className="flex items-center justify-between rounded-lg bg-black/[0.03] p-2.5">

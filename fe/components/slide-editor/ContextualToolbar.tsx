@@ -4,7 +4,13 @@
 // Tự đọc store; multi-select → căn lề + phân bố, single → vị trí + thuộc tính theo loại.
 
 import { useEditorStore } from "@/stores/slide-editor-store";
-import type { AlignDir, ElementPatch, LineMarker, SlideElement } from "./types";
+import {
+  isSlideLockedForGeneration,
+  type AlignDir,
+  type ElementPatch,
+  type LineMarker,
+  type SlideElement,
+} from "./types";
 import { NumField, Sep, ToolBtn } from "./ui";
 import { ColorPicker } from "./ColorPicker";
 import { TextToolbar } from "./TextToolbar";
@@ -172,6 +178,7 @@ export function ContextualToolbar() {
   const updateMany = useEditorStore((s) => s.updateMany);
   const alignElements = useEditorStore((s) => s.alignElements);
   const distribute = useEditorStore((s) => s.distribute);
+  const slideLocked = isSlideLockedForGeneration(slide);
 
   const single =
     selectedIds.length === 1
@@ -181,7 +188,7 @@ export function ContextualToolbar() {
   const upd: Upd = (patch) => updateMany(selectedIds, patch);
 
   // Không chọn gì → ẩn hẳn thanh; chỉ hiện khi có phần tử được chọn.
-  if (selectedIds.length === 0) return null;
+  if (selectedIds.length === 0 || slideLocked) return null;
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center px-4">

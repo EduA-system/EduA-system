@@ -161,9 +161,16 @@ export type ElementPatch = Partial<
 
 export type AlignDir = "left" | "right" | "top" | "bottom" | "cx" | "cy";
 
+export type SlideGenerationStatus = "pending" | "framing" | "ready" | "failed";
+
 export interface Slide {
   id: string;
   bg: string;
   elements: SlideElement[];
   aiPrompt?: string;
+  generationStatus?: SlideGenerationStatus;
+}
+
+export function isSlideLockedForGeneration(slide: Slide | undefined): boolean {
+  return slide?.generationStatus === "pending" || slide?.generationStatus === "framing";
 }

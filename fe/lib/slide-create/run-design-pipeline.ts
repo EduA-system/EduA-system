@@ -33,6 +33,7 @@ export type DesignPipelineCallbacks = {
     result: { bg: string; elements: SlideElement[] },
     title: string,
   ) => void;
+  onSlideFailed?: (slideId: string, message: string) => void;
   onProgress?: (ready: number, total: number) => void;
   /** Fatal error (step 1 failed / empty) — pipeline stops. */
   onError?: (message: string) => void;
@@ -206,6 +207,7 @@ export async function runDesignPipeline(
       cb.onSlideReady(slide.id, { bg, elements }, slide.title);
     } catch (e) {
       console.error("[EDUA slide] [API] design pipeline slide failed", slide.id, e);
+      cb.onSlideFailed?.(slide.id, e instanceof Error ? e.message : String(e));
     } finally {
       ready += 1;
       cb.onProgress?.(ready, total);
