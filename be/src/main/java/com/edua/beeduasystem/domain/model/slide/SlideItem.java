@@ -1,7 +1,10 @@
 package com.edua.beeduasystem.domain.model.slide;
 
+import java.util.List;
+
 public record SlideItem(String id, String title, String kind, String pedagogicalRole, String layoutHint,
-                        String content, SlideVisual visual) {
+                        String content, List<String> requiredFacts, List<QuizItem> quizItems,
+                        SlideVisual visual) {
 
     public SlideItem {
         SlideMetadata.Normalized normalized = SlideMetadata.normalize(kind, pedagogicalRole, layoutHint);
@@ -11,10 +14,15 @@ public record SlideItem(String id, String title, String kind, String pedagogical
     }
 
     public SlideItem(String id, String title, String kind, String pedagogicalRole, String layoutHint) {
-        this(id, title, kind, pedagogicalRole, layoutHint, null, null);
+        this(id, title, kind, pedagogicalRole, layoutHint, null, null, null, null);
+    }
+
+    public SlideItem(String id, String title, String kind, String pedagogicalRole, String layoutHint,
+                     String content, SlideVisual visual) {
+        this(id, title, kind, pedagogicalRole, layoutHint, content, null, null, visual);
     }
 
     public SlideItem(String id, String title, String kind) {
-        this(id, title, kind, null, null, null, null);
+        this(id, title, kind, null, null, null, null, null, null);
     }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { slideRoleLabel, type SlideItem, type SlideVisual } from "@/lib/api/slides";
 
@@ -13,6 +13,77 @@ const VISUAL_TYPES: { value: SlideVisual["type"]; label: string }[] = [
 
 const inputClass =
   "w-full rounded-lg border border-[rgba(26,26,46,0.12)] px-3 py-2 text-sm text-[#1a1a2e] outline-none transition focus:border-[#c27aff]/60 focus:ring-1 focus:ring-[#8200db]";
+
+function linesToArray(value: string): string[] | undefined {
+  const items = value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return items.length > 0 ? items : undefined;
+}
+
+function normalizeQuizItems(value: unknown): SlideItem["quizItems"] {
+  if (!Array.isArray(value)) return undefined;
+  const items = value
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+    .map((item) => ({
+      question: typeof item.question === "string" ? item.question : "",
+      choices: Array.isArray(item.choices)
+        ? item.choices.filter((choice): choice is string => typeof choice === "string")
+        : undefined,
+      answer: typeof item.answer === "string" ? item.answer : undefined,
+      explanation: typeof item.explanation === "string" ? item.explanation : undefined,
+    }))
+    .filter((item) => item.question.trim());
+  return items.length > 0 ? items : undefined;
+}
+
+function QuizItemsField({
+  slide,
+  onChange,
+}: {
+  slide: SlideItem;
+  onChange: (slide: SlideItem) => void;
+}) {
+  const [quizJson, setQuizJson] = useState(() =>
+    slide.quizItems ? JSON.stringify(slide.quizItems, null, 2) : "",
+  );
+  const [quizJsonError, setQuizJsonError] = useState<string | null>(null);
+
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-[#5c5b6e]">Câu hỏi luyện tập / phiếu học tập (JSON)</span>
+      <textarea
+        value={quizJson}
+        onChange={(e) => {
+          const next = e.target.value;
+          setQuizJson(next);
+          if (!next.trim()) {
+            setQuizJsonError(null);
+            onChange({ ...slide, quizItems: undefined });
+            return;
+          }
+          try {
+            const parsed = JSON.parse(next);
+            if (!Array.isArray(parsed)) {
+              setQuizJsonError("JSON phải là một mảng câu hỏi.");
+              return;
+            }
+            const normalized = normalizeQuizItems(parsed);
+            setQuizJsonError(null);
+            onChange({ ...slide, quizItems: normalized });
+          } catch {
+            setQuizJsonError("JSON chưa hợp lệ.");
+          }
+        }}
+        rows={5}
+        placeholder='[{"question":"...","choices":["A. ..."],"answer":"A","explanation":"..."}]'
+        className={`${inputClass} resize-y font-mono text-xs leading-relaxed`}
+      />
+      {quizJsonError ? <span className="text-[11px] text-red-500">{quizJsonError}</span> : null}
+    </label>
+  );
+}
 
 export function SlideDetailModal({
   slide,
@@ -86,6 +157,19 @@ export function SlideDetailModal({
               className={`${inputClass} resize-y leading-relaxed`}
             />
           </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-[#5c5b6e]">Dữ kiện bắt buộc</span>
+            <textarea
+              value={slide.requiredFacts?.join("\n") ?? ""}
+              onChange={(e) => onChange({ ...slide, requiredFacts: linesToArray(e.target.value) })}
+              rows={4}
+              placeholder="Mỗi dòng một dữ kiện/câu hỏi/đáp án/công thức cần giữ..."
+              className={`${inputClass} resize-y leading-relaxed`}
+            />
+          </label>
+
+          <QuizItemsField key={slide.id} slide={slide} onChange={onChange} />
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-[#5c5b6e]">Phần trực quan</span>

@@ -48,8 +48,31 @@ function slideOutlineText(slide: SlideItem): string {
   const role = slideRoleLabel(slide);
   const title = slide.title.trim();
   const head = role && role !== title ? `${title} (${role})` : title;
+  const sections: string[] = [];
   const body = slide.content?.trim();
-  return body ? `${head}\n\nNội dung giáo án cho slide này:\n${body}` : head;
+  if (body) sections.push(`Nội dung hiển thị:\n${body}`);
+  if (slide.requiredFacts?.length) {
+    sections.push(`Dữ kiện bắt buộc:\n${slide.requiredFacts.map((fact) => `- ${fact}`).join("\n")}`);
+  }
+  if (slide.quizItems?.length) {
+    const quizText = slide.quizItems
+      .map((quiz, index) => {
+        const lines = [`${index + 1}. ${quiz.question}`];
+        if (quiz.choices?.length) lines.push(...quiz.choices.map((choice) => `   ${choice}`));
+        if (quiz.answer?.trim()) lines.push(`   Đáp án: ${quiz.answer.trim()}`);
+        if (quiz.explanation?.trim()) lines.push(`   Giải thích: ${quiz.explanation.trim()}`);
+        return lines.join("\n");
+      })
+      .join("\n");
+    sections.push(`Câu hỏi luyện tập / phiếu học tập:\n${quizText}`);
+  }
+  if (slide.visual && slide.visual.type !== "none" && slide.visual.spec.trim()) {
+    sections.push(`Trực quan cần có (${slide.visual.type}):\n${slide.visual.spec.trim()}`);
+  }
+  if (slide.aiNote?.trim()) {
+    sections.push(`AI note:\n${slide.aiNote.trim()}`);
+  }
+  return sections.length ? `${head}\n\n${sections.join("\n\n")}` : head;
 }
 
 function flattenSlides(parts: OutlinePart[]): SlideItem[] {

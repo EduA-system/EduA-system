@@ -95,7 +95,7 @@ public class SlidePromptBuilder {
 
     /**
      * PHA 2 — đào sâu MỘT phần. Nhận toàn bộ giáo án (KHÔNG cắt) + toàn bộ khung (giữ mạch, tránh trùng)
-     * và soạn content hiển thị + lời giảng + thời lượng cho các slide thuộc phần đích.
+     * và soạn content hiển thị + dữ kiện bắt buộc + thời lượng cho các slide thuộc phần đích.
      */
     public String expandPartPrompt(
             LessonContext lesson,
@@ -128,6 +128,13 @@ public class SlidePromptBuilder {
                 Với mỗi slide:
                 - `content`: nội dung hiển thị trên slide. Text thuần, xuống dòng (\\n) phân ý, gạch đầu dòng "- ".
                   Tối đa 4-5 ý/slide, 1 ý chính/slide, súc tích nhưng đầy đủ, không nhồi.
+                  KHÔNG đưa nhãn điều phối lớp học như "GV", "HS", "Gợi mở", "Thảo luận nhóm", "Hãy quan sát",
+                  "Giơ bìa ABCD", trừ khi chính câu đó là nội dung cần chiếu cho học sinh.
+                - `requiredFacts`: mảng các dữ kiện/câu hỏi/đáp án/công thức bắt buộc không được mất khi dàn thành slide.
+                  Chỉ đưa dữ kiện quan trọng có trong giáo án hoặc đã khai báo ở `aiNote`.
+                - `quizItems`: mảng câu hỏi luyện tập/trắc nghiệm/phiếu học tập nếu slide có hoạt động hỏi-đáp.
+                  Mỗi item: {"question": "...", "choices": ["A. ..."], "answer": "...", "explanation": "..."}.
+                  Nếu không có quiz/câu hỏi cấu trúc → để [].
                 - `durationMinutes`: thời lượng (số nguyên phút) cho slide.
                 - `visual`: đặc tả phần trực quan slide CẦN có, dạng {"type": "...", "spec": "..."}:
                   + type ∈ image | formula | table | none.
@@ -135,10 +142,13 @@ public class SlidePromptBuilder {
                     table → spec mô tả bảng (cột/hàng). none → không cần trực quan (spec để "").
                 - `aiNote`: nếu content có phần BỔ SUNG ngoài giáo án (ví dụ, liên hệ thực tế, diễn giải tự thêm),
                   ghi MỘT câu nêu rõ phần nào là AI thêm để giáo viên duyệt. Nếu bám 100% giáo án → để chuỗi rỗng "".
+                - KHÔNG sinh script/lời thoại giáo viên/speaker notes. Chỉ sinh dữ liệu liên quan trực tiếp tới slide trình chiếu.
 
                 NGUYÊN TẮC NỘI DUNG:
                 - DỮ KIỆN GỐC (số liệu, đáp án, công thức, câu hỏi trong giáo án) phải GIỮ NGUYÊN VĂN, không bịa, không sai lệch.
-                - ĐƯỢC PHÉP bổ sung ví dụ/diễn giải/lời giảng cho slide đủ chất — NHƯNG phải ĐÚNG KHOA HỌC,
+                - Câu hỏi, phiếu học tập, bài trắc nghiệm phải được giữ trong `quizItems` hoặc `requiredFacts`,
+                  không được thay bằng câu chung chung như "làm bài tập sau".
+                - ĐƯỢC PHÉP bổ sung ví dụ/diễn giải ngắn để hiển thị trên slide — NHƯNG phải ĐÚNG KHOA HỌC,
                   tuyệt đối không thêm thông tin sai. Mọi phần bổ sung phải khai báo trong `aiNote`.
                 - THỜI LƯỢNG: tổng `durationMinutes` của các slide trong phần này phải XẤP XỈ số phút của hoạt động
                   tương ứng trong giáo án ở trên. Phần khung (bìa, mục tiêu, dặn dò, tổng kết) để 1 phút/slide.
@@ -150,6 +160,8 @@ public class SlidePromptBuilder {
                 {
                   "slides": [
                     {"id": "p1s1", "content": "Nội dung hiển thị…", "durationMinutes": 3,
+                     "requiredFacts": ["Dữ kiện bắt buộc 1"],
+                     "quizItems": [{"question": "Câu hỏi?", "choices": ["A. ...", "B. ..."], "answer": "A", "explanation": "Giải thích ngắn"}],
                      "visual": {"type": "image", "spec": "Mô tả ảnh cần vẽ"}, "aiNote": ""}
                   ]
                 }
@@ -324,6 +336,26 @@ public class SlidePromptBuilder {
     private void appendAuthoredContent(StringBuilder sb, SlideItem slide) {
         sb.append("NỘI DUNG ĐÃ CHỐT (dàn đúng nội dung này, KHÔNG soạn lại):\n");
         sb.append(slide.content()).append("\n");
+        if (slide.requiredFacts() != null && !slide.requiredFacts().isEmpty()) {
+            sb.append("\nDỮ KIỆN BẮT BUỘC KHÔNG ĐƯỢC MẤT:\n");
+            slide.requiredFacts().forEach(f -> sb.append("- ").append(f).append("\n"));
+        }
+        if (slide.quizItems() != null && !slide.quizItems().isEmpty()) {
+            sb.append("\nCÂU HỎI LUYỆN TẬP / PHIẾU HỌC TẬP:\n");
+            for (int i = 0; i < slide.quizItems().size(); i++) {
+                var quiz = slide.quizItems().get(i);
+                sb.append(i + 1).append(". ").append(quiz.question()).append("\n");
+                if (quiz.choices() != null && !quiz.choices().isEmpty()) {
+                    quiz.choices().forEach(c -> sb.append("   ").append(c).append("\n"));
+                }
+                if (quiz.answer() != null && !quiz.answer().isBlank()) {
+                    sb.append("   Đáp án: ").append(quiz.answer()).append("\n");
+                }
+                if (quiz.explanation() != null && !quiz.explanation().isBlank()) {
+                    sb.append("   Giải thích: ").append(quiz.explanation()).append("\n");
+                }
+            }
+        }
         SlideVisual visual = slide.visual();
         if (visual != null && visual.type() != null && !"none".equalsIgnoreCase(visual.type())
                 && visual.spec() != null && !visual.spec().isBlank()) {

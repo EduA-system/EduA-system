@@ -5,6 +5,7 @@ import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineRequest;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineResponse;
 import com.edua.beeduasystem.presentation.dto.slides.OutlineDto;
 import com.edua.beeduasystem.presentation.dto.slides.PartDto;
+import com.edua.beeduasystem.presentation.dto.slides.QuizItemDto;
 import com.edua.beeduasystem.presentation.dto.slides.SlideItemDto;
 import com.edua.beeduasystem.presentation.dto.slides.VisualDto;
 import com.edua.beeduasystem.repository.gateways.AiClient;
@@ -136,6 +137,8 @@ public class GenerateSlideOutlineUseCase {
                     s.id(), s.title(), s.kind(), s.pedagogicalRole(), s.layoutHint(),
                     textOrNull(node, "content"),
                     intOrNull(node, "durationMinutes"),
+                    stringListOrNull(node.path("requiredFacts")),
+                    quizItemsOrNull(node.path("quizItems")),
                     visualOrNull(node.path("visual")),
                     textOrNull(node, "aiNote")
             ));
@@ -200,6 +203,34 @@ public class GenerateSlideOutlineUseCase {
         String spec = textOrNull(node, "spec");
         if (type == null && spec == null) return null;
         return new VisualDto(type, spec);
+    }
+
+    private static List<String> stringListOrNull(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull() || !node.isArray()) return null;
+        List<String> values = new ArrayList<>();
+        for (JsonNode item : node) {
+            if (item == null || item.isNull()) continue;
+            String text = item.asText();
+            if (text != null && !text.isBlank()) values.add(text);
+        }
+        return values.isEmpty() ? null : values;
+    }
+
+    private static List<QuizItemDto> quizItemsOrNull(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull() || !node.isArray()) return null;
+        List<QuizItemDto> items = new ArrayList<>();
+        for (JsonNode item : node) {
+            if (item == null || item.isNull() || !item.isObject()) continue;
+            String question = textOrNull(item, "question");
+            if (question == null) continue;
+            items.add(new QuizItemDto(
+                    question,
+                    stringListOrNull(item.path("choices")),
+                    textOrNull(item, "answer"),
+                    textOrNull(item, "explanation")
+            ));
+        }
+        return items.isEmpty() ? null : items;
     }
 
     private static Integer intOrNull(JsonNode node, String fieldName) {
