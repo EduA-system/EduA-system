@@ -7,6 +7,13 @@ export type SlideVisual = {
   spec: string;
 };
 
+export type QuizItem = {
+  question: string;
+  choices?: string[];
+  answer?: string;
+  explanation?: string;
+};
+
 export type SlideItem = {
   id: string;
   title: string;
@@ -17,6 +24,10 @@ export type SlideItem = {
   content?: string;
   /** Thời lượng dự kiến của slide (phút). */
   durationMinutes?: number;
+  /** Dữ kiện/câu hỏi/đáp án/công thức bắt buộc không được mất khi sinh slide. */
+  requiredFacts?: string[];
+  /** Câu hỏi luyện tập/trắc nghiệm/phiếu học tập có cấu trúc. */
+  quizItems?: QuizItem[];
   /** Đặc tả phần trực quan slide cần (ảnh/công thức/bảng) — pha 3 dàn theo đây. */
   visual?: SlideVisual;
   /** Câu ghi chú phần AI bổ sung ngoài giáo án để GV duyệt; rỗng nếu bám 100% giáo án. */

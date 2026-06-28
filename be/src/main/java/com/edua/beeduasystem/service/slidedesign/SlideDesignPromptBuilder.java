@@ -665,9 +665,9 @@ public class SlideDesignPromptBuilder {
               - Pull any equation into the formula zone.
               You decide the allocation based on what zones the skin
               actually has and what the outline contains. If a zone
-              has no matching outline item, write a brief, on-topic
-              placeholder rather than leaving it empty — but stay
-              within data-max-chars.
+              has no matching outline item, DO NOT invent filler,
+              guiding prompts, student activities, or placeholders.
+              Leave that zone without new data-layer="content" children.
             </zone_content_fill>
 
             <accent_color_rule required="true">
@@ -827,7 +827,9 @@ public class SlideDesignPromptBuilder {
         user.append("according to their data-zone id and data-content-hint.\n\n");
         user.append("QUAN TRỌNG: Outline ở trên là NỘI DUNG THẬT giáo viên đã soạn cho slide này. ");
         user.append("Dùng ĐÚNG nội dung đó (câu hỏi, ví dụ, số liệu, các bước, đáp án) — giữ nguyên chi tiết quan trọng. ");
-        user.append("TUYỆT ĐỐI KHÔNG bịa ví dụ/bài tập khác, KHÔNG đưa nội dung lệch chủ đề so với outline.\n\n");
+        user.append("TUYỆT ĐỐI KHÔNG bịa ví dụ/bài tập khác, KHÔNG đưa nội dung lệch chủ đề so với outline. ");
+        user.append("KHÔNG thêm nhãn điều phối lớp học như \"Gợi mở\", \"GV\", \"HS\", \"Thảo luận nhóm\", ");
+        user.append("\"Hãy quan sát\" nếu các cụm đó không nằm nguyên trong outline content.\n\n");
         user.append("PRESERVE the dashed outline + two legend spans on EVERY header ");
         user.append("and zone div — append content as ADDITIONAL children AFTER ");
         user.append("those legend spans. Do not modify any opening tag, inline ");
