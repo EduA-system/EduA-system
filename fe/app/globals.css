@@ -170,6 +170,36 @@ body::-webkit-scrollbar {
   color: #3b3733;
 }
 
+/* Block "đang soạn" (streaming) — atom, khoá, không sửa được cho tới khi hoạt động về. */
+.lesson-document-editor .lp-pending {
+  margin-top: 18px;
+  padding: 12px 16px;
+  border: 1px dashed #d8c9bd;
+  border-radius: 10px;
+  background: #faf6f1;
+  user-select: none;
+  cursor: not-allowed;
+}
+
+.lesson-document-editor .lp-pending-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #6b6b6b;
+}
+
+.lesson-document-editor .lp-pending-status {
+  margin-top: 4px;
+  font-size: 13px;
+  font-style: italic;
+  color: #b07a52;
+}
+
+.lesson-document-editor .lp-failed {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #c0492b;
+}
+
 .lesson-document-editor ul,
 .lesson-document-editor ol {
   margin-top: 12px;

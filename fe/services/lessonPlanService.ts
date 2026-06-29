@@ -1,4 +1,4 @@
-import type { EquipmentAndMaterials, Objectives } from "@/data/lessonPlan5512Mock";
+import type { Activity5512, EquipmentAndMaterials, Objectives } from "@/data/lessonPlan5512Mock";
 
 // API client cho luồng tạo giáo án 5512. Gọi qua same-origin `/api/*`
 // (proxy tới backend cấu hình ở next.config.ts) nên không vướng CORS.
@@ -37,11 +37,15 @@ export interface GenerateLessonPlanRequest {
   userPrompt?: string;
 }
 
-/** Phản hồi hiện tại của BE: title + phần I. Mục tiêu + phần II. Thiết bị và học liệu. */
+/**
+ * Phản hồi hiện tại của BE: title + phần I. Mục tiêu + phần II. Thiết bị và học liệu
+ * + phần III. Tiến trình dạy học (mới chỉ là DÀN Ý/khung — a/b/c/d còn trống).
+ */
 export interface GeneratedLessonPlan {
   title: string | null;
   objectives: Objectives;
   equipmentAndMaterials?: EquipmentAndMaterials;
+  activities?: Activity5512[];
 }
 
 export async function fetchTextbookCatalog(): Promise<TextbookCatalog> {
@@ -95,19 +99,107 @@ export async function generateMaterials(
   return res.json();
 }
 
-// ---- Bàn giao giữa /lesson-create và /lesson-edit -----------------------
-// Chưa lưu DB nên truyền giáo án vừa sinh qua sessionStorage.
-const STORAGE_KEY = "edua:generatedLessonPlan";
-
-export function storeGeneratedLessonPlan(plan: GeneratedLessonPlan): void {
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
+// ---- Generate Activities (POST /api/lesson-plans/generate-activities) -----
+// Phần III. Tiến trình dạy học — BE trả DÀN Ý 4 hoạt động (order/name/duration
+// + tiểu hoạt động của HĐ2); a/b/c/d còn null, sẽ được điền ở bước sau.
+export async function generateActivities(
+  req: GenerateLessonPlanRequest,
+): Promise<{ activities: Activity5512[] }> {
+  const res = await fetch("/api/lesson-plans/generate-activities", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Tạo phần tiến trình dạy học thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+  return res.json();
 }
 
-export function readGeneratedLessonPlan(): GeneratedLessonPlan | null {
+// ---- Generate Activities Details (POST .../generate-activities-details) ----
+// Phần III chi tiết: gửi kèm ngữ cảnh Phần I (objectives) + II (worksheets) + DÀN Ý
+// (activities) đã sinh; BE chạy 4 call song song điền a/b/c/d cho từng hoạt động.
+export interface GenerateActivityDetailsRequest extends GenerateLessonPlanRequest {
+  objectives: Objectives;
+  equipmentAndMaterials?: EquipmentAndMaterials;
+  activities: Activity5512[];
+}
+
+export async function generateActivitiesDetails(
+  req: GenerateActivityDetailsRequest,
+): Promise<{ activities: Activity5512[] }> {
+  const res = await fetch("/api/lesson-plans/generate-activities-details", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Soạn chi tiết tiến trình dạy học thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+// ---- Streaming (POST /api/lesson-plans/generate-stream) ------------------
+// Kickoff async: BE trả 202 ngay rồi đẩy tiến trình qua STOMP
+// (/topic/lesson-plan/{sessionId}). FE không đọc body — chỉ kiểm 2xx.
+export interface StartLessonPlanStreamRequest extends GenerateLessonPlanRequest {
+  sessionId: string;
+}
+
+export async function startLessonPlanStream(req: StartLessonPlanStreamRequest): Promise<void> {
+  const res = await fetch("/api/lesson-plans/generate-stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Khởi tạo sinh giáo án thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+}
+
+// ---- Bàn giao phiên giữa /lesson-create và /lesson-edit -----------------
+// Luồng streaming: /lesson-create chỉ kickoff rồi truyền NGỮ CẢNH PHIÊN
+// (sessionId + ids) qua sessionStorage; /lesson-edit dùng sessionId để mở STOMP
+// và fill dần. (Không còn truyền cả giáo án như bản đồng bộ cũ.)
+const SESSION_KEY = "edua:lessonPlanSession";
+
+export type LessonPlanSession = StartLessonPlanStreamRequest;
+
+export function storeLessonPlanSession(session: LessonPlanSession): void {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+export function readLessonPlanSession(): LessonPlanSession | null {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as GeneratedLessonPlan) : null;
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as LessonPlanSession) : null;
   } catch {
     return null;
   }
+}
+
+/** Xoá phiên sau khi đã tiêu thụ (tránh mở lại stream khi reload/quay lại). */
+export function clearLessonPlanSession(): void {
+  sessionStorage.removeItem(SESSION_KEY);
 }

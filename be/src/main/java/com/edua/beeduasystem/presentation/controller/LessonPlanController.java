@@ -1,16 +1,21 @@
 package com.edua.beeduasystem.presentation.controller;
 
 import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
+import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateActivityDetailsRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanRequest;
+import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanStreamRequest;
+import com.edua.beeduasystem.service.lessonplan.GenerateLessonPlanStreamUseCase;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -19,9 +24,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class LessonPlanController {
 
     private final LessonPlanService lessonPlanService;
+    private final GenerateLessonPlanStreamUseCase generateLessonPlanStreamUseCase;
 
-    public LessonPlanController(LessonPlanService lessonPlanService) {
+    public LessonPlanController(LessonPlanService lessonPlanService,
+                                GenerateLessonPlanStreamUseCase generateLessonPlanStreamUseCase) {
         this.lessonPlanService = lessonPlanService;
+        this.generateLessonPlanStreamUseCase = generateLessonPlanStreamUseCase;
     }
 
     @PostMapping("/generate")
@@ -60,5 +68,61 @@ public class LessonPlanController {
     )
     public LessonPlan5512 generateMaterials(@RequestBody GenerateLessonPlanRequest request) {
         return lessonPlanService.generateMaterials(request);
+    }
+
+    @PostMapping("/generate-activities")
+    @Operation(
+            summary = "Sinh khung (dàn ý) phần III. TIẾN TRÌNH DẠY HỌC của giáo án 5512",
+            description = "Đồng bộ: lấy nội dung SGK theo bookId/chapterId/lessonId, gọi AI "
+                    + "sinh DÀN Ý 4 hoạt động (order/name/duration + tiểu hoạt động của HĐ2). "
+                    + "Chưa điền a/b/c/d, chưa lưu DB.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Giáo án với phần Tiến trình dạy học (dàn ý) đã sinh",
+                            content = @Content(schema = @Schema(implementation = LessonPlan5512.class))
+                    ),
+                    @ApiResponse(responseCode = "400", description = "Thiếu bookId/chapterId/lessonId hoặc bài chưa có nội dung số hóa"),
+                    @ApiResponse(responseCode = "502", description = "AI lỗi hoặc trả về sai định dạng")
+            }
+    )
+    public LessonPlan5512 generateActivities(@RequestBody GenerateLessonPlanRequest request) {
+        return lessonPlanService.generateActivitiesFrame(request);
+    }
+
+    @PostMapping("/generate-activities-details")
+    @Operation(
+            summary = "Điền CHI TIẾT phần III. TIẾN TRÌNH DẠY HỌC (4 call AI song song)",
+            description = "Đồng bộ: từ dàn ý (activities) + ngữ cảnh Phần I/II gửi kèm, BE chạy 4 "
+                    + "call AI song song (mỗi hoạt động một call) để điền a/b/c/d + tổ chức thực "
+                    + "hiện (và tiểu hoạt động của HĐ2), rồi trả về. Chưa lưu DB.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Giáo án với phần Tiến trình dạy học đã điền chi tiết",
+                            content = @Content(schema = @Schema(implementation = LessonPlan5512.class))
+                    ),
+                    @ApiResponse(responseCode = "400", description = "Thiếu ids/dàn ý hoặc bài chưa có nội dung số hóa"),
+                    @ApiResponse(responseCode = "502", description = "AI lỗi hoặc trả về sai định dạng")
+            }
+    )
+    public LessonPlan5512 generateActivitiesDetails(@RequestBody GenerateActivityDetailsRequest request) {
+        return lessonPlanService.generateActivitiesDetails(request);
+    }
+
+    @PostMapping("/generate-stream")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Operation(
+            summary = "Sinh giáo án 5512 theo STREAMING (async + STOMP)",
+            description = "Trả 202 ngay; công việc chạy nền và đẩy tiến trình qua STOMP topic "
+                    + "/topic/lesson-plan/{sessionId}. Thứ tự event: FRAME_READY (Phần I + II + dàn ý "
+                    + "III) → tối đa 4 × (ACTIVITY_READY | ACTIVITY_FAILED) → DONE | ERROR. Né timeout "
+                    + "proxy vì không chờ đủ 4 hoạt động trong một request đồng bộ dài.",
+            responses = {
+                    @ApiResponse(responseCode = "202", description = "Đã nhận; theo dõi tiến trình qua STOMP")
+            }
+    )
+    public void generateStream(@RequestBody GenerateLessonPlanStreamRequest request) {
+        generateLessonPlanStreamUseCase.start(request);
     }
 }

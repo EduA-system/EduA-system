@@ -9,12 +9,10 @@ import { Pill } from "../ui/Pill";
 import { Sidebar } from "../layout/Sidebar";
 import {
   fetchTextbookCatalog,
-  generateLessonPlan,
-  generateMaterials,
-  storeGeneratedLessonPlan,
+  startLessonPlanStream,
+  storeLessonPlanSession,
   type CatalogBook,
 } from "@/services/lessonPlanService";
-import type { EquipmentAndMaterials } from "@/data/lessonPlan5512Mock";
 
 export function UserDashboard() {
   const router = useRouter();
@@ -78,25 +76,29 @@ export function UserDashboard() {
     setGenerating(true);
     setGenerateError(null);
     try {
-      const req = {
+      // Luồng streaming: chỉ kickoff (BE trả 202 ngay), rồi sang /lesson-edit mở STOMP
+      // và fill dần. Không chờ AI ở đây nữa → không còn request đồng bộ dài/timeout.
+      const sessionId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `lp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      const session = {
+        sessionId,
         bookId,
         chapterId,
         lessonId,
         userPrompt: userPrompt.trim() || undefined,
       };
 
-      const plan = await generateLessonPlan(req);
+      console.log(
+        "%c[Tạo giáo án] kickoff stream",
+        "color:#e8724a;font-weight:bold",
+        session,
+      );
 
-      // Gọi thêm phần II. Thiết bị dạy học và học liệu
-      let equipmentAndMaterials: EquipmentAndMaterials | undefined;
-      try {
-        const materialsRes = await generateMaterials(req);
-        equipmentAndMaterials = materialsRes.equipmentAndMaterials;
-      } catch {
-        // Không block nếu phần II lỗi — vẫn có phần I để soạn.
-      }
-
-      storeGeneratedLessonPlan({ ...plan, equipmentAndMaterials });
+      await startLessonPlanStream(session);
+      storeLessonPlanSession(session);
       router.push("/lesson-edit");
     } catch (error: unknown) {
       setGenerateError(error instanceof Error ? error.message : "Tạo giáo án thất bại.");

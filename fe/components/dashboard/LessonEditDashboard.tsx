@@ -8,6 +8,7 @@ import { Sidebar } from "../layout/Sidebar";
 import { EditorTools } from "../LessonEditor";
 import { LessonEditor, lessonPlan5512ToHtml } from "../LessonEditor";
 import { editorExtensions } from "../LessonEditor/editorConfig";
+import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
 
 export function LessonEditDashboard() {
@@ -24,6 +25,9 @@ export function LessonEditDashboard() {
       },
     },
   });
+
+  // Mở STOMP và fill dần giáo án vào editor (nếu đến từ /lesson-create qua phiên streaming).
+  useLessonPlanStream(editor);
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
