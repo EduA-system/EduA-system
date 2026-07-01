@@ -6,7 +6,9 @@ import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import { TableKit } from "@tiptap/extension-table";
 import Image from "@tiptap/extension-image";
+import Mathematics from "@tiptap/extension-mathematics";
 import type { Extensions } from "@tiptap/react";
+import { ParagraphClass } from "./paragraphClassExtension";
 import { PendingActivity } from "./pendingActivityNode";
 
 // Cấu hình extension dùng chung cho cả editor (LessonEditor) và thanh công cụ
@@ -31,6 +33,13 @@ export const editorExtensions: Extensions = [
   // Table + TableRow + TableHeader + TableCell.
   TableKit.configure({ table: { resizable: true } }),
   Image,
+  Mathematics.configure({
+    katexOptions: {
+      throwOnError: false,
+      strict: false,
+    },
+  }),
+  ParagraphClass,
   // Block "đang soạn" (atom, khoá) cho luồng stream giáo án — fill xong thì thay bằng HTML thật.
   PendingActivity,
 ];

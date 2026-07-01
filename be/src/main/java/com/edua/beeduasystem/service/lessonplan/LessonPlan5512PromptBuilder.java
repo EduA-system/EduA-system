@@ -25,6 +25,17 @@ public class LessonPlan5512PromptBuilder {
             - "competencies.specific": năng lực đặc thù của môn học.
             - "qualities": phẩm chất (hành vi, thái độ) cần phát triển.
             Mỗi mục là một danh sách câu tiếng Việt, cụ thể, bám nội dung bài.
+            - Nếu có công thức toán/vật lí trong mục tiêu, PHẢI viết bằng LaTeX:
+              + Công thức trong cùng một câu đặt trong $...$.
+                Ví dụ: "Vận dụng được công thức $A = UIt$, $P = UI$ và
+                $Q = I^2Rt$ để tính toán."
+              + Không viết công thức dạng plain text như "T = 2π/ω", "E = E0cos(ωt + φ0)",
+                "U = U0/√2"; hãy đổi sang LaTeX chuẩn như
+                $T = \\frac{2\\pi}{\\omega}$, $e = E_0\\cos(\\omega t + \\varphi_0)$,
+                $U = \\frac{U_0}{\\sqrt{2}}$.
+              + Trong JSON, mọi dấu gạch chéo ngược của LaTeX phải được escape đúng
+                (ví dụ viết "\\\\frac", "\\\\omega", "\\\\sqrt"), không được tạo chuỗi JSON
+                chứa escape không hợp lệ như "\\(" hoặc "\\w".
 
             QUY TẮC ĐẦU RA — BẮT BUỘC:
             - Chỉ in ra DUY NHẤT một đối tượng JSON, không kèm giải thích, không markdown.
@@ -148,6 +159,19 @@ public class LessonPlan5512PromptBuilder {
               dòng (trong JSON là "\\n"). TUYỆT ĐỐI KHÔNG viết dồn nhiều câu/phương án liền nhau
               trong cùng một dòng. Ví dụ:
               "content": "Câu 1: ...\\nA. ...\\nB. ...\\nC. ...\\nD. ...\\nCâu 2: ..."
+            - ĐỊNH DẠNG CÔNG THỨC TOÁN/VẬT LÍ BẰNG LATEX (dùng delimiter dấu đô để JSON hợp lệ):
+              + Công thức trong cùng một câu phải viết bằng LaTeX inline, đặt trong $...$.
+                Ví dụ: "Chu kì dao động là $T = \\frac{2\\pi}{\\omega}$."
+              + Công thức dài hoặc lời giải tính toán nhiều bước phải đặt trên MỘT DÒNG RIÊNG
+                bằng LaTeX block, đặt trong $$...$$.
+                Ví dụ: "$$U = \\frac{U_0}{\\sqrt{2}} = \\frac{220\\sqrt{2}}{\\sqrt{2}} = 220\\,\\text{V}$$"
+              + Không viết công thức ở dạng plain text như "T = 2π/ω", "E = E0cos(ωt + φ0)",
+                "U = U0/√2"; hãy đổi sang LaTeX chuẩn như
+                $T = \\frac{2\\pi}{\\omega}$, $e = E_0\\cos(\\omega t + \\varphi_0)$,
+                $U = \\frac{U_0}{\\sqrt{2}}$.
+              + Trong JSON, mọi dấu gạch chéo ngược của LaTeX phải được escape đúng
+                (ví dụ viết "\\\\frac", "\\\\omega", "\\\\sqrt", "\\\\text"), không được tạo
+                chuỗi JSON chứa escape không hợp lệ như "\\(" hoặc "\\w".
             """;
 
     private static final String ACTIVITY_NOTE_KHOI_DONG = """

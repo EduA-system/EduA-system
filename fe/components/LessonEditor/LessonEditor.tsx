@@ -18,17 +18,72 @@ function escapeHtml(value: string | null | undefined) {
     .replaceAll("'", "&#039;");
 }
 
+function mathAttribute(value: string) {
+  return escapeHtml(value.trim());
+}
+
+function inlineRichText(value: string) {
+  return escapeHtml(value).replace(
+    /\\\((.+?)\\\)|(?<!\$)\$([^$\n]+?)\$(?!\$)/g,
+    (_match, parenLatex: string | undefined, dollarLatex: string | undefined) => {
+      const latex = parenLatex ?? dollarLatex ?? "";
+      return `<span data-type="inline-math" data-latex="${mathAttribute(latex)}"></span>`;
+    },
+  );
+}
+
+function blockMathHtml(latex: string) {
+  return `<div data-type="block-math" data-latex="${mathAttribute(latex)}"></div>`;
+}
+
+function isMultipleChoiceOption(line: string) {
+  return /^[A-Da-d][.)]\s+/.test(line);
+}
+
+function isAnswerKeyLine(line: string) {
+  return /^\d+[.)]\s*[A-Da-d]\.?$/.test(line);
+}
+
+function answerKeyHtml(lines: string[]) {
+  const answers = lines.map((line) => inlineRichText(line.replace(/\.$/, ""))).join("");
+  return `<p class="mc-answer-row">${answers}</p>`;
+}
+
+function richParagraph(line: string) {
+  const blockMath = line.match(/^\\\[(.+)\\\]$/);
+  if (blockMath) return blockMathHtml(blockMath[1]);
+  const dollarBlockMath = line.match(/^\$\$(.+)\$\$$/);
+  if (dollarBlockMath) return blockMathHtml(dollarBlockMath[1]);
+  const className = isMultipleChoiceOption(line) ? ' class="mc-option"' : "";
+  return `<p${className}>${inlineRichText(line)}</p>`;
+}
+
 /** <ul> từ danh sách chuỗi; rỗng → chuỗi rỗng. */
-function bulletList(items: string[]) {
+function bulletList(items: string[] | null | undefined) {
+  if (!items) return "";
   if (items.length === 0) return "";
-  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+  return `<ul>${items.map((item) => `<li>${inlineRichText(item)}</li>`).join("")}</ul>`;
 }
 
 /** Tách chuỗi nhiều dòng thành các <p>; rỗng → một <p> trống để ô bảng không sập. */
 function paragraphs(text: string) {
   const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
   if (lines.length === 0) return "<p></p>";
-  return lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
+  const html: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isAnswerKeyLine(lines[i])) {
+      const answers: string[] = [];
+      while (i < lines.length && isAnswerKeyLine(lines[i])) {
+        answers.push(lines[i]);
+        i++;
+      }
+      html.push(answerKeyHtml(answers));
+      i--;
+      continue;
+    }
+    html.push(richParagraph(lines[i]));
+  }
+  return html.join("");
 }
 
 /**
@@ -40,9 +95,9 @@ function labeledField(label: string, value: string | null | undefined) {
   if (!value || !value.trim()) return "";
   const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
   if (lines.length <= 1) {
-    return `<p><b>${label}</b> ${escapeHtml(lines[0] ?? "")}</p>`;
+    return `<p><b>${label}</b> ${inlineRichText(lines[0] ?? "")}</p>`;
   }
-  return `<p><b>${label}</b></p>${lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}`;
+  return `<p><b>${label}</b></p>${lines.map((line) => richParagraph(line)).join("")}`;
 }
 
 /**
@@ -118,7 +173,7 @@ function organizationStepsHtml(org: Activity5512["organization"]) {
   ];
   return steps
     .filter(([, value]) => value && value.trim())
-    .map(([label, value]) => `<p><b>${label}</b> ${escapeHtml(value)}</p>`)
+    .map(([label, value]) => `<p><b>${label}</b> ${inlineRichText(value ?? "")}</p>`)
     .join("");
 }
 
@@ -193,13 +248,13 @@ export function lessonPlan5512ToHtml(
   const { metadata, objectives, equipmentAndMaterials, activities } = plan;
   const pending = opts?.pendingOrders;
 
-  const meta = `${escapeHtml(metadata.subject)} · ${escapeHtml(metadata.grade)} · ${escapeHtml(metadata.duration)}`;
+  const meta = `${escapeHtml(metadata?.subject)} · ${escapeHtml(metadata?.grade)} · ${escapeHtml(metadata?.duration)}`;
 
-  const worksheetsHtml = equipmentAndMaterials.worksheets
+  const worksheetsHtml = (equipmentAndMaterials?.worksheets ?? [])
     .map((worksheet) => worksheetBoxHtml(worksheet))
     .join("");
 
-  const activitiesHtml = activities
+  const activitiesHtml = (activities ?? [])
     .map((activity) =>
       pending?.has(activity.order) ? pendingActivityHtml(activity) : activityHtml(activity),
     )
@@ -211,20 +266,20 @@ export function lessonPlan5512ToHtml(
 
     <section>
       <h2>I. MỤC TIÊU</h2>
-      <p><b>1. Về kiến thức</b></p>
+      <p><b>1. Kiến thức</b></p>
       ${bulletList(objectives.knowledge)}
-      <p><b>2. Về năng lực</b></p>
+      <p><b>2. Năng lực</b></p>
       <p><b>2.1. Năng lực chung</b></p>
       ${bulletList(objectives.competencies.general)}
       <p><b>2.2. Năng lực đặc thù môn học</b></p>
       ${bulletList(objectives.competencies.specific)}
-      <p><b>3. Về phẩm chất</b></p>
+      <p><b>3. Phẩm chất</b></p>
       ${bulletList(objectives.qualities)}
     </section>
 
     <section>
       <h2>II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU</h2>
-      ${equipmentTableHtml(equipmentAndMaterials.equipment)}
+      ${equipmentTableHtml(equipmentAndMaterials?.equipment)}
       ${worksheetsHtml}
     </section>
 

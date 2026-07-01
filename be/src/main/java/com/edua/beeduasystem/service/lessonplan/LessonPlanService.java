@@ -219,6 +219,14 @@ public class LessonPlanService {
         try {
             return objectMapper.readValue(json, type);
         } catch (Exception e) {
+            String repaired = repairLatexEscapes(json);
+            if (!repaired.equals(json)) {
+                try {
+                    return objectMapper.readValue(repaired, type);
+                } catch (Exception repairedError) {
+                    e.addSuppressed(repairedError);
+                }
+            }
             log.warn("Parse {} thất bại. Output AI: {}", type.getSimpleName(), raw);
             throw new LessonPlanGenerationException(errorMessage, e);
         }
@@ -240,6 +248,60 @@ public class LessonPlanService {
             }
         }
         return trimmed.trim();
+    }
+
+    /**
+     * AI đôi khi trả LaTeX trong JSON với backslash chưa escape, ví dụ {@code \(},
+     * {@code \omega}, {@code \frac}. JSON chuẩn yêu cầu {@code \\(}, {@code \\omega}.
+     * Chỉ sửa bên trong JSON string và ưu tiên các lệnh/delimiter LaTeX hay gặp để không
+     * đụng tới escape JSON hợp lệ như {@code \n} dùng cho xuống dòng.
+     */
+    private String repairLatexEscapes(String json) {
+        if (json == null || json.indexOf('\\') < 0) {
+            return json;
+        }
+        String[] latexEscapes = {
+                "\\(", "\\)", "\\[", "\\]",
+                "\\frac", "\\sqrt", "\\text", "\\cos", "\\sin", "\\tan",
+                "\\omega", "\\Omega", "\\varphi", "\\phi", "\\pi", "\\Delta",
+                "\\theta", "\\alpha", "\\beta", "\\gamma", "\\times", "\\cdot",
+                "\\left", "\\right", "\\mathrm", "\\mathbf"
+        };
+
+        StringBuilder out = new StringBuilder(json.length() + 16);
+        boolean inString = false;
+        for (int i = 0; i < json.length(); i++) {
+            char ch = json.charAt(i);
+            if (ch == '"' && !isEscaped(json, i)) {
+                inString = !inString;
+                out.append(ch);
+                continue;
+            }
+            if (inString && ch == '\\' && !isEscaped(json, i)) {
+                String remaining = json.substring(i);
+                boolean latex = false;
+                for (String escape : latexEscapes) {
+                    if (remaining.startsWith(escape)) {
+                        latex = true;
+                        break;
+                    }
+                }
+                if (latex) {
+                    out.append("\\\\");
+                    continue;
+                }
+            }
+            out.append(ch);
+        }
+        return out.toString();
+    }
+
+    private boolean isEscaped(String value, int index) {
+        int count = 0;
+        for (int i = index - 1; i >= 0 && value.charAt(i) == '\\'; i--) {
+            count++;
+        }
+        return count % 2 == 1;
     }
 
     private boolean isBlank(String value) {

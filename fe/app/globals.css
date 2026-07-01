@@ -163,6 +163,30 @@ body::-webkit-scrollbar {
   margin-top: 14px;
 }
 
+.lesson-document-editor .mc-option {
+  margin-top: 6px;
+  margin-left: 20px;
+}
+
+.lesson-document-editor p:not(.mc-option) + .mc-option {
+  margin-top: 8px;
+}
+
+.lesson-document-editor .mc-option + p:not(.mc-option) {
+  margin-top: 16px;
+}
+
+.lesson-document-editor .mc-answer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  align-items: baseline;
+}
+
+.lesson-document-editor .mc-answer-row span {
+  white-space: nowrap;
+}
+
 .lesson-document-editor .activity-sub-title {
   margin-top: 18px;
   margin-left: 18px;
@@ -293,4 +317,31 @@ body::-webkit-scrollbar {
 
 .lesson-document-editor img.ProseMirror-selectednode {
   outline: 2px solid #d97757;
+}
+
+.lesson-document-editor .tiptap-mathematics-render {
+  display: inline-flex;
+  max-width: 100%;
+  vertical-align: -0.18em;
+}
+
+.lesson-document-editor div.tiptap-mathematics-render {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fbfaf8;
+}
+
+.lesson-document-editor .tiptap-mathematics-render--editable {
+  cursor: text;
+}
+
+.lesson-document-editor .inline-math-error,
+.lesson-document-editor .block-math-error {
+  color: #c0492b;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
 }
