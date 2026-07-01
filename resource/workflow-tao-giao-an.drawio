@@ -1,0 +1,110 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Tạo giáo án 5512" id="lesson-plan-flow">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Start -->
+        <mxCell id="top" value="Đã chọn Sách → Chương → Bài học&#10;+ chủ đề · môn học · gợi ý phong cách" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="360" y="40" width="400" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- BƯỚC 1 container -->
+        <mxCell id="b1" value="BƯỚC 1 — Sinh KHUNG giáo án (mỗi phần một lần gọi AI, chạy song song)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="200" y="150" width="620" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="p1" value="Phần I — MỤC TIÊU  (kiến thức · năng lực · phẩm chất)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="230" y="190" width="560" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="p2" value="Phần II — THIẾT BỊ DẠY HỌC &amp; HỌC LIỆU  (thiết bị · phiếu học tập)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="230" y="240" width="560" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="p3" value="Phần III — TIẾN TRÌNH DẠY HỌC: sinh DÀN Ý 4 hoạt động&#10;(HĐ1 Khởi động · HĐ2 Hình thành KT · HĐ3 Luyện tập · HĐ4 Vận dụng — chưa có a/b/c/d)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="230" y="290" width="560" height="58" as="geometry" />
+        </mxCell>
+
+        <!-- Yellow note about each AI call -->
+        <mxCell id="note" value="Mỗi lần gọi AI (chờ kết quả ngay):&#10;• Dựng câu lệnh theo từng phần&#10;• Gọi mô hình: OpenAI → DeepSeek (dự phòng)&#10;• Bóc lấy phần JSON sạch&#10;• Kiểm tra, cảnh báo nếu sai" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="860" y="190" width="300" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- BƯỚC 2 container -->
+        <mxCell id="b2" value="BƯỚC 2 — Soạn CHI TIẾT Phần III: mỗi hoạt động = MỘT call AI riêng, chạy SONG SONG (tối đa 4)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="140" y="470" width="740" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="fan" value="Với MỖI hoạt động trong dàn ý → một call AI riêng (song song)&#10;Mỗi call điền: a) Mục tiêu · b) Nội dung · c) Sản phẩm · d) Tổ chức thực hiện" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="175" y="515" width="670" height="58" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h1" value="HĐ1 — Khởi động&#10;&#10;1 call AI&#10;→ a/b/c/d" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="175" y="605" width="160" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="h2" value="HĐ2 — Hình thành kiến thức&#10;&#10;1 call AI&#10;→ a/b/c/d&#10;+ các tiểu hoạt động" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="605" width="160" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="h3" value="HĐ3 — Luyện tập&#10;&#10;1 call AI&#10;→ a/b/c/d" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="525" y="605" width="160" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="h4" value="HĐ4 — Vận dụng&#10;&#10;1 call AI&#10;→ a/b/c/d" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="700" y="605" width="160" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="merge" value="Xong hoạt động nào → điền NGAY vào giáo án (hiện dần trong trình soạn thảo)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="175" y="755" width="670" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Red error box -->
+        <mxCell id="err" value="Lỗi ở một hoạt động → giữ khung,&#10;mời giáo viên soạn tay&#10;(các hoạt động khác KHÔNG bị ảnh hưởng)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;align=center;" vertex="1" parent="1">
+          <mxGeometry x="910" y="615" width="250" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Done -->
+        <mxCell id="done" value="Hoàn tất giáo án trong trình soạn thảo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="910" width="400" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="top" target="b1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="enote" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;" edge="1" parent="1" source="note" target="b1" value="áp dụng cho mọi lần gọi AI">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="p3" target="fan" value="soạn chi tiết TỪNG hoạt động (song song tối đa 4)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="fan" target="h1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="fan" target="h2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="fan" target="h3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="fan" target="h4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="h1" target="merge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="h2" target="merge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="h3" target="merge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="h4" target="merge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="h4" target="err" value="lỗi 1 HĐ">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="merge" target="done" value="khi TẤT CẢ hoạt động xong">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

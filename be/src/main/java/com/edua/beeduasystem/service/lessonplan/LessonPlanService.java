@@ -153,11 +153,12 @@ public class LessonPlanService {
         return mergeDetail(frameActivity, detail);
     }
 
-    /** Giữ order/name/duration của frame; lấy a/b/c/d + organization từ AI; zip tiểu hoạt động. */
+    /** Giữ order/name/duration của frame; lấy a/b/c/d + organization(Text) từ AI; zip tiểu hoạt động. */
     private Activity5512 mergeDetail(Activity5512 frame, Activity5512 detail) {
         return new Activity5512(
                 frame.order(), frame.name(), frame.duration(),
-                detail.objective(), detail.content(), detail.product(), detail.organization(),
+                detail.objective(), detail.content(), detail.product(),
+                detail.organization(), detail.organizationText(),
                 mergeSubs(frame.subActivities(), detail.subActivities()));
     }
 

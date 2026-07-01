@@ -5,11 +5,12 @@
  * bằng nội dung thật ở bước sau. Khóa/field là phần cố định (khung 5512).
  *
  * Cấu trúc bám mẫu thực tế `Bai-19...KNTT.docx`: năng lực 2 tầng (chung + đặc thù),
- * học liệu có phiếu học tập, mỗi hoạt động có thời lượng + tiểu hoạt động, mục
- * d) Tổ chức thực hiện tách 4 bước chuẩn. Schema khớp DTO backend dự kiến.
+ * học liệu có phiếu học tập (chỉ khi bài cần), mỗi hoạt động có thời lượng + tiểu
+ * hoạt động. Mục d) Tổ chức thực hiện: HĐ1/3/4 dùng văn ngắn `organizationText`,
+ * riêng tiểu hoạt động HĐ2 dùng `organization` 4 bước. Schema khớp DTO backend.
  */
 
-/** Mục d) Tổ chức thực hiện — 4 bước chuẩn CV 5512. */
+/** Mục d) Tổ chức thực hiện — 4 bước chuẩn CV 5512 (chỉ dùng cho tiểu hoạt động HĐ2). */
 export interface Organization {
   transfer: string; // Giao nhiệm vụ học tập
   perform: string; // Thực hiện nhiệm vụ
@@ -24,7 +25,11 @@ export interface Activity5512 {
   objective: string; // a) Mục tiêu
   content: string; // b) Nội dung
   product: string; // c) Sản phẩm
-  organization: Organization; // d) Tổ chức thực hiện
+  // d) Tổ chức thực hiện — hai dạng (khớp bài mẫu Bai-19):
+  //  - tiểu hoạt động HĐ2: `organization` 4 bước (cột "Hoạt động của GV và HS")
+  //  - hoạt động cấp 1 (HĐ1/3/4): `organizationText` văn ngắn
+  organization?: Organization | null;
+  organizationText?: string | null;
   subActivities: Activity5512[]; // tiểu hoạt động (nhất là HĐ2); rỗng nếu không có
 }
 
@@ -131,30 +136,32 @@ export const lessonPlan5512Mock: LessonPlan5512 = {
       objective:
         "Tạo nhu cầu/tâm thế tìm hiểu kiến thức mới; xác định vấn đề/nhiệm vụ cụ thể cần giải quyết trong bài.",
       content:
-        "Nêu rõ nhiệm vụ cụ thể HS phải thực hiện (trò chơi, tình huống, câu hỏi, bài tập…) để xác định vấn đề và đề xuất cách giải quyết.",
-      product: "Câu trả lời/kết quả HS cần đạt được; kèm đáp án (nếu có).",
-      organization: { ...standardOrganization },
+        "Nêu vài câu hỏi ngắn và 1–2 câu trắc nghiệm (A/B/C/D) gắn thực tế để dẫn vào bài và xác định vấn đề.",
+      product: "Câu trả lời/kết quả HS cần đạt được; kèm đáp án trắc nghiệm (nếu có).",
+      organization: null,
+      organizationText:
+        "- Hoạt động cá nhân: GV yêu cầu HS làm các hoạt động ở phần a-b-c ở trên.",
       subActivities: [],
     },
     {
       order: 2,
       name: "Hoạt động 2: Hình thành kiến thức mới",
       duration: "… phút",
-      objective:
-        "Giúp HS chiếm lĩnh kiến thức mới/giải quyết vấn đề đặt ra từ Hoạt động 1.",
-      content:
-        "HS làm việc với SGK, thiết bị dạy học, học liệu (đọc/xem/nghe/làm) để chiếm lĩnh kiến thức.",
-      product: "Kiến thức mới/kết quả HS cần viết ra, trình bày được.",
-      organization: { ...standardOrganization },
+      objective: "",
+      content: "",
+      product: "",
+      organization: null,
+      organizationText: null,
       subActivities: [
         {
           order: 1,
-          name: "Tiểu hoạt động 2.1: (tên đơn vị kiến thức)",
+          name: "Hoạt động 1: (tên đơn vị kiến thức)",
           duration: "… phút",
           objective: "Mục tiêu của tiểu hoạt động.",
           content: "Nội dung/nhiệm vụ cụ thể của tiểu hoạt động.",
           product: "Sản phẩm dự kiến (đáp án, kết luận kiến thức).",
           organization: { ...standardOrganization },
+          organizationText: null,
           subActivities: [],
         },
       ],
@@ -166,9 +173,11 @@ export const lessonPlan5512Mock: LessonPlan5512 = {
       objective:
         "Củng cố, khắc sâu kiến thức đã học; tiếp tục phát triển kĩ năng vận dụng.",
       content:
-        "Hệ thống câu hỏi, bài tập (có thể phân mức: nhận biết → thông hiểu → vận dụng → vận dụng cao).",
-      product: "Đáp án, lời giải của các câu hỏi, bài tập.",
-      organization: { ...standardOrganization },
+        "Mức độ nhận biết: 2–3 câu trắc nghiệm A/B/C/D về khái niệm.\nMức độ thông hiểu: 3–4 câu trắc nghiệm A/B/C/D về lý thuyết (khó hơn).\nMức độ vận dụng cao: 2 câu tính toán.",
+      product: "Đáp án các câu (vd 1.C; 2.D; …) kèm lời giải ngắn cho câu tính toán.",
+      organization: null,
+      organizationText:
+        "- Hoạt động cá nhân là chủ yếu; GV chữa, giúp HS chuẩn hóa kiến thức và phương pháp giải.",
       subActivities: [],
     },
     {
@@ -178,11 +187,9 @@ export const lessonPlan5512Mock: LessonPlan5512 = {
       objective: "Vận dụng kiến thức, kĩ năng đã học vào giải quyết vấn đề/tình huống thực tiễn.",
       content: "Yêu cầu HS phát hiện/giải quyết vấn đề thực tiễn gắn với nội dung bài học.",
       product: "Bài viết/báo cáo của HS về vấn đề thực tiễn.",
-      organization: {
-        ...standardOrganization,
-        conclude:
-          "Kết luận, nhận định: GV hướng dẫn HS thực hiện ở nhà; đánh giá kết quả vào buổi học kế tiếp.",
-      },
+      organization: null,
+      organizationText:
+        "GV hướng dẫn HS về nhà làm; báo cáo vào đầu giờ buổi học kế tiếp.",
       subActivities: [],
     },
   ],

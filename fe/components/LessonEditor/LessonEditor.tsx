@@ -32,6 +32,20 @@ function paragraphs(text: string) {
 }
 
 /**
+ * Ô có nhãn đậm (vd "b) Nội dung:"). Nếu value nhiều dòng (\n) — như danh sách câu hỏi,
+ * phương án A/B/C/D — thì tách MỖI dòng thành một <p> để giữ format, tránh dồn thành một
+ * đoạn dài. Value một dòng thì giữ nhãn + nội dung trên cùng dòng.
+ */
+function labeledField(label: string, value: string | null | undefined) {
+  if (!value || !value.trim()) return "";
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length <= 1) {
+    return `<p><b>${label}</b> ${escapeHtml(lines[0] ?? "")}</p>`;
+  }
+  return `<p><b>${label}</b></p>${lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}`;
+}
+
+/**
  * Mục II — bảng thiết bị 2 cột (tiêu đề cột do AI đặt). Defensive: chấp nhận cả dạng
  * cũ `string[]` (dữ liệu sessionStorage cũ) và bỏ qua nếu không có dòng nào.
  */
@@ -67,10 +81,14 @@ function worksheetBoxHtml(worksheet: Worksheet) {
 }
 
 /**
- * Mục d) Tổ chức thực hiện — 4 bước chuẩn. Ở bước DÀN Ý (khung) thì organization còn
- * null/trống → ẩn cả block để giáo viên (hoặc call sau) điền.
+ * Mục d) Tổ chức thực hiện cho hoạt động cấp 1 (HĐ1/3/4) — văn ngắn `organizationText`
+ * (đúng bài mẫu Bai-19). Fallback 4 bước `organization` cho dữ liệu cũ. Ở bước DÀN Ý
+ * (khung) cả hai còn null/trống → ẩn cả block để call sau (hoặc giáo viên) điền.
  */
 function organizationHtml(activity: Activity5512) {
+  if (activity.organizationText?.trim()) {
+    return `<p><b>d) Tổ chức thực hiện:</b></p>${paragraphs(activity.organizationText)}`;
+  }
   const org = activity.organization;
   if (!org) return "";
   const { transfer, perform, report, conclude } = org;
@@ -115,8 +133,7 @@ function organizationStepsHtml(org: Activity5512["organization"]) {
 function subActivityTableHtml(sub: Activity5512) {
   const title = `<p class="activity-sub-title"><b>${escapeHtml(sub.name)}</b>${sub.duration ? ` (${escapeHtml(sub.duration)})` : ""}</p>`;
   const intro =
-    (sub.objective?.trim() ? `<p><b>Mục tiêu:</b> ${escapeHtml(sub.objective)}</p>` : "") +
-    (sub.content?.trim() ? `<p><b>Nội dung:</b> ${escapeHtml(sub.content)}</p>` : "");
+    labeledField("Mục tiêu:", sub.objective) + labeledField("Nội dung:", sub.content);
 
   const left = organizationStepsHtml(sub.organization) || "<p></p>";
   const right = sub.product?.trim() ? paragraphs(sub.product) : "<p></p>";
@@ -136,18 +153,15 @@ export function activityHtml(activity: Activity5512, isSub = false): string {
 
   const heading = `<h3>${escapeHtml(activity.name)}${activity.duration ? ` (${escapeHtml(activity.duration)})` : ""}</h3>`;
 
-  const field = (label: string, value: string | null | undefined) =>
-    value && value.trim() ? `<p><b>${label}</b> ${escapeHtml(value)}</p>` : "";
-
   const subActivities = activity.subActivities ?? [];
   const subs = subActivities.map((sub) => activityHtml(sub, true)).join("");
   const trailing = subActivities.length > 0 ? "<p></p>" : "";
 
   return `
     ${heading}
-    ${field("a) Mục tiêu:", activity.objective)}
-    ${field("b) Nội dung:", activity.content)}
-    ${field("c) Sản phẩm:", activity.product)}
+    ${labeledField("a) Mục tiêu:", activity.objective)}
+    ${labeledField("b) Nội dung:", activity.content)}
+    ${labeledField("c) Sản phẩm:", activity.product)}
     ${organizationHtml(activity)}
     ${subs}
     ${trailing}
