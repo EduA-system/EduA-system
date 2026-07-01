@@ -77,7 +77,15 @@ export function useLessonPlanStream(editor: Editor | null) {
                 : lessonPlan5512Mock.activities;
             const merged: LessonPlan5512 = {
               ...lessonPlan5512Mock,
-              title: frame.title ?? lessonPlan5512Mock.title,
+              title: frame.title ?? session.display?.title ?? lessonPlan5512Mock.title,
+              metadata: {
+                ...lessonPlan5512Mock.metadata,
+                subject: session.display?.subject
+                  ? `Môn học/Hoạt động giáo dục: ${session.display.subject}`
+                  : lessonPlan5512Mock.metadata.subject,
+                grade: session.display?.grade ?? lessonPlan5512Mock.metadata.grade,
+                duration: session.display?.duration ?? lessonPlan5512Mock.metadata.duration,
+              },
               objectives: frame.objectives ?? lessonPlan5512Mock.objectives,
               equipmentAndMaterials:
                 frame.equipmentAndMaterials ?? lessonPlan5512Mock.equipmentAndMaterials,

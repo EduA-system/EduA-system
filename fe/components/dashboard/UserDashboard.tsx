@@ -47,6 +47,10 @@ export function UserDashboard() {
     () => selectedBook?.chapters.find((chapter) => chapter.id === chapterId) ?? null,
     [selectedBook, chapterId],
   );
+  const selectedLesson = useMemo(
+    () => selectedChapter?.lessons.find((lesson) => lesson.id === lessonId) ?? null,
+    [selectedChapter, lessonId],
+  );
 
   const bookOptions = books.map((book) => ({ value: book.id, label: `Lớp ${book.grade}` }));
   const chapterOptions = (selectedBook?.chapters ?? []).map((chapter) => ({
@@ -90,6 +94,15 @@ export function UserDashboard() {
         lessonId,
         userPrompt: userPrompt.trim() || undefined,
       };
+      const displaySession = {
+        ...session,
+        display: {
+          title: selectedLesson?.name ?? "…………………………………..",
+          subject: "Vật lí",
+          grade: selectedBook ? `lớp: ${selectedBook.grade}` : "lớp: ………",
+          duration: "Thời gian thực hiện: (số tiết)",
+        },
+      };
 
       console.log(
         "%c[Tạo giáo án] kickoff stream",
@@ -98,7 +111,7 @@ export function UserDashboard() {
       );
 
       await startLessonPlanStream(session);
-      storeLessonPlanSession(session);
+      storeLessonPlanSession(displaySession);
       router.push("/lesson-edit");
     } catch (error: unknown) {
       setGenerateError(error instanceof Error ? error.message : "Tạo giáo án thất bại.");

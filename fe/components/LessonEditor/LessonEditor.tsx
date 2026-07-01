@@ -248,6 +248,9 @@ export function lessonPlan5512ToHtml(
   const { metadata, objectives, equipmentAndMaterials, activities } = plan;
   const pending = opts?.pendingOrders;
 
+  const title = plan.title?.startsWith("TÊN BÀI DẠY:")
+    ? plan.title
+    : `TÊN BÀI DẠY: ${plan.title}`;
   const meta = `${escapeHtml(metadata?.subject)} · ${escapeHtml(metadata?.grade)} · ${escapeHtml(metadata?.duration)}`;
 
   const worksheetsHtml = (equipmentAndMaterials?.worksheets ?? [])
@@ -261,7 +264,7 @@ export function lessonPlan5512ToHtml(
     .join("");
 
   return `
-    <h1>${escapeHtml(plan.title)}</h1>
+    <h1>${escapeHtml(title)}</h1>
     <p class="document-meta">${meta}</p>
 
     <section>

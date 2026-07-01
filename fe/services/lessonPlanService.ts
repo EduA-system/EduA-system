@@ -184,7 +184,16 @@ export async function startLessonPlanStream(req: StartLessonPlanStreamRequest): 
 // và fill dần. (Không còn truyền cả giáo án như bản đồng bộ cũ.)
 const SESSION_KEY = "edua:lessonPlanSession";
 
-export type LessonPlanSession = StartLessonPlanStreamRequest;
+export interface LessonPlanDisplayMetadata {
+  title: string;
+  subject: string;
+  grade: string;
+  duration: string;
+}
+
+export type LessonPlanSession = StartLessonPlanStreamRequest & {
+  display?: LessonPlanDisplayMetadata;
+};
 
 export function storeLessonPlanSession(session: LessonPlanSession): void {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
