@@ -47,10 +47,11 @@ export function makeShape(
     zIndex: 0,
     opacity: 1,
     locked: false,
-    fill: "#d9d9d9",
-    stroke: "#000000",
+    fill: "#f6eadf",
+    stroke: "#d97757",
     strokeW: 1,
     borderRadius: 0,
+    dashStyle: "solid",
   };
 }
 
@@ -111,7 +112,7 @@ export function makePoly(overrides?: Partial<PolyElement>): PolyElement {
     svgPath: "",
     svgViewBox: "0 0 100 100",
     shapeId: "",
-    fill: "#1e293b",
+    fill: "#2b2926",
     stroke: "transparent",
     strokeW: 0,
     ...overrides,
@@ -133,7 +134,7 @@ export function makeDraw(overrides?: Partial<DrawElement>): DrawElement {
     locked: false,
     points: "",
     drawTool: "brush",
-    stroke: "#1e293b",
+    stroke: "#2b2926",
     strokeW: 6,
     ...overrides,
   };

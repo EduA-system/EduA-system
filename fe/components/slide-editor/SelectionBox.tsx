@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
-import { isSlideLockedForGeneration, type ElementPatch, type LineElement } from "./types";
+import { isSlideLockedForGeneration, type ElementPatch, type LineElement, type TextElement } from "./types";
 import {
   computeBoundingBox,
   applyResize,
@@ -10,6 +10,7 @@ import {
   getCenter,
   elemFromEndpoints,
 } from "./lib/geometry";
+import { textBoxMinHeight } from "./lib/text-box";
 
 const HANDLE_SIZE = 8;
 const ROTATE_HANDLE_OFFSET = 24;
@@ -82,6 +83,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
         h: el.h,
         type: el.type,
         fontSize: el.type === "text" ? el.fontSize : 0,
+        element: el,
       }));
       const startBbox = { ...bbox };
       const aspect = startBbox.w / startBbox.h;
@@ -103,14 +105,23 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
             w: newRect.w,
             h: newRect.h,
           };
-          // Text: chỉ scale cỡ chữ khi kéo handle góc, và làm chậm tốc độ tăng.
-          if (startEl.type === "text" && startEl.h > 0 && CORNER_HANDLES.has(handleId)) {
-            const rawScale = newRect.h / startEl.h;
-            const dampedScale = 1 + (rawScale - 1) * FONT_SCALE_DAMPING;
-            patch.fontSize = Math.max(
-              6,
-              Math.min(200, Math.round(startEl.fontSize * dampedScale))
-            );
+          // Text: scale cỡ chữ khi kéo góc, rồi giữ box không thấp hơn nội dung thật.
+          if (startEl.type === "text" && startEl.h > 0) {
+            if (CORNER_HANDLES.has(handleId)) {
+              const rawScale = newRect.h / startEl.h;
+              const dampedScale = 1 + (rawScale - 1) * FONT_SCALE_DAMPING;
+              patch.fontSize = Math.max(
+                6,
+                Math.min(200, Math.round(startEl.fontSize * dampedScale))
+              );
+            }
+
+            const nextText = { ...(startEl.element as TextElement), ...patch, type: "text" } as TextElement;
+            const minTextHeight = textBoxMinHeight(nextText, nextText.w);
+            if (patch.h != null && patch.h < minTextHeight) {
+              if (handleId.includes("n")) patch.y = (patch.y ?? startEl.y) - (minTextHeight - patch.h);
+              patch.h = minTextHeight;
+            }
           }
           return { id: startEl.id, patch };
         });
@@ -193,7 +204,6 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
   );
 
   if (!slide || selectedElements.length === 0) return null;
-  if (bbox.w === 0 || bbox.h === 0) return null;
 
   // Line/arrow đơn: hiện 2 endpoint thay cho 8 handle.
   if (single && isLine && !locked) {
@@ -215,7 +225,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
           cy={el.y1}
           r={6}
           fill="#ffffff"
-          stroke="#3b82f6"
+          stroke="#d97757"
           strokeWidth={2}
           style={{ cursor: "grab", pointerEvents: "auto" }}
           onMouseDown={(e) => handleEndpointStart(e, "start")}
@@ -224,7 +234,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
           cx={el.x2}
           cy={el.y2}
           r={6}
-          fill="#3b82f6"
+          fill="#d97757"
           stroke="#ffffff"
           strokeWidth={2}
           style={{ cursor: "grab", pointerEvents: "auto" }}
@@ -233,6 +243,8 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
       </svg>
     );
   }
+
+  if (bbox.w === 0 || bbox.h === 0) return null;
 
   return (
     <div
@@ -250,7 +262,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
         style={{
           position: "absolute",
           inset: -1,
-          border: "2px solid #3b82f6",
+          border: "2px solid #d97757",
           pointerEvents: "none",
         }}
       />
@@ -267,7 +279,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
                 width: HANDLE_SIZE,
                 height: HANDLE_SIZE,
                 background: "white",
-                border: "2px solid #3b82f6",
+                border: "2px solid #d97757",
                 borderRadius: 2,
                 cursor: handle.cursor,
                 pointerEvents: "auto",
@@ -283,7 +295,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
               top: -ROTATE_HANDLE_OFFSET,
               width: 12,
               height: 12,
-              background: "#3b82f6",
+              background: "#d97757",
               borderRadius: "50%",
               cursor: "grab",
               pointerEvents: "auto",
@@ -297,7 +309,7 @@ export function SelectionBox({ toCanvas, lockAspect }: SelectionBoxProps) {
               top: -ROTATE_HANDLE_OFFSET + 6,
               width: 1,
               height: ROTATE_HANDLE_OFFSET - 6,
-              background: "#3b82f6",
+              background: "#d97757",
               pointerEvents: "none",
             }}
           />

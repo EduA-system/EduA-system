@@ -3,12 +3,12 @@
 // Color picker: tab Đồng nhất (solid) + Gradient (linear/radial, kéo stops),
 // eyedropper, presets, transparent. Port từ /test-slide, dùng helper lib/gradient.
 
-import React, { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import React, { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { buildGradCss, isGradientCss, parseGrad, type GradConfig } from "./lib/gradient";
 
 const DOC_COLORS = [
-  "#000000", "#ffffff", "#f8fafc", "#e2e8f0",
-  "#94a3b8", "#64748b", "#475569", "#334155",
+  "#000000", "#ffffff", "#fbfaf8", "#f5f1ec",
+  "#d8d1c9", "#8a8178", "#4f4943", "#2b2926",
 ];
 
 const FLAT_COLORS = [
@@ -48,6 +48,10 @@ const ANGLE_DIRS = [
   { angle: 270, svg: "M19 12H5M10 17l-5-5 5-5" },
   { angle: 315, svg: "M19 5L5 19M5 10V5h5" },
 ];
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(value, max));
+}
 
 function StopBar({
   config,
@@ -114,7 +118,7 @@ function StopBar({
         <div
           ref={barRef}
           onClick={handleBarClick}
-          className="absolute inset-x-0 top-0 cursor-crosshair rounded-md"
+          className="absolute inset-x-0 top-0 cursor-crosshair rounded-full"
           style={{ height: 16, background: previewCss, boxShadow: "inset 0 0 0 1px rgba(0,0,0,.12)" }}
           title="Click để thêm điểm màu"
         />
@@ -123,7 +127,7 @@ function StopBar({
             key={i}
             onMouseDown={(e) => handleStopDown(e, i)}
             className={`absolute -top-0.5 -translate-x-1/2 cursor-grab active:cursor-grabbing rounded-full border-2 transition-shadow ${
-              i === selected ? "border-slate-800 shadow-md scale-110" : "border-white shadow"
+              i === selected ? "border-[#2b2926] shadow-md scale-110" : "border-white shadow"
             }`}
             style={{
               left: `${stop.pos}%`,
@@ -140,7 +144,7 @@ function StopBar({
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-1.5">
             <div
-              className="h-6 w-6 shrink-0 rounded border border-slate-200 cursor-pointer"
+              className="h-6 w-6 shrink-0 rounded border border-[#e8e2d9] cursor-pointer"
               style={{ background: config.stops[selected].color }}
               onClick={() => {
                 const inp = document.getElementById(`grad-stop-color-${selected}`) as HTMLInputElement | null;
@@ -164,7 +168,7 @@ function StopBar({
                 if (/^#[0-9a-fA-F]{0,6}$/.test(v))
                   onChange({ ...config, stops: config.stops.map((s, i) => (i === selected ? { ...s, color: v } : s)) });
               }}
-              className="w-20 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] font-mono"
+              className="w-20 rounded border border-[#e8e2d9] px-1.5 py-0.5 text-[11px] font-mono text-[#2b2926] outline-none focus:border-[#d97757]"
             />
           </label>
 
@@ -177,9 +181,9 @@ function StopBar({
               onChange={(e) =>
                 onChange({ ...config, stops: config.stops.map((s, i) => (i === selected ? { ...s, pos: Math.min(100, Math.max(0, +e.target.value)) } : s)) })
               }
-              className="w-12 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] text-right"
+              className="w-12 rounded border border-[#e8e2d9] px-1.5 py-0.5 text-[11px] text-right text-[#2b2926] outline-none focus:border-[#d97757]"
             />
-            <span className="text-[10px] text-slate-400">%</span>
+            <span className="text-[10px] text-[#8a8178]">%</span>
             <button
               disabled={config.stops.length <= 2}
               onClick={() => {
@@ -189,7 +193,7 @@ function StopBar({
                 onSelect(Math.min(selected, newStops.length - 1));
               }}
               title="Xóa điểm này"
-              className="ml-1 flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 transition-colors"
+              className="ml-1 flex h-5 w-5 items-center justify-center rounded text-[#8a8178] hover:bg-red-50 hover:text-red-500 disabled:opacity-30 transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
@@ -199,7 +203,7 @@ function StopBar({
         </div>
       )}
 
-      <p className="mt-1.5 text-[9px] text-slate-400">Click vào thanh để thêm • Kéo điểm để di chuyển</p>
+      <p className="mt-1.5 text-[9px] text-[#8a8178]">Click vào thanh để thêm • Kéo điểm để di chuyển</p>
     </div>
   );
 }
@@ -211,6 +215,10 @@ export interface ColorPickerProps {
   allowTransparent?: boolean;
   allowGradient?: boolean;
   size?: "sm" | "md";
+  preview?: "solid" | "ring";
+  triggerContent?: ReactNode;
+  triggerClassName?: string;
+  triggerStyle?: CSSProperties;
 }
 
 export function ColorPicker({
@@ -220,6 +228,10 @@ export function ColorPicker({
   allowTransparent = true,
   allowGradient = true,
   size = "md",
+  preview = "solid",
+  triggerContent,
+  triggerClassName = "",
+  triggerStyle,
 }: ColorPickerProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"solid" | "gradient">(isGradientCss(value) ? "gradient" : "solid");
@@ -227,7 +239,7 @@ export function ColorPicker({
   const [grad, setGrad] = useState<GradConfig>(() =>
     isGradientCss(value)
       ? parseGrad(value)
-      : { type: "linear", angle: 135, stops: [{ color: "#7c3aed", pos: 0 }, { color: "#3b82f6", pos: 100 }] }
+      : { type: "linear", angle: 135, stops: [{ color: "#d97757", pos: 0 }, { color: "#f6eadf", pos: 100 }] }
   );
   const [selStop, setSelStop] = useState(0);
   const [popPos, setPopPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
@@ -249,11 +261,14 @@ export function ColorPicker({
   const openPicker = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
+    const margin = 8;
+    const pickerWidth = Math.min(264, window.innerWidth - margin * 2);
+    const popH = Math.min(480, Math.max(240, window.innerHeight - margin * 2));
     const spaceBelow = window.innerHeight - rect.bottom;
-    const popH = 480;
-    const top = spaceBelow > popH + 8 ? rect.bottom + 4 : rect.top - popH - 4;
+    const rawTop = spaceBelow >= popH + margin ? rect.bottom + 6 : rect.top - popH - 6;
+    const top = clamp(rawTop, margin, Math.max(margin, window.innerHeight - popH - margin));
     const mid = rect.left + rect.width / 2;
-    const left = Math.max(8, Math.min(mid - 264 / 2, window.innerWidth - 270 - 8));
+    const left = clamp(mid - pickerWidth / 2, margin, Math.max(margin, window.innerWidth - pickerWidth - margin));
     setPopPos({ top, left });
     setTab(isGradientCss(value) && allowGradient ? "gradient" : "solid");
     if (!isGradientCss(value) && value !== "transparent") setHexInput(value.toUpperCase());
@@ -300,36 +315,41 @@ export function ColorPicker({
     }
   };
 
+  const checkerBg = "repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0 / 8px 8px";
   const triggerBg =
     value === "transparent"
-      ? "repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0 / 8px 8px"
-      : value;
+      ? checkerBg
+      : preview === "ring"
+        ? "radial-gradient(circle, #fff 0 43%, " + value + " 45% 100%)"
+        : value;
 
   const btnSz = size === "sm" ? "h-5 w-5" : "h-6 w-6";
 
   return (
     <div className="relative inline-flex items-center gap-1 shrink-0">
-      {label && <span className="text-[10px] text-slate-500">{label}</span>}
+      {label && <span className="text-[10px] text-[#6b625a]">{label}</span>}
       <button
         ref={triggerRef}
         onClick={openPicker}
         title={value}
-        className={`${btnSz} shrink-0 rounded border border-slate-300 cursor-pointer transition-shadow hover:shadow-md`}
-        style={{ background: triggerBg }}
-      />
+        className={`${btnSz} shrink-0 rounded border border-[#d8d1c9] cursor-pointer transition-shadow hover:shadow-md ${triggerClassName}`}
+        style={triggerStyle ?? { background: triggerBg }}
+      >
+        {triggerContent}
+      </button>
 
       {open && (
         <div
           ref={popRef}
-          className="fixed z-[9999] flex flex-col rounded-xl border border-slate-200 bg-white shadow-2xl"
-          style={{ top: popPos.top, left: popPos.left, width: 264 }}
+          className="fixed z-[9999] flex flex-col overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-white shadow-[0_12px_32px_rgba(43,41,38,0.16),0_2px_8px_rgba(43,41,38,0.08)]"
+          style={{ top: popPos.top, left: popPos.left, width: Math.min(264, typeof window === "undefined" ? 264 : window.innerWidth - 16), maxHeight: "calc(100vh - 16px)" }}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <span className="text-[13px] font-semibold text-slate-800">Màu sắc</span>
+          <div className="flex items-center justify-between border-b border-[#e8e2d9] px-3 py-2">
+            <span className="text-[13px] font-semibold text-[#2b2926]">Màu sắc</span>
             <button
               onClick={() => setOpen(false)}
-              className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              className="flex h-6 w-6 items-center justify-center rounded text-[#8a8178] hover:bg-[#f7f3ee] hover:text-[#4f4943] transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
@@ -338,13 +358,13 @@ export function ColorPicker({
           </div>
 
           {allowGradient && (
-            <div className="flex border-b border-slate-100 px-3">
+            <div className="flex border-b border-[#e8e2d9] px-3">
               {(["solid", "gradient"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
                   className={`mr-4 py-2 text-[12px] font-medium border-b-2 transition-colors ${
-                    tab === t ? "border-purple-600 text-purple-700" : "border-transparent text-slate-500 hover:text-slate-700"
+                    tab === t ? "border-[#d97757] text-[#9f5a3e]" : "border-transparent text-[#6b625a] hover:text-[#2b2926]"
                   }`}
                 >
                   {t === "solid" ? "Đồng nhất" : "Gradient"}
@@ -353,7 +373,7 @@ export function ColorPicker({
             </div>
           )}
 
-          <div className="overflow-y-auto" style={{ maxHeight: 420 }}>
+          <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 86px)" }}>
             {(tab === "solid" || !allowGradient) && (
               <div className="px-3 py-3 space-y-4">
                 <div>
@@ -361,7 +381,7 @@ export function ColorPicker({
                     <button
                       onClick={() => nativeColorRef.current?.click()}
                       title="Bảng màu"
-                      className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-slate-300 hover:border-purple-500 transition-colors"
+                      className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-[#d8d1c9] hover:border-[#d97757] transition-colors"
                       style={{
                         background:
                           "conic-gradient(hsl(360,100%,50%),hsl(315,100%,50%),hsl(270,100%,50%),hsl(225,100%,50%),hsl(180,100%,50%),hsl(135,100%,50%),hsl(90,100%,50%),hsl(45,100%,50%),hsl(0,100%,50%))",
@@ -378,7 +398,7 @@ export function ColorPicker({
                     <button
                       onClick={tryEyedropper}
                       title="Lấy màu từ màn hình"
-                      className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-purple-600 transition-colors"
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-[#e8e2d9] text-[#6b625a] hover:bg-[#f7f3ee] hover:text-[#d97757] transition-colors"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M2 22l5-2 12-12-3-3L4 17l-2 5z" />
@@ -392,7 +412,7 @@ export function ColorPicker({
                       placeholder="#000000"
                       onChange={(e) => onHexChange(e.target.value)}
                       maxLength={7}
-                      className="flex-1 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-mono text-slate-800 focus:border-purple-400 focus:outline-none"
+                      className="flex-1 rounded border border-[#e8e2d9] bg-[#fbfaf8] px-2 py-1 text-[11px] font-mono text-[#2b2926] focus:border-[#d97757] focus:outline-none"
                     />
                   </div>
 
@@ -404,7 +424,7 @@ export function ColorPicker({
                       <button
                         onClick={() => pickSolid("transparent")}
                         title="Trong suốt"
-                        className={`h-6 w-6 rounded border-2 transition-all ${value === "transparent" ? "border-purple-500 scale-110" : "border-slate-200"}`}
+                        className={`h-6 w-6 rounded border-2 transition-all ${value === "transparent" ? "border-[#d97757] scale-110" : "border-[#e8e2d9]"}`}
                         style={{ background: "repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0 / 8px 8px" }}
                       />
                     )}
@@ -412,7 +432,7 @@ export function ColorPicker({
                 </div>
 
                 <div>
-                  <p className="mb-2 text-[11px] font-medium text-slate-600">Màu đồng nhất mặc định</p>
+                  <p className="mb-2 text-[11px] font-medium text-[#6b625a]">Màu đồng nhất mặc định</p>
                   <div className="grid grid-cols-8 gap-1">
                     {FLAT_COLORS.map((c) => (
                       <ColorSwatch key={c} color={c} selected={value === c} onClick={() => pickSolid(c)} />
@@ -425,7 +445,7 @@ export function ColorPicker({
             {allowGradient && tab === "gradient" && (
               <div className="px-3 py-3 space-y-4">
                 <div>
-                  <p className="mb-2 text-[11px] font-medium text-slate-600">Màu gradient mặc định</p>
+                  <p className="mb-2 text-[11px] font-medium text-[#6b625a]">Màu gradient mặc định</p>
                   <div className="grid grid-cols-4 gap-1.5">
                     {GRAD_PRESETS.map((g, i) => {
                       const css = buildGradCss(g);
@@ -434,8 +454,8 @@ export function ColorPicker({
                           key={i}
                           onClick={() => applyGrad(g)}
                           title={`Gradient ${i + 1}`}
-                          className="h-12 rounded-lg border-2 transition-all hover:scale-105 active:scale-95"
-                          style={{ background: css, borderColor: value === css ? "#7c3aed" : "transparent" }}
+                          className="h-12 rounded-[14px] border-2 transition-all hover:scale-105 active:scale-95"
+                          style={{ background: css, borderColor: value === css ? "#d97757" : "transparent" }}
                         />
                       );
                     })}
@@ -443,16 +463,16 @@ export function ColorPicker({
                 </div>
 
                 <div>
-                  <p className="mb-2 text-[11px] font-medium text-slate-600">Tùy chỉnh gradient</p>
+                  <p className="mb-2 text-[11px] font-medium text-[#6b625a]">Tùy chỉnh gradient</p>
                   <div className="flex gap-1 mb-3">
                     {(["linear", "radial"] as const).map((t) => (
                       <button
                         key={t}
                         onClick={() => applyGrad({ ...grad, type: t })}
-                        className={`flex-1 rounded-md py-1.5 text-[11px] font-medium transition-colors border ${
+                        className={`flex-1 rounded-full py-1.5 text-[11px] font-medium transition-colors border ${
                           grad.type === t
-                            ? "bg-purple-600 text-white border-purple-600"
-                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                            ? "bg-[#d97757] text-white border-[#d97757]"
+                            : "bg-white text-[#6b625a] border-[#e8e2d9] hover:bg-[#fbfaf8]"
                         }`}
                       >
                         {t === "linear" ? "Tuyến tính" : "Hướng tâm"}
@@ -463,7 +483,7 @@ export function ColorPicker({
                   {grad.type === "linear" && (
                     <div className="mb-3">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <p className="text-[10px] text-slate-500">Hướng</p>
+                        <p className="text-[10px] text-[#6b625a]">Hướng</p>
                         <div className="flex items-center gap-1">
                           <input
                             type="number"
@@ -471,9 +491,9 @@ export function ColorPicker({
                             max={359}
                             value={grad.angle}
                             onChange={(e) => applyGrad({ ...grad, angle: (((+e.target.value) % 360) + 360) % 360 })}
-                            className="w-14 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] text-right"
+                            className="w-14 rounded border border-[#e8e2d9] px-1.5 py-0.5 text-[11px] text-right text-[#2b2926] outline-none focus:border-[#d97757]"
                           />
-                          <span className="text-[10px] text-slate-400">°</span>
+                          <span className="text-[10px] text-[#8a8178]">°</span>
                         </div>
                       </div>
                       <div className="grid grid-cols-8 gap-1">
@@ -482,8 +502,8 @@ export function ColorPicker({
                             key={angle}
                             onClick={() => applyGrad({ ...grad, angle })}
                             title={`${angle}°`}
-                            className={`flex h-7 w-7 items-center justify-center rounded border text-slate-600 transition-colors ${
-                              grad.angle === angle ? "bg-purple-100 border-purple-500 text-purple-700" : "border-slate-200 hover:bg-slate-100"
+                            className={`flex h-7 w-7 items-center justify-center rounded border text-[#6b625a] transition-colors ${
+                              grad.angle === angle ? "bg-[#f6eadf] border-[#d97757] text-[#9f5a3e]" : "border-[#e8e2d9] hover:bg-[#f7f3ee]"
                             }`}
                           >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -496,7 +516,7 @@ export function ColorPicker({
                   )}
 
                   <div>
-                    <p className="mb-2 text-[10px] text-slate-500">Điểm màu</p>
+                    <p className="mb-2 text-[10px] text-[#6b625a]">Điểm màu</p>
                     <StopBar config={grad} selected={selStop} onSelect={setSelStop} onChange={applyGrad} />
                   </div>
 
@@ -508,7 +528,7 @@ export function ColorPicker({
                         applyGrad({ ...grad, stops: newStops });
                         setSelStop(newStops.length - 1);
                       }}
-                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-slate-300 py-1.5 text-[11px] text-slate-500 hover:border-purple-400 hover:text-purple-600 transition-colors"
+                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-dashed border-[#d8d1c9] py-1.5 text-[11px] text-[#6b625a] hover:border-[#d97757] hover:text-[#d97757] transition-colors"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path d="M12 5v14M5 12h14" strokeLinecap="round" />
@@ -532,7 +552,7 @@ function ColorSwatch({ color, selected, onClick }: { color: string; selected: bo
       onClick={onClick}
       title={color}
       className={`h-6 w-6 shrink-0 rounded border-2 transition-all hover:scale-110 active:scale-95 ${
-        selected ? "border-purple-500 scale-110 shadow-md" : "border-transparent"
+        selected ? "border-[#d97757] scale-110 shadow-md" : "border-transparent"
       }`}
       style={{ background: color }}
     />

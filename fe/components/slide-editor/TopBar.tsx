@@ -1,69 +1,150 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
 import { isSlideLockedForGeneration, type Slide } from "./types";
 
-const ZOOM_PRESETS = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 3];
-
 interface TopBarProps {
-  zoomMode: "fit" | number;
-  onZoomModeChange: (zoom: "fit" | number) => void;
-  lockAspect: boolean;
-  onToggleLockAspect: () => void;
-  showLayers: boolean;
-  onToggleLayers: () => void;
+  pageSidebarCollapsed: boolean;
+  showLeftPanel: boolean;
+  showRightPanel: boolean;
+  onTogglePageSidebar: () => void;
+  onToggleLeftPanel: () => void;
+  onToggleRightPanel: () => void;
 }
 
 function UndoSvg() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M5.5 7.5H3V5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M3 7.5A5 5 0 1 0 8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 7 4 12l5 5" />
+      <path d="M5 12h9a6 6 0 0 1 6 6v1" />
     </svg>
   );
 }
 
 function RedoSvg() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M10.5 7.5H13V5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13 7.5A5 5 0 1 1 8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m15 7 5 5-5 5" />
+      <path d="M19 12h-9a6 6 0 0 0-6 6v1" />
+    </svg>
+  );
+}
+
+function SaveIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 2.5h8l2 2V13H3z" />
+      <path d="M5 2.5V6h5V2.5" />
+      <path d="M5.5 13V9.5h5V13" />
+    </svg>
+  );
+}
+
+function SparkIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 1.8l1.2 3.4L12.6 6.4 9.2 7.6 8 11 6.8 7.6 3.4 6.4l3.4-1.2z" />
+      <path d="M12.6 9.6l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5z" />
+    </svg>
+  );
+}
+
+function ExportIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2v7" />
+      <path d="M5.5 6.5 8 9l2.5-2.5" />
+      <path d="M3 10.5V13h10v-2.5" />
+    </svg>
+  );
+}
+
+function SidebarLeftIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.2" y="2.4" width="11.6" height="11.2" rx="2" />
+      <path d="M6 2.4v11.2" />
+      <path d="M4.1 7.9h.01" />
+    </svg>
+  );
+}
+
+function SidebarRightIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.2" y="2.4" width="11.6" height="11.2" rx="2" />
+      <path d="M10 2.4v11.2" />
+      <path d="M11.9 7.9h.01" />
+    </svg>
+  );
+}
+function EditorToolsIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.5" y="3" width="11" height="10" rx="2" />
+      <path d="M5.8 6h4.8" />
+      <path d="M5.8 8h3.2" />
+      <path d="M5.8 10h4.2" />
     </svg>
   );
 }
 
 function Divider() {
-  return <div className="mx-1 h-5 w-px shrink-0 bg-black/10" />;
+  return <div className="mx-1 h-5 w-px shrink-0 bg-[#e8e2d9]" />;
 }
 
-function ToolButton({
+function IconButton({
   onClick,
   disabled,
   active,
   children,
-  label,
   title,
+  wide = false,
 }: {
   onClick: () => void;
   disabled?: boolean;
   active?: boolean;
-  children?: React.ReactNode;
-  label?: string;
+  children: React.ReactNode;
   title?: string;
+  wide?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`flex h-[32px] w-[32px] items-center justify-center rounded-[6px] text-[13px] transition-colors ${
-        active
-          ? "bg-[#e8e8e8] text-[#1f1f1f]"
-          : "text-[#555] hover:bg-black/5"
-      } disabled:pointer-events-none disabled:opacity-30`}
+      className={`flex h-8 ${wide ? "min-w-12 px-2" : "w-8"} items-center justify-center rounded-[10px] text-[11px] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-30 ${
+        active ? "bg-[#f3efe9] text-[#2b2926]" : "text-[#8a8178] hover:bg-[#f7f3ee] hover:text-[#4f4943]"
+      }`}
     >
-      {children ?? label}
+      {children}
+    </button>
+  );
+}
+
+function ActionButton({
+  children,
+  onClick,
+  variant = "ghost",
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  variant?: "ghost" | "ai" | "dark";
+}) {
+  const cls =
+    variant === "dark"
+      ? "bg-[#2b2926] text-white shadow-[0_4px_10px_rgba(43,41,38,0.16)] hover:bg-[#3b3733]"
+      : variant === "ai"
+        ? "border border-[#eadfd7] bg-[#fff7f1] text-[#d97757] hover:bg-[#f6eadf]"
+        : "text-[#4f4943] hover:bg-[#f7f3ee]";
+
+  return (
+    <button
+      onClick={onClick}
+      className={`flex h-8 items-center gap-1.5 rounded-[10px] px-3 text-[12px] font-medium transition-colors ${cls}`}
+    >
+      {children}
     </button>
   );
 }
@@ -96,10 +177,10 @@ function Dropdown({
 
   return (
     <div ref={ref} className="relative">
-      <div onClick={onToggle}>{trigger}</div>
+      <div>{trigger}</div>
       {open && (
         <div
-          className={`absolute top-full z-50 mt-1 w-[150px] overflow-hidden rounded-[8px] border border-black/10 bg-white py-1 shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${
+          className={`absolute top-full z-50 mt-1 w-[150px] overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-white py-1 shadow-[0_8px_24px_rgba(43,41,38,0.12)] ${
             align === "right" ? "right-0" : "left-0"
           }`}
           onClick={(e) => e.stopPropagation()}
@@ -123,10 +204,8 @@ function DropdownItem({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center px-3 py-1.5 text-left text-[13px] transition-colors ${
-        active
-          ? "bg-[#e8e8e8] text-[#1f1f1f]"
-          : "text-[#555] hover:bg-black/5"
+      className={`flex w-full items-center px-3 py-1.5 text-left text-[12px] transition-colors ${
+        active ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee]"
       }`}
     >
       {children}
@@ -134,34 +213,26 @@ function DropdownItem({
   );
 }
 
+function deckTitle(slide: Slide | undefined) {
+  return slide?.aiPrompt?.trim() || "Photosynthesis Lesson";
+}
+
 export function TopBar({
-  zoomMode,
-  onZoomModeChange,
-  lockAspect,
-  onToggleLockAspect,
-  showLayers,
-  onToggleLayers,
+  pageSidebarCollapsed,
+  showLeftPanel,
+  showRightPanel,
+  onTogglePageSidebar,
+  onToggleLeftPanel,
+  onToggleRightPanel,
 }: TopBarProps) {
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
   const history = useEditorStore((s) => s.history);
-  const selectedCount = useEditorStore((s) => s.selectedIds.length);
-  const currentSlideLocked = useEditorStore((s) =>
-    isSlideLockedForGeneration(s.slides.find((sl) => sl.id === s.currentSlideId)),
-  );
+  const currentSlide = useEditorStore((s) => s.slides.find((sl) => sl.id === s.currentSlideId));
   const hasLockedSlides = useEditorStore((s) => s.slides.some(isSlideLockedForGeneration));
 
   const [menu, setMenu] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  const zoomLabel =
-    zoomMode === "fit" ? "Fit" : `${Math.round(zoomMode * 100)}%`;
-
-  function deleteSelected() {
-    if (currentSlideLocked) return;
-    const store = useEditorStore.getState();
-    if (store.selectedIds.length > 0) store.removeElements(store.selectedIds);
-  }
 
   function exportJSON() {
     const state = useEditorStore.getState();
@@ -187,7 +258,6 @@ export function TopBar({
         const data = JSON.parse(String(reader.result));
         const slides: Slide[] = Array.isArray(data) ? data : data.slides;
         if (!Array.isArray(slides) || slides.length === 0) return;
-        // Regenerate id để tránh trùng khi import vào phiên hiện tại.
         const fresh = slides.map((s, si) => ({
           ...s,
           generationStatus: undefined,
@@ -199,98 +269,55 @@ export function TopBar({
         }));
         useEditorStore.getState().replaceSlides(fresh);
       } catch {
-        // bỏ qua file không hợp lệ
+        // Ignore invalid files.
       }
     };
     reader.readAsText(file);
   }
 
   return (
-    <header className="relative flex h-[52px] shrink-0 items-center gap-1 border-b border-black/10 bg-white px-3">
-      <span className="mr-2 text-[13px] font-semibold tracking-[-0.01em] text-[#1f1f1f]">
-        Slide Maker
-      </span>
+    <header className="flex h-12 shrink-0 items-center gap-1 border-b border-[#e8e2d9] bg-white px-3">
+      <button className="flex max-w-[260px] items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-left text-[12px] font-medium text-[#4f4943] hover:bg-[#f7f3ee]">
+        <span className="truncate">{deckTitle(currentSlide)}</span>
+        <span className="text-[#b8aea5]">&gt;</span>
+      </button>
 
       <Divider />
 
-      <ToolButton onClick={undo} disabled={history.past.length === 0 || hasLockedSlides} title="Undo (Ctrl+Z)">
-        <UndoSvg />
-      </ToolButton>
-      <ToolButton onClick={redo} disabled={history.future.length === 0 || hasLockedSlides} title="Redo (Ctrl+Shift+Z)">
-        <RedoSvg />
-      </ToolButton>
-
-      <Divider />
-
-      <ToolButton onClick={onToggleLayers} active={showLayers} title="Bảng Layers" label="▦" />
-      <ToolButton onClick={deleteSelected} disabled={selectedCount === 0 || currentSlideLocked} title="Xóa (Delete)" label="🗑" />
-      <ToolButton
-        onClick={onToggleLockAspect}
-        active={lockAspect}
-        title="Khóa tỉ lệ khi resize"
-        label="⛶"
-      />
+      <IconButton onClick={onTogglePageSidebar} active={!pageSidebarCollapsed} title="Toggle page sidebar">
+        <SidebarLeftIcon />
+      </IconButton>
+      <IconButton onClick={onToggleLeftPanel} active={showLeftPanel} title="Toggle editor tools">
+        <EditorToolsIcon />
+      </IconButton>
 
       <div className="flex-1" />
 
-      <ToolButton
-        onClick={() => onZoomModeChange("fit")}
-        active={zoomMode === "fit"}
-        title="Fit to screen"
-        label="⊞"
-      />
-      <ToolButton
-        onClick={() => onZoomModeChange(1)}
-        active={zoomMode === 1}
-        title="100% zoom"
-        label="100%"
-      />
-
-      <Dropdown
-        trigger={
-          <button
-            onClick={() => setMenu(menu === "zoom" ? null : "zoom")}
-            className="flex h-[32px] items-center gap-1 rounded-[6px] px-2 text-[12px] text-[#555] transition-colors hover:bg-black/5"
-          >
-            {zoomLabel}
-            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-              <path d="M2 3l2 2 2-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
-        }
-        open={menu === "zoom"}
-        onToggle={() => setMenu(menu === "zoom" ? null : "zoom")}
-      >
-        <DropdownItem onClick={() => { onZoomModeChange("fit"); setMenu(null); }} active={zoomMode === "fit"}>
-          Fit
-        </DropdownItem>
-        <div className="mx-2 my-1 border-t border-black/5" />
-        {ZOOM_PRESETS.map((z) => (
-          <DropdownItem
-            key={z}
-            onClick={() => { onZoomModeChange(z); setMenu(null); }}
-            active={zoomMode === z}
-          >
-            {Math.round(z * 100)}%
-          </DropdownItem>
-        ))}
-      </Dropdown>
+      <IconButton onClick={undo} disabled={history.past.length === 0 || hasLockedSlides} title="Undo (Ctrl+Z)">
+        <UndoSvg />
+      </IconButton>
+      <IconButton onClick={redo} disabled={history.future.length === 0 || hasLockedSlides} title="Redo (Ctrl+Shift+Z)">
+        <RedoSvg />
+      </IconButton>
 
       <Divider />
 
+      <ActionButton onClick={() => saveDraft()}>
+        <SaveIcon />
+        Save
+      </ActionButton>
+      <ActionButton onClick={() => undefined} variant="ai">
+        <SparkIcon />
+        AI
+      </ActionButton>
       <Dropdown
         trigger={
           <button
             onClick={() => setMenu(menu === "export" ? null : "export")}
-            className="flex h-[32px] items-center gap-1 rounded-[6px] px-2 text-[12px] text-[#555] transition-colors hover:bg-black/5"
+            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-[#2b2926] px-3 text-[12px] font-medium text-white shadow-[0_4px_10px_rgba(43,41,38,0.16)] transition-colors hover:bg-[#3b3733]"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 2v7M4 6l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-              <path d="M2 3l2 2 2-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <ExportIcon />
+            Export
           </button>
         }
         open={menu === "export"}
@@ -305,6 +332,12 @@ export function TopBar({
         </DropdownItem>
       </Dropdown>
 
+      <Divider />
+
+      <IconButton onClick={onToggleRightPanel} active={showRightPanel} title="Toggle right sidebar">
+        <SidebarRightIcon />
+      </IconButton>
+
       <input
         ref={fileRef}
         type="file"
@@ -317,5 +350,19 @@ export function TopBar({
         }}
       />
     </header>
+  );
+}
+
+function saveDraft() {
+  const state = useEditorStore.getState();
+  localStorage.setItem(
+    "slide-editor-v1",
+    JSON.stringify({
+      slides: state.slides.map((slide) => {
+        const clean = { ...slide };
+        delete clean.generationStatus;
+        return clean;
+      }),
+    }),
   );
 }

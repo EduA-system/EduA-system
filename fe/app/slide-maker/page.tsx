@@ -5,9 +5,7 @@ export default function SlideMakerPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex h-screen items-center justify-center bg-[#f5f1ec] text-sm text-[#5c5b6e]">
-          Đang tải trình soạn slide…
-        </main>
+        <main className="flex h-screen items-center justify-center bg-[#f5f1ec] font-sans text-sm text-[#4f4943]">Dang tai trinh soan slide...</main>
       }
     >
       <SlideMakerClient />

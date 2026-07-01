@@ -106,8 +106,8 @@ export const SHAPE_LIBRARY: ShapeCategory[] = [
       { id: "cross", label: "Dấu cộng", path: "M35 2 L65 2 L65 35 L98 35 L98 65 L65 65 L65 98 L35 98 L35 65 L2 65 L2 35 L35 35Z" },
       { id: "cloud", label: "Đám mây", path: "M22 56 C8 56 2 44 8 34 C4 22 14 14 28 16 C32 6 44 2 56 8 C62 2 76 2 82 12 C94 12 100 24 96 34 C102 42 98 58 86 60 L22 60Z", viewBox: "0 0 104 64" },
       { id: "crescent", label: "Lưỡi liềm", path: "M50 2 C76 2 95 23 95 50 C95 77 76 98 50 98 C65 86 74 69 74 50 C74 31 65 14 50 2Z" },
-      { id: "frame", label: "Khung viền", path: "M2 2 L98 2 L98 98 L2 98Z M15 15 L15 85 L85 85 L85 15Z", defaultFill: "#7c3aed" },
-      { id: "donut", label: "Vòng tròn rỗng", path: "M50 2 A48 48 0 1 1 49.9 2Z M50 22 A28 28 0 1 0 50.1 22Z", viewBox: "0 0 100 100", defaultFill: "#0ea5e9" },
+      { id: "frame", label: "Khung viền", path: "M2 2 L98 2 L98 98 L2 98Z M15 15 L15 85 L85 85 L85 15Z", defaultFill: "#d97757" },
+      { id: "donut", label: "Vòng tròn rỗng", path: "M50 2 A48 48 0 1 1 49.9 2Z M50 22 A28 28 0 1 0 50.1 22Z", viewBox: "0 0 100 100", defaultFill: "#4f4943" },
     ],
   },
   {

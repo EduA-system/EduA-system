@@ -4,7 +4,6 @@ import { isGradientCss } from "./lib/gradient";
 
 interface ElementViewProps {
   el: SlideElement;
-  selected?: boolean;
   hideText?: boolean;
   onMouseDown?: MouseEventHandler;
   onDoubleClick?: MouseEventHandler;
@@ -74,7 +73,6 @@ function markerDef(
 
 export function ElementView({
   el,
-  selected,
   hideText,
   onMouseDown,
   onDoubleClick,
@@ -92,8 +90,6 @@ export function ElementView({
     opacity: el.opacity,
     zIndex: el.zIndex,
     cursor: "move",
-    outline: selected && el.type !== "draw" ? "2px solid #3b82f6" : undefined,
-    outlineOffset: selected && el.type !== "draw" ? 2 : undefined,
   };
 
   if (el.type === "text") {
@@ -117,6 +113,8 @@ export function ElementView({
       textShadow: el.textShadow,
       wordBreak: "break-word",
       overflowWrap: "anywhere",
+      boxSizing: "border-box",
+      padding: "4px 0",
       whiteSpace: "pre-wrap",
     };
 
@@ -132,7 +130,7 @@ export function ElementView({
           alignItems: isList ? "flex-start" : "center",
           justifyContent:
             el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start",
-          overflow: "hidden",
+          overflow: "visible",
           background: el.textBg,
         }}
       >
@@ -167,13 +165,14 @@ export function ElementView({
             </ul>
           ))
         ) : (
-          <span style={{ ...textStyle, width: "100%" }}>{el.text}</span>
+          <span style={{ ...textStyle, width: "100%", display: "block" }}>{el.text}</span>
         )}
       </div>
     );
   }
 
   if (el.type === "shape") {
+    const borderStyle = el.dashStyle === "dashed" ? "dashed" : el.dashStyle === "dotted" || el.dashStyle === "fine" ? "dotted" : "solid";
     return (
       <div
         onMouseDown={onMouseDown}
@@ -183,6 +182,7 @@ export function ElementView({
           ...base,
           background: el.fill,
           border: el.strokeW ? `${el.strokeW}px solid ${el.stroke}` : undefined,
+          borderStyle,
           borderRadius: el.shape === "ellipse" ? "50%" : el.borderRadius,
         }}
       />
@@ -220,6 +220,8 @@ export function ElementView({
               stroke={el.stroke !== "transparent" ? el.stroke : "none"}
               strokeWidth={el.strokeW || 0}
               strokeDasharray={da}
+              strokeLinecap={el.strokeLinecap}
+              strokeLinejoin={el.strokeLinejoin}
               fillRule="evenodd"
             />
           )}
@@ -248,7 +250,7 @@ export function ElementView({
               justifyContent:
                 el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start",
               padding: "4px 8px",
-              overflow: "hidden",
+              overflow: "visible",
               fontFamily: el.fontFamily,
               fontSize: el.fontSize,
               fontWeight: el.bold ? 700 : 400,
@@ -306,7 +308,7 @@ export function ElementView({
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
-        style={{ ...base, overflow: "visible" }}
+        style={{ ...base, left: 0, top: 0, width: "100%", height: "100%", transform: undefined, overflow: "visible", pointerEvents: "none", cursor: "move" }}
       >
         <defs>
           {ms && markerDef(sId, ms, el.stroke, true)}
@@ -332,6 +334,7 @@ export function ElementView({
           strokeWidth={10}
           style={{ pointerEvents: "stroke" as unknown as CSSProperties["pointerEvents"] }}
           onMouseDown={onMouseDown}
+          onContextMenu={onContextMenu}
         />
         <line
           x1={el.x1}

@@ -19,7 +19,7 @@ import { makeDraw } from "./lib/factory";
 
 export type ActiveTool = "select" | "brush" | "pencil" | "eraser";
 
-const PADDING = 40;
+const PADDING = 72;
 
 interface DragRef {
   current: {
@@ -27,7 +27,7 @@ interface DragRef {
     ids: string[];
     startPositions: Map<
       string,
-      { x: number; y: number; w: number; h: number; rotation: number }
+      { x: number; y: number; w: number; h: number; rotation: number; x1?: number; y1?: number; x2?: number; y2?: number }
     >;
     startMouse: { x: number; y: number };
   } | null;
@@ -45,7 +45,7 @@ export function Canvas({
   zoomMode,
   lockAspect,
   activeTool = "select",
-  drawColor = "#1e293b",
+  drawColor = "#2b2926",
   drawSize = 6,
   onScaleChange,
 }: {
@@ -74,6 +74,7 @@ export function Canvas({
     slides: Slide[];
     currentSlideId: string;
     originalText: string;
+    originalRect: { x: number; y: number; w: number; h: number };
   } | null>(null);
   const [snapGuides, setSnapGuides] = useState<Guide[]>([]);
   const [rubberBand, setRubberBand] = useState<RubberBand | null>(null);
@@ -151,7 +152,7 @@ export function Canvas({
 
       const startPositions = new Map<
         string,
-        { x: number; y: number; w: number; h: number; rotation: number }
+        { x: number; y: number; w: number; h: number; rotation: number; x1?: number; y1?: number; x2?: number; y2?: number }
       >();
       for (const id of currentSelected) {
         const elem = curSlide.elements.find((it) => it.id === id);
@@ -162,6 +163,10 @@ export function Canvas({
             w: elem.w,
             h: elem.h,
             rotation: elem.rotation,
+            x1: elem.type === "line" || elem.type === "arrow" ? elem.x1 : undefined,
+            y1: elem.type === "line" || elem.type === "arrow" ? elem.y1 : undefined,
+            x2: elem.type === "line" || elem.type === "arrow" ? elem.x2 : undefined,
+            y2: elem.type === "line" || elem.type === "arrow" ? elem.y2 : undefined,
           });
         }
       }
@@ -206,7 +211,21 @@ export function Canvas({
         for (const id of dragRef.current.ids) {
           const start = dragRef.current.startPositions.get(id);
           if (start) {
-            updates.push({ id, patch: { x: start.x + dx, y: start.y + dy } });
+            if (start.x1 != null && start.y1 != null && start.x2 != null && start.y2 != null) {
+              updates.push({
+                id,
+                patch: {
+                  x: start.x + dx,
+                  y: start.y + dy,
+                  x1: start.x1 + dx,
+                  y1: start.y1 + dy,
+                  x2: start.x2 + dx,
+                  y2: start.y2 + dy,
+                },
+              });
+            } else {
+              updates.push({ id, patch: { x: start.x + dx, y: start.y + dy } });
+            }
           }
         }
         useEditorStore.getState().transientUpdate(updates);
@@ -325,6 +344,7 @@ export function Canvas({
       slides: structuredClone(store.slides),
       currentSlideId: store.currentSlideId,
       originalText: el.text,
+      originalRect: { x: el.x, y: el.y, w: el.w, h: el.h },
     };
     setEditingId(el.id);
   }, [slideLocked]);
@@ -334,20 +354,32 @@ export function Canvas({
     useEditorStore.getState().transientUpdate([{ id, patch: { text } }]);
   }, [slideLocked]);
 
+  const handleTextResizeHeight = useCallback((id: string, height: number) => {
+    if (slideLocked) return;
+    useEditorStore.getState().transientUpdate([{ id, patch: { h: height } }]);
+  }, [slideLocked]);
+
   const handleTextCommit = useCallback(() => {
     const store = useEditorStore.getState();
     const snap = editSnapRef.current;
     if (editingId && snap) {
       const el = store.currentSlide()?.elements.find((e) => e.id === editingId);
-      // Chỉ ghi history nếu chữ thực sự đổi; dùng snapshot chụp trước khi sửa.
-      if (el && el.type === "text" && el.text !== snap.originalText) {
+      // Chỉ ghi history nếu nội dung hoặc kích thước thật sự đổi.
+      if (
+        el &&
+        el.type === "text" &&
+        (el.text !== snap.originalText ||
+          el.x !== snap.originalRect.x ||
+          el.y !== snap.originalRect.y ||
+          el.w !== snap.originalRect.w ||
+          el.h !== snap.originalRect.h)
+      ) {
         store.pushSnapshot({ slides: snap.slides, currentSlideId: snap.currentSlideId });
       }
     }
     editSnapRef.current = null;
     setEditingId(null);
   }, [editingId]);
-
   const openCtxMenu = useCallback(
     (e: React.MouseEvent, el: SlideElement | null) => {
       e.preventDefault();
@@ -366,6 +398,9 @@ export function Canvas({
     switch (action) {
       case "copy":
         store.copySelected();
+        break;
+      case "cut":
+        store.cutSelected();
         break;
       case "duplicate":
         if (ids.length) store.duplicateElements(ids);
@@ -407,18 +442,18 @@ export function Canvas({
   return (
     <div
       ref={areaRef}
-      className="min-h-0 flex-1 overflow-auto"
+      className="scrollbar-none min-h-0 flex-1 overflow-auto"
       style={{
-        background: "#edeff2",
-        backgroundImage: "radial-gradient(circle, #d7dbe0 1px, transparent 1px)",
+        background: "#f5f1ec",
+        backgroundImage: "radial-gradient(circle, rgba(216,209,201,0.78) 1px, transparent 1px)",
         backgroundSize: "20px 20px",
       }}
     >
       {/* Bọc canvas: căn giữa khi vừa khung, chỉ cuộn từ mép khi phóng to tràn khung. */}
-      <div className="flex w-max min-w-full min-h-full items-center justify-center p-[40px]">
+      <div className="flex w-max min-w-full min-h-full items-center justify-center px-[72px] py-[72px]">
       <div
         style={{ width: CANVAS_W * scale, height: CANVAS_H * scale }}
-        className="shrink-0 overflow-hidden rounded-[6px] shadow-[0_10px_34px_rgba(15,23,42,0.14)]"
+        className="shrink-0 overflow-hidden rounded-[12px] shadow-[0_18px_52px_rgba(43,41,38,0.16),0_3px_12px_rgba(43,41,38,0.10)]"
       >
         <div
           ref={canvasInnerRef}
@@ -440,7 +475,6 @@ export function Canvas({
             <ElementView
               key={el.id}
               el={el}
-              selected={selectedIds.includes(el.id)}
               hideText={editingId === el.id}
               onMouseDown={(e) => handleElementMouseDown(e, el)}
               onDoubleClick={() => handleDoubleClick(el)}
@@ -452,6 +486,7 @@ export function Canvas({
             <InlineTextEditor
               el={editingEl}
               onChange={(text) => handleTextChange(editingEl.id, text)}
+              onResizeHeight={(height) => handleTextResizeHeight(editingEl.id, height)}
               onCommit={handleTextCommit}
             />
           )}
@@ -470,9 +505,9 @@ export function Canvas({
             >
               {snapGuides.map((g, i) =>
                 g.type === "x" ? (
-                  <line key={i} x1={g.pos} y1={0} x2={g.pos} y2={CANVAS_H} stroke="#f43f5e" strokeWidth="1" strokeDasharray="4 2" />
+                  <line key={i} x1={g.pos} y1={0} x2={g.pos} y2={CANVAS_H} stroke="#d97757" strokeWidth="1" strokeDasharray="4 2" />
                 ) : (
-                  <line key={i} x1={0} y1={g.pos} x2={CANVAS_W} y2={g.pos} stroke="#f43f5e" strokeWidth="1" strokeDasharray="4 2" />
+                  <line key={i} x1={0} y1={g.pos} x2={CANVAS_W} y2={g.pos} stroke="#d97757" strokeWidth="1" strokeDasharray="4 2" />
                 )
               )}
             </svg>
@@ -486,8 +521,8 @@ export function Canvas({
                 top: Math.min(rubberBand.sy, rubberBand.ey),
                 width: Math.abs(rubberBand.ex - rubberBand.sx),
                 height: Math.abs(rubberBand.ey - rubberBand.sy),
-                border: "1.5px dashed #3b82f6",
-                background: "rgba(59,130,246,0.07)",
+                border: "1.5px dashed #d97757",
+                background: "rgba(217,119,87,0.10)",
                 pointerEvents: "none",
                 zIndex: 10001,
               }}
@@ -515,7 +550,7 @@ export function Canvas({
               className="absolute inset-0 z-[30000] flex items-center justify-center bg-white/35 backdrop-blur-[1px]"
               style={{ width: CANVAS_W, height: CANVAS_H }}
             >
-              <span className="size-11 animate-spin rounded-full border-[5px] border-[#8200db] border-t-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.55)]" />
+              <span className="size-11 animate-spin rounded-full border-[5px] border-[#d97757] border-t-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.55)]" />
             </div>
           )}
         </div>

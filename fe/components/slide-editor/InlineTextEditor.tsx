@@ -7,14 +7,17 @@
 
 import { useLayoutEffect, useRef } from "react";
 import type { TextElement } from "./types";
+import { textBoxMinHeight } from "./lib/text-box";
 
 export function InlineTextEditor({
   el,
   onChange,
+  onResizeHeight,
   onCommit,
 }: {
   el: TextElement;
   onChange: (text: string) => void;
+  onResizeHeight: (height: number) => void;
   onCommit: () => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -25,8 +28,12 @@ export function InlineTextEditor({
     const ta = ref.current;
     if (!ta) return;
     ta.style.height = "auto";
-    ta.style.height = `${ta.scrollHeight}px`;
-  }, [el.text, el.fontSize, el.w, el.lineHeight, el.fontFamily, el.letterSpacing]);
+    const textHeight = Math.ceil(ta.scrollHeight);
+    ta.style.height = `${textHeight}px`;
+
+    const nextBoxHeight = textBoxMinHeight(el, el.w);
+    if (nextBoxHeight > el.h + 1) onResizeHeight(nextBoxHeight);
+  }, [el, onResizeHeight]);
 
   return (
     <div
@@ -44,9 +51,9 @@ export function InlineTextEditor({
         alignItems: isList ? "flex-start" : "center",
         justifyContent:
           el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start",
-        border: "2px solid #3b82f6",
+        border: "2px solid #d97757",
         boxSizing: "border-box",
-        overflow: "hidden",
+        overflow: "visible",
       }}
     >
       <textarea
@@ -67,7 +74,7 @@ export function InlineTextEditor({
           border: "none",
           outline: "none",
           background: "transparent",
-          padding: 0,
+          padding: "4px 0",
           margin: 0,
           fontSize: el.fontSize,
           fontWeight: el.bold ? 700 : 400,
@@ -77,7 +84,8 @@ export function InlineTextEditor({
           textAlign: el.align,
           lineHeight: el.lineHeight ?? 1.2,
           letterSpacing: el.letterSpacing != null ? `${el.letterSpacing}px` : undefined,
-          overflow: "hidden",
+          overflow: "visible",
+          boxSizing: "border-box",
         }}
       />
     </div>

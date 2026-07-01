@@ -47,8 +47,8 @@ export function parseGrad(v: string): GradConfig {
     type: "linear",
     angle: 135,
     stops: [
-      { color: "#7c3aed", pos: 0 },
-      { color: "#3b82f6", pos: 100 },
+      { color: "#d97757", pos: 0 },
+      { color: "#f6eadf", pos: 100 },
     ],
   };
 }
