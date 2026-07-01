@@ -42,7 +42,6 @@ export function SlideEditor({
   const [drawColor, setDrawColor] = useState("#2b2926");
   const [drawSize, setDrawSize] = useState(6);
   const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>("properties");
-  const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [showTray, setShowTray] = useState(true);
   const [currentScale, setCurrentScale] = useState(1);
@@ -236,23 +235,19 @@ export function SlideEditor({
     >
       <TopBar
         pageSidebarCollapsed={pageSidebarCollapsed}
-        showLeftPanel={showLeftPanel}
         showRightPanel={showRightPanel}
-        onTogglePageSidebar={onTogglePageSidebar ?? (() => setShowLeftPanel((value) => !value))}
-        onToggleLeftPanel={() => setShowLeftPanel((value) => !value)}
+        onTogglePageSidebar={onTogglePageSidebar ?? (() => undefined)}
         onToggleRightPanel={() => setShowRightPanel((value) => !value)}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        {showLeftPanel && (
-          <LeftPanel
-            activeTool={activeTool}
-            onToolChange={setActiveTool}
-            drawColor={drawColor}
-            onDrawColorChange={setDrawColor}
-            drawSize={drawSize}
-            onDrawSizeChange={setDrawSize}
-          />
-        )}
+        <LeftPanel
+          activeTool={activeTool}
+          onToolChange={setActiveTool}
+          drawColor={drawColor}
+          onDrawColorChange={setDrawColor}
+          drawSize={drawSize}
+          onDrawSizeChange={setDrawSize}
+        />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div className="relative min-h-0 flex-1 overflow-hidden">
             <ContextualToolbar

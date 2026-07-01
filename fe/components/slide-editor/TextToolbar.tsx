@@ -39,16 +39,16 @@ const ALIGNS: ["left" | "center" | "right", string][] = [
 ];
 
 const selCls =
-  "h-8 max-w-[132px] rounded-full border border-[#e8e2d9] bg-white px-3 text-[13px] text-[#2b2926] focus:border-[#d97757] focus:outline-none";
+  "h-8 max-w-[132px] rounded-[10px] border border-[#e8e2d9] bg-white px-3 text-[13px] text-[#2b2926] focus:border-[#d97757] focus:outline-none";
 const menuItemCls =
-  "flex w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-left text-xs text-[#2b2926] hover:bg-[#f7f3ee]";
+  "flex w-full items-center gap-1.5 rounded-[10px] px-2.5 py-1 text-left text-xs text-[#2b2926] hover:bg-[#f7f3ee]";
 
 // Nút − [số] + cho cỡ chữ (kiểu Canva).
 function FontSizeInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const set = (v: number) => onChange(Math.max(6, Math.min(800, v)));
   const rounded = Math.round(value);
   return (
-    <div className="flex h-8 shrink-0 items-center overflow-hidden rounded-full border border-[#e8e2d9] bg-white">
+    <div className="flex h-8 shrink-0 items-center overflow-hidden rounded-[10px] border border-[#e8e2d9] bg-white">
       <button
         type="button"
         onClick={() => set(rounded - 1)}
@@ -122,9 +122,9 @@ function OpacityPanel({ value, onChange }: { value: number; onChange: (v: number
 
 function TextColorIcon({ color }: { color: string }) {
   return (
-    <span className="flex h-[18px] w-[18px] flex-col items-center justify-center text-[14px] font-bold leading-none text-[#2b2926]">
-      A
-      <span className="mt-[1px] h-[3px] w-[14px] rounded-full" style={{ background: color }} />
+    <span className="flex h-6 w-6 flex-col items-center justify-center leading-none text-[#2b2926]">
+      <span className="block h-[15px] text-center text-[15px] font-bold leading-[15px]">A</span>
+      <span className="mt-1 h-[3px] w-[15px] rounded-full" style={{ background: color }} />
     </span>
   );
 }
@@ -170,7 +170,7 @@ export function TextToolbar({ el, upd, onOpenProperties }: { el: TextElement; up
         allowTransparent={false}
         size="sm"
         triggerContent={<TextColorIcon color={el.color} />}
-        triggerClassName="!h-8 !w-8 !border-0 !bg-transparent hover:!bg-[#f7f3ee] !shadow-none"
+        triggerClassName="!flex !h-8 !w-8 !items-center !justify-center !rounded-[10px] !border-0 !bg-transparent hover:!bg-[#f7f3ee] !shadow-none"
         triggerStyle={{ background: "transparent" }}
       />
 

@@ -19,7 +19,7 @@ export function ToolBtn({
     <button
       onClick={onClick}
       title={title}
-      className={`flex h-8 min-w-8 items-center justify-center rounded-full px-1.5 text-[13px] transition-colors ${
+      className={`flex h-8 min-w-8 items-center justify-center rounded-[10px] px-1.5 text-[13px] transition-colors ${
         active ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee]"
       }`}
     >
@@ -34,7 +34,7 @@ export function Sep() {
 }
 
 const numCls =
-  "w-12 rounded-full border border-[#e8e2d9] bg-[#fbfaf8] px-1 py-0.5 text-xs text-[#2b2926] focus:border-[#d97757] focus:outline-none";
+  "w-12 rounded-[10px] border border-[#e8e2d9] bg-[#fbfaf8] px-1 py-0.5 text-xs text-[#2b2926] focus:border-[#d97757] focus:outline-none";
 const labelCls = "flex items-center gap-1 text-[10px] text-[#8a8178] shrink-0";
 
 // Ô số có nhãn dùng chung cho toolbar (cỡ, X/Y/W/H, giãn dòng…).

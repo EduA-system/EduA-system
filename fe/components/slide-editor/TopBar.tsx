@@ -6,10 +6,8 @@ import { isSlideLockedForGeneration, type Slide } from "./types";
 
 interface TopBarProps {
   pageSidebarCollapsed: boolean;
-  showLeftPanel: boolean;
   showRightPanel: boolean;
   onTogglePageSidebar: () => void;
-  onToggleLeftPanel: () => void;
   onToggleRightPanel: () => void;
 }
 
@@ -76,16 +74,6 @@ function SidebarRightIcon() {
       <rect x="2.2" y="2.4" width="11.6" height="11.2" rx="2" />
       <path d="M10 2.4v11.2" />
       <path d="M11.9 7.9h.01" />
-    </svg>
-  );
-}
-function EditorToolsIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2.5" y="3" width="11" height="10" rx="2" />
-      <path d="M5.8 6h4.8" />
-      <path d="M5.8 8h3.2" />
-      <path d="M5.8 10h4.2" />
     </svg>
   );
 }
@@ -219,10 +207,8 @@ function deckTitle(slide: Slide | undefined) {
 
 export function TopBar({
   pageSidebarCollapsed,
-  showLeftPanel,
   showRightPanel,
   onTogglePageSidebar,
-  onToggleLeftPanel,
   onToggleRightPanel,
 }: TopBarProps) {
   const undo = useEditorStore((s) => s.undo);
@@ -286,9 +272,6 @@ export function TopBar({
 
       <IconButton onClick={onTogglePageSidebar} active={!pageSidebarCollapsed} title="Toggle page sidebar">
         <SidebarLeftIcon />
-      </IconButton>
-      <IconButton onClick={onToggleLeftPanel} active={showLeftPanel} title="Toggle editor tools">
-        <EditorToolsIcon />
       </IconButton>
 
       <div className="flex-1" />
