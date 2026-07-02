@@ -1,5 +1,7 @@
 package com.edua.beeduasystem.presentation.advice;
 
+import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
+import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,5 +32,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(LessonPlanGenerationException.class)
     public ResponseEntity<ErrorResponse> handleLessonPlanGeneration(LessonPlanGenerationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidToken(InvalidTokenException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmailNotAllowedException.class)
+    public ResponseEntity<ErrorResponse> handleEmailNotAllowed(EmailNotAllowedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(ex.getMessage()));
     }
 }

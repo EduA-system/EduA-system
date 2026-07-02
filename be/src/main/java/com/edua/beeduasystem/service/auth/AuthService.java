@@ -1,0 +1,167 @@
+package com.edua.beeduasystem.service.auth;
+
+import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
+import com.edua.beeduasystem.domain.exception.InvalidTokenException;
+import com.edua.beeduasystem.domain.model.auth.AppUser;
+import com.edua.beeduasystem.domain.model.auth.AuthTokens;
+import com.edua.beeduasystem.domain.model.auth.GoogleIdentity;
+import com.edua.beeduasystem.domain.model.auth.RefreshToken;
+import com.edua.beeduasystem.domain.model.auth.UserStatus;
+import com.edua.beeduasystem.repository.gateways.GoogleIdentityVerifier;
+import com.edua.beeduasystem.repository.gateways.TokenService;
+import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.HexFormat;
+import java.util.UUID;
+
+/**
+ * Use-case xác thực: login Google, refresh (rotation), logout, currentUser.
+ * Không lưu mật khẩu (SEC-01); JWT tự phát, refresh 24h idle (SEC-03).
+ */
+@Service
+public class AuthService {
+
+    private final GoogleIdentityVerifier googleVerifier;
+    private final TokenService tokenService;
+    private final AppUserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final CurrentUserProvider currentUserProvider;
+    private final Duration refreshTtl;
+
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    public AuthService(GoogleIdentityVerifier googleVerifier,
+                       TokenService tokenService,
+                       AppUserRepository userRepository,
+                       RefreshTokenRepository refreshTokenRepository,
+                       CurrentUserProvider currentUserProvider,
+                       @Value("${app.auth.jwt.refresh-ttl:PT24H}") Duration refreshTtl) {
+        this.googleVerifier = googleVerifier;
+        this.tokenService = tokenService;
+        this.userRepository = userRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.currentUserProvider = currentUserProvider;
+        this.refreshTtl = refreshTtl;
+    }
+
+    public record LoginResult(AppUser user, AuthTokens tokens) {
+    }
+
+    /** Verify Google id_token + allowlist → lazy-activate user → phát access + refresh. */
+    @Transactional
+    public LoginResult loginWithGoogle(String idToken) {
+        GoogleIdentity identity = googleVerifier.verify(idToken);
+        if (!identity.emailVerified()) {
+            throw new InvalidTokenException("Google account email is not verified.");
+        }
+        String email = identity.email() == null ? null : identity.email().trim().toLowerCase();
+        AppUser user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EmailNotAllowedException("Email chưa được cấp quyền truy cập hệ thống."));
+        if (user.status() == UserStatus.DISABLED) {
+            throw new EmailNotAllowedException("Tài khoản đã bị khóa.");
+        }
+
+        Instant now = Instant.now();
+        AppUser activated = new AppUser(
+                user.id(),
+                user.email(),
+                user.googleSub() != null ? user.googleSub() : identity.subject(),
+                StringUtils.hasText(user.fullName()) ? user.fullName() : identity.fullName(),
+                user.role(),
+                user.subject(),
+                UserStatus.ACTIVE,
+                user.createdAt(),
+                now);
+        AppUser saved = userRepository.save(activated);
+
+        AuthTokens tokens = issueTokens(saved, now);
+        return new LoginResult(saved, tokens);
+    }
+
+    /** Rotation: revoke refresh cũ, phát access + refresh mới (sliding 24h). */
+    @Transactional
+    public AuthTokens refresh(String rawRefreshToken) {
+        if (!StringUtils.hasText(rawRefreshToken)) {
+            throw new InvalidTokenException("Missing refresh token.");
+        }
+        String hash = sha256Hex(rawRefreshToken);
+        RefreshToken stored = refreshTokenRepository.findByTokenHash(hash)
+                .orElseThrow(() -> new InvalidTokenException("Refresh token not found."));
+
+        Instant now = Instant.now();
+        if (stored.revoked()) {
+            // Dùng lại token đã revoke → nghi lộ, revoke toàn bộ token của user.
+            refreshTokenRepository.revokeAllByUserId(stored.userId());
+            throw new InvalidTokenException("Refresh token reuse detected.");
+        }
+        if (!stored.isUsable(now)) {
+            throw new InvalidTokenException("Refresh token expired.");
+        }
+
+        refreshTokenRepository.revoke(stored.id());
+
+        AppUser user = userRepository.findById(stored.userId())
+                .orElseThrow(() -> new InvalidTokenException("User not found."));
+        if (user.status() == UserStatus.DISABLED) {
+            throw new EmailNotAllowedException("Tài khoản đã bị khóa.");
+        }
+        return issueTokens(user, now);
+    }
+
+    /** Revoke refresh token hiện tại (idempotent). */
+    @Transactional
+    public void logout(String rawRefreshToken) {
+        if (!StringUtils.hasText(rawRefreshToken)) {
+            return;
+        }
+        refreshTokenRepository.findByTokenHash(sha256Hex(rawRefreshToken))
+                .ifPresent(rt -> refreshTokenRepository.revoke(rt.id()));
+    }
+
+    /** User của access token hiện tại (cho /me). */
+    @Transactional(readOnly = true)
+    public AppUser currentUser() {
+        UUID userId = currentUserProvider.requireUserId();
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidTokenException("User not found."));
+    }
+
+    private AuthTokens issueTokens(AppUser user, Instant now) {
+        String access = tokenService.issueAccessToken(user);
+        String rawRefresh = randomToken();
+        refreshTokenRepository.save(new RefreshToken(
+                UUID.randomUUID(),
+                user.id(),
+                sha256Hex(rawRefresh),
+                now.plus(refreshTtl),
+                false,
+                now));
+        return new AuthTokens(access, rawRefresh);
+    }
+
+    private String randomToken() {
+        byte[] bytes = new byte[32];
+        secureRandom.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private static String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception ex) {
+            throw new IllegalStateException("SHA-256 unavailable", ex);
+        }
+    }
+}

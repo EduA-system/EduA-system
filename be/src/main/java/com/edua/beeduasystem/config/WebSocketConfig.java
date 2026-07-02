@@ -1,7 +1,9 @@
 package com.edua.beeduasystem.config;
 
+import com.edua.beeduasystem.infrastructure.security.StompAuthChannelInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -23,10 +25,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private static final long[] HEARTBEAT = new long[]{10_000, 10_000};
 
+    private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
+
+    public WebSocketConfig(StompAuthChannelInterceptor stompAuthChannelInterceptor) {
+        this.stompAuthChannelInterceptor = stompAuthChannelInterceptor;
+    }
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("http://localhost:3000", "http://localhost:*");
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        // Verify JWT ở STOMP CONNECT (SEC-01/03) — chặn subscribe topic của người khác.
+        registration.interceptors(stompAuthChannelInterceptor);
     }
 
     @Override
