@@ -332,6 +332,9 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
               <MenuRow onClick={() => setOpenMenu("table")}>
                 <TableIcon /> Bảng
               </MenuRow>
+              <MenuRow onClick={() => setOpenMenu("formula")}>
+                <FormulaIcon /> Công thức
+              </MenuRow>
               <MenuRow onClick={() => setOpenMenu("link")}>
                 <LinkIcon /> Liên kết
               </MenuRow>
@@ -356,6 +359,19 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
               onPick={(rows, cols) => {
                 setOpenMenu(null);
                 chain().insertTable({ rows, cols, withHeaderRow: true }).run();
+              }}
+            />
+          </Popup>
+        ) : null}
+
+        {openMenu === "formula" ? (
+          <Popup align="right" widthClass="w-72">
+            <FormulaForm
+              onApply={(latex, display) => {
+                setOpenMenu(null);
+                if (!latex) return;
+                if (display) chain().insertBlockMath({ latex }).run();
+                else chain().insertInlineMath({ latex }).run();
               }}
             />
           </Popup>
@@ -619,6 +635,42 @@ function LinkForm({ initialUrl, onApply }: { initialUrl: string; onApply: (url: 
   );
 }
 
+function FormulaForm({ onApply }: { onApply: (latex: string, display: boolean) => void }) {
+  const [latex, setLatex] = useState("");
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        autoFocus
+        value={latex}
+        onChange={(event) => setLatex(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") onApply(latex.trim(), false);
+        }}
+        placeholder="vd: x^2 + y^2 = z^2"
+        className="h-8 w-full rounded-lg border border-[#e8e2d9] px-2 text-[13px] text-[#2b2926] outline-none focus:border-[#d97757]"
+      />
+      <div className="flex justify-end gap-1.5">
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onApply(latex.trim(), false)}
+          className="h-7 rounded-lg px-2.5 text-[12px] text-[#6b625a] transition hover:bg-[#f7f3ee]"
+        >
+          Chèn dạng dòng
+        </button>
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onApply(latex.trim(), true)}
+          className="h-7 rounded-lg bg-[#d97757] px-3 text-[12px] font-medium text-white transition hover:bg-[#c96545]"
+        >
+          Chèn dạng khối
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ImageForm({ onApply }: { onApply: (url: string) => void }) {
   const [url, setUrl] = useState("");
   return (
@@ -704,6 +756,7 @@ function IndentIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" f
 function OutdentIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M10 6h10M10 12h10M10 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M6 9l-3 3 3 3z" fill="currentColor" /></svg>; }
 function ClearFormatIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M6 5h12M9 5l-2 9M14 5l1 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M5 19h7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M16 15l5 5M21 15l-5 5" stroke="#d97757" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
 function TableIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><rect x="3.5" y="4.5" width="17" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.6" /><path d="M3.5 9.5h17M3.5 14.5h17M9 4.5v15M15 4.5v15" stroke="currentColor" strokeWidth="1.4" /></svg>; }
+function FormulaIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M18 4H6l5 8-5 8h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 function LinkIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7L11.5 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7L12.5 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
 function UnlinkIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M9 15l-1.5 1.5a3.5 3.5 0 01-5-5L4 10M15 9l1.5-1.5a3.5 3.5 0 015 5L20 14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M4 4l16 16" stroke="#d97757" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
 function ImageIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><rect x="3.5" y="5" width="17" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" /><circle cx="9" cy="10" r="1.6" stroke="currentColor" strokeWidth="1.4" /><path d="M5 17l4.5-4 3 2.5L16 11l4 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>; }

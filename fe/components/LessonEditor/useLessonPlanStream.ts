@@ -9,7 +9,7 @@ import {
   readLessonPlanSession,
 } from "@/services/lessonPlanService";
 import { connectLessonPlanStream, lessonPlanTopic } from "@/lib/ws/lesson-plan-client";
-import { activityHtml, lessonPlan5512ToHtml } from "./LessonEditor";
+import { activityHtml, lessonPlan5512ToHtml, lessonPlanErrorHtml } from "./LessonEditor";
 import { LP_STREAM_META } from "./pendingActivityNode";
 
 /** Thay block (node `pendingActivity` theo `order`) trong editor bằng HTML thật. */
@@ -46,6 +46,10 @@ function replacePendingBlock(editor: Editor, order: number, html: string) {
  */
 export function useLessonPlanStream(editor: Editor | null) {
   const startedRef = useRef(false);
+  // Đánh dấu khung (I/II/III-skeleton) đã từng về — dùng để quyết định có nên
+  // ghi đè toàn bộ tài liệu bằng thông báo lỗi hay không (khung về rồi thì giữ
+  // nguyên phần đã render, không phá dữ liệu GV có thể đã bắt đầu chỉnh sửa).
+  const frameReceivedRef = useRef(false);
 
   useEffect(() => {
     if (!editor || startedRef.current) return;
@@ -65,11 +69,22 @@ export function useLessonPlanStream(editor: Editor | null) {
       session,
     );
 
+    // Đặt true trong cleanup (unmount/điều hướng đi) TRƯỚC khi disconnect, để
+    // onClose không cố sửa một editor sắp/đã bị huỷ.
+    let cancelled = false;
+
+    const showErrorFallback = (message?: string) => {
+      if (frameReceivedRef.current || editor.isDestroyed) return;
+      editor.setEditable(true);
+      editor.commands.setContent(lessonPlanErrorHtml(session.display, message));
+    };
+
     const { disconnect } = connectLessonPlanStream({
       topic: lessonPlanTopic(session.sessionId),
       onEvent: (event) => {
         switch (event.type) {
           case "FRAME_READY": {
+            frameReceivedRef.current = true;
             const frame = event.frame;
             const skeleton =
               frame.activities && frame.activities.length > 0
@@ -99,6 +114,9 @@ export function useLessonPlanStream(editor: Editor | null) {
               activities: skeleton,
             });
             editor.commands.setContent(lessonPlan5512ToHtml(merged, { pendingOrders }));
+            // Mở khoá I/II ngay (đã về đầy đủ); III vẫn khoá theo từng hoạt động
+            // qua node `pendingActivity` cho tới khi ACTIVITY_READY/FAILED.
+            editor.setEditable(true);
             break;
           }
           case "ACTIVITY_READY": {
@@ -133,15 +151,22 @@ export function useLessonPlanStream(editor: Editor | null) {
           }
           case "ERROR": {
             console.error("← ERROR khi sinh giáo án:", event.message);
+            showErrorFallback(event.message);
             break;
           }
         }
       },
       onClose: () => {
         console.log("[lesson-edit] stream đóng.");
+        // Mất kết nối (onDisconnect/onStompError) mà chưa từng nhận FRAME_READY hay
+        // ERROR tường minh — coi như thất bại, mở khoá thay vì kẹt vĩnh viễn.
+        if (!cancelled) showErrorFallback();
       },
     });
 
-    return () => disconnect();
+    return () => {
+      cancelled = true;
+      disconnect();
+    };
   }, [editor]);
 }

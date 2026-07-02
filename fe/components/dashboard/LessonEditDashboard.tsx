@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useEditor } from "@tiptap/react";
 import { lessonPlan5512Mock } from "@/data/lessonPlan5512Mock";
+import { readLessonPlanSession } from "@/services/lessonPlanService";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
 import { EditorTools } from "../LessonEditor";
-import { LessonEditor, lessonPlan5512ToHtml } from "../LessonEditor";
-import { editorExtensions } from "../LessonEditor/editorConfig";
+import { LessonEditor, generatingLessonPlanSkeletonHtml, lessonPlan5512ToHtml } from "../LessonEditor";
+import { createEditorExtensions, type MathClickInfo } from "../LessonEditor/editorConfig";
+import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
 
@@ -15,9 +17,25 @@ export function LessonEditDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiCollapsed, setAiCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
+  // Đọc một lần lúc mount (lazy initializer) — tránh đọc lại sau khi
+  // `useLessonPlanStream` đã `clearLessonPlanSession()`, khiến `editable` bị tính lại.
+  const [pendingSession] = useState(() => readLessonPlanSession());
+  // Công thức AI sinh ra (hoặc chèn qua toolbar) là node atom — bấm vào sẽ mở
+  // popup này để sửa/xoá LaTeX thay vì phải xoá cả node rồi chèn lại từ đầu.
+  const [mathClick, setMathClick] = useState<MathClickInfo | null>(null);
+  // `extensions` PHẢI ổn định giữa các lần render — tạo lại mảng này mỗi render
+  // (vd gọi `createEditorExtensions(...)` trực tiếp trong `useEditor`) khiến
+  // Tiptap phát hiện thay đổi và đồng bộ lại editor mỗi lần re-render (kể cả
+  // những re-render không liên quan, như đổi lề trang hay bấm ra ngoài), có thể
+  // làm mất nội dung GV vừa sửa. `setMathClick` là setter ổn định nên tạo 1 lần
+  // là đủ, không cần đưa vào deps.
+  const [extensions] = useState(() => createEditorExtensions({ onMathClick: setMathClick }));
   const editor = useEditor({
-    extensions: editorExtensions,
-    content: lessonPlan5512ToHtml(lessonPlan5512Mock),
+    extensions,
+    content: pendingSession
+      ? generatingLessonPlanSkeletonHtml(pendingSession.display)
+      : lessonPlan5512ToHtml(lessonPlan5512Mock),
+    editable: !pendingSession,
     immediatelyRender: false,
     editorProps: {
       attributes: {
@@ -78,6 +96,10 @@ export function LessonEditDashboard() {
 
         <AssistantPanel collapsed={aiCollapsed} />
       </div>
+
+      {editor && mathClick ? (
+        <MathEditPopup editor={editor} info={mathClick} onClose={() => setMathClick(null)} />
+      ) : null}
     </main>
   );
 }

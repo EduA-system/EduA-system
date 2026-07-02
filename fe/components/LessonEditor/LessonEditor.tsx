@@ -7,6 +7,7 @@ import type {
   LessonPlan5512,
   Worksheet,
 } from "@/data/lessonPlan5512Mock";
+import type { LessonPlanDisplayMetadata } from "@/services/lessonPlanService";
 
 function escapeHtml(value: string | null | undefined) {
   if (!value) return "";
@@ -22,14 +23,23 @@ function mathAttribute(value: string) {
   return escapeHtml(value.trim());
 }
 
+/**
+ * AI đôi khi trả về markdown thô (`**đậm**`) lẫn trong nội dung — chuyển thành
+ * `<b>` thật để không hiển thị dấu `**` sống trong editor.
+ */
+function inlineMarkdownBold(value: string) {
+  return value.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+}
+
 function inlineRichText(value: string) {
-  return escapeHtml(value).replace(
+  const withMath = escapeHtml(value).replace(
     /\\\((.+?)\\\)|(?<!\$)\$([^$\n]+?)\$(?!\$)/g,
     (_match, parenLatex: string | undefined, dollarLatex: string | undefined) => {
       const latex = parenLatex ?? dollarLatex ?? "";
       return `<span data-type="inline-math" data-latex="${mathAttribute(latex)}"></span>`;
     },
   );
+  return inlineMarkdownBold(withMath);
 }
 
 function blockMathHtml(latex: string) {
@@ -233,6 +243,67 @@ export function pendingActivityHtml(activity: Activity5512) {
     ` data-name="${escapeHtml(activity.name)}"` +
     ` data-duration="${escapeHtml(activity.duration ?? "")}"></div>`
   );
+}
+
+/**
+ * Block tĩnh "⏳ Đang soạn…" dùng cho cả một phần (I/II/III) trong lúc chờ FRAME_READY.
+ * Khớp `parseHTML` của node `pendingSection` (xem `./pendingSectionNode`) — PHẢI dùng
+ * cấu trúc này thay vì HTML thô, vì Tiptap bóc bỏ mọi `<div>` không khớp node đã đăng ký.
+ */
+function pendingSectionHtml(label: string) {
+  return `<div data-pending-section data-label="${escapeHtml(label)}"></div>`;
+}
+
+/**
+ * Khung tài liệu hiển thị trong lúc chờ BE trả `FRAME_READY` — cả 3 phần đều là block
+ * khoá (editor bị `setEditable(false)` toàn bộ ở bước này, xem `LessonEditDashboard`).
+ */
+export function generatingLessonPlanSkeletonHtml(display?: LessonPlanDisplayMetadata) {
+  const title = display?.title ? `TÊN BÀI DẠY: ${display.title}` : "Đang tạo giáo án…";
+  const meta = display
+    ? `${escapeHtml(display.subject)} · ${escapeHtml(display.grade)} · ${escapeHtml(display.duration)}`
+    : "";
+
+  return `
+    <h1>${escapeHtml(title)}</h1>
+    ${meta ? `<p class="document-meta">${meta}</p>` : ""}
+
+    <section>
+      <h2>I. MỤC TIÊU</h2>
+      ${pendingSectionHtml("Mục tiêu")}
+    </section>
+
+    <section>
+      <h2>II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU</h2>
+      ${pendingSectionHtml("Thiết bị dạy học và học liệu")}
+    </section>
+
+    <section>
+      <h2>III. TIẾN TRÌNH DẠY HỌC</h2>
+      ${pendingSectionHtml("Tiến trình dạy học")}
+    </section>
+  `;
+}
+
+/**
+ * Khung lỗi khi sinh giáo án thất bại trước khi có `FRAME_READY` — mở khoá editor và
+ * để GV soạn thủ công thay vì kẹt vĩnh viễn ở trạng thái "đang soạn".
+ */
+export function lessonPlanErrorHtml(display?: LessonPlanDisplayMetadata, message?: string) {
+  const title = display?.title ? `TÊN BÀI DẠY: ${display.title}` : "";
+  const meta = display
+    ? `${escapeHtml(display.subject)} · ${escapeHtml(display.grade)} · ${escapeHtml(display.duration)}`
+    : "";
+  const note = message
+    ? `⚠️ Không tạo được giáo án tự động (${message}) — mời soạn thủ công bên dưới.`
+    : "⚠️ Không tạo được giáo án tự động — mời soạn thủ công bên dưới.";
+
+  return `
+    ${title ? `<h1>${escapeHtml(title)}</h1>` : ""}
+    ${meta ? `<p class="document-meta">${meta}</p>` : ""}
+    <p class="lp-failed">${escapeHtml(note)}</p>
+    <p></p>
+  `;
 }
 
 /**

@@ -10,36 +10,60 @@ import Mathematics from "@tiptap/extension-mathematics";
 import type { Extensions } from "@tiptap/react";
 import { ParagraphClass } from "./paragraphClassExtension";
 import { PendingActivity } from "./pendingActivityNode";
+import { PendingSection } from "./pendingSectionNode";
 
-// Cấu hình extension dùng chung cho cả editor (LessonEditor) và thanh công cụ
-// (EditorTools). StarterKit v3 đã gồm sẵn bold/italic/strike/underline/link,
-// heading, bullet/ordered list và undo-redo — nên không đăng ký lại các phần đó.
-export const editorExtensions: Extensions = [
-  StarterKit.configure({
-    heading: { levels: [1, 2, 3] },
-    link: {
-      openOnClick: false,
-      autolink: true,
-      HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
-    },
-  }),
-  // TextStyle + Color + FontFamily + FontSize (+ BackgroundColor, LineHeight).
-  TextStyleKit,
-  // Cho phép set màu highlight tuỳ ý (hiliteColor cũ).
-  Highlight.configure({ multicolor: true }),
-  TextAlign.configure({ types: ["heading", "paragraph"] }),
-  Subscript,
-  Superscript,
-  // Table + TableRow + TableHeader + TableCell.
-  TableKit.configure({ table: { resizable: true } }),
-  Image,
-  Mathematics.configure({
-    katexOptions: {
-      throwOnError: false,
-      strict: false,
-    },
-  }),
-  ParagraphClass,
-  // Block "đang soạn" (atom, khoá) cho luồng stream giáo án — fill xong thì thay bằng HTML thật.
-  PendingActivity,
-];
+/** Thông tin công thức được bấm vào — đủ để mở popup sửa tại đúng vị trí node. */
+export type MathClickInfo = { pos: number; latex: string; display: boolean };
+
+/**
+ * Cấu hình extension dùng chung cho cả editor (LessonEditor) và thanh công cụ
+ * (EditorTools). StarterKit v3 đã gồm sẵn bold/italic/strike/underline/link,
+ * heading, bullet/ordered list và undo-redo — nên không đăng ký lại các phần đó.
+ *
+ * Là factory (không phải hằng số) vì `Mathematics` cần callback `onMathClick`
+ * để mở popup sửa công thức — callback này gắn với state của component chứa
+ * editor (xem `LessonEditDashboard`), nên phải truyền vào lúc tạo extensions.
+ */
+export function createEditorExtensions(options: {
+  onMathClick?: (info: MathClickInfo) => void;
+} = {}): Extensions {
+  return [
+    StarterKit.configure({
+      heading: { levels: [1, 2, 3] },
+      link: {
+        openOnClick: false,
+        autolink: true,
+        HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
+      },
+    }),
+    // TextStyle + Color + FontFamily + FontSize (+ BackgroundColor, LineHeight).
+    TextStyleKit,
+    // Cho phép set màu highlight tuỳ ý (hiliteColor cũ).
+    Highlight.configure({ multicolor: true }),
+    TextAlign.configure({ types: ["heading", "paragraph"] }),
+    Subscript,
+    Superscript,
+    // Table + TableRow + TableHeader + TableCell.
+    TableKit.configure({ table: { resizable: true } }),
+    Image,
+    Mathematics.configure({
+      katexOptions: {
+        throwOnError: false,
+        strict: false,
+      },
+      inlineOptions: {
+        onClick: (node, pos) =>
+          options.onMathClick?.({ pos, latex: (node.attrs.latex as string) ?? "", display: false }),
+      },
+      blockOptions: {
+        onClick: (node, pos) =>
+          options.onMathClick?.({ pos, latex: (node.attrs.latex as string) ?? "", display: true }),
+      },
+    }),
+    ParagraphClass,
+    // Block "đang soạn" (atom, khoá) cho luồng stream giáo án — fill xong thì thay bằng HTML thật.
+    PendingActivity,
+    // Block "đang soạn" tĩnh cho cả một phần (I/II/III) trong lúc chờ FRAME_READY.
+    PendingSection,
+  ];
+}

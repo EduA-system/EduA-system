@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -49,11 +49,16 @@ npm run build
 # Backend from be/
 ./mvnw spring-boot:run
 ./mvnw test
+./mvnw test -Dtest=GenerateSlideOutlineUseCaseTest        # single test class
+./mvnw test -Dtest=GenerateSlideOutlineUseCaseTest#methodName  # single test method
 
 # Windows backend commands from be/
 mvnw.cmd spring-boot:run
 mvnw.cmd test
+mvnw.cmd test -Dtest=GenerateSlideOutlineUseCaseTest
 ```
+
+Backend test classes live under `be/src/test/java/com/edua/beeduasystem/` and are a mix of `*Test.java` and `*Tests.java` — match the sibling files in whatever package you're adding to.
 
 ## Frontend (`fe/`)
 
@@ -183,6 +188,8 @@ Important variables:
 - Cloudflare R2: `APP_R2_ENDPOINT`, `APP_R2_ACCESS_KEY_ID`, `APP_R2_SECRET_ACCESS_KEY`, `APP_R2_BUCKET`, `APP_R2_PUBLIC_URL`.
 
 `scripts/start.ps1` loads `.env`, checks ports 8080 and 3000, resolves cloud DB versus Docker PostgreSQL fallback, starts the backend, waits for `/api/health`, and then starts the frontend.
+
+A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io` (Swagger UI at `/swagger-ui/index.html`, health at `/api/health`) for trying live API responses without running the stack locally.
 
 ## CI, Hooks, and Validation
 
