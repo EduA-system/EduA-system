@@ -1,7 +1,7 @@
 package com.edua.beeduasystem.repository.gateways;
 
-import com.edua.beeduasystem.presentation.dto.lessonplan.Activity5512Dto;
-import com.edua.beeduasystem.presentation.dto.lessonplan.LessonPlan5512Dto;
+import com.edua.beeduasystem.domain.model.lessonplan.Activity5512;
+import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,10 +22,10 @@ import java.util.UUID;
 public interface LessonPlanStreamPort {
 
     /** Khung giáo án đã sinh xong (Bước 1 pipeline 5512). */
-    void publishFrameReady(String sessionId, LessonPlan5512Dto frame);
+    void publishFrameReady(String sessionId, LessonPlan5512 frame);
 
     /** Một hoạt động trong số 4 đã sinh xong thành công. */
-    void publishActivityReady(String sessionId, String activityId, Activity5512Dto activity);
+    void publishActivityReady(String sessionId, String activityId, Activity5512 activity);
 
     /** Một hoạt động sinh thất bại sau khi thử lại tối đa. */
     void publishActivityFailed(String sessionId, String activityId, List<String> reasons);

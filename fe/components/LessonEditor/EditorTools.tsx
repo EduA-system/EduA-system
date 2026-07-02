@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef, useState } from "react";
+import { useEditorState, type Editor } from "@tiptap/react";
 
 type DropdownOption<T extends string | number> = {
   label: string;
@@ -9,20 +9,27 @@ type DropdownOption<T extends string | number> = {
 };
 
 const TEXT_STYLES = [
-  { label: "Normal", value: "P" },
+  { label: "Normal text", value: "P" },
   { label: "Title", value: "H1" },
   { label: "Heading", value: "H2" },
   { label: "Subheading", value: "H3" },
 ] as const;
-const FONT_SIZES = [11, 12, 13, 14, 16, 18, 24];
-const FONT_FAMILIES = ["Calibri", "Arial", "Inter", "Times New Roman", "Georgia"] as const;
-const ALIGN_OPTIONS = [
-  { command: "justifyLeft", label: "Align left", icon: AlignLeftIcon },
-  { command: "justifyCenter", label: "Align center", icon: AlignCenterIcon },
-  { command: "justifyRight", label: "Align right", icon: AlignRightIcon },
-  { command: "justifyFull", label: "Justify", icon: AlignJustifyIcon },
-] as const;
+type BlockType = (typeof TEXT_STYLES)[number]["value"];
 
+const FONT_SIZES = [11, 12, 13, 14, 16, 18, 24];
+const FONT_FAMILIES = ["Arial", "Inter", "Times New Roman", "Georgia", "Verdana"] as const;
+const ALIGN_OPTIONS = [
+  { value: "left", label: "Align left", icon: AlignLeftIcon },
+  { value: "center", label: "Align center", icon: AlignCenterIcon },
+  { value: "right", label: "Align right", icon: AlignRightIcon },
+  { value: "justify", label: "Justify", icon: AlignJustifyIcon },
+] as const;
+type AlignValue = (typeof ALIGN_OPTIONS)[number]["value"];
+
+const TEXT_COLOR = "#b4472e";
+const HIGHLIGHT_COLOR = "#f6eadf";
+
+// Ký hiệu phục vụ giáo án KHTN (vật lí/hoá).
 const SPECIAL_SYMBOLS = [
   "×", "÷", "±", "∓", "√", "∛", "≈", "≠", "≤", "≥",
   "°", "′", "″", "∞", "∝", "∑", "∏", "∫", "∂", "∇",
@@ -30,200 +37,169 @@ const SPECIAL_SYMBOLS = [
   "τ", "φ", "ω", "Δ", "Ω", "→", "←", "↔", "⇌", "·",
 ];
 
-type TextStyleValue = (typeof TEXT_STYLES)[number]["value"];
-type FontFamilyValue = (typeof FONT_FAMILIES)[number];
-type AlignCommand = (typeof ALIGN_OPTIONS)[number]["command"];
+type ToolbarState = {
+  block: BlockType;
+  fontFamily: string;
+  fontSize: number | null;
+  align: AlignValue;
+  isBold: boolean;
+  isItalic: boolean;
+  isUnderline: boolean;
+  isStrike: boolean;
+  isSubscript: boolean;
+  isSuperscript: boolean;
+  isBulletList: boolean;
+  isOrderedList: boolean;
+  isLink: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  canSink: boolean;
+  canLift: boolean;
+};
 
-interface ToolbarState {
-  textStyle: TextStyleValue;
-  fontFamily: FontFamilyValue;
-  fontSize: number;
-  alignCommand: AlignCommand;
-  openMenu: string | null;
-  setOpenMenu: React.Dispatch<React.SetStateAction<string | null>>;
-  exec: (command: string, value?: string) => boolean;
-  insertHtml: (html: string) => void;
-  applyTextStyle: (value: TextStyleValue) => void;
-  applyFontFamily: (value: FontFamilyValue) => void;
-  applyFontSize: (value: number) => void;
-  applyAlign: (command: AlignCommand) => void;
-  applyLink: () => void;
-  applyImage: () => void;
+const DEFAULT_STATE: ToolbarState = {
+  block: "P",
+  fontFamily: "Arial",
+  fontSize: null,
+  align: "left",
+  isBold: false,
+  isItalic: false,
+  isUnderline: false,
+  isStrike: false,
+  isSubscript: false,
+  isSuperscript: false,
+  isBulletList: false,
+  isOrderedList: false,
+  isLink: false,
+  canUndo: false,
+  canRedo: false,
+  canSink: false,
+  canLift: false,
+};
+
+function readBlock(editor: Editor): BlockType {
+  if (editor.isActive("heading", { level: 1 })) return "H1";
+  if (editor.isActive("heading", { level: 2 })) return "H2";
+  if (editor.isActive("heading", { level: 3 })) return "H3";
+  return "P";
 }
 
-const ToolbarStateContext = createContext<ToolbarState | null>(null);
-
-function useToolbarState(): ToolbarState {
-  const ctx = useContext(ToolbarStateContext);
-  if (!ctx) {
-    throw new Error("EditorTopTools / EditorBottomTools phải được dùng bên trong <EditorToolbar>");
+function readAlign(editor: Editor): AlignValue {
+  for (const option of ALIGN_OPTIONS) {
+    if (editor.isActive({ textAlign: option.value })) return option.value;
   }
-  return ctx;
+  return "left";
 }
 
-/**
- * Toolbar 2 hàng theo Figma. Dùng compound-component: bọc header content bằng
- * provider rồi đặt <EditorTopTools /> (hàng trên, xen vào header bar) và
- * <EditorBottomTools /> (hàng dưới, dòng riêng). State dùng chung qua context.
- */
-export function EditorToolbar({ children }: { children: React.ReactNode }) {
-  const [textStyle, setTextStyle] = useState<TextStyleValue>("P");
-  const [fontFamily, setFontFamily] = useState<FontFamilyValue>("Calibri");
-  const [fontSize, setFontSize] = useState(14);
-  const [alignCommand, setAlignCommand] = useState<AlignCommand>("justifyLeft");
+function shallowEqual(a: ToolbarState, b: ToolbarState | null) {
+  if (!b) return false;
+  return (Object.keys(a) as (keyof ToolbarState)[]).every((key) => a[key] === b[key]);
+}
+
+export function EditorTools({ editor }: { editor: Editor | null }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const savedRangeRef = useRef<Range | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const exec = useCallback((command: string, value?: string) => {
-    restoreEditorSelection(savedRangeRef.current);
-    return document.execCommand(command, false, value ?? undefined);
-  }, []);
+  const state =
+    useEditorState({
+      editor,
+      selector: ({ editor: e }): ToolbarState => {
+        if (!e) return DEFAULT_STATE;
+        const rawSize = e.getAttributes("textStyle").fontSize as string | undefined;
+        return {
+          block: readBlock(e),
+          fontFamily: (e.getAttributes("textStyle").fontFamily as string | undefined) ?? "Arial",
+          fontSize: rawSize ? Number.parseInt(rawSize, 10) : null,
+          align: readAlign(e),
+          isBold: e.isActive("bold"),
+          isItalic: e.isActive("italic"),
+          isUnderline: e.isActive("underline"),
+          isStrike: e.isActive("strike"),
+          isSubscript: e.isActive("subscript"),
+          isSuperscript: e.isActive("superscript"),
+          isBulletList: e.isActive("bulletList"),
+          isOrderedList: e.isActive("orderedList"),
+          isLink: e.isActive("link"),
+          canUndo: e.can().undo(),
+          canRedo: e.can().redo(),
+          canSink: e.can().sinkListItem("listItem"),
+          canLift: e.can().liftListItem("listItem"),
+        };
+      },
+      equalityFn: shallowEqual,
+    }) ?? DEFAULT_STATE;
 
-  const insertHtml = useCallback((html: string) => {
-    if (exec("insertHTML", html)) return;
-    insertHtmlAtSelection(html, savedRangeRef.current);
-  }, [exec]);
-
-  const applyTextStyle = useCallback(
-    (next: TextStyleValue) => {
-      setTextStyle(next);
-      setOpenMenu(null);
-      exec("formatBlock", next);
-    },
-    [exec],
-  );
-
-  const applyFontFamily = useCallback(
-    (next: FontFamilyValue) => {
-      setFontFamily(next);
-      setOpenMenu(null);
-      exec("fontName", next);
-    },
-    [exec],
-  );
-
-  const applyFontSize = useCallback(
-    (next: number) => {
-      setFontSize(next);
-      setOpenMenu(null);
-      // execCommand("fontSize", ...) chỉ nhận 1-7, nên bọc selection bằng font
-      // size 7 rồi thay bằng style pixel — kỹ thuật chuẩn để set size theo px.
-      document.execCommand("fontSize", false, "7");
-      document.querySelectorAll('font[size="7"]').forEach((node) => {
-        const el = node as HTMLElement;
-        el.removeAttribute("size");
-        el.style.fontSize = `${next}px`;
-      });
-    },
-    [],
-  );
-
-  const applyAlign = useCallback(
-    (command: AlignCommand) => {
-      setAlignCommand(command);
-      setOpenMenu(null);
-      exec(command);
-    },
-    [exec],
-  );
-
-  const applyLink = useCallback(() => {
-    const url = window.prompt("Nhập đường dẫn (URL):");
-    if (url) exec("createLink", url);
-  }, [exec]);
-
-  const applyImage = useCallback(() => {
-    const url = window.prompt("Nhập đường dẫn ảnh (URL):");
-    if (url) exec("insertImage", url);
-  }, [exec]);
-
-
-  // Đóng menu khi click ngoài hoặc nhấn Escape.
+  // Đóng mọi menu/popup khi click ra ngoài thanh công cụ.
   useEffect(() => {
     if (!openMenu) return;
-
-    const handlePointer = (event: MouseEvent) => {
-      const target = event.target as Element | null;
-      if (target && (target.closest("[data-toolbar-trigger]") || target.closest("[data-toolbar-menu]"))) {
-        return;
-      }
-      setOpenMenu(null);
+    const handle = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setOpenMenu(null);
     };
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenMenu(null);
-    };
-
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleKey);
-    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
   }, [openMenu]);
 
-  useEffect(() => {
-    const saveSelection = () => {
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
+  if (!editor) {
+    return <div className="flex min-w-0 items-center gap-1.5" />;
+  }
 
-      const range = selection.getRangeAt(0);
-      if (isRangeInsideLessonEditor(range)) {
-        savedRangeRef.current = range.cloneRange();
-      }
-    };
+  const chain = () => editor.chain().focus();
 
-    document.addEventListener("selectionchange", saveSelection);
-    document.addEventListener("keyup", saveSelection);
-    document.addEventListener("mouseup", saveSelection);
-    return () => {
-      document.removeEventListener("selectionchange", saveSelection);
-      document.removeEventListener("keyup", saveSelection);
-      document.removeEventListener("mouseup", saveSelection);
-    };
-  }, []);
-
-  const value: ToolbarState = {
-    textStyle,
-    fontFamily,
-    fontSize,
-    alignCommand,
-    openMenu,
-    setOpenMenu,
-    exec,
-    insertHtml,
-    applyTextStyle,
-    applyFontFamily,
-    applyFontSize,
-    applyAlign,
-    applyLink,
-    applyImage,
+  const applyTextStyle = (next: BlockType) => {
+    setOpenMenu(null);
+    if (next === "P") chain().setParagraph().run();
+    else chain().setHeading({ level: Number(next[1]) as 1 | 2 | 3 }).run();
   };
 
-  return <ToolbarStateContext.Provider value={value}>{children}</ToolbarStateContext.Provider>;
-}
+  const applyFontFamily = (next: string) => {
+    setOpenMenu(null);
+    chain().setFontFamily(next).run();
+  };
 
-/** Hàng trên: Undo/Redo | Font family ▾ Font size ▾ | Text color, Highlight, Link */
-export function EditorTopTools() {
-  const state = useToolbarState();
-  const { openMenu, setOpenMenu, fontFamily, fontSize, exec, applyFontFamily, applyFontSize, applyLink } = state;
+  const applyFontSize = (next: number) => {
+    setOpenMenu(null);
+    chain().setFontSize(`${next}px`).run();
+  };
+
+  const applyAlign = (value: AlignValue) => {
+    setOpenMenu(null);
+    chain().setTextAlign(value).run();
+  };
+
+  const insertSymbol = (symbol: string) => {
+    chain().insertContent(symbol).run();
+  };
+
+  const activeAlign = ALIGN_OPTIONS.find((option) => option.value === state.align) ?? ALIGN_OPTIONS[0];
+  const ActiveAlignIcon = activeAlign.icon;
 
   return (
-    <div className="flex items-center gap-1.5">
-      <ToolButton onClick={() => exec("undo")} label="Undo">
+    <div ref={containerRef} className="flex min-w-0 items-center gap-1.5">
+      <ToolButton onClick={() => chain().undo().run()} label="Hoàn tác" disabled={!state.canUndo}>
         <UndoIcon />
       </ToolButton>
-      <ToolButton onClick={() => exec("redo")} label="Redo">
+      <ToolButton onClick={() => chain().redo().run()} label="Làm lại" disabled={!state.canRedo}>
         <RedoIcon />
       </ToolButton>
       <Divider />
+      <TextDropdown
+        label="Text style"
+        menuId="style"
+        openMenu={openMenu}
+        setOpenMenu={setOpenMenu}
+        value={state.block}
+        options={[...TEXT_STYLES]}
+        widthClass="w-[116px] min-w-[72px] shrink"
+        onSelect={applyTextStyle}
+      />
       <TextDropdown
         label="Font family"
         menuId="font"
         openMenu={openMenu}
         setOpenMenu={setOpenMenu}
-        value={fontFamily}
+        value={state.fontFamily}
         options={FONT_FAMILIES.map((font) => ({ label: font, value: font }))}
-        widthClass="w-[120px] min-w-[78px] shrink"
+        widthClass="w-[150px] min-w-[84px] shrink"
         onSelect={applyFontFamily}
       />
       <TextDropdown
@@ -231,85 +207,45 @@ export function EditorTopTools() {
         menuId="size"
         openMenu={openMenu}
         setOpenMenu={setOpenMenu}
-        value={fontSize}
+        value={state.fontSize ?? 0}
+        placeholder="16"
         options={FONT_SIZES.map((size) => ({ label: String(size), value: size }))}
-        widthClass="w-[56px] shrink-0"
+        widthClass="w-[60px] shrink-0"
         onSelect={applyFontSize}
       />
       <Divider />
-      <ToolButton onClick={() => exec("foreColor", "#2b2926")} label="Text color">
-        <TextColorIcon />
-      </ToolButton>
-      <ToolButton onClick={() => exec("hiliteColor", "#f6eadf")} label="Highlight">
-        <MarkerIcon />
-      </ToolButton>
-      <ToolButton onClick={() => exec("removeFormat")} label="Clear formatting">
-        <ClearFormatIcon />
-      </ToolButton>
-      <ToolButton onClick={applyLink} label="Insert link">
-        <LinkIcon />
-      </ToolButton>
-    </div>
-  );
-}
-
-/** Hàng dưới: Paragraph ▾ | B I U S | Align ▾ | Bullets, Numbered, Indent | x² x₂ | Σ Table Image */
-export function EditorBottomTools() {
-  const state = useToolbarState();
-  const {
-    textStyle,
-    alignCommand,
-    openMenu,
-    setOpenMenu,
-    exec,
-    insertHtml,
-    applyTextStyle,
-    applyAlign,
-    applyImage,
-  } = state;
-
-  const activeAlign = ALIGN_OPTIONS.find((option) => option.command === alignCommand) ?? ALIGN_OPTIONS[0];
-  const ActiveAlignIcon = activeAlign.icon;
-  const alignTriggerRef = useRef<HTMLButtonElement>(null);
-  const tableTriggerRef = useRef<HTMLButtonElement>(null);
-  const mathTriggerRef = useRef<HTMLButtonElement>(null);
-
-  return (
-    <div className="flex items-center gap-1.5">
-      <TextDropdown
-        label="Paragraph style"
-        menuId="style"
-        openMenu={openMenu}
-        setOpenMenu={setOpenMenu}
-        value={textStyle}
-        options={[...TEXT_STYLES]}
-        widthClass="w-[104px] min-w-[72px] shrink"
-        onSelect={applyTextStyle}
-      />
-      <Divider />
-      <ToolButton onClick={() => exec("bold")} label="Bold" strong>
+      <ToolButton onClick={() => chain().toggleBold().run()} label="Đậm" active={state.isBold} strong>
         B
       </ToolButton>
-      <ToolButton onClick={() => exec("italic")} label="Italic">
+      <ToolButton onClick={() => chain().toggleItalic().run()} label="Nghiêng" active={state.isItalic}>
         <ItalicIcon />
       </ToolButton>
-      <ToolButton onClick={() => exec("underline")} label="Underline">
+      <ToolButton onClick={() => chain().toggleUnderline().run()} label="Gạch chân" active={state.isUnderline}>
         <UnderlineIcon />
       </ToolButton>
-      <ToolButton onClick={() => exec("strikeThrough")} label="Strikethrough">
-        <StrikethroughIcon />
-      </ToolButton>
+      <span className="hidden items-center gap-1.5 @min-[1180px]:flex">
+        <Divider />
+        <ToolButton onClick={() => chain().setColor(TEXT_COLOR).run()} label="Màu chữ">
+          <TextColorIcon />
+        </ToolButton>
+        <ToolButton
+          onClick={() => chain().toggleHighlight({ color: HIGHLIGHT_COLOR }).run()}
+          label="Đánh dấu"
+        >
+          <MarkerIcon />
+        </ToolButton>
+      </span>
       <Divider />
-      {/* Align: popover NGANG (list ngang xuống) theo yêu cầu */}
-      <div className="relative flex shrink-0 items-center justify-center">
+      <ToolButton onClick={() => chain().toggleBulletList().run()} label="Danh sách dấu đầu dòng" active={state.isBulletList}>
+        <BulletIcon />
+      </ToolButton>
+      <div className="relative hidden shrink-0 items-center justify-center @min-[1060px]:flex">
         <button
-          ref={alignTriggerRef}
           type="button"
-          data-toolbar-trigger
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => setOpenMenu((current) => (current === "align" ? null : "align"))}
-          title="Align"
-          aria-label="Align"
+          title="Căn lề"
+          aria-label="Căn lề"
           aria-expanded={openMenu === "align"}
           className="flex h-8 shrink-0 items-center justify-center gap-0.5 rounded px-1.5 text-[#4f4943] transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
         >
@@ -317,222 +253,160 @@ export function EditorBottomTools() {
           <ChevronDownIcon />
         </button>
         {openMenu === "align" ? (
-          <MenuPortal triggerRef={alignTriggerRef} align="center">
-            <div className="flex items-center justify-center gap-1">
+          <Popup align="center">
+            <div className="flex items-center gap-1">
               {ALIGN_OPTIONS.map((option) => {
                 const Icon = option.icon;
-                const active = option.command === alignCommand;
                 return (
-                  <button
-                    key={option.command}
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => applyAlign(option.command)}
-                    title={option.label}
-                    aria-label={option.label}
-                    className={`flex size-8 items-center justify-center rounded-lg transition ${
-                      active
-                        ? "bg-[#f3efe9] text-[#2b2926]"
-                        : "text-[#6b625a] hover:bg-[#f7f3ee] hover:text-[#2b2926]"
-                    }`}
+                  <IconChoice
+                    key={option.value}
+                    label={option.label}
+                    active={option.value === state.align}
+                    onClick={() => applyAlign(option.value)}
                   >
                     <Icon />
-                  </button>
+                  </IconChoice>
                 );
               })}
             </div>
-          </MenuPortal>
+          </Popup>
         ) : null}
       </div>
-      <Divider />
-      <ToolButton onClick={() => exec("insertUnorderedList")} label="Bulleted list">
-        <BulletIcon />
-      </ToolButton>
-      <ToolButton onClick={() => exec("insertOrderedList")} label="Numbered list">
+      <ToolButton onClick={() => chain().toggleOrderedList().run()} label="Danh sách đánh số" active={state.isOrderedList}>
         <NumberListIcon />
       </ToolButton>
-      <ToolButton onClick={() => exec("indent")} label="Indent">
-        <IndentIcon />
-      </ToolButton>
       <Divider />
-      <ToolButton onClick={() => exec("superscript")} label="Superscript">
-        <SuperscriptIcon />
-      </ToolButton>
-      <ToolButton onClick={() => exec("subscript")} label="Subscript">
-        <SubscriptIcon />
-      </ToolButton>
-      <Divider />
-      <div className="relative flex shrink-0 items-center justify-center">
+      <div className="relative shrink-0">
         <button
-          ref={mathTriggerRef}
           type="button"
-          data-toolbar-trigger
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => setOpenMenu((current) => (current === "math" ? null : "math"))}
-          title="Math symbol"
-          aria-label="Math symbol"
-          aria-expanded={openMenu === "math"}
-          className="flex size-8 shrink-0 items-center justify-center rounded transition text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
+          onClick={() => setOpenMenu((current) => (current === "more" ? null : "more"))}
+          title="Thêm công cụ"
+          aria-label="Thêm công cụ"
+          aria-expanded={openMenu === "more"}
+          className="flex size-8 shrink-0 items-center justify-center rounded text-[#4f4943] transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
         >
-          <MathSymbolIcon />
+          <MoreIcon />
         </button>
-        {openMenu === "math" ? (
-          <MenuPortal triggerRef={mathTriggerRef} align="left">
+        {openMenu === "more" ? (
+          <Popup align="right" widthClass="w-60">
+            <MenuGroup label="Định dạng">
+              <div className="flex items-center gap-1">
+                <IconChoice label="Gạch ngang" active={state.isStrike} onClick={() => chain().toggleStrike().run()}>
+                  <StrikeIcon />
+                </IconChoice>
+                <IconChoice
+                  label="Chỉ số trên"
+                  active={state.isSuperscript}
+                  onClick={() => chain().toggleSuperscript().run()}
+                >
+                  <SuperscriptIcon />
+                </IconChoice>
+                <IconChoice
+                  label="Chỉ số dưới"
+                  active={state.isSubscript}
+                  onClick={() => chain().toggleSubscript().run()}
+                >
+                  <SubscriptIcon />
+                </IconChoice>
+                <IconChoice
+                  label="Giảm thụt lề"
+                  disabled={!state.canLift}
+                  onClick={() => chain().liftListItem("listItem").run()}
+                >
+                  <OutdentIcon />
+                </IconChoice>
+                <IconChoice
+                  label="Tăng thụt lề"
+                  disabled={!state.canSink}
+                  onClick={() => chain().sinkListItem("listItem").run()}
+                >
+                  <IndentIcon />
+                </IconChoice>
+                <IconChoice label="Xóa định dạng" onClick={() => chain().unsetAllMarks().clearNodes().run()}>
+                  <ClearFormatIcon />
+                </IconChoice>
+              </div>
+            </MenuGroup>
+            <MenuGroup label="Chèn">
+              <MenuRow onClick={() => setOpenMenu("table")}>
+                <TableIcon /> Bảng
+              </MenuRow>
+              <MenuRow onClick={() => setOpenMenu("link")}>
+                <LinkIcon /> Liên kết
+              </MenuRow>
+              {state.isLink ? (
+                <MenuRow onClick={() => chain().unsetLink().run()}>
+                  <UnlinkIcon /> Bỏ liên kết
+                </MenuRow>
+              ) : null}
+              <MenuRow onClick={() => setOpenMenu("symbol")}>
+                <SymbolIcon /> Ký hiệu đặc biệt
+              </MenuRow>
+              <MenuRow onClick={() => setOpenMenu("image")}>
+                <ImageIcon /> Hình ảnh
+              </MenuRow>
+            </MenuGroup>
+          </Popup>
+        ) : null}
+
+        {openMenu === "table" ? (
+          <Popup align="right" widthClass="w-max">
+            <TableGrid
+              onPick={(rows, cols) => {
+                setOpenMenu(null);
+                chain().insertTable({ rows, cols, withHeaderRow: true }).run();
+              }}
+            />
+          </Popup>
+        ) : null}
+
+        {openMenu === "link" ? (
+          <Popup align="right" widthClass="w-72">
+            <LinkForm
+              initialUrl={(editor.getAttributes("link").href as string | undefined) ?? ""}
+              onApply={(url) => {
+                setOpenMenu(null);
+                if (!url) {
+                  chain().extendMarkRange("link").unsetLink().run();
+                  return;
+                }
+                chain().extendMarkRange("link").setLink({ href: url }).run();
+              }}
+            />
+          </Popup>
+        ) : null}
+
+        {openMenu === "image" ? (
+          <Popup align="right" widthClass="w-72">
+            <ImageForm
+              onApply={(url) => {
+                setOpenMenu(null);
+                if (url) chain().setImage({ src: url }).run();
+              }}
+            />
+          </Popup>
+        ) : null}
+
+        {openMenu === "symbol" ? (
+          <Popup align="right" widthClass="w-72">
             <div className="grid grid-cols-10 gap-0.5">
               {SPECIAL_SYMBOLS.map((symbol) => (
                 <button
                   key={symbol}
                   type="button"
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => {
-                    setOpenMenu(null);
-                    insertHtml(symbol);
-                  }}
-                  title={symbol}
-                  className="flex size-7 items-center justify-center rounded text-[15px] text-[#3b3733] transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
+                  onClick={() => insertSymbol(symbol)}
+                  className="flex size-6 items-center justify-center rounded text-[15px] text-[#3b3733] transition hover:bg-[#f3efe9]"
                 >
                   {symbol}
                 </button>
               ))}
             </div>
-          </MenuPortal>
+          </Popup>
         ) : null}
       </div>
-      <div className="relative flex shrink-0 items-center justify-center">
-        <button
-          ref={tableTriggerRef}
-          type="button"
-          data-toolbar-trigger
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => setOpenMenu((current) => (current === "table" ? null : "table"))}
-          title="Insert table"
-          aria-label="Insert table"
-          aria-expanded={openMenu === "table"}
-          className="flex size-8 shrink-0 items-center justify-center rounded transition text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
-        >
-          <TableIcon />
-        </button>
-        {openMenu === "table" ? (
-          <MenuPortal triggerRef={tableTriggerRef} align="left">
-            <TableGrid
-              onPick={(rows, cols) => {
-                setOpenMenu(null);
-                const header = Array.from({ length: cols }, (_, i) =>
-                  `<th style="border:1px solid #e8e2d9;padding:6px 10px;background:#f7f3ee;min-width:60px;text-align:center">Cột ${i + 1}</th>`
-                ).join("");
-                const cell = `<td style="border:1px solid #e8e2d9;padding:6px 10px;">&nbsp;</td>`;
-                const rowHtml = `<tr>${Array.from({ length: cols }, () => cell).join("")}</tr>`;
-                const bodyHtml = Array.from({ length: rows }, () => rowHtml).join("");
-                const tableHtml = `<table style="border-collapse:collapse;width:100%;margin:8px 0"><thead><tr>${header}</tr></thead><tbody>${bodyHtml}</tbody></table><p><br></p>`;
-                insertHtml(tableHtml);
-              }}
-            />
-          </MenuPortal>
-        ) : null}
-      </div>
-      <ToolButton onClick={applyImage} label="Insert image">
-        <ImageIcon />
-      </ToolButton>
     </div>
-  );
-}
-
-function insertHtmlAtSelection(html: string, savedRange: Range | null) {
-  const editor = document.querySelector<HTMLElement>(".lesson-document-editor");
-  if (!editor) return;
-
-  const selection = window.getSelection();
-  const range = savedRange?.cloneRange() ?? document.createRange();
-  if (!savedRange) {
-    range.selectNodeContents(editor);
-    range.collapse(false);
-  }
-
-  selection?.removeAllRanges();
-  selection?.addRange(range);
-
-  const template = document.createElement("template");
-  template.innerHTML = html;
-  const fragment = template.content;
-  const lastNode = fragment.lastChild;
-  range.deleteContents();
-  range.insertNode(fragment);
-
-  if (lastNode) {
-    const nextRange = document.createRange();
-    nextRange.setStartAfter(lastNode);
-    nextRange.collapse(true);
-    selection?.removeAllRanges();
-    selection?.addRange(nextRange);
-  }
-
-  editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertHTML", data: html }));
-}
-
-function restoreEditorSelection(range: Range | null) {
-  if (!range) return;
-  const selection = window.getSelection();
-  selection?.removeAllRanges();
-  selection?.addRange(range);
-}
-
-function isRangeInsideLessonEditor(range: Range) {
-  const editor = document.querySelector(".lesson-document-editor");
-  return Boolean(editor && editor.contains(range.commonAncestorContainer));
-}
-
-/**
- * Render menu ra document.body qua portal de thoat overflow clip o toolbar/editor.
- * Tu dinh vi theo trigger va canh le theo `align`.
- */
-function MenuPortal({
-  triggerRef,
-  align = "left",
-  children,
-}: {
-  triggerRef: React.RefObject<HTMLElement | null>;
-  align?: "left" | "center";
-  children: React.ReactNode;
-}) {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
-
-  useLayoutEffect(() => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-
-    const place = () => {
-      const rect = trigger.getBoundingClientRect();
-      const menuWidth = menuRef.current?.offsetWidth ?? rect.width;
-      const left =
-        align === "center"
-          ? rect.left + rect.width / 2 - menuWidth / 2
-          : rect.left;
-      setCoords({ top: rect.bottom + 4, left });
-    };
-
-    place();
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
-    return () => {
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
-    };
-  }, [triggerRef, align]);
-
-  // SSR guard: createPortal cần document.
-  if (typeof document === "undefined") return null;
-
-  return createPortal(
-    <div
-      ref={menuRef}
-      data-toolbar-menu
-      style={{ position: "fixed", top: coords?.top ?? -9999, left: coords?.left ?? -9999, zIndex: 50 }}
-      className="overflow-hidden rounded-xl border border-[#e8e2d9] bg-white p-1 shadow-[0_8px_24px_rgba(43,41,38,0.12)]"
-    >
-      {children}
-    </div>,
-    document.body,
   );
 }
 
@@ -544,6 +418,7 @@ function TextDropdown<T extends string | number>({
   value,
   options,
   widthClass,
+  placeholder,
   onSelect,
 }: {
   label: string;
@@ -553,102 +428,135 @@ function TextDropdown<T extends string | number>({
   value: T;
   options: DropdownOption<T>[];
   widthClass: string;
+  placeholder?: string;
   onSelect: (value: T) => void;
 }) {
-  const selected = options.find((option) => option.value === value) ?? options[0];
+  const selected = options.find((option) => option.value === value);
   const isOpen = openMenu === menuId;
-  const triggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className={`relative ${widthClass}`}>
       <button
-        ref={triggerRef}
         type="button"
-        data-toolbar-trigger
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => setOpenMenu((current) => (current === menuId ? null : menuId))}
         aria-label={label}
         aria-expanded={isOpen}
         className="flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-transparent bg-transparent px-2 text-left text-[13px] text-[#4f4943] outline-none transition hover:border-[#e8e2d9] hover:bg-white"
       >
-        <span className="truncate">{selected.label}</span>
+        <span className="truncate">{selected ? selected.label : (placeholder ?? "")}</span>
         <ChevronDownIcon />
       </button>
       {isOpen ? (
-        <MenuPortal triggerRef={triggerRef}>
-          <div className="flex min-w-[120px] flex-col">
-            {options.map((option) => {
-              const active = option.value === value;
-              return (
-                <button
-                  key={String(option.value)}
-                  type="button"
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => onSelect(option.value)}
-                  className={`flex h-8 w-full items-center whitespace-nowrap rounded-lg px-2 text-left text-[13px] transition ${
-                    active
-                      ? "bg-[#f3efe9] text-[#2b2926]"
-                      : "text-[#6b625a] hover:bg-[#f7f3ee] hover:text-[#2b2926]"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </MenuPortal>
+        <div className="absolute top-9 left-0 z-50 min-w-full overflow-hidden rounded-xl border border-[#e8e2d9] bg-white p-1 shadow-[0_8px_24px_rgba(43,41,38,0.12)]">
+          {options.map((option) => {
+            const active = option.value === value;
+
+            return (
+              <button
+                key={String(option.value)}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onSelect(option.value)}
+                className={`flex h-8 w-full items-center whitespace-nowrap rounded-lg px-2 text-left text-[13px] transition ${
+                  active
+                    ? "bg-[#f3efe9] text-[#2b2926]"
+                    : "text-[#6b625a] hover:bg-[#f7f3ee] hover:text-[#2b2926]"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       ) : null}
     </div>
   );
 }
 
-function ToolButton({
+function Popup({
   children,
-  label,
-  onClick,
-  strong = false,
-  active = false,
+  align,
+  widthClass = "",
 }: {
   children: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  strong?: boolean;
-  active?: boolean;
+  align: "center" | "right";
+  widthClass?: string;
 }) {
+  const position = align === "center" ? "left-1/2 -translate-x-1/2" : "right-0";
+  return (
+    <div
+      className={`absolute top-9 z-50 rounded-xl border border-[#e8e2d9] bg-white p-2 shadow-[0_8px_24px_rgba(43,41,38,0.12)] ${position} ${widthClass}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function MenuGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="px-1 py-1 [&+&]:mt-1 [&+&]:border-t [&+&]:border-[#f0eadf] [&+&]:pt-2">
+      <div className="mb-1 px-1 text-[11px] font-medium tracking-wide text-[#a99f93] uppercase">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function MenuRow({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
   return (
     <button
       type="button"
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
-      title={label}
-      aria-label={label}
-      aria-pressed={active}
-      className={`flex size-8 shrink-0 items-center justify-center rounded transition ${
-        active
-          ? "bg-[#f3efe9] text-[#2b2926]"
-          : "text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
-      } ${strong ? "text-[14px] font-semibold" : ""}`}
+      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] text-[#4f4943] transition hover:bg-[#f7f3ee] hover:text-[#2b2926]"
     >
       {children}
     </button>
   );
 }
 
-function Divider({ className = "" }: { className?: string }) {
-  return <div className={`mx-1.5 h-5 w-px shrink-0 bg-[#e8e2d9] ${className}`} />;
+function IconChoice({
+  children,
+  label,
+  onClick,
+  active = false,
+  disabled = false,
+}: {
+  children: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`flex size-8 items-center justify-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-40 ${
+        active ? "bg-[#f3efe9] text-[#2b2926]" : "text-[#6b625a] hover:bg-[#f7f3ee] hover:text-[#2b2926]"
+      }`}
+    >
+      {children}
+    </button>
+  );
 }
 
 function TableGrid({ onPick }: { onPick: (rows: number, cols: number) => void }) {
   const [hover, setHover] = useState({ rows: 0, cols: 0 });
   const maxRows = 6;
   const maxCols = 8;
+
   return (
     <div>
       <div className="mb-1.5 text-center text-[12px] text-[#6b625a]">
-        {hover.rows > 0 ? `${hover.rows} × ${hover.cols}` : "Chọn kích thước bảng"}
+        {hover.rows > 0 ? `${hover.rows} × ${hover.cols}` : "Chọn kích thước"}
       </div>
       <div
-        className="grid grid-cols-8 gap-0.5"
+        className="grid w-max shrink-0 grid-cols-8 gap-0.5"
         onMouseLeave={() => setHover({ rows: 0, cols: 0 })}
       >
         {Array.from({ length: maxRows * maxCols }).map((_, index) => {
@@ -662,7 +570,7 @@ function TableGrid({ onPick }: { onPick: (rows: number, cols: number) => void })
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={() => setHover({ rows: row, cols: col })}
               onClick={() => onPick(row, col)}
-              className={`size-5 rounded-[3px] border transition ${
+              className={`size-5 shrink-0 rounded-[3px] border transition ${
                 filled ? "border-[#d97757] bg-[#f6eadf]" : "border-[#e8e2d9] bg-white"
               }`}
             />
@@ -673,178 +581,131 @@ function TableGrid({ onPick }: { onPick: (rows: number, cols: number) => void })
   );
 }
 
-/* ---------- Icons (currentColor, 16px, strokeWidth ~1.7) ---------- */
+function LinkForm({ initialUrl, onApply }: { initialUrl: string; onApply: (url: string) => void }) {
+  const [url, setUrl] = useState(initialUrl);
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        autoFocus
+        value={url}
+        onChange={(event) => setUrl(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") onApply(url.trim());
+        }}
+        placeholder="https://..."
+        className="h-8 w-full rounded-lg border border-[#e8e2d9] px-2 text-[13px] text-[#2b2926] outline-none focus:border-[#d97757]"
+      />
+      <div className="flex justify-end gap-1.5">
+        {initialUrl ? (
+          <button
+            type="button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => onApply("")}
+            className="h-7 rounded-lg px-2.5 text-[12px] text-[#6b625a] transition hover:bg-[#f7f3ee]"
+          >
+            Bỏ liên kết
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onApply(url.trim())}
+          className="h-7 rounded-lg bg-[#d97757] px-3 text-[12px] font-medium text-white transition hover:bg-[#c96545]"
+        >
+          Áp dụng
+        </button>
+      </div>
+    </div>
+  );
+}
 
-function ChevronDownIcon() {
+function ImageForm({ onApply }: { onApply: (url: string) => void }) {
+  const [url, setUrl] = useState("");
   return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div className="flex flex-col gap-2">
+      <input
+        autoFocus
+        value={url}
+        onChange={(event) => setUrl(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") onApply(url.trim());
+        }}
+        placeholder="URL hình ảnh..."
+        className="h-8 w-full rounded-lg border border-[#e8e2d9] px-2 text-[13px] text-[#2b2926] outline-none focus:border-[#d97757]"
+      />
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onApply(url.trim())}
+          className="h-7 rounded-lg bg-[#d97757] px-3 text-[12px] font-medium text-white transition hover:bg-[#c96545]"
+        >
+          Chèn
+        </button>
+      </div>
+    </div>
   );
 }
-function UndoIcon() {
+
+function ToolButton({
+  children,
+  label,
+  onClick,
+  strong = false,
+  active = false,
+  disabled = false,
+}: {
+  children: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  strong?: boolean;
+  active?: boolean;
+  disabled?: boolean;
+}) {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M9 8H4V3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4.8 8A8 8 0 1 1 6.9 16.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
+    <button
+      type="button"
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+      className={`flex size-8 shrink-0 items-center justify-center rounded transition disabled:cursor-not-allowed disabled:opacity-40 ${
+        active ? "bg-[#f3efe9] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
+      } ${strong ? "text-[14px] font-semibold" : ""}`}
+    >
+      {children}
+    </button>
   );
 }
-function RedoIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M15 8h5V3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M19.2 8a8 8 0 1 0-2.1 8.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
+
+function Divider({ className = "" }: { className?: string }) {
+  return <div className={`mx-1.5 h-5 w-px shrink-0 bg-[#e8e2d9] ${className}`} />;
 }
-function ItalicIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path d="M10.5 3H6.5M9.5 13H5.5M9 3L7 13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
-}
-function UnderlineIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path d="M5 3v4.2a3 3 0 006 0V3M4 13h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
-}
-function StrikethroughIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 12h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M7 7.5C7 5.6 9 4 12 4s5 1.5 5 3.5M17 16.5C17 18.4 14.8 20 12 20s-5-1.4-5-3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
-}
-function TextColorIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path d="M3 12l5-9 5 9M5 9h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M3 14h10" stroke="#d97757" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
-}
-function MarkerIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M16.5 3.5l4 4L10 18H6v-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M4 21h16" stroke="#d97757" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-function LinkIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M9.5 14.5l5-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <path d="M8 12l-1.5 1.5a3.5 3.5 0 005 5L13 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <path d="M16 12l1.5-1.5a3.5 3.5 0 00-5-5L11 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
-}
-function BulletIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M9 7h11M9 12h11M9 17h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M5 7h.01M5 12h.01M5 17h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
-}
-function NumberListIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M10 7h10M10 12h10M10 17h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M4 6h1v3M4 12h2l-2 3h2M4 18h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function IndentIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M9 7h11M9 12h11M9 17h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M4 8l3 4-3 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function SuperscriptIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path d="M2.66699 12.6668L8.00033 7.3335" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8.00033 12.6668L2.66699 7.3335" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13.3337 7.99985H10.667C10.667 6.99985 10.9617 6.66652 11.667 6.33319C12.3723 5.99985 13.3337 5.55585 13.3337 4.66785C13.3337 4.35319 13.2203 4.04785 13.011 3.80785C12.7977 3.56657 12.5079 3.40599 12.1902 3.35307C11.8725 3.30014 11.5463 3.35809 11.2663 3.51719C10.9863 3.67652 10.7743 3.92652 10.667 4.22385" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function SubscriptIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path d="M2.66699 3.3335L8.00033 8.66683" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8.00033 3.3335L2.66699 8.66683" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13.3337 12.6669H10.667C10.667 11.6669 10.9603 11.3335 11.667 11.0002C12.3737 10.6669 13.3337 10.2202 13.3337 9.33355C13.3337 9.02022 13.2203 8.71355 13.0137 8.47355C12.8002 8.23188 12.5103 8.07087 12.1923 8.01748C11.8743 7.96408 11.5477 8.02153 11.267 8.18022C10.987 8.34022 10.7737 8.59355 10.667 8.89355" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function ClearFormatIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path d="M4.66647 14.0001L1.7998 11.1335C1.13314 10.4668 1.13314 9.4668 1.7998 8.8668L8.19981 2.4668C8.86647 1.80013 9.86647 1.80013 10.4665 2.4668L14.1998 6.20013C14.8665 6.8668 14.8665 7.8668 14.1998 8.4668L8.66647 14.0001" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14.667 14H4.66699" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M3.33301 7.3335L9.33301 13.3335" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function MathSymbolIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <text x="4" y="18" fontSize="16" fill="currentColor" fontFamily="Georgia, serif" fontWeight="600">Σ</text>
-    </svg>
-  );
-}
-function TableIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M3.5 10h17M3.5 15h17M9 4.5v15M15 4.5v15" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
-  );
-}
-function ImageIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="9" cy="10" r="1.6" fill="currentColor" />
-      <path d="M4 17l4.5-4.5 3 3L15 12l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function AlignLeftIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 6h16M4 10h10M4 14h16M4 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-function AlignCenterIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 6h16M7 10h10M4 14h16M7 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-function AlignRightIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 6h16M10 10h10M4 14h16M10 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-function AlignJustifyIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
+
+function ChevronDownIcon() { return <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function UndoIcon() { return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M9 8H4V3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><path d="M4.8 8A8 8 0 1 1 6.9 16.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>; }
+function RedoIcon() { return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M15 8h5V3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><path d="M19.2 8a8 8 0 1 0-2.1 8.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>; }
+function ItalicIcon() { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M10.5 3H6.5M9.5 13H5.5M9 3L7 13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
+function UnderlineIcon() { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M5 3v4.2a3 3 0 006 0V3M4 13h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
+function StrikeIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 12h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M7 8a4 3 0 016-2.4M17 16a4 3 0 01-7 1.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
+function SuperscriptIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 6l8 12M12 6L4 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M18 4.4c1.6-.9 3 .1 3 1.2 0 1.2-2.2 1.6-2.9 3.4H21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function SubscriptIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 5l8 12M12 5L4 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M18 16.4c1.6-.9 3 .1 3 1.2 0 1.2-2.2 1.6-2.9 3.4H21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function TextColorIcon() { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M3 12l5-9 5 9M5 9h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M3 14h10" stroke="#d97757" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
+function MarkerIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M16.5 3.5l4 4L10 18H6v-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /><path d="M4 21h16" stroke="#d97757" strokeWidth="2.5" strokeLinecap="round" /></svg>; }
+function BulletIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M9 7h11M9 12h11M9 17h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M5 7h.01M5 12h.01M5 17h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>; }
+function NumberListIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M10 7h10M10 12h10M10 17h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M4 6h1v3M4 12h2l-2 3h2M4 18h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function AlignLeftIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 6h16M4 10h10M4 14h16M4 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>; }
+function AlignCenterIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 6h16M7 10h10M4 14h16M7 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>; }
+function AlignRightIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 6h16M10 10h10M4 14h16M10 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>; }
+function AlignJustifyIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>; }
+function IndentIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M10 6h10M10 12h10M10 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M3 9l3 3-3 3z" fill="currentColor" /></svg>; }
+function OutdentIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M10 6h10M10 12h10M10 18h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M6 9l-3 3 3 3z" fill="currentColor" /></svg>; }
+function ClearFormatIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M6 5h12M9 5l-2 9M14 5l1 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M5 19h7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M16 15l5 5M21 15l-5 5" stroke="#d97757" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
+function TableIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><rect x="3.5" y="4.5" width="17" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.6" /><path d="M3.5 9.5h17M3.5 14.5h17M9 4.5v15M15 4.5v15" stroke="currentColor" strokeWidth="1.4" /></svg>; }
+function LinkIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7L11.5 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7L12.5 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
+function UnlinkIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M9 15l-1.5 1.5a3.5 3.5 0 01-5-5L4 10M15 9l1.5-1.5a3.5 3.5 0 015 5L20 14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M4 4l16 16" stroke="#d97757" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
+function ImageIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><rect x="3.5" y="5" width="17" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" /><circle cx="9" cy="10" r="1.6" stroke="currentColor" strokeWidth="1.4" /><path d="M5 17l4.5-4 3 2.5L16 11l4 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function SymbolIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M16 19H8l5-7-5-7h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function MoreIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>; }

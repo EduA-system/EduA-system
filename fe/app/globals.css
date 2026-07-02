@@ -166,6 +166,67 @@ body::-webkit-scrollbar {
   margin-top: 14px;
 }
 
+.lesson-document-editor .mc-option {
+  margin-top: 6px;
+  margin-left: 20px;
+}
+
+.lesson-document-editor p:not(.mc-option) + .mc-option {
+  margin-top: 8px;
+}
+
+.lesson-document-editor .mc-option + p:not(.mc-option) {
+  margin-top: 16px;
+}
+
+.lesson-document-editor .mc-answer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  align-items: baseline;
+}
+
+.lesson-document-editor .mc-answer-row span {
+  white-space: nowrap;
+}
+
+.lesson-document-editor .activity-sub-title {
+  margin-top: 18px;
+  margin-left: 18px;
+  font-size: 15px;
+  color: #3b3733;
+}
+
+/* Block "đang soạn" (streaming) — atom, khoá, không sửa được cho tới khi hoạt động về. */
+.lesson-document-editor .lp-pending {
+  margin-top: 18px;
+  padding: 12px 16px;
+  border: 1px dashed #d8c9bd;
+  border-radius: 10px;
+  background: #faf6f1;
+  user-select: none;
+  cursor: not-allowed;
+}
+
+.lesson-document-editor .lp-pending-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #6b6b6b;
+}
+
+.lesson-document-editor .lp-pending-status {
+  margin-top: 4px;
+  font-size: 13px;
+  font-style: italic;
+  color: #b07a52;
+}
+
+.lesson-document-editor .lp-failed {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #c0492b;
+}
+
 .lesson-document-editor ul,
 .lesson-document-editor ol {
   margin-top: 12px;
@@ -198,4 +259,92 @@ body::-webkit-scrollbar {
 
 .lesson-document-editor ::selection {
   background: #f6d7c8;
+}
+
+.lesson-document-editor .tableWrapper {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.lesson-document-editor table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 0;
+}
+
+.lesson-document-editor th,
+.lesson-document-editor td {
+  position: relative;
+  min-width: 3em;
+  padding: 6px 10px;
+  border: 1px solid #d9d2c7;
+  vertical-align: top;
+}
+
+.lesson-document-editor th {
+  background: #f6f1ea;
+  font-weight: 600;
+  text-align: left;
+}
+
+.lesson-document-editor td > *,
+.lesson-document-editor th > * {
+  margin-top: 0;
+}
+
+.lesson-document-editor .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(217, 119, 87, 0.12);
+  pointer-events: none;
+}
+
+.lesson-document-editor .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: #d97757;
+  pointer-events: none;
+}
+
+.lesson-document-editor img {
+  max-width: 100%;
+  height: auto;
+  margin-top: 12px;
+  border-radius: 6px;
+}
+
+.lesson-document-editor img.ProseMirror-selectednode {
+  outline: 2px solid #d97757;
+}
+
+.lesson-document-editor .tiptap-mathematics-render {
+  display: inline-flex;
+  max-width: 100%;
+  vertical-align: -0.18em;
+}
+
+.lesson-document-editor div.tiptap-mathematics-render {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fbfaf8;
+}
+
+.lesson-document-editor .tiptap-mathematics-render--editable {
+  cursor: text;
+}
+
+.lesson-document-editor .inline-math-error,
+.lesson-document-editor .block-math-error {
+  color: #c0492b;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
 }

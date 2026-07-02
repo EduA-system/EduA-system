@@ -6,3 +6,6 @@
 
 # Windows reserved name artifacts (e.g. from `2>$null` redirections)
 nul
+
+# Office temp/lock files (e.g. ~$Phu_luc_4_...doc)
+~$*

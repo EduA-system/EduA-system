@@ -1,7 +1,7 @@
 package com.edua.beeduasystem.repository.gateways;
 
-import com.edua.beeduasystem.presentation.dto.lessonplan.Activity5512Dto;
-import com.edua.beeduasystem.presentation.dto.lessonplan.LessonPlan5512Dto;
+import com.edua.beeduasystem.domain.model.lessonplan.Activity5512;
+import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -31,11 +31,11 @@ public sealed interface LessonPlanEvent {
     String sessionId();
 
     /** Khung giáo án (Bước 1) sinh xong. */
-    record FrameReady(String sessionId, LessonPlan5512Dto frame) implements LessonPlanEvent {
+    record FrameReady(String sessionId, LessonPlan5512 frame) implements LessonPlanEvent {
     }
 
     /** Một trong 4 hoạt động sinh xong thành công. */
-    record ActivityReady(String sessionId, String activityId, Activity5512Dto activity)
+    record ActivityReady(String sessionId, String activityId, Activity5512 activity)
             implements LessonPlanEvent {
     }
 

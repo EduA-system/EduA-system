@@ -9,10 +9,22 @@ import type { NextConfig } from "next";
 // ("Selector * is not pure").
 const feRoot = join(dirname(fileURLToPath(import.meta.url)));
 
+// Backend base URL. Proxied so the browser calls same-origin `/api/*` and we
+// avoid CORS in dev/prod. Override with BACKEND_URL when BE is not on :8080.
+const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   turbopack: {
     root: feRoot,
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
   },
 };
 
