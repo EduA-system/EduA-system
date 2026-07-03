@@ -19,8 +19,8 @@ export function ToolBtn({
     <button
       onClick={onClick}
       title={title}
-      className={`flex h-8 min-w-8 items-center justify-center rounded-lg px-1.5 text-[13px] transition-colors ${
-        active ? "bg-[#e9eaf0] text-[#1f1f1f]" : "text-[#3c4043] hover:bg-[#f1f2f4]"
+      className={`flex h-8 min-w-8 items-center justify-center rounded-[10px] px-1.5 text-[13px] transition-colors ${
+        active ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee]"
       }`}
     >
       {children}
@@ -34,8 +34,8 @@ export function Sep() {
 }
 
 const numCls =
-  "w-12 rounded border border-black/15 bg-black/[0.03] px-1 py-0.5 text-xs text-[#1f1f1f] focus:border-[#1f1f1f] focus:outline-none";
-const labelCls = "flex items-center gap-1 text-[10px] text-[#777] shrink-0";
+  "w-12 rounded-[10px] border border-[#e8e2d9] bg-[#fbfaf8] px-1 py-0.5 text-xs text-[#2b2926] focus:border-[#d97757] focus:outline-none";
+const labelCls = "flex items-center gap-1 text-[10px] text-[#8a8178] shrink-0";
 
 // Ô số có nhãn dùng chung cho toolbar (cỡ, X/Y/W/H, giãn dòng…).
 export function NumField({
@@ -139,12 +139,13 @@ export function LineSpacingIcon() {
   );
 }
 
-// Độ trong suốt (vòng tròn nửa đặc).
+// Độ trong suốt.
 export function OpacityIcon() {
   return (
-    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none" />
+    <svg className="h-[18px] w-[18px]" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M2 2h14v14H2z" fill="#fff" />
+      <path d="M2 2h3.5v3.5H2zM9 2h3.5v3.5H9zM5.5 5.5H9V9H5.5zM12.5 5.5H16V9h-3.5zM2 9h3.5v3.5H2zM9 9h3.5v3.5H9zM5.5 12.5H9V16H5.5zM12.5 12.5H16V16h-3.5z" fill="#b8aea5" />
+
     </svg>
   );
 }

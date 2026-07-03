@@ -79,6 +79,7 @@ export interface ShapeElement extends ElementBase {
   stroke: string;
   strokeW: number;
   borderRadius: number;
+  dashStyle?: DashStyle;
 }
 
 export interface ImageElement extends ElementBase {
@@ -117,6 +118,8 @@ export interface PolyElement extends ElementBase {
   fill: string;
   stroke: string;
   strokeW: number;
+  strokeLinecap?: "butt" | "round" | "square";
+  strokeLinejoin?: "miter" | "round" | "bevel";
   borderRadius?: number;
   dashStyle?: DashStyle;
   // text overlay (optional)

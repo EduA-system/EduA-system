@@ -9,7 +9,7 @@ import { LeftPanel } from "./LeftPanel";
 import { Canvas, type ActiveTool } from "./Canvas";
 import { SlideTray } from "./SlideTray";
 import { BottomBar } from "./BottomBar";
-import { LayersPanel } from "./LayersPanel";
+import { LayersPanel, type RightPanelTab } from "./LayersPanel";
 import { loadSlides, saveSlides } from "./lib/storage";
 
 interface DragState {
@@ -29,18 +29,23 @@ export const dragRefGlobal = {
 export function SlideEditor({
   skipInitialLoad = false,
   onRetrySlide,
+  pageSidebarCollapsed = false,
+  onTogglePageSidebar,
 }: {
   skipInitialLoad?: boolean;
   /** AI-regenerate one slide (header retry button). Omitted outside the AI slide-maker flow. */
   onRetrySlide?: (slideId: string) => void;
+  pageSidebarCollapsed?: boolean;
+  onTogglePageSidebar?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomMode, setZoomMode] = useState<"fit" | number>("fit");
-  const [lockAspect, setLockAspect] = useState(false);
+  const lockAspect = false;
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
-  const [drawColor, setDrawColor] = useState("#1e293b");
+  const [drawColor, setDrawColor] = useState("#2b2926");
   const [drawSize, setDrawSize] = useState(6);
-  const [showLayers, setShowLayers] = useState(false);
+  const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>("properties");
+  const [showRightPanel, setShowRightPanel] = useState(true);
   const [showTray, setShowTray] = useState(true);
   const [currentScale, setCurrentScale] = useState(1);
 
@@ -54,10 +59,9 @@ export function SlideEditor({
         clearSelection();
       }
     },
-    [clearSelection]
+    [clearSelection],
   );
 
-  // Nạp slides đã lưu (bỏ qua khi đang stream deck mới).
   useEffect(() => {
     if (skipInitialLoad) return;
     const saved = loadSlides();
@@ -71,7 +75,6 @@ export function SlideEditor({
     }
   }, [skipInitialLoad]);
 
-  // Auto-save (debounce) qua subscribe để không re-render khi kéo.
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | null = null;
     const unsub = useEditorStore.subscribe((state, prev) => {
@@ -128,6 +131,12 @@ export function SlideEditor({
         store.copySelected();
       }
 
+      if (e.key === "x" && (e.ctrlKey || e.metaKey)) {
+        if (slideLocked) return;
+        e.preventDefault();
+        store.cutSelected();
+      }
+
       if (e.key === "v" && (e.ctrlKey || e.metaKey)) {
         if (slideLocked) return;
         e.preventDefault();
@@ -182,7 +191,7 @@ export function SlideEditor({
           const slide = store.currentSlide();
           if (slide) {
             const updates = store.selectedIds.map((id) => {
-              const el = slide.elements.find((e) => e.id === id);
+              const el = slide.elements.find((item) => item.id === id);
               return el
                 ? { id, patch: { x: el.x + dx, y: el.y + dy } }
                 : { id, patch: {} };
@@ -224,19 +233,17 @@ export function SlideEditor({
   return (
     <div
       ref={containerRef}
-      className="flex h-full min-h-0 flex-col bg-[#edeff2]"
+      className="flex h-full min-h-0 flex-col bg-[#f5f1ec] font-sans"
       onMouseDown={handleMouseDown}
     >
       <TopBar
-        zoomMode={zoomMode}
-        onZoomModeChange={setZoomMode}
-        lockAspect={lockAspect}
-        onToggleLockAspect={() => setLockAspect((v) => !v)}
-        showLayers={showLayers}
-        onToggleLayers={() => setShowLayers((v) => !v)}
+        pageSidebarCollapsed={pageSidebarCollapsed}
+        showRightPanel={showRightPanel}
+        onTogglePageSidebar={onTogglePageSidebar ?? (() => undefined)}
+        onToggleRightPanel={() => setShowRightPanel((value) => !value)}
         onRetrySlide={onRetrySlide}
       />
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <LeftPanel
           activeTool={activeTool}
           onToolChange={setActiveTool}
@@ -245,28 +252,35 @@ export function SlideEditor({
           drawSize={drawSize}
           onDrawSizeChange={setDrawSize}
         />
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <ContextualToolbar />
-          <Canvas
-            dragRef={dragRefGlobal}
-            zoomMode={zoomMode}
-            lockAspect={lockAspect}
-            activeTool={activeTool}
-            drawColor={drawColor}
-            drawSize={drawSize}
-            onScaleChange={setCurrentScale}
-          />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            <ContextualToolbar
+              onOpenProperties={() => {
+                setShowRightPanel(true);
+                setRightPanelTab("properties");
+              }}
+            />
+            <Canvas
+              dragRef={dragRefGlobal}
+              zoomMode={zoomMode}
+              lockAspect={lockAspect}
+              activeTool={activeTool}
+              drawColor={drawColor}
+              drawSize={drawSize}
+              onScaleChange={setCurrentScale}
+            />
+            <BottomBar
+              zoomMode={zoomMode}
+              onZoomModeChange={setZoomMode}
+              currentScale={currentScale}
+              showTray={showTray}
+              onToggleTray={() => setShowTray((v) => !v)}
+            />
+          </div>
           {showTray && <SlideTray />}
         </div>
-        {showLayers && <LayersPanel />}
+        {showRightPanel && <LayersPanel activeTab={rightPanelTab} onTabChange={setRightPanelTab} />}
       </div>
-      <BottomBar
-        zoomMode={zoomMode}
-        onZoomModeChange={setZoomMode}
-        currentScale={currentScale}
-        showTray={showTray}
-        onToggleTray={() => setShowTray((v) => !v)}
-      />
     </div>
   );
 }

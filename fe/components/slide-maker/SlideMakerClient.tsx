@@ -51,6 +51,7 @@ export function SlideMakerClient() {
   const [streaming, setStreaming] = useState(
     () => generating && initialBootstrap.active !== null,
   );
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [doneMessage, setDoneMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryError, setRetryError] = useState<string | null>(null);
@@ -214,43 +215,48 @@ export function SlideMakerClient() {
   }, [doneMessage]);
 
   return (
-    <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] text-[#171717]">
-      <div className="flex h-full w-full flex-col">
-        {streaming ? (
-          <div className="flex h-9 shrink-0 items-center gap-3 border-b border-[#e8e0d8] bg-[#faf5ff] px-4 text-xs text-[#8200db]">
-            <span className="size-3.5 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
-            <span>
-              Đang sinh slide… {progress.ready}/{progress.total}
-            </span>
-            <div className="h-1.5 max-w-xs flex-1 overflow-hidden rounded-full bg-[#e9d5ff]">
-              <div
-                className="h-full rounded-full bg-[#8200db] transition-all duration-300"
-                style={{
-                  width: progress.total > 0 ? `${(progress.ready / progress.total) * 100}%` : "0%",
-                }}
-              />
+    <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] font-sans text-[#2b2926]">
+      <div className="flex h-full w-full">
+        <Sidebar collapsed={sidebarCollapsed} activeHref="/slide-create" />
+        <div className="flex min-w-0 flex-1 flex-col">
+          {streaming ? (
+            <div className="flex h-9 shrink-0 items-center gap-3 border-b border-[#eadfd7] bg-[#fff7f1] px-4 text-xs text-[#9f5a3e]">
+              <span className="size-3.5 animate-spin rounded-full border-2 border-[#d97757] border-t-transparent" />
+              <span>
+                Đang sinh slide… {progress.ready}/{progress.total}
+              </span>
+              <div className="h-1.5 max-w-xs flex-1 overflow-hidden rounded-full bg-[#f6eadf]">
+                <div
+                  className="h-full rounded-full bg-[#d97757] transition-all duration-300"
+                  style={{
+                    width: progress.total > 0 ? `${(progress.ready / progress.total) * 100}%` : "0%",
+                  }}
+                />
+              </div>
             </div>
-          </div>
-        ) : null}
-        {doneMessage ? (
-          <div className="flex h-9 shrink-0 items-center border-b border-green-100 bg-green-50 px-4 text-xs text-green-700">
-            {doneMessage}
-          </div>
-        ) : null}
-        {errorMessage ? (
-          <div className="flex h-9 shrink-0 items-center border-b border-red-100 bg-red-50 px-4 text-xs text-red-700">
-            {errorMessage}
-          </div>
-        ) : null}
-        {retryError ? (
-          <div className="flex h-9 shrink-0 items-center border-b border-red-100 bg-red-50 px-4 text-xs text-red-700">
-            Tạo lại slide thất bại: {retryError}
-          </div>
-        ) : null}
-        <div className="flex min-h-0 flex-1">
-          <Sidebar activeHref="/slide-create" />
-          <section className="min-w-0 flex-1 overflow-hidden">
-            <SlideEditor skipInitialLoad={generating} onRetrySlide={retrySlide} />
+          ) : null}
+          {doneMessage ? (
+            <div className="flex h-9 shrink-0 items-center border-b border-[#d8d1c9] bg-[#f7f3ee] px-4 text-xs text-[#4f4943]">
+              {doneMessage}
+            </div>
+          ) : null}
+          {errorMessage ? (
+            <div className="flex h-9 shrink-0 items-center border-b border-red-100 bg-red-50 px-4 text-xs text-red-700">
+              {errorMessage}
+            </div>
+          ) : null}
+          {retryError ? (
+            <div className="flex h-9 shrink-0 items-center border-b border-red-100 bg-red-50 px-4 text-xs text-red-700">
+              Tạo lại slide thất bại: {retryError}
+            </div>
+          ) : null}
+          <section className="min-h-0 flex-1 overflow-hidden">
+            <SlideEditor
+              skipInitialLoad={generating}
+              onRetrySlide={retrySlide}
+              pageSidebarCollapsed={sidebarCollapsed}
+              onTogglePageSidebar={() => setSidebarCollapsed((current) => !current)}
+            />
           </section>
         </div>
       </div>

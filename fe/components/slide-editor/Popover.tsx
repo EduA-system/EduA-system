@@ -1,12 +1,13 @@
 "use client";
 
-// Popover dùng chung cho toolbar: nút ToolBtn mở 1 flyout định vị `fixed`.
-// Phải dùng `fixed` (không phải absolute) vì thanh toolbar có overflow-x-auto
-// sẽ cắt mất dropdown. Vị trí tính từ getBoundingClientRect (ưu tiên dưới,
-// fallback lên trên). Click ra ngoài → đóng. Mô phỏng ColorPicker.tsx.
-
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ToolBtn } from "./ui";
+
+type PopoverChildren = ReactNode | ((api: { close: () => void }) => ReactNode);
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(value, max));
+}
 
 export function Popover({
   triggerContent,
@@ -15,6 +16,7 @@ export function Popover({
   width = 220,
   estHeight = 200,
   closeOnSelect = false,
+  highlightWhenOpen = true,
   children,
 }: {
   triggerContent: ReactNode;
@@ -22,55 +24,85 @@ export function Popover({
   title?: string;
   width?: number;
   estHeight?: number;
-  // đóng popover sau khi click vào nội dung (dùng cho menu chọn 1 mục).
   closeOnSelect?: boolean;
-  children: ReactNode;
+  highlightWhenOpen?: boolean;
+  children: PopoverChildren;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
+  const updatePosition = useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const margin = 8;
+    const popHeight = Math.min(estHeight, Math.max(120, window.innerHeight - margin * 2));
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const rawTop = spaceBelow >= popHeight + margin ? rect.bottom + 6 : rect.top - popHeight - 6;
+    const maxTop = Math.max(margin, window.innerHeight - popHeight - margin);
+    const top = clamp(rawTop, margin, maxTop);
+
+    const safeWidth = Math.min(width, window.innerWidth - margin * 2);
+    const mid = rect.left + rect.width / 2;
+    const left = clamp(mid - safeWidth / 2, margin, Math.max(margin, window.innerWidth - safeWidth - margin));
+
+    setPos({ top, left });
+  }, [estHeight, width]);
+
+  const close = () => setOpen(false);
+
   const toggle = () => {
     if (open) {
       setOpen(false);
       return;
     }
-    const rect = triggerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const top = spaceBelow > estHeight + 8 ? rect.bottom + 4 : rect.top - estHeight - 4;
-    const mid = rect.left + rect.width / 2;
-    const left = Math.max(8, Math.min(mid - width / 2, window.innerWidth - width - 8));
-    setPos({ top, left });
+    updatePosition();
     setOpen(true);
   };
 
   useEffect(() => {
     if (!open) return;
+
     const onDown = (e: MouseEvent) => {
       if (popRef.current?.contains(e.target as Node)) return;
       if (triggerRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
+
+    const onReposition = () => updatePosition();
+
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
+
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+  }, [open, updatePosition]);
 
   return (
     <div ref={triggerRef} className="inline-flex shrink-0">
-      <ToolBtn active={open || active} onClick={toggle} title={title}>
+      <ToolBtn active={active || (highlightWhenOpen && open)} onClick={toggle} title={title}>
         {triggerContent}
       </ToolBtn>
       {open && (
         <div
           ref={popRef}
-          className="fixed z-[9999] flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl"
-          style={{ top: pos.top, left: pos.left, width }}
+          className="fixed z-[9999] flex flex-col gap-1.5 overflow-x-hidden overflow-y-auto rounded-[16px] border border-[#e8e2d9] bg-white p-1.5 shadow-[0_12px_32px_rgba(43,41,38,0.16),0_2px_8px_rgba(43,41,38,0.08)]"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            width: Math.min(width, typeof window === "undefined" ? width : window.innerWidth - 16),
+            maxHeight: "calc(100vh - 16px)",
+          }}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={closeOnSelect ? () => setOpen(false) : undefined}
         >
-          {children}
+          {typeof children === "function" ? children({ close }) : children}
         </div>
       )}
     </div>

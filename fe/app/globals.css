@@ -91,6 +91,58 @@ body::-webkit-scrollbar {
   pointer-events: none;
 }
 
+.edua-range {
+  appearance: none;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.edua-range:focus {
+  outline: none;
+}
+
+.edua-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: #d8d1c9;
+}
+
+.edua-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 0;
+  border-radius: 999px;
+  background: #d97757;
+  box-shadow: 0 1px 3px rgba(43, 41, 38, 0.18);
+}
+
+.edua-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.18), 0 1px 3px rgba(43, 41, 38, 0.18);
+}
+
+.edua-range::-moz-range-track {
+  height: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: #d8d1c9;
+}
+
+.edua-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #d97757;
+  box-shadow: 0 1px 3px rgba(43, 41, 38, 0.18);
+}
+
+.edua-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.18), 0 1px 3px rgba(43, 41, 38, 0.18);
+}
 .scrollbar-none {
   scrollbar-width: none;
   -ms-overflow-style: none;

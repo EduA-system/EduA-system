@@ -58,6 +58,7 @@ interface EditorState {
   setSlideBackground: (bg: string) => void;
   toggleLock: (ids: string[]) => void;
   copySelected: () => void;
+  cutSelected: () => void;
   paste: () => void;
   replaceSlides: (slides: Slide[]) => void;
 
@@ -598,6 +599,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         .filter((el) => state.selectedIds.includes(el.id))
         .map((el) => structuredClone(el));
       return { clipboard };
+    }),
+
+  cutSelected: () =>
+    set((state) => {
+      if (isCurrentSlideLocked(state)) return state;
+      const slide = state.slides.find((s) => s.id === state.currentSlideId);
+      if (!slide || state.selectedIds.length === 0) return state;
+      const ids = state.selectedIds;
+      const clipboard = slide.elements
+        .filter((el) => ids.includes(el.id))
+        .map((el) => structuredClone(el));
+      if (clipboard.length === 0) return state;
+      return {
+        ...pushHistory(state),
+        clipboard,
+        slides: withCurrentSlide(state, (s) => ({
+          ...s,
+          elements: s.elements.filter((el) => !ids.includes(el.id)),
+        })),
+        selectedIds: [],
+      };
     }),
 
   paste: () =>

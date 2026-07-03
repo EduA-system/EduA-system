@@ -159,7 +159,7 @@ export async function htmlToSlideElements(
         fontSize,
         bold: (parseInt(s.fontWeight, 10) || 400) >= 600,
         italic: s.fontStyle === "italic",
-        color: s.color || "#1e293b",
+        color: s.color || "#2b2926",
         align: alignOf(s),
         fontFamily: s.fontFamily || undefined,
         lineHeight,

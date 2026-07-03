@@ -22,6 +22,7 @@ const CANVAS_ITEMS: Item[] = [
 
 const ELEMENT_ITEMS: Item[] = [
   { label: "Sao chép", action: "copy", key: "Ctrl+C" },
+  { label: "Cắt", action: "cut", key: "Ctrl+X" },
   { label: "Nhân đôi", action: "duplicate", key: "Ctrl+D" },
   { label: "Dán", action: "paste", key: "Ctrl+V" },
   { sep: true },
@@ -65,16 +66,16 @@ export function ContextMenu({
           zIndex: 99998,
           minWidth: 200,
           background: "#ffffff",
-          border: "1px solid #e2e8f0",
+          border: "1px solid #e8e2d9",
           borderRadius: 8,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+          boxShadow: "0 8px 28px rgba(43,41,38,0.14)",
           padding: "4px 0",
         }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         {items.map((item, i) =>
           "sep" in item ? (
-            <div key={i} style={{ height: 1, background: "#e2e8f0", margin: "3px 0" }} />
+            <div key={i} style={{ height: 1, background: "#e8e2d9", margin: "3px 0" }} />
           ) : (
             <button
               key={i}
@@ -87,11 +88,11 @@ export function ContextMenu({
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                color: item.danger ? "#dc2626" : "#334155",
+                color: item.danger ? "#b42318" : "#4f4943",
                 fontSize: 13,
                 textAlign: "left",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f7f3ee")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
               onClick={() => {
                 onAction(item.action);
@@ -100,7 +101,7 @@ export function ContextMenu({
             >
               <span>{item.label}</span>
               {item.key && (
-                <span style={{ fontSize: 11, color: "#64748b", marginLeft: 24 }}>{item.key}</span>
+                <span style={{ fontSize: 11, color: "#8a8178", marginLeft: 24 }}>{item.key}</span>
               )}
             </button>
           )

@@ -9,7 +9,7 @@ import { useEditorStore } from "@/stores/slide-editor-store";
 import { CANVAS_W, CANVAS_H, isSlideLockedForGeneration, type Slide } from "./types";
 import { ElementView } from "./ElementView";
 
-const THUMB_W = 132;
+const THUMB_W = 112;
 const THUMB_SCALE = THUMB_W / CANVAS_W;
 const THUMB_H = CANVAS_H * THUMB_SCALE;
 
@@ -64,18 +64,18 @@ function Thumbnail({
       }`}
     >
       {dropBefore && (
-        <span className="pointer-events-none absolute -left-2 top-0 w-0.5 rounded bg-[#3c4043]" style={{ height: THUMB_H }} />
+        <span className="pointer-events-none absolute -left-2 top-0 w-0.5 rounded bg-[#d97757]" style={{ height: THUMB_H }} />
       )}
       {dropAfter && (
-        <span className="pointer-events-none absolute -right-2 top-0 w-0.5 rounded bg-[#3c4043]" style={{ height: THUMB_H }} />
+        <span className="pointer-events-none absolute -right-2 top-0 w-0.5 rounded bg-[#d97757]" style={{ height: THUMB_H }} />
       )}
       <button
         onClick={onClick}
         style={{ width: THUMB_W, height: THUMB_H }}
-        className={`overflow-hidden rounded-lg bg-white transition ${
+        className={`overflow-hidden rounded-[8px] bg-white transition ${
           active
-            ? "shadow-[0_6px_16px_rgba(15,23,42,0.18)] ring-2 ring-[#3c4043]"
-            : "shadow-[0_1px_3px_rgba(15,23,42,0.12)] ring-1 ring-black/5 group-hover:ring-black/15"
+            ? "shadow-[0_4px_14px_rgba(43,41,38,0.13)] ring-2 ring-[#d97757]"
+            : "shadow-[0_1px_3px_rgba(43,41,38,0.08)] ring-1 ring-[#e8e2d9] group-hover:ring-[#d8d1c9]"
         }`}
       >
         <div
@@ -93,7 +93,7 @@ function Thumbnail({
           ))}
           {locked && (
             <div className="absolute inset-0 flex items-center justify-center bg-white/45">
-              <span className="size-6 animate-spin rounded-full border-[3px] border-[#8200db] border-t-transparent" />
+              <span className="size-6 animate-spin rounded-full border-[3px] border-[#d97757] border-t-transparent" />
             </div>
           )}
           {slide.generationStatus === "failed" && (
@@ -109,7 +109,7 @@ function Thumbnail({
           onClick={onDuplicate}
           disabled={actionsDisabled}
           title="Nhân bản slide"
-          className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded bg-white/90 text-[11px] text-[#555] shadow ring-1 ring-black/10 hover:bg-white disabled:pointer-events-none disabled:opacity-30"
+          className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded bg-white/90 text-[11px] text-[#4f4943] shadow ring-1 ring-[#d8d1c9] hover:bg-white disabled:pointer-events-none disabled:opacity-30"
         >
           ⧉
         </button>
@@ -117,7 +117,7 @@ function Thumbnail({
           onClick={onDelete}
           disabled={!canDelete || actionsDisabled}
           title="Xóa slide"
-          className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded bg-white/90 text-[11px] text-[#d11] shadow ring-1 ring-black/10 hover:bg-white disabled:opacity-30"
+          className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded bg-white/90 text-[11px] text-[#b42318] shadow ring-1 ring-[#d8d1c9] hover:bg-white disabled:opacity-30"
         >
           ×
         </button>
@@ -125,7 +125,7 @@ function Thumbnail({
 
       <span
         className={`pl-0.5 text-[11px] leading-none ${
-          active ? "font-semibold text-[#1f1f1f]" : "text-[#9aa0a6]"
+          active ? "font-semibold text-[#2b2926]" : "text-[#b8aea5]"
         }`}
       >
         {index + 1}
@@ -147,8 +147,8 @@ function InsertGap({ disabled = false, onInsert }: { disabled?: boolean; onInser
         disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
       }`}
     >
-      <span className="pointer-events-none absolute inset-y-1.5 left-1/2 w-0.5 -translate-x-1/2 rounded bg-[#3c4043] opacity-0 transition group-hover/insert:opacity-100" />
-      <span className="relative flex h-5 w-5 items-center justify-center rounded-full bg-[#3c4043] text-sm leading-none text-white opacity-0 shadow transition group-hover/insert:opacity-100">
+      <span className="pointer-events-none absolute inset-y-1.5 left-1/2 w-0.5 -translate-x-1/2 rounded bg-[#d97757] opacity-0 transition group-hover/insert:opacity-100" />
+      <span className="relative flex h-5 w-5 items-center justify-center rounded-full bg-[#d97757] text-sm leading-none text-white opacity-0 shadow transition group-hover/insert:opacity-100">
         +
       </span>
     </div>
@@ -187,7 +187,7 @@ export function SlideTray() {
   };
 
   return (
-    <div className="flex shrink-0 items-end overflow-x-auto bg-[#edeff2] px-5 pb-4 pt-1">
+    <div className="scrollbar-none flex h-[116px] shrink-0 items-end overflow-x-auto border-t border-[#e8e2d9] bg-white/84 px-5 pb-3 pt-2">
       {slides.map((slide, i) => {
         const showIndicator = dragIndex !== null && overIndex === i;
         return (
@@ -232,7 +232,7 @@ export function SlideTray() {
         disabled={hasLockedSlides}
         title="Thêm slide"
         style={{ height: THUMB_H }}
-        className="ml-3 flex w-10 shrink-0 items-center justify-center self-start rounded-lg bg-white text-xl text-[#9aa0a6] ring-1 ring-black/10 transition hover:text-[#1f1f1f] hover:ring-black/20 disabled:pointer-events-none disabled:opacity-40"
+        className="ml-3 flex w-9 shrink-0 items-center justify-center self-start rounded-[8px] bg-white text-xl text-[#b8aea5] ring-1 ring-[#e8e2d9] transition hover:text-[#2b2926] hover:ring-[#d8d1c9] disabled:pointer-events-none disabled:opacity-40"
       >
         +
       </button>
