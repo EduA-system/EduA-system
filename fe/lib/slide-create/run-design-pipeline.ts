@@ -16,18 +16,18 @@ export type DesignPipelineCallbacks = {
   /**
    * Step 1 (deck skin) finished and was converted once — reusable bg +
    * decoration. Used to stamp a preview onto all skeleton slides before
-   * per-slide content fills in.
+   * per-slide layout frames finish.
    */
   onSkinReady?: (skin: { bg: string; elements: SlideElement[] }) => void;
   /**
    * Step 2 done for a slide: bordered zone frames stamped as a layout preview.
-   * Replaced by onSlideReady once step 3 fills the content.
+   * Kept for incremental UI updates; Step 2 is also the temporary final result.
    */
   onSlideFrames?: (
     slideId: string,
     result: { bg: string; elements: SlideElement[] },
   ) => void;
-  /** A slide finished steps 2+3 and was converted to editor elements. */
+  /** A slide finished the currently enabled design steps and was converted to editor elements. */
   onSlideReady: (
     slideId: string,
     result: { bg: string; elements: SlideElement[] },
@@ -40,10 +40,9 @@ export type DesignPipelineCallbacks = {
 };
 
 /**
- * Build the per-slide outline text fed to step 2 + step 3. Beyond title + role,
- * we include the real lesson content bound to this slide at the outline step
- * (cách B) so the design AI fills the slide from the teacher's plan instead of
- * inventing unrelated examples.
+ * Build the per-slide outline text fed to step 2. Beyond title + role, we
+ * include the real lesson content bound to this slide so the layout AI can
+ * choose zone count, ratios, and capacity from the teacher's plan.
  */
 function slideOutlineText(slide: SlideItem): string {
   const role = slideRoleLabel(slide);
@@ -81,7 +80,7 @@ function flattenSlides(parts: OutlinePart[]): SlideItem[] {
 }
 
 /**
- * Max slides whose step2→step3 chains run concurrently. Bounded to avoid
+ * Max slides whose step-2 layout calls run concurrently. Bounded to avoid
  * AI-provider rate limits (429) and the browser's ~6 conn/host cap on
  * HTTP/1.1. Raise carefully if the provider tier allows more throughput.
  */
@@ -107,13 +106,12 @@ async function runPool<T>(
 }
 
 /**
- * Run the 3-step HTML design pipeline for a whole deck:
+ * Run the currently enabled HTML design pipeline for a whole deck:
  *   step1 (bg_deco) once  →  deck skin
- *   per slide: step2 (structural) → step3 (content_fill) → convert → onSlideReady
+ *   per slide: step2 (structural) → convert → onSlideReady
  *
- * step2→step3 stay sequential within a slide (hard dependency), but slides
- * run in parallel with bounded concurrency (SLIDE_CONCURRENCY) so the deck
- * generates faster; each slide still reveals itself as it completes.
+ * Step 3 (content_fill) is intentionally disabled for now so the editor shows
+ * the ratio-partitioned content frames from Step 2.
  */
 export async function runDesignPipeline(
   input: DesignPipelineInput,
@@ -164,7 +162,7 @@ export async function runDesignPipeline(
     });
   }
 
-  // ── Steps 2+3 per slide (parallel, bounded) ─────────────────
+  // ── Step 2 per slide (parallel, bounded) ────────────────────
   await runPool(slides, SLIDE_CONCURRENCY, async (slide) => {
     const outline = slideOutlineText(slide);
     try {
@@ -176,34 +174,18 @@ export async function runDesignPipeline(
         step: "structural",
         priorHtml: skinHtml,
       });
-      // Preview the step-2 layout: stamp bordered zone frames before content.
-      if (cb.onSlideFrames) {
-        try {
-          const frames = await htmlToSlideElements(step2.html, {
-            bgImageUrl,
-            decoIconUrls,
-            includeZoneFrames: true,
-          });
-          cb.onSlideFrames(slide.id, { bg: frames.bg, elements: frames.elements });
-        } catch (e) {
-          logSlideApi("design pipeline: frame preview failed", {
-            slide: slide.id,
-            message: e instanceof Error ? e.message : String(e),
-          });
-        }
+      if (!step2.html.trim()) {
+        throw new Error(step2.warning || "Step 2 không tạo được HTML layout.");
       }
-      const step3 = await generateSlideHtmlDesign({
-        topic,
-        outline,
-        subject,
-        styleHint,
-        step: "content_fill",
-        priorHtml: step2.html,
+      const { bg, elements, skipped } = await htmlToSlideElements(step2.html, {
+        bgImageUrl,
+        decoIconUrls,
+        includeZoneFrames: true,
       });
-      const { bg, elements, skipped } = await htmlToSlideElements(step3.html, { bgImageUrl, decoIconUrls });
       if (skipped.length > 0) {
         logSlideApi("design pipeline: skipped elements", { slide: slide.id, skipped });
       }
+      cb.onSlideFrames?.(slide.id, { bg, elements });
       cb.onSlideReady(slide.id, { bg, elements }, slide.title);
     } catch (e) {
       console.error("[EDUA slide] [API] design pipeline slide failed", slide.id, e);

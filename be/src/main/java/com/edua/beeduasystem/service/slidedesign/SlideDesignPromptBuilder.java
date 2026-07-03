@@ -42,16 +42,15 @@ public class SlideDesignPromptBuilder {
               L0 BACKGROUND   — root inline background (THIS step)
               L1 DECORATION   — non-informative shapes/marks (THIS step)
               L2 HEADER       — masthead band + deck-level label (THIS step)
-              L2 BODY STRUCT  — per-slide containers (NEXT step)
-              L2 BODY ZONES   — per-slide placeholders (NEXT step)
+              L2 BODY ZONES   — per-slide ratio partition placeholders (NEXT step)
               L3 CONTENT      — per-slide content (LATER step)
 
             In this step you emit L0 + L1 + the HEADER region of L2.
-            Body structural and content zones come in the next step,
-            per slide. The header you draw here will appear UNCHANGED
-            on every slide, so design it as a reusable masthead — NOT
-            slide-specific. The slide must look visually coherent as a
-            designed "empty stage with masthead".
+            Body ratio partitions and content zones come in the next
+            step, per slide. The header you draw here will appear
+            UNCHANGED on every slide, so design it as a reusable
+            masthead — NOT slide-specific. The slide must look visually
+            coherent as a designed "empty stage with masthead".
             </task>
 
             <canvas>
@@ -224,16 +223,16 @@ public class SlideDesignPromptBuilder {
             """;
 
     // ----------------------------------------------------------------
-    // STEP 2 — Structural layer + Content zone declarations
+    // STEP 2 — Ratio partition + Content zone declarations
     // ----------------------------------------------------------------
-    // Receives Step 1 HTML (background + decoration + header). Appends
-    // BODY structural containers (sidebar / card / column divider) and
-    // BODY content zones (empty positioned placeholders with bbox +
-    // content hint). All new elements must sit BELOW the header band
-    // (y ≥ BODY_TOP, parsed from data-body-top on the prior HTML).
-    // Step 1 elements must remain byte-identical. Zones are made
-    // visually obvious with a dashed outline + legend label so the
-    // human reviewer can verify the bbox layout before content fill.
+    // Receives Step 1 HTML (background + decoration + header). Treats
+    // the whole body area as ONE source rectangle and cuts/partitions it
+    // into 3-4 non-overlapping content zones by explicit ratios. All new
+    // elements must sit BELOW the header band (y ≥ BODY_TOP, parsed from
+    // data-body-top on the prior HTML). Step 1 elements must remain
+    // byte-identical. Zones are made visually obvious with a dashed
+    // outline + legend label so the human reviewer can verify the ratio
+    // partition before content fill.
     // ----------------------------------------------------------------
     private static final String STEP2_STRUCT_ZONES_PROMPT = """
             <role>
@@ -250,15 +249,16 @@ public class SlideDesignPromptBuilder {
               L0 BACKGROUND   — already done in Step 1 (do not modify)
               L1 DECORATION   — already done in Step 1 (do not modify)
               L2 HEADER       — already done in Step 1 (do not modify)
-              L2 BODY STRUCT  — emit NOW (containers inside body only)
-              L2 BODY ZONES   — emit NOW (positioned placeholders)
+              L2 BODY SOURCE  — ONE implicit rectangle: x=0, y=BODY_TOP,
+                                w=960, h=540-BODY_TOP
+              L2 BODY ZONES   — emit NOW by CUTTING that source rectangle
               L3 CONTENT      — LATER step (fills the zones)
 
             You receive PRIOR_HTML (the deck skin: bg + deco + header).
             Your output is the COMPLETE updated HTML: every byte of
-            PRIOR_HTML preserved verbatim, plus new body structural
-            children plus new body zone placeholders appended INSIDE
-            the same root div.
+            PRIOR_HTML preserved verbatim, plus new body zone
+            placeholders appended INSIDE the same root div. DO NOT add
+            body structural fill/card/sidebar elements in this step.
 
             The HEADER region (top band of the canvas) is fixed and
             SHARED across every slide in this deck. You MUST NOT add
@@ -285,92 +285,64 @@ public class SlideDesignPromptBuilder {
             output will be rejected.
             </preservation_contract>
 
-            <body_layout_pattern_selection>
-            Pick ONE editorial layout pattern for the BODY region only
-            (the canvas area BELOW the header). All bboxes you emit
-            must have y ≥ BODY_TOP. The usable body region is
-            roughly 960 × (540 − BODY_TOP).
-              1. "Hero + aside" — large hero zone on the left (≈55–65%
-                 of body width), aside on the right (≈30–35%) for
-                 image/diagram. Useful for one key idea + visual.
-              2. "Accent stripe + body" — a 60–120px structural sidebar
-                 stripe on one edge of the body (top = BODY_TOP,
-                 bottom = 540); the rest hosts a hero + body zone stack.
-              3. "Two-column" — one zone on top of the body spanning
-                 full body width; two equal zones below for compare/
-                 contrast.
-              4. "Hero statement" — single hero zone centered or offset
-                 in the body, one short caption zone underneath. Minimal
-                 structural chrome.
-              5. "Card on field" — a single rounded structural card
-                 (border-radius 16–24px, soft shadow) covering most of
-                 the body region; zones live inside the card.
-            (NOTE: no "Header band + content" pattern — the header is
-            already defined in Step 1 and immutable.)
+            <body_partition_rules required="true">
+            The BODY source rectangle is:
+              source_x = 0
+              source_y = BODY_TOP
+              source_w = 960
+              source_h = 540 - BODY_TOP
 
-            EDITORIAL INTENT (this is what separates a designed slide from
-            a default-PowerPoint box grid — obey it):
-              - ASYMMETRY over symmetry. Do NOT default to a tidy
-                left-text / right-box pair on every slide. Offset the
-                hero; let ONE zone dominate (≈55–70% of the body) while
-                the rest stay deliberately small.
-              - NEGATIVE SPACE: leave 30–45% of the BODY region empty.
-                A thin slide (little outline text) must NOT get a huge
-                empty card — use a "Hero statement": one large offset
-                title with lots of breathing room, no filler zones.
-              - HERO IS THE ANCHOR: give the hero zone a GENEROUS bbox —
-                wide and tall enough for a 36–64px display title across
-                1–2 lines (think ≥320px wide, ≥110px tall). Never size the
-                hero like a caption.
-              - INTENTIONAL OVERLAP is encouraged for depth: the hero may
-                overlap an aside/image edge or sit across a card boundary,
-                as long as text stays readable. Zones do NOT have to be
-                separate non-touching rectangles.
-              - VARIETY across the deck: choose the layout that fits THIS
-                slide's content, not the same pattern every time.
-            </body_layout_pattern_selection>
+            CUT this source rectangle into exactly 3 or 4 visible body
+            zones. This is a geometric partition, not a set of floating
+            cards. Pick and declare ONE explicit ratio plan in the first
+            zone's data-content-hint, for example:
+              - "ratio plan: vertical 60/40, right split 50/50"
+              - "ratio plan: top 45, bottom columns 34/33/33"
+              - "ratio plan: left 55, right stack 35/35/30"
+              - "ratio plan: four columns 40/20/20/20"
 
-            <body_structural_rules required="true">
-            Emit 0 to 3 BODY structural children. Each MUST have:
-              - data-layer="struct"
-              - data-region="body"
-              - data-slide-el="shape"
-              - inline z-index in range 41–60
-              - position:absolute with left/top/width/height in PIXELS
-              - top (y) ≥ BODY_TOP and (y + height) ≤ 540
+            Partition constraints:
+              - Zones MUST NOT overlap.
+              - Zones MUST NOT leave large unused holes inside the body.
+              - Use a consistent gutter of 12-20px between zones.
+              - The union of zones plus gutters should cover the source
+                rectangle from left edge to right edge and BODY_TOP to
+                bottom edge; outer margin is at most 20px.
+              - ONE zone may dominate (45-65% of body area), but all
+                other zones must still be usable rectangles.
+              - This is a cut layout: do NOT create background cards,
+                sidebars, dividers, stripes, panels, or decorative shape
+                fills to occupy space.
 
-            Allowed body structural elements:
-              - Sidebar stripe (vertical band inside body, width 60–140px,
-                top = BODY_TOP, height = 540 − BODY_TOP)
-              - Card container (rounded rectangle with subtle shadow,
-                fully inside the body region)
-              - Column divider (vertical 1–2px hairline between zones,
-                inside the body region)
-
-            Body structural elements MUST NOT overlap each other. They
-            DEFINE the regions in which body zones will live.
+            Allowed ratio patterns:
+              1. "Vertical split + stack" — left or right zone takes
+                 55-65% width; the other side is split into 2-3 stacked
+                 zones.
+              2. "Top band + bottom columns" — one zone spans the top
+                 35-50% height; the bottom is split into 2-3 columns.
+              3. "Left rail + content grid" — a 25-35% left zone; the
+                 remaining width is cut into 2-3 zones, no decorative
+                 rail element.
+              4. "Four-panel ratio" — four unequal panels such as
+                 40/20/20/20 or 35/25/20/20.
 
             FORBIDDEN in this step:
               - Modifying any element from PRIOR_HTML.
               - Adding ANY element at y < BODY_TOP (the header
                 region is reserved for Step 1's masthead).
-              - Adding another header band, footer band, or any
-                full-width chrome that mirrors the existing header.
-              - Adding more decoration (no watermarks, no off-canvas
-                bleed, no layered abstract shapes — that was step 1).
+              - Adding body structural elements (`data-layer="struct"`).
+              - Adding cards, sidebars, dividers, stripes, panels, or
+                filled rectangles that are not content zones.
               - Adding content (no titles, no body, no bullets, no
                 images, no formulas).
               - SVG, scripts, animations, transitions, pseudo-elements.
-            </body_structural_rules>
+            </body_partition_rules>
 
             <body_zones_rules required="true">
-            After the body structural children, emit between 2 and 4
-            BODY ZONE placeholders. Prefer 3 — only emit 4 when the
-            outline genuinely has 4 distinct content units that each
-            need their own bbox. DO NOT pad the slide with extra zones
-            just because the catalog has 5 zone ids available. Each
-            zone is an EMPTY positioned div that reserves space for
-            future L3 content. Zones MUST:
+            Emit exactly 3 or 4 BODY ZONE placeholders. Prefer 3 unless
+            the outline genuinely has 4 distinct content units. Each zone
+            is one piece cut from the BODY source rectangle and reserves
+            space for future L3 content. Zones MUST:
               - have data-layer="zone"
               - have data-region="body"
               - have data-zone="<id>" where id is one of:
@@ -389,17 +361,14 @@ public class SlideDesignPromptBuilder {
                 and data-max-lines (1–6).
               - carry data-content-hint in ENGLISH describing what the
                 future content step should put inside.
-              - inline z-index in range 41–60 (same tier as body struct).
+              - inline z-index in range 41–60.
               - position:absolute with PIXEL left/top/width/height.
 
-            Body zones MAY overlap INTENTIONALLY for a layered editorial
-            effect (e.g. hero over an image edge) as long as the eventual
-            text stays readable — they are NOT required to be separate
-            non-touching rectangles. Body zones MAY sit INSIDE a
-            structural card. Every body zone's bbox MUST sit fully inside
-            the body region:
+            Every body zone's bbox MUST sit fully inside the body region:
               data-bbox-x ≥ 0,            data-bbox-x + data-bbox-w ≤ 960
               data-bbox-y ≥ BODY_TOP, data-bbox-y + data-bbox-h ≤ 540
+            Zones MUST NOT overlap. Gutters between adjacent zones MUST
+            be 12-20px.
 
             VISIBILITY OVERLAY required="true":
             Because step 3 has not yet filled content, each zone div
@@ -440,15 +409,15 @@ public class SlideDesignPromptBuilder {
                 (data-layer="bg" root div).
               - Then every PRIOR_HTML child unchanged (background,
                 decoration, AND header).
-              - Then the new body structural children (0–3).
-              - Then the new body zone children (2–4, prefer 3).
+              - Then the new body zone children (exactly 3 or 4).
               - End with the single closing &lt;/div&gt;.
 
             No preamble. No markdown fence. No explanation. No trailing
             text. Any deviation from PRIOR_HTML in the first part of
             your output causes the response to be rejected. Every new
-            element you emit MUST have data-region="body" and y ≥
-            BODY_TOP.
+            element you emit MUST have data-layer="zone",
+            data-region="body", and y ≥ BODY_TOP. Emit no
+            data-layer="struct" elements.
             </output_format>
             """;
 
@@ -780,17 +749,21 @@ public class SlideDesignPromptBuilder {
         user.append("\n</prior_html_step1>\n\n");
 
         user.append("BODY_TOP = ").append(bodyTop).append("px. ");
-        user.append("Every new body structural child and every new body zone you emit ");
-        user.append("MUST have y ≥ ").append(bodyTop).append(" (the header above and its ");
-        user.append("bottom gap are immutable).\n\n");
+        user.append("The BODY source rectangle to cut is x=0, y=").append(bodyTop);
+        user.append(", width=960, height=").append(540 - bodyTop).append(". ");
+        user.append("Every new body zone you emit MUST have y ≥ ").append(bodyTop);
+        user.append(" (the header above and its bottom gap are immutable).\n\n");
         user.append("Outline ở trên chứa NỘI DUNG THẬT giáo viên đã soạn cho slide này. ");
         user.append("Ước lượng lượng chữ thật đó để chọn số zone và đặt data-max-chars/data-max-lines ");
         user.append("vừa khít — đủ chỗ cho toàn bộ nội dung, không tạo zone thừa, không bỏ sót ý.\n\n");
-        user.append("Pick ONE body layout pattern consistent with the existing skin. ");
+        user.append("Pick ONE ratio partition pattern consistent with the existing skin. ");
         user.append("Emit the COMPLETE updated HTML: PRIOR_HTML preserved byte-for-byte ");
-        user.append("(background + decoration + header), then 0–3 body structural children, ");
-        user.append("then 2–4 visible body zone placeholders (prefer 3 — ");
-        user.append("don't over-pack the canvas). ");
+        user.append("(background + decoration + header), then exactly 3 or 4 visible ");
+        user.append("body zone placeholders cut from the BODY source rectangle. ");
+        user.append("Do NOT emit body structural children, cards, sidebars, dividers, ");
+        user.append("stripes, filled panels, or any data-layer=\"struct\" elements. ");
+        user.append("Declare the ratio plan in the first zone's data-content-hint. ");
+        user.append("Use 12–20px gutters, no overlaps, and no large unused holes. ");
         user.append("Each zone MUST render the debug overlay (dashed outline + legend) ");
         user.append("so a human can read the bbox layout before content is added.\n\n");
         user.append("Begin your response with the EXACT opening tag of PRIOR_HTML ");
