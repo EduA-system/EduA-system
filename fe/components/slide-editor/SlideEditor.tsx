@@ -26,7 +26,14 @@ export const dragRefGlobal = {
   current: null as DragState | null,
 };
 
-export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boolean }) {
+export function SlideEditor({
+  skipInitialLoad = false,
+  onRetrySlide,
+}: {
+  skipInitialLoad?: boolean;
+  /** AI-regenerate one slide (header retry button). Omitted outside the AI slide-maker flow. */
+  onRetrySlide?: (slideId: string) => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomMode, setZoomMode] = useState<"fit" | number>("fit");
   const [lockAspect, setLockAspect] = useState(false);
@@ -227,6 +234,7 @@ export function SlideEditor({ skipInitialLoad = false }: { skipInitialLoad?: boo
         onToggleLockAspect={() => setLockAspect((v) => !v)}
         showLayers={showLayers}
         onToggleLayers={() => setShowLayers((v) => !v)}
+        onRetrySlide={onRetrySlide}
       />
       <div className="flex min-h-0 flex-1">
         <LeftPanel

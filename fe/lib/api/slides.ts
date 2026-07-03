@@ -187,33 +187,3 @@ export async function generateOutline(request: {
   });
   return data;
 }
-
-export async function generateParts(request: {
-  sessionId: string;
-  lessonId: string;
-  lessonTitle: string;
-  lessonSummary?: string;
-  grade?: string;
-  userPrompt?: string;
-  styleHint?: string;
-  parts: OutlinePart[];
-}): Promise<void> {
-  logSlideApi("POST /api/slides/generate-parts", {
-    sessionId: request.sessionId,
-    lessonId: request.lessonId,
-    partCount: request.parts.length,
-    slideCount: request.parts.reduce((sum, part) => sum + part.slides.length, 0),
-  });
-  const res = await fetch(`${BE}/api/slides/generate-parts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    const message = `POST /api/slides/generate-parts ${res.status}: ${detail || res.statusText}`;
-    console.error("[EDUA slide] [API] generate-parts failed", message);
-    throw new Error(message);
-  }
-  logSlideApi("generate-parts accepted (202)", { sessionId: request.sessionId });
-}

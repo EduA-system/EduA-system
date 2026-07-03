@@ -4,6 +4,11 @@ import { htmlToSlideElements } from "@/components/slide-editor/lib/html-to-slide
 import { pickBackground, pickDecoIcons } from "@/lib/slide-assets/resolve";
 import type { SlideElement } from "@/components/slide-editor/types";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
+import {
+  getSlideDesignContext,
+  setSlideDesignContext,
+  type SlideDesignContext,
+} from "@/lib/slide-create/design-session";
 
 export type DesignPipelineInput = {
   topic: string;
@@ -107,6 +112,90 @@ async function runPool<T>(
 }
 
 /**
+ * Run step 2 (structural) + step 3 (content_fill) + iframe conversion for a
+ * single slide, given a ready deck skin. Shared by the full-deck pipeline
+ * below and by retrySlideDesign (regenerate one slide from the header retry
+ * button) so both paths behave identically.
+ */
+async function runSlideDesignSteps(
+  slide: SlideItem,
+  ctx: Pick<SlideDesignContext, "topic" | "subject" | "styleHint" | "skinHtml" | "bgImageUrl" | "decoIconUrls">,
+  cb: Pick<DesignPipelineCallbacks, "onSlideFrames" | "onSlideReady" | "onSlideFailed">,
+): Promise<void> {
+  const { topic, subject, styleHint, skinHtml, bgImageUrl, decoIconUrls } = ctx;
+  const outline = slideOutlineText(slide);
+  try {
+    const step2 = await generateSlideHtmlDesign({
+      topic,
+      outline,
+      subject,
+      styleHint,
+      step: "structural",
+      priorHtml: skinHtml,
+    });
+    // Preview the step-2 layout: stamp bordered zone frames before content.
+    if (cb.onSlideFrames) {
+      try {
+        const frames = await htmlToSlideElements(step2.html, {
+          bgImageUrl,
+          decoIconUrls,
+          includeZoneFrames: true,
+        });
+        cb.onSlideFrames(slide.id, { bg: frames.bg, elements: frames.elements });
+      } catch (e) {
+        logSlideApi("design pipeline: frame preview failed", {
+          slide: slide.id,
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+    const step3 = await generateSlideHtmlDesign({
+      topic,
+      outline,
+      subject,
+      styleHint,
+      step: "content_fill",
+      priorHtml: step2.html,
+    });
+    const { bg, elements, skipped } = await htmlToSlideElements(step3.html, { bgImageUrl, decoIconUrls });
+    if (skipped.length > 0) {
+      logSlideApi("design pipeline: skipped elements", { slide: slide.id, skipped });
+    }
+    if (elements.length === 0) {
+      // AI trả HTTP 200 nhưng HTML rỗng/hỏng (không parse ra được element nào) —
+      // coi như thất bại thay vì âm thầm hiện slide trắng như "ready".
+      throw new Error("AI trả về slide rỗng, không có nội dung nào được tạo.");
+    }
+    cb.onSlideReady(slide.id, { bg, elements }, slide.title);
+  } catch (e) {
+    console.error("[EDUA slide] [API] design pipeline slide failed", slide.id, e);
+    cb.onSlideFailed?.(slide.id, e instanceof Error ? e.message : String(e));
+  }
+}
+
+/**
+ * Regenerate a single slide (header "retry" button) using the deck skin and
+ * outline captured by the last runDesignPipeline call. Returns without
+ * calling the AI if that context isn't available (e.g. page was reloaded).
+ */
+export async function retrySlideDesign(
+  slideId: string,
+  cb: Pick<DesignPipelineCallbacks, "onSlideFrames" | "onSlideReady" | "onSlideFailed">,
+): Promise<void> {
+  const ctx = getSlideDesignContext();
+  if (!ctx) {
+    cb.onSlideFailed?.(slideId, "Không thể tạo lại: đã mất dữ liệu phiên tạo slide (thử tải lại trang vừa tạo deck).");
+    return;
+  }
+  const slide = ctx.slidesById.get(slideId);
+  if (!slide) {
+    cb.onSlideFailed?.(slideId, "Không tìm thấy outline gốc cho slide này để tạo lại.");
+    return;
+  }
+  await runSlideDesignSteps(slide, ctx, cb);
+}
+
+/**
  * Run the 3-step HTML design pipeline for a whole deck:
  *   step1 (bg_deco) once  →  deck skin
  *   per slide: step2 (structural) → step3 (content_fill) → convert → onSlideReady
@@ -164,50 +253,26 @@ export async function runDesignPipeline(
     });
   }
 
+  // Snapshot this run so a single slide can be retried later without
+  // redoing step 1 or re-asking the caller for the outline.
+  setSlideDesignContext({
+    topic,
+    subject,
+    styleHint,
+    skinHtml,
+    bgImageUrl,
+    decoIconUrls,
+    slidesById: new Map(slides.map((slide) => [slide.id, slide])),
+  });
+
   // ── Steps 2+3 per slide (parallel, bounded) ─────────────────
   await runPool(slides, SLIDE_CONCURRENCY, async (slide) => {
-    const outline = slideOutlineText(slide);
     try {
-      const step2 = await generateSlideHtmlDesign({
-        topic,
-        outline,
-        subject,
-        styleHint,
-        step: "structural",
-        priorHtml: skinHtml,
-      });
-      // Preview the step-2 layout: stamp bordered zone frames before content.
-      if (cb.onSlideFrames) {
-        try {
-          const frames = await htmlToSlideElements(step2.html, {
-            bgImageUrl,
-            decoIconUrls,
-            includeZoneFrames: true,
-          });
-          cb.onSlideFrames(slide.id, { bg: frames.bg, elements: frames.elements });
-        } catch (e) {
-          logSlideApi("design pipeline: frame preview failed", {
-            slide: slide.id,
-            message: e instanceof Error ? e.message : String(e),
-          });
-        }
-      }
-      const step3 = await generateSlideHtmlDesign({
-        topic,
-        outline,
-        subject,
-        styleHint,
-        step: "content_fill",
-        priorHtml: step2.html,
-      });
-      const { bg, elements, skipped } = await htmlToSlideElements(step3.html, { bgImageUrl, decoIconUrls });
-      if (skipped.length > 0) {
-        logSlideApi("design pipeline: skipped elements", { slide: slide.id, skipped });
-      }
-      cb.onSlideReady(slide.id, { bg, elements }, slide.title);
-    } catch (e) {
-      console.error("[EDUA slide] [API] design pipeline slide failed", slide.id, e);
-      cb.onSlideFailed?.(slide.id, e instanceof Error ? e.message : String(e));
+      await runSlideDesignSteps(
+        slide,
+        { topic, subject, styleHint, skinHtml, bgImageUrl, decoIconUrls },
+        cb,
+      );
     } finally {
       ready += 1;
       cb.onProgress?.(ready, total);

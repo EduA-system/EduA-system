@@ -190,7 +190,6 @@ export default function SlideOutlinePage() {
         styleHint: session.styleHint,
         subject: session.subject,
         parts: editedParts,
-        mode: "design",
       });
       patchSlideCreateSession({ outlineParts: editedParts });
       router.push("/slide-maker?generating=1");

@@ -13,6 +13,7 @@ interface TopBarProps {
   onToggleLockAspect: () => void;
   showLayers: boolean;
   onToggleLayers: () => void;
+  onRetrySlide?: (slideId: string) => void;
 }
 
 function UndoSvg() {
@@ -29,6 +30,20 @@ function RedoSvg() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M10.5 7.5H13V5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M13 7.5A5 5 0 1 1 8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function RetrySvg() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path
+        d="M13 8A5 5 0 1 1 11.5 4.2M13 2v3h-3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -141,11 +156,13 @@ export function TopBar({
   onToggleLockAspect,
   showLayers,
   onToggleLayers,
+  onRetrySlide,
 }: TopBarProps) {
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
   const history = useEditorStore((s) => s.history);
   const selectedCount = useEditorStore((s) => s.selectedIds.length);
+  const currentSlideId = useEditorStore((s) => s.currentSlideId);
   const currentSlideLocked = useEditorStore((s) =>
     isSlideLockedForGeneration(s.slides.find((sl) => sl.id === s.currentSlideId)),
   );
@@ -230,6 +247,19 @@ export function TopBar({
         title="Khóa tỉ lệ khi resize"
         label="⛶"
       />
+
+      {onRetrySlide ? (
+        <>
+          <Divider />
+          <ToolButton
+            onClick={() => currentSlideId && onRetrySlide(currentSlideId)}
+            disabled={!currentSlideId || currentSlideLocked}
+            title="Tạo lại slide này bằng AI"
+          >
+            <RetrySvg />
+          </ToolButton>
+        </>
+      ) : null}
 
       <div className="flex-1" />
 

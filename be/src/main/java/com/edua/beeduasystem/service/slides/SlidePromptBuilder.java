@@ -1,17 +1,11 @@
 package com.edua.beeduasystem.service.slides;
 
 import com.edua.beeduasystem.domain.model.lesson.LessonContext;
-import com.edua.beeduasystem.domain.model.slide.SlideItem;
-import com.edua.beeduasystem.domain.model.slide.SlideMetadata;
-import com.edua.beeduasystem.domain.model.slide.SlideOutline;
-import com.edua.beeduasystem.domain.model.slide.SlidePart;
-import com.edua.beeduasystem.domain.model.slide.SlideVisual;
 import com.edua.beeduasystem.presentation.dto.slides.InlineActivityDto;
 import com.edua.beeduasystem.presentation.dto.slides.InlineLessonPlanDto;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class SlidePromptBuilder {
@@ -52,29 +46,63 @@ public class SlidePromptBuilder {
         }
 
         sb.append("""
-                NHIỆM VỤ: Thiết kế KHUNG slide bọc trọn một tiết dạy, theo cung sau (bỏ phần nào KHÔNG có dữ liệu trong giáo án):
-                1. Bìa / Chào hỏi  — tên bài, lớp, lời chào.                role: hook
-                2. Mục tiêu bài học — từ phần Mục tiêu.                       role: explain
-                3. Khởi động / Đặt vấn đề — từ hoạt động khởi động (nếu có). role: hook
-                4. THÂN BÀI — mỗi HOẠT ĐỘNG hình thành kiến thức = MỘT phần.
-                5. Luyện tập — bài tập áp dụng (nếu có).                      role: practice
-                6. Tổng kết / Sơ đồ — từ phần Củng cố (nếu có).              role: recap
-                7. Vận dụng + BTVN — từ phần BTVN (nếu có).                  role: recap
-                8. Dặn dò / Cảm ơn — lời kết, dặn chuẩn bị bài sau.          role: recap
+                NHIỆM VỤ: Thiết kế KHUNG slide bọc trọn một tiết dạy, bám ĐÚNG cấu trúc giáo án ở trên —
+                KHÔNG dùng khung mẫu cố định, KHÔNG bịa thêm phần mà giáo án không có dữ liệu.
+
+                CẤU TRÚC BẮT BUỘC của deck (theo đúng thứ tự sau):
+                1. Bìa / Chào hỏi — LUÔN có, đúng 1 phần, 1 slide. Tên bài, lớp, lời chào.
+                   role: hook, layoutHint: title.
+                2. Mục tiêu bài học — CHỈ thêm nếu có dữ liệu ở mục MỤC TIÊU bên trên. Đúng 1 phần, 1 slide.
+                   role: explain, layoutHint: bullets.
+                3. THÂN BÀI — bám 1-1 vào danh sách CÁC HOẠT ĐỘNG bên trên:
+                   - Mỗi "HĐ i" trong CÁC HOẠT ĐỘNG = ĐÚNG MỘT phần thân bài, giữ NGUYÊN thứ tự đã cho.
+                     KHÔNG gộp 2 hoạt động vào 1 phần, KHÔNG tách 1 hoạt động thành nhiều phần,
+                     KHÔNG thêm bất kỳ phần thân bài nào ngoài danh sách hoạt động đã cho — TUYỆT ĐỐI không tự
+                     bịa các phần như "Khởi động", "Luyện tập", "Vận dụng"... nếu giáo án không có hoạt động
+                     tương ứng. Nếu giáo án chỉ có 3 hoạt động thì thân bài chỉ có ĐÚNG 3 phần, không hơn.
+                   - `part.title` phải phản ánh ĐÚNG tên/nội dung thật của hoạt động đó (dựa trên tên và mục
+                     tiêu của HĐ), không dùng nhãn chung chung khi giáo án đã có tên hoạt động cụ thể.
+                   - Slide ĐẦU TIÊN của MỖI phần thân bài LUÔN LUÔN là một "slide mở đầu phần" (chuyển ý):
+                     nêu ngắn gọn tên/mục đích của hoạt động sắp học (dựa trên mục tiêu của HĐ đó), đúng 1 slide,
+                     role: hook, layoutHint: title, brief phải ghi rõ đây là slide mở đầu — KHÔNG chứa nội dung
+                     chi tiết (số liệu, câu hỏi, bảng...) của hoạt động, chỉ dẫn nhập.
+                     SAU slide mở đầu này mới đến các slide NỘI DUNG CHI TIẾT của hoạt động (số lượng theo QUY
+                     TẮC SỐ LƯỢNG SLIDE bên dưới), với `pedagogicalRole` chọn theo ĐÚNG bản chất từng slide,
+                     KHÔNG cố định theo vị trí trong phần:
+                       hook = dẫn nhập/gợi mở thêm; explain = giảng khái niệm; derive = suy luận công thức;
+                       demonstrate = minh hoạ/thí nghiệm; practice = luyện tập/bài tập; recap = chốt ý.
+                4. Tổng kết / Dặn dò — CHỈ thêm nếu có dữ liệu Củng cố và/hoặc BTVN ở trên (bỏ hẳn phần này nếu
+                   KHÔNG có cả hai). Đúng 1 phần, gồm: 1 slide "Tổng kết" nếu có Củng cố (role: recap,
+                   layoutHint: bullets) và/hoặc 1 slide "Dặn dò / BTVN" nếu có BTVN (role: recap,
+                   layoutHint: bullets). Có dữ liệu nào thì tạo slide đó, không có thì bỏ, không tự thêm lời
+                   chào/cảm ơn thành một slide riêng.
 
                 QUY TẮC SỐ LƯỢNG SLIDE (quan trọng — tránh slide rỗng):
-                - Số slide mỗi phần phải bám LƯỢNG DỮ LIỆU THẬT trong hoạt động giáo án, KHÔNG cố cho đủ 2-4 slide.
-                - Hoạt động mỏng (chỉ vài câu/một kết luận) → đúng 1 slide. Hoạt động dày (nhiều thí nghiệm/ý) → tách nhiều slide.
-                - TUYỆT ĐỐI không tạo slide mà giáo án không có dữ liệu để soạn (vd slide "Ví dụ minh họa" khi hoạt động không nêu ví dụ nào).
-                - Phần Ứng dụng và phần Vận dụng/BTVN nếu dựa trên cùng dữ liệu thì phải PHÂN VAI rõ:
-                  Ứng dụng = giảng/phân tích ví dụ; Vận dụng = giao việc/bài tập cho HS. Không để hai phần lặp cùng nội dung.
+                - Slide mở đầu phần (mục 3) luôn đúng 1 slide, KHÔNG tính vào "lượng dữ liệu" của quy tắc dưới đây.
+                - Số slide NỘI DUNG còn lại trong mỗi phần thân bài phải bám LƯỢNG DỮ LIỆU THẬT của hoạt động đó
+                  (dựa trên phần trích GV/HS ở trên), KHÔNG cố cho đủ 2-4 slide.
+                - Hoạt động mỏng (chỉ vài câu/một kết luận) → slide mở đầu + đúng 1 slide nội dung. Hoạt động dày
+                  (nhiều thí nghiệm/nhiều ý) → tách nhiều slide nội dung sau slide mở đầu.
+                - Hoạt động THÍ NGHIỆM/THỰC HÀNH có nhiều bước rõ rệt (dụng cụ, tiến hành, bảng số liệu/kết quả,
+                  câu hỏi phân tích/kết luận...) hầu như KHÔNG BAO GIỜ vừa đủ trong 1 slide nội dung — tách thành
+                  2-3 slide nội dung riêng theo từng cụm dữ kiện (vd: 1 slide dụng cụ + các bước tiến hành, 1 slide
+                  bảng số liệu/kết quả quan sát, 1 slide câu hỏi phân tích/kết luận rút ra), miễn là giáo án có đủ
+                  dữ kiện cho từng cụm đó — không bịa thêm cụm nào giáo án không có.
+                - TUYỆT ĐỐI không tạo slide mà giáo án không có dữ liệu để soạn (vd slide "Ví dụ minh họa" khi
+                  hoạt động không nêu ví dụ nào), và TUYỆT ĐỐI không tạo phần thân bài nào không ứng với một
+                  hoạt động thật trong giáo án.
+                - Nếu 2 hoạt động liền kề có vẻ gần giống nhau (vd đều liên quan "ứng dụng"/"vận dụng"), VẪN giữ
+                  NGUYÊN là 2 phần riêng biệt (vì là 2 hoạt động khác nhau trong giáo án), nhưng PHẢI phân vai rõ
+                  theo đúng mục tiêu riêng của từng hoạt động — không để 2 phần lặp cùng nội dung.
 
                 CHỈ tạo khung — KHÔNG soạn nội dung chi tiết ở bước này. Mỗi slide trả về:
                 - `id`: mã ngắn duy nhất (vd p1s1). PHẢI duy nhất trên toàn deck.
                 - `title`: tiêu đề ngắn gọn.
                 - `pedagogicalRole`: hook | explain | derive | demonstrate | practice | recap.
                 - `layoutHint`: title | bullets | formula | image-focus | comparison | worked-example.
-                - `brief`: MỘT dòng nêu GÓC RIÊNG của slide này (để bước sau soạn chi tiết). Brief các slide phải khác nhau rõ, không chồng lấn.
+                - `brief`: MỘT dòng nêu GÓC RIÊNG của slide này (để bước sau soạn chi tiết). Brief các slide phải
+                  khác nhau rõ, không chồng lấn. Với slide mở đầu phần, brief phải ghi rõ đây là "slide mở đầu
+                  phần — dẫn vào HĐ ...".
 
                 TRẢ LỜI ĐÚNG ĐỊNH DẠNG JSON sau, KHÔNG markdown fence, KHÔNG text ngoài JSON:
                 {
@@ -82,9 +110,17 @@ public class SlidePromptBuilder {
                   "parts": [
                     {
                       "id": "p1",
-                      "title": "Tên phần",
+                      "title": "Bìa",
                       "slides": [
-                        {"id": "p1s1", "title": "Tên slide", "pedagogicalRole": "hook", "layoutHint": "title", "brief": "Slide bìa: tên bài, lớp, lời chào"}
+                        {"id": "p1s1", "title": "Chào mừng", "pedagogicalRole": "hook", "layoutHint": "title", "brief": "Slide bìa: tên bài, lớp, lời chào"}
+                      ]
+                    },
+                    {
+                      "id": "p3",
+                      "title": "Tên hoạt động lấy đúng từ HĐ 1 trong giáo án",
+                      "slides": [
+                        {"id": "p3s1", "title": "Vào bài: <tên HĐ 1>", "pedagogicalRole": "hook", "layoutHint": "title", "brief": "Slide mở đầu phần — dẫn vào HĐ 1, nêu mục đích hoạt động"},
+                        {"id": "p3s2", "title": "<góc nội dung 1 của HĐ 1>", "pedagogicalRole": "explain", "layoutHint": "bullets", "brief": "<góc riêng của slide này, khác slide mở đầu>"}
                       ]
                     }
                   ]
@@ -153,6 +189,12 @@ public class SlidePromptBuilder {
                 - THỜI LƯỢNG: tổng `durationMinutes` của các slide trong phần này phải XẤP XỈ số phút của hoạt động
                   tương ứng trong giáo án ở trên. Phần khung (bìa, mục tiêu, dặn dò, tổng kết) để 1 phút/slide.
                 - KHÔNG trùng nội dung với slide/phần khác trong khung — bám đúng GÓC của phần mình.
+                - SLIDE MỞ ĐẦU PHẦN: nếu slide đầu tiên của phần này có `pedagogicalRole` là "hook" và phần này
+                  có NHIỀU slide (tức đây là phần thân bài dựa trên một hoạt động giáo án, có slide mở đầu +
+                  slide nội dung), slide đầu tiên đó CHỈ là slide dẫn nhập/chuyển ý — 1-2 câu nêu tên và mục
+                  đích của hoạt động sắp học. TUYỆT ĐỐI KHÔNG liệt kê số liệu, câu hỏi, bảng, hay bất kỳ nội
+                  dung chi tiết nào đã thuộc về các slide SAU trong CÙNG phần — nội dung chi tiết đó chỉ được
+                  viết đúng vào slide của nó, tránh lặp/trùng giữa slide mở đầu và slide nội dung.
 
                 QUAN TRỌNG: KHÔNG đổi, KHÔNG thêm, KHÔNG bớt slide. Trả về ĐÚNG các `id` slide có trong phần đích.
 
@@ -176,16 +218,28 @@ public class SlidePromptBuilder {
             plan.objectives().forEach(o -> sb.append("- ").append(o).append("\n"));
         }
         if (plan.activities() != null && !plan.activities().isEmpty()) {
-            sb.append("CÁC HOẠT ĐỘNG (tóm tắt):\n");
+            sb.append("CÁC HOẠT ĐỘNG (đúng thứ tự trong giáo án — mỗi HĐ ứng với ĐÚNG MỘT phần thân bài, ")
+                    .append("không gộp/không tách):\n");
             List<InlineActivityDto> activities = plan.activities();
             for (int i = 0; i < activities.size(); i++) {
                 InlineActivityDto a = activities.get(i);
-                sb.append("- HĐ ").append(i + 1).append(": ").append(a.name())
-                        .append(" (").append(a.durationMinutes()).append(" phút)");
+                sb.append("HĐ ").append(i + 1).append(": ").append(a.name())
+                        .append(" (").append(a.durationMinutes()).append(" phút)\n");
                 if (a.goal() != null && !a.goal().isBlank()) {
-                    sb.append(" — ").append(a.goal());
+                    sb.append("  - Mục tiêu: ").append(a.goal()).append("\n");
                 }
-                sb.append("\n");
+                // 800 ký tự (không phải 160) — Phase 1 dùng đúng đoạn trích này để QUYẾT ĐỊNH
+                // số slide của hoạt động (xem QUY TẮC SỐ LƯỢNG SLIDE bên dưới). Cắt quá ngắn khiến
+                // một hoạt động thí nghiệm nhiều bước/nhiều dữ kiện bị nhìn nhầm là "mỏng" và chỉ
+                // tách đúng 1 slide nội dung dù giáo án thực tế có đủ dữ liệu cho 2-3 slide.
+                String teacherSnippet = snippet(a.teacherActions(), 800);
+                if (!teacherSnippet.isEmpty()) {
+                    sb.append("  - GV (trích): ").append(teacherSnippet).append("\n");
+                }
+                String studentSnippet = snippet(a.studentActions(), 800);
+                if (!studentSnippet.isEmpty()) {
+                    sb.append("  - HS (trích): ").append(studentSnippet).append("\n");
+                }
             }
         }
         if (plan.consolidation() != null && !plan.consolidation().isBlank()) {
@@ -194,6 +248,12 @@ public class SlidePromptBuilder {
         if (plan.homework() != null && !plan.homework().isBlank()) {
             sb.append("Có phần BTVN.\n");
         }
+    }
+
+    private static String snippet(String html, int maxLen) {
+        String text = stripHtml(html);
+        if (text.isEmpty()) return "";
+        return text.length() <= maxLen ? text : text.substring(0, maxLen).trim() + "…";
     }
 
     private void appendPlanFull(StringBuilder sb, InlineLessonPlanDto plan) {
@@ -229,168 +289,6 @@ public class SlidePromptBuilder {
         if (plan.homework() != null && !plan.homework().isBlank()) {
             sb.append("BTVN: ").append(stripHtml(plan.homework())).append("\n");
         }
-    }
-
-    public String slidePrompt(
-            LessonContext lesson,
-            SlideOutline outline,
-            SlidePart section,
-            SlideItem slide,
-            String userPrompt,
-            String styleHint) {
-        StringBuilder sb = new StringBuilder();
-        String role = slide.pedagogicalRole();
-        String layout = slide.layoutHint();
-
-        sb.append("Bạn là giáo viên Vật lý THPT Việt Nam đang thiết kế MỘT slide cho editor kiểu Canva.\n");
-        sb.append("BÀI HỌC: ").append(lesson.title()).append("\n");
-        sb.append("PHẦN: ").append(section.title()).append("\n");
-        sb.append("SLIDE: ").append(slide.title()).append("\n");
-        sb.append("VAI TRÒ SƯ PHẠM: ").append(role).append("\n");
-        if (layout != null) {
-            sb.append("GỢI Ý BỐ CỤC: ").append(layout).append("\n");
-        }
-        sb.append("\n");
-
-        boolean hasAuthoredContent = slide.content() != null && !slide.content().isBlank();
-        if (hasAuthoredContent) {
-            appendAuthoredContent(sb, slide);
-        } else {
-            appendLessonContext(sb, lesson, slide);
-        }
-
-        if (userPrompt != null && !userPrompt.isBlank()) {
-            sb.append("\nYÊU CẦU THÊM: ").append(userPrompt).append("\n");
-        }
-        if (styleHint != null && !styleHint.isBlank()) {
-            sb.append("\nPHONG CÁCH THIẾT KẾ: ").append(styleHint).append("\n");
-        }
-
-        boolean needsImage = needsImage(slide);
-
-        if (hasAuthoredContent) {
-            sb.append("""
-
-                LƯU Ý QUAN TRỌNG: Nội dung slide ĐÃ ĐƯỢC SOẠN SẴN ở mục "NỘI DUNG ĐÃ CHỐT" trên.
-                Nhiệm vụ của bạn CHỈ là DÀN nội dung đó thành element đẹp, KHÔNG soạn lại, KHÔNG thêm/bớt/đổi dữ kiện,
-                KHÔNG tự nghĩ ví dụ mới. Giữ đúng câu chữ và số liệu trong nội dung đã chốt.
-                Nếu có "PHẦN TRỰC QUAN" thì dựng đúng loại element tương ứng (image → imagePrompt dịch từ mô tả;
-                formula → latex; table → bố cục bảng bằng text/shape).
-                """);
-        }
-
-        sb.append("""
-
-                NHIỆM VỤ: Tạo MỘT SLIDE 16:9 dưới dạng JSON cây element (giống Canva).
-                Khung canvas: 960×540 px, gốc toạ độ (0,0) ở góc trên bên trái. Padding tối thiểu 40 px từ mép.
-
-                LOẠI ELEMENT HỖ TRỢ (field `type`):
-                - "text": rich text block. Field bắt buộc: html (chỉ dùng <p>, <strong>, <em>, <br>, <ul>, <ol>, <li>),
-                  fontSize (16-48), color (hex), align ("left"|"center"|"right").
-                - "image": ảnh minh họa. Field bắt buộc: imagePrompt (mô tả tiếng Anh, cụ thể, rõ hiện tượng vật lý).
-                  KHÔNG đặt src — frontend sẽ hiển thị placeholder.
-                  fit: "cover" hoặc "contain".
-                - "latex": công thức toán. Field bắt buộc: tex (KaTeX, không có dấu \\( \\) hay \\[ \\]).
-                - "shape": hình nền/khối trang trí. Field: shape ("rect"|"ellipse"|"line"),
-                  fill (hex), stroke (hex), strokeWidth, borderRadius.
-
-                MỌI ELEMENT đều phải có: id (string ngắn), x, y, width, height (px), zIndex (int, càng lớn càng trên).
-                Có thể thêm rotation (độ, mặc định 0).
-
-                QUY TẮC NỘI DUNG:
-                1. Slide phải có tiêu đề: 1 text element với fontSize 28-36, đặt ở y=40, x=40, width=880, height ~60.
-                2. Giới hạn theo vai trò:
-                   - hook/title: tiêu đề lớn + tối đa 1 text block dẫn nhập + (optional) 1 image.
-                   - explain/bullets: tối đa 4 bullet (1 text element chứa <ul>) + (optional) 1 image cạnh phải.
-                   - derive/formula: 1-2 latex element + 1 text chú thích ngắn.
-                   - practice/worked-example: 1 text đề bài + 1 text các bước giải.
-                   - recap/bullets: tối đa 5 bullet trong 1 text element.
-                3. Không overlap nặng giữa các element. Sắp xếp lưới gọn gàng (left-half / right-half hoặc full-width).
-                4. Tiếng Việt, súc tích, phù hợp học sinh THPT.
-
-                """);
-
-        if (needsImage) {
-            sb.append("""
-                ẢNH MINH HỌA (BẮT BUỘC cho slide này): bao gồm ÍT NHẤT 1 element type="image".
-                imagePrompt PHẢI bằng tiếng Anh, mô tả cụ thể hiện tượng vật lý/thí nghiệm cần thấy.
-
-                """);
-        }
-
-        sb.append("""
-                FORMAT OUTPUT: CHỈ trả về JSON hợp lệ, KHÔNG markdown fence, KHÔNG text ngoài JSON:
-                {
-                  "background": { "type": "color", "value": "#ffffff" },
-                  "elements": [
-                    { "type": "text", "id": "t1", "x": 40, "y": 40, "width": 880, "height": 60,
-                      "zIndex": 2, "html": "<p>Tiêu đề slide</p>", "fontSize": 32, "color": "#0f172a", "align": "left" }
-                  ]
-                }
-                """);
-
-        return sb.toString();
-    }
-
-    /** Pha 3 layout-only: in nội dung đã chốt ở outline để dàn trang trung thành. */
-    private void appendAuthoredContent(StringBuilder sb, SlideItem slide) {
-        sb.append("NỘI DUNG ĐÃ CHỐT (dàn đúng nội dung này, KHÔNG soạn lại):\n");
-        sb.append(slide.content()).append("\n");
-        if (slide.requiredFacts() != null && !slide.requiredFacts().isEmpty()) {
-            sb.append("\nDỮ KIỆN BẮT BUỘC KHÔNG ĐƯỢC MẤT:\n");
-            slide.requiredFacts().forEach(f -> sb.append("- ").append(f).append("\n"));
-        }
-        if (slide.quizItems() != null && !slide.quizItems().isEmpty()) {
-            sb.append("\nCÂU HỎI LUYỆN TẬP / PHIẾU HỌC TẬP:\n");
-            for (int i = 0; i < slide.quizItems().size(); i++) {
-                var quiz = slide.quizItems().get(i);
-                sb.append(i + 1).append(". ").append(quiz.question()).append("\n");
-                if (quiz.choices() != null && !quiz.choices().isEmpty()) {
-                    quiz.choices().forEach(c -> sb.append("   ").append(c).append("\n"));
-                }
-                if (quiz.answer() != null && !quiz.answer().isBlank()) {
-                    sb.append("   Đáp án: ").append(quiz.answer()).append("\n");
-                }
-                if (quiz.explanation() != null && !quiz.explanation().isBlank()) {
-                    sb.append("   Giải thích: ").append(quiz.explanation()).append("\n");
-                }
-            }
-        }
-        SlideVisual visual = slide.visual();
-        if (visual != null && visual.type() != null && !"none".equalsIgnoreCase(visual.type())
-                && visual.spec() != null && !visual.spec().isBlank()) {
-            sb.append("\nPHẦN TRỰC QUAN (").append(visual.type()).append("): ")
-                    .append(visual.spec()).append("\n");
-        }
-        sb.append("\n");
-    }
-
-    private void appendLessonContext(StringBuilder sb, LessonContext lesson, SlideItem slide) {
-        String role = slide.pedagogicalRole();
-        if (lesson.summary() != null && !lesson.summary().isBlank()) {
-            sb.append("BỐI CẢNH BÀI HỌC: ").append(lesson.summary()).append("\n");
-        }
-        if (!lesson.learningObjectives().isEmpty()) {
-            sb.append("MỤC TIÊU:\n");
-            lesson.learningObjectives().forEach(o -> sb.append("- ").append(o).append("\n"));
-        }
-        if ("derive".equals(role) || "formula".equals(slide.layoutHint())) {
-            appendFormulas(sb, lesson);
-        }
-    }
-
-    private void appendFormulas(StringBuilder sb, LessonContext lesson) {
-        if (!lesson.formulas().isEmpty()) {
-            sb.append("CÔNG THỨC:\n");
-            lesson.formulas().forEach(f -> sb.append("- ").append(f.latex()).append(" — ").append(f.meaning()).append("\n"));
-        }
-    }
-
-    private boolean needsImage(SlideItem slide) {
-        String role = slide.pedagogicalRole();
-        String layout = slide.layoutHint();
-        return Set.of("hook", "explain", "demonstrate", "practice").contains(role)
-                || Set.of("image-focus", "comparison").contains(layout);
     }
 
     private static String stripHtml(String html) {

@@ -312,22 +312,35 @@ public class SlideDesignPromptBuilder {
             a default-PowerPoint box grid — obey it):
               - ASYMMETRY over symmetry. Do NOT default to a tidy
                 left-text / right-box pair on every slide. Offset the
-                hero; let ONE zone dominate (≈55–70% of the body) while
+                hero; let ONE zone dominate (≈60–75% of the body) while
                 the rest stay deliberately small.
-              - NEGATIVE SPACE: leave 30–45% of the BODY region empty.
-                A thin slide (little outline text) must NOT get a huge
-                empty card — use a "Hero statement": one large offset
-                title with lots of breathing room, no filler zones.
+              - MAXIMIZE COVERAGE, MINIMIZE DEAD SPACE: the hero zone,
+                the other body zones, and the body structural containers
+                (cards / stripes / dividers) together should cover MOST
+                of the body region. Target only ~10–20% of the body
+                region as genuine negative space (small margins/gutters
+                for breathing room) — NOT 30–45%. A thin slide (little
+                outline text) must still fill the canvas: use a "Hero
+                statement" pattern where the hero zone itself is sized
+                large (wide bbox, generous height, oversized display
+                type) or sits on top of a full-bleed structural card /
+                color panel that extends across most of the body region.
+                Expand the STRUCTURE and the ZONE SIZE to fill space —
+                never invent filler content or extra zones to do it.
               - HERO IS THE ANCHOR: give the hero zone a GENEROUS bbox —
                 wide and tall enough for a 36–64px display title across
-                1–2 lines (think ≥320px wide, ≥110px tall). Never size the
-                hero like a caption.
+                1–2 lines (think ≥400px wide, ≥160px tall — bigger is
+                preferred over smaller whenever the body region allows
+                it). Never size the hero like a caption.
               - INTENTIONAL OVERLAP is encouraged for depth: the hero may
                 overlap an aside/image edge or sit across a card boundary,
                 as long as text stays readable. Zones do NOT have to be
                 separate non-touching rectangles.
               - VARIETY across the deck: choose the layout that fits THIS
-                slide's content, not the same pattern every time.
+                slide's content, not the same pattern every time — but in
+                every pattern, push zone and structural bboxes outward
+                toward the body region's edges rather than clustering
+                everything in the center with wide empty margins.
             </body_layout_pattern_selection>
 
             <body_structural_rules required="true">
@@ -789,8 +802,11 @@ public class SlideDesignPromptBuilder {
         user.append("Pick ONE body layout pattern consistent with the existing skin. ");
         user.append("Emit the COMPLETE updated HTML: PRIOR_HTML preserved byte-for-byte ");
         user.append("(background + decoration + header), then 0–3 body structural children, ");
-        user.append("then 2–4 visible body zone placeholders (prefer 3 — ");
-        user.append("don't over-pack the canvas). ");
+        user.append("then 2–4 visible body zone placeholders (prefer 3). ");
+        user.append("Keep the layout asymmetric (one dominant zone, not a tidy grid), ");
+        user.append("but size zones and structural containers generously so together ");
+        user.append("they cover most of the body region — only ~10–20% should be left ");
+        user.append("as genuine negative space, not a large empty area. ");
         user.append("Each zone MUST render the debug overlay (dashed outline + legend) ");
         user.append("so a human can read the bbox layout before content is added.\n\n");
         user.append("Begin your response with the EXACT opening tag of PRIOR_HTML ");

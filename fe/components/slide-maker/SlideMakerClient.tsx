@@ -4,17 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SlideEditor } from "@/components/slide-editor/SlideEditor";
-import { mapBeSlide, skeletonSlidesFromParts } from "@/components/slide-editor/lib/be-mapper";
+import { skeletonSlidesFromParts } from "@/components/slide-editor/lib/be-mapper";
 import type { Slide } from "@/components/slide-editor/types";
-import { generateParts } from "@/lib/api/slides";
 import {
   clearActiveGeneration,
   readActiveGeneration,
   type ActiveGeneration,
 } from "@/lib/slide-create/session";
-import { connectSlideStream, type SlideEvent } from "@/lib/ws/slide-client";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
-import { runDesignPipeline } from "@/lib/slide-create/run-design-pipeline";
+import { runDesignPipeline, retrySlideDesign } from "@/lib/slide-create/run-design-pipeline";
 import { useEditorStore } from "@/stores/slide-editor-store";
 
 function countSlides(active: ActiveGeneration) {
@@ -55,11 +53,10 @@ export function SlideMakerClient() {
   );
   const [doneMessage, setDoneMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   const replaceSlides = useEditorStore((s) => s.replaceSlides);
   const generationRef = useRef<{ sessionId: string; designStarted: boolean } | null>(null);
-  const disconnectRef = useRef<(() => void) | null>(null);
-  const activeRef = useRef<ActiveGeneration | null>(null);
 
   const upsertSlide = useCallback((slide: Slide) => {
     useEditorStore.setState((state) => ({
@@ -68,42 +65,74 @@ export function SlideMakerClient() {
     }));
   }, []);
 
-  const handleEvent = useCallback(
-    (event: SlideEvent, active: ActiveGeneration) => {
-      if (event.type === "SLIDE_PART_READY") {
-        const existing = useEditorStore.getState().slides.find((s) => s.id === event.partId);
-        const title =
-          existing?.aiPrompt ??
-          active.parts.flatMap((p) => p.slides).find((s) => s.id === event.partId)?.title ??
-          "";
-        const mapped = mapBeSlide(event.partId, title, event.elements, event.background);
-        upsertSlide(mapped);
-        setProgress((p) => ({ ...p, ready: p.ready + 1 }));
-      } else if (event.type === "SLIDE_PART_FAILED") {
-        useEditorStore.setState((state) => ({
-          slides: state.slides.map((s) =>
-            s.id === event.partId ? { ...s, generationStatus: "failed" } : s,
-          ),
-          selectedIds: state.currentSlideId === event.partId ? [] : state.selectedIds,
-        }));
-        setProgress((p) => ({ ...p, ready: p.ready + 1 }));
-      } else if (event.type === "LOG") {
-        /* logged in slide-client */
-      } else if (event.type === "DONE") {
-        setStreaming(false);
-        setDoneMessage("Sinh slide xong.");
-        clearActiveGeneration();
-        router.replace("/slide-maker");
-      } else if (event.type === "ERROR") {
-        setStreaming(false);
-        setErrorMessage(event.message);
-        markGeneratingSlidesFailed();
-        clearActiveGeneration();
-        router.replace("/slide-maker");
-      }
+  const handleSlideFrames = useCallback(
+    (slideId: string, result: { bg: string; elements: Slide["elements"] }) => {
+      useEditorStore.setState((state) => ({
+        slides: state.slides.map((s) =>
+          s.id === slideId
+            ? {
+                ...s,
+                bg: result.bg,
+                elements: result.elements.map((e) => ({ ...e })),
+                generationStatus: "framing",
+              }
+            : s,
+        ),
+        selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,
+      }));
     },
-    [router, upsertSlide],
+    [],
   );
+
+  const handleSlideReady = useCallback(
+    (slideId: string, result: { bg: string; elements: Slide["elements"] }, title: string) => {
+      upsertSlide({
+        id: slideId,
+        bg: result.bg,
+        elements: result.elements,
+        aiPrompt: title,
+        generationStatus: "ready",
+      });
+    },
+    [upsertSlide],
+  );
+
+  const handleSlideFailed = useCallback((slideId: string) => {
+    useEditorStore.setState((state) => ({
+      slides: state.slides.map((s) =>
+        s.id === slideId ? { ...s, generationStatus: "failed" } : s,
+      ),
+      selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,
+    }));
+  }, []);
+
+  // Retry AI generation for a single slide (header toolbar button), reusing
+  // the deck skin + outline captured by the last full pipeline run.
+  const retrySlide = useCallback(
+    (slideId: string) => {
+      setRetryError(null);
+      useEditorStore.setState((state) => ({
+        slides: state.slides.map((s) =>
+          s.id === slideId ? { ...s, generationStatus: "pending" } : s,
+        ),
+      }));
+      void retrySlideDesign(slideId, {
+        onSlideFrames: handleSlideFrames,
+        onSlideReady: handleSlideReady,
+        onSlideFailed: (id, message) => {
+          handleSlideFailed(id);
+          setRetryError(message);
+        },
+      });
+    },
+    [handleSlideFrames, handleSlideReady, handleSlideFailed],
+  );
+
+  useEffect(() => {
+    if (!retryError) return;
+    const t = setTimeout(() => setRetryError(null), 6000);
+    return () => clearTimeout(t);
+  }, [retryError]);
 
   useEffect(() => {
     if (!generating) return;
@@ -114,142 +143,69 @@ export function SlideMakerClient() {
       return;
     }
 
-    activeRef.current = active;
-
     const isNewSession = generationRef.current?.sessionId !== active.sessionId;
     if (isNewSession) {
       generationRef.current = { sessionId: active.sessionId, designStarted: false };
       replaceSlides(skeletonSlidesFromParts(active.parts));
     }
 
-    let cancelled = false;
+    // Client-side 3-step HTML design pipeline. Strict Mode chạy effect 2 lần nhưng
+    // pipeline lần 1 vẫn chạy nền; designStarted chỉ chặn khởi động trùng.
+    if (generationRef.current?.designStarted) return;
 
-    // ── Design mode: client-side 3-step HTML pipeline (no STOMP) ──
-    // Không dùng cancelled ở đây: Strict Mode chạy effect 2 lần nhưng pipeline lần 1
-    // vẫn chạy nền; designStarted chỉ chặn khởi động trùng.
-    if (active.mode === "design") {
-      if (!generationRef.current?.designStarted) {
-        let pipelineErrored = false;
-        generationRef.current = { sessionId: active.sessionId, designStarted: true };
-        logSlideApi("start design pipeline", {
-          sessionId: active.sessionId,
-          topic: active.topic,
-          slideCount: countSlides(active),
-        });
-        void runDesignPipeline(
-          {
-            topic: active.topic,
-            subject: active.subject,
-            styleHint: active.styleHint,
-            parts: active.parts,
-          },
-          {
-            onSkinReady: (skin) => {
-              useEditorStore.setState((state) => ({
-                slides: state.slides.map((s) =>
-                  s.elements.length === 0
-                    ? { ...s, bg: skin.bg, elements: skin.elements.map((e) => ({ ...e })) }
-                    : s,
-                ),
-              }));
-            },
-            onSlideFrames: (slideId, result) => {
-              useEditorStore.setState((state) => ({
-                slides: state.slides.map((s) =>
-                  s.id === slideId
-                    ? {
-                        ...s,
-                        bg: result.bg,
-                        elements: result.elements.map((e) => ({ ...e })),
-                        generationStatus: "framing",
-                      }
-                    : s,
-                ),
-                selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,
-              }));
-            },
-            onSlideReady: (slideId, result, title) => {
-              upsertSlide({
-                id: slideId,
-                bg: result.bg,
-                elements: result.elements,
-                aiPrompt: title,
-                generationStatus: "ready",
-              });
-            },
-            onSlideFailed: (slideId) => {
-              useEditorStore.setState((state) => ({
-                slides: state.slides.map((s) =>
-                  s.id === slideId ? { ...s, generationStatus: "failed" } : s,
-                ),
-                selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,
-              }));
-            },
-            onProgress: (ready, total) => setProgress({ ready, total }),
-            onError: (message) => {
-              pipelineErrored = true;
-              setStreaming(false);
-              setErrorMessage(message);
-              markGeneratingSlidesFailed();
-              clearActiveGeneration();
-              router.replace("/slide-maker");
-            },
-          },
-        ).then(() => {
-          if (pipelineErrored) return;
-          setStreaming(false);
-          setDoneMessage("Sinh slide xong.");
-          clearActiveGeneration();
-          router.replace("/slide-maker");
-        });
-      }
-      return;
-    }
-
-    const { disconnect } = connectSlideStream({
-      topic: active.topic,
-      onEvent: (event) => {
-        if (cancelled) return;
-        const current = activeRef.current;
-        if (current) handleEvent(event, current);
-      },
-      onClose: () => {
-        disconnectRef.current = null;
-      },
-    });
-    disconnectRef.current = disconnect;
-
-    logSlideApi("start generate-parts", {
+    let pipelineErrored = false;
+    generationRef.current = { sessionId: active.sessionId, designStarted: true };
+    logSlideApi("start design pipeline", {
       sessionId: active.sessionId,
       topic: active.topic,
       slideCount: countSlides(active),
-      parts: active.parts,
     });
-
-    void generateParts({
-      sessionId: active.sessionId,
-      lessonId: active.lessonId,
-      lessonTitle: active.lessonTitle,
-      lessonSummary: active.lessonSummary,
-      grade: active.grade,
-      styleHint: active.styleHint,
-      parts: active.parts,
-    }).catch((err) => {
-      if (cancelled) return;
-      console.error("[EDUA slide] [API] generate-parts failed", err);
+    void runDesignPipeline(
+      {
+        topic: active.topic,
+        subject: active.subject,
+        styleHint: active.styleHint,
+        parts: active.parts,
+      },
+      {
+        onSkinReady: (skin) => {
+          useEditorStore.setState((state) => ({
+            slides: state.slides.map((s) =>
+              s.elements.length === 0
+                ? { ...s, bg: skin.bg, elements: skin.elements.map((e) => ({ ...e })) }
+                : s,
+            ),
+          }));
+        },
+        onSlideFrames: handleSlideFrames,
+        onSlideReady: handleSlideReady,
+        onSlideFailed: handleSlideFailed,
+        onProgress: (ready, total) => setProgress({ ready, total }),
+        onError: (message) => {
+          pipelineErrored = true;
+          setStreaming(false);
+          setErrorMessage(message);
+          markGeneratingSlidesFailed();
+          clearActiveGeneration();
+          router.replace("/slide-maker");
+        },
+      },
+    ).then(() => {
+      if (pipelineErrored) return;
       setStreaming(false);
-      setErrorMessage(err instanceof Error ? err.message : String(err));
-      markGeneratingSlidesFailed();
+      setDoneMessage("Sinh slide xong.");
       clearActiveGeneration();
       router.replace("/slide-maker");
     });
-
-    return () => {
-      cancelled = true;
-      disconnectRef.current?.();
-      disconnectRef.current = null;
-    };
-  }, [generating, handleEvent, initialBootstrap.active, replaceSlides, router, upsertSlide]);
+  }, [
+    generating,
+    initialBootstrap.active,
+    replaceSlides,
+    router,
+    handleSlideFrames,
+    handleSlideReady,
+    handleSlideFailed,
+  ]);
 
   useEffect(() => {
     if (!doneMessage) return;
@@ -286,10 +242,15 @@ export function SlideMakerClient() {
             {errorMessage}
           </div>
         ) : null}
+        {retryError ? (
+          <div className="flex h-9 shrink-0 items-center border-b border-red-100 bg-red-50 px-4 text-xs text-red-700">
+            Tạo lại slide thất bại: {retryError}
+          </div>
+        ) : null}
         <div className="flex min-h-0 flex-1">
           <Sidebar activeHref="/slide-create" />
           <section className="min-w-0 flex-1 overflow-hidden">
-            <SlideEditor skipInitialLoad={generating} />
+            <SlideEditor skipInitialLoad={generating} onRetrySlide={retrySlide} />
           </section>
         </div>
       </div>
