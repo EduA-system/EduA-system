@@ -1,15 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Client ID là public (không phải secret). Backend chạy ở 8080.
 const GOOGLE_CLIENT_ID =
   "98078357098-pknisf1ub7kg5nop658jpeo31clhid2f.apps.googleusercontent.com";
 const API = "http://localhost:8080";
 
+interface GoogleIdentityServices {
+  accounts: {
+    id: {
+      initialize: (config: {
+        client_id: string;
+        callback: (resp: { credential: string }) => void;
+      }) => void;
+      renderButton: (
+        parent: HTMLElement,
+        options: { theme: string; size: string },
+      ) => void;
+    };
+  };
+}
+
 declare global {
   interface Window {
-    google?: any;
+    google?: GoogleIdentityServices;
   }
 }
 
@@ -18,10 +33,29 @@ export default function AuthTestPage() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [log, setLog] = useState<string>("Chưa đăng nhập.");
 
-  const print = (label: string, data: unknown) =>
-    setLog(`${label}\n\n${JSON.stringify(data, null, 2)}`);
+  const print = useCallback(
+    (label: string, data: unknown) =>
+      setLog(`${label}\n\n${JSON.stringify(data, null, 2)}`),
+    [],
+  );
 
-  // 1) Nạp Google Identity Services + render nút Sign in with Google.
+  // Gửi id_token cho backend → nhận access token (refresh nằm trong cookie HttpOnly).
+  const loginWithGoogle = useCallback(
+    async (idToken: string) => {
+      const r = await fetch(`${API}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ idToken }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) setAccessToken(data.accessToken);
+      print(`POST /api/auth/google → ${r.status}`, data);
+    },
+    [print],
+  );
+
+  // Nạp Google Identity Services + render nút Sign in with Google.
   useEffect(() => {
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client";
@@ -42,20 +76,7 @@ export default function AuthTestPage() {
     return () => {
       document.body.removeChild(s);
     };
-  }, []);
-
-  // 2) Gửi id_token cho backend → nhận access token (refresh nằm trong cookie HttpOnly).
-  async function loginWithGoogle(idToken: string) {
-    const r = await fetch(`${API}/api/auth/google`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ idToken }),
-    });
-    const data = await r.json().catch(() => ({}));
-    if (r.ok) setAccessToken(data.accessToken);
-    print(`POST /api/auth/google → ${r.status}`, data);
-  }
+  }, [loginWithGoogle]);
 
   async function callMe() {
     const r = await fetch(`${API}/api/auth/me`, {
