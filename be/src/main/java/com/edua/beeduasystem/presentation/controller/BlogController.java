@@ -2,6 +2,7 @@ package com.edua.beeduasystem.presentation.controller;
 
 import com.edua.beeduasystem.presentation.dto.blog.CreateBlogCommentRequest;
 import com.edua.beeduasystem.presentation.dto.blog.CreateBlogPostRequest;
+import com.edua.beeduasystem.presentation.dto.blog.RemoveBlogPostRequest;
 import com.edua.beeduasystem.presentation.dto.blog.UpdateBlogCommentRequest;
 import com.edua.beeduasystem.presentation.dto.blog.UpdateBlogPostRequest;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
@@ -86,6 +87,14 @@ public class BlogController {
     @Operation(summary = "Xóa bài của mình (soft-delete — BR-16)")
     public void delete(@PathVariable UUID id) {
         postService.delete(id);
+    }
+
+    @PostMapping("/blog-posts/{id}/removal")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('MODERATOR')")
+    @Operation(summary = "Moderator gỡ bài vi phạm (đúng môn + lý do — BR-21)")
+    public void removePost(@PathVariable UUID id, @RequestBody RemoveBlogPostRequest request) {
+        postService.removeByModerator(id, request.reason());
     }
 
     @PostMapping("/blog-posts/{id}/comments")

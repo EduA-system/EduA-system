@@ -76,6 +76,25 @@ public class BlogPostService {
                 post.createdAt(), Instant.now()));
     }
 
+    /**
+     * Moderator gỡ bài vi phạm (BR-21): chỉ khi bài thuộc môn phụ trách, bắt buộc lý do.
+     * Soft-delete kèm audit (removedReason + removedBy).
+     */
+    public void removeByModerator(UUID id, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Removal reason is required.");
+        }
+        BlogPost post = requirePublished(id);
+        Subject moderatorSubject = currentUser.require().subject();
+        if (moderatorSubject == null || post.subject() != moderatorSubject) {
+            throw new ForbiddenOperationException("You can only remove posts in your assigned subject.");
+        }
+        postRepository.save(new BlogPost(
+                post.id(), post.authorId(), post.title(), post.content(), post.subject(),
+                BlogPostStatus.REMOVED_BY_MODERATOR, reason.trim(), currentUser.requireUserId(),
+                post.createdAt(), Instant.now()));
+    }
+
     /** Chi tiết bài PUBLISHED kèm bình luận. */
     public BlogViews.PostDetail getDetail(UUID id) {
         return toDetail(requirePublished(id));
