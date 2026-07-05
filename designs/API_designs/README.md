@@ -7,6 +7,7 @@ Thiết kế endpoint, tách theo ranh giới **chung (hạ tầng dùng lại)*
 | [`api-chung.md`](./api-chung.md) | Hạ tầng dùng chung: upload R2, catalog SGK, STOMP transport, auth/RBAC/rate-limit cross-cutting | Team hạ tầng/shared |
 | [`auth.md`](./auth.md) | Xác thực Google OAuth2 + JWT + RBAC (SEC-01/03/04) | Team auth |
 | [`lesson-plan.md`](./lesson-plan.md) | Toàn bộ nghiệp vụ giáo án 5512 (UC-23/27/32) | Team lesson-plan |
+| [`blog.md`](./blog.md) | Blog cộng đồng giáo viên: bài viết + bình luận + kiểm duyệt (BR-20/21/22) | Team blog |
 
 > Nguồn gốc: `sprints/lesson-plan-api-design.md`. Các file ở đây là bản tách chi tiết, dùng làm spec chính thức.
 
