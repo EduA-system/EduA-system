@@ -1,0 +1,157 @@
+package com.edua.beeduasystem.service.blog;
+
+import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
+import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.model.auth.Subject;
+import com.edua.beeduasystem.domain.model.blog.BlogPost;
+import com.edua.beeduasystem.domain.model.blog.BlogPostStatus;
+import com.edua.beeduasystem.repository.repositories.BlogCommentRepository;
+import com.edua.beeduasystem.repository.repositories.BlogPostRepository;
+import com.edua.beeduasystem.service.auth.CurrentUserProvider;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Nghiệp vụ bài blog cho Teacher: tạo (publish trực tiếp — BR-20), sửa/xóa của mình (owner-only — BR-16),
+ * đọc danh sách/chi tiết. Nội dung HTML được sanitize trước khi lưu.
+ */
+@Service
+public class BlogPostService {
+
+    private final BlogPostRepository postRepository;
+    private final BlogCommentRepository commentRepository;
+    private final BlogContentSanitizer sanitizer;
+    private final BlogAuthorResolver authorResolver;
+    private final CurrentUserProvider currentUser;
+
+    public BlogPostService(BlogPostRepository postRepository,
+                           BlogCommentRepository commentRepository,
+                           BlogContentSanitizer sanitizer,
+                           BlogAuthorResolver authorResolver,
+                           CurrentUserProvider currentUser) {
+        this.postRepository = postRepository;
+        this.commentRepository = commentRepository;
+        this.sanitizer = sanitizer;
+        this.authorResolver = authorResolver;
+        this.currentUser = currentUser;
+    }
+
+    /** Tạo bài mới, publish ngay (BR-20). */
+    public BlogViews.PostDetail create(String title, String rawContent, String rawSubject) {
+        UUID authorId = currentUser.requireUserId();
+        String cleanTitle = requireTitle(title);
+        String cleanContent = requireContent(rawContent);
+        Subject subject = requireSubject(rawSubject);
+        Instant now = Instant.now();
+        BlogPost saved = postRepository.save(new BlogPost(
+                UUID.randomUUID(), authorId, cleanTitle, cleanContent, subject,
+                BlogPostStatus.PUBLISHED, null, null, now, now));
+        return toDetail(saved);
+    }
+
+    /** Sửa bài của chính mình (owner-only). Các trường null = giữ nguyên. */
+    public BlogViews.PostDetail update(UUID id, String title, String rawContent, String rawSubject) {
+        BlogPost post = requirePublished(id);
+        requireOwner(post.authorId());
+        String newTitle = title != null ? requireTitle(title) : post.title();
+        String newContent = rawContent != null ? requireContent(rawContent) : post.content();
+        Subject newSubject = rawSubject != null ? requireSubject(rawSubject) : post.subject();
+        BlogPost saved = postRepository.save(new BlogPost(
+                post.id(), post.authorId(), newTitle, newContent, newSubject,
+                post.status(), post.removedReason(), post.removedBy(), post.createdAt(), Instant.now()));
+        return toDetail(saved);
+    }
+
+    /** Xóa bài của chính mình (soft-delete — DELETED_BY_AUTHOR). */
+    public void delete(UUID id) {
+        BlogPost post = requirePublished(id);
+        requireOwner(post.authorId());
+        postRepository.save(new BlogPost(
+                post.id(), post.authorId(), post.title(), post.content(), post.subject(),
+                BlogPostStatus.DELETED_BY_AUTHOR, post.removedReason(), post.removedBy(),
+                post.createdAt(), Instant.now()));
+    }
+
+    /** Chi tiết bài PUBLISHED kèm bình luận. */
+    public BlogViews.PostDetail getDetail(UUID id) {
+        return toDetail(requirePublished(id));
+    }
+
+    /** Danh sách bài PUBLISHED, lọc tùy chọn theo môn/tác giả/từ khóa. */
+    public BlogViews.Page<BlogViews.PostSummary> list(String rawSubject, UUID authorId, String q, int page, int size) {
+        Subject subject = parseSubject(rawSubject);
+        BlogPostRepository.SearchResult result = postRepository.search(subject, authorId, q, page, size);
+        Map<UUID, String> authorNames = authorResolver.names(result.items(), BlogPost::authorId);
+        List<BlogViews.PostSummary> items = result.items().stream()
+                .map(p -> new BlogViews.PostSummary(
+                        p.id(), p.title(), p.subject(), p.authorId(),
+                        authorNames.get(p.authorId()), p.createdAt(),
+                        commentRepository.countByPostId(p.id())))
+                .toList();
+        return new BlogViews.Page<>(items, page, size, result.total());
+    }
+
+    private BlogViews.PostDetail toDetail(BlogPost post) {
+        List<BlogViews.CommentView> comments = commentRepository.findByPostId(post.id()).stream()
+                .map(c -> {
+                    // resolve theo từng comment; danh sách bình luận mỗi bài thường nhỏ.
+                    return new BlogViews.CommentView(
+                            c.id(), c.content(), c.authorId(),
+                            authorResolver.name(c.authorId()), c.createdAt(), c.updatedAt());
+                })
+                .toList();
+        return new BlogViews.PostDetail(
+                post.id(), post.title(), post.content(), post.subject(), post.authorId(),
+                authorResolver.name(post.authorId()), post.createdAt(), post.updatedAt(), comments);
+    }
+
+    private BlogPost requirePublished(UUID id) {
+        return postRepository.findPublishedById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Blog post not found."));
+    }
+
+    private void requireOwner(UUID authorId) {
+        if (!authorId.equals(currentUser.requireUserId())) {
+            throw new ForbiddenOperationException("You can only modify your own blog post.");
+        }
+    }
+
+    private String requireTitle(String title) {
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Title is required.");
+        }
+        return title.trim();
+    }
+
+    private String requireContent(String rawContent) {
+        String clean = sanitizer.sanitize(rawContent);
+        if (sanitizer.isEmpty(clean)) {
+            throw new IllegalArgumentException("Content is required.");
+        }
+        return clean;
+    }
+
+    private Subject requireSubject(String rawSubject) {
+        Subject subject = parseSubject(rawSubject);
+        if (subject == null) {
+            throw new IllegalArgumentException("Subject is required. Allowed: MATH, CHEMISTRY, PHYSICS.");
+        }
+        return subject;
+    }
+
+    static Subject parseSubject(String rawSubject) {
+        if (rawSubject == null || rawSubject.isBlank()) {
+            return null;
+        }
+        try {
+            return Subject.valueOf(rawSubject.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException(
+                    "Invalid subject: " + rawSubject + ". Allowed: MATH, CHEMISTRY, PHYSICS.");
+        }
+    }
+}
