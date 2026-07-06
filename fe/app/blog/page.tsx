@@ -27,6 +27,23 @@ async function api<T>(path: string, token: string | null, init: RequestInit = {}
   return data as T;
 }
 
+async function uploadFile(token: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`/api/uploads`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error((data as { message?: string })?.message ?? "Upload thất bại");
+  }
+  const data = await res.json();
+  return data.url as string;
+}
+
 interface GIS {
   accounts: { id: {
     initialize: (c: { client_id: string; callback: (r: { credential: string }) => void }) => void;
@@ -36,14 +53,53 @@ interface GIS {
 declare global { interface Window { google?: GIS } }
 
 // ---- editor dùng đúng cấu hình lesson (TipTap) ----
-function RichEditor({ onChange }: { onChange: (html: string) => void }) {
+function RichEditor({ onChange, token }: { onChange: (html: string) => void; token: string }) {
   const editor = useEditor({
     extensions: createEditorExtensions(),
     content: "",
     immediatelyRender: false,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
-  return <EditorContent editor={editor} className="tiptap min-h-32 rounded border p-3" />;
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadFile(token, file);
+      editor?.chain().focus().setImage({ src: url }).run();
+    } catch (err) {
+      alert(String(err));
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-1 flex gap-1">
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="rounded border px-2 py-1 text-xs disabled:opacity-50"
+          type="button"
+          disabled={uploading}
+        >
+          {uploading ? "Đang tải…" : "Chèn ảnh"}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".png,.jpg,.jpeg"
+          className="hidden"
+          onChange={handleImageUpload}
+        />
+      </div>
+      <EditorContent editor={editor} className="tiptap min-h-32 rounded border p-3" />
+    </div>
+  );
 }
 
 function RichView({ html }: { html: string }) {
@@ -214,7 +270,7 @@ export default function BlogPage() {
               className="mb-2 rounded border px-3 py-2">
               {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
-            <RichEditor onChange={setContent} />
+            <RichEditor onChange={setContent} token={token!} />
             <button onClick={createPost} className="mt-3 rounded bg-black px-4 py-2 text-sm text-white">Đăng bài</button>
           </section>
 
