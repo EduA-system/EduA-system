@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,6 +32,15 @@ public class JpaAppUserRepository implements AppUserRepository {
     @Transactional(readOnly = true)
     public Optional<AppUser> findById(UUID id) {
         return jpa.findById(id).map(JpaAppUserRepository::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppUser> findAllById(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return jpa.findAllById(ids).stream().map(JpaAppUserRepository::toDomain).toList();
     }
 
     @Override
