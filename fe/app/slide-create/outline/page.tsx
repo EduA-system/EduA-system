@@ -61,10 +61,7 @@ export default function SlideOutlinePage() {
             ? p
             : {
                 ...p,
-                slides: p.slides.map((s) => {
-                  const filled = event.slides.find((x) => x.id === s.id);
-                  return filled ? { ...s, ...filled } : s;
-                }),
+                slides: event.slides.length > 0 ? event.slides : p.slides,
               },
         ),
       );

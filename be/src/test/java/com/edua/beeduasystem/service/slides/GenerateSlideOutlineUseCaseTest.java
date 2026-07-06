@@ -167,4 +167,110 @@ class GenerateSlideOutlineUseCaseTest {
         assertEquals("Tốc độ phản ứng là gì?", slide.quizItems().get(0).question());
         assertEquals("C", slide.quizItems().get(0).answer());
     }
+
+    @Test
+    void expandsOneSkeletonSlideIntoMultipleChildSlides() {
+        when(promptBuilder.outlineStructurePrompt(any(LessonContext.class), any(), any(), any(), any()))
+                .thenReturn("structure");
+        when(promptBuilder.expandPartPrompt(any(LessonContext.class), any(), any(), any(), any(), any()))
+                .thenReturn("expand");
+        when(aiClient.generate("structure")).thenReturn("""
+                {
+                  "lessonTitle": "Bài 19",
+                  "parts": [
+                    {
+                      "id": "p1",
+                      "title": "Ứng dụng",
+                      "slides": [
+                        {"id": "p1s1", "title": "Ứng dụng trong đời sống", "pedagogicalRole": "explain", "layoutHint": "bullets"},
+                        {"id": "p1s2", "title": "Chốt kiến thức", "pedagogicalRole": "recap", "layoutHint": "bullets"}
+                      ]
+                    }
+                  ]
+                }
+                """);
+        when(aiClient.generate("expand")).thenReturn("""
+                {
+                  "slides": [
+                    {
+                      "id": "p1s1-1",
+                      "sourceSlideId": "p1s1",
+                      "title": "Nồng độ và nhiệt độ",
+                      "content": "- Tăng nồng độ làm phản ứng xảy ra nhanh hơn.\\n- Giảm nhiệt độ giúp bảo quản thực phẩm lâu hơn.",
+                      "durationMinutes": 2,
+                      "requiredFacts": [],
+                      "quizItems": [],
+                      "visual": {"type": "none", "spec": ""},
+                      "aiNote": ""
+                    },
+                    {
+                      "id": "p1s1-2",
+                      "sourceSlideId": "p1s1",
+                      "title": "Diện tích bề mặt và xúc tác",
+                      "content": "- Đập nhỏ chất rắn làm tăng diện tích tiếp xúc.\\n- Chất xúc tác làm phản ứng xảy ra nhanh hơn.",
+                      "durationMinutes": 2,
+                      "requiredFacts": [],
+                      "quizItems": [],
+                      "visual": {"type": "none", "spec": ""},
+                      "aiNote": ""
+                    },
+                    {
+                      "id": "outside-1",
+                      "sourceSlideId": "outside",
+                      "title": "Không thuộc part",
+                      "content": "Phải bị bỏ qua"
+                    },
+                    {
+                      "id": "p1s2",
+                      "content": "- Các yếu tố có thể làm thay đổi tốc độ phản ứng.",
+                      "durationMinutes": 1,
+                      "requiredFacts": [],
+                      "quizItems": [],
+                      "visual": {"type": "none", "spec": ""},
+                      "aiNote": ""
+                    }
+                  ]
+                }
+                """);
+
+        var useCase = new GenerateSlideOutlineUseCase(
+                aiClient, promptBuilder, outlineStream, Executors.newSingleThreadExecutor());
+
+        var req = new GenerateOutlineRequest(
+                "bai19",
+                "Bài 19",
+                "",
+                "Lớp 10",
+                "Hóa học",
+                new InlineLessonPlanDto(
+                        "Bài 19",
+                        10,
+                        45,
+                        List.of("Hiểu tốc độ phản ứng"),
+                        List.of("Thảo luận"),
+                        List.of(new InlineActivityDto("a1", "Ứng dụng", 5, "Liên hệ thực tế", "", "", "")),
+                        "",
+                        ""),
+                null,
+                "Tối giản");
+
+        var res = useCase.execute(req);
+
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<com.edua.beeduasystem.presentation.dto.slides.SlideItemDto>> captor =
+                org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(outlineStream, timeout(TimeUnit.SECONDS.toMillis(2)))
+                .publishPartReady(org.mockito.ArgumentMatchers.eq(res.sessionId()),
+                        org.mockito.ArgumentMatchers.eq("p1"), captor.capture());
+
+        var slides = captor.getValue();
+        assertEquals(3, slides.size());
+        assertEquals("p1s1-1", slides.get(0).id());
+        assertEquals("Nồng độ và nhiệt độ", slides.get(0).title());
+        assertEquals("explain", slides.get(0).pedagogicalRole());
+        assertEquals("p1s1-2", slides.get(1).id());
+        assertEquals("Diện tích bề mặt và xúc tác", slides.get(1).title());
+        assertEquals("p1s2", slides.get(2).id());
+        assertEquals("Chốt kiến thức", slides.get(2).title());
+    }
 }

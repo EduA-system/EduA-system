@@ -308,6 +308,41 @@ public class SlideDesignPromptBuilder {
             (NOTE: no "Header band + content" pattern — the header is
             already defined in Step 1 and immutable.)
 
+            <pedagogical_layout_catalog required="true">
+            Choose the layout from the slide's teaching purpose, not from
+            habit. Read the outline title, role label, layout hint, content,
+            quiz items, and visual cue. Prefer these mappings:
+              - hook / title / greeting:
+                  Hero statement. One oversized hero zone plus one small
+                  caption/accent zone. Avoid body bullet zones unless the
+                  outline truly has a second sentence.
+              - explain / concept:
+                  Assertion + evidence. Hero is a sentence-like claim;
+                  body is a short explanation; caption is the emphasized
+                  takeaway or key term.
+              - comparison / factors / applications:
+                  Comparison grid or 2–3 mini-cards. Use separate zones for
+                  grouped items (e.g. concentration + temperature, surface
+                  area + catalyst). Do not place 4+ factors in one body zone.
+              - experiment / demonstrate:
+                  Setup / observe / conclude. Reserve aside for the setup
+                  or phenomenon image; use body for 2–3 procedure/observation
+                  points; use caption for the conclusion.
+              - practice / quiz / worked-example:
+                  Question card. Hero or body carries the question; choices
+                  or steps get their own large zone; caption/formula holds
+                  the answer cue only when the outline says to show it.
+              - recap / summary-map:
+                  Numbered takeaways or compact map. Use 3–4 short zones or
+                  a card container with numbered chunks; avoid a long bullet
+                  list.
+
+            If the outline already has a layoutHint such as comparison,
+            experiment, quiz, formula, worked-example, image-focus, or
+            summary-map, honor that hint unless it clearly contradicts the
+            visible content.
+            </pedagogical_layout_catalog>
+
             EDITORIAL INTENT (this is what separates a designed slide from
             a default-PowerPoint box grid — obey it):
               - ASYMMETRY over symmetry. Do NOT default to a tidy
@@ -328,6 +363,10 @@ public class SlideDesignPromptBuilder {
                 separate non-touching rectangles.
               - VARIETY across the deck: choose the layout that fits THIS
                 slide's content, not the same pattern every time.
+              - CONTENT DECORATION IS STRUCTURAL: when the slide contains
+                several small ideas, reserve space for chips/cards/callouts
+                instead of a single long text block. These are not decorative
+                filler; they are reading aids for the lesson content.
             </body_layout_pattern_selection>
 
             <body_structural_rules required="true">
@@ -346,6 +385,11 @@ public class SlideDesignPromptBuilder {
                 fully inside the body region)
               - Column divider (vertical 1–2px hairline between zones,
                 inside the body region)
+              - Mini-card backplates (2–3 sibling rounded rectangles for
+                comparison/application chunks). Each mini-card must have a
+                matching zone placed inside or directly over it.
+              - Callout backplate (small accent-neutral rounded rectangle)
+                for one conclusion, answer cue, or key term.
 
             Body structural elements MUST NOT overlap each other. They
             DEFINE the regions in which body zones will live.
@@ -400,6 +444,15 @@ public class SlideDesignPromptBuilder {
             the body region:
               data-bbox-x ≥ 0,            data-bbox-x + data-bbox-w ≤ 960
               data-bbox-y ≥ BODY_TOP, data-bbox-y + data-bbox-h ≤ 540
+
+            DENSITY RULES:
+              - Do not make one giant body zone for 4+ bullets. Split into
+                comparison/card zones or choose fewer zones only when the
+                outline is genuinely short.
+              - For a long title, allocate a wider hero zone and reduce the
+                intended font size in Step 3; never rely on narrow wrapping.
+              - For quizzes, formulas, or experiments, allocate dedicated
+                zones instead of burying them in body text.
 
             VISIBILITY OVERLAY required="true":
             Because step 3 has not yet filled content, each zone div
@@ -561,6 +614,35 @@ public class SlideDesignPromptBuilder {
             data-content-hint and data-max-chars / data-max-lines to
             size the text):
 
+            CONTENT DECORATION PATTERNS (choose based on outline):
+              - Chips: for short factor names, conditions, units, or steps.
+                Emit each chip as its OWN data-layer="content" text element
+                inside the relevant zone, with small rounded-pill visual
+                treatment via background/border/padding if supported by the
+                tag. Keep each chip ≤ 4 words.
+              - Mini-cards: for applications/examples/comparison chunks.
+                Put each chunk in its own data-layer="content" text block
+                inside the corresponding zone or mini-card backplate. Use a
+                bold 1-line label plus one short explanation line.
+              - Callout: for a conclusion, answer, or key idea. Use one
+                standalone caption or body element with stronger weight and
+                the slide accent.
+              - Step strip: for procedures. Use 2–4 short numbered text
+                elements, not a paragraph.
+              - Question block: for practice. Keep the question prominent;
+                choices/answer/explanation are separate text elements when
+                the outline includes them.
+              - Comparison columns: for A vs B or cause → effect. Keep
+                labels separate from explanation text so the editor can
+                preserve hierarchy.
+
+            AVOID PLAIN BULLET WALLS:
+              If the outline has 3+ parallel ideas (factors, examples,
+              applications, steps), do NOT render them as one dense <ul>.
+              Prefer chips, mini-cards, comparison columns, or step strip.
+              Use <ul> only when the content is truly a short list and no
+              visual grouping is needed.
+
               data-zone="hero"
                 → APPEND ONE
                   &lt;h1 data-layer="content"
@@ -568,14 +650,19 @@ public class SlideDesignPromptBuilder {
                               font-family:Inter,sans-serif;
                               font-size:[36–64px — SCALE TO FIT: ~36px for
                                 a long full-sentence title, up to ~64px for
-                                a short punchy one]; font-weight:800;
+                              a short punchy one]; font-weight:800;
                               letter-spacing:-0.02em; line-height:1.05;
+                              word-break:normal; overflow-wrap:normal;
+                              hyphens:none; white-space:normal;
                               color:[mood-dark or mood-light];
                               z-index:70;"&gt;…&lt;/h1&gt;
                   This is the DISPLAY hero — it must read big and bold,
                   never caption-sized. Newsreader serif is a strong choice
                   for an editorial mood. Keep the hero ONE solid color
                   (see <accent_color_rule> for where the accent goes).
+                  NEVER split Vietnamese words across spaces. Bad:
+                  "đế n", "số ng", "xuấ t". If the title is long, use a
+                  smaller font and wider zone instead of broken words.
 
               data-zone="body"
                 → APPEND ONE
@@ -601,6 +688,9 @@ public class SlideDesignPromptBuilder {
                   keep the teacher's real content intact; if it slightly
                   exceeds the hint, shorten gently rather than dropping
                   facts. Avoid tiny dense walls of text.
+                  When a body zone represents cards/chips/steps, emit
+                  multiple sibling data-layer="content" text blocks so the
+                  converter creates separate editable elements.
 
               data-zone="aside"
                 → APPEND ONE IMAGE PLACEHOLDER DIV — NOT a real
@@ -668,6 +758,16 @@ public class SlideDesignPromptBuilder {
               has no matching outline item, DO NOT invent filler,
               guiding prompts, student activities, or placeholders.
               Leave that zone without new data-layer="content" children.
+
+            DENSITY FAILURE MODE:
+              If the outline content cannot fit into the available zones
+              while keeping readable font sizes (hero ≥ 32px, body ≥ 14px),
+              do NOT shrink text below those sizes and do NOT create a
+              dense wall. Preserve the most important visible content and
+              make the warning obvious in the generated layout by using a
+              short caption such as "Cần tách slide ở bước outline" only
+              when the outline itself is too large. The normal fix should
+              be upstream slide splitting, not tiny text.
             </zone_content_fill>
 
             <accent_color_rule required="true">

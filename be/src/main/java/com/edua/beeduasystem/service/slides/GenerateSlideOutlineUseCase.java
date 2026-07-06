@@ -111,16 +111,25 @@ public class GenerateSlideOutlineUseCase {
     }
 
     /**
-     * Ghép nội dung pha 2 vào khung pha 1 theo {@code slide.id}. Chỉ điền content/notes/duration cho
-     * các slide CÓ SẴN trong khung — bỏ qua id lạ (chống drift). Slide thiếu nội dung giữ nguyên khung.
+     * Ghép nội dung pha 2 vào khung pha 1. Một slide khung có thể được thay bằng nhiều slide con khi
+     * nội dung dài; slide con phải khai báo {@code sourceSlideId} trỏ về slide gốc để chống drift.
      */
     private List<SlideItemDto> mergeExpanded(PartDto part, String raw) {
         java.util.Map<String, JsonNode> byId = new java.util.HashMap<>();
+        java.util.Map<String, List<JsonNode>> bySourceId = new java.util.HashMap<>();
+        java.util.Set<String> skeletonIds = new java.util.HashSet<>();
+        for (SlideItemDto s : part.slides()) {
+            skeletonIds.add(s.id());
+        }
         try {
             JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(raw));
             for (JsonNode s : root.path("slides")) {
                 String id = s.path("id").asText(null);
                 if (id != null && !id.isBlank()) byId.put(id, s);
+                String sourceSlideId = s.path("sourceSlideId").asText(null);
+                if (sourceSlideId != null && skeletonIds.contains(sourceSlideId)) {
+                    bySourceId.computeIfAbsent(sourceSlideId, ignored -> new ArrayList<>()).add(s);
+                }
             }
         } catch (Exception e) {
             log.warn("Expand parse failed for part {}, keeping skeleton: {}", part.id(), e.getMessage());
@@ -128,22 +137,42 @@ public class GenerateSlideOutlineUseCase {
 
         List<SlideItemDto> result = new ArrayList<>();
         for (SlideItemDto s : part.slides()) {
+            List<JsonNode> splitNodes = bySourceId.get(s.id());
+            if (splitNodes != null && !splitNodes.isEmpty()) {
+                for (JsonNode node : splitNodes) {
+                    result.add(toExpandedSlide(s, node));
+                }
+                continue;
+            }
             JsonNode node = byId.get(s.id());
             if (node == null) {
                 result.add(s);
                 continue;
             }
-            result.add(new SlideItemDto(
-                    s.id(), s.title(), s.kind(), s.pedagogicalRole(), s.layoutHint(),
-                    textOrNull(node, "content"),
-                    intOrNull(node, "durationMinutes"),
-                    stringListOrNull(node.path("requiredFacts")),
-                    quizItemsOrNull(node.path("quizItems")),
-                    visualOrNull(node.path("visual")),
-                    textOrNull(node, "aiNote")
-            ));
+            result.add(toExpandedSlide(s, node));
         }
         return result;
+    }
+
+    private SlideItemDto toExpandedSlide(SlideItemDto source, JsonNode node) {
+        String id = textOrNull(node, "id");
+        String title = textOrNull(node, "title");
+        String kind = textOrNull(node, "kind");
+        String pedagogicalRole = textOrNull(node, "pedagogicalRole");
+        String layoutHint = textOrNull(node, "layoutHint");
+        return new SlideItemDto(
+                id == null ? source.id() : id,
+                title == null ? source.title() : title,
+                kind == null ? source.kind() : kind,
+                pedagogicalRole == null ? source.pedagogicalRole() : pedagogicalRole,
+                layoutHint == null ? source.layoutHint() : layoutHint,
+                textOrNull(node, "content"),
+                intOrNull(node, "durationMinutes"),
+                stringListOrNull(node.path("requiredFacts")),
+                quizItemsOrNull(node.path("quizItems")),
+                visualOrNull(node.path("visual")),
+                textOrNull(node, "aiNote")
+        );
     }
 
     private ParsedSkeleton parseSkeleton(LessonContext lesson, String raw) {

@@ -65,6 +65,10 @@ public class SlidePromptBuilder {
                 QUY TẮC SỐ LƯỢNG SLIDE (quan trọng — tránh slide rỗng):
                 - Số slide mỗi phần phải bám LƯỢNG DỮ LIỆU THẬT trong hoạt động giáo án, KHÔNG cố cho đủ 2-4 slide.
                 - Hoạt động mỏng (chỉ vài câu/một kết luận) → đúng 1 slide. Hoạt động dày (nhiều thí nghiệm/ý) → tách nhiều slide.
+                - Một slide chỉ phục vụ MỘT thông điệp hoặc MỘT nhóm ý rất gần nhau. Nếu một hoạt động/phần có hơn 3 ý,
+                  ví dụ, yếu tố ảnh hưởng, câu hỏi hoặc bước thao tác thì PHẢI chia thành nhiều slide liên tiếp.
+                - Slide ứng dụng/ví dụ chỉ chứa 2-3 ví dụ liên quan. Không gom toàn bộ phần "ứng dụng", "yếu tố",
+                  "các trường hợp" vào một slide duy nhất nếu giáo án có nhiều dữ kiện.
                 - TUYỆT ĐỐI không tạo slide mà giáo án không có dữ liệu để soạn (vd slide "Ví dụ minh họa" khi hoạt động không nêu ví dụ nào).
                 - Phần Ứng dụng và phần Vận dụng/BTVN nếu dựa trên cùng dữ liệu thì phải PHÂN VAI rõ:
                   Ứng dụng = giảng/phân tích ví dụ; Vận dụng = giao việc/bài tập cho HS. Không để hai phần lặp cùng nội dung.
@@ -75,6 +79,8 @@ public class SlidePromptBuilder {
                 - `pedagogicalRole`: hook | explain | derive | demonstrate | practice | recap.
                 - `layoutHint`: title | bullets | formula | image-focus | comparison | worked-example.
                 - `brief`: MỘT dòng nêu GÓC RIÊNG của slide này (để bước sau soạn chi tiết). Brief các slide phải khác nhau rõ, không chồng lấn.
+                  KHÔNG viết brief bao quát kiểu "trình bày các ứng dụng/yếu tố..."; phải nêu phạm vi hẹp như
+                  "ứng dụng của nồng độ và nhiệt độ" hoặc "so sánh diện tích bề mặt và chất xúc tác".
 
                 TRẢ LỜI ĐÚNG ĐỊNH DẠNG JSON sau, KHÔNG markdown fence, KHÔNG text ngoài JSON:
                 {
@@ -124,10 +130,12 @@ public class SlidePromptBuilder {
 
         sb.append("""
                 NHIỆM VỤ: Soạn NỘI DUNG HOÀN CHỈNH cho các slide thuộc phần có id ở trên. Nội dung này là
-                NGUỒN SỰ THẬT — sẽ được dàn thẳng lên slide, nên phải CHÍN, đủ để trình chiếu ngay, KHÔNG phải tóm tắt.
+                NGUỒN SỰ THẬT — sẽ được dàn thẳng lên slide. Nếu một slide quá dài, KHÔNG được rút mất ý:
+                hãy TÁCH thành nhiều slide con liên tiếp để vẫn giữ đủ nội dung.
                 Với mỗi slide:
                 - `content`: nội dung hiển thị trên slide. Text thuần, xuống dòng (\\n) phân ý, gạch đầu dòng "- ".
-                  Tối đa 4-5 ý/slide, 1 ý chính/slide, súc tích nhưng đầy đủ, không nhồi.
+                  Tối đa 2-3 ý/slide, 1 ý chính hoặc 1 nhóm ý rất gần nhau/slide, súc tích nhưng đầy đủ, không nhồi.
+                  Mỗi gạch đầu dòng nên ngắn (khoảng 14-18 từ), tránh một bullet chứa nhiều mệnh đề nối bằng dấu phẩy/chấm phẩy.
                   KHÔNG đưa nhãn điều phối lớp học như "GV", "HS", "Gợi mở", "Thảo luận nhóm", "Hãy quan sát",
                   "Giơ bìa ABCD", trừ khi chính câu đó là nội dung cần chiếu cho học sinh.
                 - `requiredFacts`: mảng các dữ kiện/câu hỏi/đáp án/công thức bắt buộc không được mất khi dàn thành slide.
@@ -146,6 +154,10 @@ public class SlidePromptBuilder {
 
                 NGUYÊN TẮC NỘI DUNG:
                 - DỮ KIỆN GỐC (số liệu, đáp án, công thức, câu hỏi trong giáo án) phải GIỮ NGUYÊN VĂN, không bịa, không sai lệch.
+                - Nếu dữ kiện gốc nhiều hơn sức chứa một slide, PHẢI phân bổ sang nhiều slide con; không bỏ bớt dữ kiện để đạt giới hạn chữ.
+                - Một slide nên có khoảng 60-80 từ tối đa. Slide bìa/hook nên ngắn hơn. Khi vượt mức này, tách slide.
+                - Với phần có danh sách ứng dụng/yếu tố/trường hợp: chia theo nhóm 2-3 mục gần nhau, ví dụ
+                  "nồng độ và nhiệt độ", "diện tích bề mặt và xúc tác", "áp suất trong hệ khí".
                 - Câu hỏi, phiếu học tập, bài trắc nghiệm phải được giữ trong `quizItems` hoặc `requiredFacts`,
                   không được thay bằng câu chung chung như "làm bài tập sau".
                 - ĐƯỢC PHÉP bổ sung ví dụ/diễn giải ngắn để hiển thị trên slide — NHƯNG phải ĐÚNG KHOA HỌC,
@@ -154,12 +166,17 @@ public class SlidePromptBuilder {
                   tương ứng trong giáo án ở trên. Phần khung (bìa, mục tiêu, dặn dò, tổng kết) để 1 phút/slide.
                 - KHÔNG trùng nội dung với slide/phần khác trong khung — bám đúng GÓC của phần mình.
 
-                QUAN TRỌNG: KHÔNG đổi, KHÔNG thêm, KHÔNG bớt slide. Trả về ĐÚNG các `id` slide có trong phần đích.
+                QUY TẮC TÁCH SLIDE KHI NỘI DUNG DÀI:
+                - Được phép thay một slide trong khung bằng nhiều slide con nếu nội dung vượt giới hạn trên.
+                - Slide không bị tách: giữ nguyên `id` cũ, có thể bỏ `sourceSlideId`.
+                - Slide bị tách: trả nhiều object có `sourceSlideId` bằng id slide gốc và `id` mới dạng `<id-gốc>-1`, `<id-gốc>-2`.
+                - Mỗi slide con phải có `title` riêng, `content` riêng và giữ metadata phù hợp. Nếu không chắc metadata, dùng metadata của slide gốc.
+                - KHÔNG tạo slide mới không có `sourceSlideId` thuộc phần đích. KHÔNG đổi thứ tự mạch bài.
 
                 TRẢ LỜI ĐÚNG ĐỊNH DẠNG JSON sau, KHÔNG markdown fence, KHÔNG text ngoài JSON:
                 {
                   "slides": [
-                    {"id": "p1s1", "content": "Nội dung hiển thị…", "durationMinutes": 3,
+                    {"id": "p1s1", "sourceSlideId": "p1s1", "title": "Tiêu đề slide", "content": "Nội dung hiển thị…", "durationMinutes": 3,
                      "requiredFacts": ["Dữ kiện bắt buộc 1"],
                      "quizItems": [{"question": "Câu hỏi?", "choices": ["A. ...", "B. ..."], "answer": "A", "explanation": "Giải thích ngắn"}],
                      "visual": {"type": "image", "spec": "Mô tả ảnh cần vẽ"}, "aiNote": ""}
