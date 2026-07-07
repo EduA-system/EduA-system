@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
+import { AuthProvider } from "@/lib/auth/AuthContext";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 
@@ -51,7 +52,9 @@ export default function RootLayout({
       lang="vi"
       className={`${inter.variable} ${libertine.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

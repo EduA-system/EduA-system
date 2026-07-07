@@ -1,30 +1,55 @@
 "use client";
 
-function GoogleMark() {
-  return (
-    <svg aria-hidden className="size-6 shrink-0" viewBox="0 0 30 31" fill="none">
-      <path d="M29.42 15.86c0-1.08-.1-2.12-.28-3.13H15v5.92h8.08a6.9 6.9 0 0 1-2.99 4.52v3.84h4.85c2.84-2.66 4.48-6.57 4.48-11.15Z" fill="#448AFF" />
-      <path d="M15 30.5c4.05 0 7.45-1.37 9.94-3.7l-4.85-3.84c-1.35.92-3.07 1.47-5.09 1.47-3.91 0-7.22-2.69-8.4-6.3H1.59v3.97A14.99 14.99 0 0 0 15 30.5Z" fill="#43A047" />
-      <path d="M6.6 18.13a9.18 9.18 0 0 1 0-5.76V8.4H1.59a15.18 15.18 0 0 0 0 13.7l5.01-3.97Z" fill="#FFC107" />
-      <path d="M15 6.08c2.2 0 4.18.77 5.74 2.28l4.31-4.39C22.45 1.5 19.05 0 15 0A14.99 14.99 0 0 0 1.59 8.4l5.01 3.97c1.18-3.61 4.49-6.29 8.4-6.29Z" fill="#F44336" />
-    </svg>
-  );
-}
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getAuthErrorMessage } from "@/lib/auth/client";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { useGoogleSignIn } from "@/lib/auth/useGoogleSignIn";
 
 function AuthPanel() {
+  const router = useRouter();
+  const { signIn, status } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleCredential = useCallback(
+    async (credential: string) => {
+      setSubmitting(true);
+      setError(null);
+      try {
+        await signIn(credential);
+        router.push("/blog");
+      } catch (err) {
+        setError(getAuthErrorMessage(err));
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [router, signIn],
+  );
+
+  const { buttonRef, loaded, error: googleError } = useGoogleSignIn(handleCredential);
+  const disabled = submitting || status === "loading";
+
   return (
     <div className="grid w-full transition-[grid-template-rows] duration-500 ease-[cubic-bezier(.22,1,.36,1)] [grid-template-rows:1fr]">
       <div className="min-h-0 overflow-visible px-3 pb-4">
         <div
           className="w-full rounded-[20px] border border-[#b9b9b9] bg-gradient-to-br from-[#fbfff8] to-[#f7fbf4] px-6 py-[30px] shadow-[0_3px_4px_rgba(0,0,0,0.25)] transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] animate-[authPanelIn_520ms_cubic-bezier(.22,1,.36,1)] sm:px-[38px]"
         >
-          <button
-            type="button"
-            className="flex h-[51px] w-full items-center justify-center gap-2.5 rounded-[14px] border border-[#a49d9d] text-base font-medium text-[#424242] shadow-[0_3px_4px_rgba(0,0,0,0.18)] transition duration-300 hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#272727]"
-          >
-            <GoogleMark />
-            <span>Continue with Google</span>
-          </button>
+          <div className="flex min-h-[51px] w-full items-center justify-center rounded-[14px] border border-[#a49d9d] bg-white/30 shadow-[0_3px_4px_rgba(0,0,0,0.18)]">
+            {!loaded && <span className="text-sm font-medium text-[#424242]">Đang tải Google...</span>}
+            <div
+              ref={buttonRef}
+              className={disabled ? "pointer-events-none opacity-60" : undefined}
+            />
+          </div>
+          {submitting && <p className="mt-3 text-sm font-medium text-[#424242]">Đang đăng nhập...</p>}
+          {(error || googleError) && (
+            <p className="mt-3 text-sm font-medium text-red-600" role="alert">
+              {error ?? googleError}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -48,6 +73,15 @@ function GraphicArea() {
 }
 
 export function AuthFlow({ fontClassName }: { fontClassName: string }) {
+  const router = useRouter();
+  const { status } = useAuth();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/blog");
+    }
+  }, [router, status]);
+
   return (
     <main className={`${fontClassName} min-h-screen overflow-x-hidden bg-[#fbfff8] text-[#191919]`}>
       <style jsx global>{`
