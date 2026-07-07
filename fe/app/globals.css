@@ -400,3 +400,88 @@ body::-webkit-scrollbar {
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   white-space: pre-wrap;
 }
+
+.blog-detail-prose .tiptap {
+  color: #4a4b5e;
+  font-size: 15px;
+  line-height: 26.25px;
+  word-break: break-word;
+}
+
+.blog-detail-prose .tiptap:focus {
+  outline: none;
+}
+
+.blog-detail-prose .tiptap p,
+.blog-detail-prose .tiptap h1,
+.blog-detail-prose .tiptap h2,
+.blog-detail-prose .tiptap h3,
+.blog-detail-prose .tiptap ul,
+.blog-detail-prose .tiptap ol {
+  margin: 0;
+}
+
+.blog-detail-prose .tiptap p + p,
+.blog-detail-prose .tiptap p + ul,
+.blog-detail-prose .tiptap p + ol,
+.blog-detail-prose .tiptap ul + p,
+.blog-detail-prose .tiptap ol + p {
+  margin-top: 16px;
+}
+
+.blog-detail-prose .tiptap h1,
+.blog-detail-prose .tiptap h2 {
+  margin-top: 28px;
+  color: #1c1e2e;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 27.5px;
+}
+
+.blog-detail-prose .tiptap h3 {
+  margin-top: 24px;
+  color: #1c1e2e;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.blog-detail-prose .tiptap h1 + p,
+.blog-detail-prose .tiptap h2 + p,
+.blog-detail-prose .tiptap h3 + p {
+  margin-top: 16px;
+}
+
+.blog-detail-prose .tiptap ul,
+.blog-detail-prose .tiptap ol {
+  padding-left: 22px;
+}
+
+.blog-detail-prose .tiptap ul {
+  list-style-type: disc;
+}
+
+.blog-detail-prose .tiptap ol {
+  list-style-type: decimal;
+}
+
+.blog-detail-prose .tiptap li + li {
+  margin-top: 8px;
+}
+
+.blog-detail-prose .tiptap img {
+  max-width: 100%;
+  height: auto;
+  margin-top: 20px;
+  border-radius: 14px;
+}
+
+.blog-comment-content p,
+.blog-comment-content ul,
+.blog-comment-content ol {
+  margin: 0;
+}
+
+.blog-comment-content p + p {
+  margin-top: 6px;
+}

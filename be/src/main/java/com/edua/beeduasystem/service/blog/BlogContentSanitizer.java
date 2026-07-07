@@ -42,4 +42,22 @@ public class BlogContentSanitizer {
         boolean hasMedia = sanitizedHtml.contains("<img") || sanitizedHtml.contains("data-latex");
         return !hasText && !hasMedia;
     }
+
+    /** Đoạn trích văn bản thuần (bỏ thẻ HTML), dùng cho tóm tắt trong danh sách bài. */
+    public String plainTextExcerpt(String sanitizedHtml, int maxLength) {
+        if (sanitizedHtml == null || sanitizedHtml.isBlank()) {
+            return "";
+        }
+        String text = Jsoup.parse(sanitizedHtml).text();
+        return text.length() > maxLength ? text.substring(0, maxLength).trim() + "…" : text;
+    }
+
+    /** URL ảnh đầu tiên trong nội dung (nếu có), dùng làm thumbnail trong danh sách bài. */
+    public String firstImageSrc(String sanitizedHtml) {
+        if (sanitizedHtml == null || sanitizedHtml.isBlank()) {
+            return null;
+        }
+        var img = Jsoup.parse(sanitizedHtml).selectFirst("img");
+        return img != null ? img.attr("src") : null;
+    }
 }

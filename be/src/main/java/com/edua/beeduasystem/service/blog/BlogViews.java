@@ -26,7 +26,7 @@ public final class BlogViews {
     ) {
     }
 
-    /** Dòng tóm tắt trong danh sách bài (không kèm nội dung để nhẹ). */
+    /** Dòng tóm tắt trong danh sách bài: kèm đoạn trích văn bản + thumbnail (nếu có), không kèm HTML đầy đủ. */
     public record PostSummary(
             UUID id,
             String title,
@@ -34,7 +34,9 @@ public final class BlogViews {
             UUID authorId,
             String authorName,
             Instant createdAt,
-            long commentCount
+            long commentCount,
+            String excerpt,
+            String thumbnailUrl
     ) {
     }
 
