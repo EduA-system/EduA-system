@@ -2,8 +2,11 @@ package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
+import com.edua.beeduasystem.domain.model.auth.UserRole;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
+import com.edua.beeduasystem.infrastructure.persistence.repository.RoleJpaRepository;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,11 +29,17 @@ public class AdminSeedRunner implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(AdminSeedRunner.class);
 
     private final AppUserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final RoleJpaRepository roleJpaRepository;
     private final String adminEmail;
 
     public AdminSeedRunner(AppUserRepository userRepository,
+                           UserRoleRepository userRoleRepository,
+                           RoleJpaRepository roleJpaRepository,
                            @Value("${app.auth.admin-seed-email:}") String adminEmail) {
         this.userRepository = userRepository;
+        this.userRoleRepository = userRoleRepository;
+        this.roleJpaRepository = roleJpaRepository;
         this.adminEmail = adminEmail;
     }
 
@@ -43,16 +52,21 @@ public class AdminSeedRunner implements ApplicationRunner {
         if (userRepository.findByEmail(email).isPresent()) {
             return;
         }
-        userRepository.save(new AppUser(
+        Instant now = Instant.now();
+        AppUser saved = userRepository.save(new AppUser(
                 UUID.randomUUID(),
                 email,
                 null,
                 null,
-                Role.ADMINISTRATOR,
                 null,
                 UserStatus.INVITED,
-                Instant.now(),
+                now,
                 null));
+        // Assign ADMINISTRATOR role
+        var roleEntity = roleJpaRepository.findByName(Role.ADMINISTRATOR.name())
+                .orElseThrow(() -> new IllegalStateException("Role ADMINISTRATOR not found in DB"));
+        userRoleRepository.save(new UserRole(
+                UUID.randomUUID(), saved.id(), roleEntity.getId(), null, now));
         log.info("Seeded ADMINISTRATOR account for {}", email);
     }
 }

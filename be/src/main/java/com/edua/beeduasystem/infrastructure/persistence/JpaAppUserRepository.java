@@ -1,9 +1,13 @@
 package com.edua.beeduasystem.infrastructure.persistence;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
+import com.edua.beeduasystem.domain.model.auth.Role;
+import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.infrastructure.persistence.entity.AppUserEntity;
 import com.edua.beeduasystem.infrastructure.persistence.repository.AppUserJpaRepository;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +48,18 @@ public class JpaAppUserRepository implements AppUserRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<AppUser> findAllByRole(Role role, Pageable pageable) {
+        return jpa.findByRoleName(role.name(), pageable).map(JpaAppUserRepository::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AppUser> findAllByRoleAndSubject(Role role, Subject subject, Pageable pageable) {
+        return jpa.findByRoleNameAndSubject(role.name(), subject, pageable).map(JpaAppUserRepository::toDomain);
+    }
+
+    @Override
     @Transactional
     public AppUser save(AppUser user) {
         AppUserEntity e = jpa.findById(user.id()).orElseGet(AppUserEntity::new);
@@ -51,7 +67,6 @@ public class JpaAppUserRepository implements AppUserRepository {
         e.setEmail(user.email());
         e.setGoogleSub(user.googleSub());
         e.setFullName(user.fullName());
-        e.setRole(user.role());
         e.setSubject(user.subject());
         e.setStatus(user.status());
         e.setCreatedAt(user.createdAt() != null ? user.createdAt() : Instant.now());
@@ -65,7 +80,6 @@ public class JpaAppUserRepository implements AppUserRepository {
                 e.getEmail(),
                 e.getGoogleSub(),
                 e.getFullName(),
-                e.getRole(),
                 e.getSubject(),
                 e.getStatus(),
                 e.getCreatedAt(),

@@ -20,12 +20,15 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Phát/verify access JWT nội bộ (HS256) bằng jjwt.
- * Claims: sub = userId, email, role, subject; TTL cấu hình (mặc định 60′ — SEC-03).
+ * Claims: sub = userId, email, roles (comma-separated), role (primary), subject.
  */
 @Component
 public class JwtTokenAdapter implements TokenService {
@@ -42,20 +45,22 @@ public class JwtTokenAdapter implements TokenService {
         if (StringUtils.hasText(secret) && secret.getBytes(StandardCharsets.UTF_8).length >= 32) {
             this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         } else {
-            // Dev fallback: chưa cấu hình APP_AUTH_JWT_SECRET (hoặc < 32 bytes). Sinh key tạm —
-            // token KHÔNG sống qua restart. Bắt buộc set secret ở prod.
             log.warn("app.auth.jwt.secret chưa được cấu hình hợp lệ (>=32 bytes). Dùng key HS256 tạm cho dev.");
             this.key = Jwts.SIG.HS256.key().build();
         }
     }
 
     @Override
-    public String issueAccessToken(AppUser user) {
+    public String issueAccessToken(AppUser user, Set<Role> roles) {
         Instant now = Instant.now();
+        String rolesStr = roles.stream().map(Role::name).collect(Collectors.joining(","));
+        String primaryRole = rolesStr.isEmpty() ? "TEACHER" : rolesStr.split(",")[0];
+
         var builder = Jwts.builder()
                 .subject(user.id().toString())
                 .claim("email", user.email())
-                .claim("role", user.role().name())
+                .claim("roles", rolesStr)
+                .claim("role", primaryRole)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(accessTtl)))
                 .signWith(key);
@@ -70,11 +75,22 @@ public class JwtTokenAdapter implements TokenService {
         try {
             Claims c = Jwts.parser().verifyWith(key).build()
                     .parseSignedClaims(accessToken).getPayload();
+            String rolesStr = c.get("roles", String.class);
+            Set<Role> roles;
+            if (StringUtils.hasText(rolesStr)) {
+                roles = Arrays.stream(rolesStr.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(Role::valueOf)
+                        .collect(Collectors.toSet());
+            } else {
+                roles = Set.of(Role.valueOf(c.get("role", String.class)));
+            }
             String subjectClaim = c.get("subject", String.class);
             return new AccessTokenClaims(
                     UUID.fromString(c.getSubject()),
                     c.get("email", String.class),
-                    Role.valueOf(c.get("role", String.class)),
+                    roles,
                     subjectClaim != null ? Subject.valueOf(subjectClaim) : null);
         } catch (JwtException | IllegalArgumentException ex) {
             throw new InvalidTokenException("Invalid or expired access token.");

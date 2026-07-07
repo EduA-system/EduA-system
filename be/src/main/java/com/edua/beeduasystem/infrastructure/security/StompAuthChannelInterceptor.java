@@ -39,8 +39,11 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 throw new InvalidTokenException("Missing Bearer token on STOMP CONNECT.");
             }
             AccessTokenClaims claims = tokenService.parse(header.substring(BEARER.length()).trim());
-            var auth = new UsernamePasswordAuthenticationToken(
-                    claims, null, List.of(new SimpleGrantedAuthority("ROLE_" + claims.role().name())));
+            var roles = claims.roles();
+            var authorities = roles.stream()
+                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
+                    .toList();
+            var auth = new UsernamePasswordAuthenticationToken(claims, null, authorities);
             accessor.setUser(auth);
         }
         return message;

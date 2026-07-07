@@ -1,6 +1,5 @@
 package com.edua.beeduasystem.infrastructure.persistence.entity;
 
-import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import jakarta.persistence.Column;
@@ -34,10 +33,6 @@ public class AppUserEntity {
 
     @Column(name = "full_name")
     private String fullName;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private Role role;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
