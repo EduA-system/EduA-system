@@ -4,6 +4,7 @@ import Link from "next/link";
 import { navGroups } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { hasAnyRole } from "@/lib/auth/permissions";
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -42,8 +43,7 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false }: Sideba
       ...group,
       items: group.items.filter((item) => {
         if (!item.requiredRole) return true;
-        if (!user) return false;
-        return item.requiredRole.includes(user.role as "TEACHER" | "MODERATOR" | "ADMINISTRATOR");
+        return hasAnyRole(user, item.requiredRole);
       }),
     }))
     .filter((group) => group.items.length > 0);

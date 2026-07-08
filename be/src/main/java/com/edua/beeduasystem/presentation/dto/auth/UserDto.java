@@ -17,12 +17,13 @@ public record UserDto(
         String subject
 ) {
     public static UserDto from(AppUser user, Set<Role> roles) {
+        List<String> orderedRoles = Role.orderedByPriority(roles).stream().map(Enum::name).toList();
         return new UserDto(
                 user.id(),
                 user.email(),
                 user.fullName(),
-                roles.stream().findFirst().map(Enum::name).orElse(null),
-                roles.stream().map(Enum::name).toList(),
+                orderedRoles.isEmpty() ? null : orderedRoles.getFirst(),
+                orderedRoles,
                 user.subject() != null ? user.subject().name() : null);
     }
 }

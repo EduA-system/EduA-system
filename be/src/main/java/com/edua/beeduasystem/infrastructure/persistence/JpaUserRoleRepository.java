@@ -93,15 +93,25 @@ public class JpaUserRoleRepository implements UserRoleRepository {
 
     @Override
     @Transactional
-    public void assignOrUpdateRole(UUID userId, UUID roleId, UUID grantedBy, Instant grantedAt) {
-        List<UserRoleEntity> existing = jpa.findByUserId(userId).stream()
+    public void replaceRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt) {
+        UUID roleId = resolveRoleId(role);
+        List<UserRoleEntity> existing = jpa.findByUserId(userId);
+        UserRoleEntity retained = existing.stream()
                 .filter(ur -> ur.getRoleId().equals(roleId))
-                .toList();
-        if (!existing.isEmpty()) {
-            UserRoleEntity e = existing.getFirst();
-            e.setGrantedBy(grantedBy);
-            e.setGrantedAt(grantedAt);
-            jpa.save(e);
+                .findFirst()
+                .orElse(existing.isEmpty() ? null : existing.getFirst());
+
+        for (UserRoleEntity e : existing) {
+            if (retained == null || !e.getId().equals(retained.getId())) {
+                jpa.delete(e);
+            }
+        }
+
+        if (retained != null) {
+            retained.setRoleId(roleId);
+            retained.setGrantedBy(grantedBy);
+            retained.setGrantedAt(grantedAt);
+            jpa.save(retained);
         } else {
             UserRoleEntity e = new UserRoleEntity();
             e.setId(UUID.randomUUID());
@@ -118,5 +128,11 @@ public class JpaUserRoleRepository implements UserRoleRepository {
                 .filter(r -> r.getName().equals(role.name()))
                 .map(RoleEntity::getId)
                 .collect(Collectors.toSet());
+    }
+
+    private UUID resolveRoleId(Role role) {
+        return roleJpa.findByName(role.name())
+                .orElseThrow(() -> new IllegalStateException("Role " + role.name() + " not found in DB"))
+                .getId();
     }
 }

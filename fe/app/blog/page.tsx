@@ -233,10 +233,9 @@ export default function BlogPage() {
     setDetail(null);
   }
 
-  if (!user) return null;
-
   return (
     <RouteGuard pathname="/blog">
+    {user && (
     <div className="mx-auto max-w-3xl p-6">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Blog giáo viên</h1>
@@ -345,6 +344,7 @@ export default function BlogPage() {
         </>
       )}
     </div>
+    )}
     </RouteGuard>
   );
 }

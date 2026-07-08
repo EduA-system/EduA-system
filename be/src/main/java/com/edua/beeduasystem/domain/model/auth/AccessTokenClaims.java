@@ -11,8 +11,6 @@ public record AccessTokenClaims(
         Subject subject
 ) {
     public Role primaryRole() {
-        if (roles.contains(Role.ADMINISTRATOR)) return Role.ADMINISTRATOR;
-        if (roles.contains(Role.MODERATOR)) return Role.MODERATOR;
-        return Role.TEACHER;
+        return Role.primaryOf(roles);
     }
 }

@@ -7,7 +7,6 @@ import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
-import com.edua.beeduasystem.infrastructure.persistence.repository.RoleJpaRepository;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import org.springframework.data.domain.Page;
@@ -29,16 +28,13 @@ public class ModeratorTeacherService {
 
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
-    private final RoleJpaRepository roleJpaRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public ModeratorTeacherService(AppUserRepository userRepository,
                                    UserRoleRepository userRoleRepository,
-                                   RoleJpaRepository roleJpaRepository,
                                    CurrentUserProvider currentUserProvider) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
-        this.roleJpaRepository = roleJpaRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -169,8 +165,6 @@ public class ModeratorTeacherService {
     }
 
     private void assignRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt) {
-        var roleEntity = roleJpaRepository.findByName(role.name())
-                .orElseThrow(() -> new IllegalStateException("Role " + role.name() + " not found in DB"));
-        userRoleRepository.assignOrUpdateRole(userId, roleEntity.getId(), grantedBy, grantedAt);
+        userRoleRepository.replaceRole(userId, role, grantedBy, grantedAt);
     }
 }

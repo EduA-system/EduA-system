@@ -53,8 +53,8 @@ public class JwtTokenAdapter implements TokenService {
     @Override
     public String issueAccessToken(AppUser user, Set<Role> roles) {
         Instant now = Instant.now();
-        String rolesStr = roles.stream().map(Role::name).collect(Collectors.joining(","));
-        String primaryRole = rolesStr.isEmpty() ? "TEACHER" : rolesStr.split(",")[0];
+        String rolesStr = Role.orderedByPriority(roles).stream().map(Role::name).collect(Collectors.joining(","));
+        String primaryRole = Role.primaryOf(roles).name();
 
         var builder = Jwts.builder()
                 .subject(user.id().toString())

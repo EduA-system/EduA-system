@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
+import { hasAnyRole } from "@/lib/auth/permissions";
 
 const SUBJECTS = ["MATH", "CHEMISTRY", "PHYSICS"] as const;
 
@@ -54,8 +55,8 @@ export default function UserManagementPage() {
   const [addSubject, setAddSubject] = useState("CHEMISTRY");
   const [addFullName, setAddFullName] = useState("");
 
-  const isAdmin = user?.role === "ADMINISTRATOR";
-  const isModerator = user?.role === "MODERATOR";
+  const isAdmin = hasAnyRole(user, ["ADMINISTRATOR"]);
+  const isModerator = hasAnyRole(user, ["MODERATOR"]);
 
   const loadItems = useCallback(async () => {
     if (status !== "authenticated" || !user) return;
@@ -149,10 +150,9 @@ export default function UserManagementPage() {
   const addLabel = isAdmin ? "Thêm Moderator" : "Thêm Teacher";
   const emptyMsg = isAdmin ? "Chưa có Moderator." : "Chưa có Teacher.";
 
-  if (!user) return null;
-
   return (
     <RouteGuard pathname="/user-management">
+    {user && (
     <div className="mx-auto max-w-3xl p-6">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">{title}</h1>
@@ -224,6 +224,7 @@ export default function UserManagementPage() {
         )}
       </section>
     </div>
+    )}
     </RouteGuard>
   );
 }

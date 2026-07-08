@@ -2,9 +2,7 @@ package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
-import com.edua.beeduasystem.domain.model.auth.UserRole;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
-import com.edua.beeduasystem.infrastructure.persistence.repository.RoleJpaRepository;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import org.slf4j.Logger;
@@ -30,16 +28,13 @@ public class AdminSeedRunner implements ApplicationRunner {
 
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
-    private final RoleJpaRepository roleJpaRepository;
     private final String adminEmail;
 
     public AdminSeedRunner(AppUserRepository userRepository,
                            UserRoleRepository userRoleRepository,
-                           RoleJpaRepository roleJpaRepository,
                            @Value("${app.auth.admin-seed-email:}") String adminEmail) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
-        this.roleJpaRepository = roleJpaRepository;
         this.adminEmail = adminEmail;
     }
 
@@ -62,11 +57,7 @@ public class AdminSeedRunner implements ApplicationRunner {
                 UserStatus.INVITED,
                 now,
                 null));
-        // Assign ADMINISTRATOR role
-        var roleEntity = roleJpaRepository.findByName(Role.ADMINISTRATOR.name())
-                .orElseThrow(() -> new IllegalStateException("Role ADMINISTRATOR not found in DB"));
-        userRoleRepository.save(new UserRole(
-                UUID.randomUUID(), saved.id(), roleEntity.getId(), null, now));
+        userRoleRepository.replaceRole(saved.id(), Role.ADMINISTRATOR, null, now);
         log.info("Seeded ADMINISTRATOR account for {}", email);
     }
 }

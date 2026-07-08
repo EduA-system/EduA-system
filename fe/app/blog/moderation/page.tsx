@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
+import { hasAnyRole } from "@/lib/auth/permissions";
 
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type Summary = {
@@ -55,19 +56,20 @@ export default function BlogModerationPage() {
   const [posts, setPosts] = useState<Summary[]>([]);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [msg, setMsg] = useState("");
+  const isModerator = hasAnyRole(user, ["MODERATOR"]);
 
   const loadPosts = useCallback(async () => {
-    if (status !== "authenticated" || !user || user.role !== "MODERATOR") return;
+    if (status !== "authenticated" || !user || !isModerator) return;
     const scope = user.subject ? `?subject=${user.subject}` : "";
     try {
       setPosts((await api<{ items: Summary[] }>(authFetch, `/blog-posts${scope}`)).items);
     } catch (e) {
       setMsg(String(e));
     }
-  }, [authFetch, status, user]);
+  }, [authFetch, status, user, isModerator]);
 
   useEffect(() => {
-    if (status !== "authenticated" || !user || user.role !== "MODERATOR") return;
+    if (status !== "authenticated" || !user || !isModerator) return;
     let cancelled = false;
     const scope = user.subject ? `?subject=${user.subject}` : "";
     api<{ items: Summary[] }>(authFetch, `/blog-posts${scope}`)
@@ -80,7 +82,7 @@ export default function BlogModerationPage() {
     return () => {
       cancelled = true;
     };
-  }, [authFetch, status, user]);
+  }, [authFetch, status, user, isModerator]);
 
   async function openDetail(id: string) {
     try {
@@ -113,10 +115,9 @@ export default function BlogModerationPage() {
     setDetail(null);
   }
 
-  if (!user) return null;
-
   return (
     <RouteGuard pathname="/blog/moderation" denyHref="/blog" denyLabel="V\u1ec1 trang Blog">
+    {user && (
     <div className="mx-auto max-w-3xl p-6">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Kiểm duyệt Blog - môn {user.subject}</h1>
@@ -178,6 +179,7 @@ export default function BlogModerationPage() {
         </section>
       )}
     </div>
+    )}
     </RouteGuard>
   );
 }
