@@ -2,7 +2,7 @@
 -- Dữ liệu read-only; seed bằng app importer (TextbookCatalogImporter) từ JSON classpath.
 
 CREATE TABLE textbooks (
-    id         UUID         PRIMARY KEY,
+    id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     code       VARCHAR(20)  NOT NULL UNIQUE,
     name       VARCHAR(200) NOT NULL,
     grade      INTEGER      NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE textbooks (
 );
 
 CREATE TABLE chapters (
-    id          UUID         PRIMARY KEY,
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     textbook_id UUID         NOT NULL REFERENCES textbooks (id),
     code        VARCHAR(20)  NOT NULL,
     name        VARCHAR(500) NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE chapters (
 );
 
 CREATE TABLE lessons (
-    id             UUID         PRIMARY KEY,
+    id             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     chapter_id     UUID         NOT NULL REFERENCES chapters (id),
     code           VARCHAR(20)  NOT NULL,
     name           VARCHAR(500) NOT NULL,
