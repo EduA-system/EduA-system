@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { RouteGuard } from "@/lib/auth/RouteGuard";
 
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type Summary = {
@@ -113,41 +113,10 @@ export default function BlogModerationPage() {
     setDetail(null);
   }
 
-  if (status === "loading") {
-    return <div className="mx-auto max-w-md p-8 text-sm text-gray-600">Đang kiểm tra phiên đăng nhập...</div>;
-  }
-
-  if (!user) {
-    return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="mb-4 text-xl font-semibold">Kiểm duyệt Blog</h1>
-        <p className="mb-4 text-sm text-gray-600">Đăng nhập bằng Google với tài khoản Moderator.</p>
-        <Link className="rounded bg-black px-4 py-2 text-sm text-white" href="/login">
-          Đăng nhập
-        </Link>
-      </div>
-    );
-  }
-
-  if (user.role !== "MODERATOR") {
-    return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="mb-2 text-xl font-semibold">Kiểm duyệt Blog</h1>
-        <p className="text-sm text-gray-600">
-          Tài khoản {user.email} ({user.role}) không có quyền kiểm duyệt.{" "}
-          <Link href="/blog" className="underline">
-            Về trang Blog
-          </Link>{" "}
-          ·{" "}
-          <button onClick={handleLogout} className="underline">
-            Đăng xuất
-          </button>
-        </p>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
+    <RouteGuard pathname="/blog/moderation" denyHref="/blog" denyLabel="V\u1ec1 trang Blog">
     <div className="mx-auto max-w-3xl p-6">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Kiểm duyệt Blog - môn {user.subject}</h1>
@@ -209,5 +178,6 @@ export default function BlogModerationPage() {
         </section>
       )}
     </div>
+    </RouteGuard>
   );
 }

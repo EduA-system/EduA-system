@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions } from "@/components/LessonEditor/editorConfig";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { RouteGuard } from "@/lib/auth/RouteGuard";
 
 const SUBJECTS = ["MATH", "CHEMISTRY", "PHYSICS"] as const;
 
@@ -233,23 +233,10 @@ export default function BlogPage() {
     setDetail(null);
   }
 
-  if (status === "loading") {
-    return <div className="mx-auto max-w-md p-8 text-sm text-gray-600">Đang kiểm tra phiên đăng nhập...</div>;
-  }
-
-  if (!user) {
-    return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="mb-4 text-xl font-semibold">Blog giáo viên</h1>
-        <p className="mb-4 text-sm text-gray-600">Đăng nhập bằng Google để tiếp tục.</p>
-        <Link className="rounded bg-black px-4 py-2 text-sm text-white" href="/login">
-          Đăng nhập
-        </Link>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
+    <RouteGuard pathname="/blog">
     <div className="mx-auto max-w-3xl p-6">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Blog giáo viên</h1>
@@ -358,5 +345,6 @@ export default function BlogPage() {
         </>
       )}
     </div>
+    </RouteGuard>
   );
 }

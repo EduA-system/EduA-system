@@ -91,6 +91,28 @@ public class JpaUserRoleRepository implements UserRoleRepository {
         return result;
     }
 
+    @Override
+    @Transactional
+    public void assignOrUpdateRole(UUID userId, UUID roleId, UUID grantedBy, Instant grantedAt) {
+        List<UserRoleEntity> existing = jpa.findByUserId(userId).stream()
+                .filter(ur -> ur.getRoleId().equals(roleId))
+                .toList();
+        if (!existing.isEmpty()) {
+            UserRoleEntity e = existing.getFirst();
+            e.setGrantedBy(grantedBy);
+            e.setGrantedAt(grantedAt);
+            jpa.save(e);
+        } else {
+            UserRoleEntity e = new UserRoleEntity();
+            e.setId(UUID.randomUUID());
+            e.setUserId(userId);
+            e.setRoleId(roleId);
+            e.setGrantedBy(grantedBy);
+            e.setGrantedAt(grantedAt);
+            jpa.save(e);
+        }
+    }
+
     private Set<UUID> resolveRoleIds(Role role) {
         return roleJpa.findAll().stream()
                 .filter(r -> r.getName().equals(role.name()))

@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -65,5 +66,14 @@ public class AdminController {
             description = "Soft-delete: set status = DISABLED. Giữ audit trail.")
     public void deleteModerator(@PathVariable UUID id) {
         adminModeratorService.deleteModerator(id);
+    }
+
+    @PatchMapping("/moderators/{id}/reactivate")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Kích hoạt lại Moderator đã bị thu hồi",
+            description = "Set status = INVITED, cập nhật granted_by/granted_at.")
+    public ModeratorDto reactivateModerator(@PathVariable UUID id) {
+        var user = adminModeratorService.reactivateModerator(id);
+        return ModeratorDto.from(user, null, null);
     }
 }

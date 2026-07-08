@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { RouteGuard } from "@/lib/auth/RouteGuard";
 
 const SUBJECTS = ["MATH", "CHEMISTRY", "PHYSICS"] as const;
 
@@ -115,15 +115,25 @@ export default function UserManagementPage() {
     }
   }
 
-  async function deleteUser(id: string) {
-    if (!window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
+  async function toggleUser(id: string, currentStatus: string) {
+    const isDisabled = currentStatus === "DISABLED";
+    if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
     try {
-      if (isAdmin) {
-        await api(authFetch, `/admin/moderators/${id}`, { method: "DELETE" });
-      } else if (isModerator) {
-        await api(authFetch, `/moderator/teachers/${id}`, { method: "DELETE" });
+      if (isDisabled) {
+        if (isAdmin) {
+          await api(authFetch, `/admin/moderators/${id}/reactivate`, { method: "PATCH" });
+        } else if (isModerator) {
+          await api(authFetch, `/moderator/teachers/${id}/reactivate`, { method: "PATCH" });
+        }
+        setMsg("Đã kích hoạt lại.");
+      } else {
+        if (isAdmin) {
+          await api(authFetch, `/admin/moderators/${id}`, { method: "DELETE" });
+        } else if (isModerator) {
+          await api(authFetch, `/moderator/teachers/${id}`, { method: "DELETE" });
+        }
+        setMsg("Đã thu hồi.");
       }
-      setMsg("Đã thu hồi.");
       await loadItems();
     } catch (e) {
       setMsg(String(e));
@@ -135,38 +145,14 @@ export default function UserManagementPage() {
     setItems([]);
   }
 
-  if (status === "loading") {
-    return <div className="mx-auto max-w-md p-8 text-sm text-gray-600">Đang kiểm tra phiên đăng nhập...</div>;
-  }
-
-  if (!user) {
-    return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="mb-4 text-xl font-semibold">Quản lý tài khoản</h1>
-        <p className="mb-4 text-sm text-gray-600">Đăng nhập bằng Google để tiếp tục.</p>
-        <Link className="rounded bg-black px-4 py-2 text-sm text-white" href="/login">
-          Đăng nhập
-        </Link>
-      </div>
-    );
-  }
-
-  if (!isAdmin && !isModerator) {
-    return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="mb-2 text-xl font-semibold">Quản lý tài khoản</h1>
-        <p className="text-sm text-gray-600">
-          Tài khoản {user.email} ({user.role}) không có quyền quản lý tài khoản.
-        </p>
-      </div>
-    );
-  }
-
   const title = isAdmin ? "Quản lý Moderator" : "Quản lý Teacher";
   const addLabel = isAdmin ? "Thêm Moderator" : "Thêm Teacher";
   const emptyMsg = isAdmin ? "Chưa có Moderator." : "Chưa có Teacher.";
 
+  if (!user) return null;
+
   return (
+    <RouteGuard pathname="/user-management">
     <div className="mx-auto max-w-3xl p-6">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">{title}</h1>
@@ -227,10 +213,10 @@ export default function UserManagementPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => deleteUser(item.id)}
-                  className="text-sm text-red-600 underline"
+                  onClick={() => toggleUser(item.id, item.status)}
+                  className={`text-sm underline ${item.status === "DISABLED" ? "text-green-600" : "text-red-600"}`}
                 >
-                  Thu hồi
+                  {item.status === "DISABLED" ? "Kích hoạt lại" : "Thu hồi"}
                 </button>
               </div>
             ))}
@@ -238,5 +224,6 @@ export default function UserManagementPage() {
         )}
       </section>
     </div>
+    </RouteGuard>
   );
 }

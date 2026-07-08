@@ -6,7 +6,6 @@ import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
-import com.edua.beeduasystem.domain.model.auth.UserRole;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.infrastructure.persistence.repository.RoleJpaRepository;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
@@ -141,10 +140,37 @@ public class ModeratorTeacherService {
                 user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
     }
 
+    @Transactional
+    public AppUser reactivateTeacher(UUID id) {
+        Subject moderatorSubject = currentUserProvider.require().subject();
+        if (moderatorSubject == null) {
+            throw new ForbiddenOperationException("Moderator phải có subject để quản lý giáo viên.");
+        }
+        AppUser user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giáo viên."));
+        if (user.status() != UserStatus.DISABLED) {
+            throw new ResourceNotFoundException("Giáo viên chưa bị thu hồi.");
+        }
+        var roles = userRoleRepository.findRolesByUserId(id);
+        if (!roles.contains(Role.TEACHER)) {
+            throw new ResourceNotFoundException("Không tìm thấy giáo viên.");
+        }
+        if (user.subject() != moderatorSubject) {
+            throw new ForbiddenOperationException(
+                    "Bạn chỉ có thể quản lý giáo viên môn " + moderatorSubject.name() + ".");
+        }
+        UUID currentUserId = currentUserProvider.requireUserId();
+        Instant now = Instant.now();
+        AppUser reactivated = userRepository.save(new AppUser(
+                user.id(), user.email(), user.googleSub(), user.fullName(),
+                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
+        assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
+        return reactivated;
+    }
+
     private void assignRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt) {
         var roleEntity = roleJpaRepository.findByName(role.name())
                 .orElseThrow(() -> new IllegalStateException("Role " + role.name() + " not found in DB"));
-        userRoleRepository.save(new UserRole(
-                UUID.randomUUID(), userId, roleEntity.getId(), grantedBy, grantedAt));
+        userRoleRepository.assignOrUpdateRole(userId, roleEntity.getId(), grantedBy, grantedAt);
     }
 }

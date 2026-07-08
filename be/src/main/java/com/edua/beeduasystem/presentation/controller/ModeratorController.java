@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -65,5 +66,14 @@ public class ModeratorController {
             description = "Soft-delete: set status = DISABLED. Chỉ được xoá teacher cùng subject.")
     public void deleteTeacher(@PathVariable UUID id) {
         moderatorTeacherService.deleteTeacher(id);
+    }
+
+    @PatchMapping("/teachers/{id}/reactivate")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Kích hoạt lại Teacher đã bị thu hồi",
+            description = "Set status = INVITED, cập nhật granted_by/granted_at.")
+    public TeacherDto reactivateTeacher(@PathVariable UUID id) {
+        var user = moderatorTeacherService.reactivateTeacher(id);
+        return TeacherDto.from(user, null, null);
     }
 }

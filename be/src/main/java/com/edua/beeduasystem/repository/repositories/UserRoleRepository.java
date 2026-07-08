@@ -20,4 +20,7 @@ public interface UserRoleRepository {
 
     /** userId -> grantedAt */
     Map<UUID, Instant> findGrantedAtsByUserIds(Collection<UUID> userIds, Role role);
+
+    /** Tạo mới hoặc cập nhật granted_by/granted_at (dùng khi reactivate). */
+    void assignOrUpdateRole(UUID userId, UUID roleId, UUID grantedBy, Instant grantedAt);
 }
