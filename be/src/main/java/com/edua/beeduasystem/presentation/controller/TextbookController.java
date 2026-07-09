@@ -8,8 +8,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/textbooks")
@@ -36,5 +40,28 @@ public class TextbookController {
     )
     public TextbookCatalog getCatalog() {
         return textbookService.getCatalog();
+    }
+
+    @GetMapping("/names")
+    @Operation(summary = "Lấy danh sách tên sách nhẹ cho dropdown")
+    public List<TextbookCatalog.BookName> getBookNames(
+            @RequestParam(name = "subject", required = false) String subjectCode
+    ) {
+        return textbookService.getBookNames(subjectCode);
+    }
+
+    @GetMapping("/{bookCode}/chapters")
+    @Operation(summary = "Lấy danh sách chương theo sách")
+    public List<TextbookCatalog.ChapterSummary> getChapters(@PathVariable String bookCode) {
+        return textbookService.getChapters(bookCode);
+    }
+
+    @GetMapping("/{bookCode}/chapters/{chapterCode}/lessons")
+    @Operation(summary = "Lấy danh sách bài theo sách và chương")
+    public List<TextbookCatalog.LessonSummary> getLessons(
+            @PathVariable String bookCode,
+            @PathVariable String chapterCode
+    ) {
+        return textbookService.getLessons(bookCode, chapterCode);
     }
 }

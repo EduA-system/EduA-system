@@ -20,9 +20,27 @@ public record TextbookCatalog(
     public record Book(String id, String name, int grade, String source, List<Chapter> chapters) {
     }
 
+    public record BookName(
+            String id,
+            String name,
+            int grade,
+            String subjectCode,
+            String subjectName,
+            Integer volume,
+            String publisher,
+            String series
+    ) {
+    }
+
     public record Chapter(String id, String name, List<Lesson> lessons) {
     }
 
+    public record ChapterSummary(String id, String name) {
+    }
+
     public record Lesson(String id, String name, Integer page) {
+    }
+
+    public record LessonSummary(String id, String name, Integer page) {
     }
 }
