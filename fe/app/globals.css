@@ -148,6 +148,36 @@ body::-webkit-scrollbar {
   -ms-overflow-style: none;
 }
 
+/* Tweakpane (ParamPanel — bảng tham số mô phỏng vật lý) mặc định theme tối,
+   lệch tông với giao diện sáng EDUA. Override biến CSS của Tweakpane để khớp
+   màu nền/viền/chữ đang dùng trong Slide Maker & Lesson Editor.
+   ".tp-rotv" (không phải ".tp-dfwv") là class thật sự bọc theme khi Pane được
+   tạo với option `container` (dfwv chỉ áp dụng khi Tweakpane tự nổi floating
+   panel, không phải trường hợp của ParamPanel). */
+.tp-rotv {
+  --tp-base-background-color: #ffffff;
+  --tp-base-shadow-color: rgba(43, 41, 38, 0.1);
+  --tp-button-background-color: #f5f1ec;
+  --tp-button-background-color-active: #f0ece5;
+  --tp-button-background-color-focus: #f6eadf;
+  --tp-button-background-color-hover: #efe9e2;
+  --tp-button-foreground-color: #2b2926;
+  --tp-container-background-color: #faf9f7;
+  --tp-container-background-color-active: #f0ece5;
+  --tp-container-background-color-focus: #f5f1ec;
+  --tp-container-background-color-hover: #f7f3ee;
+  --tp-container-foreground-color: #4f4943;
+  --tp-groove-foreground-color: #e8e2d9;
+  --tp-input-background-color: #f5f1ec;
+  --tp-input-background-color-active: #ecdfd2;
+  --tp-input-background-color-focus: #f2e4d5;
+  --tp-input-background-color-hover: #efe4d8;
+  --tp-input-foreground-color: #c96545;
+  --tp-label-foreground-color: #6b6b6b;
+  --tp-monitor-background-color: #f5f1ec;
+  --tp-monitor-foreground-color: #4f4943;
+}
+
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }

@@ -1,0 +1,362 @@
+"use client";
+
+// Renderer 2D bằng Konva (imperative) cho Kernel Cơ học 2D.
+// Đọc Scene + kernel thật (kernel/*.ts), chạy vòng lặp vật lý, vẽ vật/lò xo/dây.
+//
+// KHÔNG GIAN: mặt đất CỐ ĐỊNH ở world y=0 (dải nền + đường sàn), phần còn lại là
+// lưới phủ kín canvas → mặt phẳng 2D vô hạn. Canvas rộng theo khung chứa.
+//
+// KÉO-THẢ: kéo một vật động để đặt lại vị trí đầu → thả ra mô phỏng chạy lại từ đó.
+//
+// CONTROLLED: chạy/dừng (`running`) và `resetSignal` do component CHA điều khiển
+// (nút nằm ở bảng tham số). Khi kéo, gọi `onRunningChange` để cha cập nhật theo.
+
+import { useEffect, useRef, useState } from "react";
+import Konva from "konva";
+import { buildKernel, readPosition, readVelocity, stepScene } from "./kernel/build-derivs";
+import type { StateVec } from "./shared/ode";
+import type { Scene } from "./kernel/types";
+
+const H = 520; // chiều cao canvas (px); bề rộng đo theo khung chứa
+
+type Vec2 = { x: number; y: number };
+type Box = { minX: number; maxX: number; minY: number; maxY: number };
+
+// Mô phỏng trước ~5 s để biết quỹ đạo → hộp bao. LUÔN gồm mặt đất y=0.
+function fitBox(scene: Scene): Box {
+  const xs = scene.bodies.map((b) => b.x);
+  const ys = scene.bodies.map((b) => b.y);
+  let minX = Math.min(...xs), maxX = Math.max(...xs);
+  let minY = Math.min(...ys), maxY = Math.max(...ys);
+  const kernel = buildKernel(scene);
+  let s = kernel.project(kernel.initialState);
+  let bounded = true;
+  for (let i = 0; i < 300 && bounded; i++) {
+    s = stepScene(kernel, s, 1 / 60);
+    for (const b of scene.bodies) {
+      if (b.fixed) continue;
+      const p = readPosition(s, b.id);
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || Math.abs(p.x) > 60 || Math.abs(p.y) > 60) {
+        bounded = false;
+        break;
+      }
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+    }
+  }
+  if (!bounded) { minX -= 4; maxX += 4; maxY += 4; }
+  minY = Math.min(minY, 0); // luôn thấy mặt đất
+  return { minX, maxX, minY, maxY };
+}
+
+// Năng lượng của hệ (để tracking): động năng + thế năng (trọng lực + lò xo).
+function energyOf(scene: Scene, state: StateVec): { ke: number; pe: number } {
+  const gravity = scene.forces.find((f) => f.kind === "gravity");
+  const g = gravity && gravity.kind === "gravity" ? gravity.g ?? 9.8 : 0;
+  const posById = (id: string): { x: number; y: number } => {
+    const b = scene.bodies.find((x) => x.id === id);
+    if (!b) return { x: 0, y: 0 };
+    return b.fixed ? { x: b.x, y: b.y } : readPosition(state, id);
+  };
+  let ke = 0, pe = 0;
+  for (const b of scene.bodies) {
+    if (b.fixed) continue;
+    const v = readVelocity(state, b.id);
+    ke += 0.5 * b.mass * (v.x * v.x + v.y * v.y);
+    pe += b.mass * g * readPosition(state, b.id).y;
+  }
+  for (const f of scene.forces) {
+    if (f.kind !== "spring") continue;
+    const pa = posById(f.a), pb = posById(f.b);
+    const ext = Math.hypot(pb.x - pa.x, pb.y - pa.y) - f.restLength;
+    pe += 0.5 * f.k * ext * ext;
+  }
+  return { ke, pe };
+}
+
+function springPoints(ax: number, ay: number, bx: number, by: number): number[] {
+  const dx = bx - ax, dy = by - ay;
+  const len = Math.hypot(dx, dy) || 1;
+  const px = -dy / len, py = dx / len;
+  const n = 16;
+  const pts = [ax, ay];
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    const off = (i % 2 ? 1 : -1) * 7;
+    pts.push(ax + dx * t + px * off, ay + dy * t + py * off);
+  }
+  pts.push(bx, by);
+  return pts;
+}
+
+/** Dữ liệu tracking live phát ra ngoài canvas (để cha render thành bảng). */
+export type SceneReadout = {
+  bodies: { id: string; x: number; y: number; speed: number }[];
+  energy: { ke: number; pe: number; total: number };
+};
+
+export function SceneKonva2D({
+  scene,
+  running,
+  resetSignal,
+  onRunningChange,
+  onReadout,
+  seekSeconds,
+  seekToken,
+}: {
+  scene: Scene;
+  running: boolean;
+  resetSignal: number;
+  onRunningChange: (running: boolean) => void;
+  // Phát tracking (toạ độ/vận tốc/cơ năng) lên cha để hiển thị ngoài canvas.
+  onReadout?: (r: SceneReadout) => void;
+  // "Đi tới mốc thời gian t" — tăng seekToken để yêu cầu nhảy tới seekSeconds
+  // giây (tính từ trạng thái đầu, KHÔNG phải hiện tại). Dựng lại từ đầu rồi
+  // tích phân nhanh (deterministic, cùng sub-step 1/240) tới đúng thời điểm đó
+  // rồi tự dừng — không phải "tua nhanh có hoạt ảnh", mà nhảy thẳng tới trạng thái.
+  seekSeconds?: number;
+  seekToken?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(0);
+  const runningRef = useRef(running);
+  useEffect(() => {
+    runningRef.current = running;
+  }, [running]);
+  // Giữ onReadout mới nhất qua ref để effect dựng scene không phụ thuộc nó.
+  const onReadoutRef = useRef(onReadout);
+  useEffect(() => {
+    onReadoutRef.current = onReadout;
+  }, [onReadout]);
+
+  // Đo bề rộng khung chứa → canvas rộng theo (mở hết chỗ).
+  useEffect(() => {
+    if (containerRef.current) setW(containerRef.current.clientWidth);
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !w) return;
+    const W = w;
+
+    // Bản làm việc — kéo-thả/reset sửa ở đây, không đụng prop.
+    const work: Scene = {
+      bodies: scene.bodies.map((b) => ({ ...b })),
+      forces: scene.forces,
+      constraints: scene.constraints,
+    };
+    let kernel = buildKernel(work);
+    let state = kernel.project(kernel.initialState);
+
+    // Đi tới mốc thời gian: tích phân xác định (không phụ thuộc frame rate)
+    // từ trạng thái đầu tới seekSeconds, rồi dừng lại đúng đó để xem/đối chiếu.
+    if (seekToken && seekSeconds != null && seekSeconds > 0) {
+      const seekSub = 1 / 240;
+      const seekSteps = Math.round(seekSeconds / seekSub);
+      for (let i = 0; i < seekSteps; i++) state = stepScene(kernel, state, seekSub);
+      runningRef.current = false;
+      onRunningChange(false);
+    }
+
+    // world→screen: mặt đất (y=0) ghim gần đáy, vật scale vừa khung.
+    const box = fitBox(work);
+    const sidePad = 70, topPad = 50, groundPad = 46;
+    const bboxW = Math.max(box.maxX - box.minX, 1);
+    const worldH = Math.max(box.maxY, 1) + Math.max(-box.minY, 0);
+    const scale = Math.min((W - 2 * sidePad) / bboxW, (H - topPad - groundPad) / worldH);
+    const cxBox = (box.minX + box.maxX) / 2;
+    const groundY = H - groundPad;
+    const toScreen = (wx: number, wy: number): Vec2 => ({ x: W / 2 + (wx - cxBox) * scale, y: groundY - wy * scale });
+    const toWorld = (sx: number, sy: number): Vec2 => ({ x: cxBox + (sx - W / 2) / scale, y: (groundY - sy) / scale });
+
+    const stage = new Konva.Stage({ container, width: W, height: H });
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    layer.add(new Konva.Rect({ x: 0, y: 0, width: W, height: H, fill: "#0f172a" }));
+
+    // Lưới phủ kín canvas → không gian vô hạn.
+    const wl = toWorld(0, 0).x, wr = toWorld(W, 0).x;
+    const wb = toWorld(0, H).y, wt = toWorld(0, 0).y;
+    const step = scale >= 26 ? 1 : scale >= 13 ? 2 : 5;
+    for (let gx = Math.ceil(wl / step) * step; gx <= wr; gx += step) {
+      const x = toScreen(gx, 0).x;
+      layer.add(new Konva.Line({ points: [x, 0, x, H], stroke: "#1e293b", strokeWidth: 1 }));
+    }
+    for (let gy = Math.ceil(wb / step) * step; gy <= wt; gy += step) {
+      const y = toScreen(0, gy).y;
+      layer.add(new Konva.Line({ points: [0, y, W, y], stroke: "#1e293b", strokeWidth: 1 }));
+    }
+
+    // Mặt đất CỐ ĐỊNH ở y=0 (đồng thời là trục Ox).
+    layer.add(new Konva.Rect({ x: 0, y: groundY, width: W, height: H - groundY, fill: "#0b1220" }));
+    layer.add(new Konva.Line({ points: [0, groundY, W, groundY], stroke: "#64748b", strokeWidth: 3 }));
+
+    // ── Trục toạ độ + nhãn số (mặt phẳng 2D định lượng) ──
+    const labelColor = "#64748b";
+    const yAxisX = toScreen(0, 0).x;
+    const yAxisOnScreen = yAxisX >= 0 && yAxisX <= W - 16;
+    if (yAxisOnScreen) {
+      layer.add(new Konva.Line({ points: [yAxisX, 0, yAxisX, groundY], stroke: "#3f4d63", strokeWidth: 1.5 })); // trục Oy
+    }
+    for (let gx = Math.ceil(wl / step) * step; gx <= wr; gx += step) {
+      if (gx === 0) continue;
+      layer.add(new Konva.Text({ x: toScreen(gx, 0).x + 2, y: groundY - 15, text: `${gx}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
+    }
+    if (yAxisOnScreen) {
+      for (let gy = Math.ceil(wb / step) * step; gy <= wt; gy += step) {
+        if (gy <= 0) continue;
+        layer.add(new Konva.Text({ x: yAxisX + 4, y: toScreen(0, gy).y - 6, text: `${gy}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
+      }
+    }
+    const o = toScreen(0, 0); // gốc toạ độ O
+    layer.add(new Konva.Circle({ x: o.x, y: o.y, radius: 3, fill: "#94a3b8" }));
+    layer.add(new Konva.Text({ x: o.x + 5, y: o.y - 17, text: "O", fontSize: 12, fill: "#94a3b8", fontFamily: "monospace" }));
+
+    // Mặt phẳng riêng của cảnh (surface constraint).
+    for (const c of work.constraints) {
+      if (c.kind !== "surface") continue;
+      const rad = (c.angle * Math.PI) / 180;
+      const hx = (Math.cos(rad) * c.length) / 2;
+      const hy = (Math.sin(rad) * c.length) / 2;
+      const a = toScreen(c.x - hx, c.y - hy);
+      const b = toScreen(c.x + hx, c.y + hy);
+      layer.add(new Konva.Line({ points: [a.x, a.y, b.x, b.y], stroke: "#475569", strokeWidth: 4 }));
+    }
+
+    // Lò xo + dây/thanh.
+    const springs: { a: string; b: string; line: Konva.Line }[] = [];
+    for (const f of work.forces) {
+      if (f.kind !== "spring") continue;
+      const line = new Konva.Line({ stroke: "#cbd5e1", strokeWidth: 2.5, lineJoin: "round" });
+      layer.add(line);
+      springs.push({ a: f.a, b: f.b, line });
+    }
+    const links: { a: string; b: string; line: Konva.Line }[] = [];
+    for (const c of work.constraints) {
+      if (c.kind === "surface") continue;
+      const line = new Konva.Line({ stroke: "#64748b", strokeWidth: c.kind === "rod" ? 3 : 1.5 });
+      layer.add(line);
+      links.push({ a: c.a, b: c.b, line });
+    }
+
+    // Vật.
+    const circles: Record<string, Konva.Circle | Konva.Rect> = {};
+    let draggingId: string | null = null;
+    let resumeAfterDrag = false;
+
+    const posOf = (id: string): Vec2 => {
+      const b = work.bodies.find((x) => x.id === id)!;
+      return b.fixed ? { x: b.x, y: b.y } : readPosition(state, b.id);
+    };
+    const screenOf = (id: string): Vec2 => {
+      // Vật đang kéo: lấy vị trí node Konva tức thời để dây/lò xo bám theo tay
+      // (không thì chúng trỏ về vị trí cũ trong state → rời khỏi vật).
+      if (id === draggingId) {
+        const node = circles[id];
+        if (node) return { x: node.x(), y: node.y() };
+      }
+      const wpt = posOf(id);
+      return toScreen(wpt.x, wpt.y);
+    };
+    // Toạ độ world để hiển thị (vật đang kéo → quy từ vị trí node về world).
+    const worldOf = (id: string): Vec2 => {
+      const node = circles[id];
+      if (id === draggingId && node) return toWorld(node.x(), node.y());
+      return posOf(id);
+    };
+
+    for (const b of work.bodies) {
+      const p = toScreen(b.x, b.y);
+      if (b.fixed) {
+        const r = new Konva.Rect({ x: p.x - 7, y: p.y - 7, width: 14, height: 14, fill: "#1e293b", cornerRadius: 2 });
+        layer.add(r);
+        circles[b.id] = r;
+      } else {
+        // Vật va chạm (có radius) vẽ đúng bán kính thật; còn lại suy theo khối lượng.
+        const worldR = b.radius ?? Math.min(0.25 + b.mass * 0.04, 0.5);
+        const radius = Math.max(8, worldR * scale);
+        const c = new Konva.Circle({ x: p.x, y: p.y, radius, fill: "#f472b6", draggable: true, shadowBlur: 6, shadowColor: "#000" });
+        c.on("dragstart", () => {
+          draggingId = b.id;
+          resumeAfterDrag = runningRef.current;
+          onRunningChange(false);
+        });
+        c.on("dragend", () => {
+          const wpt = toWorld(c.x(), c.y());
+          const body = work.bodies.find((x) => x.id === b.id)!;
+          body.x = wpt.x; body.y = wpt.y; body.vx = 0; body.vy = 0;
+          kernel = buildKernel(work);
+          state = kernel.project(kernel.initialState);
+          draggingId = null;
+          onRunningChange(resumeAfterDrag);
+        });
+        layer.add(c);
+        circles[b.id] = c;
+      }
+    }
+
+    // ── Tracking toạ độ + giá trị (live) ──
+    const coordLabels: Record<string, Konva.Text> = {};
+    for (const b of work.bodies) {
+      if (b.fixed) continue;
+      const t = new Konva.Text({ text: "", fontSize: 11, fill: "#cbd5e1", fontFamily: "monospace" });
+      layer.add(t);
+      coordLabels[b.id] = t;
+    }
+
+    // Tracking đưa ra ngoài canvas (panel) — chỉ phát ~12 lần/giây cho đỡ render.
+    let readoutTick = 0;
+    const syncShapes = () => {
+      for (const b of work.bodies) {
+        if (b.fixed || b.id === draggingId) continue;
+        circles[b.id]!.position(screenOf(b.id));
+      }
+      for (const s of springs) {
+        const pa = screenOf(s.a), pb = screenOf(s.b);
+        s.line.points(springPoints(pa.x, pa.y, pb.x, pb.y));
+      }
+      for (const l of links) {
+        const pa = screenOf(l.a), pb = screenOf(l.b);
+        l.line.points([pa.x, pa.y, pb.x, pb.y]);
+      }
+      // nhãn toạ độ bám theo vật + thu dữ liệu tracking
+      const bodies: SceneReadout["bodies"] = [];
+      for (const b of work.bodies) {
+        if (b.fixed) continue;
+        const wpt = worldOf(b.id);
+        const sp = screenOf(b.id);
+        const lbl = coordLabels[b.id]!;
+        lbl.position({ x: sp.x + 12, y: sp.y - 10 });
+        lbl.text(`(${wpt.x.toFixed(1)}, ${wpt.y.toFixed(1)})`);
+        const v = readVelocity(state, b.id);
+        bodies.push({ id: b.id, x: wpt.x, y: wpt.y, speed: Math.hypot(v.x, v.y) });
+      }
+      if (readoutTick % 5 === 0) {
+        const e = energyOf(work, state);
+        onReadoutRef.current?.({ bodies, energy: { ke: e.ke, pe: e.pe, total: e.ke + e.pe } });
+      }
+      readoutTick++;
+    };
+    syncShapes();
+
+    const anim = new Konva.Animation((frame) => {
+      if (runningRef.current && frame && frame.timeDiff > 0) {
+        const dt = Math.min(frame.timeDiff / 1000, 1 / 30);
+        const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
+        const sub = dt / steps;
+        for (let i = 0; i < steps; i++) state = stepScene(kernel, state, sub);
+      }
+      syncShapes();
+    }, layer);
+    anim.start();
+
+    return () => {
+      anim.stop();
+      stage.destroy();
+    };
+    // resetSignal/seekToken: tăng → dựng lại cảnh từ đầu (reset/đi tới mốc).
+    // running đọc qua ref nên KHÔNG ở deps.
+  }, [scene, w, resetSignal, seekToken, seekSeconds, onRunningChange]);
+
+  return <div ref={containerRef} className="w-full overflow-hidden rounded-lg" style={{ height: H }} />;
+}

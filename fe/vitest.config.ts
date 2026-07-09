@@ -1,0 +1,12 @@
+import { defineConfig } from "vitest/config";
+import { resolve } from "node:path";
+
+// Test cho kernel vật lý thuần TS (không DOM/React/Konva) → environment node.
+// Alias "@" khớp tsconfig paths để import kiểu @/components/... resolve được.
+export default defineConfig({
+  resolve: { alias: { "@": resolve(__dirname, ".") } },
+  test: {
+    environment: "node",
+    include: ["components/simulations/kernel/**/*.test.ts"],
+  },
+});
