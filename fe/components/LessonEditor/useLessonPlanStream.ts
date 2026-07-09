@@ -8,6 +8,7 @@ import {
   clearLessonPlanSession,
   readLessonPlanSession,
 } from "@/services/lessonPlanService";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { connectLessonPlanStream, lessonPlanTopic } from "@/lib/ws/lesson-plan-client";
 import { activityHtml, lessonPlan5512ToHtml, lessonPlanErrorHtml } from "./LessonEditor";
 import { LP_STREAM_META } from "./pendingActivityNode";
@@ -45,6 +46,7 @@ function replacePendingBlock(editor: Editor, order: number, html: string) {
  * mỗi ACTIVITY_READY/FAILED thay đúng block của HĐ đó. Không có phiên → giữ khung mock.
  */
 export function useLessonPlanStream(editor: Editor | null) {
+  const { accessToken } = useAuth();
   const startedRef = useRef(false);
   // Đánh dấu khung (I/II/III-skeleton) đã từng về — dùng để quyết định có nên
   // ghi đè toàn bộ tài liệu bằng thông báo lỗi hay không (khung về rồi thì giữ
@@ -81,6 +83,7 @@ export function useLessonPlanStream(editor: Editor | null) {
 
     const { disconnect } = connectLessonPlanStream({
       topic: lessonPlanTopic(session.sessionId),
+      accessToken,
       onEvent: (event) => {
         switch (event.type) {
           case "FRAME_READY": {
@@ -168,5 +171,5 @@ export function useLessonPlanStream(editor: Editor | null) {
       cancelled = true;
       disconnect();
     };
-  }, [editor]);
+  }, [accessToken, editor]);
 }
