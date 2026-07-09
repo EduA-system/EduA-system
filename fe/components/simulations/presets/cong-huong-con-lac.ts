@@ -35,7 +35,7 @@ export const congHuongConLac: Preset = {
     const g = p.g ?? 9.8;
 
     const py = 3; // độ cao hàng trục treo
-    const dx = 2.2; // khoảng cách ngang giữa các trục treo
+    const dx = 3.2; // khoảng cách ngang giữa các trục treo — dãn rộng để 3 con lắc tách rời rõ khi đung đưa
     const x1 = -dx, x2 = 0, x3 = dx;
 
     // restLength lò xo = khoảng cách giữa hai VỊ TRÍ TREO THẲNG ĐỨNG (nghỉ),
@@ -66,12 +66,15 @@ export const congHuongConLac: Preset = {
       ],
     };
   },
+  // Đánh số cố định dưới mỗi con lắc — dễ phân biệt khi cả 3 cùng đung đưa,
+  // giống quy ước sơ đồ Barton kinh điển (1)(2)(3)…
+  bodyLabels: { bob1: "1", bob2: "2", bob3: "3" },
   analysis: {
     landmarks: [
       {
         key: "resonance",
         label: "Điều kiện cộng hưởng (lúc thả)",
-        description: "Năng lượng truyền mạnh nhất sang con lắc có tần số riêng khớp con lắc 1.",
+        description: "Truyền năng lượng khi tần số khớp nhau.",
         atTime: () => 0,
         values: (p) => {
           const L1 = p.L1 ?? 1.2;
@@ -88,7 +91,7 @@ export const congHuongConLac: Preset = {
       {
         key: "beat-peak",
         label: "Đỉnh truyền năng lượng (khi L₁=L₂)",
-        description: "Sau nửa nhịp phách T_beat/2 — nếu L₂ khớp L₁, năng lượng dồn gần hết sang con lắc 2.",
+        description: "Năng lượng dồn sang con lắc 2.",
         atTime: (p) => {
           const L1 = p.L1 ?? 1.2;
           const g = p.g ?? 9.8;

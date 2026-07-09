@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState } from "react";
 import Konva from "konva";
 import { buildKernel, readPosition, readVelocity, stepScene } from "./kernel/build-derivs";
+import { computeBodyPositionsAtTime } from "./sim-time";
 import type { StateVec } from "./shared/ode";
 import type { Scene } from "./kernel/types";
 
@@ -103,6 +104,10 @@ export function SceneKonva2D({
   onReadout,
   seekSeconds,
   seekToken,
+  markLabel,
+  ghostSeconds,
+  ghostLabel,
+  bodyLabels,
 }: {
   scene: Scene;
   running: boolean;
@@ -116,6 +121,16 @@ export function SceneKonva2D({
   // rồi tự dừng — không phải "tua nhanh có hoạt ảnh", mà nhảy thẳng tới trạng thái.
   seekSeconds?: number;
   seekToken?: number;
+  // Nhãn mốc hiện tại đang xem (vd "t2" hoặc "B") — vẽ cạnh mỗi vật động khi
+  // đang dừng ở một mốc (seekToken active).
+  markLabel?: string;
+  // Mốc VỪA đi qua trước đó — vẽ tàn ảnh (nét đứt, mờ) tại vị trí mốc đó để so
+  // sánh trực quan với vị trí hiện tại. null/undefined = không có tàn ảnh.
+  ghostSeconds?: number | null;
+  ghostLabel?: string;
+  // Nhãn cố định gắn với từng vật (vd đánh số con lắc "1","2","3") — LUÔN hiện,
+  // khác markLabel/ghostLabel (chỉ hiện khi đang xem 1 mốc).
+  bodyLabels?: Record<string, string>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
@@ -212,6 +227,52 @@ export function SceneKonva2D({
     layer.add(new Konva.Circle({ x: o.x, y: o.y, radius: 3, fill: "#94a3b8" }));
     layer.add(new Konva.Text({ x: o.x + 5, y: o.y - 17, text: "O", fontSize: 12, fill: "#94a3b8", fontFamily: "monospace" }));
 
+    // Thanh treo trang trí — khi ≥2 vật fixed cùng độ cao (vd nhiều con lắc
+    // treo cạnh nhau), vẽ 1 thanh ngang nối chúng + giá đỡ gạch chéo ở 2 đầu,
+    // giống sơ đồ con lắc Barton kinh điển. THUẦN HIỂN THỊ — các trục vẫn là
+    // fixed độc lập về vật lý (kernel chưa hỗ trợ vật rắn quay/thanh cứng chung).
+    {
+      const fixedGroups = new Map<number, { x: number; y: number }[]>();
+      for (const b of work.bodies) {
+        if (!b.fixed) continue;
+        const key = Math.round(b.y * 100);
+        const list = fixedGroups.get(key) ?? [];
+        list.push({ x: b.x, y: b.y });
+        fixedGroups.set(key, list);
+      }
+      for (const group of fixedGroups.values()) {
+        if (group.length < 2) continue;
+        const minX = Math.min(...group.map((b) => b.x));
+        const maxX = Math.max(...group.map((b) => b.x));
+        const y = group[0]!.y;
+        const pad = 0.5; // world units — thanh nhô ra ngoài 2 trục ngoài cùng
+        const left = toScreen(minX - pad, y);
+        const right = toScreen(maxX + pad, y);
+        layer.add(new Konva.Line({ points: [left.x, left.y, right.x, right.y], stroke: "#475569", strokeWidth: 4 }));
+        for (const pt of [left, right]) {
+          const wW = 24, wH = 16;
+          // Giá đỡ hình nêm dưới đầu thanh.
+          layer.add(
+            new Konva.Line({
+              points: [pt.x - wW / 2, pt.y + wH, pt.x + wW / 2, pt.y + wH, pt.x, pt.y],
+              closed: true,
+              fill: "#1e293b",
+              stroke: "#475569",
+              strokeWidth: 1.5,
+            }),
+          );
+          // Vạch gạch chéo (ký hiệu ngàm cố định) dưới giá đỡ.
+          layer.add(new Konva.Line({ points: [pt.x - wW / 2 - 4, pt.y + wH, pt.x + wW / 2 + 4, pt.y + wH], stroke: "#475569", strokeWidth: 2 }));
+          for (let i = -1; i <= 2; i++) {
+            const hx = pt.x - wW / 2 + i * (wW / 3);
+            layer.add(
+              new Konva.Line({ points: [hx, pt.y + wH, hx - 6, pt.y + wH + 8], stroke: "#64748b", strokeWidth: 1.5 }),
+            );
+          }
+        }
+      }
+    }
+
     // Mặt phẳng riêng của cảnh (surface constraint).
     for (const c of work.constraints) {
       if (c.kind !== "surface") continue;
@@ -265,17 +326,84 @@ export function SceneKonva2D({
       return posOf(id);
     };
 
+    // Bán kính hiển thị — dùng chung cho vật thật lẫn tàn ảnh (ghost).
+    const radiusFor = (b: Scene["bodies"][number]): number => {
+      const worldR = b.radius ?? Math.min(0.25 + b.mass * 0.04, 0.5);
+      return Math.max(8, worldR * scale);
+    };
+
+    // Tàn ảnh (ghost) — vị trí các vật động tại mốc VỪA đi qua trước đó, vẽ nét
+    // đứt mờ để so sánh trực quan với vị trí hiện tại. Chỉ tính khi có yêu cầu.
+    if (ghostSeconds != null && ghostSeconds >= 0) {
+      const ghostPos = computeBodyPositionsAtTime(work, ghostSeconds);
+      for (const b of work.bodies) {
+        if (b.fixed) continue;
+        const gp = ghostPos[b.id];
+        if (!gp) continue;
+        const sp = toScreen(gp.x, gp.y);
+        layer.add(
+          new Konva.Circle({
+            x: sp.x,
+            y: sp.y,
+            radius: radiusFor(b),
+            stroke: "#f472b6",
+            strokeWidth: 1.5,
+            dash: [5, 4],
+            opacity: 0.55,
+            listening: false,
+          }),
+        );
+        if (ghostLabel) {
+          layer.add(
+            new Konva.Text({
+              x: sp.x - 6,
+              y: sp.y - radiusFor(b) - 16,
+              text: ghostLabel,
+              fontSize: 12,
+              fontStyle: "italic",
+              fill: "#f472b6",
+              opacity: 0.65,
+              fontFamily: "monospace",
+              listening: false,
+            }),
+          );
+        }
+      }
+    }
+
     for (const b of work.bodies) {
-      const p = toScreen(b.x, b.y);
+      // Vị trí khởi tạo node: vật fixed dùng toạ độ tĩnh; vật động đọc từ `state`
+      // hiện tại (đã tích phân tới seekSeconds nếu có yêu cầu "đi tới mốc") để
+      // node — và nhãn mốc gắn theo nó — không bị vẽ nhầm ở vị trí ban đầu rồi
+      // "giật" sang đúng chỗ ở khung hình kế (syncShapes chạy ngay sau vẫn đúng,
+      // nhưng nhãn mốc chỉ vẽ MỘT LẦN ở đây nên phải đúng ngay từ đầu).
+      const p = b.fixed ? toScreen(b.x, b.y) : toScreen(readPosition(state, b.id).x, readPosition(state, b.id).y);
       if (b.fixed) {
         const r = new Konva.Rect({ x: p.x - 7, y: p.y - 7, width: 14, height: 14, fill: "#1e293b", cornerRadius: 2 });
         layer.add(r);
         circles[b.id] = r;
       } else {
         // Vật va chạm (có radius) vẽ đúng bán kính thật; còn lại suy theo khối lượng.
-        const worldR = b.radius ?? Math.min(0.25 + b.mass * 0.04, 0.5);
-        const radius = Math.max(8, worldR * scale);
+        const radius = radiusFor(b);
         const c = new Konva.Circle({ x: p.x, y: p.y, radius, fill: "#f472b6", draggable: true, shadowBlur: 6, shadowColor: "#000" });
+        // Nhãn mốc hiện tại (vd "t2"/"B") — chỉ khi đang dừng đúng tại một mốc.
+        if (seekToken && markLabel) {
+          const badge = new Konva.Label({ x: p.x + radius + 4, y: p.y - radius - 22, listening: false });
+          badge.add(
+            new Konva.Tag({ fill: "#e8724a", cornerRadius: 4 }),
+          );
+          badge.add(
+            new Konva.Text({
+              text: markLabel,
+              fontSize: 12,
+              fontStyle: "bold",
+              fill: "#ffffff",
+              fontFamily: "monospace",
+              padding: 4,
+            }),
+          );
+          layer.add(badge);
+        }
         c.on("dragstart", () => {
           draggingId = b.id;
           resumeAfterDrag = runningRef.current;
@@ -304,6 +432,22 @@ export function SceneKonva2D({
       coordLabels[b.id] = t;
     }
 
+    // Nhãn cố định (vd đánh số con lắc) — LUÔN hiện, khác markLabel/ghostLabel.
+    const idLabels: Record<string, Konva.Text> = {};
+    for (const b of work.bodies) {
+      if (b.fixed || !bodyLabels?.[b.id]) continue;
+      const t = new Konva.Text({
+        text: `(${bodyLabels[b.id]})`,
+        fontSize: 13,
+        fontStyle: "bold",
+        fill: "#e2e8f0",
+        fontFamily: "monospace",
+        listening: false,
+      });
+      layer.add(t);
+      idLabels[b.id] = t;
+    }
+
     // Tracking đưa ra ngoài canvas (panel) — chỉ phát ~12 lần/giây cho đỡ render.
     let readoutTick = 0;
     const syncShapes = () => {
@@ -328,6 +472,8 @@ export function SceneKonva2D({
         const lbl = coordLabels[b.id]!;
         lbl.position({ x: sp.x + 12, y: sp.y - 10 });
         lbl.text(`(${wpt.x.toFixed(1)}, ${wpt.y.toFixed(1)})`);
+        const idLbl = idLabels[b.id];
+        if (idLbl) idLbl.position({ x: sp.x - idLbl.width() / 2, y: sp.y + radiusFor(b) + 6 });
         const v = readVelocity(state, b.id);
         bodies.push({ id: b.id, x: wpt.x, y: wpt.y, speed: Math.hypot(v.x, v.y) });
       }
@@ -356,7 +502,7 @@ export function SceneKonva2D({
     };
     // resetSignal/seekToken: tăng → dựng lại cảnh từ đầu (reset/đi tới mốc).
     // running đọc qua ref nên KHÔNG ở deps.
-  }, [scene, w, resetSignal, seekToken, seekSeconds, onRunningChange]);
+  }, [scene, w, resetSignal, seekToken, seekSeconds, markLabel, ghostSeconds, ghostLabel, bodyLabels, onRunningChange]);
 
   return <div ref={containerRef} className="w-full overflow-hidden rounded-lg" style={{ height: H }} />;
 }

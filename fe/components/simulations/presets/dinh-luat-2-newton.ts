@@ -38,7 +38,7 @@ export const dinhLuat2Newton: Preset = {
       {
         key: "forces",
         label: "Phân tích lực (lúc thả)",
-        description: "Hợp lực = lực kéo trừ lực ma sát trượt; gia tốc theo định luật II Newton.",
+        description: "Hợp lực = F kéo − ma sát.",
         atTime: () => 0,
         values: (p) => {
           const F = p.F ?? 10;
@@ -58,7 +58,7 @@ export const dinhLuat2Newton: Preset = {
       {
         key: "after2s",
         label: "Sau 2 giây",
-        description: "Chuyển động nhanh dần đều: v = a·t (xuất phát từ trạng thái nghỉ).",
+        description: "Chuyển động nhanh dần đều.",
         atTime: () => 2,
         values: (p) => {
           const F = p.F ?? 10;

@@ -35,7 +35,7 @@ export const matNghiengMaSat: Preset = {
       {
         key: "condition",
         label: "Điều kiện trượt & lực (lúc thả)",
-        description: "So sánh thành phần trọng lực dọc mặt với ma sát nghỉ cực đại.",
+        description: "So sánh lực kéo xuống với ma sát.",
         atTime: () => 0,
         values: (p) => {
           const th = ((p.angle ?? 30) * Math.PI) / 180;
@@ -55,7 +55,7 @@ export const matNghiengMaSat: Preset = {
       {
         key: "after",
         label: "Sau 1.5 giây",
-        description: "Nếu trượt: chuyển động nhanh dần đều dọc mặt nghiêng với a = g(sinθ − μcosθ).",
+        description: "Trượt nhanh dần đều (nếu đủ điều kiện).",
         atTime: () => 1.5,
         values: (p) => {
           const th = ((p.angle ?? 30) * Math.PI) / 180;

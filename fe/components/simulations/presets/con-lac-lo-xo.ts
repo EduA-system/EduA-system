@@ -37,7 +37,7 @@ export const conLacLoXo: Preset = {
       {
         key: "extreme-start",
         label: "Biên ban đầu (thả lệch xuống)",
-        description: "Vị trí thả — li độ = −A, tốc độ = 0.",
+        description: "Li độ = −A, tốc độ = 0.",
         atTime: () => 0,
         values: (p) => [
           { label: "Biên độ A", value: ((p.A ?? 0.4) * 100).toFixed(0), unit: "cm" },
@@ -47,7 +47,7 @@ export const conLacLoXo: Preset = {
       {
         key: "eq",
         label: "Vị trí cân bằng",
-        description: "Lò xo giãn tĩnh Δl = mg/k, sau 1/4 chu kỳ — tốc độ lớn nhất.",
+        description: "Tốc độ lớn nhất.",
         atTime: (p) => {
           const m = p.m ?? 1;
           const k = p.k ?? 20;
@@ -68,7 +68,7 @@ export const conLacLoXo: Preset = {
       {
         key: "extreme-far",
         label: "Biên đối diện (lệch lên)",
-        description: "Sau nửa chu kỳ — li độ = +A, tốc độ lại về 0, gia tốc cực đại.",
+        description: "Li độ = +A, gia tốc cực đại.",
         atTime: (p) => {
           const m = p.m ?? 1;
           const k = p.k ?? 20;

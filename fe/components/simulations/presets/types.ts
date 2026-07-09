@@ -47,4 +47,7 @@ export type Preset = {
   // Điểm giá trị quan trọng (tuỳ chọn) — panel "Phân tích" còn hiện mốc thời
   // gian chung (1s, 2s…) cho MỌI preset, không phụ thuộc field này.
   analysis?: PresetAnalysis;
+  // Nhãn cố định gắn với từng vật (vd đánh số con lắc) — hiện LUÔN trên canvas,
+  // khác với markLabel/ghostLabel của SceneKonva2D (chỉ hiện khi xem 1 mốc thời gian).
+  bodyLabels?: Record<string, string>;
 };

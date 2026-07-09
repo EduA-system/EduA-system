@@ -1,26 +1,29 @@
 "use client";
 
-// Panel "Phân tích" — thay cho benchmark đo sai số cũ. Gồm:
-//  1. MỐC THỜI GIAN: chung cho MỌI thí nghiệm — bấm để mô phỏng nhảy thẳng tới
-//     đúng giây đó (tích phân xác định từ trạng thái đầu, không phải tua nhanh
-//     có hoạt ảnh) rồi tự dừng lại để xem/đối chiếu.
-//  2. MỐC GIÁ TRỊ QUAN TRỌNG: trạng thái đặc biệt do preset khai báo (biên, vị
-//     trí cân bằng, đỉnh quỹ đạo, lúc va chạm…), có thể kèm nút "Đi tới" nếu
-//     preset cho biết đúng thời điểm xảy ra (atTime).
+// Panel "Phân tích" — gồm:
+//  1. MỐC THỜI GIAN (t1, t2, t3…): chung cho MỌI thí nghiệm — bấm để mô phỏng
+//     nhảy thẳng tới đúng giây đó rồi tự dừng lại.
+//  2. MỐC GIÁ TRỊ QUAN TRỌNG (A, B, C…): trạng thái đặc biệt do preset khai báo.
+// Cả hai đều hiện nhãn NGAY TRÊN canvas (qua markLabel/ghostLabel của
+// SceneKonva2D) và để lại TÀN ẢNH nét đứt của mốc vừa xem trước đó.
 //
-// Giao diện theo hệ màu sáng EDUA. Không đụng kernel — chỉ gọi onJumpTo(seconds).
+// Giao diện theo hệ màu sáng EDUA. Không đụng kernel.
 
 import { Clock, Crosshair, MoveRight } from "lucide-react";
 import type { PresetAnalysis } from "./presets/types";
 
 // Mốc thời gian mặc định — áp dụng chung, không cần preset khai báo riêng.
-const TIME_MARKS = [0.5, 1, 2, 3, 4, 5, 6, 8];
+const TIME_MARK_SECONDS = [0.5, 1, 2, 3, 4, 5, 6, 8];
+
+export type JumpMark = { seconds: number; label: string };
 
 function TimeMarkButton({
+  label,
   seconds,
   active,
   onClick,
 }: {
+  label: string;
   seconds: number;
   active: boolean;
   onClick: () => void;
@@ -29,27 +32,42 @@ function TimeMarkButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-9 min-w-[52px] items-center justify-center rounded-[10px] border px-2.5 font-mono text-[13px] font-medium transition-colors duration-150 ease-out ${
+      className={`flex h-11 min-w-[46px] flex-col items-center justify-center rounded-[10px] border px-2 transition-colors duration-150 ease-out ${
         active
           ? "border-[#e8724a] bg-[#e8724a] text-white"
           : "border-[#e8e2d9] bg-white text-[#4f4943] hover:border-[#d97757] hover:text-[#c96545]"
       }`}
     >
-      {seconds}s
+      <span className="font-mono text-[13px] font-semibold leading-none">{label}</span>
+      <span className={`mt-1 text-[9px] leading-none ${active ? "text-white/75" : "text-[#b8aea5]"}`}>
+        {seconds}s
+      </span>
     </button>
+  );
+}
+
+function LandmarkBadge({ letter, active }: { letter: string; active: boolean }) {
+  return (
+    <span
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-[13px] font-bold ${
+        active ? "bg-[#e8724a] text-white" : "bg-[#f5f1ec] text-[#4f4943]"
+      }`}
+    >
+      {letter}
+    </span>
   );
 }
 
 export function LandmarksPanel({
   analysis,
   params,
-  activeSeconds,
+  active,
   onJumpTo,
 }: {
   analysis?: PresetAnalysis;
   params: Record<string, number>;
-  activeSeconds: number | null;
-  onJumpTo: (seconds: number) => void;
+  active: JumpMark | null;
+  onJumpTo: (mark: JumpMark) => void;
 }) {
   const landmarks = analysis?.landmarks ?? [];
 
@@ -64,22 +82,25 @@ export function LandmarksPanel({
           </h3>
         </div>
         <p className="text-[11px] leading-relaxed text-[#6b6b6b]">
-          Bấm một mốc để mô phỏng nhảy thẳng tới đúng giây đó (tính từ lúc thả) và dừng lại — xem
-          trạng thái tại thời điểm đó thay vì phải canh giờ bằng mắt.
+          Bấm t1, t2… để nhảy thẳng tới đúng giây đó — mốc trước hiện tàn ảnh nét đứt để so sánh.
         </p>
         <div className="flex flex-wrap gap-2">
-          {TIME_MARKS.map((sec) => (
-            <TimeMarkButton
-              key={sec}
-              seconds={sec}
-              active={activeSeconds === sec}
-              onClick={() => onJumpTo(sec)}
-            />
-          ))}
+          {TIME_MARK_SECONDS.map((seconds, i) => {
+            const label = `t${i + 1}`;
+            return (
+              <TimeMarkButton
+                key={seconds}
+                label={label}
+                seconds={seconds}
+                active={active?.label === label}
+                onClick={() => onJumpTo({ seconds, label })}
+              />
+            );
+          })}
         </div>
       </div>
 
-      {/* Mốc giá trị quan trọng — theo preset */}
+      {/* Mốc giá trị quan trọng — theo preset, đặt tên A, B, C… */}
       {landmarks.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -88,10 +109,11 @@ export function LandmarksPanel({
               Mốc giá trị quan trọng
             </h3>
           </div>
-          {landmarks.map((lm) => {
+          {landmarks.map((lm, i) => {
+            const letter = String.fromCharCode(65 + i); // A, B, C…
             const values = lm.values(params);
             const t = lm.atTime ? lm.atTime(params) : null;
-            const isActive = t != null && activeSeconds != null && Math.abs(activeSeconds - t) < 1e-6;
+            const isActive = active?.label === letter;
             return (
               <div
                 key={lm.key}
@@ -100,14 +122,17 @@ export function LandmarksPanel({
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-[#171717]">{lm.label}</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-[#6b6b6b]">{lm.description}</p>
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <LandmarkBadge letter={letter} active={isActive} />
+                    <div className="min-w-0 pt-0.5">
+                      <p className="text-[13px] font-semibold text-[#171717]">{lm.label}</p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-[#8a8178]">{lm.description}</p>
+                    </div>
                   </div>
                   {t != null && (
                     <button
                       type="button"
-                      onClick={() => onJumpTo(Math.max(0, t))}
+                      onClick={() => onJumpTo({ seconds: Math.max(0, t), label: letter })}
                       title={`t ≈ ${t.toFixed(2)}s`}
                       className={`flex shrink-0 items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11px] font-semibold transition-colors duration-150 ease-out ${
                         isActive

@@ -10,7 +10,7 @@
  *   bản gốc bất khả xâm phạm, luôn revert được.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { forwardRef, useMemo, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import {
   Search,
@@ -19,13 +19,13 @@ import {
   Pause,
   RotateCcw,
   CheckCircle2,
-  ShieldCheck,
   PanelLeft,
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { useGenieSidebarCollapse } from "@/components/layout/genie/useGenieSidebarCollapse";
 import { ParamPanel } from "@/components/simulations/param-panel";
-import { LandmarksPanel } from "@/components/simulations/landmarks-panel";
+import { LandmarksPanel, type JumpMark } from "@/components/simulations/landmarks-panel";
 import { PRESETS, type Preset, type Domain } from "@/components/simulations/presets";
 import type { SceneReadout } from "@/components/simulations/scene-konva-2d";
 
@@ -180,20 +180,23 @@ function Badge({
 
 /* ─────────────────────────── Nút ẩn/hiện thanh điều hướng ─────────────────────────── */
 
-function SidebarToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      title={collapsed ? "Hiện thanh điều hướng" : "Ẩn thanh điều hướng"}
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-150 ease-out ${
-        collapsed ? "text-[#6b6b6b] hover:bg-[#f7f3ee]" : "bg-[#f6eadf] text-[#c96545]"
-      }`}
-    >
-      <PanelLeft className="h-[18px] w-[18px]" strokeWidth={2} />
-    </button>
-  );
-}
+const SidebarToggle = forwardRef<HTMLButtonElement, { collapsed: boolean; onToggle: () => void }>(
+  function SidebarToggle({ collapsed, onToggle }, ref) {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        onClick={onToggle}
+        title={collapsed ? "Hiện thanh điều hướng" : "Ẩn thanh điều hướng"}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-150 ease-out ${
+          collapsed ? "text-[#6b6b6b] hover:bg-[#f7f3ee]" : "bg-[#f6eadf] text-[#c96545]"
+        }`}
+      >
+        <PanelLeft className="h-[18px] w-[18px]" strokeWidth={2} />
+      </button>
+    );
+  },
+);
 
 /* ─────────────────────────── Chip lọc theo lĩnh vực ─────────────────────────── */
 
@@ -231,6 +234,14 @@ export default function MoPhongHubPage() {
   const [domainFilter, setDomainFilter] = useState<Set<Domain>>(new Set(DOMAINS));
   const [query, setQuery] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarWrapperRef = useRef<HTMLDivElement>(null);
+  const sidebarToggleRef = useRef<HTMLButtonElement>(null);
+  const { overlay: genieOverlay, isAnimating: sidebarAnimating, toggle: toggleGenieSidebar } =
+    useGenieSidebarCollapse({
+      sidebarRef: sidebarWrapperRef,
+      toggleButtonRef: sidebarToggleRef,
+      onSettled: setSidebarCollapsed,
+    });
 
   const toggleDomain = (d: Domain) => {
     setDomainFilter((prev) => {
@@ -258,22 +269,25 @@ export default function MoPhongHubPage() {
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
-      <Sidebar collapsed={sidebarCollapsed} activeHref="/mo-phong-vat-ly" />
+      <div ref={sidebarWrapperRef} className="flex shrink-0" style={{ opacity: sidebarAnimating ? 0 : 1 }}>
+        <Sidebar collapsed={sidebarCollapsed} activeHref="/mo-phong-vat-ly" />
+      </div>
+      {genieOverlay}
 
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header + thanh lọc nằm ngang */}
         <header className="shrink-0 border-b border-[#e8e2d9] bg-white px-8 py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <SidebarToggle collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
+              <SidebarToggle
+                ref={sidebarToggleRef}
+                collapsed={sidebarCollapsed}
+                onToggle={() => toggleGenieSidebar(sidebarCollapsed)}
+              />
               <div>
-                <h1 className="text-2xl font-bold text-[#171717]">Thư viện mô phỏng Vật lý</h1>
+                <h1 className="font-libertine text-2xl font-bold text-[#171717]">Thư viện mô phỏng Vật lý</h1>
                 <p className="mt-1 text-sm text-[#6b6b6b]">{total} mô phỏng • chọn để xem & tuỳ chỉnh</p>
               </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3.5 py-2 text-[12px] font-medium text-[#c96545]">
-              <ShieldCheck className="h-4 w-4 shrink-0" strokeWidth={2} />
-              Mọi sim đã kiểm duyệt · luôn khôi phục được
             </div>
           </div>
 
@@ -389,17 +403,32 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
   const [running, setRunning] = useState(true);
   const [resetSignal, setResetSignal] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarWrapperRef = useRef<HTMLDivElement>(null);
+  const sidebarToggleRef = useRef<HTMLButtonElement>(null);
+  const { overlay: genieOverlay, isAnimating: sidebarAnimating, toggle: toggleGenieSidebar } =
+    useGenieSidebarCollapse({
+      sidebarRef: sidebarWrapperRef,
+      toggleButtonRef: sidebarToggleRef,
+      onSettled: setSidebarCollapsed,
+    });
 
   const [aiState, setAiState] = useState<AiState>("idle");
   const [aiPrompt, setAiPrompt] = useState("");
   const [readout, setReadout] = useState<SceneReadout | null>(null); // tracking từ kernel
 
-  // "Đi tới mốc thời gian t" — tăng seekToken để yêu cầu renderer nhảy thẳng
-  // tới seekSeconds (tích phân xác định từ đầu, không phải tua có hoạt ảnh).
-  const [seekSeconds, setSeekSeconds] = useState<number | null>(null);
+  // "Đi tới mốc" — tăng seekToken để yêu cầu renderer nhảy thẳng tới mốc đó
+  // (tích phân xác định từ đầu, không phải tua có hoạt ảnh). Giữ lại mốc TRƯỚC
+  // đó (prevMark) để renderer vẽ tàn ảnh nét đứt so sánh.
+  const [activeMark, setActiveMark] = useState<JumpMark | null>(null);
+  const [prevMark, setPrevMark] = useState<JumpMark | null>(null);
   const [seekToken, setSeekToken] = useState(0);
-  const jumpTo = (seconds: number) => {
-    setSeekSeconds(seconds);
+  const jumpTo = (mark: JumpMark) => {
+    // Chưa từng đi tới mốc nào (activeMark null) → lấy trạng thái BAN ĐẦU
+    // (t=0) làm tàn ảnh mặc định, để ngay lần bấm đầu tiên cũng có cái để so
+    // sánh thay vì không hiện gì cả. Không gắn nhãn chữ (label rỗng) vì đây
+    // không phải một mốc được đặt tên, chỉ là "trước khi bắt đầu".
+    setPrevMark(activeMark ?? { seconds: 0, label: "" });
+    setActiveMark(mark);
     setSeekToken((n) => n + 1);
   };
 
@@ -413,7 +442,8 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
     setAiState("idle");
     setAiPrompt("");
     setRunning(true);
-    setSeekSeconds(null);
+    setActiveMark(null);
+    setPrevMark(null);
     setResetSignal((n) => n + 1);
   };
 
@@ -430,12 +460,19 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
-      <Sidebar collapsed={sidebarCollapsed} activeHref="/mo-phong-vat-ly" />
+      <div ref={sidebarWrapperRef} className="flex shrink-0" style={{ opacity: sidebarAnimating ? 0 : 1 }}>
+        <Sidebar collapsed={sidebarCollapsed} activeHref="/mo-phong-vat-ly" />
+      </div>
+      {genieOverlay}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top bar */}
         <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[#e8e2d9] bg-white px-4">
-          <SidebarToggle collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
+          <SidebarToggle
+            ref={sidebarToggleRef}
+            collapsed={sidebarCollapsed}
+            onToggle={() => toggleGenieSidebar(sidebarCollapsed)}
+          />
           <button
             onClick={onBack}
             className="flex items-center gap-1.5 text-[13px] font-medium text-[#6b6b6b] transition-colors duration-150 ease-out hover:text-[#171717]"
@@ -476,8 +513,12 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                     resetSignal={resetSignal}
                     onRunningChange={setRunning}
                     onReadout={setReadout}
-                    seekSeconds={seekSeconds ?? undefined}
+                    seekSeconds={activeMark?.seconds}
                     seekToken={seekToken}
+                    markLabel={activeMark?.label}
+                    ghostSeconds={prevMark?.seconds ?? null}
+                    ghostLabel={prevMark?.label}
+                    bodyLabels={preset.bodyLabels}
                   />
                 </div>
 
@@ -502,7 +543,8 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                     <div className="mx-1 h-6 w-px shrink-0 bg-black/10" />
                     <button
                       onClick={() => {
-                        setSeekSeconds(null);
+                        setActiveMark(null);
+                        setPrevMark(null);
                         setResetSignal((n) => n + 1);
                         setRunning(true);
                       }}
@@ -606,7 +648,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                 <LandmarksPanel
                   analysis={preset.analysis}
                   params={params}
-                  activeSeconds={seekSeconds}
+                  active={activeMark}
                   onJumpTo={jumpTo}
                 />
               )}

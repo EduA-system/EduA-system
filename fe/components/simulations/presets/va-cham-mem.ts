@@ -27,7 +27,7 @@ export const vaChamMem: Preset = {
       {
         key: "after",
         label: "Sau va chạm mềm (e = 0)",
-        description: "Hai vật dính, cùng vận tốc; bảo toàn động lượng, mất một phần động năng.",
+        description: "Dính vào nhau, mất động năng.",
         // Khoảng cách ban đầu 4m, va chạm khi tâm cách nhau = tổng bán kính 0.8m
         // → quãng đường tiếp cận 3.2m; +0.15s để thấy trạng thái NGAY SAU va chạm.
         atTime: (p) => {

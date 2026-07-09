@@ -28,7 +28,7 @@ export const vaChamDanHoi: Preset = {
       {
         key: "after",
         label: "Sau va chạm đàn hồi (e = 1)",
-        description: "Bảo toàn cả động lượng lẫn động năng; vận tốc trao đổi theo công thức.",
+        description: "Bảo toàn động lượng và động năng.",
         // Khoảng cách ban đầu 4m, va chạm khi tâm cách nhau = tổng bán kính 0.8m
         // → quãng đường tiếp cận 3.2m; +0.15s để thấy trạng thái NGAY SAU va chạm.
         atTime: (p) => {
