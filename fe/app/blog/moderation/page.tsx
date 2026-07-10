@@ -116,7 +116,7 @@ export default function BlogModerationPage() {
   }
 
   return (
-    <RouteGuard pathname="/blog/moderation" denyHref="/blog" denyLabel="V\u1ec1 trang Blog">
+    <RouteGuard pathname="/blog/moderation" denyHref="/blog" denyLabel="Về trang Blog">
     {user && (
     <div className="mx-auto max-w-3xl p-6">
       <header className="mb-6 flex items-center justify-between">
