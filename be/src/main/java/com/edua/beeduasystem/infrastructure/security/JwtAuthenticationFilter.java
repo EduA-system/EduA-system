@@ -2,6 +2,7 @@ package com.edua.beeduasystem.infrastructure.security;
 
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.model.auth.AccessTokenClaims;
+import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.repository.gateways.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,10 +17,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Verify access JWT trên mỗi request (SEC-03). Có Bearer → set SecurityContext với authority ROLE_&lt;role&gt;.
- * Token có mặt nhưng sai/hết hạn → 401 ngay. Không có token → để chain xử (endpoint public đi tiếp,
+ * Verify access JWT trên mỗi request (SEC-03). Có Bearer -> set SecurityContext với authorities ROLE_<role>.
+ * Token có mặt nhưng sai/hết hạn -> 401 ngay. Không có token -> để chain xử (endpoint public đi tiếp,
  * protected sẽ bị 401 bởi entry point).
  */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -42,7 +45,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         try {
             AccessTokenClaims claims = tokenService.parse(header.substring(BEARER.length()).trim());
-            var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + claims.role().name()));
+            Set<Role> roles = claims.roles();
+            List<SimpleGrantedAuthority> authorities = roles.stream()
+                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
+                    .collect(Collectors.toList());
             var authentication = new UsernamePasswordAuthenticationToken(claims, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
             chain.doFilter(request, response);

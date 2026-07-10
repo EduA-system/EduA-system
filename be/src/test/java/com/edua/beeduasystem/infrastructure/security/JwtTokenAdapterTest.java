@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,33 +22,45 @@ class JwtTokenAdapterTest {
 
     private AppUser user() {
         return new AppUser(UUID.randomUUID(), "teacher@fpt.edu.vn", "sub-1", "GV A",
-                Role.TEACHER, Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), Instant.now());
+                Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), Instant.now());
     }
 
     @Test
     void issueThenParse_roundTrip() {
         JwtTokenAdapter adapter = new JwtTokenAdapter(SECRET, Duration.ofMinutes(60));
         AppUser user = user();
+        Set<Role> roles = Set.of(Role.TEACHER);
 
-        String token = adapter.issueAccessToken(user);
+        String token = adapter.issueAccessToken(user, roles);
         AccessTokenClaims claims = adapter.parse(token);
 
         assertThat(claims.userId()).isEqualTo(user.id());
         assertThat(claims.email()).isEqualTo(user.email());
-        assertThat(claims.role()).isEqualTo(Role.TEACHER);
+        assertThat(claims.roles()).contains(Role.TEACHER);
         assertThat(claims.subject()).isEqualTo(Subject.CHEMISTRY);
+    }
+
+    @Test
+    void issueThenParse_multipleRoles_usesDeterministicPrimaryRole() {
+        JwtTokenAdapter adapter = new JwtTokenAdapter(SECRET, Duration.ofMinutes(60));
+
+        String token = adapter.issueAccessToken(user(), Set.of(Role.TEACHER, Role.ADMINISTRATOR, Role.MODERATOR));
+        AccessTokenClaims claims = adapter.parse(token);
+
+        assertThat(claims.roles()).containsExactlyInAnyOrder(Role.TEACHER, Role.MODERATOR, Role.ADMINISTRATOR);
+        assertThat(claims.primaryRole()).isEqualTo(Role.ADMINISTRATOR);
     }
 
     @Test
     void parse_expiredToken_throws() {
         JwtTokenAdapter adapter = new JwtTokenAdapter(SECRET, Duration.ofSeconds(-1));
-        String token = adapter.issueAccessToken(user());
+        String token = adapter.issueAccessToken(user(), Set.of(Role.TEACHER));
         assertThatThrownBy(() -> adapter.parse(token)).isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void parse_wrongSignature_throws() {
-        String token = new JwtTokenAdapter(SECRET, Duration.ofMinutes(60)).issueAccessToken(user());
+        String token = new JwtTokenAdapter(SECRET, Duration.ofMinutes(60)).issueAccessToken(user(), Set.of(Role.TEACHER));
         JwtTokenAdapter other = new JwtTokenAdapter("ffffffffffffffffffffffffffffffffffffffffffffffff", Duration.ofMinutes(60));
         assertThatThrownBy(() -> other.parse(token)).isInstanceOf(InvalidTokenException.class);
     }

@@ -6,6 +6,7 @@ import {
   GOOGLE_CLIENT_ID,
   TOKEN_KEY,
   formatRelativeTime,
+  getGoogleIdentity,
   type Comment,
   type Detail,
   type Summary,
@@ -108,11 +109,12 @@ export function BlogCommunityPage() {
     s.src = "https://accounts.google.com/gsi/client";
     s.async = true;
     s.onload = () => {
-      window.google?.accounts.id.initialize({
+      const google = getGoogleIdentity();
+      google?.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: (r) => loginWithGoogle(r.credential),
       });
-      if (btnRef.current) window.google?.accounts.id.renderButton(btnRef.current, { theme: "outline", size: "large" });
+      if (btnRef.current) google?.accounts.id.renderButton(btnRef.current, { theme: "outline", size: "large" });
     };
     document.body.appendChild(s);
     return () => { document.body.removeChild(s); };

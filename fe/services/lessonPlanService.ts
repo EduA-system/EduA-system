@@ -17,12 +17,28 @@ export interface CatalogChapter {
   lessons: CatalogLesson[];
 }
 
+export interface CatalogChapterSummary {
+  id: string;
+  name: string;
+}
+
 export interface CatalogBook {
   id: string;
   name: string;
   grade: number;
   source?: string;
   chapters: CatalogChapter[];
+}
+
+export interface CatalogBookName {
+  id: string;
+  name: string;
+  grade: number;
+  subjectCode: string;
+  subjectName: string;
+  volume: number | null;
+  publisher?: string | null;
+  series?: string | null;
 }
 
 export interface TextbookCatalog {
@@ -52,6 +68,36 @@ export async function fetchTextbookCatalog(): Promise<TextbookCatalog> {
   const res = await fetch("/api/textbooks", { headers: { Accept: "application/json" } });
   if (!res.ok) {
     throw new Error(`Không tải được danh mục SGK (HTTP ${res.status}).`);
+  }
+  return res.json();
+}
+
+export async function fetchTextbookNames(subject = "PHYSICS"): Promise<CatalogBookName[]> {
+  const params = new URLSearchParams({ subject });
+  const res = await fetch(`/api/textbooks/names?${params.toString()}`, { headers: { Accept: "application/json" } });
+  if (!res.ok) {
+    throw new Error(`Khong tai duoc danh sach SGK (HTTP ${res.status}).`);
+  }
+  return res.json();
+}
+
+export async function fetchTextbookChapters(bookId: string): Promise<CatalogChapterSummary[]> {
+  const res = await fetch(`/api/textbooks/${encodeURIComponent(bookId)}/chapters`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(`Khong tai duoc danh sach chuong (HTTP ${res.status}).`);
+  }
+  return res.json();
+}
+
+export async function fetchChapterLessons(bookId: string, chapterId: string): Promise<CatalogLesson[]> {
+  const res = await fetch(
+    `/api/textbooks/${encodeURIComponent(bookId)}/chapters/${encodeURIComponent(chapterId)}/lessons`,
+    { headers: { Accept: "application/json" } },
+  );
+  if (!res.ok) {
+    throw new Error(`Khong tai duoc danh sach bai hoc (HTTP ${res.status}).`);
   }
   return res.json();
 }

@@ -99,4 +99,7 @@ export interface GIS {
     renderButton: (el: HTMLElement, o: { theme: string; size: string }) => void;
   } };
 }
-declare global { interface Window { google?: GIS } }
+
+export function getGoogleIdentity(): GIS | undefined {
+  return (window as Window & { google?: GIS }).google;
+}

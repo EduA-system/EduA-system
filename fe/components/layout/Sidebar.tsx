@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { navGroups } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { hasAnyRole } from "@/lib/auth/permissions";
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -9,13 +13,40 @@ interface SidebarProps {
   fixed?: boolean;
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
 export function Sidebar({ collapsed = false, activeHref, fixed = false }: SidebarProps) {
+  const { user } = useAuth();
   const position = fixed
     ? "fixed top-12 left-0 z-40 flex flex-col"
     : "flex flex-col";
   const visibility = collapsed
     ? "w-0 min-w-0 border-r-0 p-0 opacity-0 pointer-events-none"
     : "w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100";
+
+  const displayName = user?.fullName ?? user?.email ?? "Nguyen Thi Hoa";
+  const initials = user ? getInitials(displayName) : "NH";
+  const displayRole = user?.role === "ADMINISTRATOR"
+    ? "Qu\u1ea3n tr\u1ecb vi\u00ean"
+    : user?.role === "MODERATOR"
+      ? "Ng\u01b0\u1eddi ki\u1ec3m duy\u1ec7t"
+      : "Gi\u00e1o vi\u00ean";
+
+  const filteredGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (!item.requiredRole) return true;
+        return hasAnyRole(user, item.requiredRole);
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <aside
@@ -41,7 +72,7 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false }: Sideba
         </div>
 
         <nav className="min-h-0 flex-1 overflow-y-auto space-y-2 pb-3">
-          {navGroups.map((group) => (
+          {filteredGroups.map((group) => (
             <div key={group.label} className="pb-2">
               <div className="px-2 text-[9px] font-semibold uppercase leading-[14px] tracking-[0.11em] text-[#6b6b6b]">
                 {group.label}
@@ -72,15 +103,15 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false }: Sideba
         <div className="mt-auto shrink-0 border-t border-[#d8d1c9] py-3">
           <div className="flex items-center gap-2 rounded-xl px-3 py-3">
             <div className="relative flex size-[34px] items-center justify-center rounded-xl bg-[#1f1f1f] text-xs font-semibold text-white">
-              NH
+              {initials}
               <span className="absolute bottom-0 right-0 size-2 rounded-full border border-white bg-[#80cfa0]" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-[13px] font-medium text-[#1f1f1f]">
-                Nguyen Thi Hoa
+                {displayName}
               </div>
               <div className="truncate text-[11px] text-[#6b6b6b]">
-                {"GV V\u1eadt l\u00fd \u00b7 THPT Qu\u1ed1c Gia"}
+                {displayRole}{user?.subject ? ` \u00b7 ${user.subject}` : ""}
               </div>
             </div>
           </div>

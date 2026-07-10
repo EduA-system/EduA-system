@@ -1,3 +1,5 @@
+export type Role = "TEACHER" | "MODERATOR" | "ADMINISTRATOR";
+
 export type NavItem = {
   label: string;
   icon: string;
@@ -5,6 +7,7 @@ export type NavItem = {
   active?: boolean;
   expanded?: boolean;
   child?: boolean;
+  requiredRole?: Role[];
 };
 
 export type NavGroup = {
@@ -42,6 +45,13 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "C\u00e0i \u0111\u1eb7t", icon: "settings", href: "/homepage" },
       { label: "Tr\u1ee3 gi\u00fap", icon: "help", href: "/help" },
+    ],
+  },
+  {
+    label: "ADMIN",
+    items: [
+      { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog/moderation", requiredRole: ["MODERATOR", "ADMINISTRATOR"] },
+      { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "ADMINISTRATOR"] },
     ],
   },
 ];

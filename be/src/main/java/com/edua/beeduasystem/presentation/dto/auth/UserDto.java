@@ -1,7 +1,10 @@
 package com.edua.beeduasystem.presentation.dto.auth;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
+import com.edua.beeduasystem.domain.model.auth.Role;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /** Thông tin user trả cho FE (không lộ trường nhạy cảm). */
@@ -10,14 +13,17 @@ public record UserDto(
         String email,
         String fullName,
         String role,
+        List<String> roles,
         String subject
 ) {
-    public static UserDto from(AppUser user) {
+    public static UserDto from(AppUser user, Set<Role> roles) {
+        List<String> orderedRoles = Role.orderedByPriority(roles).stream().map(Enum::name).toList();
         return new UserDto(
                 user.id(),
                 user.email(),
                 user.fullName(),
-                user.role().name(),
+                orderedRoles.isEmpty() ? null : orderedRoles.getFirst(),
+                orderedRoles,
                 user.subject() != null ? user.subject().name() : null);
     }
 }

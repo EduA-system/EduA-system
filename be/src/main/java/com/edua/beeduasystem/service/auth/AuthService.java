@@ -6,11 +6,13 @@ import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.AuthTokens;
 import com.edua.beeduasystem.domain.model.auth.GoogleIdentity;
 import com.edua.beeduasystem.domain.model.auth.RefreshToken;
+import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.gateways.GoogleIdentityVerifier;
 import com.edua.beeduasystem.repository.gateways.TokenService;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
+import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,12 +25,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Set;
 import java.util.UUID;
 
-/**
- * Use-case xác thực: login Google, refresh (rotation), logout, currentUser.
- * Không lưu mật khẩu (SEC-01); JWT tự phát, refresh 24h idle (SEC-03).
- */
 @Service
 public class AuthService {
 
@@ -36,6 +35,7 @@ public class AuthService {
     private final TokenService tokenService;
     private final AppUserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserRoleRepository userRoleRepository;
     private final CurrentUserProvider currentUserProvider;
     private final Duration refreshTtl;
 
@@ -45,20 +45,24 @@ public class AuthService {
                        TokenService tokenService,
                        AppUserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
+                       UserRoleRepository userRoleRepository,
                        CurrentUserProvider currentUserProvider,
                        @Value("${app.auth.jwt.refresh-ttl:PT24H}") Duration refreshTtl) {
         this.googleVerifier = googleVerifier;
         this.tokenService = tokenService;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.userRoleRepository = userRoleRepository;
         this.currentUserProvider = currentUserProvider;
         this.refreshTtl = refreshTtl;
     }
 
-    public record LoginResult(AppUser user, AuthTokens tokens) {
+    public record LoginResult(AppUser user, Set<Role> roles, AuthTokens tokens) {
     }
 
-    /** Verify Google id_token + allowlist → lazy-activate user → phát access + refresh. */
+    public record CurrentUserInfo(AppUser user, Set<Role> roles) {
+    }
+
     @Transactional
     public LoginResult loginWithGoogle(String idToken) {
         GoogleIdentity identity = googleVerifier.verify(idToken);
@@ -78,18 +82,17 @@ public class AuthService {
                 user.email(),
                 user.googleSub() != null ? user.googleSub() : identity.subject(),
                 StringUtils.hasText(user.fullName()) ? user.fullName() : identity.fullName(),
-                user.role(),
                 user.subject(),
                 UserStatus.ACTIVE,
                 user.createdAt(),
                 now);
         AppUser saved = userRepository.save(activated);
 
-        AuthTokens tokens = issueTokens(saved, now);
-        return new LoginResult(saved, tokens);
+        Set<Role> roles = userRoleRepository.findRolesByUserId(saved.id());
+        AuthTokens tokens = issueTokens(saved, roles, now);
+        return new LoginResult(saved, roles, tokens);
     }
 
-    /** Rotation: revoke refresh cũ, phát access + refresh mới (sliding 24h). */
     @Transactional
     public AuthTokens refresh(String rawRefreshToken) {
         if (!StringUtils.hasText(rawRefreshToken)) {
@@ -101,7 +104,6 @@ public class AuthService {
 
         Instant now = Instant.now();
         if (stored.revoked()) {
-            // Dùng lại token đã revoke → nghi lộ, revoke toàn bộ token của user.
             refreshTokenRepository.revokeAllByUserId(stored.userId());
             throw new InvalidTokenException("Refresh token reuse detected.");
         }
@@ -116,10 +118,10 @@ public class AuthService {
         if (user.status() == UserStatus.DISABLED) {
             throw new EmailNotAllowedException("Tài khoản đã bị khóa.");
         }
-        return issueTokens(user, now);
+        Set<Role> roles = userRoleRepository.findRolesByUserId(user.id());
+        return issueTokens(user, roles, now);
     }
 
-    /** Revoke refresh token hiện tại (idempotent). */
     @Transactional
     public void logout(String rawRefreshToken) {
         if (!StringUtils.hasText(rawRefreshToken)) {
@@ -129,16 +131,17 @@ public class AuthService {
                 .ifPresent(rt -> refreshTokenRepository.revoke(rt.id()));
     }
 
-    /** User của access token hiện tại (cho /me). */
     @Transactional(readOnly = true)
-    public AppUser currentUser() {
+    public CurrentUserInfo currentUser() {
         UUID userId = currentUserProvider.requireUserId();
-        return userRepository.findById(userId)
+        AppUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new InvalidTokenException("User not found."));
+        Set<Role> roles = userRoleRepository.findRolesByUserId(userId);
+        return new CurrentUserInfo(user, roles);
     }
 
-    private AuthTokens issueTokens(AppUser user, Instant now) {
-        String access = tokenService.issueAccessToken(user);
+    private AuthTokens issueTokens(AppUser user, Set<Role> roles, Instant now) {
+        String access = tokenService.issueAccessToken(user, roles);
         String rawRefresh = randomToken();
         refreshTokenRepository.save(new RefreshToken(
                 UUID.randomUUID(),
