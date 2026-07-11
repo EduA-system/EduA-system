@@ -48,7 +48,7 @@ class AuthServiceTest {
 
     private AppUser invitedUser(String email) {
         return new AppUser(UUID.randomUUID(), email, null, null,
-                null, UserStatus.INVITED, Instant.now(), null);
+                null, null, null, UserStatus.INVITED, Instant.now(), null);
     }
 
     @Test

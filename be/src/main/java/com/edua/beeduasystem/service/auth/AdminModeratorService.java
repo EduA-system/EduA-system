@@ -84,6 +84,7 @@ public class AdminModeratorService {
             AppUser reactivated = userRepository.save(new AppUser(
                     u.id(), u.email(), u.googleSub(),
                     fullName != null ? fullName.trim() : u.fullName(),
+                    u.avatarUrl(), u.contactInfo(),
                     subject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
             assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
             return reactivated;
@@ -92,6 +93,7 @@ public class AdminModeratorService {
         AppUser saved = userRepository.save(new AppUser(
                 UUID.randomUUID(), normalizedEmail, null,
                 fullName != null ? fullName.trim() : null,
+                null, null,
                 subject, UserStatus.INVITED, now, null));
         assignRole(saved.id(), Role.MODERATOR, currentUserId, now);
         return saved;
@@ -110,6 +112,7 @@ public class AdminModeratorService {
         }
         userRepository.save(new AppUser(
                 user.id(), user.email(), user.googleSub(), user.fullName(),
+                user.avatarUrl(), user.contactInfo(),
                 user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
     }
 
@@ -128,6 +131,7 @@ public class AdminModeratorService {
         Instant now = Instant.now();
         AppUser reactivated = userRepository.save(new AppUser(
                 user.id(), user.email(), user.googleSub(), user.fullName(),
+                user.avatarUrl(), user.contactInfo(),
                 user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
         assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
         return reactivated;

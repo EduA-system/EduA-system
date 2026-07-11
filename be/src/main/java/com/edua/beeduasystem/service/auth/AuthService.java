@@ -82,6 +82,8 @@ public class AuthService {
                 user.email(),
                 user.googleSub() != null ? user.googleSub() : identity.subject(),
                 StringUtils.hasText(user.fullName()) ? user.fullName() : identity.fullName(),
+                user.avatarUrl(),
+                user.contactInfo(),
                 user.subject(),
                 UserStatus.ACTIVE,
                 user.createdAt(),

@@ -54,6 +54,8 @@ public class AdminSeedRunner implements ApplicationRunner {
                 null,
                 null,
                 null,
+                null,
+                null,
                 UserStatus.INVITED,
                 now,
                 null));

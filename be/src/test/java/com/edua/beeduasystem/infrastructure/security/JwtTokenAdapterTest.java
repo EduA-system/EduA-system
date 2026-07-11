@@ -22,7 +22,7 @@ class JwtTokenAdapterTest {
 
     private AppUser user() {
         return new AppUser(UUID.randomUUID(), "teacher@fpt.edu.vn", "sub-1", "GV A",
-                Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), Instant.now());
+                null, null, Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), Instant.now());
     }
 
     @Test
