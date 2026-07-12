@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           clearSession();
           return null;
         }
-        const refreshedUser = await getMe(refreshed.accessToken);
+        const refreshedUser = refreshed.user ?? (await getMe(refreshed.accessToken));
         setSession(refreshed.accessToken, refreshedUser);
         return refreshed.accessToken;
       } catch {

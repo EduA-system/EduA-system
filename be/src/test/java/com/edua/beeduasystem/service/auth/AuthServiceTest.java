@@ -3,6 +3,7 @@ package com.edua.beeduasystem.service.auth;
 import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.GoogleIdentity;
+import com.edua.beeduasystem.domain.model.auth.RefreshToken;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.gateways.GoogleIdentityVerifier;
@@ -24,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AuthServiceTest {
@@ -79,5 +81,25 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.loginWithGoogle("idtok"))
                 .isInstanceOf(EmailNotAllowedException.class);
+    }
+
+    @Test
+    void refresh_returnsUserAndRolesWithNewTokens() {
+        UUID userId = UUID.randomUUID();
+        AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Teacher",
+                null, null, null, UserStatus.ACTIVE, Instant.now(), Instant.now());
+        RefreshToken refreshToken = new RefreshToken(UUID.randomUUID(), userId, "hash",
+                Instant.now().plus(Duration.ofHours(1)), false, Instant.now());
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(refreshToken));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRoleRepository.findRolesByUserId(userId)).thenReturn(Set.of(Role.TEACHER));
+        when(tokenService.issueAccessToken(user, Set.of(Role.TEACHER))).thenReturn("new-access-jwt");
+
+        AuthService.RefreshResult result = authService.refresh("refresh-token");
+
+        assertThat(result.user()).isEqualTo(user);
+        assertThat(result.roles()).containsExactly(Role.TEACHER);
+        assertThat(result.tokens().accessToken()).isEqualTo("new-access-jwt");
+        verify(refreshTokenRepository).revoke(refreshToken.id());
     }
 }
