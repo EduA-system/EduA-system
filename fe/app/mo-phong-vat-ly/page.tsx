@@ -28,16 +28,33 @@ import { ParamPanel } from "@/components/simulations/param-panel";
 import { LandmarksPanel, type JumpMark } from "@/components/simulations/landmarks-panel";
 import { PRESETS, type Preset, type Domain } from "@/components/simulations/presets";
 import type { SceneReadout } from "@/components/simulations/scene-konva-2d";
+import type { Scene } from "@/components/simulations/kernel/types";
+import type { WaveScene } from "@/components/simulations/wave/types";
+import type { StringWaveScene } from "@/components/simulations/string-wave/types";
+import type { WaveFieldScene } from "@/components/simulations/wave-field/types";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
   () => import("@/components/simulations/scene-konva-2d").then((m) => m.SceneKonva2D),
   { ssr: false },
 );
+const SceneKonvaWave2D = dynamic(
+  () => import("@/components/simulations/wave/scene-konva-wave-2d").then((m) => m.SceneKonvaWave2D),
+  { ssr: false },
+);
+const SceneKonvaStringWave = dynamic(
+  () => import("@/components/simulations/string-wave/scene-konva-string-wave").then((m) => m.SceneKonvaStringWave),
+  { ssr: false },
+);
+// Canvas thuần (không Konva) — cần thao tác ImageData trực tiếp cho heatmap.
+const SceneCanvasWaveField = dynamic(
+  () => import("@/components/simulations/wave-field/scene-canvas-wave-field").then((m) => m.SceneCanvasWaveField),
+  { ssr: false },
+);
 
 /* ─────────────────────────── Dữ liệu catalog ─────────────────────────── */
 
-const DOMAINS: Domain[] = ["Cơ học", "Dao động & Sóng", "Điện & Từ", "Nhiệt & Khí", "Hạt nhân"];
+const DOMAINS: Domain[] = ["Cơ học", "Dao động & Sóng", "Quang học", "Điện & Từ", "Nhiệt & Khí", "Hạt nhân"];
 
 // Lĩnh vực chưa có kernel → hiển thị thẻ disabled để giữ bản đồ chương trình đầy đủ.
 type Placeholder = { id: string; title: string; domain: Domain; grade: 10 | 11 | 12; desc: string };
@@ -126,6 +143,92 @@ function Thumb({ id }: { id: string }) {
         <>
           <path d="M30 100 L170 100 L170 50 Z" fill="#1e293b" stroke="#475569" strokeWidth="2" />
           <rect x="120" y="58" width="22" height="16" rx="2" fill="#f472b6" transform="rotate(-20 131 66)" />
+        </>,
+      );
+    case "giao-thoa-song-nuoc":
+      return frame(
+        <>
+          {[10, 20, 30, 42].map((r) => (
+            <circle key={`a${r}`} cx="80" cy="60" r={r} fill="none" stroke="#475569" strokeWidth="1" />
+          ))}
+          {[10, 20, 30, 42].map((r) => (
+            <circle key={`b${r}`} cx="120" cy="60" r={r} fill="none" stroke="#475569" strokeWidth="1" />
+          ))}
+          <path d="M100 8 V112" stroke="#f87171" strokeWidth="2" />
+          <path d="M124 10 Q145 60 124 110" fill="none" stroke="#f87171" strokeWidth="1.5" />
+          <path d="M76 10 Q55 60 76 110" fill="none" stroke="#f87171" strokeWidth="1.5" />
+          <path d="M112 10 Q122 60 112 110" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="3 3" />
+          <path d="M88 10 Q78 60 88 110" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="3 3" />
+          <circle cx="80" cy="60" r="4" fill="#f472b6" />
+          <circle cx="120" cy="60" r="4" fill="#f472b6" />
+        </>,
+      );
+    case "giao-thoa-anh-sang":
+      return frame(
+        <>
+          <line x1="20" y1="60" x2="55" y2="60" stroke="#facc15" strokeWidth="1.5" />
+          <circle cx="20" cy="60" r="4" fill="#facc15" />
+          <line x1="65" y1="15" x2="65" y2="45" stroke="#334155" strokeWidth="5" />
+          <line x1="65" y1="52" x2="65" y2="68" stroke="#334155" strokeWidth="5" />
+          <line x1="65" y1="75" x2="65" y2="105" stroke="#334155" strokeWidth="5" />
+          {[16, 28, 40].map((r) => (
+            <circle key={`p${r}`} cx="65" cy="48" r={r} fill="none" stroke="#475569" strokeWidth="1" />
+          ))}
+          {[16, 28, 40].map((r) => (
+            <circle key={`q${r}`} cx="65" cy="72" r={r} fill="none" stroke="#475569" strokeWidth="1" />
+          ))}
+          <line x1="65" y1="48" x2="180" y2="60" stroke="#f87171" strokeWidth="1" opacity="0.6" />
+          <line x1="65" y1="72" x2="180" y2="60" stroke="#f87171" strokeWidth="1" opacity="0.6" />
+          <line x1="178" y1="10" x2="178" y2="110" stroke="#e2e8f0" strokeWidth="3" />
+          {[16, 34, 60, 86, 104].map((y, i) => (
+            <line key={y} x1="176" y1={y} x2="180" y2={y} stroke={i % 2 === 0 ? "#f87171" : "#60a5fa"} strokeWidth="5" />
+          ))}
+        </>,
+      );
+    case "giao-thoa-anh-sang-day-du":
+      return frame(
+        <>
+          <defs>
+            <linearGradient id="wf-thumb-grad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#0f172a" />
+              <stop offset="20%" stopColor="#fbbf24" />
+              <stop offset="35%" stopColor="#0f172a" />
+              <stop offset="50%" stopColor="#fbbf24" />
+              <stop offset="65%" stopColor="#0f172a" />
+              <stop offset="80%" stopColor="#fbbf24" />
+              <stop offset="100%" stopColor="#0f172a" />
+            </linearGradient>
+          </defs>
+          <rect x="110" y="8" width="30" height="104" fill="url(#wf-thumb-grad)" opacity="0.85" />
+          <circle cx="30" cy="60" r="4" fill="#facc15" />
+          <line x1="45" y1="30" x2="45" y2="90" stroke="#334155" strokeWidth="5" />
+          <line x1="45" y1="55" x2="105" y2="48" stroke="#f9a8d4" strokeWidth="1" opacity="0.7" />
+          <line x1="45" y1="65" x2="105" y2="72" stroke="#f9a8d4" strokeWidth="1" opacity="0.7" />
+          <circle cx="105" cy="48" r="3.5" fill="#fef08a" />
+          <circle cx="105" cy="72" r="3.5" fill="#fef08a" />
+          <line x1="176" y1="10" x2="176" y2="110" stroke="#e2e8f0" strokeWidth="2" />
+        </>,
+      );
+    case "song-tren-day":
+      return frame(
+        <>
+          <path d="M10 60 Q35 20 60 60 T110 60 T160 60 T190 60" fill="none" stroke="#38bdf8" strokeWidth="2.5" />
+          <circle cx="60" cy="60" r="6" fill="#facc15" />
+          <path d="M20 30 h20" stroke="#e8724a" strokeWidth="2" />
+          <path d="M40 30 l-6 -4 m6 4 l-6 4" fill="none" stroke="#e8724a" strokeWidth="2" />
+        </>,
+      );
+    case "song-dung":
+      return frame(
+        <>
+          <line x1="20" y1="60" x2="180" y2="60" stroke="#475569" strokeWidth="1" strokeDasharray="3 3" />
+          <path d="M20 60 Q55 15 90 60 T160 60 T180 60" fill="none" stroke="#38bdf8" strokeWidth="2.5" />
+          <path d="M20 60 Q55 105 90 60 T160 60 T180 60" fill="none" stroke="#475569" strokeWidth="1" strokeDasharray="3 3" />
+          {[20, 90, 160].map((x) => (
+            <circle key={x} cx={x} cy={60} r="4" fill="#94a3b8" />
+          ))}
+          <rect x="14" y="40" width="8" height="40" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
+          <rect x="158" y="40" width="8" height="40" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
         </>,
       );
     case "va-cham-dan-hoi":
@@ -390,6 +493,84 @@ export default function MoPhongHubPage() {
   );
 }
 
+/* ─────────────────────────── Chú thích ký hiệu (sóng) ─────────────────────────── */
+
+type LegendItem = { swatch: ReactNode; label: string };
+
+const dashSwatch = (color: string) => (
+  <svg width="20" height="8" viewBox="0 0 20 8">
+    <line x1="0" y1="4" x2="20" y2="4" stroke={color} strokeWidth="2" strokeDasharray="4 3" />
+  </svg>
+);
+const lineSwatch = (color: string) => (
+  <svg width="20" height="8" viewBox="0 0 20 8">
+    <line x1="0" y1="4" x2="20" y2="4" stroke={color} strokeWidth="2" />
+  </svg>
+);
+const dotSwatch = (color: string) => <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />;
+
+function LegendBox({ items }: { items: LegendItem[] }) {
+  return (
+    <div className="space-y-2 rounded-[10px] border border-[#e8e2d9] bg-white p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#8a8178]">Chú thích ký hiệu</p>
+      <div className="space-y-1.5">
+        {items.map((it) => (
+          <div key={it.label} className="flex items-center gap-2 text-[11px] leading-snug text-[#4f4943]">
+            <span className="flex w-5 shrink-0 items-center justify-center">{it.swatch}</span>
+            {it.label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WaveLegend({ scene }: { scene: WaveScene }) {
+  const isLight = scene.screenDistance != null;
+  const maxLabel = scene.labels?.maxima ?? "CĐ";
+  const minLabel = scene.labels?.minima ?? "CT";
+  const items: LegendItem[] = isLight
+    ? [
+        { swatch: lineSwatch("#f87171"), label: `${maxLabel} — Vân sáng (2 sóng cùng pha)` },
+        { swatch: dashSwatch("#60a5fa"), label: `${minLabel} — Vân tối (2 sóng ngược pha)` },
+        { swatch: dotSwatch("#facc15"), label: "S — khe hẹp tạo nguồn kết hợp" },
+        { swatch: dotSwatch("#f472b6"), label: "S1, S2 — 2 khe Y-âng (nguồn kết hợp)" },
+        { swatch: lineSwatch("#e2e8f0"), label: "Màn quan sát — vị trí vân đánh dấu chính xác, không xấp xỉ" },
+      ]
+    : [
+        { swatch: lineSwatch("#f87171"), label: `${maxLabel} — Cực đại (2 sóng cùng pha)` },
+        { swatch: dashSwatch("#60a5fa"), label: `${minLabel} — Cực tiểu (2 sóng ngược pha)` },
+        { swatch: dotSwatch("#f472b6"), label: "S1, S2 — nguồn sóng kết hợp" },
+        { swatch: dotSwatch("#f87171"), label: "Điểm giao cùng pha (đỉnh gặp đỉnh / đáy gặp đáy)" },
+        { swatch: dotSwatch("#60a5fa"), label: "Điểm giao ngược pha (đỉnh gặp đáy)" },
+      ];
+  return <LegendBox items={items} />;
+}
+
+function StringWaveLegend({ mode }: { mode: "traveling" | "standing" }) {
+  if (mode === "standing") {
+    return (
+      <LegendBox
+        items={[
+          { swatch: dotSwatch("#94a3b8"), label: "N — Nút (biên độ luôn bằng 0)" },
+          { swatch: dotSwatch("#f59e0b"), label: "B — Bụng (biên độ dao động cực đại ±2A)" },
+          { swatch: dashSwatch("#475569"), label: "Đường bao — 2 vị trí biên của dây theo thời gian" },
+        ]}
+      />
+    );
+  }
+  return (
+    <LegendBox
+      items={[
+        { swatch: dotSwatch("#facc15"), label: "Chấm vàng — 1 phần tử dây (dao động vuông góc phương truyền)" },
+        { swatch: lineSwatch("#facc15"), label: "A — vector biên độ" },
+        { swatch: lineSwatch("#34d399"), label: "λ — 1 bước sóng" },
+        { swatch: lineSwatch("#e8724a"), label: "Mũi tên cam — chiều truyền sóng" },
+      ]}
+    />
+  );
+}
+
 /* ─────────────────────────── Màn chi tiết + tuỳ chỉnh ─────────────────────────── */
 
 type AiState = "idle" | "thinking" | "review";
@@ -402,6 +583,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
   const [edited, setEdited] = useState(false);
   const [running, setRunning] = useState(true);
   const [resetSignal, setResetSignal] = useState(0);
+  const [speed, setSpeed] = useState(1);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarWrapperRef = useRef<HTMLDivElement>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement>(null);
@@ -442,6 +624,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
     setAiState("idle");
     setAiPrompt("");
     setRunning(true);
+    setSpeed(1);
     setActiveMark(null);
     setPrevMark(null);
     setResetSignal((n) => n + 1);
@@ -502,13 +685,51 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* Sim stage */}
-          <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto p-8">
-            <div className="w-full">
-              <div className="relative">
-                <div className="overflow-hidden rounded-[16px] border border-[#e8e2d9] shadow-sm">
+          {/* Sim stage — trải kín không gian dành cho (canvas tự đo & lấp đầy,
+              xem shared/use-container-size.ts), chỉ chừa lề nhỏ quanh khung. */}
+          <div className="flex flex-1 flex-col overflow-hidden p-3">
+            <div className="relative min-h-0 flex-1">
+              <div className="absolute inset-0 overflow-hidden rounded-[16px] border border-[#e8e2d9] shadow-sm">
+                {preset.kind === "wave" ? (
+                  <SceneKonvaWave2D
+                    scene={scene as WaveScene}
+                    running={running}
+                    resetSignal={resetSignal}
+                    onRunningChange={setRunning}
+                    seekSeconds={activeMark?.seconds}
+                    seekToken={seekToken}
+                    markLabel={activeMark?.label}
+                    speed={speed}
+                  />
+                ) : preset.kind === "string-wave" ? (
+                  <SceneKonvaStringWave
+                    scene={scene as StringWaveScene}
+                    running={running}
+                    resetSignal={resetSignal}
+                    onRunningChange={setRunning}
+                    seekSeconds={activeMark?.seconds}
+                    seekToken={seekToken}
+                    markLabel={activeMark?.label}
+                    speed={speed}
+                  />
+                ) : preset.kind === "wave-field" ? (
+                  <SceneCanvasWaveField
+                    scene={scene as WaveFieldScene}
+                    running={running}
+                    resetSignal={resetSignal}
+                    onRunningChange={setRunning}
+                    seekSeconds={activeMark?.seconds}
+                    seekToken={seekToken}
+                    markLabel={activeMark?.label}
+                    speed={speed}
+                    onParamsChange={(patch) => {
+                      setParams((prev) => ({ ...prev, ...patch }));
+                      markEdited();
+                    }}
+                  />
+                ) : (
                   <SceneKonva2D
-                    scene={scene}
+                    scene={scene as Scene}
                     running={running}
                     resetSignal={resetSignal}
                     onRunningChange={setRunning}
@@ -519,45 +740,62 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                     ghostSeconds={prevMark?.seconds ?? null}
                     ghostLabel={prevMark?.label}
                     bodyLabels={preset.bodyLabels}
+                    speed={speed}
                   />
-                </div>
+                )}
+              </div>
 
-                {/* Floating tool panel */}
-                <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center">
-                  <div className="pointer-events-auto flex items-center gap-1 rounded-[14px] border border-[#e8e2d9] bg-white p-1.5 shadow-[0_8px_24px_rgba(43,41,38,0.12),0_2px_8px_rgba(43,41,38,0.08)]">
-                    <button
-                      onClick={() => setRunning((r) => !r)}
-                      title={running ? "Tạm dừng" : "Bắt đầu"}
-                      className={`flex h-11 w-11 items-center justify-center rounded-[12px] transition-colors duration-150 ease-out ${
-                        running
-                          ? "bg-[#e8724a] text-white hover:bg-[#d96a42]"
-                          : "text-[#4f4943] hover:bg-[#f7f3ee]"
-                      }`}
-                    >
-                      {running ? (
-                        <Pause className="h-5 w-5" strokeWidth={2} />
-                      ) : (
-                        <Play className="h-5 w-5" strokeWidth={2} />
-                      )}
-                    </button>
-                    <div className="mx-1 h-6 w-px shrink-0 bg-black/10" />
-                    <button
-                      onClick={() => {
-                        setActiveMark(null);
-                        setPrevMark(null);
-                        setResetSignal((n) => n + 1);
-                        setRunning(true);
-                      }}
-                      title="Đặt lại"
-                      className="flex h-11 w-11 items-center justify-center rounded-[12px] text-[#4f4943] transition-colors duration-150 ease-out hover:bg-[#f7f3ee]"
-                    >
-                      <RotateCcw className="h-5 w-5" strokeWidth={2} />
-                    </button>
+              {/* Floating tool panel */}
+              <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center">
+                <div className="pointer-events-auto flex items-center gap-1 rounded-[14px] border border-[#e8e2d9] bg-white p-1.5 shadow-[0_8px_24px_rgba(43,41,38,0.12),0_2px_8px_rgba(43,41,38,0.08)]">
+                  <button
+                    onClick={() => setRunning((r) => !r)}
+                    title={running ? "Tạm dừng" : "Bắt đầu"}
+                    className={`flex h-11 w-11 items-center justify-center rounded-[12px] transition-colors duration-150 ease-out ${
+                      running
+                        ? "bg-[#e8724a] text-white hover:bg-[#d96a42]"
+                        : "text-[#4f4943] hover:bg-[#f7f3ee]"
+                    }`}
+                  >
+                    {running ? (
+                      <Pause className="h-5 w-5" strokeWidth={2} />
+                    ) : (
+                      <Play className="h-5 w-5" strokeWidth={2} />
+                    )}
+                  </button>
+                  <div className="mx-1 h-6 w-px shrink-0 bg-black/10" />
+                  <button
+                    onClick={() => {
+                      setActiveMark(null);
+                      setPrevMark(null);
+                      setResetSignal((n) => n + 1);
+                      setRunning(true);
+                    }}
+                    title="Đặt lại"
+                    className="flex h-11 w-11 items-center justify-center rounded-[12px] text-[#4f4943] transition-colors duration-150 ease-out hover:bg-[#f7f3ee]"
+                  >
+                    <RotateCcw className="h-5 w-5" strokeWidth={2} />
+                  </button>
+                  <div className="mx-1 h-6 w-px shrink-0 bg-black/10" />
+                  {/* Tốc độ mô phỏng — chỉ nhân vào dt mỗi khung hình, không đụng độ chính xác. */}
+                  <div className="flex items-center gap-0.5 rounded-[12px] bg-[#f5f1ec] p-1">
+                    {[0.5, 1, 2].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSpeed(s)}
+                        title={`Tốc độ ${s}×`}
+                        className={`h-9 rounded-[9px] px-2.5 text-[12px] font-semibold transition-colors duration-150 ease-out ${
+                          speed === s ? "bg-[#e8724a] text-white" : "text-[#6b6b6b] hover:bg-white hover:text-[#171717]"
+                        }`}
+                      >
+                        {s}×
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
-              <p className="mt-3 text-center text-[13px] text-[#6b6b6b]">{preset.objective}</p>
             </div>
+            <p className="mt-3 shrink-0 text-center text-[13px] text-[#6b6b6b]">{preset.objective}</p>
           </div>
 
           {/* Customize panel */}
@@ -628,6 +866,25 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                   <p className="rounded-[10px] bg-[#faf9f7] p-3 text-xs leading-relaxed text-[#6b6b6b]">
                     Rủi ro <b>bằng 0</b>: chỉ kéo slider, sim do dev build phản hồi tức thì. Dành cho mọi giáo viên.
                   </p>
+                  {preset.kind === "wave" && <WaveLegend scene={scene as WaveScene} />}
+                  {preset.kind === "string-wave" && <StringWaveLegend mode={(scene as StringWaveScene).mode} />}
+                  {preset.kind === "wave-field" && preset.quickPresets && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {preset.quickPresets.map((qp) => (
+                        <button
+                          key={qp.label}
+                          type="button"
+                          onClick={() => {
+                            setParams((prev) => ({ ...prev, ...qp.params }));
+                            markEdited();
+                          }}
+                          className="rounded-full border border-[#e8e2d9] px-3 py-1 text-xs text-[#6b6b6b] transition-colors duration-150 ease-out hover:border-[#d97757] hover:text-[#c96545]"
+                        >
+                          {qp.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {preset.params.length === 0 ? (
                     <p className="text-sm text-[#8a8178]">Sim này chưa có tham số (prototype).</p>
                   ) : (

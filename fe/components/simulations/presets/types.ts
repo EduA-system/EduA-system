@@ -6,9 +6,12 @@
 // (tránh trôi). Mỗi preset tự đọc `p.key ?? default` trong applyParams.
 
 import type { Scene } from "../kernel/types";
+import type { WaveScene } from "../wave/types";
+import type { StringWaveScene } from "../string-wave/types";
+import type { WaveFieldScene } from "../wave-field/types";
 import type { ParamDef } from "../param-panel";
 
-export type Domain = "Cơ học" | "Dao động & Sóng" | "Điện & Từ" | "Nhiệt & Khí" | "Hạt nhân";
+export type Domain = "Cơ học" | "Dao động & Sóng" | "Quang học" | "Điện & Từ" | "Nhiệt & Khí" | "Hạt nhân";
 
 /** ParamDef của panel + giá trị mặc định cho preset. */
 export type PresetParam = ParamDef & { default: number };
@@ -34,7 +37,7 @@ export type PresetAnalysis = {
   landmarks?: Landmark[];
 };
 
-export type Preset = {
+type PresetBase = {
   id: string;
   title: string;
   domain: Domain;
@@ -43,11 +46,40 @@ export type Preset = {
   objective: string; // mục tiêu học tập (hiển thị dưới sân khấu)
   sgkRef?: string; // tham chiếu SGK, vd "Vật lí 10 — Bài 7"
   params: PresetParam[];
-  applyParams: (p: Record<string, number>) => Scene;
   // Điểm giá trị quan trọng (tuỳ chọn) — panel "Phân tích" còn hiện mốc thời
   // gian chung (1s, 2s…) cho MỌI preset, không phụ thuộc field này.
   analysis?: PresetAnalysis;
+};
+
+/** Preset chạy trên kernel Cơ học 2D (kernel/*.ts) + SceneKonva2D. */
+export type MechanicsPreset = PresetBase & {
+  kind?: "mechanics";
+  applyParams: (p: Record<string, number>) => Scene;
   // Nhãn cố định gắn với từng vật (vd đánh số con lắc) — hiện LUÔN trên canvas,
   // khác với markLabel/ghostLabel của SceneKonva2D (chỉ hiện khi xem 1 mốc thời gian).
   bodyLabels?: Record<string, string>;
 };
+
+/** Preset sóng trường (giao thoa…) — biên độ là hàm giải tích, xem wave/types.ts. */
+export type WavePreset = PresetBase & {
+  kind: "wave";
+  applyParams: (p: Record<string, number>) => WaveScene;
+};
+
+/** Preset sóng cơ 1 chiều trên dây (sóng trên dây, sóng dừng) — xem string-wave/types.ts. */
+export type StringWavePreset = PresetBase & {
+  kind: "string-wave";
+  applyParams: (p: Record<string, number>) => StringWaveScene;
+};
+
+/**
+ * Preset giao thoa Y-âng ĐẦY ĐỦ — trường sóng thực tính từ phương trình sóng
+ * (không vẽ vân trang trí), xem wave-field/types.ts + wave-field/physics.ts.
+ */
+export type WaveFieldPreset = PresetBase & {
+  kind: "wave-field";
+  applyParams: (p: Record<string, number>) => WaveFieldScene;
+  quickPresets?: { label: string; params: Record<string, number> }[];
+};
+
+export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset;

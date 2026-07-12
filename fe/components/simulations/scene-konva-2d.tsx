@@ -17,8 +17,13 @@ import { buildKernel, readPosition, readVelocity, stepScene } from "./kernel/bui
 import { computeBodyPositionsAtTime } from "./sim-time";
 import type { StateVec } from "./shared/ode";
 import type { Scene } from "./kernel/types";
+import { attachZoomPan, type ZoomActions } from "./shared/konva-zoom";
+import { ZoomControls } from "./shared/zoom-controls";
+import { useContainerSize } from "./shared/use-container-size";
 
-const H = 520; // chiều cao canvas (px); bề rộng đo theo khung chứa
+// Lưới/mặt đất vẽ rộng hơn khung nhìn ban đầu nhiều lần để còn phủ kín khi
+// zoom out / kéo canvas (lưới TĨNH, không tính lại theo viewport khi zoom).
+const GRID_EXTENT_FACTOR = 5;
 
 type Vec2 = { x: number; y: number };
 type Box = { minX: number; maxX: number; minY: number; maxY: number };
@@ -108,6 +113,7 @@ export function SceneKonva2D({
   ghostSeconds,
   ghostLabel,
   bodyLabels,
+  speed = 1,
 }: {
   scene: Scene;
   running: boolean;
@@ -131,28 +137,38 @@ export function SceneKonva2D({
   // Nhãn cố định gắn với từng vật (vd đánh số con lắc "1","2","3") — LUÔN hiện,
   // khác markLabel/ghostLabel (chỉ hiện khi đang xem 1 mốc).
   bodyLabels?: Record<string, string>;
+  // Hệ số tốc độ mô phỏng (0.5 = chậm nửa, 1 = thật, 2 = nhanh gấp đôi…) — chỉ
+  // nhân vào dt mỗi khung hình, không đụng kernel/độ chính xác tích phân.
+  speed?: number;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [w, setW] = useState(0);
+  // Đo kích thước THẬT của khung chứa (không cố định 520px) → canvas trải
+  // kín toàn bộ không gian cha dành cho, kể cả khi thu/mở sidebar hay resize.
+  const { ref: containerRef, size } = useContainerSize<HTMLDivElement>();
+  const [zoomPct, setZoomPct] = useState(100);
+  // Nút zoom nằm ngoài effect dựng cảnh (React JSX) → gọi qua ref vào hàm
+  // thao tác trực tiếp trên Konva.Stage, tránh phải dựng lại toàn bộ cảnh.
+  const zoomActionsRef = useRef<ZoomActions | null>(null);
   const runningRef = useRef(running);
   useEffect(() => {
     runningRef.current = running;
   }, [running]);
+  // speed qua ref (như running) → đổi tốc độ không dựng lại toàn bộ cảnh.
+  const speedRef = useRef(speed);
+  useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
   // Giữ onReadout mới nhất qua ref để effect dựng scene không phụ thuộc nó.
   const onReadoutRef = useRef(onReadout);
   useEffect(() => {
     onReadoutRef.current = onReadout;
   }, [onReadout]);
 
-  // Đo bề rộng khung chứa → canvas rộng theo (mở hết chỗ).
-  useEffect(() => {
-    if (containerRef.current) setW(containerRef.current.clientWidth);
-  }, []);
-
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !w) return;
+    const { width: w, height: hgt } = size;
+    if (!container || !w || !hgt) return;
     const W = w;
+    const H = hgt;
 
     // Bản làm việc — kéo-thả/reset sửa ở đây, không đụng prop.
     const work: Scene = {
@@ -187,31 +203,42 @@ export function SceneKonva2D({
     const stage = new Konva.Stage({ container, width: W, height: H });
     const layer = new Konva.Layer();
     stage.add(layer);
-    layer.add(new Konva.Rect({ x: 0, y: 0, width: W, height: H, fill: "#0f172a" }));
 
-    // Lưới phủ kín canvas → không gian vô hạn.
+    // ── Zoom (lăn chuột quanh con trỏ, hoặc nút +/−/reset) — chỉ scale + dịch
+    // stage (KHÔNG GIAN), không vẽ lại nội dung. Nền vẽ bằng CSS của container
+    // (không phải Konva.Rect) nên khung canvas luôn phủ kín, không "trôi" theo
+    // transform khi zoom/pan. ──
+    zoomActionsRef.current = attachZoomPan(stage, { width: W, height: H, onZoomChange: setZoomPct });
+
+    // Lưới phủ kín canvas → không gian vô hạn. Vẽ RỘNG HƠN khung nhìn ban đầu
+    // (GRID_EXTENT_FACTOR lần) để còn phủ kín khi zoom out / kéo canvas.
     const wl = toWorld(0, 0).x, wr = toWorld(W, 0).x;
     const wb = toWorld(0, H).y, wt = toWorld(0, 0).y;
     const step = scale >= 26 ? 1 : scale >= 13 ? 2 : 5;
-    for (let gx = Math.ceil(wl / step) * step; gx <= wr; gx += step) {
+    const cxWorld = (wl + wr) / 2, cyWorld = (wb + wt) / 2;
+    const gx0 = cxWorld - (GRID_EXTENT_FACTOR * (wr - wl)) / 2, gx1 = cxWorld + (GRID_EXTENT_FACTOR * (wr - wl)) / 2;
+    const gy0 = cyWorld - (GRID_EXTENT_FACTOR * (wt - wb)) / 2, gy1 = cyWorld + (GRID_EXTENT_FACTOR * (wt - wb)) / 2;
+    for (let gx = Math.ceil(gx0 / step) * step; gx <= gx1; gx += step) {
       const x = toScreen(gx, 0).x;
-      layer.add(new Konva.Line({ points: [x, 0, x, H], stroke: "#1e293b", strokeWidth: 1 }));
+      layer.add(new Konva.Line({ points: [x, toScreen(0, gy1).y, x, toScreen(0, gy0).y], stroke: "#1e293b", strokeWidth: 1 }));
     }
-    for (let gy = Math.ceil(wb / step) * step; gy <= wt; gy += step) {
+    for (let gy = Math.ceil(gy0 / step) * step; gy <= gy1; gy += step) {
       const y = toScreen(0, gy).y;
-      layer.add(new Konva.Line({ points: [0, y, W, y], stroke: "#1e293b", strokeWidth: 1 }));
+      layer.add(new Konva.Line({ points: [toScreen(gx0, 0).x, y, toScreen(gx1, 0).x, y], stroke: "#1e293b", strokeWidth: 1 }));
     }
 
-    // Mặt đất CỐ ĐỊNH ở y=0 (đồng thời là trục Ox).
-    layer.add(new Konva.Rect({ x: 0, y: groundY, width: W, height: H - groundY, fill: "#0b1220" }));
-    layer.add(new Konva.Line({ points: [0, groundY, W, groundY], stroke: "#64748b", strokeWidth: 3 }));
+    // Mặt đất CỐ ĐỊNH ở y=0 (đồng thời là trục Ox) — vẽ rộng/cao hơn khung
+    // nhìn để còn phủ kín khi zoom out / kéo canvas.
+    const groundX0 = toScreen(gx0, 0).x, groundX1 = toScreen(gx1, 0).x;
+    layer.add(new Konva.Rect({ x: groundX0, y: groundY, width: groundX1 - groundX0, height: 4000, fill: "#0b1220" }));
+    layer.add(new Konva.Line({ points: [groundX0, groundY, groundX1, groundY], stroke: "#64748b", strokeWidth: 3 }));
 
     // ── Trục toạ độ + nhãn số (mặt phẳng 2D định lượng) ──
     const labelColor = "#64748b";
     const yAxisX = toScreen(0, 0).x;
     const yAxisOnScreen = yAxisX >= 0 && yAxisX <= W - 16;
     if (yAxisOnScreen) {
-      layer.add(new Konva.Line({ points: [yAxisX, 0, yAxisX, groundY], stroke: "#3f4d63", strokeWidth: 1.5 })); // trục Oy
+      layer.add(new Konva.Line({ points: [yAxisX, toScreen(0, gy1).y, yAxisX, groundY], stroke: "#3f4d63", strokeWidth: 1.5 })); // trục Oy
     }
     for (let gx = Math.ceil(wl / step) * step; gx <= wr; gx += step) {
       if (gx === 0) continue;
@@ -487,7 +514,7 @@ export function SceneKonva2D({
 
     const anim = new Konva.Animation((frame) => {
       if (runningRef.current && frame && frame.timeDiff > 0) {
-        const dt = Math.min(frame.timeDiff / 1000, 1 / 30);
+        const dt = Math.min(frame.timeDiff / 1000, 1 / 30) * speedRef.current;
         const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
         const sub = dt / steps;
         for (let i = 0; i < steps; i++) state = stepScene(kernel, state, sub);
@@ -502,7 +529,17 @@ export function SceneKonva2D({
     };
     // resetSignal/seekToken: tăng → dựng lại cảnh từ đầu (reset/đi tới mốc).
     // running đọc qua ref nên KHÔNG ở deps.
-  }, [scene, w, resetSignal, seekToken, seekSeconds, markLabel, ghostSeconds, ghostLabel, bodyLabels, onRunningChange]);
+  }, [scene, size, resetSignal, seekToken, seekSeconds, markLabel, ghostSeconds, ghostLabel, bodyLabels, onRunningChange, containerRef]);
 
-  return <div ref={containerRef} className="w-full overflow-hidden rounded-lg" style={{ height: H }} />;
+  return (
+    <div className="relative h-full w-full overflow-hidden rounded-lg bg-[#0f172a]">
+      <div ref={containerRef} className="h-full w-full" />
+      <ZoomControls
+        percent={zoomPct}
+        onZoomIn={() => zoomActionsRef.current?.in()}
+        onZoomOut={() => zoomActionsRef.current?.out()}
+        onReset={() => zoomActionsRef.current?.reset()}
+      />
+    </div>
+  );
 }

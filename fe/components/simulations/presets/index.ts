@@ -12,6 +12,11 @@ import { congHuongConLac } from "./cong-huong-con-lac";
 import { matNghiengMaSat } from "./mat-nghieng-ma-sat";
 import { vaChamDanHoi } from "./va-cham-dan-hoi";
 import { vaChamMem } from "./va-cham-mem";
+import { giaoThoaSongNuoc } from "./giao-thoa-song-nuoc";
+import { songTrenDay } from "./song-tren-day";
+import { songDung } from "./song-dung";
+import { giaoThoaAnhSang } from "./giao-thoa-anh-sang";
+import { giaoThoaAnhSangDayDu } from "./giao-thoa-anh-sang-day-du";
 
 export type { Preset, PresetParam, Domain } from "./types";
 
@@ -26,6 +31,11 @@ export const PRESETS: Preset[] = [
   matNghiengMaSat,
   vaChamDanHoi,
   vaChamMem,
+  giaoThoaSongNuoc,
+  songTrenDay,
+  songDung,
+  giaoThoaAnhSang,
+  giaoThoaAnhSangDayDu,
 ];
 
 export function getPreset(id: string): Preset | undefined {
