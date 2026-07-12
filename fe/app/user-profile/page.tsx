@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardIcon } from "@/components/ui/DashboardIcon";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
@@ -61,33 +61,32 @@ function initialsOf(name: string): string {
 
 function UserProfileContent() {
   const { user, authFetch, signOut, updateUser } = useAuth();
-  const [fullName, setFullName] = useState("");
-  const [contactInfo, setContactInfo] = useState("");
+  const [fullName, setFullName] = useState(() => user?.fullName ?? "");
+  const [contactInfo, setContactInfo] = useState(() => user?.contactInfo ?? "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarPreviewRef = useRef<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setFullName(user?.fullName ?? "");
-    setContactInfo(user?.contactInfo ?? "");
-    setAvatarFile(null);
-    setAvatarPreview(null);
-  }, [user]);
+    return () => {
+      if (avatarPreviewRef.current) URL.revokeObjectURL(avatarPreviewRef.current);
+    };
+  }, []);
 
-  useEffect(() => {
-    if (!avatarFile) return;
-    const preview = URL.createObjectURL(avatarFile);
-    setAvatarPreview(preview);
-    return () => URL.revokeObjectURL(preview);
-  }, [avatarFile]);
+  function clearAvatarPreview() {
+    if (avatarPreviewRef.current) URL.revokeObjectURL(avatarPreviewRef.current);
+    avatarPreviewRef.current = null;
+    setAvatarPreview(null);
+  }
 
   function resetForm() {
     setFullName(user?.fullName ?? "");
     setContactInfo(user?.contactInfo ?? "");
     setAvatarFile(null);
-    setAvatarPreview(null);
+    clearAvatarPreview();
     setError("");
     setSuccess("");
   }
@@ -107,7 +106,11 @@ function UserProfileContent() {
     }
     setError("");
     setSuccess("");
+    clearAvatarPreview();
+    const preview = URL.createObjectURL(file);
+    avatarPreviewRef.current = preview;
     setAvatarFile(file);
+    setAvatarPreview(preview);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
