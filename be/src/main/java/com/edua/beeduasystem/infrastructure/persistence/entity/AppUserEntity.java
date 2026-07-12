@@ -34,6 +34,12 @@ public class AppUserEntity {
     @Column(name = "full_name")
     private String fullName;
 
+    @Column(name = "avatar_url", length = 1024)
+    private String avatarUrl;
+
+    @Column(name = "contact_info", length = 500)
+    private String contactInfo;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private Subject subject;
