@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { navGroups } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -23,6 +24,7 @@ function getInitials(name: string): string {
 
 export function Sidebar({ collapsed = false, activeHref, fixed = false }: SidebarProps) {
   const { user } = useAuth();
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const position = fixed
     ? "fixed top-12 left-0 z-40 flex flex-col"
     : "flex flex-col";
@@ -37,6 +39,10 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false }: Sideba
     : user?.role === "MODERATOR"
       ? "Ng\u01b0\u1eddi ki\u1ec3m duy\u1ec7t"
       : "Gi\u00e1o vi\u00ean";
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [user?.avatarUrl]);
 
   const filteredGroups = navGroups
     .map((group) => ({
@@ -101,9 +107,17 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false }: Sideba
         </nav>
 
         <div className="mt-auto shrink-0 border-t border-[#d8d1c9] py-3">
-          <div className="flex items-center gap-2 rounded-xl px-3 py-3">
-            <div className="relative flex size-[34px] items-center justify-center rounded-xl bg-[#1f1f1f] text-xs font-semibold text-white">
-              {initials}
+          <Link
+            href="/user-profile"
+            className={`flex items-center gap-2 rounded-xl px-3 py-3 transition hover:bg-[#edeae5] ${
+              activeHref === "/user-profile" ? "bg-[#edeae5]" : ""
+            }`}
+          >
+            <div className="relative flex size-[34px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#1f1f1f] text-xs font-semibold text-white">
+              {user?.avatarUrl && !avatarFailed ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.avatarUrl} alt="" className="size-full object-cover" onError={() => setAvatarFailed(true)} />
+              ) : initials}
               <span className="absolute bottom-0 right-0 size-2 rounded-full border border-white bg-[#80cfa0]" />
             </div>
             <div className="min-w-0 flex-1">
@@ -114,7 +128,7 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false }: Sideba
                 {displayRole}{user?.subject ? ` \u00b7 ${user.subject}` : ""}
               </div>
             </div>
-          </div>
+          </Link>
         </div>
       </div>
     </aside>
