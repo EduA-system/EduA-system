@@ -49,6 +49,10 @@ type PresetBase = {
   // Điểm giá trị quan trọng (tuỳ chọn) — panel "Phân tích" còn hiện mốc thời
   // gian chung (1s, 2s…) cho MỌI preset, không phụ thuộc field này.
   analysis?: PresetAnalysis;
+  // Nút bấm nhanh (tuỳ chọn) — set thẳng 1 bộ tham số minh hoạ 1 tình huống rõ
+  // ràng (vd "Đẩy nhau" / "Hút nhau"), thay vì bắt người dùng tự dò slider mới
+  // ra được. Hiện ngay trên tab Tham số, phía trên các slider.
+  quickPresets?: { label: string; params: Record<string, number> }[];
 };
 
 /** Preset chạy trên kernel Cơ học 2D (kernel/*.ts) + SceneKonva2D. */
@@ -79,7 +83,6 @@ export type StringWavePreset = PresetBase & {
 export type WaveFieldPreset = PresetBase & {
   kind: "wave-field";
   applyParams: (p: Record<string, number>) => WaveFieldScene;
-  quickPresets?: { label: string; params: Record<string, number> }[];
 };
 
 export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset;

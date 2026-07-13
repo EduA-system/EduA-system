@@ -6,6 +6,9 @@ import type { Scene } from "./types";
 
 export type Vec2 = { x: number; y: number };
 
+/** Hằng số Coulomb thật, N·m²/C². */
+export const COULOMB_KE = 8.99e9;
+
 /** Cách đọc vị trí / vận tốc một vật từ trạng thái hiện tại của hệ. */
 export type Readers = {
   pos: (id: string) => Vec2;
@@ -70,6 +73,24 @@ export function netForces(scene: Scene, r: Readers): Record<string, Vec2> {
       case "applied": {
         // Lực ngoài không đổi.
         add(force.body, force.fx, force.fy);
+        break;
+      }
+      case "coulomb": {
+        // Coulomb: F = ke·q1·q2/r² dọc đường nối a→b (cùng công thức khoảng
+        // cách/hướng như spring), nhưng dấu NGƯỢC spring: mag > 0 (cùng dấu
+        // điện tích) → ĐẨY (a lùi theo −u, b lùi theo +u); mag < 0 → HÚT.
+        const pa = r.pos(force.a);
+        const pb = r.pos(force.b);
+        const dx = pb.x - pa.x;
+        const dy = pb.y - pa.y;
+        const rr = Math.hypot(dx, dy);
+        if (rr < 1e-9) break; // hai điện tích trùng nhau → hướng không xác định, bỏ qua
+        const ux = dx / rr;
+        const uy = dy / rr;
+        const ke = force.ke ?? COULOMB_KE;
+        const mag = (ke * force.q1 * force.q2) / (rr * rr);
+        add(force.a, -mag * ux, -mag * uy);
+        add(force.b, mag * ux, mag * uy);
         break;
       }
     }

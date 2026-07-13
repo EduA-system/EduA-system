@@ -23,7 +23,8 @@ import { useContainerSize } from "./shared/use-container-size";
 
 // Lưới/mặt đất vẽ rộng hơn khung nhìn ban đầu nhiều lần để còn phủ kín khi
 // zoom out / kéo canvas (lưới TĨNH, không tính lại theo viewport khi zoom).
-const GRID_EXTENT_FACTOR = 5;
+// Đây cũng là "vùng làm việc" pan bị khoá trong đó (xem konva-zoom.ts).
+const GRID_EXTENT_FACTOR = 7;
 
 type Vec2 = { x: number; y: number };
 type Box = { minX: number; maxX: number; minY: number; maxY: number };
@@ -208,7 +209,7 @@ export function SceneKonva2D({
     // stage (KHÔNG GIAN), không vẽ lại nội dung. Nền vẽ bằng CSS của container
     // (không phải Konva.Rect) nên khung canvas luôn phủ kín, không "trôi" theo
     // transform khi zoom/pan. ──
-    zoomActionsRef.current = attachZoomPan(stage, { width: W, height: H, onZoomChange: setZoomPct });
+    zoomActionsRef.current = attachZoomPan(stage, { width: W, height: H, onZoomChange: setZoomPct, panExtentFactor: GRID_EXTENT_FACTOR });
 
     // Lưới phủ kín canvas → không gian vô hạn. Vẽ RỘNG HƠN khung nhìn ban đầu
     // (GRID_EXTENT_FACTOR lần) để còn phủ kín khi zoom out / kéo canvas.
@@ -538,7 +539,6 @@ export function SceneKonva2D({
         percent={zoomPct}
         onZoomIn={() => zoomActionsRef.current?.in()}
         onZoomOut={() => zoomActionsRef.current?.out()}
-        onReset={() => zoomActionsRef.current?.reset()}
       />
     </div>
   );

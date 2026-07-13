@@ -29,14 +29,10 @@ export const dragRefGlobal = {
 export function SlideEditor({
   skipInitialLoad = false,
   onRetrySlide,
-  pageSidebarCollapsed = false,
-  onTogglePageSidebar,
 }: {
   skipInitialLoad?: boolean;
   /** AI-regenerate one slide (header retry button). Omitted outside the AI slide-maker flow. */
   onRetrySlide?: (slideId: string) => void;
-  pageSidebarCollapsed?: boolean;
-  onTogglePageSidebar?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomMode, setZoomMode] = useState<"fit" | number>("fit");
@@ -237,9 +233,7 @@ export function SlideEditor({
       onMouseDown={handleMouseDown}
     >
       <TopBar
-        pageSidebarCollapsed={pageSidebarCollapsed}
         showRightPanel={showRightPanel}
-        onTogglePageSidebar={onTogglePageSidebar ?? (() => undefined)}
         onToggleRightPanel={() => setShowRightPanel((value) => !value)}
         onRetrySlide={onRetrySlide}
       />

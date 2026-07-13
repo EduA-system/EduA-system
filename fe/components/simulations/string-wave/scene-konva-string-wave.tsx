@@ -27,7 +27,7 @@ import { ZoomControls } from "../shared/zoom-controls";
 import { useContainerSize } from "../shared/use-container-size";
 
 const SAMPLES = 160; // số điểm lấy mẫu dựng đường cong sóng mỗi khung hình
-const GRID_EXTENT_FACTOR = 3; // lưới vẽ rộng hơn khung nhìn ban đầu để còn chỗ kéo (pan)
+const GRID_EXTENT_FACTOR = 5; // lưới vẽ rộng hơn khung nhìn ban đầu — cũng là "vùng làm việc" pan bị khoá trong đó (xem konva-zoom.ts)
 
 type Vec2 = { x: number; y: number };
 
@@ -89,7 +89,7 @@ export function SceneKonvaStringWave({
     const layer = new Konva.Layer();
     stage.add(layer);
 
-    zoomActionsRef.current = attachZoomPan(stage, { width: W, height: H, onZoomChange: setZoomPct });
+    zoomActionsRef.current = attachZoomPan(stage, { width: W, height: H, onZoomChange: setZoomPct, panExtentFactor: GRID_EXTENT_FACTOR });
 
     // ── Lưới dọc + trục 0 (dây ở trạng thái nghỉ, nét đứt vì là đường THAM
     // CHIẾU — dây thật là đường cong động vẽ đè lên sau). Vẽ rộng hơn khung
@@ -236,7 +236,6 @@ export function SceneKonvaStringWave({
         percent={zoomPct}
         onZoomIn={() => zoomActionsRef.current?.in()}
         onZoomOut={() => zoomActionsRef.current?.out()}
-        onReset={() => zoomActionsRef.current?.reset()}
       />
     </div>
   );

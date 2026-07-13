@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Maximize2, ZoomIn, ZoomOut } from "lucide-react";
+import { ZoomIn, ZoomOut } from "lucide-react";
 
 function ZoomButton({ title, onClick, children }: { title: string; onClick: () => void; children: ReactNode }) {
   return (
@@ -21,12 +21,10 @@ export function ZoomControls({
   percent,
   onZoomIn,
   onZoomOut,
-  onReset,
 }: {
   percent: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  onReset: () => void;
 }) {
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
@@ -37,10 +35,6 @@ export function ZoomControls({
         <span className="w-11 select-none text-center font-mono text-[11px] text-slate-300">{percent}%</span>
         <ZoomButton title="Phóng to" onClick={onZoomIn}>
           <ZoomIn className="h-4 w-4" strokeWidth={2} />
-        </ZoomButton>
-        <div className="mx-0.5 h-5 w-px bg-white/10" />
-        <ZoomButton title="Về mặc định" onClick={onReset}>
-          <Maximize2 className="h-4 w-4" strokeWidth={2} />
         </ZoomButton>
       </div>
     </div>

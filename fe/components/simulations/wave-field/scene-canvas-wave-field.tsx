@@ -34,6 +34,7 @@ import { buildXSegments, canvasToWorld, compressedX, fitViewport, inverseCompres
 import { apertureFactor, computeIntensityGrid, computeInstantaneousFieldGrid, type FieldGrid, type ZoneGeometry } from "./field-grid";
 import { divergingColor, intensityColor } from "./colormap";
 import { useContainerSize } from "../shared/use-container-size";
+import { ZoomControls } from "../shared/zoom-controls";
 
 const GRID_COLS = 160;
 const GRID_ROWS = 110;
@@ -78,8 +79,7 @@ function drawBarrierBar(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: 
   }
 }
 
-function drawBarriers(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: number) => Point, scene: WaveFieldScene, s1: Point, s2: Point) {
-  const halfHeight = Math.max(scene.slitSeparation * 1.6, 60);
+function drawBarriers(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: number) => Point, scene: WaveFieldScene, s1: Point, s2: Point, halfHeight: number) {
   const gapSingle = Math.max(scene.wavelength * 0.4, 4);
   drawBarrierBar(ctx, toScreen, scene.xSingleSlit, halfHeight, [[0, gapSingle]]);
   const gapDouble = Math.max(scene.slitWidth, 4) / 2;
@@ -165,32 +165,53 @@ function drawEducationalLabels(
   void yTop;
 }
 
-function drawSemicircle(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: number) => Point, center: Point, radius: number) {
-  const samples = 28;
+/**
+ * Cung sóng bán nguyệt (forward = +x), CHỈ vẽ phần x ≤ wallX — điểm nào vượt
+ * quá tường (bị chặn) thì ngắt đoạn (moveTo lại) thay vì bỏ nguyên cả vòng,
+ * để 2 cạnh trên/dưới cung (chưa chạm tường) vẫn tiếp tục hiện ra bình thường
+ * thay vì biến mất sớm cùng lúc với phần giữa (điểm đã chạm tường).
+ */
+function drawSemicircleClippedAtWall(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: number) => Point, center: Point, radius: number, wallX: number) {
+  const samples = 40;
+  let started = false;
   ctx.beginPath();
   for (let i = 0; i <= samples; i++) {
     const theta = -Math.PI / 2 + (Math.PI * i) / samples; // forward = +x (quy ước cố định của module này)
     const wx = center.x + radius * Math.cos(theta);
     const wy = center.y + radius * Math.sin(theta);
-    const sp = toScreen(wx, wy);
-    if (i === 0) ctx.moveTo(sp.x, sp.y);
-    else ctx.lineTo(sp.x, sp.y);
+    if (wx <= wallX) {
+      const sp = toScreen(wx, wy);
+      if (!started) {
+        ctx.moveTo(sp.x, sp.y);
+        started = true;
+      } else {
+        ctx.lineTo(sp.x, sp.y);
+      }
+    } else {
+      started = false;
+    }
   }
   ctx.stroke();
 }
 
-/** Vẽ các đỉnh sóng (cách nhau λ) của 1 nguồn — CHỈ những cung có bán kính > 0 (đã "kích hoạt") và ≤ cap. */
-function drawArcsFrom(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: number) => Point, center: Point, reach: number, wavelength: number, cap: number, color: string) {
+/**
+ * Vẽ các đỉnh sóng (cách nhau λ) của 1 nguồn — sóng tiếp tục lan ra (không
+ * biến mất giữa chừng), chỉ bị CẮT ĐÚNG TẠI TƯỜNG (wallX, xem hàm trên) chứ
+ * không ẩn cả cung theo bán kính như trước (bug cũ: cạnh trên/dưới — vốn
+ * chưa chạm tường — cũng bị ẩn sớm cùng lúc với đỉnh cung). `ringSpan` chỉ
+ * giới hạn SỐ VÒNG vẽ (hiệu năng), không phải nơi sóng "biến mất".
+ */
+function drawArcsFrom(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: number) => Point, center: Point, reach: number, wavelength: number, ringSpan: number, wallX: number, color: string) {
   if (reach <= 0) return;
   const nMax = Math.floor(reach / wavelength);
-  const nMin = Math.max(0, Math.ceil((reach - cap) / wavelength));
+  const nMin = Math.max(0, Math.ceil((reach - ringSpan) / wavelength));
   ctx.strokeStyle = color;
   ctx.lineWidth = 1.4;
   ctx.globalAlpha = 0.7;
   for (let n = nMin; n <= nMax; n++) {
     const radius_n = reach - n * wavelength;
-    if (radius_n <= 0 || radius_n > cap) continue;
-    drawSemicircle(ctx, toScreen, center, radius_n);
+    if (radius_n <= 0 || radius_n > ringSpan) continue;
+    drawSemicircleClippedAtWall(ctx, toScreen, center, radius_n, wallX);
   }
   ctx.globalAlpha = 1;
 }
@@ -198,19 +219,21 @@ function drawArcsFrom(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: nu
 /**
  * Mặt sóng CÓ NHÂN QUẢ: S kích hoạt tại t=0 (mốc gốc). S1 kích hoạt tại
  * activationTimeS1 = distance(S,S1)/c — S2 tương tự. KHÔNG dùng chung 1 mốc
- * cho cả 3 nguồn (đúng yêu cầu mục 7). Cung từ S1/S2 bị CHẶN bởi màn (cap =
- * đúng khoảng cách khe kép→màn, không hơn) — không vẽ tràn qua bên phải màn.
+ * cho cả 3 nguồn (đúng yêu cầu mục 7). Cung từ S1/S2 bị CHẶN bởi màn (cắt
+ * đúng tại đường màn) — không hiện tràn qua bên phải màn.
  */
-function drawAnimatedArcs(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: number) => Point, scene: WaveFieldScene, source: Point, s1: Point, s2: Point, t: number) {
+function drawAnimatedArcs(ctx: CanvasRenderingContext2D, toScreen: (x: number, y: number) => Point, scene: WaveFieldScene, source: Point, s1: Point, s2: Point, t: number, halfHeight: number) {
   const v = waveSpeed(scene.wavelength, scene.frequency);
-  const capS = Math.max(scene.xSlits - scene.xSingleSlit, 1);
-  drawArcsFrom(ctx, toScreen, source, v * t, scene.wavelength, capS, "#f9a8d4");
+  const wallSlits = scene.xSlits;
+  const ringSpanS = Math.hypot(scene.xSlits - scene.xSingleSlit, halfHeight);
+  drawArcsFrom(ctx, toScreen, source, v * t, scene.wavelength, ringSpanS, wallSlits, "#f9a8d4");
 
   const tS1 = activationTime(source, s1, v);
   const tS2 = activationTime(source, s2, v);
-  const capScreen = Math.max(scene.screenDistance, 1);
-  drawArcsFrom(ctx, toScreen, s1, v * (t - tS1), scene.wavelength, capScreen, "#f9a8d4");
-  drawArcsFrom(ctx, toScreen, s2, v * (t - tS2), scene.wavelength, capScreen, "#f0abfc");
+  const wallScreen = scene.xSlits + scene.screenDistance;
+  const ringSpanScreen = Math.hypot(scene.screenDistance, halfHeight);
+  drawArcsFrom(ctx, toScreen, s1, v * (t - tS1), scene.wavelength, ringSpanScreen, wallScreen, "#f9a8d4");
+  drawArcsFrom(ctx, toScreen, s2, v * (t - tS2), scene.wavelength, ringSpanScreen, wallScreen, "#f0abfc");
 }
 
 /** Cường độ tại 1 điểm màn — dùng ΔL CHÍNH XÁC (không xấp xỉ theta), nhân bao nhiễu xạ nếu bật. */
@@ -369,6 +392,7 @@ export function SceneCanvasWaveField({
   onParamsChange?: (patch: Record<string, number>) => void;
 }) {
   const { ref: containerRef, size } = useContainerSize<HTMLDivElement>();
+  const transformRef = useRef<HTMLDivElement>(null);
   const staticRef = useRef<HTMLCanvasElement>(null);
   const dynamicRef = useRef<HTMLCanvasElement>(null);
   const runningRef = useRef(running);
@@ -385,9 +409,17 @@ export function SceneCanvasWaveField({
   }, [onParamsChange]);
 
   const pYRef = useRef(0);
-  const dragTargetRef = useRef<"p" | "screen" | null>(null);
-  const [fps, setFps] = useState(0);
+  const dragTargetRef = useRef<"p" | "screen" | "pan" | null>(null);
   const [readout, setReadout] = useState<Readout | null>(null);
+
+  // Zoom/pan CSS-level (thuần transform trên div bọc 2 canvas) — giống tinh
+  // thần konva-zoom.ts (chỉ scale/dịch khung đã vẽ sẵn, không vẽ lại theo
+  // zoom) nhưng áp cho Canvas thuần thay vì Konva.Stage. Pan bị khoá trong
+  // đúng "vùng làm việc" (xem clampPan bên dưới) — kéo được, không lệch xa.
+  const zoomRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+  const [zoomPct, setZoomPct] = useState(100);
+  const zoomActionsRef = useRef<{ in: () => void; out: () => void; reset: () => void } | null>(null);
 
   useEffect(() => {
     pYRef.current = 0;
@@ -419,9 +451,12 @@ export function SceneCanvasWaveField({
     const geo: ZoneGeometry = { source, s1, s2, xSingleSlit: scene.xSingleSlit, xSlits: scene.xSlits };
     const xScreen = scene.xSlits + scene.screenDistance;
     const i0 = (scene.wavelength * scene.screenDistance) / scene.slitSeparation;
-    const ySpan = Math.max(scene.slitSeparation * 1.2, i0 * 5);
-    const xMax = xScreen + Math.max(30, scene.wavelength * 2);
-    const xMin = scene.xSingleSlit - Math.max(40, scene.wavelength * 3);
+    // Biên khung nhìn nới rộng hơn (so với sát nội dung) — cho thêm khoảng
+    // trống xung quanh để pan/zoom có chỗ khám phá, đồng bộ với các renderer
+    // Konva khác (xem GRID_EXTENT_FACTOR trong wave/scene-konva-wave-2d.tsx…).
+    const ySpan = Math.max(scene.slitSeparation * 1.5, i0 * 6);
+    const xMax = xScreen + Math.max(40, scene.wavelength * 3);
+    const xMin = scene.xSingleSlit - Math.max(55, scene.wavelength * 4);
     const vp = fitViewport(drawWidth, hgt, xMin, xMax, -ySpan, ySpan, 30);
 
     // ── Bố cục hiển thị: nén trục x (CHỈ ở chế độ Sơ đồ giáo dục — heatmap
@@ -441,6 +476,10 @@ export function SceneCanvasWaveField({
     const ampNorm = 2 * scene.amplitude; // chuẩn hoá CỐ ĐỊNH theo lý thuyết (2A) — tránh singularity 1/√r gần nguồn khi bật suy giảm chi phối chuẩn hoá.
     const yTop = canvasToWorld(0, 0, vp).y;
     const yBottom = canvasToWorld(0, vp.height, vp).y;
+    // Rào chắn kéo dài hết chiều cao khung nhìn (thay vì chiều dài cố định nhỏ)
+    // — trông như tường thật, và cũng là biên để CẮT sóng khi nó lan tới (xem
+    // drawArcsFrom/drawSemicircleClippedAtWall).
+    const barrierHalfHeight = Math.max(Math.abs(yTop), Math.abs(yBottom)) * 1.02;
 
     const drawStatic = () => {
       sctx.fillStyle = "#0f172a";
@@ -451,7 +490,7 @@ export function SceneCanvasWaveField({
         blitGrid(sctx, grid, drawWidth, hgt, (v) => intensityColor(Math.min(1, v / (ampNorm * ampNorm))));
       }
 
-      drawBarriers(sctx, toScreen, scene, s1, s2);
+      drawBarriers(sctx, toScreen, scene, s1, s2, barrierHalfHeight);
       if (scene.displayMode === "educational") drawEducationalLabels(sctx, toScreen, scene, s1, s2, yTop, yBottom, source);
 
       // Propagation mode: màn/biểu đồ đổi theo t nên vẽ ở lớp DYNAMIC (mỗi khung
@@ -469,7 +508,7 @@ export function SceneCanvasWaveField({
         const grid = computeInstantaneousFieldGrid(GRID_COLS, GRID_ROWS, vp, geo, t, scene);
         blitGrid(dctx, grid, drawWidth, hgt, (v) => divergingColor(Math.max(-1, Math.min(1, v / ampNorm))));
       } else if (scene.displayMode === "educational") {
-        drawAnimatedArcs(dctx, toScreen, scene, source, s1, s2, t);
+        drawAnimatedArcs(dctx, toScreen, scene, source, s1, s2, t, barrierHalfHeight);
       }
 
       if (scene.propagationMode) {
@@ -504,28 +543,81 @@ export function SceneCanvasWaveField({
     drawStatic();
     drawDynamic(simTime);
 
+    // ── Zoom/pan: transform CSS thuần trên div bọc 2 canvas (transformOrigin
+    // 0 0) — KHÔNG vẽ lại nội dung, chỉ scale/dịch khung đã có sẵn, giống
+    // konva-zoom.ts. Toạ độ con trỏ đo trên `container` (KHÔNG bị transform)
+    // rồi quy đổi ngược về không gian canvas gốc qua panRef/zoomRef. ──
+    const transformEl = transformRef.current;
+    const applyTransform = () => {
+      if (transformEl) transformEl.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${zoomRef.current})`;
+    };
+    const minZoom = 0.8, maxZoom = 6; // cho phép zoom out một chút để thấy rộng hơn khung gốc
+    // Khoá pan trong đúng "vùng làm việc" = khung nội dung đã fit (không có
+    // lề lưới thêm như các renderer Konva) — kéo được, nhưng không lệch xa ra
+    // ngoài khung nhìn đã dựng. Ở đúng minZoom (chưa zoom in), không có phần
+    // dư để pan (khoảng hợp lệ co về {0,0}) — mở rộng dần khi zoom in.
+    const clampPan = (pan: Point, zoom: number): Point => ({
+      x: Math.min(0, Math.max(w * (1 - zoom), pan.x)),
+      y: Math.min(0, Math.max(hgt * (1 - zoom), pan.y)),
+    });
+    const applyZoom = (nextZoom: number, focal?: Point) => {
+      const clamped = Math.min(maxZoom, Math.max(minZoom, nextZoom));
+      const f = focal ?? { x: w / 2, y: hgt / 2 };
+      const worldUnderFocal = { x: (f.x - panRef.current.x) / zoomRef.current, y: (f.y - panRef.current.y) / zoomRef.current };
+      zoomRef.current = clamped;
+      panRef.current = clampPan({ x: f.x - worldUnderFocal.x * clamped, y: f.y - worldUnderFocal.y * clamped }, clamped);
+      applyTransform();
+      setZoomPct(Math.round(clamped * 100));
+    };
+    zoomActionsRef.current = {
+      in: () => applyZoom(zoomRef.current * 1.3),
+      out: () => applyZoom(zoomRef.current / 1.3),
+      reset: () => {
+        zoomRef.current = 1;
+        panRef.current = { x: 0, y: 0 };
+        applyTransform();
+        setZoomPct(100);
+      },
+    };
+    applyTransform();
+
     // ── Kéo P (trên màn) hoặc kéo MÀN (đổi D) — phân biệt theo khoảng cách
-    // con trỏ tới marker P hiện tại (ưu tiên) so với đường màn. ──
+    // con trỏ tới marker P hiện tại (ưu tiên) so với đường màn; nếu không
+    // trúng cái nào thì kéo nền để PAN (đã khoá trong vùng làm việc). ──
     const getPointerCanvas = (evt: PointerEvent): Point => {
-      const rect = dynamicCanvas.getBoundingClientRect();
-      return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+      const rect = container.getBoundingClientRect();
+      const outer = { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+      return { x: (outer.x - panRef.current.x) / zoomRef.current, y: (outer.y - panRef.current.y) / zoomRef.current };
     };
     const screenScreenX = toScreenX(xScreen);
+    const panStart = { x: 0, y: 0, panX: 0, panY: 0 };
     const onPointerDown = (evt: PointerEvent) => {
       const pc = getPointerCanvas(evt);
       const pMarker = toScreen(xScreen, pYRef.current);
       const distToP = Math.hypot(pc.x - pMarker.x, pc.y - pMarker.y);
-      dragTargetRef.current = distToP < 16 ? "p" : Math.abs(pc.x - screenScreenX) < 14 ? "screen" : null;
-      if (!dragTargetRef.current) return;
+      dragTargetRef.current = distToP < 16 ? "p" : Math.abs(pc.x - screenScreenX) < 14 ? "screen" : "pan";
       dynamicCanvas.setPointerCapture(evt.pointerId);
       if (dragTargetRef.current === "p") {
         const world = canvasToWorld(pc.x, pc.y, vp);
         pYRef.current = Math.max(-ySpan, Math.min(ySpan, world.y));
         drawStatic();
+      } else if (dragTargetRef.current === "pan") {
+        panStart.x = evt.clientX;
+        panStart.y = evt.clientY;
+        panStart.panX = panRef.current.x;
+        panStart.panY = panRef.current.y;
       }
     };
     const onPointerMove = (evt: PointerEvent) => {
       if (!dragTargetRef.current) return;
+      if (dragTargetRef.current === "pan") {
+        panRef.current = clampPan(
+          { x: panStart.panX + (evt.clientX - panStart.x), y: panStart.panY + (evt.clientY - panStart.y) },
+          zoomRef.current,
+        );
+        applyTransform();
+        return;
+      }
       const pc = getPointerCanvas(evt);
       if (dragTargetRef.current === "p") {
         const world = canvasToWorld(pc.x, pc.y, vp);
@@ -541,28 +633,26 @@ export function SceneCanvasWaveField({
       dragTargetRef.current = null;
       dynamicCanvas.releasePointerCapture(evt.pointerId);
     };
+    const onWheel = (evt: WheelEvent) => {
+      evt.preventDefault();
+      const rect = container.getBoundingClientRect();
+      const focal = { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+      const factor = 1.08;
+      applyZoom(evt.deltaY > 0 ? zoomRef.current / factor : zoomRef.current * factor, focal);
+    };
     dynamicCanvas.addEventListener("pointerdown", onPointerDown);
     dynamicCanvas.addEventListener("pointermove", onPointerMove);
     dynamicCanvas.addEventListener("pointerup", onPointerUp);
+    dynamicCanvas.addEventListener("wheel", onWheel, { passive: false });
 
     let raf = 0;
     let lastTime = performance.now();
-    let fpsAcc = 0, fpsCount = 0, fpsLastReport = lastTime;
     const animated = scene.displayMode === "instantaneous" || scene.displayMode === "educational" || scene.propagationMode;
     const loop = (now: number) => {
       const dtReal = Math.min((now - lastTime) / 1000, 1 / 30);
       lastTime = now;
       if (runningRef.current && animated) simTime += dtReal * speedRef.current;
       drawDynamic(simTime);
-
-      fpsAcc += dtReal;
-      fpsCount++;
-      if (now - fpsLastReport > 400) {
-        setFps(Math.round(fpsCount / Math.max(fpsAcc, 1e-6)));
-        fpsAcc = 0;
-        fpsCount = 0;
-        fpsLastReport = now;
-      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -572,18 +662,23 @@ export function SceneCanvasWaveField({
       dynamicCanvas.removeEventListener("pointerdown", onPointerDown);
       dynamicCanvas.removeEventListener("pointermove", onPointerMove);
       dynamicCanvas.removeEventListener("pointerup", onPointerUp);
+      dynamicCanvas.removeEventListener("wheel", onWheel);
     };
   }, [scene, size, resetSignal, seekToken, seekSeconds, markLabel, onRunningChange, containerRef]);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg bg-[#0f172a]">
-      <div ref={containerRef} className="relative h-full w-full">
-        <canvas ref={staticRef} className="absolute inset-0" />
-        <canvas ref={dynamicRef} className="absolute inset-0 touch-none" />
+      <div ref={containerRef} className="relative h-full w-full overflow-hidden">
+        <div ref={transformRef} className="absolute inset-0" style={{ transformOrigin: "0 0" }}>
+          <canvas ref={staticRef} className="absolute inset-0" />
+          <canvas ref={dynamicRef} className="absolute inset-0 touch-none" />
+        </div>
       </div>
-      <div className="pointer-events-none absolute left-3 top-3 rounded-[6px] bg-black/40 px-2 py-1 font-mono text-[10px] text-slate-300">
-        {fps} FPS
-      </div>
+      <ZoomControls
+        percent={zoomPct}
+        onZoomIn={() => zoomActionsRef.current?.in()}
+        onZoomOut={() => zoomActionsRef.current?.out()}
+      />
       {readout && (
         <div className="pointer-events-none absolute bottom-3 left-3 space-y-0.5 rounded-[8px] bg-black/50 px-3 py-2 font-mono text-[10.5px] leading-snug text-slate-200">
           <div>R1 = {readout.R1.toFixed(1)} · R2 = {readout.R2.toFixed(1)}</div>

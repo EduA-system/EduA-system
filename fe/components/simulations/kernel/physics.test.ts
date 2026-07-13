@@ -178,6 +178,104 @@ describe("Lực kéo không đổi (định luật II Newton)", () => {
   });
 });
 
+describe("Lực Coulomb (nhiễm điện đẩy/hút)", () => {
+  const ke = 8.99e9;
+
+  it("cùng dấu điện tích → đẩy nhau ra xa, cơ năng bảo toàn", () => {
+    const m = 1;
+    const q = 1e-6; // 1 µC mỗi vật, cùng dấu
+    const r0 = 1;
+    const scene: Scene = {
+      bodies: [
+        { id: "a", x: -r0 / 2, y: 0, vx: 0, vy: 0, mass: m },
+        { id: "b", x: r0 / 2, y: 0, vx: 0, vy: 0, mass: m },
+      ],
+      forces: [{ kind: "coulomb", a: "a", b: "b", q1: q, q2: q }],
+      constraints: [],
+    };
+    const energy = (s: StateVec): number => {
+      const pa = readPosition(s, "a"), pb = readPosition(s, "b");
+      const va = readVelocity(s, "a"), vb = readVelocity(s, "b");
+      const ke2 = 0.5 * m * (va.x * va.x + va.y * va.y) + 0.5 * m * (vb.x * vb.x + vb.y * vb.y);
+      const r = Math.hypot(pb.x - pa.x, pb.y - pa.y);
+      return ke2 + (ke * q * q) / r;
+    };
+    const E0 = energy(run(scene, 0).s);
+    let maxDev = 0;
+    let rEnd = r0;
+    run(scene, 5, (s) => {
+      maxDev = Math.max(maxDev, Math.abs(energy(s) - E0) / E0);
+      const pa = readPosition(s, "a"), pb = readPosition(s, "b");
+      rEnd = Math.hypot(pb.x - pa.x, pb.y - pa.y);
+    });
+    expect(maxDev).toBeLessThan(0.01);
+    expect(rEnd).toBeGreaterThan(r0); // đẩy nhau → khoảng cách tăng
+  });
+
+  it("trái dấu điện tích → hút nhau lại gần, cơ năng bảo toàn", () => {
+    const m = 1;
+    const q = 1e-6;
+    const r0 = 1;
+    const scene: Scene = {
+      bodies: [
+        { id: "a", x: -r0 / 2, y: 0, vx: 0, vy: 0, mass: m },
+        { id: "b", x: r0 / 2, y: 0, vx: 0, vy: 0, mass: m },
+      ],
+      forces: [{ kind: "coulomb", a: "a", b: "b", q1: q, q2: -q }],
+      constraints: [],
+    };
+    const energy = (s: StateVec): number => {
+      const pa = readPosition(s, "a"), pb = readPosition(s, "b");
+      const va = readVelocity(s, "a"), vb = readVelocity(s, "b");
+      const ke2 = 0.5 * m * (va.x * va.x + va.y * va.y) + 0.5 * m * (vb.x * vb.x + vb.y * vb.y);
+      const r = Math.hypot(pb.x - pa.x, pb.y - pa.y);
+      return ke2 + (ke * q * -q) / r;
+    };
+    const E0 = energy(run(scene, 0).s);
+    let maxDev = 0;
+    let rEnd = r0;
+    run(scene, 5, (s) => {
+      maxDev = Math.max(maxDev, Math.abs(energy(s) - E0) / E0);
+      const pa = readPosition(s, "a"), pb = readPosition(s, "b");
+      rEnd = Math.hypot(pb.x - pa.x, pb.y - pa.y);
+    });
+    expect(maxDev).toBeLessThan(0.01);
+    expect(rEnd).toBeLessThan(r0); // hút nhau → khoảng cách giảm
+  });
+
+  // Hai quả cầu nhiễm điện CÙNG dấu, treo bằng 2 dây tại CÙNG một điểm — đẩy
+  // nhau lệch ra, ổn định ở góc θ thoả tanθ = F_Coulomb/(mg). Góc nhỏ (sinθ≈θ,
+  // r≈2Lθ) → công thức closed-form kinh điển: θ³ = ke·q²/(4·m·g·L²).
+  it("hai quả cầu treo cùng điểm, cùng dấu: góc lệch cân bằng khớp θ³ = ke·q²/(4mgL²)", () => {
+    const g = 9.8, L = 0.2, m = 0.001, q = 2e-8; // 1g, 0.02µC — góc nhỏ ~7.5°
+    const th0 = 0.05; // lệch nhỏ ban đầu để Coulomb có hướng xác định ngay từ đầu
+    const px = 0, py = 1;
+    const c = 0.02; // lực cản mạnh (quá tắt dần) để hệ ổn định về cân bằng, không dao động mãi
+    const scene: Scene = {
+      bodies: [
+        { id: "pivot", x: px, y: py, vx: 0, vy: 0, mass: 1, fixed: true },
+        { id: "bob1", x: px - L * Math.sin(th0), y: py - L * Math.cos(th0), vx: 0, vy: 0, mass: m },
+        { id: "bob2", x: px + L * Math.sin(th0), y: py - L * Math.cos(th0), vx: 0, vy: 0, mass: m },
+      ],
+      forces: [
+        { kind: "gravity", g },
+        { kind: "coulomb", a: "bob1", b: "bob2", q1: q, q2: q },
+        { kind: "drag", body: "bob1", c },
+        { kind: "drag", body: "bob2", c },
+      ],
+      constraints: [
+        { kind: "rod", a: "pivot", b: "bob1", length: L },
+        { kind: "rod", a: "pivot", b: "bob2", length: L },
+      ],
+    };
+    const { s } = run(scene, 8);
+    const x1 = readPosition(s, "bob1").x;
+    const thFinal = Math.asin(Math.abs(px - x1) / L);
+    const thExpected = Math.cbrt((8.99e9 * q * q) / (4 * m * g * L * L));
+    expect(Math.abs(thFinal - thExpected) / thExpected).toBeLessThan(0.1);
+  });
+});
+
 describe("Cộng hưởng con lắc ghép qua lò xo", () => {
   const g = 9.8;
   const L = 1.2;

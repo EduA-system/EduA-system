@@ -10,7 +10,7 @@
  *   bản gốc bất khả xâm phạm, luôn revert được.
  */
 
-import { forwardRef, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import {
   Search,
@@ -19,11 +19,9 @@ import {
   Pause,
   RotateCcw,
   CheckCircle2,
-  PanelLeft,
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { useGenieSidebarCollapse } from "@/components/layout/genie/useGenieSidebarCollapse";
 import { ParamPanel } from "@/components/simulations/param-panel";
 import { LandmarksPanel, type JumpMark } from "@/components/simulations/landmarks-panel";
 import { PRESETS, type Preset, type Domain } from "@/components/simulations/presets";
@@ -163,28 +161,6 @@ function Thumb({ id }: { id: string }) {
           <circle cx="120" cy="60" r="4" fill="#f472b6" />
         </>,
       );
-    case "giao-thoa-anh-sang":
-      return frame(
-        <>
-          <line x1="20" y1="60" x2="55" y2="60" stroke="#facc15" strokeWidth="1.5" />
-          <circle cx="20" cy="60" r="4" fill="#facc15" />
-          <line x1="65" y1="15" x2="65" y2="45" stroke="#334155" strokeWidth="5" />
-          <line x1="65" y1="52" x2="65" y2="68" stroke="#334155" strokeWidth="5" />
-          <line x1="65" y1="75" x2="65" y2="105" stroke="#334155" strokeWidth="5" />
-          {[16, 28, 40].map((r) => (
-            <circle key={`p${r}`} cx="65" cy="48" r={r} fill="none" stroke="#475569" strokeWidth="1" />
-          ))}
-          {[16, 28, 40].map((r) => (
-            <circle key={`q${r}`} cx="65" cy="72" r={r} fill="none" stroke="#475569" strokeWidth="1" />
-          ))}
-          <line x1="65" y1="48" x2="180" y2="60" stroke="#f87171" strokeWidth="1" opacity="0.6" />
-          <line x1="65" y1="72" x2="180" y2="60" stroke="#f87171" strokeWidth="1" opacity="0.6" />
-          <line x1="178" y1="10" x2="178" y2="110" stroke="#e2e8f0" strokeWidth="3" />
-          {[16, 34, 60, 86, 104].map((y, i) => (
-            <line key={y} x1="176" y1={y} x2="180" y2={y} stroke={i % 2 === 0 ? "#f87171" : "#60a5fa"} strokeWidth="5" />
-          ))}
-        </>,
-      );
     case "giao-thoa-anh-sang-day-du":
       return frame(
         <>
@@ -241,6 +217,38 @@ function Thumb({ id }: { id: string }) {
           <path d="M86 64 l16 0 m-4 -4 l4 4 l-4 4" fill="none" stroke="#34d399" strokeWidth="2" />
         </>,
       );
+    case "nhiem-dien-day":
+      return frame(
+        <>
+          <line x1="70" y1="15" x2="130" y2="15" stroke="#475569" strokeWidth="3" />
+          <circle cx="100" cy="15" r="3" fill="#94a3b8" />
+          <line x1="100" y1="15" x2="66" y2="86" stroke="#94a3b8" strokeWidth="2" />
+          <line x1="100" y1="15" x2="134" y2="86" stroke="#94a3b8" strokeWidth="2" />
+          <circle cx="66" cy="86" r="9" fill="#f472b6" />
+          <circle cx="134" cy="86" r="9" fill="#f472b6" />
+          <text x="61" y="90" fontSize="11" fontWeight="bold" fill="#0f172a">+</text>
+          <text x="129" y="90" fontSize="11" fontWeight="bold" fill="#0f172a">+</text>
+          <path d="M84 70 L96 70" stroke="#34d399" strokeWidth="2" strokeLinecap="round" />
+          <path d="M92 66 L96 70 L92 74" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M116 70 L104 70" stroke="#34d399" strokeWidth="2" strokeLinecap="round" />
+          <path d="M108 66 L104 70 L108 74" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </>,
+      );
+    case "nhiem-dien-hut":
+      return frame(
+        <>
+          <line x1="30" y1="15" x2="70" y2="15" stroke="#475569" strokeWidth="3" />
+          <line x1="130" y1="15" x2="170" y2="15" stroke="#475569" strokeWidth="3" />
+          <line x1="50" y1="15" x2="50" y2="95" stroke="#475569" strokeWidth="1" strokeDasharray="3 3" />
+          <line x1="150" y1="15" x2="150" y2="95" stroke="#475569" strokeWidth="1" strokeDasharray="3 3" />
+          <line x1="50" y1="15" x2="65" y2="90" stroke="#94a3b8" strokeWidth="2" />
+          <line x1="150" y1="15" x2="135" y2="90" stroke="#94a3b8" strokeWidth="2" />
+          <circle cx="65" cy="90" r="9" fill="#f472b6" />
+          <circle cx="135" cy="90" r="9" fill="#60a5fa" />
+          <text x="61" y="110" fontSize="11" fontWeight="bold" fill="#e2e8f0">1</text>
+          <text x="131" y="110" fontSize="11" fontWeight="bold" fill="#e2e8f0">2</text>
+        </>,
+      );
     default: {
       const icons: Record<string, string> = {
         ohm: "M30 60h30l10-25 20 50 10-25h70",
@@ -281,26 +289,6 @@ function Badge({
   );
 }
 
-/* ─────────────────────────── Nút ẩn/hiện thanh điều hướng ─────────────────────────── */
-
-const SidebarToggle = forwardRef<HTMLButtonElement, { collapsed: boolean; onToggle: () => void }>(
-  function SidebarToggle({ collapsed, onToggle }, ref) {
-    return (
-      <button
-        ref={ref}
-        type="button"
-        onClick={onToggle}
-        title={collapsed ? "Hiện thanh điều hướng" : "Ẩn thanh điều hướng"}
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-150 ease-out ${
-          collapsed ? "text-[#6b6b6b] hover:bg-[#f7f3ee]" : "bg-[#f6eadf] text-[#c96545]"
-        }`}
-      >
-        <PanelLeft className="h-[18px] w-[18px]" strokeWidth={2} />
-      </button>
-    );
-  },
-);
-
 /* ─────────────────────────── Chip lọc theo lĩnh vực ─────────────────────────── */
 
 function DomainChip({
@@ -336,15 +324,6 @@ export default function MoPhongHubPage() {
   const [selected, setSelected] = useState<Preset | null>(null);
   const [domainFilter, setDomainFilter] = useState<Set<Domain>>(new Set(DOMAINS));
   const [query, setQuery] = useState("");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const sidebarWrapperRef = useRef<HTMLDivElement>(null);
-  const sidebarToggleRef = useRef<HTMLButtonElement>(null);
-  const { overlay: genieOverlay, isAnimating: sidebarAnimating, toggle: toggleGenieSidebar } =
-    useGenieSidebarCollapse({
-      sidebarRef: sidebarWrapperRef,
-      toggleButtonRef: sidebarToggleRef,
-      onSettled: setSidebarCollapsed,
-    });
 
   const toggleDomain = (d: Domain) => {
     setDomainFilter((prev) => {
@@ -372,21 +351,13 @@ export default function MoPhongHubPage() {
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
-      <div ref={sidebarWrapperRef} className="flex shrink-0" style={{ opacity: sidebarAnimating ? 0 : 1 }}>
-        <Sidebar collapsed={sidebarCollapsed} activeHref="/mo-phong-vat-ly" />
-      </div>
-      {genieOverlay}
+      <Sidebar activeHref="/mo-phong-vat-ly" />
 
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header + thanh lọc nằm ngang */}
         <header className="shrink-0 border-b border-[#e8e2d9] bg-white px-8 py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <SidebarToggle
-                ref={sidebarToggleRef}
-                collapsed={sidebarCollapsed}
-                onToggle={() => toggleGenieSidebar(sidebarCollapsed)}
-              />
               <div>
                 <h1 className="font-libertine text-2xl font-bold text-[#171717]">Thư viện mô phỏng Vật lý</h1>
                 <p className="mt-1 text-sm text-[#6b6b6b]">{total} mô phỏng • chọn để xem & tuỳ chỉnh</p>
@@ -525,25 +496,14 @@ function LegendBox({ items }: { items: LegendItem[] }) {
   );
 }
 
-function WaveLegend({ scene }: { scene: WaveScene }) {
-  const isLight = scene.screenDistance != null;
-  const maxLabel = scene.labels?.maxima ?? "CĐ";
-  const minLabel = scene.labels?.minima ?? "CT";
-  const items: LegendItem[] = isLight
-    ? [
-        { swatch: lineSwatch("#f87171"), label: `${maxLabel} — Vân sáng (2 sóng cùng pha)` },
-        { swatch: dashSwatch("#60a5fa"), label: `${minLabel} — Vân tối (2 sóng ngược pha)` },
-        { swatch: dotSwatch("#facc15"), label: "S — khe hẹp tạo nguồn kết hợp" },
-        { swatch: dotSwatch("#f472b6"), label: "S1, S2 — 2 khe Y-âng (nguồn kết hợp)" },
-        { swatch: lineSwatch("#e2e8f0"), label: "Màn quan sát — vị trí vân đánh dấu chính xác, không xấp xỉ" },
-      ]
-    : [
-        { swatch: lineSwatch("#f87171"), label: `${maxLabel} — Cực đại (2 sóng cùng pha)` },
-        { swatch: dashSwatch("#60a5fa"), label: `${minLabel} — Cực tiểu (2 sóng ngược pha)` },
-        { swatch: dotSwatch("#f472b6"), label: "S1, S2 — nguồn sóng kết hợp" },
-        { swatch: dotSwatch("#f87171"), label: "Điểm giao cùng pha (đỉnh gặp đỉnh / đáy gặp đáy)" },
-        { swatch: dotSwatch("#60a5fa"), label: "Điểm giao ngược pha (đỉnh gặp đáy)" },
-      ];
+function WaveLegend() {
+  const items: LegendItem[] = [
+    { swatch: lineSwatch("#f87171"), label: "CĐ — Cực đại (2 sóng cùng pha)" },
+    { swatch: dashSwatch("#60a5fa"), label: "CT — Cực tiểu (2 sóng ngược pha)" },
+    { swatch: dotSwatch("#f472b6"), label: "S1, S2 — nguồn sóng kết hợp" },
+    { swatch: dotSwatch("#f87171"), label: "Điểm giao cùng pha (đỉnh gặp đỉnh / đáy gặp đáy)" },
+    { swatch: dotSwatch("#60a5fa"), label: "Điểm giao ngược pha (đỉnh gặp đáy)" },
+  ];
   return <LegendBox items={items} />;
 }
 
@@ -584,15 +544,6 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
   const [running, setRunning] = useState(true);
   const [resetSignal, setResetSignal] = useState(0);
   const [speed, setSpeed] = useState(1);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const sidebarWrapperRef = useRef<HTMLDivElement>(null);
-  const sidebarToggleRef = useRef<HTMLButtonElement>(null);
-  const { overlay: genieOverlay, isAnimating: sidebarAnimating, toggle: toggleGenieSidebar } =
-    useGenieSidebarCollapse({
-      sidebarRef: sidebarWrapperRef,
-      toggleButtonRef: sidebarToggleRef,
-      onSettled: setSidebarCollapsed,
-    });
 
   const [aiState, setAiState] = useState<AiState>("idle");
   const [aiPrompt, setAiPrompt] = useState("");
@@ -643,19 +594,11 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
-      <div ref={sidebarWrapperRef} className="flex shrink-0" style={{ opacity: sidebarAnimating ? 0 : 1 }}>
-        <Sidebar collapsed={sidebarCollapsed} activeHref="/mo-phong-vat-ly" />
-      </div>
-      {genieOverlay}
+      <Sidebar activeHref="/mo-phong-vat-ly" />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top bar */}
         <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[#e8e2d9] bg-white px-4">
-          <SidebarToggle
-            ref={sidebarToggleRef}
-            collapsed={sidebarCollapsed}
-            onToggle={() => toggleGenieSidebar(sidebarCollapsed)}
-          />
           <button
             onClick={onBack}
             className="flex items-center gap-1.5 text-[13px] font-medium text-[#6b6b6b] transition-colors duration-150 ease-out hover:text-[#171717]"
@@ -687,7 +630,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
         <div className="flex flex-1 overflow-hidden">
           {/* Sim stage — trải kín không gian dành cho (canvas tự đo & lấp đầy,
               xem shared/use-container-size.ts), chỉ chừa lề nhỏ quanh khung. */}
-          <div className="flex flex-1 flex-col overflow-hidden p-3">
+          <div className="flex flex-1 flex-col overflow-hidden p-2">
             <div className="relative min-h-0 flex-1">
               <div className="absolute inset-0 overflow-hidden rounded-[16px] border border-[#e8e2d9] shadow-sm">
                 {preset.kind === "wave" ? (
@@ -746,24 +689,24 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
               </div>
 
               {/* Floating tool panel */}
-              <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center">
-                <div className="pointer-events-auto flex items-center gap-1 rounded-[14px] border border-[#e8e2d9] bg-white p-1.5 shadow-[0_8px_24px_rgba(43,41,38,0.12),0_2px_8px_rgba(43,41,38,0.08)]">
+              <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
+                <div className="pointer-events-auto flex items-center gap-0.5 rounded-[11px] border border-[#e8e2d9] bg-white p-1 shadow-[0_8px_24px_rgba(43,41,38,0.12),0_2px_8px_rgba(43,41,38,0.08)]">
                   <button
                     onClick={() => setRunning((r) => !r)}
                     title={running ? "Tạm dừng" : "Bắt đầu"}
-                    className={`flex h-11 w-11 items-center justify-center rounded-[12px] transition-colors duration-150 ease-out ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors duration-150 ease-out ${
                       running
                         ? "bg-[#e8724a] text-white hover:bg-[#d96a42]"
                         : "text-[#4f4943] hover:bg-[#f7f3ee]"
                     }`}
                   >
                     {running ? (
-                      <Pause className="h-5 w-5" strokeWidth={2} />
+                      <Pause className="h-4 w-4" strokeWidth={2} />
                     ) : (
-                      <Play className="h-5 w-5" strokeWidth={2} />
+                      <Play className="h-4 w-4" strokeWidth={2} />
                     )}
                   </button>
-                  <div className="mx-1 h-6 w-px shrink-0 bg-black/10" />
+                  <div className="mx-0.5 h-4 w-px shrink-0 bg-black/10" />
                   <button
                     onClick={() => {
                       setActiveMark(null);
@@ -772,19 +715,19 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                       setRunning(true);
                     }}
                     title="Đặt lại"
-                    className="flex h-11 w-11 items-center justify-center rounded-[12px] text-[#4f4943] transition-colors duration-150 ease-out hover:bg-[#f7f3ee]"
+                    className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[#4f4943] transition-colors duration-150 ease-out hover:bg-[#f7f3ee]"
                   >
-                    <RotateCcw className="h-5 w-5" strokeWidth={2} />
+                    <RotateCcw className="h-4 w-4" strokeWidth={2} />
                   </button>
-                  <div className="mx-1 h-6 w-px shrink-0 bg-black/10" />
+                  <div className="mx-0.5 h-4 w-px shrink-0 bg-black/10" />
                   {/* Tốc độ mô phỏng — chỉ nhân vào dt mỗi khung hình, không đụng độ chính xác. */}
-                  <div className="flex items-center gap-0.5 rounded-[12px] bg-[#f5f1ec] p-1">
+                  <div className="flex items-center gap-0.5 rounded-[9px] bg-[#f5f1ec] p-0.5">
                     {[0.5, 1, 2].map((s) => (
                       <button
                         key={s}
                         onClick={() => setSpeed(s)}
                         title={`Tốc độ ${s}×`}
-                        className={`h-9 rounded-[9px] px-2.5 text-[12px] font-semibold transition-colors duration-150 ease-out ${
+                        className={`h-6 rounded-[7px] px-1.5 text-[11px] font-semibold transition-colors duration-150 ease-out ${
                           speed === s ? "bg-[#e8724a] text-white" : "text-[#6b6b6b] hover:bg-white hover:text-[#171717]"
                         }`}
                       >
@@ -799,7 +742,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
           </div>
 
           {/* Customize panel */}
-          <div className="flex w-96 shrink-0 flex-col border-l border-[#e8e2d9] bg-white">
+          <div className="flex w-80 shrink-0 flex-col border-l border-[#e8e2d9] bg-white">
             {/* Tracking (live) — gom thành một bảng, hiển thị ở mọi tab */}
             {readout && readout.bodies.length > 0 && (
               <div className="shrink-0 border-b border-[#e8e2d9] px-4 py-3">
@@ -819,9 +762,9 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                     {readout.bodies.map((b) => (
                       <tr key={b.id} className="border-t border-[#f0ece5]">
                         <td className="py-1 text-left text-[#4f4943]">{b.id}</td>
-                        <td className="py-1 text-right font-mono tabular-nums text-[#2b2926]">{b.x.toFixed(2)}</td>
-                        <td className="py-1 text-right font-mono tabular-nums text-[#2b2926]">{b.y.toFixed(2)}</td>
-                        <td className="py-1 text-right font-mono tabular-nums text-[#2b2926]">{b.speed.toFixed(2)}</td>
+                        <td className="py-1 text-right tabular-nums text-[#2b2926]">{b.x.toFixed(2)}</td>
+                        <td className="py-1 text-right tabular-nums text-[#2b2926]">{b.y.toFixed(2)}</td>
+                        <td className="py-1 text-right tabular-nums text-[#2b2926]">{b.speed.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -829,7 +772,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                 <div className="mt-2 flex items-center justify-between rounded-[10px] bg-[#faf9f7] px-3 py-1.5">
                   <span className="text-xs font-medium text-[#6b6b6b]">Cơ năng</span>
                   <span className="text-xs text-[#4f4943]">
-                    <span className="font-mono font-semibold tabular-nums text-[#171717]">
+                    <span className="font-semibold tabular-nums text-[#171717]">
                       {readout.energy.total.toFixed(1)} J
                     </span>
                     <span className="ml-2 text-[#8a8178]">
@@ -866,9 +809,9 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                   <p className="rounded-[10px] bg-[#faf9f7] p-3 text-xs leading-relaxed text-[#6b6b6b]">
                     Rủi ro <b>bằng 0</b>: chỉ kéo slider, sim do dev build phản hồi tức thì. Dành cho mọi giáo viên.
                   </p>
-                  {preset.kind === "wave" && <WaveLegend scene={scene as WaveScene} />}
+                  {preset.kind === "wave" && <WaveLegend />}
                   {preset.kind === "string-wave" && <StringWaveLegend mode={(scene as StringWaveScene).mode} />}
-                  {preset.kind === "wave-field" && preset.quickPresets && (
+                  {preset.quickPresets && (
                     <div className="flex flex-wrap gap-1.5">
                       {preset.quickPresets.map((qp) => (
                         <button

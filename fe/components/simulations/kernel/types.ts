@@ -58,7 +58,24 @@ export type DragForce = { kind: "drag"; body: string; c: number };
 /** Lực ngoài không đổi (kéo/đẩy) tác dụng lên một vật. */
 export type AppliedForce = { kind: "applied"; body: string; fx: number; fy: number };
 
-export type Force = GravityForce | SpringForce | DragForce | AppliedForce;
+/**
+ * Lực Coulomb 2D giữa 2 điện tích điểm `a`, `b`: F = ke·q1·q2/r² dọc đường
+ * nối hai vật (định luật Coulomb thật, không xấp xỉ). `q1·q2 > 0` (cùng dấu)
+ * → ĐẨY NHAU; `q1·q2 < 0` (trái dấu) → HÚT NHAU. `ke` mặc định hằng số
+ * Coulomb thật 8.99×10⁹ N·m²/C² — dùng SI nên `q1`, `q2` (đơn vị Coulomb)
+ * cần nhập ở thang µC (×10⁻⁶) để ra lực cỡ mN hợp lý so với trọng lực của
+ * vật nhẹ (vài gam), đúng thí nghiệm quả cầu nhiễm điện SGK.
+ */
+export type CoulombForce = {
+  kind: "coulomb";
+  a: string;
+  b: string;
+  q1: number; // điện tích vật a (C)
+  q2: number; // điện tích vật b (C)
+  ke?: number; // hằng số Coulomb (N·m²/C²)
+};
+
+export type Force = GravityForce | SpringForce | DragForce | AppliedForce | CoulombForce;
 // Giai đoạn 2 (cần mô hình tiếp xúc): friction, contact (phản lực mặt).
 
 // ── Ràng buộc ─────────────────────────────────────────────────────────────────
