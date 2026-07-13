@@ -31,6 +31,10 @@ import type { WaveScene } from "@/components/simulations/wave/types";
 import type { StringWaveScene } from "@/components/simulations/string-wave/types";
 import type { WaveFieldScene } from "@/components/simulations/wave-field/types";
 import type { PointChargeFieldScene } from "@/components/simulations/point-charge-field/types";
+import { BrownianDetailView } from "@/components/simulations/brownian/BrownianDetailView";
+import { HeatingCurveDetailView } from "@/components/simulations/heating-curve/HeatingCurveDetailView";
+import { CorkPopDetailView } from "@/components/simulations/cork-pop/CorkPopDetailView";
+import { PendulumResonanceDetailView } from "@/components/simulations/pendulum-resonance/PendulumResonanceDetailView";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
@@ -130,15 +134,10 @@ function Thumb({ id }: { id: string }) {
     case "cong-huong-con-lac":
       return frame(
         <>
-          <line x1="30" y1="18" x2="170" y2="18" stroke="#475569" strokeWidth="3" />
-          <line x1="60" y1="18" x2="86" y2="74" stroke="#94a3b8" strokeWidth="2" />
-          <line x1="100" y1="18" x2="100" y2="80" stroke="#94a3b8" strokeWidth="2" />
-          <line x1="140" y1="18" x2="140" y2="80" stroke="#94a3b8" strokeWidth="2" />
-          <line x1="86" y1="74" x2="100" y2="80" stroke="#34d399" strokeWidth="1.5" strokeDasharray="2 2" />
-          <line x1="100" y1="80" x2="140" y2="80" stroke="#34d399" strokeWidth="1.5" strokeDasharray="2 2" />
-          <circle cx="86" cy="74" r="7" fill="#f472b6" />
-          <circle cx="100" cy="80" r="7" fill="#a78bfa" />
-          <circle cx="140" cy="80" r="7" fill="#60a5fa" />
+          <path d="M24 18 L176 24 L176 30 L24 24 Z" fill="#e2e8f0" stroke="#67e8f9" strokeWidth="1.5" />
+          <path d="M32 26 V38 M168 30 V42" stroke="#94a3b8" strokeWidth="3" />
+          {[45, 72, 99, 126, 153].map((x, index) => <g key={x}><line x1={x} y1={index % 2 ? 23 : 21} x2={x + (index - 2) * 2} y2={index % 2 ? 76 : 84} stroke="#94a3b8" strokeWidth="1.5" /><circle cx={x + (index - 2) * 2} cy={index % 2 ? 80 : 88} r="6" fill={["#fb7185", "#fb923c", "#facc15", "#4ade80", "#67e8f9"][index]} stroke="#fff7ed" strokeWidth="1" /></g>)}
+          <path d="M45 62 Q52 72 45 82 M126 62 Q134 74 126 86" fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeDasharray="3 3" opacity=".6" />
         </>,
       );
     case "dao-dong-tat-dan":
@@ -303,6 +302,45 @@ function Thumb({ id }: { id: string }) {
           <path d="M97 56 L101 60 L97 64" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </>,
       );
+    case "brownian-pollen":
+      return frame(
+        <>
+          <path d="M24 78 L38 64 L48 74 L61 51 L75 66 L88 46 L105 57 L119 38 L135 54 L151 34 L174 45" fill="none" stroke="#fbbf24" strokeWidth="2.2" strokeLinejoin="miter" />
+          {[24, 38, 48, 61, 75, 88, 105, 119, 135, 151, 174].map((x, i) => (
+            <circle key={`${x}-${i}`} cx={x} cy={[78, 64, 74, 51, 66, 46, 57, 38, 54, 34, 45][i]} r="1.5" fill="#fdba74" />
+          ))}
+          {["34,22", "54,88", "88,20", "132,78", "168,24", "180,84", "20,42", "105,98"].map((point) => {
+            const [x, y] = point.split(",");
+            return <circle key={point} cx={x} cy={y} r="2" fill="#67e8f9" opacity="0.85" />;
+          })}
+          <circle cx="104" cy="57" r="3.8" fill="#f59e0b" stroke="#fed7aa" strokeWidth="1" />
+          <circle cx="103" cy="56" r="1" fill="#fff7ed" opacity="0.7" />
+        </>,
+      );
+    case "dun-nong-nhiet-do-thoi-gian":
+      return frame(
+        <>
+          <line x1="30" y1="96" x2="180" y2="96" stroke="#cbd5e1" strokeWidth="1.2" />
+          <line x1="30" y1="96" x2="30" y2="18" stroke="#cbd5e1" strokeWidth="1.2" />
+          <path d="M30 84 L82 68 L82 56 L116 56 L162 30" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M82 56 H116" fill="none" stroke="#fb7185" strokeWidth="2.5" />
+          <rect x="45" y="31" width="34" height="9" rx="3" fill="#b91c1c" stroke="#fed7aa" strokeWidth="1" />
+          <path d="M48 48 Q62 34 76 48 Q70 64 62 68 Q54 63 48 48" fill="#fb923c" />
+          <path d="M50 93 H75" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="162" cy="30" r="3" fill="#fff7ed" />
+        </>,
+      );
+    case "nut-bac-bat-noi-nang-cong":
+      return frame(
+        <>
+          <path d="M68 88 L72 42 H128 L132 88 Q100 102 68 88" fill="rgba(103,232,249,0.08)" stroke="#67e8f9" strokeWidth="2" />
+          <path d="M87 42 V26 H113 V42" fill="none" stroke="#67e8f9" strokeWidth="2" />
+          <rect x="84" y="22" width="32" height="8" rx="2" fill="#f97316" stroke="#fed7aa" strokeWidth="1" />
+          <circle cx="82" cy="65" r="2" fill="#67e8f9" /><circle cx="110" cy="72" r="2" fill="#67e8f9" /><circle cx="96" cy="54" r="2" fill="#67e8f9" />
+          <path d="M100 105 Q86 84 100 72 Q114 84 100 105" fill="#fb923c" />
+          <path d="M42 96 H158" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" />
+        </>,
+      );
     default: {
       const icons: Record<string, string> = {
         ohm: "M30 60h30l10-25 20 50 10-25h70",
@@ -401,6 +439,10 @@ export default function MoPhongHubPage() {
 
   const filtered = domainFilter.size < DOMAINS.length;
 
+  if (selected?.kind === "brownian") return <BrownianDetailView preset={selected} onBack={() => setSelected(null)} />;
+  if (selected?.kind === "heating-curve") return <HeatingCurveDetailView preset={selected} onBack={() => setSelected(null)} />;
+  if (selected?.kind === "cork-pop") return <CorkPopDetailView preset={selected} onBack={() => setSelected(null)} />;
+  if (selected?.kind === "pendulum-resonance") return <PendulumResonanceDetailView preset={selected} onBack={() => setSelected(null)} />;
   if (selected) return <DetailView preset={selected} onBack={() => setSelected(null)} />;
 
   return (
@@ -629,7 +671,7 @@ function StringWaveLegend({ mode }: { mode: "traveling" | "standing" }) {
 
 type AiState = "idle" | "thinking" | "review";
 
-function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) {
+function DetailView({ preset, onBack }: { preset: Exclude<Preset, { kind: "brownian" | "heating-curve" | "cork-pop" | "pendulum-resonance" }>; onBack: () => void }) {
   const baseParams = Object.fromEntries(preset.params.map((p) => [p.key, p.default]));
 
   const [params, setParams] = useState<Record<string, number>>(baseParams);

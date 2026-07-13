@@ -12,6 +12,9 @@ import type { WaveFieldScene } from "../wave-field/types";
 import type { PointChargeFieldScene } from "../point-charge-field/types";
 import type { ParamDef } from "../param-panel";
 import type { SceneAnnotation } from "../scene-konva-2d";
+import type { HeatingCurveScene } from "../heating-curve/types";
+import type { CorkPopScene } from "../cork-pop/types";
+import type { PendulumResonanceScene } from "../pendulum-resonance/types";
 
 export type Domain = "Cơ học" | "Dao động & Sóng" | "Quang học" | "Điện & Từ" | "Nhiệt & Khí" | "Hạt nhân";
 
@@ -110,4 +113,25 @@ export type PointChargeFieldPreset = PresetBase & {
   applyParams: (p: Record<string, number>) => PointChargeFieldScene;
 };
 
-export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset;
+/** Mô phỏng Brown có renderer Canvas và bộ điều khiển riêng, không dùng Scene cơ học. */
+export type BrownianPreset = PresetBase & {
+  kind: "brownian";
+  applyParams: (p: Record<string, number>) => Record<string, never>;
+};
+
+export type HeatingCurvePreset = PresetBase & {
+  kind: "heating-curve";
+  applyParams: (p: Record<string, number>) => HeatingCurveScene;
+};
+
+export type CorkPopPreset = PresetBase & {
+  kind: "cork-pop";
+  applyParams: (p: Record<string, number>) => CorkPopScene;
+};
+
+export type PendulumResonancePreset = PresetBase & {
+  kind: "pendulum-resonance";
+  applyParams: (p: Record<string, number>) => PendulumResonanceScene;
+};
+
+export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset | BrownianPreset | HeatingCurvePreset | CorkPopPreset | PendulumResonancePreset;
