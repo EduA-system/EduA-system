@@ -4,6 +4,7 @@ import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
+import com.edua.beeduasystem.domain.exception.MoleculeBuildException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(MoleculeBuildException.class)
+    public ResponseEntity<ErrorResponse> handleMoleculeBuild(MoleculeBuildException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
