@@ -30,6 +30,7 @@ import type { Scene } from "@/components/simulations/kernel/types";
 import type { WaveScene } from "@/components/simulations/wave/types";
 import type { StringWaveScene } from "@/components/simulations/string-wave/types";
 import type { WaveFieldScene } from "@/components/simulations/wave-field/types";
+import type { PointChargeFieldScene } from "@/components/simulations/point-charge-field/types";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
@@ -47,6 +48,14 @@ const SceneKonvaStringWave = dynamic(
 // Canvas thuần (không Konva) — cần thao tác ImageData trực tiếp cho heatmap.
 const SceneCanvasWaveField = dynamic(
   () => import("@/components/simulations/wave-field/scene-canvas-wave-field").then((m) => m.SceneCanvasWaveField),
+  { ssr: false },
+);
+// Canvas thuần — điện phổ 2 điện tích điểm (đường sức truy vết RK4 thật).
+const SceneCanvasPointChargeField = dynamic(
+  () =>
+    import("@/components/simulations/point-charge-field/scene-canvas-point-charge-field").then(
+      (m) => m.SceneCanvasPointChargeField,
+    ),
   { ssr: false },
 );
 
@@ -247,6 +256,51 @@ function Thumb({ id }: { id: string }) {
           <circle cx="135" cy="90" r="9" fill="#60a5fa" />
           <text x="61" y="110" fontSize="11" fontWeight="bold" fill="#e2e8f0">1</text>
           <text x="131" y="110" fontSize="11" fontWeight="bold" fill="#e2e8f0">2</text>
+        </>,
+      );
+    case "dien-pho-hai-dien-tich":
+      return frame(
+        <>
+          {[
+            "M60,60 Q100,60 140,60",
+            "M58,53 Q100,35 142,53",
+            "M58,67 Q100,85 142,67",
+            "M56,46 Q100,18 144,46",
+            "M56,74 Q100,102 144,74",
+            "M62,58 Q100,52 138,58",
+            "M62,62 Q100,68 138,62",
+          ].map((d) => (
+            <path key={d} d={d} fill="none" stroke="#e8724a" strokeWidth="1.5" strokeLinecap="round" />
+          ))}
+          <circle cx="50" cy="60" r="10" fill="#f87171" stroke="#b91c1c" strokeWidth="1.5" />
+          <circle cx="150" cy="60" r="10" fill="#60a5fa" stroke="#1d4ed8" strokeWidth="1.5" />
+          <text x="46" y="64" fontSize="12" fontWeight="bold" fill="#ffffff">+</text>
+          <text x="146" y="64" fontSize="12" fontWeight="bold" fill="#ffffff">−</text>
+        </>,
+      );
+    case "dien-truong-2-ban-song-song":
+      return frame(
+        <>
+          <line x1="55" y1="15" x2="55" y2="100" stroke="#475569" strokeWidth="3" />
+          <line x1="145" y1="15" x2="145" y2="100" stroke="#475569" strokeWidth="3" />
+          <text x="47" y="14" fontSize="12" fontWeight="bold" fill="#e2e8f0">+</text>
+          <text x="140" y="14" fontSize="12" fontWeight="bold" fill="#e2e8f0">−</text>
+          {[40, 60, 80].map((y) => (
+            <g key={y}>
+              <path d={`M63 ${y} h70`} fill="none" stroke="#34d399" strokeWidth="1.5" strokeLinecap="round" />
+              <path
+                d={`M129 ${y - 4} L137 ${y} L129 ${y + 4}`}
+                fill="none"
+                stroke="#34d399"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </g>
+          ))}
+          <circle cx="80" cy="60" r="6" fill="#f472b6" />
+          <path d="M87 60 h14" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" />
+          <path d="M97 56 L101 60 L97 64" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </>,
       );
     default: {
@@ -507,6 +561,46 @@ function WaveLegend() {
   return <LegendBox items={items} />;
 }
 
+function ElectricFieldLegend() {
+  const items: LegendItem[] = [
+    { swatch: lineSwatch("#e8724a"), label: "Đường sức điện trường (chiều từ + sang −, đổi chiều nếu đảo cực)" },
+    { swatch: dotSwatch("#f87171"), label: "+ — bản tích điện dương" },
+    { swatch: dotSwatch("#cbd5e1"), label: "− — bản tích điện âm" },
+    { swatch: dotSwatch("#60a5fa"), label: "Hạt mang điện q (kéo được để đặt lại vị trí)" },
+    { swatch: lineSwatch("#34d399"), label: "v₀ — vector vận tốc ban đầu" },
+  ];
+  return <LegendBox items={items} />;
+}
+
+function PointChargeFieldLegend({ mode }: { mode: "field-lines" | "spectrum" }) {
+  if (mode === "spectrum") {
+    return (
+      <>
+        <LegendBox
+          items={[
+            { swatch: lineSwatch("#fde68a"), label: "Hạt điện phổ — định hướng theo điện trường tại đó" },
+            { swatch: dotSwatch("#f87171"), label: "+ — điện tích dương" },
+            { swatch: dotSwatch("#60a5fa"), label: "− — điện tích âm" },
+          ]}
+        />
+        <p className="mt-2 text-[11px] leading-relaxed text-[#8a8178]">
+          Các hạt chỉ minh hoạ sự định hướng của vật liệu điện môi theo điện trường, không phải quỹ đạo chuyển động
+          của điện tích.
+        </p>
+      </>
+    );
+  }
+  return (
+    <LegendBox
+      items={[
+        { swatch: lineSwatch("#e8724a"), label: "Đường sức điện — mũi tên luôn hướng từ + sang −" },
+        { swatch: dotSwatch("#f87171"), label: "+ — điện tích dương" },
+        { swatch: dotSwatch("#60a5fa"), label: "− — điện tích âm" },
+      ]}
+    />
+  );
+}
+
 function StringWaveLegend({ mode }: { mode: "traveling" | "standing" }) {
   if (mode === "standing") {
     return (
@@ -567,6 +661,29 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
 
   // Tầng 2 → tầng 1: tham số hiện tại dựng thành Scene cho kernel.
   const scene = useMemo(() => preset.applyParams(params), [preset, params]);
+  // Chú thích tuỳ chọn (mũi tên trường, nhãn +/−…) — PHẢI memo hoá giống `scene`:
+  // preset.annotations(params) tạo mảng object MỚI mỗi lần gọi, nếu gọi trực
+  // tiếp trong JSX thì mỗi render cha sẽ đổi reference → useEffect của
+  // SceneKonva2D (phụ thuộc `annotations`) chạy lại → dựng lại stage → gọi
+  // onReadout ngay khi setup → setState ở cha → render lại → lặp vô hạn
+  // ("Maximum update depth exceeded").
+  const annotations = useMemo(
+    () => (preset.kind === undefined || preset.kind === "mechanics" ? preset.annotations?.(params) : undefined),
+    [preset, params],
+  );
+  // bodyLabels có thể là object tĩnh HOẶC hàm của params (vd nhãn phản ánh dấu
+  // điện tích hiện tại) — memo hoá tương tự `annotations` để tránh cùng lỗi
+  // reference-mới-mỗi-render (đối tượng tĩnh vẫn ổn định qua useMemo bình thường).
+  const bodyLabels = useMemo(() => {
+    if (preset.kind !== undefined && preset.kind !== "mechanics") return undefined;
+    const bl = preset.bodyLabels;
+    return typeof bl === "function" ? bl(params) : bl;
+  }, [preset, params]);
+  const bodySigns = useMemo(() => {
+    if (preset.kind !== undefined && preset.kind !== "mechanics") return undefined;
+    const bs = preset.bodySigns;
+    return typeof bs === "function" ? bs(params) : bs;
+  }, [preset, params]);
 
   const markEdited = () => setEdited(true);
   const revertAll = () => {
@@ -670,6 +787,21 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                       markEdited();
                     }}
                   />
+                ) : preset.kind === "point-charge-field" ? (
+                  <SceneCanvasPointChargeField
+                    scene={scene as PointChargeFieldScene}
+                    running={running}
+                    resetSignal={resetSignal}
+                    onRunningChange={setRunning}
+                    seekSeconds={activeMark?.seconds}
+                    seekToken={seekToken}
+                    markLabel={activeMark?.label}
+                    speed={speed}
+                    onParamsChange={(patch) => {
+                      setParams((prev) => ({ ...prev, ...patch }));
+                      markEdited();
+                    }}
+                  />
                 ) : (
                   <SceneKonva2D
                     scene={scene as Scene}
@@ -682,7 +814,11 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                     markLabel={activeMark?.label}
                     ghostSeconds={prevMark?.seconds ?? null}
                     ghostLabel={prevMark?.label}
-                    bodyLabels={preset.bodyLabels}
+                    bodyLabels={bodyLabels}
+                    bodySigns={bodySigns}
+                    annotations={annotations}
+                    bodyColors={preset.kind === undefined || preset.kind === "mechanics" ? preset.bodyColors : undefined}
+                    minimalOverlay={preset.kind === undefined || preset.kind === "mechanics" ? preset.minimalOverlay : undefined}
                     speed={speed}
                   />
                 )}
@@ -811,6 +947,10 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                   </p>
                   {preset.kind === "wave" && <WaveLegend />}
                   {preset.kind === "string-wave" && <StringWaveLegend mode={(scene as StringWaveScene).mode} />}
+                  {preset.id === "dien-truong-2-ban-song-song" && <ElectricFieldLegend />}
+                  {preset.kind === "point-charge-field" && (
+                    <PointChargeFieldLegend mode={(scene as PointChargeFieldScene).displayMode} />
+                  )}
                   {preset.quickPresets && (
                     <div className="flex flex-wrap gap-1.5">
                       {preset.quickPresets.map((qp) => (

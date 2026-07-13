@@ -18,6 +18,8 @@ import { songDung } from "./song-dung";
 import { giaoThoaAnhSangDayDu } from "./giao-thoa-anh-sang-day-du";
 import { nhiemDienDay } from "./nhiem-dien-day";
 import { nhiemDienHut } from "./nhiem-dien-hut";
+import { dienTruong2BanSongSong } from "./dien-truong-2-ban-song-song";
+import { dienPhoHaiDienTich } from "./dien-pho-hai-dien-tich";
 
 export type { Preset, PresetParam, Domain } from "./types";
 
@@ -38,6 +40,8 @@ export const PRESETS: Preset[] = [
   giaoThoaAnhSangDayDu,
   nhiemDienDay,
   nhiemDienHut,
+  dienTruong2BanSongSong,
+  dienPhoHaiDienTich,
 ];
 
 export function getPreset(id: string): Preset | undefined {

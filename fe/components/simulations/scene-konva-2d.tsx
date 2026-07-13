@@ -102,6 +102,55 @@ export type SceneReadout = {
   energy: { ke: number; pe: number; total: number };
 };
 
+/**
+ * Chú thích trực quan tuỳ chọn của preset (đường sức, nhãn +/− bản tụ, bản kim
+ * loại, đường sức cong ở mép…) — THUẦN HIỂN THỊ, toạ độ world TĨNH (không bám
+ * vật động), không ảnh hưởng vật lý/kernel. Vẽ một lần khi dựng cảnh, giống
+ * mặt phẳng/lưới.
+ */
+export type SceneAnnotation =
+  // Đường thẳng + 1 đầu mũi tên tại phân số `arrowAt` dọc đường (0..1, mặc
+  // định 1 = ở cuối đường) — arrowAt < 1 để mũi tên nằm giữa đường, không sát
+  // 2 đầu (vd đường sức điện trường).
+  | { kind: "arrow"; x1: number; y1: number; x2: number; y2: number; color?: string; arrowAt?: number; animated?: boolean }
+  | { kind: "label"; x: number; y: number; text: string; color?: string; fontSize?: number; fontStyle?: string; fontFamily?: string }
+  // Hình chữ nhật world-aligned (không xoay) — dùng cho bản kim loại tụ điện.
+  // (x, y) = tâm hình chữ nhật.
+  | { kind: "rect"; x: number; y: number; width: number; height: number; fill?: string; stroke?: string; strokeWidth?: number }
+  // Đường cong Bézier bậc 3 — dùng cho đường sức cong ở mép (hiệu ứng rìa).
+  | {
+      kind: "curve";
+      x1: number;
+      y1: number;
+      cx1: number;
+      cy1: number;
+      cx2: number;
+      cy2: number;
+      x2: number;
+      y2: number;
+      color?: string;
+      strokeWidth?: number;
+      arrowAt?: number;
+      animated?: boolean;
+    };
+
+// Đầu mũi tên hình chevron tại (x,y), hướng theo `angle` (rad) — dùng chung
+// cho "arrow" (giữa đường thẳng) và "curve" (tiếp tuyến tại điểm arrowAt).
+function addArrowhead(layer: Konva.Layer, x: number, y: number, angle: number, color: string, size = 8) {
+  const a1 = angle + Math.PI - Math.PI / 7;
+  const a2 = angle + Math.PI + Math.PI / 7;
+  layer.add(
+    new Konva.Line({
+      points: [x + size * Math.cos(a1), y + size * Math.sin(a1), x, y, x + size * Math.cos(a2), y + size * Math.sin(a2)],
+      stroke: color,
+      strokeWidth: 2,
+      lineCap: "round",
+      lineJoin: "round",
+      listening: false,
+    }),
+  );
+}
+
 export function SceneKonva2D({
   scene,
   running,
@@ -114,6 +163,10 @@ export function SceneKonva2D({
   ghostSeconds,
   ghostLabel,
   bodyLabels,
+  annotations,
+  bodyColors,
+  bodySigns,
+  minimalOverlay,
   speed = 1,
 }: {
   scene: Scene;
@@ -138,6 +191,20 @@ export function SceneKonva2D({
   // Nhãn cố định gắn với từng vật (vd đánh số con lắc "1","2","3") — LUÔN hiện,
   // khác markLabel/ghostLabel (chỉ hiện khi đang xem 1 mốc).
   bodyLabels?: Record<string, string>;
+  // Chú thích tuỳ chọn của preset (mũi tên trường, nhãn +/−…) — xem SceneAnnotation.
+  annotations?: SceneAnnotation[];
+  // Màu riêng cho từng vật (id → mã màu), ghi đè màu hồng mặc định — vd hạt
+  // mang điện vẽ xanh dương thay vì hồng cho preset điện trường.
+  bodyColors?: Record<string, string>;
+  // Ký hiệu ngắn (1-2 ký tự, vd "+"/"−"/"0") vẽ ĐÈ LÊN TÂM vật, bám theo vật
+  // khi di chuyển — khác bodyLabels (vẽ DƯỚI vật). Dùng cho dấu điện tích
+  // ngay trên hạt, giống hạt mang điện trong sách giáo khoa.
+  bodySigns?: Record<string, string>;
+  // Ẩn mặt đất/trục Ox-Oy/nhãn số/gốc O/nhãn toạ độ cạnh vật VÀ đường mặt
+  // phẳng mặc định (surface constraint) — dùng cho sơ đồ giáo khoa tối giản có
+  // chú thích (annotations) tự vẽ mọi thứ. KHÔNG ẩn lưới nền (vẫn vẽ, chỉ là
+  // kết cấu mờ cho cảm giác chiều sâu, không phải công cụ định lượng).
+  minimalOverlay?: boolean;
   // Hệ số tốc độ mô phỏng (0.5 = chậm nửa, 1 = thật, 2 = nhanh gấp đôi…) — chỉ
   // nhân vào dt mỗi khung hình, không đụng kernel/độ chính xác tích phân.
   speed?: number;
@@ -212,48 +279,58 @@ export function SceneKonva2D({
     zoomActionsRef.current = attachZoomPan(stage, { width: W, height: H, onZoomChange: setZoomPct, panExtentFactor: GRID_EXTENT_FACTOR });
 
     // Lưới phủ kín canvas → không gian vô hạn. Vẽ RỘNG HƠN khung nhìn ban đầu
-    // (GRID_EXTENT_FACTOR lần) để còn phủ kín khi zoom out / kéo canvas.
+    // (GRID_EXTENT_FACTOR lần) để còn phủ kín khi zoom out / kéo canvas. LUÔN
+    // vẽ (kể cả minimalOverlay) — lưới chỉ là kết cấu nền mờ, khác với trục
+    // toạ độ/nhãn số/gốc O/nhãn toạ độ debug (những thứ minimalOverlay ẩn).
     const wl = toWorld(0, 0).x, wr = toWorld(W, 0).x;
     const wb = toWorld(0, H).y, wt = toWorld(0, 0).y;
-    const step = scale >= 26 ? 1 : scale >= 13 ? 2 : 5;
+    // Thêm bậc nhỏ hơn 1 đơn vị — preset có thang world nhỏ (vd khe hở tụ điện
+    // vài chục cm) đạt scale rất cao (px/đơn vị) nên trước đây LUÔN rơi vào
+    // bậc thô nhất (step=1), khiến cả khung nhìn (world height ~1 đơn vị) chỉ
+    // có 0-1 đường lưới — trông như "mất lưới". Bậc mịn hơn không ảnh hưởng
+    // preset thang lớn (con lắc, ném xiên…) vì scale của chúng hiếm khi vượt 100.
+    const step = scale >= 400 ? 0.1 : scale >= 200 ? 0.2 : scale >= 100 ? 0.5 : scale >= 26 ? 1 : scale >= 13 ? 2 : 5;
+    const gridColor = "#3a4a68"; // tăng tương phản mạnh với nền #0f172a (bậc #1e293b/#293548 trước đó gần như không thấy)
     const cxWorld = (wl + wr) / 2, cyWorld = (wb + wt) / 2;
     const gx0 = cxWorld - (GRID_EXTENT_FACTOR * (wr - wl)) / 2, gx1 = cxWorld + (GRID_EXTENT_FACTOR * (wr - wl)) / 2;
     const gy0 = cyWorld - (GRID_EXTENT_FACTOR * (wt - wb)) / 2, gy1 = cyWorld + (GRID_EXTENT_FACTOR * (wt - wb)) / 2;
     for (let gx = Math.ceil(gx0 / step) * step; gx <= gx1; gx += step) {
       const x = toScreen(gx, 0).x;
-      layer.add(new Konva.Line({ points: [x, toScreen(0, gy1).y, x, toScreen(0, gy0).y], stroke: "#1e293b", strokeWidth: 1 }));
+      layer.add(new Konva.Line({ points: [x, toScreen(0, gy1).y, x, toScreen(0, gy0).y], stroke: gridColor, strokeWidth: 1 }));
     }
     for (let gy = Math.ceil(gy0 / step) * step; gy <= gy1; gy += step) {
       const y = toScreen(0, gy).y;
-      layer.add(new Konva.Line({ points: [toScreen(gx0, 0).x, y, toScreen(gx1, 0).x, y], stroke: "#1e293b", strokeWidth: 1 }));
+      layer.add(new Konva.Line({ points: [toScreen(gx0, 0).x, y, toScreen(gx1, 0).x, y], stroke: gridColor, strokeWidth: 1 }));
     }
 
-    // Mặt đất CỐ ĐỊNH ở y=0 (đồng thời là trục Ox) — vẽ rộng/cao hơn khung
-    // nhìn để còn phủ kín khi zoom out / kéo canvas.
-    const groundX0 = toScreen(gx0, 0).x, groundX1 = toScreen(gx1, 0).x;
-    layer.add(new Konva.Rect({ x: groundX0, y: groundY, width: groundX1 - groundX0, height: 4000, fill: "#0b1220" }));
-    layer.add(new Konva.Line({ points: [groundX0, groundY, groundX1, groundY], stroke: "#64748b", strokeWidth: 3 }));
+    // Mặt đất/trục Ox, trục Oy, nhãn số, gốc O — ẩn khi minimalOverlay (sơ đồ
+    // giáo khoa tối giản tự vẽ mọi thứ qua annotations, không cần định lượng).
+    if (!minimalOverlay) {
+      const groundX0 = toScreen(gx0, 0).x, groundX1 = toScreen(gx1, 0).x;
+      layer.add(new Konva.Rect({ x: groundX0, y: groundY, width: groundX1 - groundX0, height: 4000, fill: "#0b1220" }));
+      layer.add(new Konva.Line({ points: [groundX0, groundY, groundX1, groundY], stroke: "#64748b", strokeWidth: 3 }));
 
-    // ── Trục toạ độ + nhãn số (mặt phẳng 2D định lượng) ──
-    const labelColor = "#64748b";
-    const yAxisX = toScreen(0, 0).x;
-    const yAxisOnScreen = yAxisX >= 0 && yAxisX <= W - 16;
-    if (yAxisOnScreen) {
-      layer.add(new Konva.Line({ points: [yAxisX, toScreen(0, gy1).y, yAxisX, groundY], stroke: "#3f4d63", strokeWidth: 1.5 })); // trục Oy
-    }
-    for (let gx = Math.ceil(wl / step) * step; gx <= wr; gx += step) {
-      if (gx === 0) continue;
-      layer.add(new Konva.Text({ x: toScreen(gx, 0).x + 2, y: groundY - 15, text: `${gx}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
-    }
-    if (yAxisOnScreen) {
-      for (let gy = Math.ceil(wb / step) * step; gy <= wt; gy += step) {
-        if (gy <= 0) continue;
-        layer.add(new Konva.Text({ x: yAxisX + 4, y: toScreen(0, gy).y - 6, text: `${gy}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
+      // ── Trục toạ độ + nhãn số (mặt phẳng 2D định lượng) ──
+      const labelColor = "#64748b";
+      const yAxisX = toScreen(0, 0).x;
+      const yAxisOnScreen = yAxisX >= 0 && yAxisX <= W - 16;
+      if (yAxisOnScreen) {
+        layer.add(new Konva.Line({ points: [yAxisX, toScreen(0, gy1).y, yAxisX, groundY], stroke: "#3f4d63", strokeWidth: 1.5 })); // trục Oy
       }
+      for (let gx = Math.ceil(wl / step) * step; gx <= wr; gx += step) {
+        if (gx === 0) continue;
+        layer.add(new Konva.Text({ x: toScreen(gx, 0).x + 2, y: groundY - 15, text: `${gx}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
+      }
+      if (yAxisOnScreen) {
+        for (let gy = Math.ceil(wb / step) * step; gy <= wt; gy += step) {
+          if (gy <= 0) continue;
+          layer.add(new Konva.Text({ x: yAxisX + 4, y: toScreen(0, gy).y - 6, text: `${gy}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
+        }
+      }
+      const o = toScreen(0, 0); // gốc toạ độ O
+      layer.add(new Konva.Circle({ x: o.x, y: o.y, radius: 3, fill: "#94a3b8" }));
+      layer.add(new Konva.Text({ x: o.x + 5, y: o.y - 17, text: "O", fontSize: 12, fill: "#94a3b8", fontFamily: "monospace" }));
     }
-    const o = toScreen(0, 0); // gốc toạ độ O
-    layer.add(new Konva.Circle({ x: o.x, y: o.y, radius: 3, fill: "#94a3b8" }));
-    layer.add(new Konva.Text({ x: o.x + 5, y: o.y - 17, text: "O", fontSize: 12, fill: "#94a3b8", fontFamily: "monospace" }));
 
     // Thanh treo trang trí — khi ≥2 vật fixed cùng độ cao (vd nhiều con lắc
     // treo cạnh nhau), vẽ 1 thanh ngang nối chúng + giá đỡ gạch chéo ở 2 đầu,
@@ -301,15 +378,97 @@ export function SceneKonva2D({
       }
     }
 
-    // Mặt phẳng riêng của cảnh (surface constraint).
-    for (const c of work.constraints) {
-      if (c.kind !== "surface") continue;
-      const rad = (c.angle * Math.PI) / 180;
-      const hx = (Math.cos(rad) * c.length) / 2;
-      const hy = (Math.sin(rad) * c.length) / 2;
-      const a = toScreen(c.x - hx, c.y - hy);
-      const b = toScreen(c.x + hx, c.y + hy);
-      layer.add(new Konva.Line({ points: [a.x, a.y, b.x, b.y], stroke: "#475569", strokeWidth: 4 }));
+    // Mặt phẳng riêng của cảnh (surface constraint) — bỏ qua khi minimalOverlay
+    // vì preset tự vẽ mặt phẳng qua annotations "rect" (vd bản kim loại tụ điện).
+    if (!minimalOverlay) {
+      for (const c of work.constraints) {
+        if (c.kind !== "surface") continue;
+        const rad = (c.angle * Math.PI) / 180;
+        const hx = (Math.cos(rad) * c.length) / 2;
+        const hy = (Math.sin(rad) * c.length) / 2;
+        const a = toScreen(c.x - hx, c.y - hy);
+        const b = toScreen(c.x + hx, c.y + hy);
+        layer.add(new Konva.Line({ points: [a.x, a.y, b.x, b.y], stroke: "#475569", strokeWidth: 4 }));
+      }
+    }
+
+    // Chú thích tuỳ chọn của preset (đường sức, nhãn +/−, bản kim loại, đường
+    // sức cong mép…) — toạ độ world TĨNH, vẽ một lần, không bám vật động.
+    // `animated` (arrow/curve) → nét đứt "chảy" theo chiều mũi tên, cập nhật
+    // trong vòng lặp Konva.Animation bên dưới (xem `flowingShapes`).
+    const flowingShapes: Konva.Shape[] = [];
+    for (const ann of annotations ?? []) {
+      if (ann.kind === "arrow") {
+        const p1 = toScreen(ann.x1, ann.y1);
+        const p2 = toScreen(ann.x2, ann.y2);
+        const color = ann.color ?? "#34d399";
+        const line = new Konva.Line({
+          points: [p1.x, p1.y, p2.x, p2.y],
+          stroke: color,
+          strokeWidth: 2,
+          listening: false,
+          dash: ann.animated ? [10, 8] : undefined,
+        });
+        layer.add(line);
+        if (ann.animated) flowingShapes.push(line);
+        const t = ann.arrowAt ?? 1;
+        const ax = p1.x + (p2.x - p1.x) * t;
+        const ay = p1.y + (p2.y - p1.y) * t;
+        addArrowhead(layer, ax, ay, Math.atan2(p2.y - p1.y, p2.x - p1.x), color);
+      } else if (ann.kind === "rect") {
+        const corner = toScreen(ann.x - ann.width / 2, ann.y + ann.height / 2); // world top-left (y lên → screen trên)
+        layer.add(
+          new Konva.Rect({
+            x: corner.x,
+            y: corner.y,
+            width: ann.width * scale,
+            height: ann.height * scale,
+            fill: ann.fill ?? "#e2e8f0",
+            stroke: ann.stroke ?? "#475569",
+            strokeWidth: ann.strokeWidth ?? 2,
+            cornerRadius: 2,
+            listening: false,
+          }),
+        );
+      } else if (ann.kind === "curve") {
+        const p1 = toScreen(ann.x1, ann.y1);
+        const c1 = toScreen(ann.cx1, ann.cy1);
+        const c2 = toScreen(ann.cx2, ann.cy2);
+        const p2 = toScreen(ann.x2, ann.y2);
+        const color = ann.color ?? "#f59e0b";
+        const path = new Konva.Path({
+          data: `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p2.x} ${p2.y}`,
+          stroke: color,
+          strokeWidth: ann.strokeWidth ?? 2,
+          listening: false,
+          dash: ann.animated ? [10, 8] : undefined,
+        });
+        layer.add(path);
+        if (ann.animated) flowingShapes.push(path);
+        if (ann.arrowAt != null) {
+          const t = ann.arrowAt;
+          const mt = 1 - t;
+          const bx = mt * mt * mt * p1.x + 3 * mt * mt * t * c1.x + 3 * mt * t * t * c2.x + t * t * t * p2.x;
+          const by = mt * mt * mt * p1.y + 3 * mt * mt * t * c1.y + 3 * mt * t * t * c2.y + t * t * t * p2.y;
+          const dx = 3 * mt * mt * (c1.x - p1.x) + 6 * mt * t * (c2.x - c1.x) + 3 * t * t * (p2.x - c2.x);
+          const dy = 3 * mt * mt * (c1.y - p1.y) + 6 * mt * t * (c2.y - c1.y) + 3 * t * t * (p2.y - c2.y);
+          addArrowhead(layer, bx, by, Math.atan2(dy, dx), color);
+        }
+      } else {
+        const p = toScreen(ann.x, ann.y);
+        layer.add(
+          new Konva.Text({
+            x: p.x - 5,
+            y: p.y - 8,
+            text: ann.text,
+            fontSize: ann.fontSize ?? 16,
+            fontStyle: ann.fontStyle ?? "bold",
+            fill: ann.color ?? "#e2e8f0",
+            fontFamily: ann.fontFamily ?? "monospace",
+            listening: false,
+          }),
+        );
+      }
     }
 
     // Lò xo + dây/thanh.
@@ -413,7 +572,8 @@ export function SceneKonva2D({
       } else {
         // Vật va chạm (có radius) vẽ đúng bán kính thật; còn lại suy theo khối lượng.
         const radius = radiusFor(b);
-        const c = new Konva.Circle({ x: p.x, y: p.y, radius, fill: "#f472b6", draggable: true, shadowBlur: 6, shadowColor: "#000" });
+        const fill = bodyColors?.[b.id] ?? "#f472b6";
+        const c = new Konva.Circle({ x: p.x, y: p.y, radius, fill, draggable: true, shadowBlur: 6, shadowColor: "#000" });
         // Nhãn mốc hiện tại (vd "t2"/"B") — chỉ khi đang dừng đúng tại một mốc.
         if (seekToken && markLabel) {
           const badge = new Konva.Label({ x: p.x + radius + 4, y: p.y - radius - 22, listening: false });
@@ -451,13 +611,16 @@ export function SceneKonva2D({
       }
     }
 
-    // ── Tracking toạ độ + giá trị (live) ──
+    // ── Tracking toạ độ + giá trị (live) — ẩn nhãn toạ độ cạnh vật khi
+    // minimalOverlay (sơ đồ giáo khoa không hiện toạ độ debug cạnh hạt). ──
     const coordLabels: Record<string, Konva.Text> = {};
-    for (const b of work.bodies) {
-      if (b.fixed) continue;
-      const t = new Konva.Text({ text: "", fontSize: 11, fill: "#cbd5e1", fontFamily: "monospace" });
-      layer.add(t);
-      coordLabels[b.id] = t;
+    if (!minimalOverlay) {
+      for (const b of work.bodies) {
+        if (b.fixed) continue;
+        const t = new Konva.Text({ text: "", fontSize: 11, fill: "#cbd5e1", fontFamily: "monospace" });
+        layer.add(t);
+        coordLabels[b.id] = t;
+      }
     }
 
     // Nhãn cố định (vd đánh số con lắc) — LUÔN hiện, khác markLabel/ghostLabel.
@@ -474,6 +637,22 @@ export function SceneKonva2D({
       });
       layer.add(t);
       idLabels[b.id] = t;
+    }
+
+    // Ký hiệu đè lên tâm vật (vd dấu +/− điện tích) — LUÔN hiện, bám theo vật.
+    const signLabels: Record<string, Konva.Text> = {};
+    for (const b of work.bodies) {
+      if (b.fixed || !bodySigns?.[b.id]) continue;
+      const t = new Konva.Text({
+        text: bodySigns[b.id],
+        fontSize: 15,
+        fontStyle: "bold",
+        fill: "#ffffff",
+        fontFamily: "monospace",
+        listening: false,
+      });
+      layer.add(t);
+      signLabels[b.id] = t;
     }
 
     // Tracking đưa ra ngoài canvas (panel) — chỉ phát ~12 lần/giây cho đỡ render.
@@ -497,11 +676,15 @@ export function SceneKonva2D({
         if (b.fixed) continue;
         const wpt = worldOf(b.id);
         const sp = screenOf(b.id);
-        const lbl = coordLabels[b.id]!;
-        lbl.position({ x: sp.x + 12, y: sp.y - 10 });
-        lbl.text(`(${wpt.x.toFixed(1)}, ${wpt.y.toFixed(1)})`);
+        const lbl = coordLabels[b.id];
+        if (lbl) {
+          lbl.position({ x: sp.x + 12, y: sp.y - 10 });
+          lbl.text(`(${wpt.x.toFixed(1)}, ${wpt.y.toFixed(1)})`);
+        }
         const idLbl = idLabels[b.id];
         if (idLbl) idLbl.position({ x: sp.x - idLbl.width() / 2, y: sp.y + radiusFor(b) + 6 });
+        const signLbl = signLabels[b.id];
+        if (signLbl) signLbl.position({ x: sp.x - signLbl.width() / 2, y: sp.y - signLbl.height() / 2 });
         const v = readVelocity(state, b.id);
         bodies.push({ id: b.id, x: wpt.x, y: wpt.y, speed: Math.hypot(v.x, v.y) });
       }
@@ -521,6 +704,15 @@ export function SceneKonva2D({
         for (let i = 0; i < steps; i++) state = stepScene(kernel, state, sub);
       }
       syncShapes();
+      // Nét đứt "chảy" trên đường sức animated — LUÔN chạy (kể cả lúc dừng mô
+      // phỏng), vì đây là chỉ báo chiều điện trường tĩnh, không phải chuyển
+      // động của hạt. Tốc độ tính theo thời gian thực (frame.timeDiff), không
+      // phụ thuộc speed/running.
+      if (flowingShapes.length > 0 && frame) {
+        const flowSpeed = 40; // px/s
+        const delta = (flowSpeed * frame.timeDiff) / 1000;
+        for (const shape of flowingShapes) shape.dashOffset(shape.dashOffset() - delta);
+      }
     }, layer);
     anim.start();
 
@@ -530,7 +722,23 @@ export function SceneKonva2D({
     };
     // resetSignal/seekToken: tăng → dựng lại cảnh từ đầu (reset/đi tới mốc).
     // running đọc qua ref nên KHÔNG ở deps.
-  }, [scene, size, resetSignal, seekToken, seekSeconds, markLabel, ghostSeconds, ghostLabel, bodyLabels, onRunningChange, containerRef]);
+  }, [
+    scene,
+    size,
+    resetSignal,
+    seekToken,
+    seekSeconds,
+    markLabel,
+    ghostSeconds,
+    ghostLabel,
+    bodyLabels,
+    annotations,
+    bodyColors,
+    bodySigns,
+    minimalOverlay,
+    onRunningChange,
+    containerRef,
+  ]);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg bg-[#0f172a]">

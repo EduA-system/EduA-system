@@ -9,7 +9,9 @@ import type { Scene } from "../kernel/types";
 import type { WaveScene } from "../wave/types";
 import type { StringWaveScene } from "../string-wave/types";
 import type { WaveFieldScene } from "../wave-field/types";
+import type { PointChargeFieldScene } from "../point-charge-field/types";
 import type { ParamDef } from "../param-panel";
+import type { SceneAnnotation } from "../scene-konva-2d";
 
 export type Domain = "Cơ học" | "Dao động & Sóng" | "Quang học" | "Điện & Từ" | "Nhiệt & Khí" | "Hạt nhân";
 
@@ -60,8 +62,22 @@ export type MechanicsPreset = PresetBase & {
   kind?: "mechanics";
   applyParams: (p: Record<string, number>) => Scene;
   // Nhãn cố định gắn với từng vật (vd đánh số con lắc) — hiện LUÔN trên canvas,
-  // khác với markLabel/ghostLabel của SceneKonva2D (chỉ hiện khi xem 1 mốc thời gian).
-  bodyLabels?: Record<string, string>;
+  // bám theo vật khi di chuyển (khác annotations tĩnh), khác markLabel/ghostLabel
+  // (chỉ hiện khi xem 1 mốc thời gian). Object tĩnh (đa số preset) hoặc hàm của
+  // params khi nhãn cần phản ánh giá trị hiện tại (vd dấu điện tích q).
+  bodyLabels?: Record<string, string> | ((p: Record<string, number>) => Record<string, string>);
+  // Chú thích trực quan tuỳ chọn (mũi tên trường đều, nhãn +/− bản tụ…) — THUẦN
+  // HIỂN THỊ, không ảnh hưởng vật lý. Toạ độ world tĩnh, không bám vật động.
+  annotations?: (p: Record<string, number>) => SceneAnnotation[];
+  // Màu riêng cho từng vật (id → mã màu) — TĨNH, giống bodyLabels (không phải
+  // hàm của params) để tránh tạo reference mới mỗi render.
+  bodyColors?: Record<string, string>;
+  // Ký hiệu ngắn đè lên TÂM vật (vd "+"/"−"/"0" dấu điện tích), bám theo vật
+  // khi di chuyển — khác bodyLabels (vẽ dưới vật). Object tĩnh hoặc hàm params.
+  bodySigns?: Record<string, string> | ((p: Record<string, number>) => Record<string, string>);
+  // Ẩn trục toạ độ/nhãn toạ độ debug (KHÔNG ẩn lưới nền) — dùng cho sơ đồ giáo
+  // khoa tối giản tự vẽ mọi thứ qua annotations. Xem SceneKonva2D.
+  minimalOverlay?: boolean;
 };
 
 /** Preset sóng trường (giao thoa…) — biên độ là hàm giải tích, xem wave/types.ts. */
@@ -85,4 +101,13 @@ export type WaveFieldPreset = PresetBase & {
   applyParams: (p: Record<string, number>) => WaveFieldScene;
 };
 
-export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset;
+/**
+ * Preset điện phổ 2 điện tích điểm — chồng chất Coulomb THẬT, đường sức truy
+ * vết bằng RK4 (không hardcode hình), xem point-charge-field/*.ts.
+ */
+export type PointChargeFieldPreset = PresetBase & {
+  kind: "point-charge-field";
+  applyParams: (p: Record<string, number>) => PointChargeFieldScene;
+};
+
+export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset;

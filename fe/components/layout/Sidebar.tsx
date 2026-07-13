@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { PanelLeft } from "lucide-react";
 import { navGroups } from "../dashboard/data";
@@ -29,6 +29,44 @@ const EASE = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 const DURATION = "duration-[340ms]";
 const MAIN_TRANSITION = `${DURATION} ${EASE}`;
 
+// Mỗi trang tự dựng <Sidebar> riêng (không có layout chung giữ nó sống xuyên
+// suốt điều hướng) — chuyển trang là component này unmount/mount lại từ đầu,
+// state `collapsed` nội bộ sẽ mất. Lưu vào localStorage để trang MỚI đọc lại
+// đúng lựa chọn trước đó thay vì luôn bật lại về mở rộng.
+//
+// Đọc qua useSyncExternalStore (không phải useState+useEffect) — đây là API
+// React dành riêng cho việc này: getSnapshot đọc localStorage đồng bộ ngay
+// trong render (không lệch hydration vì getServerSnapshot luôn trả "mở",
+// khớp với HTML server render), và set-state-trong-effect (bị lint chặn vì
+// gây render dồn) là không cần thiết.
+const COLLAPSED_STORAGE_KEY = "edua-sidebar-collapsed";
+const COLLAPSED_CHANGE_EVENT = "edua-sidebar-collapsed-change";
+
+function readCollapsed(): boolean {
+  return localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1";
+}
+
+function writeCollapsed(value: boolean) {
+  localStorage.setItem(COLLAPSED_STORAGE_KEY, value ? "1" : "0");
+  // Tự bắn sự kiện — localStorage.setItem KHÔNG tự kích hoạt "storage" event
+  // ở CHÍNH tab vừa ghi (event đó chỉ bắn sang các tab khác), nên phải tự báo
+  // cho useSyncExternalStore biết snapshot vừa đổi để render lại ngay.
+  window.dispatchEvent(new Event(COLLAPSED_CHANGE_EVENT));
+}
+
+function subscribeCollapsed(callback: () => void): () => void {
+  window.addEventListener(COLLAPSED_CHANGE_EVENT, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(COLLAPSED_CHANGE_EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
+
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {
@@ -52,7 +90,12 @@ function Tooltip({ label }: { label: string }) {
 
 export function Sidebar({ activeHref, fixed = false }: SidebarProps) {
   const { user } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, getServerSnapshot);
+
+  const setCollapsed = (next: boolean | ((c: boolean) => boolean)) => {
+    const value = typeof next === "function" ? next(collapsed) : next;
+    writeCollapsed(value);
+  };
 
   const position = fixed ? "fixed top-12 left-0 z-40 flex flex-col" : "flex flex-col";
 
@@ -155,11 +198,15 @@ export function Sidebar({ activeHref, fixed = false }: SidebarProps) {
                   return (
                     <Link
                       key={item.label}
-                      className={`group relative flex h-9 w-full items-center rounded-[9px] px-3 text-[13px] font-medium tracking-[-0.01em] transition-colors duration-150 ${
+                      className={`group relative flex h-9 items-center overflow-hidden rounded-[9px] text-[13px] font-medium tracking-[-0.01em] transition-colors duration-150 ${
                         isGroupHeader
                           ? "text-[#6b6b6b]"
                           : `hover:bg-[#edeae5] hover:text-[#1f1f1f] ${active ? "bg-[#edeae5] text-[#1f1f1f]" : "text-[#6b6b6b]"}`
-                      } ${item.child && !collapsed ? "ml-6 w-[calc(100%-24px)]" : ""} ${collapsed ? "" : "gap-2.5"}`}
+                      } ${
+                        collapsed
+                          ? "mx-auto w-9 justify-center"
+                          : `w-full gap-2.5 px-3 ${item.child ? "ml-6 w-[calc(100%-24px)]" : ""}`
+                      }`}
                       href={item.href}
                     >
                       <IconSlot>
