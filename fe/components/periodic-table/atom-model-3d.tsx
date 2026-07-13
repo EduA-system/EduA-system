@@ -23,6 +23,8 @@ export { getShellDistribution } from './orbital-data';
 export const SUBSHELL_COLORS: Record<SubshellType, string> = { s: '#60a5fa', p: '#4ade80', d: '#f59e0b', f: '#a855f7' };
 export const SHELL_COLORS = ['#2563eb', '#84cc16', '#d4a017', '#ea580c', '#7c3aed', '#0891b2', '#ca8a04'] as const;
 export const SHELL_NAMES = ['K', 'L', 'M', 'N', 'O', 'P', 'Q'] as const;
+const ELECTRON_RADIUS = 0.18;
+const SUBSHELL_ENVELOPE_RADIUS = ELECTRON_RADIUS * 1.5;
 
 function Nucleus({ protons, neutrons }: Pick<AtomModel3DProps, 'protons' | 'neutrons'>) {
   const particles = useMemo(() => {
@@ -92,9 +94,9 @@ function createRoundedArcTubeGeometry(orbitRadius: number, tubeRadius: number, a
 }
 
 function SubshellEnvelope({ radius, startAngle, arc, color, opacity }: { radius: number; startAngle: number; arc: number; color: string; opacity: number }) {
-  const geometry = useMemo(() => createRoundedArcTubeGeometry(radius, 0.27, Math.max(arc, 0.001)), [radius, arc]);
+  const geometry = useMemo(() => createRoundedArcTubeGeometry(radius, SUBSHELL_ENVELOPE_RADIUS, Math.max(arc, 0.001)), [radius, arc]);
   return <group rotation={[0, -startAngle, 0]}>
-    {arc === 0 ? <mesh position={[radius, 0, 0]}><sphereGeometry args={[0.27, 20, 20]} /><meshPhysicalMaterial color={color} transparent opacity={opacity} roughness={0.3} depthWrite={false} side={THREE.FrontSide} /></mesh> : null}
+    {arc === 0 ? <mesh position={[radius, 0, 0]}><sphereGeometry args={[SUBSHELL_ENVELOPE_RADIUS, 20, 20]} /><meshPhysicalMaterial color={color} transparent opacity={opacity} roughness={0.3} depthWrite={false} side={THREE.FrontSide} /></mesh> : null}
     {arc > 0 ? <mesh geometry={geometry}>
       <meshPhysicalMaterial color={color} transparent opacity={opacity} roughness={0.3} depthWrite={false} side={THREE.FrontSide} />
     </mesh> : null}
@@ -142,7 +144,7 @@ function LayerRing({ shell, shellIndex, mode, activeShell, activeSubshell, pause
       const muted = mode === 'orbital' && activeSubshell != null && !selected;
       const color = mode === 'orbital' && selected ? SUBSHELL_COLORS[particle.type] : muted || ringDimmed ? '#94a3b8' : '#2563eb';
       return <mesh key={`${particle.key}-${particle.index}`} position={[Math.cos(angle) * radius, 0, Math.sin(angle) * radius]} scale={selected || shellSelected ? 1.2 : 1}>
-        <sphereGeometry args={[0.18, 18, 18]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={selected || shellSelected ? 0.78 : muted || ringDimmed ? 0.08 : 0.42} />
+        <sphereGeometry args={[ELECTRON_RADIUS, 18, 18]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={selected || shellSelected ? 0.78 : muted || ringDimmed ? 0.08 : 0.42} />
       </mesh>;
     })}
   </group>;
