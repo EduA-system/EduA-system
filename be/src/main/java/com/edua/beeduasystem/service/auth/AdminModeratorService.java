@@ -1,6 +1,7 @@
 package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
+import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
@@ -75,6 +76,10 @@ public class AdminModeratorService {
         UUID currentUserId = currentUserProvider.requireUserId();
         Instant now = Instant.now();
 
+        if (userRepository.existsActiveByRoleAndSubject(Role.MODERATOR, subject)) {
+            throw new ForbiddenOperationException("Môn " + subject.name() + " đã có moderator. Mỗi môn chỉ được phép 1 moderator.");
+        }
+
         var existing = userRepository.findByEmail(normalizedEmail);
         if (existing.isPresent()) {
             AppUser u = existing.get();
@@ -126,6 +131,9 @@ public class AdminModeratorService {
         var roles = userRoleRepository.findRolesByUserId(id);
         if (!roles.contains(Role.MODERATOR)) {
             throw new ResourceNotFoundException("Không tìm thấy moderator.");
+        }
+        if (user.subject() != null && userRepository.existsActiveByRoleAndSubject(Role.MODERATOR, user.subject())) {
+            throw new ForbiddenOperationException("Môn " + user.subject().name() + " đã có moderator khác. Mỗi môn chỉ được phép 1 moderator.");
         }
         UUID currentUserId = currentUserProvider.requireUserId();
         Instant now = Instant.now();

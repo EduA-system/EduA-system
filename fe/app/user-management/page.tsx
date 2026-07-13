@@ -7,6 +7,12 @@ import { hasAnyRole } from "@/lib/auth/permissions";
 
 const SUBJECTS = ["MATH", "CHEMISTRY", "PHYSICS"] as const;
 
+const SUBJECT_LABELS: Record<string, string> = {
+  MATH: "Toán",
+  CHEMISTRY: "Hoá",
+  PHYSICS: "Lý",
+};
+
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 type UserItem = {
@@ -93,6 +99,15 @@ export default function UserManagementPage() {
     return () => { cancelled = true; };
   }, [authFetch, status, user, isAdmin, isModerator]);
 
+  useEffect(() => {
+    if (!isAdmin || items.length === 0) return;
+    const active = items.filter((i) => i.status !== "DISABLED").map((i) => i.subject);
+    if (active.includes(addSubject)) {
+      const next = SUBJECTS.find((s) => !active.includes(s));
+      if (next) setAddSubject(next);
+    }
+  }, [items, addSubject, isAdmin]);
+
   async function addUser() {
     if (!addEmail.trim()) return;
     try {
@@ -150,6 +165,10 @@ export default function UserManagementPage() {
   const addLabel = isAdmin ? "Thêm Moderator" : "Thêm Teacher";
   const emptyMsg = isAdmin ? "Chưa có Moderator." : "Chưa có Teacher.";
 
+  const takenSubjects = isAdmin
+    ? new Set(items.filter((i) => i.status !== "DISABLED").map((i) => i.subject))
+    : new Set<string>();
+
   return (
     <RouteGuard pathname="/user-management">
     {user && (
@@ -186,9 +205,12 @@ export default function UserManagementPage() {
             value={addSubject}
             onChange={(e) => setAddSubject(e.target.value)}
             className="rounded border px-3 py-2 text-sm"
+            disabled={isAdmin && takenSubjects.size >= SUBJECTS.length}
           >
             {SUBJECTS.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s} disabled={isAdmin && takenSubjects.has(s)}>
+                {SUBJECT_LABELS[s] ?? s}{isAdmin && takenSubjects.has(s) ? " (đã có)" : ""}
+              </option>
             ))}
           </select>
           <button onClick={addUser} className="rounded bg-black px-4 py-2 text-sm text-white">
