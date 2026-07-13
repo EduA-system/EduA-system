@@ -37,7 +37,7 @@ export const navGroups: NavGroup[] = [
       { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/homepage", expanded: true },
       { label: "V\u1eadt l\u00fd", icon: "physics", href: "/homepage", child: true },
       { label: "H\u00f3a h\u1ecdc", icon: "chemistry", href: "/homepage", child: true },
-      { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/homepage", child: true },
+      { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/periodic-table", child: true },
     ],
   },
   {

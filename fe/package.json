@@ -7,9 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audit:periodic-table": "node scripts/audit-periodic-table.mjs",
+    "sync:periodic-table": "node scripts/sync-periodic-table-data.mjs"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@stomp/stompjs": "^7.3.0",
     "@tiptap/extension-highlight": "^3.27.1",
     "@tiptap/extension-image": "^3.27.1",
@@ -26,6 +30,7 @@
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "three": "^0.184.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
