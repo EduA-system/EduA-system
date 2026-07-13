@@ -20,8 +20,8 @@ import {
 
 const GAP_RATIO = 0.06;       // gap = 6 % of cell size (matches zperiod proportion)
 const COLS = 18;
-const MIN_CELL = 38;
-const MAX_CELL = 72;          // ~zperiod sizing (~67px per cell at 1255-wide container)
+const MIN_CELL = 54;
+const MAX_CELL = 68;
 
 interface Props {
   visibleSet: Set<number>;
@@ -38,6 +38,9 @@ interface Props {
   quickRange: [number, number] | null;
   onChangeQuickRange: (range: [number, number] | null) => void;
   hasActiveFilters: boolean;
+  searchQuery: string;
+  onChangeSearchQuery: (query: string) => void;
+  onOpenSidebar: () => void;
 }
 
 function resolveColor(
@@ -110,27 +113,27 @@ function ControlDropdown<T extends string>({
       <button
         onClick={onToggle}
         className={`pt-lift inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium ${
-          active ? 'border-purple-400 bg-gradient-to-br from-purple-50 to-fuchsia-50 text-purple-700 shadow-sm'
-                 : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`}
+          active ? 'border-[#d97757] bg-[#fff7f1] text-[#b45335] shadow-sm'
+                 : 'border-[#d8d1c9] bg-white text-[#6b6b6b] hover:border-[#c7bdb3] hover:bg-[#faf8f5]'}`}
       >
         {label && <span>{label}</span>}
-        <span className="font-semibold">{options.find(o => o.value === currentValue)?.label}</span>
+        <span className="font-semibold whitespace-nowrap">{options.find(o => o.value === currentValue)?.label}</span>
         <svg className={`h-3 w-3 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       {isOpen && (
-        <div className="pt-dropdown-in absolute left-0 top-full z-30 mt-1.5 min-w-[200px] overflow-hidden rounded-xl border border-gray-100 bg-white/95 backdrop-blur-sm shadow-xl ring-1 ring-black/5">
+        <div className="pt-dropdown-in absolute left-0 top-full z-30 mt-1.5 min-w-[240px] overflow-hidden rounded-xl border border-gray-100 bg-white/95 backdrop-blur-sm shadow-xl ring-1 ring-black/5">
           {options.map((opt, i) => (
             <button
               key={opt.value}
               onClick={() => { onSelect(opt.value); onToggle(); }}
               style={{ animationDelay: `${i * 18}ms` }}
-              className={`pt-fade-up flex w-full items-center gap-2 px-3 py-2 text-sm transition-all hover:bg-purple-50 hover:pl-4 duration-200 ${
-                opt.value === currentValue ? 'bg-purple-50 font-semibold text-purple-700' : 'text-gray-700'}`}
+              className={`pt-fade-up flex w-full items-center gap-2 whitespace-nowrap px-3 py-2 text-sm transition-all hover:bg-[#fff7f1] hover:pl-4 duration-200 ${
+                opt.value === currentValue ? 'bg-[#fff7f1] font-semibold text-[#b45335]' : 'text-[#4b4743]'}`}
             >
               {opt.value === currentValue ? (
-                <svg className="h-3.5 w-3.5 text-purple-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="h-3.5 w-3.5 text-[#d97757] shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               ) : (
@@ -364,6 +367,9 @@ export function PeriodicTable({
   quickRange,
   onChangeQuickRange,
   hasActiveFilters,
+  searchQuery,
+  onChangeSearchQuery,
+  onOpenSidebar,
 }: Props) {
   const [openDropdown, setOpenDropdown] = useState<DropdownKey>(null);
   const [hoveredLegendKey, setHoveredLegendKey] = useState<string | null>(null);
@@ -427,10 +433,21 @@ export function PeriodicTable({
   const stubFont = `clamp(7px, ${Math.round(cell * 0.18)}px, 12px)`;
 
   return (
-    <div className="flex h-full flex-col gap-2 min-h-0">
+    <div className="flex h-full w-full min-w-0 flex-col gap-2">
       {/* ── Controls ─────────────────────────────────────────── */}
       {/* relative z-20: ensure dropdown menus paint over the (transform-ed) table wrap */}
       <div className="pt-fade-up relative z-20 flex flex-wrap items-center gap-2 shrink-0" style={{ animationDelay: '80ms' }}>
+        <button
+          type="button"
+          onClick={onOpenSidebar}
+          aria-label="Mở menu điều hướng"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#d8d1c9] bg-white text-[#6b6b6b] transition hover:bg-[#edeae5] md:hidden"
+        >
+          <svg viewBox="0 0 24 24" className="size-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+
         <ControlDropdown<GroupMode>
           label="Nhóm"
           active={displayMode === 'group'}
@@ -454,8 +471,8 @@ export function PeriodicTable({
           title="Mở bộ lọc chi tiết"
           className={`pt-lift group inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium ${
             hasActiveFilters
-              ? 'border-purple-400 bg-gradient-to-br from-purple-50 to-fuchsia-50 text-purple-700 shadow-sm'
-              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+            ? 'border-[#d97757] bg-[#fff7f1] text-[#b45335] shadow-sm'
+            : 'border-[#d8d1c9] bg-white text-[#6b6b6b] hover:border-[#c7bdb3] hover:bg-[#faf8f5]'
           }`}
         >
           <svg className="h-3.5 w-3.5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -463,14 +480,14 @@ export function PeriodicTable({
           </svg>
           Bộ lọc
           {hasActiveFilters && (
-            <span className="pt-pulse-ring ml-0.5 inline-flex h-2 w-2 items-center justify-center rounded-full bg-purple-500" />
+            <span className="pt-pulse-ring ml-0.5 inline-flex h-2 w-2 items-center justify-center rounded-full bg-[#d97757]" />
           )}
         </button>
 
         <button
           onClick={() => { setHoveredLegendKey(null); onReset(); }}
           title="Đặt lại tất cả về mặc định"
-          className="pt-lift group inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+          className="pt-lift group inline-flex items-center gap-1.5 rounded-full border border-[#d8d1c9] bg-white px-3.5 py-1.5 text-sm font-medium text-[#6b6b6b] hover:border-[#c7bdb3] hover:bg-[#faf8f5]"
         >
           <svg className="h-3.5 w-3.5 transition-transform duration-500 group-hover:-rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -478,24 +495,51 @@ export function PeriodicTable({
           Đặt lại
         </button>
 
-        <span className={`ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-300 ${
-          visibleSet.size === 118
-            ? 'bg-gray-100 text-gray-600'
-            : 'bg-gradient-to-r from-purple-100 to-fuchsia-100 text-purple-700 shadow-sm'
-        }`}>
-          <span className={`inline-block h-1.5 w-1.5 rounded-full ${visibleSet.size === 118 ? 'bg-gray-400' : 'bg-purple-500 animate-pulse'}`} />
-          {visibleSet.size === 118 ? (
-            <>
-              <span className="font-semibold">118</span>
-              <span>nguyên tố</span>
-            </>
-          ) : (
-            <>
-              <span className="font-bold tabular-nums">{visibleSet.size}</span>
-              <span className="opacity-70">/ 118 nguyên tố</span>
-            </>
-          )}
-        </span>
+        <div className="ml-auto flex min-w-0 basis-full items-center justify-end gap-2 sm:basis-auto">
+          <div className="group relative w-full max-w-[300px] sm:w-[260px]">
+            <svg className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#8a8179] transition-colors group-focus-within:text-[#d97757]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => onChangeSearchQuery(event.target.value)}
+              placeholder="Tìm nguyên tố, ký hiệu, số nguyên tử"
+              className="pt-search w-full rounded-full border border-[#d8d1c9] bg-white py-2 pl-9 pr-8 text-xs text-[#1f1f1f] placeholder:text-[#8a8179] transition-all focus:border-[#d97757] focus:outline-none"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                aria-label="Xóa tìm kiếm"
+                onClick={() => onChangeSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a8179] transition hover:text-[#1f1f1f]"
+              >
+                <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-300 ${
+            visibleSet.size === 118
+              ? 'bg-[#edeae5] text-[#5f5a55]'
+              : 'bg-[#fff0e8] text-[#b45335] shadow-sm'
+          }`}>
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${visibleSet.size === 118 ? 'bg-[#8a8179]' : 'bg-[#d97757] animate-pulse'}`} />
+            {visibleSet.size === 118 ? (
+              <>
+                <span className="font-semibold">118</span>
+                <span>nguyên tố</span>
+              </>
+            ) : (
+              <>
+                <span className="font-bold tabular-nums">{visibleSet.size}</span>
+                <span className="opacity-70">/ 118 nguyên tố</span>
+              </>
+            )}
+          </span>
+        </div>
       </div>
 
 {/* ── Combined range slider + gradient legend (in color mode) ─── */}
@@ -510,8 +554,8 @@ export function PeriodicTable({
       )}
 
       {/* ── Table (fills remaining space) ─────────────────────── */}
-      <div ref={tableWrapRef} className="pt-fade-up flex-1 min-h-0 min-w-0 overflow-auto flex items-start justify-center" style={{ animationDelay: '180ms' }}>
-        <div style={{ width: tableW, maxWidth: '100%' }} className="flex flex-col" >
+      <div ref={tableWrapRef} className="pt-fade-up min-h-0 min-w-0 flex-1 overflow-auto" style={{ animationDelay: '180ms' }}>
+        <div style={{ width: tableW }} className="mx-auto flex shrink-0 flex-col" >
 
           {/* Group numbers 1–18 */}
           <div style={{ ...makeGridStyle(1), gridTemplateRows: '18px' }}>

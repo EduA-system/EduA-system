@@ -12,6 +12,9 @@ interface SidebarProps {
   activeHref?: string;
   /** Render as a fixed full-height overlay layer instead of an in-flow column. */
   fixed?: boolean;
+  /** Turn the sidebar into a responsive drawer on small screens. */
+  responsive?: boolean;
+  mobileOpen?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -22,15 +25,19 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export function Sidebar({ collapsed = false, activeHref, fixed = false }: SidebarProps) {
+export function Sidebar({ collapsed = false, activeHref, fixed = false, responsive = false, mobileOpen = false }: SidebarProps) {
   const { user } = useAuth();
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const position = fixed
     ? "fixed top-12 left-0 z-40 flex flex-col"
-    : "flex flex-col";
+    : responsive
+      ? "fixed inset-y-0 left-0 z-40 flex h-screen flex-col transition-transform duration-300 md:relative md:inset-auto md:z-auto md:h-full md:translate-x-0"
+      : "flex flex-col";
   const visibility = collapsed
     ? "w-0 min-w-0 border-r-0 p-0 opacity-0 pointer-events-none"
-    : "w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100";
+    : responsive
+      ? `w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100 ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`
+      : "w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100";
 
   const displayName = user?.fullName ?? user?.email ?? "Nguyen Thi Hoa";
   const initials = user ? getInitials(displayName) : "NH";
@@ -52,7 +59,7 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false }: Sideba
 
   return (
     <aside
-      className={`shrink-0 overflow-hidden bg-[#f7f5f2] transition-[width,min-width,opacity,padding,border] duration-300 ${position} ${visibility}`}
+      className={`shrink-0 overflow-hidden bg-[#f7f5f2] transition-[width,min-width,opacity,padding,border,transform] duration-300 ${position} ${visibility}`}
       aria-hidden={collapsed}
       style={fixed ? { height: "calc(100% - 48px)" } : undefined}
     >
