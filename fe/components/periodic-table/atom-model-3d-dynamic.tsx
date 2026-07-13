@@ -6,7 +6,7 @@ import type { AtomModel3DProps } from './atom-model-3d';
 const AtomModel3D = dynamic<AtomModel3DProps>(() => import('./atom-model-3d'), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full items-center justify-center text-xs text-gray-400">
+    <div className="flex h-full items-center justify-center bg-[#fffdfb] text-xs text-[#8a8179]">
       Đang tải mô hình...
     </div>
   ),

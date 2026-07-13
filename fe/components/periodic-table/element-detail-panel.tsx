@@ -44,17 +44,21 @@ function EnergyDiagram({ subshells, activeSubshell, onSelect }: {
   activeSubshell: string | null;
   onSelect: (key: string) => void;
 }) {
-  return <div className="max-h-44 w-full overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2" aria-label="Sơ đồ mức năng lượng Aufbau">
-    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Mức năng lượng Aufbau (cao → thấp)</div>
-    <div className="space-y-1.5">
+  return <div className="max-h-52 w-full overflow-y-auto rounded-lg border border-[#e5dfd8] bg-[#faf8f5] p-2" aria-label="Sơ đồ mức năng lượng Aufbau">
+    <div className="mb-2 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-[#8a8179]">
+      <span>Mức năng lượng Aufbau</span>
+      <span className="normal-case tracking-normal text-[#b6aca3]">cao → thấp</span>
+    </div>
+    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
       {[...subshells].reverse().map(subshell => {
         const active = activeSubshell === subshell.key;
         const color = SUBSHELL_COLORS[subshell.type];
-        return <button key={subshell.key} onClick={() => onSelect(subshell.key)} className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left transition" style={active ? { backgroundColor: `${color}22`, boxShadow: `inset 3px 0 ${color}` } : undefined}>
-          <span className="w-7 font-mono text-xs font-bold" style={{ color }}>{subshell.key}</span>
-          <span className="flex gap-0.5" aria-label={`${subshell.electrons} electron`}>
-            {subshell.boxes.map((box, index) => <span key={index} className="flex h-5 w-5 items-center justify-center border border-slate-400 bg-white text-[13px] leading-none text-slate-800">{box.arrows.includes('up') && '↑'}{box.arrows.includes('down') && '↓'}</span>)}
+        return <button key={subshell.key} onClick={() => onSelect(subshell.key)} className="grid w-full grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-md border border-transparent px-2 py-1 text-left transition hover:border-[#e5dfd8] hover:bg-white" style={active ? { backgroundColor: `${color}18`, borderColor: `${color}66`, boxShadow: `inset 3px 0 ${color}` } : undefined}>
+          <span className="font-mono text-xs font-bold" style={{ color }}>{subshell.key}</span>
+          <span className="flex min-w-0 gap-0.5 overflow-hidden" aria-label={`${subshell.electrons} electron`}>
+            {subshell.boxes.map((box, index) => <span key={index} className="flex h-5 w-5 items-center justify-center rounded-[3px] border border-[#c7bdb3] bg-white text-[13px] leading-none text-[#1f1f1f]">{box.arrows.includes('up') && '↑'}{box.arrows.includes('down') && '↓'}</span>)}
           </span>
+          <span className="text-[10px] font-medium text-[#8a8179]">{subshell.electrons}e⁻</span>
         </button>;
       })}
     </div>
@@ -127,32 +131,32 @@ export function ElementDetailPanel({ element, onClose }: Props) {
       }`}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-[#1f1f1f]/35 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* Popup */}
       <div
         role="dialog"
-        className={`relative z-10 flex w-full max-w-[92vw] max-h-[96vh] overflow-hidden rounded-2xl bg-white shadow-2xl
+        className={`relative z-10 flex w-full max-w-[1140px] max-h-[96vh] flex-col overflow-hidden rounded-[16px] bg-[#fffdfb] shadow-2xl ring-1 ring-black/5 lg:flex-row
           transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
           ${open ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-75 translate-y-2'}`}
       >
         {shown && colors && (
           <>
             {/* ── LEFT: info panel ── */}
-            <div className="flex w-[420px] shrink-0 flex-col border-r border-gray-100">
+            <div className="flex max-h-[44vh] w-full shrink-0 flex-col border-b border-[#e5dfd8] bg-[#fffdfb] lg:max-h-none lg:w-[430px] lg:border-b-0 lg:border-r">
 
               {/* Hero */}
               <div
                 className="shrink-0 relative overflow-hidden flex flex-col items-center justify-center py-6 px-5"
                 style={{
-                  background: `linear-gradient(145deg, ${colors.bg} 0%, ${colors.border}28 100%)`,
+                  background: `linear-gradient(145deg, #fff7f1 0%, ${colors.bg} 58%, ${colors.border}24 100%)`,
                 }}
               >
                 {/* Dot grid texture across hero */}
                 <svg
                   className="absolute inset-0 w-full h-full pointer-events-none"
                   aria-hidden
-                  style={{ opacity: 0.22 }}
+                  style={{ opacity: 0.16 }}
                 >
                   <defs>
                     <pattern id={`dots-${shown.atomicNumber}`} x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
@@ -167,7 +171,7 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                   className="absolute -right-4 top-1/2 -translate-y-1/2 pointer-events-none"
                   width="160" height="160" viewBox="-80 -80 160 160"
                   aria-hidden
-                  style={{ opacity: 0.32 }}
+                  style={{ opacity: 0.22 }}
                 >
                   <g fill="none" stroke={colors.border} strokeWidth="1.4">
                     <ellipse rx="68" ry="22" />
@@ -186,7 +190,7 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                   className="absolute left-4 top-3 pointer-events-none"
                   width="22" height="22" viewBox="-11 -11 22 22"
                   aria-hidden
-                  style={{ opacity: 0.40 }}
+                  style={{ opacity: 0.28 }}
                 >
                   <rect x="-7" y="-7" width="14" height="14" fill="none" stroke={colors.border} strokeWidth="1.4" transform="rotate(18)" />
                 </svg>
@@ -194,7 +198,7 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                   className="absolute right-3 top-4 pointer-events-none"
                   width="18" height="18" viewBox="-9 -9 18 18"
                   aria-hidden
-                  style={{ opacity: 0.42 }}
+                  style={{ opacity: 0.30 }}
                 >
                   <polygon
                     points="0,-7 6,-3.5 6,3.5 0,7 -6,3.5 -6,-3.5"
@@ -205,7 +209,7 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                   className="absolute left-8 bottom-3 pointer-events-none"
                   width="16" height="16" viewBox="-8 -8 16 16"
                   aria-hidden
-                  style={{ opacity: 0.38 }}
+                  style={{ opacity: 0.26 }}
                 >
                   <rect x="-5" y="-5" width="10" height="10" fill="none" stroke={colors.border} strokeWidth="1.3" transform="rotate(-22)" />
                 </svg>
@@ -223,7 +227,7 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                     style={{
                       fontSize: 86,
                       color: colors.text,
-                      textShadow: `0 4px 12px ${colors.border}60, 0 10px 32px ${colors.border}35`,
+                      textShadow: `0 4px 12px ${colors.border}38, 0 10px 32px ${colors.border}22`,
                     }}
                   >
                     {shown.symbol}
@@ -241,7 +245,7 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                 <span
                   className="relative z-10 mt-3 rounded-full px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest"
                   style={{
-                    backgroundColor: colors.border + '22',
+                    backgroundColor: '#ffffff99',
                     color: colors.text,
                     border: `1px solid ${colors.border}55`,
                   }}
@@ -253,7 +257,7 @@ export function ElementDetailPanel({ element, onClose }: Props) {
               {/* Fade bridge — overlaps hero bottom */}
               <div
                 className="shrink-0 h-10 -mt-10 relative z-10 pointer-events-none"
-                style={{ background: `linear-gradient(to bottom, transparent, #ffffff)` }}
+                style={{ background: `linear-gradient(to bottom, transparent, #fffdfb)` }}
               />
 
               {/* Scrollable info + arrow */}
@@ -263,8 +267,8 @@ export function ElementDetailPanel({ element, onClose }: Props) {
 
                 {/* Basic info */}
                 <section>
-                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
-                    <span className="h-3 w-[3px] rounded-full" style={{ backgroundColor: colors.border }} />
+                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#8a8179]">
+                    <span className="h-3 w-[3px] rounded-full bg-[#d97757]" />
                     Thông tin cơ bản
                   </h3>
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
@@ -275,8 +279,8 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                       { label: 'Trạng thái', val: STATE_VI[shown.state] },
                     ].map(({ label, val }) => (
                       <div key={label}>
-                        <div className="text-[11px] uppercase tracking-wide text-gray-400 mb-0.5">{label}</div>
-                        <div className="font-bold text-gray-800 text-base">{val}</div>
+                        <div className="mb-0.5 text-[11px] uppercase tracking-wide text-[#8a8179]">{label}</div>
+                        <div className="text-base font-bold text-[#1f1f1f]">{val}</div>
                       </div>
                     ))}
                   </dl>
@@ -284,11 +288,11 @@ export function ElementDetailPanel({ element, onClose }: Props) {
 
                 {/* Electron structure */}
                 <section>
-                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
-                    <span className="h-3 w-[3px] rounded-full" style={{ backgroundColor: colors.border }} />
+                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#8a8179]">
+                    <span className="h-3 w-[3px] rounded-full bg-[#d97757]" />
                     Cấu trúc electron
                   </h3>
-                  <div className="mb-3 rounded-xl px-4 py-3 font-mono text-sm leading-relaxed bg-gray-50 border border-gray-100 text-gray-700">
+                  <div className="mb-3 rounded-xl border border-[#e5dfd8] bg-[#faf8f5] px-4 py-3 font-mono text-sm leading-relaxed text-[#4b4743]">
                     {shown.electronConfig}
                   </div>
                   <div className="flex flex-nowrap items-center justify-center gap-5">
@@ -298,13 +302,13 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                     ].map(({ label, val, dot }) => (
                       <div key={label} className="flex items-center gap-1.5 shrink-0">
                         <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: dot }} />
-                        <span className="text-sm text-gray-500 whitespace-nowrap">{label}</span>
-                        <span className="font-bold text-gray-800 text-sm">{val}</span>
+                        <span className="whitespace-nowrap text-sm text-[#6b6b6b]">{label}</span>
+                        <span className="text-sm font-bold text-[#1f1f1f]">{val}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                    <span className="font-semibold text-slate-700">Đồng vị minh họa: </span>
+                  <div className="mt-3 rounded-lg border border-[#e5dfd8] bg-[#faf8f5] px-3 py-2 text-xs text-[#5f5a55]">
+                    <span className="font-semibold text-[#1f1f1f]">Đồng vị minh họa: </span>
                     {shown.representativeIsotope
                       ? `${shown.symbol}-${shown.representativeIsotope.massNumber} · ${shown.protons} proton · ${shown.representativeIsotope.neutronCount} neutron`
                       : 'Chưa có đồng vị đại diện'}
@@ -313,11 +317,11 @@ export function ElementDetailPanel({ element, onClose }: Props) {
 
                 {/* Physical properties */}
                 <section>
-                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
-                    <span className="h-3 w-[3px] rounded-full" style={{ backgroundColor: colors.border }} />
+                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#8a8179]">
+                    <span className="h-3 w-[3px] rounded-full bg-[#d97757]" />
                     Tính chất vật lý
                   </h3>
-                  <div className="rounded-xl border border-gray-100 overflow-hidden">
+                  <div className="overflow-hidden rounded-xl border border-[#e5dfd8]">
                     {[
                       { label: 'Nóng chảy', val: formatTemp(shown.meltingPoint) },
                       { label: 'Sôi', val: formatTemp(shown.boilingPoint) },
@@ -327,10 +331,10 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                       <div
                         key={label}
                         className="flex items-center justify-between px-4 py-2.5"
-                        style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : '#ffffff' }}
+                        style={{ backgroundColor: idx % 2 === 0 ? '#faf8f5' : '#fffdfb' }}
                       >
-                        <span className="text-sm text-gray-400">{label}</span>
-                        <span className="font-semibold text-gray-800 text-sm">{val}</span>
+                        <span className="text-sm text-[#8a8179]">{label}</span>
+                        <span className="text-sm font-semibold text-[#1f1f1f]">{val}</span>
                       </div>
                     ))}
                   </div>
@@ -338,11 +342,11 @@ export function ElementDetailPanel({ element, onClose }: Props) {
 
                 {/* Chemical properties */}
                 <section>
-                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
-                    <span className="h-3 w-[3px] rounded-full" style={{ backgroundColor: colors.border }} />
+                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#8a8179]">
+                    <span className="h-3 w-[3px] rounded-full bg-[#d97757]" />
                     Tính chất hóa học
                   </h3>
-                  <div className="rounded-xl border border-gray-100 overflow-hidden">
+                  <div className="overflow-hidden rounded-xl border border-[#e5dfd8]">
                     {[
                       { label: 'Độ âm điện (Pauling)', val: formatVal(shown.electronegativity) },
                       { label: 'Năng lượng ion hóa', val: formatVal(shown.ionizationEnergy, 'kJ/mol') },
@@ -351,10 +355,10 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                       <div
                         key={label}
                         className="flex items-center justify-between px-4 py-2.5"
-                        style={{ backgroundColor: idx % 2 === 0 ? '#fafafa' : '#ffffff' }}
+                        style={{ backgroundColor: idx % 2 === 0 ? '#faf8f5' : '#fffdfb' }}
                       >
-                        <span className="text-sm text-gray-400">{label}</span>
-                        <span className="font-semibold text-gray-800 text-sm">{val}</span>
+                        <span className="text-sm text-[#8a8179]">{label}</span>
+                        <span className="text-sm font-semibold text-[#1f1f1f]">{val}</span>
                       </div>
                     ))}
                   </div>
@@ -364,9 +368,9 @@ export function ElementDetailPanel({ element, onClose }: Props) {
 
                 {/* Scroll arrow */}
                 <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-14 flex flex-col items-center justify-end pb-2"
-                  style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.96))' }}
+                  style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,253,251,0.96))' }}
                 >
-                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-gray-300 animate-bounce">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 animate-bounce text-[#c7bdb3]">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 8l5 5 5-5" />
                   </svg>
                 </div>
@@ -374,18 +378,18 @@ export function ElementDetailPanel({ element, onClose }: Props) {
             </div>
 
             {/* ── RIGHT: atom model ── */}
-            <div className="relative flex flex-1 flex-col min-w-0 bg-white">
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#fffdfb]">
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-xl leading-none text-gray-600 shadow-sm backdrop-blur transition hover:bg-white hover:text-gray-900 hover:scale-110"
+                className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-[#e5dfd8] bg-white/85 text-xl leading-none text-[#5f5a55] shadow-sm backdrop-blur transition hover:bg-white hover:text-[#1f1f1f] hover:scale-105"
                 aria-label="Đóng"
               >
                 ×
               </button>
 
               {/* Mode toggle (top-left of canvas) */}
-              <div className="absolute left-4 top-4 z-10 flex rounded-lg bg-white/85 p-1 shadow-sm backdrop-blur">
+              <div className="absolute left-4 top-4 z-10 flex rounded-lg border border-[#e5dfd8] bg-white/85 p-1 shadow-sm backdrop-blur">
                 {(['shell', 'orbital'] as const).map(m => (
                   <button
                     key={m}
@@ -395,7 +399,7 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                       setActiveSubshell(m === 'orbital' ? energySubshells.at(-1)?.key ?? null : null);
                     }}
                     className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
-                      mode === m ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-800'
+                      mode === m ? 'bg-[#1f1f1f] text-white' : 'text-[#6b6b6b] hover:text-[#1f1f1f]'
                     }`}
                   >
                     {m === 'shell' ? 'Lớp' : 'Orbital'}
@@ -404,7 +408,7 @@ export function ElementDetailPanel({ element, onClose }: Props) {
               </div>
 
               {/* Canvas */}
-              <div className="flex-1 min-h-[600px]">
+              <div className="min-h-[300px] flex-1 lg:min-h-0">
                 <AtomModel3D
                   atomicNumber={shown.atomicNumber}
                   protons={shown.protons}
@@ -419,16 +423,16 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                 />
               </div>
 
-              <p className="shrink-0 border-t border-slate-100 bg-slate-50 px-5 py-2 text-center text-[11px] leading-relaxed text-slate-500">
+              <p className="shrink-0 border-t border-[#e5dfd8] bg-[#faf8f5] px-5 py-2 text-center text-[11px] leading-relaxed text-[#5f5a55]">
                 Chế độ Lớp minh họa phân bố theo lớp chính. Chế độ Orbital hiển thị các hạt e⁻ theo phân lớp; vòng và chuyển động là quy ước trực quan, không phải quỹ đạo vật lý thực.
                 {!shown.representativeIsotope && ' Hạt nhân chỉ hiển thị proton vì chưa có đồng vị minh họa.'}
               </p>
 
-              {/* Selector — two rows: legend+controls on top, scrollable pills below */}
-              <div className="shrink-0 border-t border-gray-200 bg-white px-5 py-2 space-y-2">
+              {/* Selector — shell uses horizontal pills; orbital uses a compact energy panel. */}
+              <div className="shrink-0 space-y-2 border-t border-[#e5dfd8] bg-[#fffdfb] px-4 py-2">
 
                 {/* Row 1 — legend + active info + pause */}
-                <div className="flex items-center gap-3 text-xs text-gray-400">
+                <div className="flex items-center gap-3 text-xs text-[#8a8179]">
                   {mode === 'shell' && activeShell != null && (
                     <span
                       className="font-medium truncate"
@@ -460,14 +464,14 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                           Proton
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <span className="inline-block h-3 w-3 rounded-full bg-slate-400" />
+                          <span className="inline-block h-3 w-3 rounded-full bg-[#8a8179]" />
                           Neutron
                         </span>
                       </>
                     )}
                     <button
                       onClick={() => setPaused(p => !p)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-800"
+                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edeae5] text-[#5f5a55] transition hover:bg-[#e5dfd8] hover:text-[#1f1f1f]"
                       aria-label={paused ? 'Tiếp tục' : 'Dừng'}
                       title={paused ? 'Tiếp tục' : 'Dừng chuyển động'}
                     >
@@ -480,18 +484,15 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                   </span>
                 </div>
 
-                {/* Row 2 — scrollable pill list with arrow indicators */}
-                <div className="relative">
-                  <div
-                    ref={pillsRef}
-                    onScroll={updatePillsScroll}
-                    className="flex items-center gap-2 min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden scroll-smooth pr-8"
-                  >
-                  <span className="shrink-0 text-[11px] font-medium text-gray-400">
-                    {mode === 'shell' ? 'Lớp:' : 'Orbital:'}
-                  </span>
-                  {mode === 'shell'
-                    ? shells.map((shell, i) => {
+                {mode === 'shell' ? (
+                  <div className="relative">
+                    <div
+                      ref={pillsRef}
+                      onScroll={updatePillsScroll}
+                      className="flex min-w-0 items-center gap-2 overflow-x-auto scroll-smooth pr-8 [&::-webkit-scrollbar]:hidden"
+                    >
+                      <span className="shrink-0 text-[11px] font-medium text-[#8a8179]">Lớp:</span>
+                      {shells.map((shell, i) => {
                         const eCount = shell.electrons;
                         const isActive = activeShell === i;
                         const c = SHELL_COLORS[i % SHELL_COLORS.length];
@@ -499,53 +500,56 @@ export function ElementDetailPanel({ element, onClose }: Props) {
                           <button
                             key={i}
                             onClick={() => setActiveShell(isActive ? null : i)}
-                            className="shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition-all duration-150"
+                            className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition-all duration-150"
                             style={
                               isActive
                                 ? { backgroundColor: c, color: '#fff', boxShadow: `0 0 0 3px ${c}40` }
-                                : { backgroundColor: '#f1f5f9', color: '#64748b' }
+                                : { backgroundColor: '#faf8f5', color: '#5f5a55' }
                             }
                           >
                             <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c }} />
                             {SHELL_NAMES[i]}: {eCount}e⁻
                           </button>
                         );
-                      })
-                    : <EnergyDiagram subshells={energySubshells} activeSubshell={activeSubshell} onSelect={setActiveSubshell} />}
-                  </div>
+                      })}
+                    </div>
 
-                  {/* Left scroll arrow */}
-                  {pillsCanScrollLeft && (
-                    <button
-                      onClick={() => scrollPills(-1)}
-                      className="absolute left-0 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md text-gray-600 hover:text-gray-900 hover:scale-110 transition"
-                      style={{ boxShadow: '0 0 0 4px white, 0 2px 6px rgba(0,0,0,0.15)' }}
-                      aria-label="Cuộn trái"
-                    >
-                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3.5 w-3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l-6 5 6 5" />
-                      </svg>
-                    </button>
-                  )}
-
-                  {/* Right scroll arrow + fade */}
-                  {pillsCanScrollRight && (
-                    <>
-                      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12"
-                        style={{ background: 'linear-gradient(to right, transparent, #ffffff 60%)' }} />
+                    {pillsCanScrollLeft && (
                       <button
-                        onClick={() => scrollPills(1)}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-gray-600 hover:text-gray-900 hover:scale-110 transition"
-                        style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
-                        aria-label="Cuộn phải"
+                        onClick={() => scrollPills(-1)}
+                        className="absolute left-0 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#5f5a55] shadow-md transition hover:text-[#1f1f1f] hover:scale-105"
+                        style={{ boxShadow: '0 0 0 4px #fffdfb, 0 2px 6px rgba(0,0,0,0.15)' }}
+                        aria-label="Cuộn trái"
                       >
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3.5 w-3.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 5l6 5-6 5" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l-6 5 6 5" />
                         </svg>
                       </button>
-                    </>
-                  )}
-                </div>
+                    )}
+
+                    {pillsCanScrollRight && (
+                      <>
+                        <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-12"
+                          style={{ background: 'linear-gradient(to right, transparent, #fffdfb 60%)' }} />
+                        <button
+                          onClick={() => scrollPills(1)}
+                          className="absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#5f5a55] transition hover:text-[#1f1f1f] hover:scale-105"
+                          style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
+                          aria-label="Cuộn phải"
+                        >
+                          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3.5 w-3.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 5l6 5-6 5" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid min-h-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+                    <span className="pt-2 text-[11px] font-medium text-[#8a8179]">Orbital:</span>
+                    <EnergyDiagram subshells={energySubshells} activeSubshell={activeSubshell} onSelect={setActiveSubshell} />
+                  </div>
+                )}
               </div>
             </div>
           </>

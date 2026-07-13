@@ -49,7 +49,7 @@ export interface Element {
   electronegativity: number | null;
   ionizationEnergy: number | null;
   electronAffinity: number | null;
-  /** PubChem van der Waals radius, in pm. */
+  /** van der Waals radius, in pm, when available from the reviewed snapshot. */
   vanDerWaalsRadius: number | null;
   representativeIsotope: RepresentativeIsotope | null;
   state: ElementState;
@@ -66,22 +66,23 @@ export interface FilterState {
   electronegativity: [number, number] | null;
   ionizationEnergy: [number, number] | null;
   electronAffinity: [number, number] | null;
+  vanDerWaalsRadius: [number, number] | null;
   blocks: Set<ElementBlock>;
   states: Set<ElementState>;
   categories: Set<ElementCategory>;
 }
 
 export const CATEGORY_COLORS: Record<ElementCategory, { bg: string; border: string; text: string; label: string }> = {
-  'alkali-metal':    { bg: '#fde68a', border: '#f59e0b', text: '#78350f', label: 'Kim loại kiềm' },
-  'alkaline-earth':  { bg: '#fed7aa', border: '#fb923c', text: '#7c2d12', label: 'Kim loại kiềm thổ' },
-  'transition-metal':{ bg: '#bfdbfe', border: '#60a5fa', text: '#1e3a8a', label: 'Kim loại chuyển tiếp' },
-  'post-transition': { bg: '#bbf7d0', border: '#4ade80', text: '#14532d', label: 'Kim loại hậu chuyển tiếp' },
-  'metalloid':       { bg: '#d9f99d', border: '#a3e635', text: '#365314', label: 'Á kim' },
-  'nonmetal':        { bg: '#fce7f3', border: '#f472b6', text: '#831843', label: 'Phi kim' },
-  'halogen':         { bg: '#ede9fe', border: '#a78bfa', text: '#4c1d95', label: 'Halogen' },
-  'noble-gas':       { bg: '#cffafe', border: '#22d3ee', text: '#164e63', label: 'Khí hiếm' },
-  'lanthanide':      { bg: '#fef9c3', border: '#facc15', text: '#713f12', label: 'Lanthanide' },
-  'actinide':        { bg: '#fee2e2', border: '#f87171', text: '#7f1d1d', label: 'Actinide' },
+  'alkali-metal':    { bg: '#f7d7ae', border: '#df744f', text: '#743c29', label: 'Kim loại kiềm' },
+  'alkaline-earth':  { bg: '#f6d1a8', border: '#d58a47', text: '#6f4222', label: 'Kim loại kiềm thổ' },
+  'transition-metal':{ bg: '#caddea', border: '#739ab1', text: '#2f4d5d', label: 'Kim loại chuyển tiếp' },
+  'post-transition': { bg: '#cbe3ca', border: '#72a97b', text: '#355b3c', label: 'Kim loại hậu chuyển tiếp' },
+  'metalloid':       { bg: '#e4e3a8', border: '#aaa443', text: '#5d5922', label: 'Á kim' },
+  'nonmetal':        { bg: '#f2cbc1', border: '#c98070', text: '#70473e', label: 'Phi kim' },
+  'halogen':         { bg: '#ddceed', border: '#9679b5', text: '#51416a', label: 'Halogen' },
+  'noble-gas':       { bg: '#c5e3e1', border: '#65a7a2', text: '#315c5a', label: 'Khí hiếm' },
+  'lanthanide':      { bg: '#f0dca4', border: '#c09339', text: '#6b5128', label: 'Lanthanide' },
+  'actinide':        { bg: '#efc9c0', border: '#bc725d', text: '#693d32', label: 'Actinide' },
   'unknown':         { bg: '#f3f4f6', border: '#d1d5db', text: '#374151', label: 'Không xác định' },
 };
 
@@ -142,6 +143,7 @@ export const DEFAULT_FILTER_STATE: FilterState = {
   electronegativity: null,
   ionizationEnergy: null,
   electronAffinity: null,
+  vanDerWaalsRadius: null,
   blocks: new Set(),
   states: new Set(),
   categories: new Set(),

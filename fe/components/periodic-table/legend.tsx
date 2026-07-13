@@ -233,7 +233,7 @@ export function Legend({ displayMode, groupMode, colorMode, heatmapMin, heatmapM
                 : isDimmed
                   ? 'opacity-40'
                   : 'hover:bg-gray-50 hover:scale-105',
-              isPinned ? 'bg-purple-50' : '',
+              isPinned ? 'bg-[#fff7f1]' : '',
             ].join(' ')}
             style={isActive ? { outline: `2px solid ${item.border}`, outlineOffset: '2px' } : undefined}
             title={isPinned ? `Đã ghim: ${item.label} (bấm lại để bỏ)` : `Bấm để ghim: ${item.label}`}

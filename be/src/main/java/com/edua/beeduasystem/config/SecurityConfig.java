@@ -37,6 +37,7 @@ public class SecurityConfig {
             "/api/lesson-plans/**",
             "/api/slides/**",
             "/api/slide-design/**",
+            "/api/molecules/**",
             "/api/uploads/**"
     };
 

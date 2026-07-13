@@ -144,6 +144,85 @@ const RADIOACTIVE_WITH_NO_STANDARD_ATOMIC_WEIGHT = new Set([
   43, 61, ...Array.from({ length: 35 }, (_, index) => index + 84),
 ]);
 
+const VDW_RADII_PM: Partial<Record<number, number>> = {
+  1: 120,
+  2: 140,
+  3: 181,
+  4: 153,
+  5: 192,
+  6: 170,
+  7: 155,
+  8: 152,
+  9: 147,
+  10: 154,
+  11: 227,
+  12: 173,
+  13: 184,
+  14: 210,
+  15: 180,
+  16: 180,
+  17: 175,
+  18: 188,
+  19: 275,
+  20: 231,
+  21: 230,
+  22: 215,
+  23: 205,
+  24: 205,
+  25: 205,
+  26: 205,
+  27: 200,
+  28: 200,
+  29: 200,
+  30: 210,
+  31: 187,
+  32: 211,
+  33: 185,
+  34: 190,
+  35: 183,
+  36: 202,
+  37: 303,
+  38: 249,
+  39: 240,
+  40: 230,
+  41: 215,
+  42: 210,
+  43: 205,
+  44: 205,
+  45: 200,
+  46: 205,
+  47: 210,
+  48: 220,
+  49: 193,
+  50: 217,
+  51: 206,
+  52: 206,
+  53: 198,
+  54: 216,
+  55: 343,
+  56: 268,
+  57: 250,
+  72: 225,
+  73: 220,
+  74: 210,
+  75: 205,
+  76: 200,
+  77: 200,
+  78: 205,
+  79: 210,
+  80: 205,
+  81: 196,
+  82: 202,
+  83: 207,
+  84: 197,
+  85: 202,
+  86: 220,
+  87: 348,
+  88: 283,
+  90: 240,
+  92: 230,
+};
+
 function atomicWeightFor(atomicNumber: number, legacyMass: number): AtomicWeight {
   // CIAAW 2024 publishes an interval for terrestrial hydrogen materials.
   if (atomicNumber === 1) return { kind: 'interval', min: 1.00784, max: 1.00811 };
@@ -169,9 +248,7 @@ export const ELEMENTS: Element[] = SNAPSHOT_RECORDS.map((record) => {
   return {
     ...element,
     atomicWeight: atomicWeightFor(record.atomicNumber, record.atomicMass),
-    // PubChem's downloadable periodic-table CSV does not publish a van der
-    // Waals-radius column. Do not relabel its AtomicRadius value as VdW data.
-    vanDerWaalsRadius: null,
+    vanDerWaalsRadius: VDW_RADII_PM[record.atomicNumber] ?? null,
     representativeIsotope,
     ...pubChem,
   } as Element;
@@ -222,6 +299,7 @@ export function applyFilters(
     if (!checkRange(el.electronegativity, filters.electronegativity)) continue;
     if (!checkRange(el.ionizationEnergy, filters.ionizationEnergy)) continue;
     if (!checkRange(el.electronAffinity, filters.electronAffinity)) continue;
+    if (!checkRange(el.vanDerWaalsRadius, filters.vanDerWaalsRadius)) continue;
 
     if (filters.blocks.size > 0 && !filters.blocks.has(el.block)) continue;
     if (filters.states.size > 0 && !filters.states.has(el.state)) continue;

@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { ContactShadows, Environment, OrbitControls } from '@react-three/drei';
+import { Environment, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { getShellDistribution as getShellData, subshellKey, type ElectronShell, type SubshellType } from './orbital-data';
 
@@ -160,8 +160,7 @@ export default function AtomModel3D({ atomicNumber, protons, neutrons, electronC
   const cameraDistance = maxRadius * 2.6 + 3;
 
   return <Canvas key={`atom-${atomicNumber}-${mode}`} shadows camera={{ position: [0, cameraDistance * 0.7, cameraDistance * 0.7], fov: 52 }} dpr={[1, 2]} gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.9 }} style={{ width: '100%', height: '100%' }}>
-    <color attach="background" args={['#ffffff']} /><ambientLight intensity={0.6} /><directionalLight position={[7, 10, 8]} intensity={1.3} /><pointLight position={[-6, 4, -5]} intensity={0.7} color="#818cf8" />
-    <ContactShadows position={[0, -3, 0]} opacity={0.18} scale={15} blur={3} far={10} />
+    <color attach="background" args={['#fffdfb']} /><ambientLight intensity={0.6} /><directionalLight position={[7, 10, 8]} intensity={1.3} /><pointLight position={[-6, 4, -5]} intensity={0.7} color="#d97757" />
     <OrbitControls enablePan={false} minDistance={3} maxDistance={cameraDistance * 2.2} autoRotate={!paused} autoRotateSpeed={0.35} />
     <Suspense fallback={null}><Environment preset="warehouse" /></Suspense>
     <LayerScene protons={protons} neutrons={neutrons} shells={shells} mode={mode} activeShell={activeShell} activeSubshell={activeSubshell} paused={paused} />
