@@ -23,6 +23,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   accessToken: string | null;
   status: AuthStatus;
+  updateUser: (user: AuthUser) => void;
   signIn: (idToken: string) => Promise<AuthUser>;
   signOut: () => Promise<void>;
   refreshToken: () => Promise<string | null>;
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           clearSession();
           return null;
         }
-        const refreshedUser = await getMe(refreshed.accessToken);
+        const refreshedUser = refreshed.user ?? (await getMe(refreshed.accessToken));
         setSession(refreshed.accessToken, refreshedUser);
         return refreshed.accessToken;
       } catch {
@@ -118,6 +119,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [clearSession]);
 
+  const updateUser = useCallback((nextUser: AuthUser) => {
+    setUser(nextUser);
+  }, []);
+
   const authFetch = useCallback(
     async (input: RequestInfo | URL, init: RequestInit = {}) => {
       let token = tokenRef.current;
@@ -145,12 +150,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       accessToken,
       status,
+      updateUser,
       signIn,
       signOut,
       refreshToken,
       authFetch,
     }),
-    [accessToken, authFetch, refreshToken, signIn, signOut, status, user],
+    [accessToken, authFetch, refreshToken, signIn, signOut, status, updateUser, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

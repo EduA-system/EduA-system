@@ -17,10 +17,12 @@ export type LessonPlanEvent =
  */
 export function connectLessonPlanStream({
   topic,
+  accessToken,
   onEvent,
   onClose,
 }: {
   topic: string;
+  accessToken: string;
   onEvent: (event: LessonPlanEvent) => void;
   onClose: () => void;
 }): { disconnect: () => void } {
@@ -30,6 +32,7 @@ export function connectLessonPlanStream({
 
   const client = new Client({
     brokerURL,
+    connectHeaders: { Authorization: `Bearer ${accessToken}` },
     reconnectDelay: 2000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,

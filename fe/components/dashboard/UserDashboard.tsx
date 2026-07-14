@@ -8,18 +8,33 @@ import { Dropdown } from "../ui/Dropdown";
 import { Pill } from "../ui/Pill";
 import { Sidebar } from "../layout/Sidebar";
 import {
-  fetchTextbookCatalog,
+  fetchChapterLessons,
+  fetchTextbookChapters,
+  fetchTextbookNames,
   startLessonPlanStream,
   storeLessonPlanSession,
-  type CatalogBook,
+  type CatalogBookName,
+  type CatalogChapterSummary,
+  type CatalogLesson,
 } from "@/services/lessonPlanService";
+import { useAuth } from "@/lib/auth/AuthContext";
+
+const SUBJECT_OPTIONS = [
+  { value: "PHYSICS", label: "Vật lí" },
+  { value: "CHEMISTRY", label: "Hóa học" },
+  { value: "MATH", label: "Toán" },
+];
 
 export function UserDashboard() {
   const router = useRouter();
+  const { authFetch } = useAuth();
 
-  const [books, setBooks] = useState<CatalogBook[]>([]);
+  const [books, setBooks] = useState<CatalogBookName[]>([]);
+  const [chapters, setChapters] = useState<CatalogChapterSummary[]>([]);
+  const [lessons, setLessons] = useState<CatalogLesson[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
 
+  const [subjectCode, setSubjectCode] = useState("PHYSICS");
   const [bookId, setBookId] = useState<string | null>(null);
   const [chapterId, setChapterId] = useState<string | null>(null);
   const [lessonId, setLessonId] = useState<string | null>(null);
@@ -30,9 +45,9 @@ export function UserDashboard() {
 
   useEffect(() => {
     let active = true;
-    fetchTextbookCatalog()
-      .then((catalog) => {
-        if (active) setBooks(catalog.books ?? []);
+    fetchTextbookNames(subjectCode)
+      .then((items) => {
+        if (active) setBooks(items);
       })
       .catch((error: unknown) => {
         if (active) setCatalogError(error instanceof Error ? error.message : "Không tải được danh mục SGK.");
@@ -40,39 +55,97 @@ export function UserDashboard() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [subjectCode]);
+
+  useEffect(() => {
+    if (!bookId) {
+      return;
+    }
+
+    let active = true;
+    fetchTextbookChapters(bookId)
+      .then((items) => {
+        if (active) setChapters(items);
+      })
+      .catch((error: unknown) => {
+        if (active) setCatalogError(error instanceof Error ? error.message : "Khong tai duoc danh sach chuong.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [bookId]);
+
+  useEffect(() => {
+    if (!bookId || !chapterId) {
+      return;
+    }
+
+    let active = true;
+    fetchChapterLessons(bookId, chapterId)
+      .then((items) => {
+        if (active) setLessons(items);
+      })
+      .catch((error: unknown) => {
+        if (active) setCatalogError(error instanceof Error ? error.message : "Khong tai duoc danh sach bai hoc.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [bookId, chapterId]);
 
   const selectedBook = useMemo(() => books.find((book) => book.id === bookId) ?? null, [books, bookId]);
-  const selectedChapter = useMemo(
-    () => selectedBook?.chapters.find((chapter) => chapter.id === chapterId) ?? null,
-    [selectedBook, chapterId],
-  );
-  const selectedLesson = useMemo(
-    () => selectedChapter?.lessons.find((lesson) => lesson.id === lessonId) ?? null,
-    [selectedChapter, lessonId],
+  const selectedChapter = useMemo(() => chapters.find((chapter) => chapter.id === chapterId) ?? null, [chapters, chapterId]);
+  const selectedLesson = useMemo(() => lessons.find((lesson) => lesson.id === lessonId) ?? null, [lessons, lessonId]);
+  const selectedSubject = useMemo(
+    () => SUBJECT_OPTIONS.find((subject) => subject.value === subjectCode) ?? SUBJECT_OPTIONS[0],
+    [subjectCode],
   );
 
-  const bookOptions = books.map((book) => ({ value: book.id, label: `Lớp ${book.grade}` }));
-  const chapterOptions = (selectedBook?.chapters ?? []).map((chapter) => ({
+  const bookOptions = useMemo(() => {
+    const gradeCounts = books.reduce((counts, book) => {
+      counts.set(book.grade, (counts.get(book.grade) ?? 0) + 1);
+      return counts;
+    }, new Map<number, number>());
+
+    return books.map((book) => ({
+      value: book.id,
+      label: (gradeCounts.get(book.grade) ?? 0) > 1 ? `Lớp ${book.grade} - ${book.name}` : `Lớp ${book.grade}`,
+    }));
+  }, [books]);
+  const chapterOptions = chapters.map((chapter) => ({
     value: chapter.id,
     label: chapter.name,
   }));
-  const lessonOptions = (selectedChapter?.lessons ?? []).map((lesson) => ({
+  const lessonOptions = lessons.map((lesson) => ({
     value: lesson.id,
     label: lesson.name,
   }));
 
   const canGenerate = Boolean(bookId && chapterId && lessonId) && !generating;
 
+  function handleSubjectChange(value: string) {
+    setSubjectCode(value);
+    setBookId(null);
+    setChapterId(null);
+    setLessonId(null);
+    setBooks([]);
+    setChapters([]);
+    setLessons([]);
+    setCatalogError(null);
+  }
+
   function handleBookChange(value: string) {
     setBookId(value);
     setChapterId(null);
     setLessonId(null);
+    setChapters([]);
+    setLessons([]);
   }
 
   function handleChapterChange(value: string) {
     setChapterId(value);
     setLessonId(null);
+    setLessons([]);
   }
 
   async function handleGenerate() {
@@ -98,7 +171,8 @@ export function UserDashboard() {
         ...session,
         display: {
           title: selectedLesson?.name ?? "…………………………………..",
-          subject: "Vật lí",
+          subject: selectedBook?.subjectName ?? selectedSubject.label,
+          subjectCode: subjectCode as "MATH" | "CHEMISTRY" | "PHYSICS",
           grade: selectedBook ? `lớp: ${selectedBook.grade}` : "lớp: ………",
           duration: "Thời gian thực hiện: (số tiết)",
         },
@@ -110,7 +184,7 @@ export function UserDashboard() {
         session,
       );
 
-      await startLessonPlanStream(session);
+      await startLessonPlanStream(session, authFetch);
       storeLessonPlanSession(displaySession);
       router.push("/lesson-edit");
     } catch (error: unknown) {
@@ -153,15 +227,19 @@ export function UserDashboard() {
                 Chọn nội dung giảng dạy
               </div>
 
-              {catalogError ? (
+              {catalogError && (
                 <p className="mt-4 rounded-lg border border-[#e8b4a4] bg-[#fdf3ef] px-3 py-2 text-[12px] text-[#c0492b]">
                   {catalogError}
                 </p>
-              ) : (
+              )}
+
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <div className="flex h-[34px] items-center gap-2 rounded-lg border border-[#d8d1c9] bg-[#f3efe9] px-3 text-[12px] font-medium text-[#6b6b6b]">
-                    Vật lí
-                  </div>
+                  <Dropdown
+                    placeholder="Môn học"
+                    value={subjectCode}
+                    options={SUBJECT_OPTIONS}
+                    onChange={handleSubjectChange}
+                  />
                   <span className="text-[#d8d1c9]">›</span>
                   <Dropdown
                     placeholder="Lớp"
@@ -186,7 +264,6 @@ export function UserDashboard() {
                     disabled={!selectedChapter}
                   />
                 </div>
-              )}
 
               <div className="my-6 h-px bg-[#d8d1c9]" />
 

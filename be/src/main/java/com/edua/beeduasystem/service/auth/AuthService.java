@@ -60,6 +60,9 @@ public class AuthService {
     public record LoginResult(AppUser user, Set<Role> roles, AuthTokens tokens) {
     }
 
+    public record RefreshResult(AppUser user, Set<Role> roles, AuthTokens tokens) {
+    }
+
     public record CurrentUserInfo(AppUser user, Set<Role> roles) {
     }
 
@@ -82,6 +85,8 @@ public class AuthService {
                 user.email(),
                 user.googleSub() != null ? user.googleSub() : identity.subject(),
                 StringUtils.hasText(user.fullName()) ? user.fullName() : identity.fullName(),
+                user.avatarUrl(),
+                user.contactInfo(),
                 user.subject(),
                 UserStatus.ACTIVE,
                 user.createdAt(),
@@ -94,7 +99,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthTokens refresh(String rawRefreshToken) {
+    public RefreshResult refresh(String rawRefreshToken) {
         if (!StringUtils.hasText(rawRefreshToken)) {
             throw new InvalidTokenException("Missing refresh token.");
         }
@@ -119,7 +124,7 @@ public class AuthService {
             throw new EmailNotAllowedException("Tài khoản đã bị khóa.");
         }
         Set<Role> roles = userRoleRepository.findRolesByUserId(user.id());
-        return issueTokens(user, roles, now);
+        return new RefreshResult(user, roles, issueTokens(user, roles, now));
     }
 
     @Transactional

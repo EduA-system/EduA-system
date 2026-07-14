@@ -9,6 +9,7 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
@@ -16,8 +17,8 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Auth cho WebSocket: bắt buộc access JWT ở STOMP {@code CONNECT} (native header Authorization).
- * Gán Principal = user, để chặn subscribe topic của người khác (rò rỉ nội dung qua /topic/...).
+ * Auth cho WebSocket: mọi STOMP {@code CONNECT} phải có access JWT hợp lệ ở native header
+ * Authorization; sau đó gán Principal = user.
  */
 @Component
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
@@ -35,8 +36,11 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             String header = accessor.getFirstNativeHeader(HttpHeaders.AUTHORIZATION);
-            if (header == null || !header.startsWith(BEARER)) {
-                throw new InvalidTokenException("Missing Bearer token on STOMP CONNECT.");
+            if (header == null || header.isBlank()) {
+                throw new InvalidTokenException("Authentication required for STOMP CONNECT.");
+            }
+            if (!header.startsWith(BEARER)) {
+                throw new InvalidTokenException("Invalid Authorization header on STOMP CONNECT.");
             }
             AccessTokenClaims claims = tokenService.parse(header.substring(BEARER.length()).trim());
             var roles = claims.roles();
@@ -45,6 +49,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                     .toList();
             var auth = new UsernamePasswordAuthenticationToken(claims, null, authorities);
             accessor.setUser(auth);
+            return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
         }
         return message;
     }

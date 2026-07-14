@@ -1,6 +1,5 @@
 package com.edua.beeduasystem.presentation.controller;
 
-import com.edua.beeduasystem.domain.model.auth.AuthTokens;
 import com.edua.beeduasystem.presentation.dto.auth.AuthResponse;
 import com.edua.beeduasystem.presentation.dto.auth.GoogleLoginRequest;
 import com.edua.beeduasystem.presentation.dto.auth.UserDto;
@@ -55,13 +54,13 @@ public class AuthController {
     @PostMapping("/refresh")
     @Operation(summary = "Làm mới access token (rotation)",
             description = "Đọc refresh token từ cookie, rotation (revoke cũ + phát mới, sliding 24h). "
-                    + "401 nếu thiếu/revoked/hết hạn.")
+                    + "Trả access token và thông tin user hiện tại. 401 nếu thiếu/revoked/hết hạn.")
     public ResponseEntity<AuthResponse> refresh(
             @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken) {
-        AuthTokens tokens = authService.refresh(refreshToken);
+        AuthService.RefreshResult result = authService.refresh(refreshToken);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshCookie(tokens.refreshToken()).toString())
-                .body(new AuthResponse(tokens.accessToken(), null));
+                .header(HttpHeaders.SET_COOKIE, refreshCookie(result.tokens().refreshToken()).toString())
+                .body(new AuthResponse(result.tokens().accessToken(), UserDto.from(result.user(), result.roles())));
     }
 
     @PostMapping("/logout")
