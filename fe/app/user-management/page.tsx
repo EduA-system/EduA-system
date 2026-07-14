@@ -7,6 +7,12 @@ import { hasAnyRole } from "@/lib/auth/permissions";
 
 const SUBJECTS = ["MATH", "CHEMISTRY", "PHYSICS"] as const;
 
+const SUBJECT_LABELS: Record<string, string> = {
+  MATH: "Toán",
+  CHEMISTRY: "Hoá",
+  PHYSICS: "Lý",
+};
+
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 type UserItem = {
@@ -26,6 +32,13 @@ type PageResponse = {
   totalElements: number;
   totalPages: number;
 };
+
+function availableSubject(items: UserItem[], currentSubject: string): string {
+  const activeSubjects = new Set(items.filter((item) => item.status !== "DISABLED").map((item) => item.subject));
+  return activeSubjects.has(currentSubject)
+    ? SUBJECTS.find((subject) => !activeSubjects.has(subject)) ?? currentSubject
+    : currentSubject;
+}
 
 async function api<T>(
   authFetch: AuthFetch,
@@ -54,6 +67,10 @@ export default function UserManagementPage() {
   const [addEmail, setAddEmail] = useState("");
   const [addSubject, setAddSubject] = useState("CHEMISTRY");
   const [addFullName, setAddFullName] = useState("");
+  const [replacementTarget, setReplacementTarget] = useState<UserItem | null>(null);
+  const [replacementEmail, setReplacementEmail] = useState("");
+  const [disablePrevious, setDisablePrevious] = useState(false);
+  const [isReplacing, setIsReplacing] = useState(false);
 
   const isAdmin = hasAnyRole(user, ["ADMINISTRATOR"]);
   const isModerator = hasAnyRole(user, ["MODERATOR"]);
@@ -64,6 +81,7 @@ export default function UserManagementPage() {
       if (isAdmin) {
         const data = await api<PageResponse>(authFetch, "/admin/moderators");
         setItems(data.content);
+        setAddSubject((current) => availableSubject(data.content, current));
       } else if (isModerator) {
         const data = await api<PageResponse>(authFetch, "/moderator/teachers");
         setItems(data.content);
@@ -80,7 +98,10 @@ export default function UserManagementPage() {
       try {
         if (isAdmin) {
           const data = await api<PageResponse>(authFetch, "/admin/moderators");
-          if (!cancelled) setItems(data.content);
+          if (!cancelled) {
+            setItems(data.content);
+            setAddSubject((current) => availableSubject(data.content, current));
+          }
         } else if (isModerator) {
           const data = await api<PageResponse>(authFetch, "/moderator/teachers");
           if (!cancelled) setItems(data.content);
@@ -141,6 +162,35 @@ export default function UserManagementPage() {
     }
   }
 
+  function openReplacement(item: UserItem) {
+    setReplacementTarget(item);
+    setReplacementEmail("");
+    setDisablePrevious(false);
+  }
+
+  function closeReplacement() {
+    if (isReplacing) return;
+    setReplacementTarget(null);
+  }
+
+  async function replaceModerator() {
+    if (!replacementTarget || !replacementEmail.trim()) return;
+    setIsReplacing(true);
+    try {
+      await api<UserItem>(authFetch, `/admin/moderators/${replacementTarget.id}/replacement`, {
+        method: "POST",
+        body: JSON.stringify({ replacementEmail, disablePrevious }),
+      });
+      setReplacementTarget(null);
+      setMsg("Đã thay moderator.");
+      await loadItems();
+    } catch (e) {
+      setMsg(String(e));
+    } finally {
+      setIsReplacing(false);
+    }
+  }
+
   async function handleLogout() {
     await signOut();
     setItems([]);
@@ -149,6 +199,10 @@ export default function UserManagementPage() {
   const title = isAdmin ? "Quản lý Moderator" : "Quản lý Teacher";
   const addLabel = isAdmin ? "Thêm Moderator" : "Thêm Teacher";
   const emptyMsg = isAdmin ? "Chưa có Moderator." : "Chưa có Teacher.";
+
+  const takenSubjects = isAdmin
+    ? new Set(items.filter((i) => i.status !== "DISABLED").map((i) => i.subject))
+    : new Set<string>();
 
   return (
     <RouteGuard pathname="/user-management">
@@ -186,9 +240,12 @@ export default function UserManagementPage() {
             value={addSubject}
             onChange={(e) => setAddSubject(e.target.value)}
             className="rounded border px-3 py-2 text-sm"
+            disabled={isAdmin && takenSubjects.size >= SUBJECTS.length}
           >
             {SUBJECTS.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s} disabled={isAdmin && takenSubjects.has(s)}>
+                {SUBJECT_LABELS[s] ?? s}{isAdmin && takenSubjects.has(s) ? " (đã có)" : ""}
+              </option>
             ))}
           </select>
           <button onClick={addUser} className="rounded bg-black px-4 py-2 text-sm text-white">
@@ -212,17 +269,70 @@ export default function UserManagementPage() {
                     {item.grantedByEmail ? ` · cấp bởi ${item.grantedByEmail}` : ""}
                   </div>
                 </div>
-                <button
-                  onClick={() => toggleUser(item.id, item.status)}
-                  className={`text-sm underline ${item.status === "DISABLED" ? "text-green-600" : "text-red-600"}`}
-                >
-                  {item.status === "DISABLED" ? "Kích hoạt lại" : "Thu hồi"}
-                </button>
+                {isAdmin && item.status !== "DISABLED" ? (
+                  <button
+                    type="button"
+                    onClick={() => openReplacement(item)}
+                    className="text-sm underline text-red-600"
+                  >
+                    Thay moderator
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => toggleUser(item.id, item.status)}
+                    className={`text-sm underline ${item.status === "DISABLED" ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {item.status === "DISABLED" ? "Kích hoạt lại" : "Thu hồi"}
+                  </button>
+                )}
               </div>
             ))}
           </div>
         )}
       </section>
+
+      {replacementTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="replace-moderator-title">
+            <h2 id="replace-moderator-title" className="text-lg font-semibold">Thay moderator</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              {replacementTarget.fullName ?? replacementTarget.email} sẽ được chuyển thành Teacher.
+            </p>
+            <label className="mt-4 block text-sm font-medium" htmlFor="replacement-email">Email moderator thay thế</label>
+            <input
+              id="replacement-email"
+              type="email"
+              value={replacementEmail}
+              onChange={(e) => setReplacementEmail(e.target.value)}
+              placeholder="Email"
+              className="mt-1 w-full rounded border px-3 py-2 text-sm"
+              autoFocus
+            />
+            <label className="mt-4 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={disablePrevious}
+                onChange={(e) => setDisablePrevious(e.target.checked)}
+              />
+              Vô hiệu hoá tài khoản moderator cũ sau khi chuyển thành Teacher
+            </label>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={closeReplacement} disabled={isReplacing} className="rounded border px-3 py-2 text-sm">
+                Huỷ
+              </button>
+              <button
+                type="button"
+                onClick={replaceModerator}
+                disabled={isReplacing || !replacementEmail.trim()}
+                className="rounded bg-black px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isReplacing ? "Đang thay..." : "Xác nhận thay"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     )}
     </RouteGuard>

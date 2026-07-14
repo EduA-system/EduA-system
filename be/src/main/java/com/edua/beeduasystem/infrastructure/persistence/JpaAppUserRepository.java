@@ -60,6 +60,12 @@ public class JpaAppUserRepository implements AppUserRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean existsActiveByRoleAndSubject(Role role, Subject subject) {
+        return jpa.existsActiveByRoleNameAndSubject(role.name(), subject);
+    }
+
+    @Override
     @Transactional
     public AppUser save(AppUser user) {
         AppUserEntity e = jpa.findById(user.id()).orElseGet(AppUserEntity::new);
