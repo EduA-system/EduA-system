@@ -12,6 +12,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import {
   Search,
   ChevronLeft,
@@ -35,6 +36,8 @@ import { BrownianDetailView } from "@/components/simulations/brownian/BrownianDe
 import { HeatingCurveDetailView } from "@/components/simulations/heating-curve/HeatingCurveDetailView";
 import { CorkPopDetailView } from "@/components/simulations/cork-pop/CorkPopDetailView";
 import { PendulumResonanceDetailView } from "@/components/simulations/pendulum-resonance/PendulumResonanceDetailView";
+import { HeatTransferDetailView } from "@/components/simulations/heat-transfer/HeatTransferDetailView";
+import { IsothermalBoyleDetailView } from "@/components/simulations/isothermal-boyle/IsothermalBoyleDetailView";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
@@ -72,7 +75,6 @@ type Placeholder = { id: string; title: string; domain: Domain; grade: 10 | 11 |
 const PLACEHOLDERS: Placeholder[] = [
   { id: "ohm", title: "Định luật Ohm", domain: "Điện & Từ", grade: 11, desc: "Mạch điện cơ bản, khảo sát quan hệ U – I – R." },
   { id: "induction", title: "Cảm ứng điện từ", domain: "Điện & Từ", grade: 12, desc: "Nam châm chuyển động qua cuộn dây sinh dòng cảm ứng." },
-  { id: "boyle", title: "Định luật Boyle", domain: "Nhiệt & Khí", grade: 12, desc: "Nén khí đẳng nhiệt, quan sát quan hệ p – V." },
   { id: "decay", title: "Phóng xạ & chu kỳ bán rã", domain: "Hạt nhân", grade: 12, desc: "Mô phỏng phân rã ngẫu nhiên theo thời gian." },
 ];
 
@@ -134,10 +136,42 @@ function Thumb({ id }: { id: string }) {
     case "cong-huong-con-lac":
       return frame(
         <>
-          <path d="M24 18 L176 24 L176 30 L24 24 Z" fill="#e2e8f0" stroke="#67e8f9" strokeWidth="1.5" />
-          <path d="M32 26 V38 M168 30 V42" stroke="#94a3b8" strokeWidth="3" />
-          {[45, 72, 99, 126, 153].map((x, index) => <g key={x}><line x1={x} y1={index % 2 ? 23 : 21} x2={x + (index - 2) * 2} y2={index % 2 ? 76 : 84} stroke="#94a3b8" strokeWidth="1.5" /><circle cx={x + (index - 2) * 2} cy={index % 2 ? 80 : 88} r="6" fill={["#fb7185", "#fb923c", "#facc15", "#4ade80", "#67e8f9"][index]} stroke="#fff7ed" strokeWidth="1" /></g>)}
-          <path d="M45 62 Q52 72 45 82 M126 62 Q134 74 126 86" fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeDasharray="3 3" opacity=".6" />
+          <rect x="27" y="18" width="146" height="8" rx="2" fill="#e2e8f0" stroke="#67e8f9" strokeWidth="1.5" />
+          <path d="M35 26 V40 M165 26 V40 M28 40 H42 M158 40 H172" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
+          {[{ pivot: 47, bob: 44, y: 82 }, { pivot: 73, bob: 75, y: 77 }, { pivot: 100, bob: 100, y: 87 }, { pivot: 127, bob: 124, y: 76 }, { pivot: 153, bob: 157, y: 82 }].map(({ pivot, bob, y }, index) => <g key={pivot}><circle cx={pivot} cy="26" r="2" fill="#cbd5e1" /><line x1={pivot} y1="27" x2={bob} y2={y - 5} stroke="#a8b4c4" strokeWidth="1.5" /><circle cx={bob} cy={y} r="6" fill={["#fb7185", "#fb923c", "#facc15", "#4ade80", "#67e8f9"][index]} stroke="#fff7ed" strokeWidth="1.2" /></g>)}
+          <path d="M47 45 Q39 58 44 72 M127 45 Q135 57 124 70" fill="none" stroke="#fbbf24" strokeWidth="1.4" strokeDasharray="3 3" opacity=".7" />
+        </>,
+      );
+    case "nguyen-ly-truyen-nhiet":
+      return frame(
+        <>
+          <rect x="31" y="55" width="53" height="35" rx="7" fill="#f97316" stroke="#fed7aa" strokeWidth="1.5" />
+          <rect x="116" y="55" width="53" height="35" rx="7" fill="#38bdf8" stroke="#cffafe" strokeWidth="1.5" />
+          <path d="M53 50 V27 M147 50 V27" stroke="#cbd5e1" strokeWidth="2" />
+          <circle cx="53" cy="23" r="5" fill="#fb923c" stroke="#fed7aa" />
+          <circle cx="147" cy="23" r="5" fill="#67e8f9" stroke="#cffafe" />
+          <path d="M88 72 H112" stroke="#fbbf24" strokeWidth="2.5" />
+          <path d="M112 72 l-6 -4 v8 z" fill="#fbbf24" />
+          {[0, 1, 2].map((index) => <circle key={index} cx={91 + index * 7} cy={68 + (index % 2) * 8} r="1.7" fill="#fde68a" />)}
+        </>,
+      );
+    case "isothermal-boyle":
+      return frame(
+        <>
+          <rect x="78" y="20" width="44" height="78" rx="7" fill="rgba(103,232,249,.12)" stroke="#cbd5e1" strokeWidth="1.8" />
+          <rect x="84" y="52" width="32" height="42" rx="5" fill="rgba(103,232,249,.42)" stroke="#67e8f9" strokeWidth="1" />
+          <rect x="70" y="45" width="60" height="10" rx="3" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1.2" />
+          <line x1="100" y1="22" x2="100" y2="45" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="100" cy="18" r="5" fill="#e8724a" stroke="#fed7aa" />
+          {[0, 1, 2, 3, 4, 5].map((index) => <circle key={index} cx={88 + (index % 3) * 10} cy={64 + Math.floor(index / 3) * 14} r="1.7" fill="#cffafe" />)}
+          <circle cx="154" cy="55" r="22" fill="none" stroke="#cbd5e1" strokeWidth="1.8" />
+          <path d="M140 70 A20 20 0 0 1 168 70" fill="none" stroke="#67e8f9" strokeWidth="3" opacity=".45" />
+          <line x1="154" y1="55" x2="166" y2="43" stroke="#e8724a" strokeWidth="2.2" strokeLinecap="round" />
+          <circle cx="154" cy="55" r="2.5" fill="#e8724a" />
+          <path d="M43 35 V82" stroke="#cbd5e1" strokeWidth="2" />
+          <circle cx="43" cy="88" r="6" fill="#fb923c" stroke="#fed7aa" />
+          <line x1="34" y1="76" x2="52" y2="76" stroke="#fb923c" strokeWidth="3" strokeLinecap="round" />
+          <text x="32" y="25" fill="#67e8f9" fontSize="10" fontWeight="700">T = const</text>
         </>,
       );
     case "dao-dong-tat-dan":
@@ -413,6 +447,7 @@ function DomainChip({
 /* ─────────────────────────── Trang chính ─────────────────────────── */
 
 export default function MoPhongHubPage() {
+  const router = useRouter();
   const [selected, setSelected] = useState<Preset | null>(null);
   const [domainFilter, setDomainFilter] = useState<Set<Domain>>(new Set(DOMAINS));
   const [query, setQuery] = useState("");
@@ -439,11 +474,18 @@ export default function MoPhongHubPage() {
 
   const filtered = domainFilter.size < DOMAINS.length;
 
-  if (selected?.kind === "brownian") return <BrownianDetailView preset={selected} onBack={() => setSelected(null)} />;
-  if (selected?.kind === "heating-curve") return <HeatingCurveDetailView preset={selected} onBack={() => setSelected(null)} />;
-  if (selected?.kind === "cork-pop") return <CorkPopDetailView preset={selected} onBack={() => setSelected(null)} />;
-  if (selected?.kind === "pendulum-resonance") return <PendulumResonanceDetailView preset={selected} onBack={() => setSelected(null)} />;
-  if (selected) return <DetailView preset={selected} onBack={() => setSelected(null)} />;
+  const backToLibrary = () => {
+    setSelected(null);
+    router.replace("/mo-phong-vat-ly");
+  };
+
+  if (selected?.kind === "brownian") return <BrownianDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "heating-curve") return <HeatingCurveDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "cork-pop") return <CorkPopDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "pendulum-resonance") return <PendulumResonanceDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "heat-transfer") return <HeatTransferDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "isothermal-boyle") return <IsothermalBoyleDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected) return <DetailView preset={selected} onBack={backToLibrary} />;
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
@@ -671,7 +713,7 @@ function StringWaveLegend({ mode }: { mode: "traveling" | "standing" }) {
 
 type AiState = "idle" | "thinking" | "review";
 
-function DetailView({ preset, onBack }: { preset: Exclude<Preset, { kind: "brownian" | "heating-curve" | "cork-pop" | "pendulum-resonance" }>; onBack: () => void }) {
+function DetailView({ preset, onBack }: { preset: Exclude<Preset, { kind: "brownian" | "heating-curve" | "cork-pop" | "pendulum-resonance" | "heat-transfer" | "isothermal-boyle" }>; onBack: () => void }) {
   const baseParams = Object.fromEntries(preset.params.map((p) => [p.key, p.default]));
 
   const [params, setParams] = useState<Record<string, number>>(baseParams);

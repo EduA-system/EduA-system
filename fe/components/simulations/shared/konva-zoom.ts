@@ -24,8 +24,8 @@ export function attachZoomPan(
     panExtentFactor?: number;
   },
 ): ZoomActions {
-  // minZoom mặc định 0.8 — cho zoom out một chút để thấy rộng hơn khung gốc.
-  const minZoom = opts.minZoom ?? 0.8;
+  // Khóa zoom-out ở 100% để giữ bố cục mô phỏng trong khung EDUA.
+  const minZoom = opts.minZoom ?? 1;
   const maxZoom = opts.maxZoom ?? 6;
   const panExtentFactor = Math.max(1, opts.panExtentFactor ?? 3);
   let zoom = 1;

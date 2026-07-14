@@ -267,7 +267,7 @@ export function BrownianCanvas({
     const { width, height } = size;
     if (!container || !transformEl || width <= 0 || height <= 0) return;
 
-    const minZoom = 0.8;
+    const minZoom = 1;
     const maxZoom = 6;
     const applyTransform = () => {
       transformEl.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${zoomRef.current})`;
