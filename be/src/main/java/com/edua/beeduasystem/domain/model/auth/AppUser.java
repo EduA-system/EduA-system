@@ -13,6 +13,8 @@ public record AppUser(
         String email,
         String googleSub,
         String fullName,
+        String avatarUrl,
+        String contactInfo,
         Subject subject,
         UserStatus status,
         Instant createdAt,

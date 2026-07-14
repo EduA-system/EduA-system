@@ -1,9 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useEditor } from "@tiptap/react";
+import type { JSONContent } from "@tiptap/core";
+import { useSearchParams } from "next/navigation";
 import { lessonPlan5512Mock } from "@/data/lessonPlan5512Mock";
-import { readLessonPlanSession } from "@/services/lessonPlanService";
+import {
+  readLessonPlanSession,
+  type LessonPlanSession,
+} from "@/services/lessonPlanService";
+import {
+  createLibraryContent,
+  getLibraryContent,
+  updateLibraryContent,
+  type LibrarySubject,
+} from "@/lib/library";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
 import { EditorTools } from "../LessonEditor";
@@ -14,11 +26,22 @@ import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
 
 export function LessonEditDashboard() {
+  const { authFetch } = useAuth();
+  const searchParams = useSearchParams();
+  const libraryId = searchParams.get("libraryId");
   const [aiCollapsed, setAiCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
   // Đọc một lần lúc mount (lazy initializer) — tránh đọc lại sau khi
   // `useLessonPlanStream` đã `clearLessonPlanSession()`, khiến `editable` bị tính lại.
   const [pendingSession] = useState(() => readLessonPlanSession());
+  const [lessonSession, setLessonSession] = useState<LessonPlanSession | null>(pendingSession);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const libraryContentIdRef = useRef<string | null>(null);
+  const librarySubjectRef = useRef<LibrarySubject | undefined>(undefined);
+  const savingRef = useRef(false);
+  const revisionRef = useRef(0);
   // Công thức AI sinh ra (hoặc chèn qua toolbar) là node atom — bấm vào sẽ mở
   // popup này để sửa/xoá LaTeX thay vì phải xoá cả node rồi chèn lại từ đầu.
   const [mathClick, setMathClick] = useState<MathClickInfo | null>(null);
@@ -34,7 +57,7 @@ export function LessonEditDashboard() {
     content: pendingSession
       ? generatingLessonPlanSkeletonHtml(pendingSession.display)
       : lessonPlan5512ToHtml(lessonPlan5512Mock),
-    editable: !pendingSession,
+    editable: !pendingSession && !libraryId,
     immediatelyRender: false,
     editorProps: {
       attributes: {
@@ -43,8 +66,115 @@ export function LessonEditDashboard() {
     },
   });
 
-  // Mở STOMP và fill dần giáo án vào editor (nếu đến từ /lesson-create qua phiên streaming).
-  useLessonPlanStream(editor);
+  useEffect(() => {
+    if (!editor) return;
+
+    const markDirty = () => {
+      revisionRef.current += 1;
+      setIsDirty(true);
+    };
+    editor.on("update", markDirty);
+    return () => {
+      editor.off("update", markDirty);
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    if (!libraryId || !editor) return;
+
+    let cancelled = false;
+    editor.setEditable(false);
+
+    void getLibraryContent(authFetch, libraryId)
+      .then((content) => {
+        if (cancelled) return;
+        const document = getLessonPlanDocument(content.payload);
+        if (!document) throw new Error("Giáo án đã lưu có định dạng không hợp lệ.");
+
+        libraryContentIdRef.current = content.id;
+        librarySubjectRef.current = content.subject ?? undefined;
+        editor.commands.setContent(document);
+        revisionRef.current = 0;
+        setIsDirty(false);
+        editor.setEditable(true);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setSaveStatus("error");
+        setSaveError(error instanceof Error ? error.message : "Không thể mở giáo án đã lưu.");
+        editor.setEditable(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, editor, libraryId]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [isDirty]);
+
+  const saveLesson = useCallback(
+    async (session: LessonPlanSession | null = lessonSession) => {
+      if (!editor || savingRef.current) return;
+
+      savingRef.current = true;
+      setSaveStatus("saving");
+      setSaveError(null);
+      const title = editor.state.doc.firstChild?.textContent.trim() || session?.display?.title || "Giáo án mới";
+      const subject = (session?.display?.subjectCode as LibrarySubject | undefined) ?? librarySubjectRef.current;
+      const revisionAtSave = revisionRef.current;
+      const payload = {
+        format: "tiptap-json",
+        version: 1,
+        document: editor.getJSON(),
+        source: session
+          ? {
+              bookId: session.bookId,
+              chapterId: session.chapterId,
+              lessonId: session.lessonId,
+              userPrompt: session.userPrompt,
+            }
+          : undefined,
+      };
+
+      try {
+        if (libraryContentIdRef.current) {
+          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, payload });
+        } else {
+          const created = await createLibraryContent(authFetch, {
+            type: "LESSON_PLAN",
+            title,
+            subject,
+            payload,
+          });
+          libraryContentIdRef.current = created.id;
+          librarySubjectRef.current = created.subject ?? undefined;
+        }
+        setSaveStatus("saved");
+        if (revisionRef.current === revisionAtSave) setIsDirty(false);
+      } catch (error: unknown) {
+        setSaveStatus("error");
+        setSaveError(error instanceof Error ? error.message : "Không thể lưu giáo án.");
+      } finally {
+        savingRef.current = false;
+      }
+    },
+    [authFetch, editor, lessonSession],
+  );
+
+  // Khi AI đã hoàn thành toàn bộ activity, lưu bản giáo án đầu tiên vào thư viện.
+  useLessonPlanStream(editor, (session) => {
+    setLessonSession(session);
+    void saveLesson(session);
+  }, !libraryId);
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
@@ -55,7 +185,7 @@ export function LessonEditDashboard() {
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
             <div className="@container flex h-12 items-center gap-2 px-3">
               <div className="flex shrink-0 items-center gap-1.5">
-                <HeaderActionButton onClick={() => undefined} label="Lưu">
+                <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
                   <SaveIcon />
                 </HeaderActionButton>
                 <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>
@@ -76,6 +206,20 @@ export function LessonEditDashboard() {
                 <AiToggleIcon />
               </button>
             </div>
+            {saveStatus !== "idle" && (
+              <p
+                className={`px-3 pb-2 text-[11px] ${
+                  saveStatus === "error" ? "text-[#c0492b]" : "text-[#6b6b6b]"
+                }`}
+                role={saveStatus === "error" ? "alert" : "status"}
+              >
+                {saveStatus === "saving"
+                  ? "Đang lưu giáo án..."
+                  : saveStatus === "saved"
+                    ? "Đã lưu vào thư viện."
+                    : saveError}
+              </p>
+            )}
             <Ruler bare margins={margins} onMarginsChange={setMargins} />
           </header>
 
@@ -92,6 +236,13 @@ export function LessonEditDashboard() {
       ) : null}
     </main>
   );
+}
+
+function getLessonPlanDocument(payload: unknown): JSONContent | null {
+  if (!payload || typeof payload !== "object") return null;
+  const document = (payload as { document?: unknown }).document;
+  if (!document || typeof document !== "object") return null;
+  return document as JSONContent;
 }
 
 function HeaderActionButton({

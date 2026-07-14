@@ -2,6 +2,7 @@ package com.edua.beeduasystem.presentation.controller;
 
 import com.edua.beeduasystem.presentation.dto.auth.AddModeratorRequest;
 import com.edua.beeduasystem.presentation.dto.auth.ModeratorDto;
+import com.edua.beeduasystem.presentation.dto.auth.ReplaceModeratorRequest;
 import com.edua.beeduasystem.service.auth.AdminModeratorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -61,11 +62,20 @@ public class AdminController {
     }
 
     @DeleteMapping("/moderators/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Thu hồi Moderator (UC-62)",
-            description = "Soft-delete: set status = DISABLED. Giữ audit trail.")
+    @Operation(summary = "Thu hồi Moderator (không còn hỗ trợ)",
+            description = "Moderator phải được thay thế qua endpoint replacement trước khi thu hồi quyền.")
     public void deleteModerator(@PathVariable UUID id) {
         adminModeratorService.deleteModerator(id);
+    }
+
+    @PostMapping("/moderators/{id}/replacement")
+    @Operation(summary = "Thay Moderator",
+            description = "Cấp Moderator kế nhiệm cùng môn, hạ Moderator cũ xuống Teacher và có thể vô hiệu hoá tài khoản cũ.")
+    public ModeratorDto replaceModerator(
+            @PathVariable UUID id,
+            @Valid @RequestBody ReplaceModeratorRequest request) {
+        var user = adminModeratorService.replaceModerator(id, request.replacementEmail(), request.disablePrevious());
+        return ModeratorDto.from(user, null, null);
     }
 
     @PatchMapping("/moderators/{id}/reactivate")

@@ -109,7 +109,9 @@ public class BlogPostService {
                 .map(p -> new BlogViews.PostSummary(
                         p.id(), p.title(), p.subject(), p.authorId(),
                         authorNames.get(p.authorId()), p.createdAt(),
-                        commentRepository.countByPostId(p.id())))
+                        commentRepository.countByPostId(p.id()),
+                        sanitizer.plainTextExcerpt(p.content(), 160),
+                        sanitizer.firstImageSrc(p.content())))
                 .toList();
         return new BlogViews.Page<>(items, page, size, result.total());
     }

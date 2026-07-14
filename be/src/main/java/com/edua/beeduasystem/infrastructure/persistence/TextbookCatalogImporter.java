@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,10 +32,14 @@ public class TextbookCatalogImporter implements CommandLineRunner {
 
     private final TextbookJpaRepository textbookRepo;
     private final ObjectMapper objectMapper;
+    private final JdbcTemplate jdbcTemplate;
 
-    public TextbookCatalogImporter(TextbookJpaRepository textbookRepo, ObjectMapper objectMapper) {
+    public TextbookCatalogImporter(TextbookJpaRepository textbookRepo,
+                                   ObjectMapper objectMapper,
+                                   JdbcTemplate jdbcTemplate) {
         this.textbookRepo = textbookRepo;
         this.objectMapper = objectMapper;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
@@ -52,6 +57,7 @@ public class TextbookCatalogImporter implements CommandLineRunner {
         int lessons = 0;
         int withContent = 0;
 
+        int bookOrder = 0;
         for (TextbookCatalog.Book book : catalog.books()) {
             Map<String, JsonNode> content = readContent(book.id());
 
@@ -97,7 +103,8 @@ public class TextbookCatalogImporter implements CommandLineRunner {
                 chapters++;
             }
 
-            textbookRepo.save(textbook);
+            textbookRepo.saveAndFlush(textbook);
+            insertTextbookName(textbook, bookOrder++);
             books++;
         }
 
@@ -125,5 +132,67 @@ public class TextbookCatalogImporter implements CommandLineRunner {
         } catch (Exception e) {
             throw new IllegalStateException("Failed to read " + resource, e);
         }
+    }
+
+    private void insertTextbookName(TextbookEntity textbook, int sortOrder) {
+        jdbcTemplate.update("""
+                        INSERT INTO textbook_names (
+                            id,
+                            textbook_id,
+                            code,
+                            name,
+                            grade,
+                            subject_code,
+                            subject_name,
+                            volume,
+                            publisher,
+                            series,
+                            sort_order
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                textbook.getId(),
+                textbook.getId(),
+                textbook.getCode(),
+                textbook.getName(),
+                textbook.getGrade(),
+                subjectCode(textbook.getCode()),
+                subjectName(textbook.getCode()),
+                volume(textbook.getCode()),
+                textbook.getPublisher(),
+                textbook.getSeries(),
+                sortOrder);
+    }
+
+    private String subjectCode(String textbookCode) {
+        if (textbookCode.startsWith("LI")) {
+            return "PHYSICS";
+        }
+        if (textbookCode.startsWith("HOA")) {
+            return "CHEMISTRY";
+        }
+        if (textbookCode.startsWith("TOAN")) {
+            return "MATH";
+        }
+        return "OTHER";
+    }
+
+    private String subjectName(String textbookCode) {
+        return switch (subjectCode(textbookCode)) {
+            case "PHYSICS" -> "Vật lí";
+            case "CHEMISTRY" -> "Hóa học";
+            case "MATH" -> "Toán";
+            default -> "Khác";
+        };
+    }
+
+    private Integer volume(String textbookCode) {
+        if (textbookCode.endsWith("_T1")) {
+            return 1;
+        }
+        if (textbookCode.endsWith("_T2")) {
+            return 2;
+        }
+        return null;
     }
 }
