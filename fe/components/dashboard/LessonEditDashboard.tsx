@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useEditor } from "@tiptap/react";
 import { lessonPlan5512Mock } from "@/data/lessonPlan5512Mock";
-import { readLessonPlanSession } from "@/services/lessonPlanService";
+import {
+  readLessonPlanSession,
+  type LessonPlanSession,
+} from "@/services/lessonPlanService";
+import {
+  createLibraryContent,
+  updateLibraryContent,
+  type LibrarySubject,
+} from "@/lib/library";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
 import { EditorTools } from "../LessonEditor";
@@ -14,12 +23,18 @@ import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
 
 export function LessonEditDashboard() {
+  const { authFetch } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiCollapsed, setAiCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
   // Đọc một lần lúc mount (lazy initializer) — tránh đọc lại sau khi
   // `useLessonPlanStream` đã `clearLessonPlanSession()`, khiến `editable` bị tính lại.
   const [pendingSession] = useState(() => readLessonPlanSession());
+  const [lessonSession, setLessonSession] = useState<LessonPlanSession | null>(pendingSession);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const libraryContentIdRef = useRef<string | null>(null);
+  const savingRef = useRef(false);
   // Công thức AI sinh ra (hoặc chèn qua toolbar) là node atom — bấm vào sẽ mở
   // popup này để sửa/xoá LaTeX thay vì phải xoá cả node rồi chèn lại từ đầu.
   const [mathClick, setMathClick] = useState<MathClickInfo | null>(null);
@@ -44,8 +59,57 @@ export function LessonEditDashboard() {
     },
   });
 
-  // Mở STOMP và fill dần giáo án vào editor (nếu đến từ /lesson-create qua phiên streaming).
-  useLessonPlanStream(editor);
+  const saveLesson = useCallback(
+    async (session: LessonPlanSession | null = lessonSession) => {
+      if (!editor || savingRef.current) return;
+
+      savingRef.current = true;
+      setSaveStatus("saving");
+      setSaveError(null);
+      const title = editor.state.doc.firstChild?.textContent.trim() || session?.display?.title || "Giáo án mới";
+      const subject = session?.display?.subjectCode as LibrarySubject | undefined;
+      const payload = {
+        format: "tiptap-json",
+        version: 1,
+        document: editor.getJSON(),
+        source: session
+          ? {
+              bookId: session.bookId,
+              chapterId: session.chapterId,
+              lessonId: session.lessonId,
+              userPrompt: session.userPrompt,
+            }
+          : undefined,
+      };
+
+      try {
+        if (libraryContentIdRef.current) {
+          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, payload });
+        } else {
+          const created = await createLibraryContent(authFetch, {
+            type: "LESSON_PLAN",
+            title,
+            subject,
+            payload,
+          });
+          libraryContentIdRef.current = created.id;
+        }
+        setSaveStatus("saved");
+      } catch (error: unknown) {
+        setSaveStatus("error");
+        setSaveError(error instanceof Error ? error.message : "Không thể lưu giáo án.");
+      } finally {
+        savingRef.current = false;
+      }
+    },
+    [authFetch, editor, lessonSession],
+  );
+
+  // Khi AI đã hoàn thành toàn bộ activity, lưu bản giáo án đầu tiên vào thư viện.
+  useLessonPlanStream(editor, (session) => {
+    setLessonSession(session);
+    void saveLesson(session);
+  });
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
@@ -65,7 +129,7 @@ export function LessonEditDashboard() {
               </button>
 
               <div className="flex shrink-0 items-center gap-1.5">
-                <HeaderActionButton onClick={() => undefined} label="Lưu">
+                <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
                   <SaveIcon />
                 </HeaderActionButton>
                 <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>
@@ -86,6 +150,20 @@ export function LessonEditDashboard() {
                 <AiToggleIcon />
               </button>
             </div>
+            {saveStatus !== "idle" && (
+              <p
+                className={`px-3 pb-2 text-[11px] ${
+                  saveStatus === "error" ? "text-[#c0492b]" : "text-[#6b6b6b]"
+                }`}
+                role={saveStatus === "error" ? "alert" : "status"}
+              >
+                {saveStatus === "saving"
+                  ? "Đang lưu giáo án..."
+                  : saveStatus === "saved"
+                    ? "Đã lưu vào thư viện."
+                    : saveError}
+              </p>
+            )}
             <Ruler bare margins={margins} onMarginsChange={setMargins} />
           </header>
 

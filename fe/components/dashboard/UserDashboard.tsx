@@ -17,6 +17,7 @@ import {
   type CatalogChapterSummary,
   type CatalogLesson,
 } from "@/services/lessonPlanService";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 const SUBJECT_OPTIONS = [
   { value: "PHYSICS", label: "Vật lí" },
@@ -26,6 +27,7 @@ const SUBJECT_OPTIONS = [
 
 export function UserDashboard() {
   const router = useRouter();
+  const { authFetch } = useAuth();
 
   const [books, setBooks] = useState<CatalogBookName[]>([]);
   const [chapters, setChapters] = useState<CatalogChapterSummary[]>([]);
@@ -170,6 +172,7 @@ export function UserDashboard() {
         display: {
           title: selectedLesson?.name ?? "…………………………………..",
           subject: selectedBook?.subjectName ?? selectedSubject.label,
+          subjectCode: subjectCode as "MATH" | "CHEMISTRY" | "PHYSICS",
           grade: selectedBook ? `lớp: ${selectedBook.grade}` : "lớp: ………",
           duration: "Thời gian thực hiện: (số tiết)",
         },
@@ -181,7 +184,7 @@ export function UserDashboard() {
         session,
       );
 
-      await startLessonPlanStream(session);
+      await startLessonPlanStream(session, authFetch);
       storeLessonPlanSession(displaySession);
       router.push("/lesson-edit");
     } catch (error: unknown) {

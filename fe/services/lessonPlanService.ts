@@ -206,8 +206,13 @@ export interface StartLessonPlanStreamRequest extends GenerateLessonPlanRequest 
   sessionId: string;
 }
 
-export async function startLessonPlanStream(req: StartLessonPlanStreamRequest): Promise<void> {
-  const res = await fetch("/api/lesson-plans/generate-stream", {
+export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export async function startLessonPlanStream(
+  req: StartLessonPlanStreamRequest,
+  authFetch: AuthFetch,
+): Promise<void> {
+  const res = await authFetch("/api/lesson-plans/generate-stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),
@@ -233,6 +238,7 @@ const SESSION_KEY = "edua:lessonPlanSession";
 export interface LessonPlanDisplayMetadata {
   title: string;
   subject: string;
+  subjectCode?: "MATH" | "CHEMISTRY" | "PHYSICS";
   grade: string;
   duration: string;
 }

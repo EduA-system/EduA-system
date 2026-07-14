@@ -22,7 +22,7 @@ export function connectLessonPlanStream({
   onClose,
 }: {
   topic: string;
-  accessToken?: string | null;
+  accessToken: string;
   onEvent: (event: LessonPlanEvent) => void;
   onClose: () => void;
 }): { disconnect: () => void } {
@@ -32,7 +32,7 @@ export function connectLessonPlanStream({
 
   const client = new Client({
     brokerURL,
-    connectHeaders: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    connectHeaders: { Authorization: `Bearer ${accessToken}` },
     reconnectDelay: 2000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,

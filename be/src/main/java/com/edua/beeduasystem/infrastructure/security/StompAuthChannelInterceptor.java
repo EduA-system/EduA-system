@@ -9,6 +9,7 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
@@ -16,9 +17,8 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Auth cho WebSocket: nếu STOMP {@code CONNECT} có access JWT ở native header Authorization
- * thì gán Principal = user. Các luồng public sinh nội dung dùng topic session ngẫu nhiên nên
- * vẫn cho phép CONNECT anonymous, khớp với các HTTP endpoint public tương ứng.
+ * Auth cho WebSocket: mọi STOMP {@code CONNECT} phải có access JWT hợp lệ ở native header
+ * Authorization; sau đó gán Principal = user.
  */
 @Component
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
@@ -37,7 +37,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             String header = accessor.getFirstNativeHeader(HttpHeaders.AUTHORIZATION);
             if (header == null || header.isBlank()) {
-                return message;
+                throw new InvalidTokenException("Authentication required for STOMP CONNECT.");
             }
             if (!header.startsWith(BEARER)) {
                 throw new InvalidTokenException("Invalid Authorization header on STOMP CONNECT.");
@@ -49,6 +49,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                     .toList();
             var auth = new UsernamePasswordAuthenticationToken(claims, null, authorities);
             accessor.setUser(auth);
+            return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
         }
         return message;
     }

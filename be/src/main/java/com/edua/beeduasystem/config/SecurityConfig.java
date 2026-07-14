@@ -17,7 +17,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Bảo mật stateless (JWT). Public: login/refresh/logout, health, swagger, STOMP handshake.
+ * Bảo mật stateless (JWT). Public: login/refresh/logout, health, swagger và STOMP handshake.
+ * Xác thực cho phiên STOMP được kiểm tra tại frame CONNECT.
  * Còn lại cần access token hợp lệ; RBAC chi tiết qua {@code @PreAuthorize} (SEC-04).
  */
 @Configuration
@@ -34,7 +35,6 @@ public class SecurityConfig {
             "/swagger-ui.html",
             "/v3/api-docs/**",
             "/api/textbooks/**",
-            "/api/lesson-plans/**",
             "/api/slides/**",
             "/api/slide-design/**",
             "/api/molecules/**",
