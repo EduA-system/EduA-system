@@ -19,6 +19,39 @@ export type PointState = { x: number; y: number; vx: number; vy: number };
 // từng cái, lặp lại để hội tụ. Bài THPT chuỗi ngắn → 5 vòng là dư.
 const ITERATIONS = 5;
 
+type ClosestTrackPoint = {
+  x: number;
+  y: number;
+  tx: number;
+  ty: number;
+  t: number;
+  segment: number;
+  dist2: number;
+};
+
+function closestPointOnTrack(points: { x: number; y: number }[], x: number, y: number): ClosestTrackPoint | null {
+  let best: ClosestTrackPoint | null = null;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 < 1e-12) continue;
+    const rawT = ((x - a.x) * dx + (y - a.y) * dy) / len2;
+    const t = Math.max(0, Math.min(1, rawT));
+    const qx = a.x + dx * t;
+    const qy = a.y + dy * t;
+    const distX = x - qx;
+    const distY = y - qy;
+    const dist2 = distX * distX + distY * distY;
+    const len = Math.sqrt(len2);
+    const candidate = { x: qx, y: qy, tx: dx / len, ty: dy / len, t, segment: i, dist2 };
+    if (!best || candidate.dist2 < best.dist2) best = candidate;
+  }
+  return best;
+}
+
 /**
  * Giải toàn bộ ràng buộc của `scene`, sửa trực tiếp các điểm trong `pts`.
  * `invMass[id]` = 1/m, bằng 0 nếu vật cố định (fixed) — vật cố định không bị
@@ -65,6 +98,27 @@ export function projectConstraints(
         continue;
       }
 
+      if (c.kind === "curveTrack") {
+        const P = pts[c.body];
+        if (!P || (invMass[c.body] ?? 0) === 0 || c.points.length < 2) continue;
+        const q = closestPointOnTrack(c.points, P.x, P.y);
+        if (!q) continue;
+        const correction = Math.hypot(q.x - P.x, q.y - P.y);
+        let vt = P.vx * q.tx + P.vy * q.ty;
+        const atStart = q.segment === 0 && q.t <= 1e-5;
+        const atEnd = q.segment === c.points.length - 2 && q.t >= 1 - 1e-5;
+        if ((atStart && vt < 0) || (atEnd && vt > 0)) vt = 0;
+        const friction = c.friction ?? 0;
+        if (friction > 0 && correction > 0) {
+          const drop = Math.min(Math.abs(vt), friction * correction);
+          vt -= Math.sign(vt) * drop;
+        }
+        P.x = q.x;
+        P.y = q.y;
+        P.vx = q.tx * vt;
+        P.vy = q.ty * vt;
+        continue;
+      }
       const A = pts[c.a];
       const B = pts[c.b];
       if (!A || !B) continue; // tham chiếu id không tồn tại — bỏ qua

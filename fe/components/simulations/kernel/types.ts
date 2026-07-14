@@ -29,6 +29,13 @@ export type Body = {
   // Bán kính va chạm (m). VẮNG → vật là chất điểm, KHÔNG va chạm vật-vật (giữ
   // nguyên hành vi cũ). Có → tham gia va chạm tròn-tròn (xem collisions.ts).
   radius?: number;
+  visual?: {
+    shape?: "circle" | "streamlined" | "plate" | "forceMeter";
+    color?: string;
+    label?: string;
+    reading?: string;
+    angle?: number;
+  };
 };
 
 // ── Lực ──────────────────────────────────────────────────────────────────────
@@ -85,8 +92,44 @@ export type SurfaceConstraint = {
   friction: number; // hệ số ma sát Coulomb (0 = mặt nhẵn không ma sát)
 };
 
-export type Constraint = RodConstraint | RopeConstraint | SurfaceConstraint;
+export type TrackPoint = { x: number; y: number };
+
+export type CurveTrackConstraint = {
+  kind: "curveTrack";
+  body: string;
+  points: TrackPoint[];
+  friction?: number;
+};
+
+export type Constraint = RodConstraint | RopeConstraint | SurfaceConstraint | CurveTrackConstraint;
 // Giai đoạn 2: pin (chốt quay), ma sát trên mặt.
+
+// ── Annotation (lớp chú thích hình học) ────────────────────────────────────────
+// Annotation CHỈ ĐỂ VẼ — hoàn toàn KHÔNG tham gia tính toán vật lý. buildKernel()
+// bỏ qua field này; nó không đi vào netForces/derivs/rk4/projectConstraints. Đây
+// là lớp phủ trực quan (vector lực/vận tốc…) mà tầng 2 khai báo trong applyParams,
+// tầng 3 (renderer) vẽ ra. KHÔNG được nhét logic/công thức vật lý vào đây.
+
+/**
+ * Một vector mũi tên để minh hoạ (lực, vận tốc, thành phần lực…).
+ * - Gốc: `anchor` (id một vật — gốc bám theo vật khi nó di chuyển) được ưu tiên;
+ *   nếu vắng thì dùng `at` (toạ độ world cố định). Vắng cả hai → gốc tại (0, 0).
+ * - `dx`/`dy`: thành phần vector theo WORLD-UNITS (m). Preset TỰ quy đổi từ đại
+ *   lượng vật lý (vd Newton) sang mét khi khai báo, để renderer không cần "biết"
+ *   đây là lực — giữ renderer thuần hình học.
+ */
+export type VectorAnnotation = {
+  kind: "vector";
+  at?: { x: number; y: number };
+  anchor?: string;
+  dx: number;
+  dy: number;
+  color?: string;
+  label?: string;
+  width?: number; // độ dày thân mũi tên (px); vắng → renderer dùng mặc định
+};
+
+export type Annotation = VectorAnnotation;
 
 /**
  * Một cảnh mô phỏng = vật + lực + ràng buộc. Đây là thứ AI (tầng 2) khai báo;
@@ -99,4 +142,7 @@ export type Scene = {
   // Hệ số đàn hồi e ∈ [0,1] dùng CHUNG cho mọi va chạm trong cảnh. Mặc định 1
   // (va chạm đàn hồi hoàn toàn — bảo toàn động năng). e = 0: va chạm mềm (dính).
   restitution?: number;
+  // Lớp chú thích hình học (vector lực/vận tốc…). CHỈ để vẽ — kernel bỏ qua
+  // hoàn toàn. Vắng (đa số preset) → không vẽ gì, hành vi y hệt trước.
+  annotations?: Annotation[];
 };

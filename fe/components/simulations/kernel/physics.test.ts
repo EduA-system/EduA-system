@@ -303,3 +303,31 @@ describe("Đi tới mốc thời gian — atTime() khớp trạng thái kernel",
     expect(Math.abs(readPosition(s, "p").y - y0)).toBeLessThan(0.1);
   });
 });
+
+describe("curveTrack constraint", () => {
+  it("projects a body onto the nearest track segment", () => {
+    const scene: Scene = {
+      bodies: [{ id: "ball", x: 0, y: 1, vx: 0, vy: 0, mass: 1 }],
+      forces: [],
+      constraints: [{ kind: "curveTrack", body: "ball", points: [{ x: -1, y: 0 }, { x: 1, y: 0 }] }],
+    };
+    const { s } = run(scene, 0);
+    const p = readPosition(s, "ball");
+    expect(Math.abs(p.x)).toBeLessThan(1e-9);
+    expect(Math.abs(p.y)).toBeLessThan(1e-9);
+  });
+
+  it("keeps motion on an inclined track while gravity accelerates along the tangent", () => {
+    const scene: Scene = {
+      bodies: [{ id: "ball", x: -1, y: 1, vx: 0, vy: 0, mass: 1 }],
+      forces: [{ kind: "gravity", g: 9.8 }],
+      constraints: [{ kind: "curveTrack", body: "ball", points: [{ x: -1, y: 1 }, { x: 1, y: 0 }] }],
+    };
+    const { s } = run(scene, 0.6);
+    const p = readPosition(s, "ball");
+    const expectedYOnLine = 0.5 - 0.5 * p.x;
+    expect(p.x).toBeGreaterThan(-0.95);
+    expect(p.y).toBeLessThan(0.98);
+    expect(Math.abs(p.y - expectedYOnLine)).toBeLessThan(1e-6);
+  });
+});

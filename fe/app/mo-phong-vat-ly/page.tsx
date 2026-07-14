@@ -60,6 +60,75 @@ function Thumb({ id }: { id: string }) {
   );
 
   switch (id) {
+    case "luc-tuong-tac-hai-xe":
+      return frame(
+        <>
+          <line x1="20" y1="90" x2="180" y2="90" stroke="#475569" strokeWidth="2" />
+          <circle cx="58" cy="78" r="12" fill="#60a5fa" />
+          <circle cx="132" cy="78" r="12" fill="#f472b6" />
+          <path d="M22 78 h26" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+          <path d="M40 69 l11 9 l-11 9" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M74 78 h42" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
+          <path d="M88 53 h28" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M108 46 l10 7 l-10 7" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M118 62 h-28" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M98 55 l-10 7 l10 7" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="52" y="103" fontSize="11" fontWeight="700" fill="#cbd5e1">A</text>
+          <text x="126" y="103" fontSize="11" fontWeight="700" fill="#cbd5e1">B</text>
+        </>,
+      );
+    case "do-p-t-bang-luc-ke":
+      return frame(
+        <>
+          <line x1="54" y1="18" x2="146" y2="18" stroke="#475569" strokeWidth="3" />
+          <rect x="78" y="24" width="44" height="28" rx="6" fill="#1e293b" stroke="#94a3b8" strokeWidth="2" />
+          <path d="M86 42 A14 14 0 0 1 114 42" fill="none" stroke="#38bdf8" strokeWidth="2" />
+          <path d="M100 42 L110 34" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="100" y1="52" x2="100" y2="78" stroke="#cbd5e1" strokeWidth="2" />
+          <rect x="84" y="78" width="32" height="22" rx="3" fill="#f472b6" />
+          <path d="M128 78 v24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M121 94 l7 10 l7 -10" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="134" y="96" fontSize="11" fontWeight="700" fill="#34d399">P</text>
+          <path d="M72 78 v-24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M65 62 l7 -10 l7 10" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="58" y="58" fontSize="11" fontWeight="700" fill="#60a5fa">T</text>
+        </>,
+      );
+    case "quy-tac-moment":
+      return frame(
+        <>
+          <line x1="28" y1="58" x2="172" y2="58" stroke="#cbd5e1" strokeWidth="5" strokeLinecap="round" />
+          <circle cx="100" cy="58" r="8" fill="#fbbf24" />
+          <path d="M100 66 L88 96 H112 Z" fill="#475569" />
+          <line x1="52" y1="58" x2="100" y2="58" stroke="#60a5fa" strokeWidth="2" strokeDasharray="5 4" />
+          <line x1="100" y1="58" x2="148" y2="58" stroke="#f472b6" strokeWidth="2" strokeDasharray="5 4" />
+          <path d="M52 34 v38" fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" />
+          <path d="M44 62 l8 12 l8 -12" fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M148 34 v38" fill="none" stroke="#f472b6" strokeWidth="3" strokeLinecap="round" />
+          <path d="M140 62 l8 12 l8 -12" fill="none" stroke="#f472b6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="42" y="28" fontSize="11" fontWeight="700" fill="#60a5fa">F1</text>
+          <text x="138" y="28" fontSize="11" fontWeight="700" fill="#f472b6">F2</text>
+          <text x="61" y="51" fontSize="10" fill="#93c5fd">d1</text>
+          <text x="126" y="51" fontSize="10" fill="#f9a8d4">d2</text>
+          <text x="76" y="112" fontSize="11" fontWeight="700" fill="#fbbf24">M = F.d</text>
+        </>,
+      );
+    case "luc-can-chat-luu":
+      return frame(
+        <>
+          <path d="M34 18 c14 10 14 24 0 34 c-14 -10 -14 -24 0 -34Z" fill="#60a5fa" />
+          <circle cx="96" cy="52" r="10" fill="#f472b6" />
+          <rect x="146" y="44" width="28" height="14" rx="3" fill="#fbbf24" />
+          <path d="M34 58 V94" stroke="#60a5fa" strokeWidth="2" strokeDasharray="4 4" />
+          <path d="M96 68 V96" stroke="#f472b6" strokeWidth="2" strokeDasharray="4 4" />
+          <path d="M160 64 V104" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 4" />
+          <path d="M22 34 h-12 M48 34 h12 M84 52 h-14 M108 52 h14 M138 51 h-18 M180 51 h10" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+          <path d="M28 78 L34 90 L40 78" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M90 76 L96 88 L102 76" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M154 82 L160 94 L166 82" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="20" y1="104" x2="180" y2="104" stroke="#475569" strokeWidth="2" />
+        </>,
+      );
     case "dinh-luat-2-newton":
       return frame(
         <>
@@ -67,6 +136,39 @@ function Thumb({ id }: { id: string }) {
           <rect x="58" y="66" width="30" height="24" rx="3" fill="#f472b6" />
           <path d="M96 78 h44" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" />
           <path d="M132 70 l12 8 l-12 8" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </>,
+      );
+    case "tong-hop-luc-dong-quy":
+      return frame(
+        <>
+          <circle cx="100" cy="62" r="8" fill="#fbbf24" />
+          <line x1="100" y1="62" x2="160" y2="62" stroke="#60a5fa" strokeWidth="2.5" />
+          <line x1="100" y1="62" x2="70" y2="28" stroke="#f472b6" strokeWidth="2.5" />
+          <line x1="100" y1="62" x2="64" y2="98" stroke="#34d399" strokeWidth="2.5" />
+          <rect x="152" y="49" width="34" height="24" rx="6" fill="#111827" stroke="#60a5fa" strokeWidth="2" />
+          <rect x="40" y="12" width="36" height="22" rx="6" fill="#111827" stroke="#f472b6" strokeWidth="2" transform="rotate(-28 58 23)" />
+          <rect x="34" y="88" width="38" height="22" rx="6" fill="#111827" stroke="#34d399" strokeWidth="2" transform="rotate(35 53 99)" />
+          <circle cx="162" cy="61" r="5" fill="#0f172a" stroke="#94a3b8" strokeWidth="1.5" />
+          <path d="M162 61 l6 -5" stroke="#fbbf24" strokeWidth="1.8" strokeLinecap="round" />
+          <text x="157" y="68" fontSize="8" fontWeight="700" fill="#e2e8f0">10N</text>
+          <path d="M112 54 l18 -10" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
+          <path d="M112 70 l18 10" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
+          <text x="86" y="116" fontSize="11" fontWeight="700" fill="#fbbf24">ΣF = R</text>
+        </>,
+      );
+    case "tong-hop-hai-luc-cung-phuong":
+      return frame(
+        <>
+          <line x1="20" y1="92" x2="180" y2="92" stroke="#475569" strokeWidth="2" />
+          <rect x="86" y="54" width="28" height="24" rx="3" fill="#f472b6" />
+          {/* F₁ sang trái (xanh) */}
+          <path d="M84 66 H36" fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" />
+          <path d="M45 60 l-9 6 l9 6" fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="30" y="52" fontSize="11" fontWeight="700" fill="#60a5fa">F₁</text>
+          {/* F₂ sang phải (cam), dài hơn → hợp lực sang phải */}
+          <path d="M116 66 H172" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
+          <path d="M163 60 l9 6 l-9 6" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="160" y="52" fontSize="11" fontWeight="700" fill="#f59e0b">F₂</text>
         </>,
       );
     case "nem-xien":
@@ -77,6 +179,33 @@ function Thumb({ id }: { id: string }) {
           <line x1="20" y1="100" x2="180" y2="100" stroke="#475569" strokeWidth="2" />
         </>,
       );
+    case "mang-cong-galilei":
+      return frame(
+        <>
+          <path d="M28 28 C52 80 76 96 100 96 C128 96 150 72 172 30" fill="none" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" />
+          <path d="M28 28 C52 80 76 96 100 96 C128 96 150 72 172 30" fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="34" cy="34" r="7" fill="#f472b6" />
+          <path d="M42 44 Q70 83 98 94" fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 4" />
+          <text x="126" y="54" fontSize="11" fontWeight="700" fill="#cbd5e1">h</text>
+          <path d="M158 34 V92" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
+        </>,
+      );
+    case "nem-ngang":
+      return frame(
+        <>
+          <line x1="24" y1="100" x2="180" y2="100" stroke="#475569" strokeWidth="2" />
+          <line x1="34" y1="24" x2="34" y2="100" stroke="#64748b" strokeWidth="3" />
+          <line x1="34" y1="24" x2="78" y2="24" stroke="#64748b" strokeWidth="3" />
+          <path d="M78 24 Q118 32 160 96" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeDasharray="4 4" />
+          <line x1="52" y1="24" x2="52" y2="96" stroke="#60a5fa" strokeWidth="2" strokeDasharray="4 4" />
+          <circle cx="78" cy="24" r="6" fill="#f472b6" />
+          <circle cx="52" cy="24" r="6" fill="#60a5fa" />
+          <path d="M88 24 h28" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M108 17 l10 7 l-10 7" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="160" cy="96" r="6" fill="#f472b6" />
+          <circle cx="52" cy="96" r="6" fill="#60a5fa" />
+        </>,
+      );
     case "roi-tu-do":
       return frame(
         <>
@@ -84,6 +213,35 @@ function Thumb({ id }: { id: string }) {
           <circle cx="100" cy="30" r="6" fill="#f472b6" />
           <path d="M94 70 L100 84 L106 70" fill="none" stroke="#34d399" strokeWidth="2" />
           <line x1="40" y1="100" x2="160" y2="100" stroke="#475569" strokeWidth="2" />
+        </>,
+      );
+    case "ong-newton-khong-khi":
+      return frame(
+        <>
+          <rect x="58" y="10" width="84" height="98" rx="20" fill="#111827" stroke="#64748b" strokeWidth="2" />
+          <rect x="66" y="18" width="68" height="82" rx="16" fill="#0f172a" stroke="#334155" strokeWidth="1" />
+          <line x1="100" y1="24" x2="100" y2="94" stroke="#334155" strokeWidth="1" strokeDasharray="3 4" />
+          <circle cx="84" cy="78" r="8" fill="#f472b6" />
+          <path d="M113 39 c10 4 13 14 5 22 c-8 -5 -12 -13 -5 -22Z" fill="#a78bfa" />
+          <path d="M118 43 c-7 7 -7 11 -3 17" fill="none" stroke="#ddd6fe" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M75 54 L84 66 L93 54" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M108 70 L116 80 L124 70" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="66" y1="94" x2="134" y2="94" stroke="#475569" strokeWidth="2" />
+        </>,
+      );
+    case "ong-newton-chan-khong":
+      return frame(
+        <>
+          <rect x="58" y="10" width="84" height="98" rx="20" fill="#111827" stroke="#64748b" strokeWidth="2" />
+          <rect x="66" y="18" width="68" height="82" rx="16" fill="#0f172a" stroke="#334155" strokeWidth="1" />
+          <line x1="100" y1="24" x2="100" y2="94" stroke="#334155" strokeWidth="1" strokeDasharray="3 4" />
+          <circle cx="84" cy="70" r="8" fill="#f472b6" />
+          <path d="M111 61 c10 4 13 14 5 22 c-8 -5 -12 -13 -5 -22Z" fill="#a78bfa" />
+          <path d="M116 65 c-7 7 -7 11 -3 17" fill="none" stroke="#ddd6fe" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M75 43 L84 55 L93 43" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M108 43 L116 55 L124 43" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M73 88 H127" fill="none" stroke="#60a5fa" strokeWidth="2" strokeDasharray="4 4" />
+          <line x1="66" y1="94" x2="134" y2="94" stroke="#475569" strokeWidth="2" />
         </>,
       );
     case "con-lac-don":
@@ -693,3 +851,4 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
     </main>
   );
 }
+
