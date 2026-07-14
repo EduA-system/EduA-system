@@ -274,7 +274,7 @@ export function HeatingCurveCanvas({
     const container = containerRef.current;
     const transformEl = transformRef.current;
     if (!container || !transformEl || size.width <= 0 || size.height <= 0) return;
-    const minZoom = 0.8;
+    const minZoom = 1;
     const maxZoom = 6;
     const applyTransform = () => { transformEl.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${zoomRef.current})`; };
     const clampPan = (pan: { x: number; y: number }, zoom: number) => ({

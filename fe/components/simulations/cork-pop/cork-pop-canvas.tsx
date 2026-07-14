@@ -90,6 +90,16 @@ export function CorkPopCanvas({ params, running, resetSignal, stepSignal, onSnap
 
       ctx.fillStyle = "#0f172a";
       ctx.fillRect(0, 0, size.width, size.height);
+      // Lưới nền nhẹ giúp đọc vị trí và biến đổi thể tích mà không làm cảnh
+      // giống một bảng debug kỹ thuật.
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.09)";
+      ctx.lineWidth = 1;
+      for (let x = 18; x < size.width; x += 36) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size.height); ctx.stroke();
+      }
+      for (let y = 58; y < size.height; y += 36) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size.width, y); ctx.stroke();
+      }
       ctx.textBaseline = "alphabetic";
       ctx.textAlign = "left";
       ctx.fillStyle = "rgba(226, 232, 240, 0.92)";
@@ -178,15 +188,8 @@ export function CorkPopCanvas({ params, running, resetSignal, stepSignal, onSnap
         ctx.stroke(); ctx.setLineDash([]);
       }
 
-      // Bảng số liệu và thanh chuyển hóa năng lượng.
-      const boxX = 14; const boxY = size.height - 112; const boxW = Math.min(250, size.width - 28);
-      ctx.fillStyle = "rgba(2, 6, 23, 0.76)"; ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, 78, 8); ctx.fill();
-      ctx.textAlign = "left"; ctx.fillStyle = "rgba(226, 232, 240, 0.72)"; ctx.font = "10px Inter, sans-serif"; ctx.fillText("Đại lượng thời gian thực", boxX + 10, boxY + 16);
-      ctx.fillStyle = "#e2e8f0"; ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
-      ctx.fillText(`T: ${snapshot.temperature.toFixed(1)} K`, boxX + 10, boxY + 34); ctx.fillText(`U: ${snapshot.internalEnergy.toFixed(2)} J`, boxX + 10, boxY + 50); ctx.fillText(`A: ${snapshot.work.toFixed(2)} J`, boxX + 10, boxY + 66);
-      ctx.fillText(`P: ${snapshot.pressure.toFixed(1)} kPa`, boxX + boxW * 0.52, boxY + 34); ctx.fillText(`F: ${snapshot.force.toFixed(2)} N`, boxX + boxW * 0.52, boxY + 50);
-      ctx.fillStyle = snapshot.status === "popped" ? "#fb7185" : snapshot.status === "near-pop" ? "#fbbf24" : "#67e8f9"; ctx.fillText(snapshot.status === "popped" ? "Đã bật" : snapshot.status === "near-pop" ? "Sắp bật" : "Đang giữ", boxX + boxW * 0.52, boxY + 66);
-
+      // Thanh chuyển hóa năng lượng được giữ lại như một chú thích trực quan
+      // gọn, còn các con số chi tiết nằm trong panel bên phải.
       const energyY = size.height - 22; const energyW = Math.max(100, size.width - 28); const q = Math.max(1, snapshot.heatAdded); const u = Math.max(0, snapshot.internalEnergy); const a = Math.max(0, snapshot.work); const totalEnergy = Math.max(q, u + a, 1);
       ctx.fillStyle = "rgba(148, 163, 184, 0.2)"; ctx.fillRect(14, energyY - 7, energyW, 7); ctx.fillStyle = "#fb923c"; ctx.fillRect(14, energyY - 7, energyW * Math.min(1, q / totalEnergy), 7); ctx.fillStyle = "#67e8f9"; ctx.fillRect(14, energyY - 7, energyW * Math.min(1, u / totalEnergy), 4); ctx.fillStyle = "#fbbf24"; ctx.fillRect(14, energyY - 3, energyW * Math.min(1, a / totalEnergy), 3);
       ctx.fillStyle = "rgba(226, 232, 240, 0.7)"; ctx.font = "9px Inter, sans-serif"; ctx.fillText("Q nhiệt", 14, energyY - 11); ctx.fillText("U nội năng", Math.min(size.width - 74, 14 + energyW * 0.45), energyY - 11); ctx.textAlign = "right"; ctx.fillText("A công cơ học", size.width - 14, energyY - 11);
@@ -222,17 +225,30 @@ export function CorkPopCanvas({ params, running, resetSignal, stepSignal, onSnap
     const container = containerRef.current; const transformEl = transformRef.current;
     if (!container || !transformEl || size.width <= 0 || size.height <= 0) return;
     const applyTransform = () => { transformEl.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${zoomRef.current})`; };
-    const clampPan = (pan: { x: number; y: number }, zoom: number) => ({ x: Math.min(0, Math.max(size.width * (1 - zoom), pan.x)), y: Math.min(0, Math.max(size.height * (1 - zoom), pan.y)) });
-    const applyZoom = (next: number, focal?: { x: number; y: number }) => { const zoom = Math.min(6, Math.max(0.8, next)); const f = focal ?? { x: size.width / 2, y: size.height / 2 }; const world = { x: (f.x - panRef.current.x) / zoomRef.current, y: (f.y - panRef.current.y) / zoomRef.current }; zoomRef.current = zoom; panRef.current = clampPan({ x: f.x - world.x * zoom, y: f.y - world.y * zoom }, zoom); applyTransform(); setZoomPct(Math.round(zoom * 100)); };
+    const clampPan = (pan: { x: number; y: number }, zoom: number) => {
+      const maxX = Math.max(0, (size.width * (zoom - 1)) / 2);
+      const maxY = Math.max(0, (size.height * (zoom - 1)) / 2);
+      return {
+        x: Math.min(maxX, Math.max(-maxX, pan.x)),
+        y: Math.min(maxY, Math.max(-maxY, pan.y)),
+      };
+    };
+    const applyZoom = (next: number) => {
+      const zoom = Math.min(6, Math.max(1, next));
+      zoomRef.current = zoom;
+      panRef.current = clampPan(panRef.current, zoom);
+      applyTransform();
+      setZoomPct(Math.round(zoom * 100));
+    };
     zoomActionsRef.current = { in: () => applyZoom(zoomRef.current * 1.3), out: () => applyZoom(zoomRef.current / 1.3) }; applyTransform();
     let dragging = false; const start = { x: 0, y: 0, panX: 0, panY: 0 };
     const onPointerDown = (event: PointerEvent) => { if (event.button !== 0 || event.target !== canvasRef.current) return; dragging = true; start.x = event.clientX; start.y = event.clientY; start.panX = panRef.current.x; start.panY = panRef.current.y; container.setPointerCapture(event.pointerId); };
     const onPointerMove = (event: PointerEvent) => { if (!dragging) return; panRef.current = clampPan({ x: start.panX + event.clientX - start.x, y: start.panY + event.clientY - start.y }, zoomRef.current); applyTransform(); };
     const onPointerUp = (event: PointerEvent) => { dragging = false; if (container.hasPointerCapture(event.pointerId)) container.releasePointerCapture(event.pointerId); };
-    const onWheel = (event: WheelEvent) => { if (event.target !== canvasRef.current) return; event.preventDefault(); const rect = container.getBoundingClientRect(); applyZoom(event.deltaY > 0 ? zoomRef.current / 1.08 : zoomRef.current * 1.08, { x: event.clientX - rect.left, y: event.clientY - rect.top }); };
+    const onWheel = (event: WheelEvent) => { if (event.target !== canvasRef.current) return; event.preventDefault(); applyZoom(event.deltaY > 0 ? zoomRef.current / 1.08 : zoomRef.current * 1.08); };
     container.addEventListener("pointerdown", onPointerDown); container.addEventListener("pointermove", onPointerMove); container.addEventListener("pointerup", onPointerUp); container.addEventListener("pointercancel", onPointerUp); container.addEventListener("wheel", onWheel, { passive: false });
     return () => { container.removeEventListener("pointerdown", onPointerDown); container.removeEventListener("pointermove", onPointerMove); container.removeEventListener("pointerup", onPointerUp); container.removeEventListener("pointercancel", onPointerUp); container.removeEventListener("wheel", onWheel); };
   }, [containerRef, size]);
 
-  return <div ref={containerRef} className="relative h-full min-h-[360px] w-full overflow-hidden rounded-lg bg-[#0f172a]"><div ref={transformRef} className="absolute inset-0" style={{ transformOrigin: "0 0" }}><canvas ref={canvasRef} className="absolute inset-0 block h-full w-full touch-none cursor-grab active:cursor-grabbing" aria-label="Mô phỏng nút bấc bật: nội năng chuyển thành công" /></div><ZoomControls percent={zoomPct} onZoomIn={() => zoomActionsRef.current?.in()} onZoomOut={() => zoomActionsRef.current?.out()} /></div>;
+  return <div ref={containerRef} className="relative h-full min-h-[360px] w-full overflow-hidden rounded-lg bg-[#0f172a]"><div ref={transformRef} className="absolute inset-0" style={{ transformOrigin: "center center" }}><canvas ref={canvasRef} className="absolute inset-0 block h-full w-full touch-none cursor-grab active:cursor-grabbing" aria-label="Mô phỏng nút bấc bật: nội năng chuyển thành công" /></div><ZoomControls percent={zoomPct} onZoomIn={() => zoomActionsRef.current?.in()} onZoomOut={() => zoomActionsRef.current?.out()} /></div>;
 }

@@ -15,6 +15,8 @@ import type { SceneAnnotation } from "../scene-konva-2d";
 import type { HeatingCurveScene } from "../heating-curve/types";
 import type { CorkPopScene } from "../cork-pop/types";
 import type { PendulumResonanceScene } from "../pendulum-resonance/types";
+import type { HeatTransferScene } from "../heat-transfer/types";
+import type { IsothermalBoyleScene } from "../isothermal-boyle/types";
 
 export type Domain = "Cơ học" | "Dao động & Sóng" | "Quang học" | "Điện & Từ" | "Nhiệt & Khí" | "Hạt nhân";
 
@@ -134,4 +136,14 @@ export type PendulumResonancePreset = PresetBase & {
   applyParams: (p: Record<string, number>) => PendulumResonanceScene;
 };
 
-export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset | BrownianPreset | HeatingCurvePreset | CorkPopPreset | PendulumResonancePreset;
+export type HeatTransferPreset = PresetBase & {
+  kind: "heat-transfer";
+  applyParams: (p: Record<string, number>) => HeatTransferScene;
+};
+
+export type IsothermalBoylePreset = PresetBase & {
+  kind: "isothermal-boyle";
+  applyParams: (p: Record<string, number>) => IsothermalBoyleScene;
+};
+
+export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset | BrownianPreset | HeatingCurvePreset | CorkPopPreset | PendulumResonancePreset | HeatTransferPreset | IsothermalBoylePreset;

@@ -551,7 +551,7 @@ export function SceneCanvasWaveField({
     const applyTransform = () => {
       if (transformEl) transformEl.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${zoomRef.current})`;
     };
-    const minZoom = 0.8, maxZoom = 6; // cho phép zoom out một chút để thấy rộng hơn khung gốc
+    const minZoom = 1, maxZoom = 6;
     // Khoá pan trong đúng "vùng làm việc" = khung nội dung đã fit (không có
     // lề lưới thêm như các renderer Konva) — kéo được, nhưng không lệch xa ra
     // ngoài khung nhìn đã dựng. Ở đúng minZoom (chưa zoom in), không có phần
