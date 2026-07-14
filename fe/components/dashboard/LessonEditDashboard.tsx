@@ -29,7 +29,6 @@ export function LessonEditDashboard() {
   const { authFetch } = useAuth();
   const searchParams = useSearchParams();
   const libraryId = searchParams.get("libraryId");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiCollapsed, setAiCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
   // Đọc một lần lúc mount (lazy initializer) — tránh đọc lại sau khi
@@ -180,20 +179,11 @@ export function LessonEditDashboard() {
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
       <div className="flex h-full w-full">
-        <Sidebar collapsed={sidebarCollapsed} />
+        <Sidebar />
 
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
             <div className="@container flex h-12 items-center gap-2 px-3">
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed((current) => !current)}
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#e8e2d9] bg-white text-[#6b6b6b] shadow-sm transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
-                aria-label={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
-              >
-                <SidebarToggleIcon />
-              </button>
-
               <div className="flex shrink-0 items-center gap-1.5">
                 <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
                   <SaveIcon />
@@ -280,15 +270,6 @@ function HeaderActionButton({
       {children}
       <span className="hidden @min-[1100px]:inline">{label}</span>
     </button>
-  );
-}
-
-function SidebarToggleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect x="2.5" y="3" width="11" height="10" rx="2" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M6 3v10" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
   );
 }
 
