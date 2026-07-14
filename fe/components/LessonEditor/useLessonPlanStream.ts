@@ -49,6 +49,7 @@ function replacePendingBlock(editor: Editor, order: number, html: string) {
 export function useLessonPlanStream(
   editor: Editor | null,
   onComplete?: (session: LessonPlanSession) => void,
+  enabled = true,
 ) {
   const { accessToken, status } = useAuth();
   const startedRef = useRef(false);
@@ -62,7 +63,7 @@ export function useLessonPlanStream(
   const frameReceivedRef = useRef(false);
 
   useEffect(() => {
-    if (!editor || startedRef.current) return;
+    if (!enabled || !editor || startedRef.current) return;
 
     // Đợi AuthProvider hoàn tất refresh phiên. STOMP bắt buộc có JWT nên không được
     // mở socket trong lúc token còn null.
@@ -189,5 +190,5 @@ export function useLessonPlanStream(
       cancelled = true;
       disconnect();
     };
-  }, [accessToken, editor, status]);
+  }, [accessToken, editor, enabled, status]);
 }
