@@ -30,7 +30,7 @@ export type Body = {
   // nguyên hành vi cũ). Có → tham gia va chạm tròn-tròn (xem collisions.ts).
   radius?: number;
   visual?: {
-    shape?: "circle" | "streamlined" | "plate" | "forceMeter";
+    shape?: "circle" | "streamlined" | "plate" | "box" | "forceMeter";
     color?: string;
     label?: string;
     reading?: string;
@@ -129,7 +129,29 @@ export type VectorAnnotation = {
   width?: number; // độ dày thân mũi tên (px); vắng → renderer dùng mặc định
 };
 
-export type Annotation = VectorAnnotation;
+/**
+ * Vector ĐỘNG minh hoạ một lò xo — độ dài tính lại MỖI FRAME từ trạng thái thực
+ * (khác VectorAnnotation có dx/dy chốt sẵn). Trỏ tới spring qua cặp (a, b);
+ * renderer đọc k/restLength của CHÍNH spring đó trong scene.forces để tính độ
+ * giãn Δℓ = L − restLength và lực đàn hồi Fđh = k·Δℓ. CHỈ để vẽ — kernel bỏ qua.
+ * Preset chỉ khai báo "vẽ vector cho lò xo nào + hệ số quy đổi", KHÔNG viết công
+ * thức: mọi số liệu renderer đọc từ Scene, đúng triết lý declarative.
+ */
+export type SpringVectorAnnotation = {
+  kind: "springVector";
+  a: string; // đầu neo (điểm treo)
+  b: string; // đầu tự do (vật)
+  // N → world-units (m) để vẽ vector lực đàn hồi. Vắng/0 → không vẽ vector lực.
+  forceScale?: number;
+  // Hệ số vẽ vector độ giãn Δℓ (m). Vắng/0 → không vẽ vector độ giãn. 1 = đúng mét.
+  stretchScale?: number;
+  forceColor?: string;
+  stretchColor?: string;
+  forceLabel?: string; // vd "Fđh"
+  stretchLabel?: string; // vd "Δℓ"
+};
+
+export type Annotation = VectorAnnotation | SpringVectorAnnotation;
 
 /**
  * Một cảnh mô phỏng = vật + lực + ràng buộc. Đây là thứ AI (tầng 2) khai báo;
@@ -145,4 +167,9 @@ export type Scene = {
   // Lớp chú thích hình học (vector lực/vận tốc…). CHỈ để vẽ — kernel bỏ qua
   // hoàn toàn. Vắng (đa số preset) → không vẽ gì, hành vi y hệt trước.
   annotations?: Annotation[];
+  // Khung nhìn CỐ ĐỊNH (world-units, m) — chỉ để renderer canh camera, kernel bỏ
+  // qua. Khai báo khi quỹ đạo KHÔNG bị chặn (vật gia tốc chạy xa): tránh camera
+  // tự zoom lại mỗi lần đổi tham số. Vắng → renderer tự đo khung theo quỹ đạo
+  // (hành vi mặc định cũ). Renderer vẫn luôn đảm bảo thấy mặt đất y=0.
+  view?: { minX: number; maxX: number; minY: number; maxY: number };
 };

@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import Konva from "konva";
 import { buildKernel, readPosition, readVelocity, stepScene } from "./kernel/build-derivs";
 import type { StateVec } from "./shared/ode";
-import type { Scene, VectorAnnotation } from "./kernel/types";
+import type { Scene, VectorAnnotation, SpringVectorAnnotation } from "./kernel/types";
 
 const H = 520; // chiều cao canvas (px); bề rộng đo theo khung chứa
 
@@ -24,6 +24,13 @@ type Box = { minX: number; maxX: number; minY: number; maxY: number };
 
 // Mô phỏng trước ~5 s để biết quỹ đạo → hộp bao. LUÔN gồm mặt đất y=0.
 function fitBox(scene: Scene): Box {
+  // Preset khai báo khung nhìn cố định → dùng luôn, KHÔNG mô phỏng để đoán khung.
+  // Nhờ vậy camera đứng yên khi đổi tham số (với quỹ đạo không bị chặn). Vẫn ghim
+  // mặt đất y=0 trong khung.
+  if (scene.view) {
+    const v = scene.view;
+    return { minX: v.minX, maxX: v.maxX, minY: Math.min(v.minY, 0), maxY: v.maxY };
+  }
   const xs = scene.bodies.map((b) => b.x);
   const ys = scene.bodies.map((b) => b.y);
   let minX = Math.min(...xs), maxX = Math.max(...xs);
@@ -162,6 +169,7 @@ export function SceneKonva2D({
       forces: scene.forces,
       constraints: scene.constraints,
       annotations: scene.annotations,
+      view: scene.view,
     };
     let kernel = buildKernel(work);
     let state = kernel.project(kernel.initialState);
@@ -381,6 +389,20 @@ export function SceneKonva2D({
                 shadowBlur: 6,
                 shadowColor: "#000",
               })
+            : shape === "box"
+            ? new Konva.Rect({
+                x: p.x,
+                y: p.y,
+                width: radius * 1.6,
+                height: radius * 1.6,
+                offsetX: radius * 0.8,
+                offsetY: radius * 0.8,
+                cornerRadius: 4,
+                fill,
+                draggable: true,
+                shadowBlur: 6,
+                shadowColor: "#000",
+              })
             : shape === "streamlined"
               ? new Konva.RegularPolygon({
                   x: p.x,
@@ -436,7 +458,13 @@ export function SceneKonva2D({
       const start = toScreen(ow.x, ow.y);
       const tip = toScreen(ow.x + entry.ann.dx, ow.y + entry.ann.dy);
       entry.arrow.points([start.x, start.y, tip.x, tip.y]);
-      if (entry.label) entry.label.position({ x: tip.x + 6, y: tip.y - 6 });
+      if (entry.label) {
+        // Đặt label ở PHÍA NGOÀI ngọn theo hướng mũi tên: vector chỉ sang trái →
+        // label bên trái ngọn, sang phải → bên phải. Tránh nhãn đè lên thân vector.
+        const leftward = tip.x < start.x;
+        const x = leftward ? tip.x - entry.label.width() - 6 : tip.x + 6;
+        entry.label.position({ x, y: tip.y - 6 });
+      }
     };
     for (const ann of work.annotations ?? []) {
       if (ann.kind !== "vector") continue;
@@ -464,6 +492,100 @@ export function SceneKonva2D({
     // Vector gốc-bám-vật có cần cập nhật mỗi frame không (khi vật di chuyển)?
     const hasAnchoredArrow = arrows.some((a) => a.ann.anchor != null);
 
+    // ── Vector ĐỘNG cho lò xo (springVector) — độ dài tính lại MỖI FRAME ─────
+    // Trỏ tới một spring qua (a,b); renderer đọc k/restLength của chính spring đó
+    // trong work.forces → tính Δℓ và Fđh = k·Δℓ. CHỈ vẽ, không đụng vật lý.
+    type SpringVecEntry = {
+      ann: SpringVectorAnnotation;
+      k: number;
+      restLength: number;
+      forceArrow?: Konva.Arrow;
+      forceLabel?: Konva.Text;
+      stretchArrow?: Konva.Arrow;
+      stretchLabel?: Konva.Text;
+    };
+    const springVecs: SpringVecEntry[] = [];
+    for (const ann of work.annotations ?? []) {
+      if (ann.kind !== "springVector") continue;
+      const spring = work.forces.find(
+        (f) => f.kind === "spring" && f.a === ann.a && f.b === ann.b,
+      );
+      if (!spring || spring.kind !== "spring") continue;
+      const entry: SpringVecEntry = { ann, k: spring.k, restLength: spring.restLength };
+      const mkArrow = (color: string): Konva.Arrow => {
+        const a = new Konva.Arrow({
+          points: [0, 0, 0, 0],
+          stroke: color,
+          fill: color,
+          strokeWidth: 3,
+          pointerLength: 10,
+          pointerWidth: 9,
+          lineCap: "round",
+          lineJoin: "round",
+        });
+        layer.add(a);
+        return a;
+      };
+      const mkLabel = (text: string, color: string): Konva.Text => {
+        const t = new Konva.Text({ text, fontSize: 12, fontStyle: "700", fill: color, fontFamily: "monospace" });
+        layer.add(t);
+        return t;
+      };
+      if ((ann.forceScale ?? 0) > 0) {
+        const color = ann.forceColor ?? "#f59e0b";
+        entry.forceArrow = mkArrow(color);
+        if (ann.forceLabel) entry.forceLabel = mkLabel(ann.forceLabel, color);
+      }
+      if ((ann.stretchScale ?? 0) > 0) {
+        const color = ann.stretchColor ?? "#34d399";
+        entry.stretchArrow = mkArrow(color);
+        if (ann.stretchLabel) entry.stretchLabel = mkLabel(ann.stretchLabel, color);
+      }
+      springVecs.push(entry);
+    }
+    // Đặt label ở phía ngoài ngọn theo hướng mũi tên (tránh đè thân) — như syncArrow.
+    const placeTipLabel = (label: Konva.Text, sx: number, sy: number, tx: number, ty: number) => {
+      const leftward = tx < sx;
+      label.position({ x: leftward ? tx - label.width() - 6 : tx + 6, y: ty - 6 });
+    };
+    // Cập nhật một springVector: đọc vị trí hai đầu (world), tính Δℓ dọc trục lò
+    // xo, vẽ vector Δℓ (đoạn đã giãn) và Fđh = k·Δℓ (hướng kéo vật về neo).
+    const syncSpringVec = (e: SpringVecEntry) => {
+      const pa = worldOf(e.ann.a); // neo
+      const pb = worldOf(e.ann.b); // vật
+      const dx = pb.x - pa.x, dy = pb.y - pa.y;
+      const L = Math.hypot(dx, dy) || 1e-9;
+      const ux = dx / L, uy = dy / L; // đơn vị neo → vật
+      const ext = L - e.restLength;   // >0 giãn, <0 nén
+      // trục lệch (vuông góc lò xo) để mũi tên không đè lên lò xo
+      const px = -uy, py = ux;
+      // Vector Δℓ: từ điểm "hết chiều dài tự nhiên" tới vật, lệch sang một bên.
+      if (e.stretchArrow) {
+        const s = e.ann.stretchScale ?? 1;
+        const off = 0.32; // lệch trục (m)
+        const baseX = pa.x + ux * e.restLength + px * off;
+        const baseY = pa.y + uy * e.restLength + py * off;
+        const tipX = baseX + ux * ext * s;
+        const tipY = baseY + uy * ext * s;
+        const a = toScreen(baseX, baseY), b = toScreen(tipX, tipY);
+        e.stretchArrow.points([a.x, a.y, b.x, b.y]);
+        if (e.stretchLabel) placeTipLabel(e.stretchLabel, a.x, a.y, b.x, b.y);
+      }
+      // Vector Fđh: gốc tại vật, hướng −u (kéo về neo khi giãn), dài k·ext·scale.
+      if (e.forceArrow) {
+        const s = e.ann.forceScale ?? 0;
+        const off = -0.32; // lệch phía đối diện Δℓ
+        const mag = e.k * ext * s; // >0 khi giãn
+        const baseX = pb.x + px * off;
+        const baseY = pb.y + py * off;
+        const tipX = baseX - ux * mag;
+        const tipY = baseY - uy * mag;
+        const a = toScreen(baseX, baseY), b = toScreen(tipX, tipY);
+        e.forceArrow.points([a.x, a.y, b.x, b.y]);
+        if (e.forceLabel) placeTipLabel(e.forceLabel, a.x, a.y, b.x, b.y);
+      }
+    };
+
     // Tracking đưa ra ngoài canvas (panel) — chỉ phát ~12 lần/giây cho đỡ render.
     let readoutTick = 0;
     const syncShapes = () => {
@@ -485,6 +607,8 @@ export function SceneKonva2D({
           if (entry.ann.anchor != null) syncArrow(entry);
         }
       }
+      // Vector động của lò xo: độ dài đổi theo Δℓ thực → cập nhật mỗi frame.
+      for (const e of springVecs) syncSpringVec(e);
       // nhãn toạ độ bám theo vật + thu dữ liệu tracking
       const bodies: SceneReadout["bodies"] = [];
       for (const b of work.bodies) {

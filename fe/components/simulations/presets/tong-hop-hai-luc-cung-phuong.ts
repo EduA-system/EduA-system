@@ -42,8 +42,8 @@ export const tongHopHaiLucCungPhuong: Preset = {
           vx: 0,
           vy: 0,
           mass: m,
-          radius: 0.32,
-          visual: { shape: "plate", color: "#f472b6", label: "m" },
+          radius: 0.24,
+          visual: { shape: "box", color: "#f472b6", label: "m" },
         },
       ],
       // Hai lực ngược chiều CÙNG đặt lên vật. Kernel tự cộng dồn thành hợp lực
@@ -58,6 +58,10 @@ export const tongHopHaiLucCungPhuong: Preset = {
         { kind: "vector", anchor: "block", dx: -F1 * N_TO_M, dy: 0, color: "#60a5fa", label: `F₁ = ${F1} N` },
         { kind: "vector", anchor: "block", dx: F2 * N_TO_M, dy: 0, color: "#f59e0b", label: `F₂ = ${F2} N` },
       ],
+      // Khung nhìn CỐ ĐỊNH: vật gia tốc chạy xa nên quỹ đạo không bị chặn — khai
+      // báo khung để camera KHÔNG tự zoom lại mỗi lần đổi F₁/F₂. Đủ rộng để thấy
+      // hai vector (lực tối đa 20 N ↦ 0.8 m) và một đoạn vật trôi ban đầu.
+      view: { minX: -3.5, maxX: 3.5, minY: 0, maxY: 2.2 },
     };
   },
   analysis: {

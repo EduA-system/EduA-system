@@ -13,7 +13,12 @@ import { roiTuDo } from "./roi-tu-do";
 import { nemXien } from "./nem-xien";
 import { nemNgang } from "./nem-ngang";
 import { mangCongGalilei } from "./mang-cong-galilei";
+import { dongNangTheNang } from "./dong-nang-the-nang";
+import { mangBaoToanCoNang } from "./mang-bao-toan-co-nang";
 import { conLacDon } from "./con-lac-don";
+import { baoToanCoNangConLac } from "./bao-toan-co-nang-con-lac";
+import { dinhLuatHooke } from "./dinh-luat-hooke";
+import { lucHuongTam } from "./luc-huong-tam";
 import { conLacLoXo } from "./con-lac-lo-xo";
 import { daoDongTatDan } from "./dao-dong-tat-dan";
 import { congHuongConLac } from "./cong-huong-con-lac";
@@ -37,7 +42,12 @@ export const PRESETS: Preset[] = [
   nemXien,
   nemNgang,
   mangCongGalilei,
+  dongNangTheNang,
+  mangBaoToanCoNang,
   conLacDon,
+  baoToanCoNangConLac,
+  dinhLuatHooke,
+  lucHuongTam,
   conLacLoXo,
   daoDongTatDan,
   congHuongConLac,

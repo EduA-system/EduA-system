@@ -27,6 +27,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { ParamPanel } from "@/components/simulations/param-panel";
 import { LandmarksPanel } from "@/components/simulations/landmarks-panel";
 import { PRESETS, type Preset, type Domain } from "@/components/simulations/presets";
+import { FLUID_SIMS, type FluidSim } from "@/components/simulations/fluid";
+import { FluidDetailView } from "@/components/simulations/fluid/fluid-detail-view";
 import type { SceneReadout } from "@/components/simulations/scene-konva-2d";
 
 // Konva chạm DOM → chỉ tải phía client.
@@ -190,6 +192,97 @@ function Thumb({ id }: { id: string }) {
           <path d="M158 34 V92" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
         </>,
       );
+    case "ap-suat-chat-long":
+      return frame(
+        <>
+          {/* Bể nước */}
+          <rect x="40" y="24" width="120" height="80" fill="#1d4ed8" opacity="0.35" stroke="#475569" strokeWidth="2" />
+          <line x1="40" y1="24" x2="160" y2="24" stroke="#93c5fd" strokeWidth="2" />
+          {/* Điểm đo + mũi tên áp suất mọi hướng */}
+          <g stroke="#fbbf24" strokeWidth="2" strokeLinecap="round">
+            <line x1="100" y1="78" x2="100" y2="64" />
+            <line x1="100" y1="78" x2="100" y2="92" />
+            <line x1="100" y1="78" x2="86" y2="78" />
+            <line x1="100" y1="78" x2="114" y2="78" />
+            <line x1="100" y1="78" x2="90" y2="68" />
+            <line x1="100" y1="78" x2="110" y2="68" />
+            <line x1="100" y1="78" x2="90" y2="88" />
+            <line x1="100" y1="78" x2="110" y2="88" />
+          </g>
+          <circle cx="100" cy="78" r="4" fill="#fbbf24" />
+          <text x="44" y="60" fontSize="11" fontWeight="700" fill="#34d399">p = ρgh</text>
+        </>,
+      );
+    case "binh-thong-nhau":
+      return frame(
+        <>
+          {/* Ống chữ U */}
+          <path d="M56 24 V96 H144 V24" fill="none" stroke="#475569" strokeWidth="3" />
+          <path d="M78 24 V96 H122 V24" fill="none" stroke="#475569" strokeWidth="3" />
+          {/* Nước hai nhánh cùng mực */}
+          <rect x="56" y="52" width="22" height="44" fill="#1d4ed8" opacity="0.4" />
+          <rect x="122" y="52" width="22" height="44" fill="#1d4ed8" opacity="0.4" />
+          <rect x="56" y="84" width="88" height="12" fill="#1d4ed8" opacity="0.4" />
+          {/* Đường ngang chuẩn nối hai mặt thoáng */}
+          <line x1="56" y1="52" x2="144" y2="52" stroke="#34d399" strokeWidth="1.5" strokeDasharray="5 4" />
+        </>,
+      );
+    case "dinh-luat-hooke":
+      return frame(
+        <>
+          <line x1="60" y1="14" x2="140" y2="14" stroke="#475569" strokeWidth="3" />
+          {/* Lò xo zig-zag từ giá treo xuống quả cân */}
+          <path d="M100 14 l-7 6 l14 7 l-14 7 l14 7 l-14 7 l7 6" fill="none" stroke="#a78bfa" strokeWidth="2" />
+          <rect x="86" y="66" width="28" height="22" rx="3" fill="#f472b6" />
+          {/* Mũi tên độ giãn Δℓ */}
+          <path d="M150 20 V64" stroke="#34d399" strokeWidth="1.5" strokeDasharray="3 3" />
+          <text x="154" y="46" fontSize="11" fontWeight="700" fill="#34d399">Δℓ</text>
+        </>,
+      );
+    case "luc-huong-tam":
+      return frame(
+        <>
+          {/* Quỹ đạo tròn */}
+          <circle cx="100" cy="60" r="42" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
+          <circle cx="100" cy="60" r="4" fill="#94a3b8" />
+          {/* Dây + vật */}
+          <line x1="100" y1="60" x2="142" y2="60" stroke="#94a3b8" strokeWidth="2" />
+          <circle cx="142" cy="60" r="8" fill="#f472b6" />
+          {/* Lực hướng tâm (vào tâm) + vận tốc (tiếp tuyến) */}
+          <path d="M138 60 H112" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M120 55 l-8 5 l8 5" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M142 56 V26" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M137 34 l5 -8 l5 8" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="150" y="40" fontSize="10" fontWeight="700" fill="#60a5fa">v</text>
+        </>,
+      );
+    case "mang-bao-toan-co-nang":
+      return frame(
+        <>
+          {/* Máng chữ U đối xứng */}
+          <path d="M26 26 C50 96 80 100 100 100 C120 100 150 96 174 26" fill="none" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" />
+          <path d="M26 26 C50 96 80 100 100 100 C120 100 150 96 174 26" fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Bi ở đỉnh trái + ảnh mờ ở đỉnh phải (cùng độ cao) */}
+          <circle cx="30" cy="32" r="7" fill="#f472b6" />
+          <circle cx="170" cy="32" r="7" fill="#f472b6" opacity="0.4" />
+          {/* Đường ngang nét đứt nối hai đỉnh: cùng độ cao → bảo toàn */}
+          <path d="M30 32 H170" stroke="#34d399" strokeWidth="1.5" strokeDasharray="4 4" />
+          <text x="82" y="24" fontSize="10" fontWeight="700" fill="#34d399">W = const</text>
+        </>,
+      );
+    case "dong-nang-the-nang":
+      return frame(
+        <>
+          {/* Ray: dốc cong xuống rồi chạy ngang (chạy một lần) */}
+          <path d="M26 26 C44 92 66 98 92 98 L176 98" fill="none" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" />
+          <path d="M26 26 C44 92 66 98 92 98 L176 98" fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Xe hình hộp ở đỉnh dốc */}
+          <rect x="24" y="24" width="15" height="12" rx="2" fill="#f472b6" transform="rotate(-42 31 30)" />
+          {/* Nhãn năng lượng: đỉnh = Wt, chân dốc = Wđ */}
+          <text x="30" y="18" fontSize="11" fontWeight="700" fill="#34d399">Wt</text>
+          <text x="120" y="90" fontSize="11" fontWeight="700" fill="#fbbf24">Wđ</text>
+        </>,
+      );
     case "nem-ngang":
       return frame(
         <>
@@ -251,6 +344,19 @@ function Thumb({ id }: { id: string }) {
           <circle cx="148" cy="86" r="9" fill="#f472b6" />
           <line x1="60" y1="12" x2="140" y2="12" stroke="#475569" strokeWidth="3" />
           <path d="M100 24 A 64 64 0 0 1 148 86" fill="none" stroke="#a78bfa" strokeWidth="1.5" strokeDasharray="3 3" />
+        </>,
+      );
+    case "bao-toan-co-nang-con-lac":
+      return frame(
+        <>
+          <line x1="60" y1="12" x2="140" y2="12" stroke="#475569" strokeWidth="3" />
+          {/* Hai vị trí con lắc: biên (Wt max) và thấp nhất (Wđ max) */}
+          <line x1="100" y1="12" x2="150" y2="84" stroke="#94a3b8" strokeWidth="1.5" opacity="0.5" />
+          <circle cx="150" cy="84" r="8" fill="#34d399" opacity="0.55" />
+          <line x1="100" y1="12" x2="100" y2="100" stroke="#94a3b8" strokeWidth="2" />
+          <circle cx="100" cy="100" r="9" fill="#fbbf24" />
+          <text x="120" y="72" fontSize="11" fontWeight="700" fill="#34d399">Wt</text>
+          <text x="66" y="98" fontSize="11" fontWeight="700" fill="#fbbf24">Wđ</text>
         </>,
       );
     case "con-lac-lo-xo":
@@ -386,6 +492,7 @@ function DomainChip({
 
 export default function MoPhongHubPage() {
   const [selected, setSelected] = useState<Preset | null>(null);
+  const [selectedFluid, setSelectedFluid] = useState<FluidSim | null>(null);
   const [domainFilter, setDomainFilter] = useState<Set<Domain>>(new Set(DOMAINS));
   const [query, setQuery] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -404,15 +511,19 @@ export default function MoPhongHubPage() {
     domainFilter.has(domain) && title.toLowerCase().includes(q);
 
   const presets = PRESETS.filter((p) => matches(p.domain, p.title));
+  const fluidSims = FLUID_SIMS.filter((s) => matches(s.domain, s.title));
   const placeholders = PLACEHOLDERS.filter((p) => matches(p.domain, p.title));
-  const total = presets.length + placeholders.length;
+  const total = presets.length + fluidSims.length + placeholders.length;
 
   const countInDomain = (d: Domain) =>
-    PRESETS.filter((s) => s.domain === d).length + PLACEHOLDERS.filter((s) => s.domain === d).length;
+    PRESETS.filter((s) => s.domain === d).length +
+    FLUID_SIMS.filter((s) => s.domain === d).length +
+    PLACEHOLDERS.filter((s) => s.domain === d).length;
 
   const filtered = domainFilter.size < DOMAINS.length;
 
   if (selected) return <DetailView preset={selected} onBack={() => setSelected(null)} />;
+  if (selectedFluid) return <FluidDetailView sim={selectedFluid} onBack={() => setSelectedFluid(null)} />;
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
@@ -476,6 +587,30 @@ export default function MoPhongHubPage() {
               <button
                 key={sim.id}
                 onClick={() => setSelected(sim)}
+                className="group overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-white text-left shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[#d97757] hover:shadow-md"
+              >
+                <div className="aspect-[5/3] w-full overflow-hidden bg-[#0f172a] p-2.5">
+                  <div className="h-full w-full overflow-hidden rounded-[10px]">
+                    <Thumb id={sim.id} />
+                  </div>
+                </div>
+                <div className="space-y-1.5 p-5">
+                  <div className="flex items-center gap-2">
+                    <Badge tone="primary">Lớp {sim.grade}</Badge>
+                    <Badge tone="neutral">{sim.domain}</Badge>
+                  </div>
+                  <h3 className="text-[15px] font-semibold text-[#171717] group-hover:text-[#c96545]">
+                    {sim.title}
+                  </h3>
+                  <p className="line-clamp-2 text-[12px] leading-relaxed text-[#6b6b6b]">{sim.desc}</p>
+                </div>
+              </button>
+            ))}
+
+            {fluidSims.map((sim) => (
+              <button
+                key={sim.id}
+                onClick={() => setSelectedFluid(sim)}
                 className="group overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-white text-left shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[#d97757] hover:shadow-md"
               >
                 <div className="aspect-[5/3] w-full overflow-hidden bg-[#0f172a] p-2.5">
