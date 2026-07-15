@@ -20,6 +20,8 @@ import { makeDraw } from "./lib/factory";
 export type ActiveTool = "select" | "brush" | "pencil" | "eraser";
 
 const PADDING = 72;
+const ZOOM_MIN = 0.1;
+const ZOOM_MAX = 4;
 
 interface DragRef {
   current: {
@@ -48,6 +50,7 @@ export function Canvas({
   drawColor = "#2b2926",
   drawSize = 6,
   onScaleChange,
+  onZoomModeChange,
 }: {
   dragRef: DragRef;
   zoomMode: "fit" | number;
@@ -56,6 +59,7 @@ export function Canvas({
   drawColor?: string;
   drawSize?: number;
   onScaleChange?: (scale: number) => void;
+  onZoomModeChange: (zoom: number) => void;
 }) {
   const slide = useEditorStore((s) =>
     s.slides.find((sl) => sl.id === s.currentSlideId)
@@ -67,6 +71,8 @@ export function Canvas({
   const areaRef = useRef<HTMLDivElement>(null);
   const canvasInnerRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(1);
+  const zoomFrameRef = useRef<number | null>(null);
+  const pendingZoomRef = useRef<number | null>(null);
   const [fitScale, setFitScale] = useState(1);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -110,6 +116,41 @@ export function Canvas({
     ro.observe(area);
     return () => ro.disconnect();
   }, [zoomMode]);
+
+  // Ctrl/⌘ + wheel (kể cả pinch trên touchpad) chỉ zoom canvas, không zoom browser.
+  // Touchpad có thể bắn nhiều wheel event trong cùng một lượt xử lý, nên chỉ
+  // đưa giá trị zoom mới vào React một lần mỗi frame.
+  useEffect(() => {
+    const area = areaRef.current;
+    if (!area) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+
+      event.preventDefault();
+      const factor = Math.exp(-event.deltaY * 0.0015);
+      const nextScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, scaleRef.current * factor));
+      scaleRef.current = nextScale;
+      pendingZoomRef.current = nextScale;
+
+      if (zoomFrameRef.current !== null) return;
+      zoomFrameRef.current = requestAnimationFrame(() => {
+        zoomFrameRef.current = null;
+        if (pendingZoomRef.current !== null) {
+          onZoomModeChange(pendingZoomRef.current);
+          pendingZoomRef.current = null;
+        }
+      });
+    };
+
+    area.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      area.removeEventListener("wheel", handleWheel);
+      if (zoomFrameRef.current !== null) cancelAnimationFrame(zoomFrameRef.current);
+      zoomFrameRef.current = null;
+      pendingZoomRef.current = null;
+    };
+  }, [onZoomModeChange]);
 
   const toCanvas = useCallback((clientX: number, clientY: number) => {
     const rect = canvasInnerRef.current?.getBoundingClientRect();

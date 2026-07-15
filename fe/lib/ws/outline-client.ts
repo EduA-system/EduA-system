@@ -10,10 +10,12 @@ export type OutlineEvent =
 
 export function connectOutlineStream({
   topic,
+  accessToken,
   onEvent,
   onClose,
 }: {
   topic: string;
+  accessToken: string;
   onEvent: (event: OutlineEvent) => void;
   onClose: () => void;
 }): { disconnect: () => void } {
@@ -23,6 +25,7 @@ export function connectOutlineStream({
 
   const client = new Client({
     brokerURL,
+    connectHeaders: { Authorization: `Bearer ${accessToken}` },
     reconnectDelay: 2000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,

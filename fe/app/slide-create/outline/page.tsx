@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
 import { generateOutline, type OutlinePart } from "@/lib/api/slides";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { connectOutlineStream, type OutlineEvent } from "@/lib/ws/outline-client";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 import {
@@ -43,6 +44,7 @@ function loadOutlineBoot(): OutlineBoot {
 
 export default function SlideOutlinePage() {
   const router = useRouter();
+  const { accessToken, status: authStatus } = useAuth();
   const [boot] = useState(loadOutlineBoot);
   const [session, setSession] = useState<SlideGenerationSession | null>(boot.session);
   const [status, setStatus] = useState<Status>(boot.status);
@@ -79,7 +81,18 @@ export default function SlideOutlinePage() {
   // Sinh khung (pha 1) + subscribe stream (pha 2) một lần.
   useEffect(() => {
     if (status !== "outlining" || !session) return;
+    if (authStatus === "loading") return;
     let cancelled = false;
+    if (authStatus !== "authenticated" || !accessToken) {
+      queueMicrotask(() => {
+        if (cancelled) return;
+        setStatus("error");
+      setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tạo slide.");
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     void (async () => {
       logSlideApi("outline page: generating structure…", {
@@ -114,6 +127,7 @@ export default function SlideOutlinePage() {
 
         const { disconnect } = connectOutlineStream({
           topic: res.outlineTopic,
+          accessToken,
           onEvent: handleOutlineEvent,
           onClose: () => {
             disconnectRef.current = null;
@@ -131,7 +145,7 @@ export default function SlideOutlinePage() {
     return () => {
       cancelled = true;
     };
-  }, [status, session, handleOutlineEvent]);
+  }, [accessToken, authStatus, status, session, handleOutlineEvent]);
 
   // Ngắt kết nối khi rời trang.
   useEffect(() => () => disconnectRef.current?.(), []);

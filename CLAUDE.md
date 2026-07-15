@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **EDUA System** is an AI assistant system for educators and an FPT University capstone project. The repository is a small monorepo with two independently built apps:
 
 - `fe/`: educator-facing Next.js application.
-- `be/`: Spring Boot API for textbook data, upload, lesson-plan generation, slide generation, AI integrations, storage, and streaming updates.
+- `be/`: Spring Boot API for textbook data, authentication, library content, blog/community features, lesson-plan generation, slide generation, molecule generation, uploads, and streaming updates.
 
 Project copy and documents are primarily Vietnamese. Code identifiers should stay in English.
 
@@ -28,14 +28,12 @@ Project copy and documents are primarily Vietnamese. Code identifiers should sta
 
 There is no root build orchestration beyond Husky setup. Work from `fe/` or `be/` for app-specific commands.
 
-## Quick Commands
+## Common Commands
 
 ```bash
 # Root
-npm install
-
-# Full stack from root
-pwsh scripts/start.ps1
+npm install                     # installs Husky only
+pwsh scripts/start.ps1          # start backend + frontend, auto-resolving cloud DB vs local Docker Postgres
 pwsh scripts/start.ps1 -SkipBe
 pwsh scripts/start.ps1 -SkipFe
 
@@ -45,12 +43,15 @@ npm run dev
 npm run lint
 npm run typecheck
 npm run build
+npm test                        # runs Vitest physics/simulation tests
+npm test -- components/simulations/engines/mechanics/collisions.test.ts
+npm run test:watch
 
 # Backend from be/
 ./mvnw spring-boot:run
 ./mvnw test
-./mvnw test -Dtest=GenerateSlideOutlineUseCaseTest        # single test class
-./mvnw test -Dtest=GenerateSlideOutlineUseCaseTest#methodName  # single test method
+./mvnw test -Dtest=GenerateSlideOutlineUseCaseTest
+./mvnw test -Dtest=GenerateSlideOutlineUseCaseTest#methodName
 
 # Windows backend commands from be/
 mvnw.cmd spring-boot:run
@@ -62,7 +63,7 @@ Backend test classes live under `be/src/test/java/com/edua/beeduasystem/` and ar
 
 ## Frontend (`fe/`)
 
-**Stack:** Next.js 16.2.6 App Router, React 19.2.4, TypeScript strict mode, Tailwind CSS v4, TipTap 3, STOMP, Zustand.
+**Stack:** Next.js 16.2.6 App Router, React 19.2.4, TypeScript strict mode, Tailwind CSS v4, TipTap 3, STOMP, Zustand, Vitest, Three.js / React Three Fiber.
 
 **Package name:** `fe-edua-system`.
 
@@ -70,30 +71,17 @@ Backend test classes live under `be/src/test/java/com/edua/beeduasystem/` and ar
 
 This is Next.js 16, which has breaking changes compared with older remembered patterns. Before changing Next.js code, read the relevant guide in `fe/node_modules/next/dist/docs/` and respect deprecation notices. Also check `fe/AGENTS.md`.
 
-### Frontend Structure
+### Frontend Architecture
 
-```text
-fe/app/
-├── page.tsx                    / re-exports the home experience
-├── home/                       landing page blocks, hero media, ticker
-├── homepage/                   dashboard/homepage route
-├── help/                       help route
-├── lesson-create/              lesson plan creation workspace
-├── lesson-edit/                lesson editor route
-├── slide-create/               slide creation flow
-│   └── outline/                generated outline review route
-└── slide-maker/                slide editor/maker route
-
-fe/components/
-├── LessonEditor/
-├── dashboard/
-├── layout/
-├── lesson-plan/
-├── outline-editor/
-├── slide-editor/
-├── slide-maker/
-└── ui/
-```
+- `fe/app/` uses the App Router. `app/page.tsx` re-exports the landing page, and feature routes live in route folders such as `lesson-create`, `lesson-edit`, `slide-create`, `slide-maker`, `blog`, `library`, `molecules`, `periodic-table`, `user-profile`, and `user-management`.
+- `fe/components/` is organized by product area rather than by primitive type: lesson editor, lesson-plan workspace, outline editor, slide editor, slide maker, blog, dashboard, molecules, periodic-table, simulations, layout, and shared `ui` components.
+- Most frontend API calls go through same-origin `/api/*`, which Next rewrites to the backend via `fe/next.config.ts`. This avoids CORS for standard REST calls.
+- Slide generation/design clients are a separate path: `fe/lib/api/slides.ts` and `fe/lib/api/slide-design.ts` call the backend directly via `NEXT_PUBLIC_API_URL` instead of the Next rewrite.
+- Real-time generation flows use raw STOMP over WebSocket, not SockJS. Frontend clients in `fe/lib/ws/` connect to `NEXT_PUBLIC_WS_URL` (default `ws://localhost:8080`) and pass the JWT in the STOMP `CONNECT` headers.
+- Rich lesson and blog editing is built on TipTap. The lesson editor extends TipTap with custom nodes/extensions in `fe/components/LessonEditor/` for streaming-generated pending sections and activities.
+- Slide editing and rendering logic is concentrated under `fe/components/slide-editor/`, with conversion helpers for backend HTML/design output under `fe/components/slide-editor/lib/`.
+- Physics simulations live under `fe/components/simulations/`. The current Vitest setup only includes this subtree and runs in a Node environment.
+- Lightweight client state uses Zustand stores such as `fe/stores/slide-editor-store.ts`.
 
 ### Frontend Conventions
 
@@ -102,26 +90,26 @@ fe/components/
 - Global styles live in `fe/app/globals.css`.
 - Fonts are configured in `fe/app/layout.tsx`: Inter plus local SVN-Linux Libertine files from `fe/app/fonts/`.
 - HTML language is Vietnamese: `<html lang="vi">`.
-- Static assets live in `fe/public/`, including dashboard icons, home media, screenshots, and slide assets.
+- Static assets live in `fe/public/`.
 - Keep route folders lowercase and React component files PascalCase.
-- No frontend test runner is configured yet; quality gates are lint, typecheck, and build.
+- Frontend quality gates in CI and Husky are `lint`, `typecheck`, and `build`; Vitest exists but is not part of CI yet.
 
 ## Backend (`be/`)
 
-**Stack:** Spring Boot 3.4.5, Java 21, Maven, PostgreSQL, Flyway, Spring AI 1.0.0, SpringDoc OpenAPI 2.8.8, WebSocket/STOMP, AWS S3 SDK 2.26.12 for Cloudflare R2, Lombok, Jsoup.
+**Stack:** Spring Boot 3.4.5, Java 21, Maven, PostgreSQL, Flyway, Spring AI 1.0.0, Spring Security, SpringDoc OpenAPI 2.8.8, WebSocket/STOMP, AWS S3 SDK 2.26.12 for Cloudflare R2, Lombok, Jsoup.
 
 **Base package:** `com.edua.beeduasystem`.
 
 ### Layered Architecture
 
-Follow `designs/layered-architecture.md` and `.codex/skills/edua-backend-layered-architecture/SKILL.md`.
+Follow `designs/layered-architecture.md`.
 
 ```text
 presentation/    REST controllers, DTOs, exception advice
-service/         Use-case orchestration, prompt builders, parsers, validators
+service/         Use-case orchestration, prompt builders, parsers, sanitizers, validators
 domain/          Core models, rules, domain exceptions
 repository/      Service-facing repository and gateway interfaces
-infrastructure/  JPA, AI adapters, storage adapters, messaging/STOMP
+infrastructure/  JPA, AI adapters, storage adapters, security, messaging/STOMP
 config/          Spring configuration and bean wiring
 ```
 
@@ -141,40 +129,34 @@ Rules:
 - Keep HTTP status, request, and response concerns out of service/domain code.
 - Services depend on interfaces in `repository/`; infrastructure implements those interfaces.
 
+### Backend Architecture
+
+- The backend is feature-oriented inside the service layer: current areas include `auth`, `blog`, `lessonplan`, `library`, `molecule`, `slides`, `slidedesign`, `textbook`, and `upload`.
+- Persistence is PostgreSQL + Flyway. Migrations currently cover textbook catalog, auth, blog, roles/user roles, audit history, library content, and textbook cleanup/profile updates.
+- Authentication is stateless JWT. Google sign-in starts in the frontend, then backend auth endpoints issue/refresh tokens. Request auth is enforced by `JwtAuthenticationFilter`, and role checks are done with method security.
+- WebSocket streaming is part of the main architecture, not a side feature. Spring exposes a raw STOMP endpoint at `/ws`; JWT is validated on STOMP `CONNECT` via `StompAuthChannelInterceptor`; lesson-plan and outline generators publish progress events through stream port interfaces and STOMP adapters.
+- AI access is abstracted behind `repository/gateways/AiClient`. `infrastructure/ai/config/AiClientConfig.java` currently wires a `FallbackAiClient` that effectively uses DeepSeek; OpenAI adapter code exists but is commented out for now.
+- Storage abstractions live behind repository gateways as well. Upload flows go through `StorageClient`, with the current implementation targeting Cloudflare R2.
+- The backend serves both synchronous REST flows and asynchronous generation pipelines. Prompt builders, HTML extractors, and output post-processing are part of the service layer rather than controllers.
+
 ### Backend Package Snapshot
 
 ```text
 com.edua.beeduasystem/
-├── config/                    CORS, OpenAPI, virtual threads, WebSocket
-├── domain/model/              health, lesson context, slide models, textbook catalog
-├── presentation/
-│   ├── advice/                GlobalExceptionHandler
-│   ├── controller/            Health, Textbook, Upload, Slide, SlideDesign
-│   └── dto/                   health, lesson plan, slide, slide design, upload DTOs
-├── service/
-│   ├── slidedesign/           HTML slide design generation
-│   ├── slides/                outline and slide deck generation
-│   ├── textbook/              textbook catalog use cases
-│   └── upload/                upload use cases
+├── config/                    CORS, OpenAPI, security, virtual threads, WebSocket
+├── domain/                    core models and domain exceptions
+├── presentation/              controllers, DTOs, exception advice
+├── service/                   feature use cases and generation pipelines
 ├── repository/
-│   ├── gateways/              AiClient, StorageClient, stream ports/events, diagnostics
-│   └── repositories/          TextbookCatalogRepository
+│   ├── gateways/              AiClient, StorageClient, TokenService, stream ports, identity verifier
+│   └── repositories/          service-facing persistence interfaces
 └── infrastructure/
-    ├── ai/                    OpenAI, DeepSeek, fallback AI client
-    ├── messaging/             STOMP stream adapters and diagnostics bridge
-    ├── persistence/           JPA entities, repositories, textbook importer
+    ├── ai/                    provider adapters, fallback client, Spring AI config
+    ├── messaging/             STOMP stream adapters
+    ├── persistence/           JPA entities, repositories, adapters, importers
+    ├── security/              JWT, Google token verification, STOMP auth, rate limiting
     └── storage/               Cloudflare R2 adapter and config
 ```
-
-### Backend Features
-
-- Health check at `/api/health`.
-- Swagger UI at `/swagger-ui/index.html`.
-- Textbook catalog backed by PostgreSQL/Flyway and seeded resource data.
-- File upload to Cloudflare R2.
-- AI provider abstraction with OpenAI primary and DeepSeek fallback.
-- Lesson plan and slide generation workflows with STOMP streaming events.
-- Slide HTML design generation and post-processing.
 
 ## Environment
 
@@ -183,11 +165,13 @@ Copy `.env.example` to `.env` for local development.
 Important variables:
 
 - PostgreSQL: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, plus Docker fallback values `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`.
+- Frontend/backend routing: `BACKEND_URL` for Next rewrite target, `NEXT_PUBLIC_API_URL` for direct slide/slide-design HTTP calls, `NEXT_PUBLIC_WS_URL` for STOMP WebSocket clients.
 - OpenAI: `APP_AI_OPENAI_API_KEY`, optional base URL and default model.
 - DeepSeek: `APP_AI_DEEPSEEK_API_KEY`, optional base URL and default model.
 - Cloudflare R2: `APP_R2_ENDPOINT`, `APP_R2_ACCESS_KEY_ID`, `APP_R2_SECRET_ACCESS_KEY`, `APP_R2_BUCKET`, `APP_R2_PUBLIC_URL`.
+- Auth/rate limiting: JWT and Google auth settings are read from Spring properties/environment; see `be/src/main/java/com/edua/beeduasystem/config/SecurityConfig.java` and the auth/security infrastructure package when changing auth flows.
 
-`scripts/start.ps1` loads `.env`, checks ports 8080 and 3000, resolves cloud DB versus Docker PostgreSQL fallback, starts the backend, waits for `/api/health`, and then starts the frontend.
+`scripts/start.ps1` loads `.env`, checks ports 8080 and 3000, prompts to free occupied ports, resolves cloud DB versus Docker PostgreSQL fallback, starts the backend, waits for `/api/health`, and then starts the frontend.
 
 A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io` (Swagger UI at `/swagger-ui/index.html`, health at `/api/health`) for trying live API responses without running the stack locally.
 
@@ -196,6 +180,7 @@ A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4o
 - CI runs frontend checks on Node 20, 22, and 24: `npm ci`, `npm run lint`, `npm run typecheck`, `npm run build`.
 - Husky pre-commit runs the same frontend lint/typecheck/build sequence from `fe/`.
 - Run backend tests with `./mvnw test` or `mvnw.cmd test` when backend code changes.
+- Run `npm test` in `fe/` when changing simulation engine code; that Vitest suite is currently separate from CI.
 
 ## Working Rules
 
