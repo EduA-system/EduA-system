@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { Dropdown, type DropdownOption } from "../ui/Dropdown";
 import { Sidebar } from "../layout/Sidebar";
+import { storeExamMatrixSession } from "./ExamMatrixDashboard";
 
 const SUBJECT_OPTIONS: DropdownOption[] = [
   { value: "PHYSICS", label: "Vật lí" },
@@ -44,6 +46,7 @@ const SCOPE_INFO: Record<string, { scope: string; detail: string }> = {
 };
 
 export function ExamCreateDashboard() {
+  const router = useRouter();
   const [subjectCode, setSubjectCode] = useState<string | null>(null);
   const [grade, setGrade] = useState<string | null>(null);
   const [examType, setExamType] = useState<string | null>(null);
@@ -82,12 +85,15 @@ export function ExamCreateDashboard() {
   }
 
   function handleSubmit() {
-    if (!canSubmit) return;
-    console.log("[Tạo đề kiểm tra]", {
-      subject: subjectCode,
-      grade,
-      examType,
+    if (!canSubmit || !selectedSubject || !selectedGrade || !selectedExamType) return;
+    storeExamMatrixSession({
+      subject: subjectCode!,
+      subjectLabel: selectedSubject.label,
+      grade: grade!,
+      examType: examType!,
+      examTypeLabel: selectedExamType.label,
     });
+    router.push("/exam-matrix");
   }
 
   return (
