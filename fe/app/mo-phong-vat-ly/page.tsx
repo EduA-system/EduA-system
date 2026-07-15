@@ -99,20 +99,23 @@ function Thumb({ id }: { id: string }) {
     case "quy-tac-moment":
       return frame(
         <>
-          <line x1="28" y1="58" x2="172" y2="58" stroke="#cbd5e1" strokeWidth="5" strokeLinecap="round" />
+          <g transform="rotate(-6 100 58)">
+            <line x1="28" y1="58" x2="172" y2="58" stroke="#cbd5e1" strokeWidth="6" strokeLinecap="round" />
+            <rect x="42" y="34" width="22" height="22" rx="4" fill="#60a5fa" />
+            <rect x="134" y="34" width="30" height="30" rx="4" fill="#f472b6" />
+          </g>
           <circle cx="100" cy="58" r="8" fill="#fbbf24" />
-          <path d="M100 66 L88 96 H112 Z" fill="#475569" />
-          <line x1="52" y1="58" x2="100" y2="58" stroke="#60a5fa" strokeWidth="2" strokeDasharray="5 4" />
-          <line x1="100" y1="58" x2="148" y2="58" stroke="#f472b6" strokeWidth="2" strokeDasharray="5 4" />
-          <path d="M52 34 v38" fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" />
-          <path d="M44 62 l8 12 l8 -12" fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M148 34 v38" fill="none" stroke="#f472b6" strokeWidth="3" strokeLinecap="round" />
-          <path d="M140 62 l8 12 l8 -12" fill="none" stroke="#f472b6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="42" y="28" fontSize="11" fontWeight="700" fill="#60a5fa">F1</text>
-          <text x="138" y="28" fontSize="11" fontWeight="700" fill="#f472b6">F2</text>
-          <text x="61" y="51" fontSize="10" fill="#93c5fd">d1</text>
-          <text x="126" y="51" fontSize="10" fill="#f9a8d4">d2</text>
-          <text x="76" y="112" fontSize="11" fontWeight="700" fill="#fbbf24">M = F.d</text>
+          <path d="M100 66 L84 102 H116 Z" fill="#475569" />
+          <line x1="52" y1="72" x2="52" y2="92" stroke="#93c5fd" strokeWidth="3" strokeLinecap="round" />
+          <path d="M45 84 l7 10 l7 -10" fill="none" stroke="#93c5fd" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="150" y1="56" x2="150" y2="86" stroke="#f9a8d4" strokeWidth="3" strokeLinecap="round" />
+          <path d="M143 78 l7 10 l7 -10" fill="none" stroke="#f9a8d4" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M52 62 H100 M100 54 H150" stroke="#64748b" strokeWidth="2" strokeDasharray="5 4" />
+          <text x="41" y="30" fontSize="10" fontWeight="700" fill="#60a5fa">m1</text>
+          <text x="142" y="30" fontSize="10" fontWeight="700" fill="#f472b6">m2</text>
+          <text x="70" y="53" fontSize="10" fill="#93c5fd">d1</text>
+          <text x="124" y="51" fontSize="10" fill="#f9a8d4">d2</text>
+          <text x="70" y="116" fontSize="11" fontWeight="700" fill="#fbbf24">M = m.g.d</text>
         </>,
       );
     case "luc-can-chat-luu":
@@ -384,6 +387,23 @@ function Thumb({ id }: { id: string }) {
     case "dao-dong-tat-dan":
       return frame(
         <path d="M20 60 Q35 20 50 60 T80 60 T110 60 T140 60 T170 60" fill="none" stroke="#a78bfa" strokeWidth="2" />,
+      );
+    case "phan-tich-luc":
+      return frame(
+        <>
+          <path d="M28 98 L174 98 L174 42 Z" fill="#1e293b" stroke="#475569" strokeWidth="2" />
+          <line x1="36" y1="94" x2="166" y2="45" stroke="#86efac" strokeWidth="4" strokeLinecap="round" />
+          <rect x="110" y="54" width="28" height="18" rx="3" fill="#86efac" stroke="#14532d" strokeWidth="1.5" transform="rotate(-21 124 63)" />
+          <path d="M124 63 v36" stroke="#f8fafc" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M117 90 l7 10 l7 -10" fill="none" stroke="#f8fafc" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="132" y="98" fontSize="11" fontWeight="700" fill="#f8fafc">P</text>
+          <path d="M124 63 l-17 31" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M105 83 l2 12 l10 -7" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="88" y="93" fontSize="11" fontWeight="700" fill="#fbbf24">P1</text>
+          <path d="M124 63 l34 13" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M147 68 l12 8 l-14 2" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="160" y="81" fontSize="11" fontWeight="700" fill="#60a5fa">P2</text>
+        </>,
       );
     case "mat-nghieng-ma-sat":
       return frame(

@@ -168,6 +168,7 @@ export function SceneKonva2D({
       bodies: scene.bodies.map((b) => ({ ...b })),
       forces: scene.forces,
       constraints: scene.constraints,
+      restitution: scene.restitution,
       annotations: scene.annotations,
       view: scene.view,
     };
@@ -363,6 +364,22 @@ export function SceneKonva2D({
             ? makeForceMeter(p, radius, fill, false, b.visual?.reading, b.visual?.angle ?? 0, b.visual?.label)
             : shape === "circle"
               ? new Konva.Circle({ x: p.x, y: p.y, radius, fill, stroke: "#e2e8f0", strokeWidth: 1.5 })
+              : shape === "box"
+              ? new Konva.Rect({
+                  x: p.x,
+                  y: p.y,
+                  width: radius * 1.6,
+                  height: radius * 1.6,
+                  offsetX: radius * 0.8,
+                  offsetY: radius * 0.8,
+                  cornerRadius: 4,
+                  fill,
+                  rotation: b.visual?.angle ?? 0,
+                  stroke: "#e2e8f0",
+                  strokeWidth: 1,
+                  shadowBlur: 4,
+                  shadowColor: "#000",
+                })
               : new Konva.Rect({ x: p.x - 7, y: p.y - 7, width: 14, height: 14, fill: "#1e293b", cornerRadius: 2 });
         layer.add(node);
         circles[b.id] = node;
@@ -399,6 +416,7 @@ export function SceneKonva2D({
                 offsetY: radius * 0.8,
                 cornerRadius: 4,
                 fill,
+                rotation: b.visual?.angle ?? 0,
                 draggable: true,
                 shadowBlur: 6,
                 shadowColor: "#000",

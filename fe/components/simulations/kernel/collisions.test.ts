@@ -2,7 +2,7 @@
 // khi e=1, dính khi e=0, và backward-compat (không radius → không va chạm).
 
 import { describe, it, expect } from "vitest";
-import { readVelocity } from "./build-derivs";
+import { readPosition, readVelocity } from "./build-derivs";
 import { run } from "./sim-test-helpers";
 import type { Scene } from "./types";
 
@@ -51,6 +51,18 @@ describe("Va chạm mềm (e=0)", () => {
     expect(Math.abs(u1 - u2)).toBeLessThan(0.05);
     const common = (m1 * v1) / (m1 + m2);
     expect(Math.abs(u1 - common)).toBeLessThan(0.05);
+  });
+
+  it("sau khi dính, hai vật tiếp tục đi sát nhau như một khối", () => {
+    const { s } = run(headOn(0, 1, 2, 4), 4);
+    const p1 = readPosition(s, "b1");
+    const p2 = readPosition(s, "b2");
+    const v1 = readVelocity(s, "b1");
+    const v2 = readVelocity(s, "b2");
+    const distance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    expect(Math.abs(distance - 0.8)).toBeLessThan(0.02);
+    expect(Math.abs(v1.x - v2.x)).toBeLessThan(0.01);
+    expect(Math.abs(v1.y - v2.y)).toBeLessThan(0.01);
   });
 });
 

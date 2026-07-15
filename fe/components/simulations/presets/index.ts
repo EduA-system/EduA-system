@@ -7,6 +7,7 @@ import { lucTuongTacHaiXe } from "./luc-tuong-tac-hai-xe";
 import { doPTBangLucKe } from "./do-p-t-bang-luc-ke";
 import { quyTacMoment } from "./quy-tac-moment";
 import { tongHopLucDongQuy } from "./tong-hop-luc-dong-quy";
+import { phanTichLuc } from "./phan-tich-luc";
 import { lucCanChatLuu } from "./luc-can-chat-luu";
 import { tongHopHaiLucCungPhuong } from "./tong-hop-hai-luc-cung-phuong";
 import { roiTuDo } from "./roi-tu-do";
@@ -36,6 +37,7 @@ export const PRESETS: Preset[] = [
   doPTBangLucKe,
   quyTacMoment,
   tongHopLucDongQuy,
+  phanTichLuc,
   lucCanChatLuu,
   tongHopHaiLucCungPhuong,
   roiTuDo,
