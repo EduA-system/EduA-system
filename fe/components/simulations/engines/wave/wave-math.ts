@@ -1,6 +1,6 @@
 // Toán học thuần cho giao thoa sóng nước 2 nguồn kết hợp cùng pha — không phụ
 // thuộc Konva/React, kiểm chứng được bằng công thức SGK (giống tinh thần
-// kernel/physics.test.ts: so khớp lời giải closed-form, không chỉ "nhìn ổn").
+// công thức closed-form, không chỉ "nhìn ổn").
 
 import type { WaveSource } from "./types";
 

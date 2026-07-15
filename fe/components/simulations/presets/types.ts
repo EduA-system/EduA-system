@@ -5,13 +5,13 @@
 // applyParams là NGUỒN DUY NHẤT dựng Scene từ tham số — không bake Scene tĩnh
 // (tránh trôi). Mỗi preset tự đọc `p.key ?? default` trong applyParams.
 
-import type { Scene } from "../kernel/types";
-import type { WaveScene } from "../wave/types";
-import type { StringWaveScene } from "../string-wave/types";
-import type { WaveFieldScene } from "../wave-field/types";
-import type { PointChargeFieldScene } from "../point-charge-field/types";
-import type { ParamDef } from "../param-panel";
-import type { SceneAnnotation } from "../scene-konva-2d";
+import type { Scene } from "../engines/mechanics/types";
+import type { WaveScene } from "../engines/wave/types";
+import type { StringWaveScene } from "../engines/string-wave/types";
+import type { WaveFieldScene } from "../engines/wave-field/types";
+import type { PointChargeFieldScene } from "../engines/point-charge-field/types";
+import type { ParamDef } from "../shared/param-panel";
+import type { SceneAnnotation } from "../shared/scene-types";
 
 export type Domain = "Cơ học" | "Dao động & Sóng" | "Quang học" | "Điện & Từ" | "Nhiệt & Khí" | "Hạt nhân";
 
@@ -57,7 +57,7 @@ type PresetBase = {
   quickPresets?: { label: string; params: Record<string, number> }[];
 };
 
-/** Preset chạy trên kernel Cơ học 2D (kernel/*.ts) + SceneKonva2D. */
+/** Preset chạy trên engine mechanics 2D + renderer mechanics. */
 export type MechanicsPreset = PresetBase & {
   kind?: "mechanics";
   applyParams: (p: Record<string, number>) => Scene;
@@ -80,13 +80,13 @@ export type MechanicsPreset = PresetBase & {
   minimalOverlay?: boolean;
 };
 
-/** Preset sóng trường (giao thoa…) — biên độ là hàm giải tích, xem wave/types.ts. */
+/** Preset sóng trường (giao thoa…) — biên độ là hàm giải tích, xem engines/wave. */
 export type WavePreset = PresetBase & {
   kind: "wave";
   applyParams: (p: Record<string, number>) => WaveScene;
 };
 
-/** Preset sóng cơ 1 chiều trên dây (sóng trên dây, sóng dừng) — xem string-wave/types.ts. */
+/** Preset sóng cơ 1 chiều trên dây (sóng trên dây, sóng dừng) — xem engines/string-wave. */
 export type StringWavePreset = PresetBase & {
   kind: "string-wave";
   applyParams: (p: Record<string, number>) => StringWaveScene;
@@ -94,7 +94,7 @@ export type StringWavePreset = PresetBase & {
 
 /**
  * Preset giao thoa Y-âng ĐẦY ĐỦ — trường sóng thực tính từ phương trình sóng
- * (không vẽ vân trang trí), xem wave-field/types.ts + wave-field/physics.ts.
+ * (không vẽ vân trang trí), xem engines/wave-field.
  */
 export type WaveFieldPreset = PresetBase & {
   kind: "wave-field";
@@ -103,7 +103,7 @@ export type WaveFieldPreset = PresetBase & {
 
 /**
  * Preset điện phổ 2 điện tích điểm — chồng chất Coulomb THẬT, đường sức truy
- * vết bằng RK4 (không hardcode hình), xem point-charge-field/*.ts.
+ * vết bằng RK4 (không hardcode hình), xem engines/point-charge-field.
  */
 export type PointChargeFieldPreset = PresetBase & {
   kind: "point-charge-field";

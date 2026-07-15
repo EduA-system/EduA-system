@@ -3,7 +3,7 @@ import type { Preset } from "./types";
 // Thí nghiệm kinh điển SGK: 2 quả cầu nhỏ nhiễm điện CÙNG DẤU, treo bằng 2 sợi
 // dây tại CÙNG một điểm (giống cong-huong-con-lac.ts: nhiều con lắc rod riêng
 // biệt, ở đây 2 rod dùng CHUNG 1 anchor). Lực Coulomb giữa 2 quả cầu
-// (kernel/forces.ts) đẩy nhau lệch ra 2 bên, tắt dần về góc cân bằng. Xem
+// (engines/mechanics/forces.ts) đẩy nhau lệch ra 2 bên, tắt dần về góc cân bằng. Xem
 // nhiem-dien-hut.ts cho phiên bản hút nhau (2 giá treo riêng biệt).
 
 export const nhiemDienDay: Preset = {

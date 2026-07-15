@@ -1,5 +1,5 @@
 // World (vật lý, trục y HƯỚNG LÊN) ↔ screen/canvas (y HƯỚNG XUỐNG) — ranh
-// giới DUY NHẤT chuyển đổi toạ độ, theo đúng quy ước wave-field/coordinates.ts.
+// giới DUY NHẤT chuyển đổi toạ độ, theo đúng quy ước engines/wave-field/coordinates.ts.
 // Không dùng toạ độ pixel trực tiếp trong công thức vật lý ở nơi khác.
 
 export type Viewport = { width: number; height: number; scale: number; centerX: number; centerY: number };

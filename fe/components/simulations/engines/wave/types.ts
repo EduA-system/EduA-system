@@ -1,7 +1,7 @@
-// Scene cho thí nghiệm SÓNG TRƯỜNG (field) — khác hẳn kernel Cơ học (kernel/types.ts):
+// Scene cho thí nghiệm SÓNG TRƯỜNG (field) — khác hẳn engine mechanics:
 // không có body/force/constraint để tích phân, biên độ là HÀM GIẢI TÍCH của
 // (x, y, t) — chồng chập 2 sóng tròn kết hợp phát ra từ 2 nguồn điểm cùng pha.
-// Vì vậy không tái dùng kernel ODE — renderer (scene-konva-wave-2d.tsx) tự vẽ
+// Vì vậy không tái dùng ODE mechanics — renderer wave tự vẽ
 // trực tiếp từ công thức, không có bước "tích phân".
 
 export type WaveSource = { id: string; x: number; y: number };

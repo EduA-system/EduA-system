@@ -1,5 +1,5 @@
 import type { StringWavePreset } from "./types";
-import { waveSpeed } from "../string-wave/string-wave-math";
+import { waveSpeed } from "../engines/string-wave/string-wave-math";
 
 const WINDOW_LENGTH = 60; // cm — cửa sổ quan sát cố định, KHÔNG phụ thuộc tham số nào (tránh bù scale)
 

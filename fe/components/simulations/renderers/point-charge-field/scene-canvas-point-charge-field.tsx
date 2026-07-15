@@ -1,7 +1,7 @@
 "use client";
 
 // Renderer Canvas THUẦN (không Konva) cho "Điện phổ của hai điện tích điểm" —
-// theo đúng tinh thần wave-field/scene-canvas-wave-field.tsx (vật lý thật,
+// theo đúng tinh thần renderers/wave-field/scene-canvas-wave-field.tsx (vật lý thật,
 // không animation liên tục vì cảnh KHÔNG phụ thuộc thời gian: đường sức và
 // hạt điện phổ chỉ đổi khi điện tích/tham số đổi, không phải hệ động).
 //
@@ -11,12 +11,12 @@
 // (totalField), không suy từ chiều truy vết — luôn đúng chiều E cục bộ.
 
 import { useEffect, useRef, useState } from "react";
-import type { PointChargeFieldScene } from "./types";
-import { fieldMagnitude, totalField, totalPotential, type Point } from "./physics";
-import { pointAtFraction, traceAllFieldLines } from "./field-line-tracer";
-import { fitViewport, screenToWorld, worldToScreen } from "./coordinates";
-import { useContainerSize } from "../shared/use-container-size";
-import { ZoomControls } from "../shared/zoom-controls";
+import type { PointChargeFieldScene } from "../../engines/point-charge-field/types";
+import { fieldMagnitude, totalField, totalPotential, type Point } from "../../engines/point-charge-field/physics";
+import { pointAtFraction, traceAllFieldLines } from "../../engines/point-charge-field/field-line-tracer";
+import { fitViewport, screenToWorld, worldToScreen } from "../../engines/point-charge-field/coordinates";
+import { useContainerSize } from "../../shared/use-container-size";
+import { ZoomControls } from "../../shared/zoom-controls";
 
 const FIELD_LINE_COLOR = "#e8724a";
 const POSITIVE_FILL = "#f87171";
@@ -70,7 +70,7 @@ export function SceneCanvasPointChargeField({
   }, [onParamsChange]);
 
   // Zoom/pan CSS-transform thuần (không vẽ lại nội dung khi zoom/pan) — giống
-  // hệt wave-field/scene-canvas-wave-field.tsx.
+  // hệt renderers/wave-field/scene-canvas-wave-field.tsx.
   const zoomRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
   const [zoomPct, setZoomPct] = useState(100);

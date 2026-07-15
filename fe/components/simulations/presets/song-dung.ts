@@ -1,5 +1,5 @@
 import type { StringWavePreset } from "./types";
-import { waveSpeed, wavelengthForHarmonicFixedFixed } from "../string-wave/string-wave-math";
+import { waveSpeed, wavelengthForHarmonicFixedFixed } from "../engines/string-wave/string-wave-math";
 
 export const songDung: StringWavePreset = {
   id: "song-dung",

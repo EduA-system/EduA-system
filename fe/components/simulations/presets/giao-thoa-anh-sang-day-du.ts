@@ -1,5 +1,5 @@
 import type { WaveFieldPreset } from "./types";
-import { calculateFringeSpacingApproximation, waveSpeed } from "../wave-field/physics";
+import { calculateFringeSpacingApproximation, waveSpeed } from "../engines/wave-field/physics";
 
 const X_SINGLE_SLIT = 0;
 const X_SLITS = 140;

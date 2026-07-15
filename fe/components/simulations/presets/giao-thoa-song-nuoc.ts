@@ -1,5 +1,5 @@
 import type { WavePreset } from "./types";
-import { maxMaximaOrder, maxMinimaOrder, waveSpeed } from "../wave/wave-math";
+import { maxMaximaOrder, maxMinimaOrder, waveSpeed } from "../engines/wave/wave-math";
 
 export const giaoThoaSongNuoc: WavePreset = {
   id: "giao-thoa-song-nuoc",

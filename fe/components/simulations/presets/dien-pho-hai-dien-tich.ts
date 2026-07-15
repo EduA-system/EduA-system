@@ -1,12 +1,12 @@
 import type { Preset } from "./types";
-import { fieldAngle, fieldMagnitude, totalField, totalPotential } from "../point-charge-field/physics";
-import type { Charge } from "../point-charge-field/physics";
+import { fieldAngle, fieldMagnitude, totalField, totalPotential } from "../engines/point-charge-field/physics";
+import type { Charge } from "../engines/point-charge-field/physics";
 
 // "Điện phổ của hai điện tích điểm" — đường sức điện KHÔNG hardcode: mỗi lần
 // dựng cảnh chỉ đóng gói vị trí/độ lớn 2 điện tích + tham số hiển thị vào
 // PointChargeFieldScene; renderer (scene-canvas-point-charge-field.tsx) mới
-// thật sự tính điện trường (point-charge-field/physics.ts, chồng chất Coulomb
-// thật) và truy vết đường sức bằng RK4 (point-charge-field/field-line-tracer.ts)
+// thật sự tính điện trường (engines/point-charge-field, chồng chất Coulomb
+// thật) và truy vết đường sức bằng RK4.
 // mỗi khi vẽ. Xem 2 file đó cho toàn bộ mô hình vật lý.
 //
 // q1, q2 nhập theo nC (×1e-9 ra Coulomb thật) — cùng quy ước đổi đơn vị như

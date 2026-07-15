@@ -16,7 +16,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Konva from "konva";
-import type { WaveScene } from "./types";
+import type { WaveScene } from "../../engines/wave/types";
 import {
   hyperbolaBranch,
   interferencePoints,
@@ -24,10 +24,10 @@ import {
   maxMinimaOrder,
   ringRadiiAt,
   waveSpeed,
-} from "./wave-math";
-import { attachZoomPan, type ZoomActions } from "../shared/konva-zoom";
-import { ZoomControls } from "../shared/zoom-controls";
-import { useContainerSize } from "../shared/use-container-size";
+} from "../../engines/wave/wave-math";
+import { attachZoomPan, type ZoomActions } from "../../shared/konva-zoom";
+import { ZoomControls } from "../../shared/zoom-controls";
+import { useContainerSize } from "../../shared/use-container-size";
 
 const MAX_LABELED_ORDER = 3; // gắn nhãn chữ đầy đủ tối đa tới bậc này cho đỡ rối, vẫn vẽ hết đường thực có
 // Lưới vẽ rộng hơn vùng nhìn ban đầu nhiều lần để còn phủ kín khi zoom out

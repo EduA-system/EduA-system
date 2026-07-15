@@ -2,8 +2,8 @@
 // từ trạng thái đầu (không phụ thuộc frame rate). Dùng chung cho "đi tới mốc
 // thời gian" và vẽ tàn ảnh (ghost) của mốc vừa đi qua trên canvas.
 
-import { buildKernel, readPosition, stepScene } from "./kernel/build-derivs";
-import type { Scene } from "./kernel/types";
+import { buildKernel, readPosition, stepScene } from "./build-derivs";
+import type { Scene } from "./types";
 
 export type BodyPositions = Record<string, { x: number; y: number }>;
 

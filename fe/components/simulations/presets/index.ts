@@ -1,5 +1,5 @@
 // Thư viện preset cơ học — bản gốc đã kiểm duyệt cho /mo-phong-hub.
-// Tất cả chạy trên kernel Cơ học 2D (kernel/*.ts). Thêm preset = thêm 1 file + 1 dòng ở đây.
+// Preset cơ học chạy trên engine mechanics; các preset khác chọn engine theo `kind`.
 
 import type { Preset } from "./types";
 import { dinhLuat2Newton } from "./dinh-luat-2-newton";

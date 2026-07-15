@@ -2,7 +2,7 @@
 
 // Renderer 2D bằng Konva (imperative) cho SÓNG CƠ 1 CHIỀU TRÊN DÂY — dùng
 // chung cho 2 preset: "Sóng trên dây" (mode: traveling) và "Sóng dừng" (mode:
-// standing). Cùng triết lý với wave/scene-konva-wave-2d.tsx: biên độ là hàm
+// standing). Cùng triết lý với renderers/wave/scene-konva-wave-2d.tsx: biên độ là hàm
 // giải tích y(x,t), không tích phân ODE, nên "đi tới mốc thời gian t" là tức
 // thời. Cùng quy ước zoom/pan/fill-kín-không-gian với 2 renderer kia (xem
 // shared/konva-zoom.ts, shared/zoom-controls.tsx, shared/use-container-size.ts).
@@ -14,17 +14,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import Konva from "konva";
-import type { StringWaveScene } from "./types";
+import type { StringWaveScene } from "../../engines/string-wave/types";
 import {
   antinodePositionsFixedFixed,
   nodePositionsFixedFixed,
   standingDisplacement,
   travelingDisplacement,
   waveNumber,
-} from "./string-wave-math";
-import { attachZoomPan, type ZoomActions } from "../shared/konva-zoom";
-import { ZoomControls } from "../shared/zoom-controls";
-import { useContainerSize } from "../shared/use-container-size";
+} from "../../engines/string-wave/string-wave-math";
+import { attachZoomPan, type ZoomActions } from "../../shared/konva-zoom";
+import { ZoomControls } from "../../shared/zoom-controls";
+import { useContainerSize } from "../../shared/use-container-size";
 
 const SAMPLES = 160; // số điểm lấy mẫu dựng đường cong sóng mỗi khung hình
 const GRID_EXTENT_FACTOR = 5; // lưới vẽ rộng hơn khung nhìn ban đầu — cũng là "vùng làm việc" pan bị khoá trong đó (xem konva-zoom.ts)

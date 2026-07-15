@@ -1,7 +1,7 @@
 import type { Preset } from "./types";
 
 // Cộng hưởng qua GHÉP LÒ XO giữa các con lắc — không dùng thanh treo cứng chung
-// (kernel chưa có vật rắn quay/mô-men lực, xem kernel/types.ts) nên không mô
+// (engines/mechanics chưa có vật rắn quay/mô-men lực, xem engines/mechanics/types.ts) nên không mô
 // phỏng được con lắc Barton kiểu "thanh ngang" kinh điển. Thay vào đó: 3 con lắc
 // đơn treo độc lập (rod riêng từng cái), ghép năng lượng qua 2 lò xo YẾU nối
 // bob1↔bob2 và bob2↔bob3. Khi L trùng nhau (cùng tần số riêng ω=√(g/L)), năng

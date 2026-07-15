@@ -1,15 +1,15 @@
 // Vật lý thuần (không render/canvas) cho "Điện phổ của hai điện tích điểm" —
 // chồng chất điện trường Coulomb thật, KHÔNG hardcode hình dạng đường sức.
-// Theo đúng quy ước wave-field/physics.ts: hàm nhỏ, thuần, dễ test.
+// Theo đúng quy ước engines/wave-field/physics.ts: hàm nhỏ, thuần, dễ test.
 //
 // Đơn vị: điện tích tính bằng Coulomb thật (preset đổi từ nC ×1e-9, giống
-// kernel/forces.ts đổi µC), vị trí tính bằng world unit (mét). k = ke/epsilonR.
+// engines/mechanics/forces.ts đổi µC), vị trí tính bằng world unit (mét). k = ke/epsilonR.
 
 export type Point = { x: number; y: number };
 export type Charge = { x: number; y: number; q: number }; // q: Coulomb (đã đổi từ nC)
 export type FieldVector = { ex: number; ey: number };
 
-/** Hằng số Coulomb thật, N·m²/C² — giống COULOMB_KE trong kernel/forces.ts. */
+/** Hằng số Coulomb thật, N·m²/C² — giống COULOMB_KE trong engines/mechanics/forces.ts. */
 export const COULOMB_KE = 8.99e9;
 
 /** Bán kính "softening" mặc định (world unit) — tránh chia cho 0 sát điện tích. */

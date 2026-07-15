@@ -10,7 +10,7 @@
 // Giao diện theo hệ màu sáng EDUA. Không đụng kernel.
 
 import { Clock, Crosshair, MoveRight } from "lucide-react";
-import type { PresetAnalysis } from "./presets/types";
+import type { PresetAnalysis } from "../presets/types";
 
 // Mốc thời gian mặc định — áp dụng chung, không cần preset khai báo riêng.
 const TIME_MARK_SECONDS = [0.5, 1, 2, 3, 4, 5, 6, 8];

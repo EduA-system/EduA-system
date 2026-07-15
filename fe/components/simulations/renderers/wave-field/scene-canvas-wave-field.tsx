@@ -16,7 +16,7 @@
 // trong physics.ts), không vẽ tràn lan ngay từ khung hình đầu.
 
 import { useEffect, useRef, useState } from "react";
-import type { WaveFieldScene } from "./types";
+import type { WaveFieldScene } from "../../engines/wave-field/types";
 import {
   activationTime,
   averageIntensityCausal,
@@ -29,12 +29,12 @@ import {
   totalOpticalPath,
   waveSpeed,
   type Point,
-} from "./physics";
-import { buildXSegments, canvasToWorld, compressedX, fitViewport, inverseCompressedX, worldToCanvas, type Viewport, type XSegment } from "./coordinates";
-import { apertureFactor, computeIntensityGrid, computeInstantaneousFieldGrid, type FieldGrid, type ZoneGeometry } from "./field-grid";
-import { divergingColor, intensityColor } from "./colormap";
-import { useContainerSize } from "../shared/use-container-size";
-import { ZoomControls } from "../shared/zoom-controls";
+} from "../../engines/wave-field/physics";
+import { buildXSegments, canvasToWorld, compressedX, fitViewport, inverseCompressedX, worldToCanvas, type Viewport, type XSegment } from "../../engines/wave-field/coordinates";
+import { apertureFactor, computeIntensityGrid, computeInstantaneousFieldGrid, type FieldGrid, type ZoneGeometry } from "../../engines/wave-field/field-grid";
+import { divergingColor, intensityColor } from "../../engines/wave-field/colormap";
+import { useContainerSize } from "../../shared/use-container-size";
+import { ZoomControls } from "../../shared/zoom-controls";
 
 const GRID_COLS = 160;
 const GRID_ROWS = 110;
@@ -453,7 +453,7 @@ export function SceneCanvasWaveField({
     const i0 = (scene.wavelength * scene.screenDistance) / scene.slitSeparation;
     // Biên khung nhìn nới rộng hơn (so với sát nội dung) — cho thêm khoảng
     // trống xung quanh để pan/zoom có chỗ khám phá, đồng bộ với các renderer
-    // Konva khác (xem GRID_EXTENT_FACTOR trong wave/scene-konva-wave-2d.tsx…).
+    // Konva khác (xem GRID_EXTENT_FACTOR trong renderers/wave/scene-konva-wave-2d.tsx…).
     const ySpan = Math.max(scene.slitSeparation * 1.5, i0 * 6);
     const xMax = xScreen + Math.max(40, scene.wavelength * 3);
     const xMin = scene.xSingleSlit - Math.max(55, scene.wavelength * 4);

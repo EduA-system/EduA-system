@@ -8,7 +8,7 @@
 //
 // AI KHÔNG đụng vào file này — AI chỉ tạo ra `Scene` đưa vào đây.
 
-import { rk4, type StateVec } from "../shared/ode";
+import { rk4, type StateVec } from "./ode";
 import { netForces, type Vec2 } from "./forces";
 import { projectConstraints, type PointState } from "./constraints";
 import { resolveCollisions } from "./collisions";

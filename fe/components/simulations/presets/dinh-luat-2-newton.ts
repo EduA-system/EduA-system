@@ -1,7 +1,7 @@
 import type { Preset } from "./types";
 
-// Dùng lực "applied" (F ngoài không đổi) — kernel đã hỗ trợ (kind "applied" trong
-// kernel/types.ts, cộng lực trong kernel/forces.ts) nhưng chưa preset nào dùng tới.
+// Dùng lực "applied" (F ngoài không đổi) — engines/mechanics đã hỗ trợ (kind "applied" trong
+// engines/mechanics/types.ts, cộng lực trong engines/mechanics/forces.ts) nhưng chưa preset nào dùng tới.
 // Vật nằm trên mặt sàn (surface, ma sát tuỳ chỉnh) và bị kéo ngang bằng lực không đổi F.
 
 export const dinhLuat2Newton: Preset = {

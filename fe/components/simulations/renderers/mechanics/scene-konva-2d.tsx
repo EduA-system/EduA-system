@@ -1,7 +1,7 @@
 "use client";
 
 // Renderer 2D bằng Konva (imperative) cho Kernel Cơ học 2D.
-// Đọc Scene + kernel thật (kernel/*.ts), chạy vòng lặp vật lý, vẽ vật/lò xo/dây.
+// Đọc Scene + engine mechanics, chạy vòng lặp vật lý, vẽ vật/lò xo/dây.
 //
 // KHÔNG GIAN: mặt đất CỐ ĐỊNH ở world y=0 (dải nền + đường sàn), phần còn lại là
 // lưới phủ kín canvas → mặt phẳng 2D vô hạn. Canvas rộng theo khung chứa.
@@ -13,13 +13,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Konva from "konva";
-import { buildKernel, readPosition, readVelocity, stepScene } from "./kernel/build-derivs";
-import { computeBodyPositionsAtTime } from "./sim-time";
-import type { StateVec } from "./shared/ode";
-import type { Scene } from "./kernel/types";
-import { attachZoomPan, type ZoomActions } from "./shared/konva-zoom";
-import { ZoomControls } from "./shared/zoom-controls";
-import { useContainerSize } from "./shared/use-container-size";
+import { buildKernel, readPosition, readVelocity, stepScene } from "../../engines/mechanics/build-derivs";
+import { computeBodyPositionsAtTime } from "../../engines/mechanics/sim-time";
+import type { StateVec } from "../../engines/mechanics/ode";
+import type { Scene } from "../../engines/mechanics/types";
+import { attachZoomPan, type ZoomActions } from "../../shared/konva-zoom";
+import { ZoomControls } from "../../shared/zoom-controls";
+import { useContainerSize } from "../../shared/use-container-size";
+import type { SceneAnnotation, SceneReadout } from "../../shared/scene-types";
 
 // Lưới/mặt đất vẽ rộng hơn khung nhìn ban đầu nhiều lần để còn phủ kín khi
 // zoom out / kéo canvas (lưới TĨNH, không tính lại theo viewport khi zoom).
@@ -96,44 +97,6 @@ function springPoints(ax: number, ay: number, bx: number, by: number): number[] 
   return pts;
 }
 
-/** Dữ liệu tracking live phát ra ngoài canvas (để cha render thành bảng). */
-export type SceneReadout = {
-  bodies: { id: string; x: number; y: number; speed: number }[];
-  energy: { ke: number; pe: number; total: number };
-};
-
-/**
- * Chú thích trực quan tuỳ chọn của preset (đường sức, nhãn +/− bản tụ, bản kim
- * loại, đường sức cong ở mép…) — THUẦN HIỂN THỊ, toạ độ world TĨNH (không bám
- * vật động), không ảnh hưởng vật lý/kernel. Vẽ một lần khi dựng cảnh, giống
- * mặt phẳng/lưới.
- */
-export type SceneAnnotation =
-  // Đường thẳng + 1 đầu mũi tên tại phân số `arrowAt` dọc đường (0..1, mặc
-  // định 1 = ở cuối đường) — arrowAt < 1 để mũi tên nằm giữa đường, không sát
-  // 2 đầu (vd đường sức điện trường).
-  | { kind: "arrow"; x1: number; y1: number; x2: number; y2: number; color?: string; arrowAt?: number; animated?: boolean }
-  | { kind: "label"; x: number; y: number; text: string; color?: string; fontSize?: number; fontStyle?: string; fontFamily?: string }
-  // Hình chữ nhật world-aligned (không xoay) — dùng cho bản kim loại tụ điện.
-  // (x, y) = tâm hình chữ nhật.
-  | { kind: "rect"; x: number; y: number; width: number; height: number; fill?: string; stroke?: string; strokeWidth?: number }
-  // Đường cong Bézier bậc 3 — dùng cho đường sức cong ở mép (hiệu ứng rìa).
-  | {
-      kind: "curve";
-      x1: number;
-      y1: number;
-      cx1: number;
-      cy1: number;
-      cx2: number;
-      cy2: number;
-      x2: number;
-      y2: number;
-      color?: string;
-      strokeWidth?: number;
-      arrowAt?: number;
-      animated?: boolean;
-    };
-
 // Đầu mũi tên hình chevron tại (x,y), hướng theo `angle` (rad) — dùng chung
 // cho "arrow" (giữa đường thẳng) và "curve" (tiếp tuyến tại điểm arrowAt).
 function addArrowhead(layer: Konva.Layer, x: number, y: number, angle: number, color: string, size = 8) {
@@ -206,7 +169,7 @@ export function SceneKonva2D({
   // kết cấu mờ cho cảm giác chiều sâu, không phải công cụ định lượng).
   minimalOverlay?: boolean;
   // Hệ số tốc độ mô phỏng (0.5 = chậm nửa, 1 = thật, 2 = nhanh gấp đôi…) — chỉ
-  // nhân vào dt mỗi khung hình, không đụng kernel/độ chính xác tích phân.
+  // nhân vào dt mỗi khung hình, không đụng engine/độ chính xác tích phân.
   speed?: number;
 }) {
   // Đo kích thước THẬT của khung chứa (không cố định 520px) → canvas trải

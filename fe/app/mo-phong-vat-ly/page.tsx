@@ -3,7 +3,7 @@
 /**
  * Hub mô phỏng Vật lý kiểu PhET + tuỳ chỉnh bằng AI.
  *
- * - Render bằng SceneKonva2D (Konva 2D) chạy trên KERNEL THẬT (kernel/*.ts).
+ * - Render bằng renderer riêng, nhận kết quả từ engine vật lý tương ứng.
  * - Thư viện = các PRESET đã kiểm duyệt (components/simulations/presets/).
  * - Luồng: Thư viện (browse + filter) → chọn sim → tham số / sửa bằng AI.
  * - Tầng AI là MOCK (giả độ trễ + diff + kiểm tra thị giác) minh hoạ mô hình an toàn:
@@ -22,38 +22,38 @@ import {
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { ParamPanel } from "@/components/simulations/param-panel";
-import { LandmarksPanel, type JumpMark } from "@/components/simulations/landmarks-panel";
+import { ParamPanel } from "@/components/simulations/shared/param-panel";
+import { LandmarksPanel, type JumpMark } from "@/components/simulations/shared/landmarks-panel";
 import { PRESETS, type Preset, type Domain } from "@/components/simulations/presets";
-import type { SceneReadout } from "@/components/simulations/scene-konva-2d";
-import type { Scene } from "@/components/simulations/kernel/types";
-import type { WaveScene } from "@/components/simulations/wave/types";
-import type { StringWaveScene } from "@/components/simulations/string-wave/types";
-import type { WaveFieldScene } from "@/components/simulations/wave-field/types";
-import type { PointChargeFieldScene } from "@/components/simulations/point-charge-field/types";
+import type { SceneReadout } from "@/components/simulations/shared/scene-types";
+import type { Scene } from "@/components/simulations/engines/mechanics/types";
+import type { WaveScene } from "@/components/simulations/engines/wave/types";
+import type { StringWaveScene } from "@/components/simulations/engines/string-wave/types";
+import type { WaveFieldScene } from "@/components/simulations/engines/wave-field/types";
+import type { PointChargeFieldScene } from "@/components/simulations/engines/point-charge-field/types";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
-  () => import("@/components/simulations/scene-konva-2d").then((m) => m.SceneKonva2D),
+  () => import("@/components/simulations/renderers/mechanics/scene-konva-2d").then((m) => m.SceneKonva2D),
   { ssr: false },
 );
 const SceneKonvaWave2D = dynamic(
-  () => import("@/components/simulations/wave/scene-konva-wave-2d").then((m) => m.SceneKonvaWave2D),
+  () => import("@/components/simulations/renderers/wave/scene-konva-wave-2d").then((m) => m.SceneKonvaWave2D),
   { ssr: false },
 );
 const SceneKonvaStringWave = dynamic(
-  () => import("@/components/simulations/string-wave/scene-konva-string-wave").then((m) => m.SceneKonvaStringWave),
+  () => import("@/components/simulations/renderers/string-wave/scene-konva-string-wave").then((m) => m.SceneKonvaStringWave),
   { ssr: false },
 );
 // Canvas thuần (không Konva) — cần thao tác ImageData trực tiếp cho heatmap.
 const SceneCanvasWaveField = dynamic(
-  () => import("@/components/simulations/wave-field/scene-canvas-wave-field").then((m) => m.SceneCanvasWaveField),
+  () => import("@/components/simulations/renderers/wave-field/scene-canvas-wave-field").then((m) => m.SceneCanvasWaveField),
   { ssr: false },
 );
 // Canvas thuần — điện phổ 2 điện tích điểm (đường sức truy vết RK4 thật).
 const SceneCanvasPointChargeField = dynamic(
   () =>
-    import("@/components/simulations/point-charge-field/scene-canvas-point-charge-field").then(
+    import("@/components/simulations/renderers/point-charge-field/scene-canvas-point-charge-field").then(
       (m) => m.SceneCanvasPointChargeField,
     ),
   { ssr: false },

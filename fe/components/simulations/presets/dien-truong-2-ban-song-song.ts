@@ -1,5 +1,5 @@
 import type { Preset } from "./types";
-import type { SceneAnnotation } from "../scene-konva-2d";
+import type { SceneAnnotation } from "../shared/scene-types";
 
 // Thí nghiệm kinh điển SGK: hạt mang điện q bay vào giữa 2 bản phẳng song song
 // tích điện trái dấu, vận tốc đầu v0 CÙNG PHƯƠNG với đường sức (khác trường
