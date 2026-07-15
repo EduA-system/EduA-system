@@ -14,6 +14,16 @@ export interface ExamMatrixSession {
   grade: string;
   examType: string;
   examTypeLabel: string;
+  configuration: {
+    mode: "cv7991";
+    difficulty: "EASY" | "MEDIUM" | "HARD";
+    confirmedByTeacher: true;
+    allowEssayForGrade12: boolean;
+    complianceStatus: "MATCHED" | "DEVIATED";
+    warnings: string[];
+    questionTypes: Record<string, { questionCount: number; score: number }>;
+    assessmentRatios: { recognition: number; comprehension: number; application: number };
+  };
 }
 
 const SESSION_KEY = "edua:examMatrixSession";
