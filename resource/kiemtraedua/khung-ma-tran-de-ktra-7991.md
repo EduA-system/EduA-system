@@ -1,7 +1,11 @@
 # Khung Ma trận & Bản đặc tả Đề kiểm tra định kì — CV 7991/BGDĐT-GDTrH
 
-> Bộ xương **cố định** sẽ được hardcode trong DTO + prompt + export.
-> AI chỉ điền **nội dung** vào các ô dựa trên môn học, lớp và chương trình đã chọn.
+> Giáo viên là người **chủ động nhập và chốt cấu trúc đề**: số câu, điểm/câu,
+> tổng điểm từng dạng và tỉ lệ mức độ nhận thức.
+> Hệ thống tự tính toán, kiểm tra và cảnh báo sai lệch so với khung tham khảo
+> của Công văn 7991; AI **không được tự chọn hoặc tự sửa các con số này**.
+> Sau khi giáo viên xác nhận, cấu hình đã chốt là đầu vào bắt buộc cho Ma trận,
+> Bản đặc tả và Đề kiểm tra.
 >
 > Nguồn: Công văn 7991/BGDĐT-GDTrH ngày 17/12/2024 + các đề mẫu thực tế.
 
@@ -10,19 +14,22 @@
 ## 1. Quy trình chuẩn hóa đề kiểm tra
 
 ```
-Bước 1: Chọn thông tin
+Bước 1: Chọn thông tin và cấu hình đề
   └─ Môn học (Toán / Lý / Hoá)
   └─ Lớp (10 / 11 / 12)
   └─ Loại kiểm tra (Giữa HK1 / Giữa HK2 / Cuối HK1 / Cuối HK2)
+  └─ Giáo viên nhập số câu + điểm/câu cho từng dạng
+  └─ Giáo viên nhập tỉ lệ Biết / Hiểu / Vận dụng
+  └─ Hệ thống tính tổng và đối chiếu khung tham khảo CV 7991
+  └─ Giáo viên xem cảnh báo và xác nhận cấu hình
 
 Bước 2: Lập Ma trận
-  └─ Xác định dạng thức câu hỏi + tỉ lệ điểm
-  └─ Xác định mức độ đánh giá
+  └─ Dùng nguyên cấu trúc và tỉ lệ giáo viên đã xác nhận
   └─ Phân bổ điểm theo chương/chủ đề
 
 Bước 3: Biên soạn Bản đặc tả
   └─ Liệt kê đơn vị kiến thức theo từng chương
-  └─ Gán yêu cầu cần đạt (Biết/Hiểu/Vận dụng/Vận dụng cao)
+  └─ Gán yêu cầu cần đạt (Biết/Hiểu/Vận dụng)
   └─ Xác định số câu hỏi theo từng mức + dạng thức
 
 Bước 4: Soạn đề thi (file riêng)
@@ -31,13 +38,31 @@ Bước 4: Soạn đề thi (file riêng)
 
 ---
 
-## 2. Quy tắc phân biệt Lớp 10-11 vs Lớp 12
+## 2. Nguyên tắc cấu hình và trường hợp Lớp 12
 
-| Tiêu chí | Lớp 10, 11 | Lớp 12 |
-|---|---|---|
-| Dạng thức câu hỏi | 4 dạng (có Tự luận) | 3 dạng (KHÔNG tự luận) |
-| Lý do | Chưa thi THPT quốc gia | Làm quen format thi THPT |
-| Tự luận | ✅ Có (~20-30%) | ❌ Không có |
+### 2.1. Giáo viên quyết định cấu trúc
+
+- Không hardcode cấu trúc khác nhau theo lớp như một quy định bắt buộc của CV 7991.
+- Khi bật chế độ **Theo CV 7991**, hệ thống điền sẵn cấu trúc tham khảo
+  `3-2-2-3 điểm` và mức độ `40%-30%-30%`.
+- Giáo viên được sửa số câu, điểm/câu và tỉ lệ. Hệ thống không chặn nếu tổng
+  vẫn hợp lệ, nhưng phải chỉ rõ phần sai lệch so với cấu trúc tham khảo.
+- AI chỉ phân bổ nội dung theo cấu hình cuối cùng do giáo viên xác nhận.
+
+### 2.2. Khóa mềm Tự luận đối với Lớp 12
+
+Khi chọn Lớp 12, giao diện áp dụng preset nhằm gợi ý cấu trúc gần với đề thi
+tốt nghiệp THPT, nhưng đây **không phải lệnh cấm tự luận của CV 7991**:
+
+- Mặc định đặt `essay.questionCount = 0` và ẩn/disable ô **Số câu** của Tự luận.
+- Trong phần **Nâng cao**, cung cấp toggle `Cho phép tự luận`.
+- Khi bật toggle, mở lại các ô Số câu và Điểm Tự luận để giáo viên cấu hình.
+- Khi tắt lại toggle, hệ thống yêu cầu xác nhận trước khi đưa số câu và điểm
+  Tự luận về `0`, tránh làm mất cấu hình ngoài ý muốn.
+- Trạng thái toggle và cấu hình tự luận phải được lưu cùng cấu hình đề.
+
+Như vậy, trường muốn đề giữa kỳ Lớp 12 có tự luận vẫn thực hiện được; hệ thống
+chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuyên môn của giáo viên.
 
 ---
 
@@ -56,6 +81,13 @@ Bước 4: Soạn đề thi (file riêng)
     "examType": "giua_hk1 | giua_hk2 | cuoi_hk1 | cuoi_hk2",
     "duration": "45 phút | 60 phút | 90 phút",
     "totalScore": 10.0
+  },
+  "configuration": {
+    "mode": "cv7991 | custom",
+    "confirmedByTeacher": true,
+    "allowEssayForGrade12": false,
+    "complianceStatus": "MATCHED | DEVIATED | INVALID",
+    "warnings": []
   },
   "questionTypes": {
     "multipleChoice": {
@@ -94,13 +126,11 @@ Bước 4: Soạn đề thi (file riêng)
     }
   },
   "assessmentLevels": {
-    "basic": ["nhan_biet", "thong_hieu", "van_dung"],
-    "advanced": ["nhan_biet", "thong_hieu", "van_dung", "van_dung_cao"],
+    "levels": ["nhan_biet", "thong_hieu", "van_dung"],
     "ratioByLevel": {
       "nhan_biet": 0.40,
       "thong_hieu": 0.30,
-      "van_dung": 0.20,
-      "van_dung_cao": 0.10
+      "van_dung": 0.30
     }
   },
   "chapterDistribution": [
@@ -121,27 +151,46 @@ Bước 4: Soạn đề thi (file riêng)
 }
 ```
 
-### 3.2. Giá trị hardcode theo lớp
+### 3.2. Giá trị gợi ý theo CV 7991
 
-#### Lớp 10, 11 (có tự luận)
+Đây là preset để điền ban đầu và làm mốc đối chiếu, **không phải dữ liệu do AI
+sinh và cũng không phải giá trị khóa cứng trên giao diện**.
 
 | Dạng thức | Tỉ lệ | Điểm | Số câu |
 |---|---|---|---|
 | TNKQ nhiều lựa chọn | 30% | 3.0đ | 12 câu × 0.25đ |
 | Đúng – Sai | 20% | 2.0đ | 2 câu (8 ý) |
 | Trả lời ngắn | 20% | 2.0đ | 4 câu × 0.5đ |
-| Tự luận | 30% | 3.0đ | 2-3 câu |
+| Tự luận | 30% | 3.0đ | Giáo viên nhập |
 | **Tổng** | **100%** | **10đ** | |
 
-#### Lớp 12 (không tự luận)
+Nếu môn học không sử dụng Trả lời ngắn, chuyển phần điểm này sang Đúng–Sai theo
+chú thích của phụ lục CV 7991.
 
-| Dạng thức | Tỉ lệ | Điểm | Số câu |
-|---|---|---|---|
-| TNKQ nhiều lựa chọn | 45% | 4.5đ | 18 câu × 0.25đ |
-| Đúng – Sai | 30% | 3.0đ | 3 câu (12 ý) |
-| Trả lời ngắn | 25% | 2.5đ | 5 câu × 0.5đ |
-| Tự luận | ❌ | 0đ | Không có |
-| **Tổng** | **100%** | **10đ** | |
+Với Lớp 12, có thể áp dụng preset riêng không tự luận như một gợi ý sản phẩm.
+Preset này phải được ghi rõ là **gợi ý theo định hướng cấu trúc thi tốt nghiệp**,
+không được ghi là yêu cầu bắt buộc của CV 7991. Giáo viên có thể bật
+`Cho phép tự luận` trong phần Nâng cao.
+
+### 3.3. Ví dụ đối chiếu cấu hình giáo viên nhập
+
+Giáo viên nhập:
+
+| Dạng thức | Số câu | Điểm/câu | Thành tiền |
+|---|---:|---:|---:|
+| TNKQ nhiều lựa chọn | 12 | 0.25 | 3.0đ |
+| Đúng – Sai | 2 | 1.0 | 2.0đ |
+| Trả lời ngắn | 4 | 0.25 | 1.0đ |
+| Tự luận | 1 | Theo ý/câu | 4.0đ |
+| **Tổng** | | | **10.0đ** |
+
+Cấu hình này hợp lệ để tiếp tục vì tổng bằng 10 điểm, nhưng hệ thống hiển thị:
+
+> Có sai lệch với cấu trúc tham khảo CV 7991: Trả lời ngắn thiếu 1.0 điểm;
+> Tự luận vượt 1.0 điểm.
+
+Giáo viên có thể quay lại chỉnh hoặc chọn **Xác nhận và tiếp tục**. Sau khi xác
+nhận, Ma trận, Bản đặc tả và Đề kiểm tra đều phải tuân theo đúng cấu hình này.
 
 ---
 
@@ -183,8 +232,7 @@ Bước 4: Soạn đề thi (file riêng)
             ],
             "van_dung": [
               "Yêu cầu cần đạt mức Vận dụng 1"
-            ],
-            "van_dung_cao": []
+            ]
           },
           "questionAllocation": {
             "multipleChoice": {
@@ -229,10 +277,9 @@ Bước 4: Soạn đề thi (file riêng)
       "essay": { "count": 3, "score": 3.0 }
     },
     "byLevel": {
-      "nhan_biet": { "count": 12, "score": 3.0, "ratio": 0.30 },
+      "nhan_biet": { "count": 12, "score": 4.0, "ratio": 0.40 },
       "thong_hieu": { "count": 10, "score": 3.0, "ratio": 0.30 },
-      "van_dung": { "count": 6, "score": 2.5, "ratio": 0.25 },
-      "van_dung_cao": { "count": 2, "score": 1.5, "ratio": 0.15 }
+      "van_dung": { "count": 8, "score": 3.0, "ratio": 0.30 }
     }
   }
 }
@@ -254,6 +301,12 @@ Bước 4: Soạn đề thi (file riêng)
 ```
 ExamMatrixDto
  ├─ MetadataDto metadata                    (subject, grade, examType, duration, totalScore)
+ ├─ ExamConfigurationDto configuration
+ │    ├─ String mode                        (cv7991 | custom)
+ │    ├─ boolean confirmedByTeacher
+ │    ├─ boolean allowEssayForGrade12
+ │    ├─ String complianceStatus            (MATCHED | DEVIATED | INVALID)
+ │    └─ List<String> warnings
  ├─ Map<String, QuestionTypeDto> questionTypes
  │    ├─ multipleChoice  (label, ratio, score, pointsPerQuestion, questionCount)
  │    ├─ trueFalse       (label, ratio, score, itemsPerQuestion, scoringRule, questionCount)
@@ -280,7 +333,7 @@ ExamSpecificationDto
  │    │    ├─ String unitName
  │    │    ├─ String content
  │    │    ├─ int durationInWeeks
- │    │    ├─ LearningOutcomesDto learningOutcomes   (nhan_biet, thong_hieu, van_dung, van_dung_cao)
+ │    │    ├─ LearningOutcomesDto learningOutcomes   (nhan_biet, thong_hieu, van_dung)
  │    │    ├─ QuestionAllocationDto questionAllocation
  │    │    ├─ int totalQuestions
  │    │    └─ double totalScore
@@ -294,8 +347,7 @@ ExamSpecificationDto
 LearningOutcomesDto
  ├─ List<String> nhan_biet
  ├─ List<String> thong_hieu
- ├─ List<String> van_dung
- └─ List<String> van_dung_cao
+ └─ List<String> van_dung
 
 QuestionAllocationDto
  ├─ Map<String, Integer> multipleChoice    (nhan_biet → X câu)
@@ -309,9 +361,15 @@ QuestionAllocationDto
 ## 6. Pipeline sinh Ma trận + Bản đặc tả
 
 ```
+Call 0  → Giáo viên cấu hình và xác nhận cấu trúc đề
+          Input:  subject + grade + examType + số câu + điểm + tỉ lệ mức độ
+          Output: ExamConfigurationDto đã tính tổng + cảnh báo đối chiếu
+          Điều kiện: confirmedByTeacher = true
+
 Call 1  → Tạo Ma trận
-          Input:  subject + grade + examType
+          Input:  ExamConfigurationDto đã được giáo viên xác nhận
           Output: ExamMatrixDto (questionTypes, assessmentLevels, chapterDistribution)
+          Ràng buộc: AI không được thay đổi số câu, điểm và tỉ lệ mức độ
           → publish MATRIX_READY
 
 Call 2  → Tạo Bản đặc tả (dựa vào Ma trận)
@@ -333,17 +391,23 @@ Call 3..N → Tạo đề thi (file riêng)
 |---|---|
 | Tổng điểm = 10.0 | Ma trận phải cộng đúng 10 điểm |
 | Tổng câu = Tổng TNKQ + Đ-S + TL ngắn + Tự luận | Số câu phải khớp |
-| Tỉ lệ ± 5% | Tỉ lệ thực tế mỗi dạng so với yêu cầu CV 7991 không lệch quá 5% |
+| Đối chiếu cấu trúc tham khảo | Sai lệch `3-2-2-3` tạo cảnh báo cụ thể, không chặn giáo viên tiếp tục |
+| Tổng tỉ lệ mức độ = 100% | Biết + Hiểu + Vận dụng phải cộng đúng 100% |
 | Mỗi đơn vị kiến thức phải có câu hỏi | Không được bỏ trống đơn vị nào |
-| Mức độ phân bổ đúng | Nhận biết ≥ 30%, Thông hiểu ≥ 20%, Vận dụng ≥ 15% |
-| Lớp 12 không có tự luận | Essay count = 0 khi grade = 12 |
-| Lớp 10-11 phải có tự luận | Essay count > 0 khi grade = 10 hoặc 11 |
+| Cảnh báo mức độ tham khảo | So sánh với `40%-30%-30%`; sai lệch được cảnh báo, không tự sửa |
+| Tự luận Lớp 12 | Mặc định 0; chỉ cho nhập khi `allowEssayForGrade12 = true` |
+| Giáo viên đã xác nhận | Không gọi AI tạo Ma trận khi `confirmedByTeacher = false` |
+| Bảo toàn cấu hình | AI trả về khác số câu/điểm/tỉ lệ đã chốt thì kết quả không hợp lệ |
 
 ---
 
 ## 8. Ví dụ minh họa
 
 ### 8.1. Ma trận — Hoá 11 (Giữa HK2)
+
+Ví dụ này minh họa một cấu hình tùy chỉnh đã được giáo viên xác nhận. Vì phân
+bổ `3.5-3.0-1.5-2.0` khác preset `3-2-2-3`, trạng thái đối chiếu của nó là
+`DEVIATED`; hệ thống phải lưu cảnh báo cùng Ma trận.
 
 ```json
 {
@@ -354,6 +418,18 @@ Call 3..N → Tạo đề thi (file riêng)
     "examType": "giua_hk2",
     "duration": "45 phút",
     "totalScore": 10.0
+  },
+  "configuration": {
+    "mode": "cv7991",
+    "confirmedByTeacher": true,
+    "allowEssayForGrade12": false,
+    "complianceStatus": "DEVIATED",
+    "warnings": [
+      "TNKQ nhiều lựa chọn vượt 0.5 điểm",
+      "Đúng-Sai vượt 1.0 điểm",
+      "Trả lời ngắn thiếu 0.5 điểm",
+      "Tự luận thiếu 1.0 điểm"
+    ]
   },
   "questionTypes": {
     "multipleChoice": {
@@ -456,9 +532,7 @@ Call 3..N → Tạo đề thi (file riêng)
             ],
             "van_dung": [
               "Viết được công thức cấu tạo, gọi được tên một số alcohol đơn giản (C1-C5)",
-              "Thực hiện được các thí nghiệm: đốt cháy ethanol, glycerol tác dụng với Cu(OH)2"
-            ],
-            "van_dung_cao": [
+              "Thực hiện được các thí nghiệm: đốt cháy ethanol, glycerol tác dụng với Cu(OH)2",
               "Nêu được thái độ, cách ứng xử với việc bảo vệ sức khoẻ liên quan đến rượu bia"
             ]
           },
@@ -479,16 +553,29 @@ Call 3..N → Tạo đề thi (file riêng)
 
 ---
 
-## 9. Phân biệt Hardcode vs AI sinh
+## 9. Phân biệt Hệ thống, Giáo viên và AI
 
-| Thành phần | Hardcode? | Ghi chú |
+| Thành phần | Chủ thể quyết định | Ghi chú |
 |---|---|---|
-| Cấu trúc JSON schema | ✅ Cố định | Để parse ổn định |
-| 4 dạng thức câu hỏi | ✅ Cố định | TNKQ, Đ-S, TL ngắn, Tự luận |
-| Tỉ lệ điểm theo lớp 10-11 vs 12 | ✅ Cố định | Theo quy tắc trên |
-| Quy tắc chấm Đúng-Sai | ✅ Cố định | 0.1 / 0.25 / 0.5 / 1.0 |
-| Validation rules | ✅ Cố định | Tổng = 10đ, tỉ lệ ±5% |
-| Chương/trường môn theo lớp | ❌ AI sinh | Từ syllabus chương trình |
-| Đơn vị kiến thức + YCCĐ | ❌ AI sinh | Từ sách giáo khoa |
-| Phân bổ câu hỏi theo đơn vị | ❌ AI sinh | Dựa vào trọng tâm kiến thức |
-| Ma trận mẫu minh họa | ❌ AI sinh | Để user tham khảo |
+| Cấu trúc JSON schema | Hệ thống | Cố định để parse ổn định |
+| Danh sách dạng câu hỏi | Hệ thống | TNKQ, Đ-S, TL ngắn, Tự luận |
+| Preset `3-2-2-3` và `40-30-30` | Hệ thống | Gợi ý và mốc cảnh báo theo CV 7991 |
+| Số câu, điểm/câu, tổng điểm mỗi dạng | **Giáo viên** | AI không được thay đổi |
+| Tỉ lệ Biết/Hiểu/Vận dụng | **Giáo viên** | Tổng bắt buộc bằng 100% |
+| Cho phép tự luận ở Lớp 12 | **Giáo viên** | Toggle Nâng cao, mặc định tắt |
+| Tính tổng và cảnh báo sai lệch | Hệ thống | Cảnh báo rõ từng dạng, không tự sửa |
+| Chương/chủ đề theo lớp | AI đề xuất | Dựa trên syllabus, giáo viên có thể duyệt |
+| Đơn vị kiến thức + YCCĐ | AI sinh | Từ chương trình/tài liệu đầu vào |
+| Phân bổ câu hỏi theo đơn vị | AI sinh | Phải khớp cấu hình giáo viên đã chốt |
+| Nội dung câu hỏi và đáp án | AI sinh | Tạo sau Ma trận và Bản đặc tả |
+
+---
+
+## 10. Nguyên tắc xuyên suốt
+
+`Cấu hình giáo viên xác nhận → Ma trận → Bản đặc tả → Đề kiểm tra`
+
+Ba sản phẩm phía sau phải dùng cùng một phiên bản cấu hình. Nếu giáo viên sửa
+số câu, điểm hoặc tỉ lệ sau khi đã sinh Ma trận, hệ thống phải đánh dấu Ma trận,
+Bản đặc tả và Đề cũ là cần tạo lại; không được âm thầm ghép cấu hình mới với kết
+quả cũ.
