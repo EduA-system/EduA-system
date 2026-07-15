@@ -29,7 +29,7 @@ export const navGroups: NavGroup[] = [
       { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-edit", active: true },
       { label: "Slide", icon: "slides", href: "/slide-create" },
-      { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/lesson-create" },
+      { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/exam-create" },
     ],
   },
   {
