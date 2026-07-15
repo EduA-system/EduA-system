@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useEditor } from "@tiptap/react";
+import { EditorContent, useEditor } from "@tiptap/react";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
 import { EditorTools, Ruler } from "../LessonEditor";
 import { createEditorExtensions } from "../LessonEditor/editorConfig";
+import { examMatrixTemplateHtml } from "../exam-matrix/ExamMatrixTables";
 
 export interface ExamMatrixSession {
   subject: string;
@@ -43,11 +44,11 @@ export function ExamMatrixDashboard() {
   const [extensions] = useState(() => createEditorExtensions());
   const editor = useEditor({
     extensions,
-    content: "<p></p>",
+    content: examMatrixTemplateHtml(),
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: "lesson-document-editor min-h-[calc(100vh-188px)] text-[#2b2926] outline-none",
+        class: "lesson-document-editor exam-matrix-editor min-h-[calc(100vh-188px)] text-[#2b2926] outline-none",
       },
     },
   });
@@ -95,19 +96,17 @@ export function ExamMatrixDashboard() {
           </header>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-[980px]">
+            <div className="mx-auto max-w-[1280px]">
               {session && (
                 <p className="mb-4 text-[13px] text-[#6b6b6b]">
                   {session.subjectLabel} — Lớp {session.grade} — {session.examTypeLabel}
                 </p>
               )}
-              <div className="rounded-[14px] border border-[#d8d1c9] bg-white px-7 py-[22px]">
-                <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
-                  Khung ma trận đề kiểm tra
-                </div>
-                <p className="mt-4 text-[13px] leading-[22px] text-[#6b6b6b]">
-                  Ma trận sẽ được hiển thị và chỉnh sửa tại đây.
-                </p>
+              <div
+                className="bg-white py-10 shadow-[0_1px_2px_rgba(43,41,38,0.06),0_4px_14px_rgba(43,41,38,0.05)]"
+                style={{ paddingLeft: margins.left, paddingRight: margins.right }}
+              >
+                <EditorContent editor={editor} />
               </div>
             </div>
           </div>

@@ -51,6 +51,7 @@ type ToolbarState = {
   isBulletList: boolean;
   isOrderedList: boolean;
   isLink: boolean;
+  isTable: boolean;
   canUndo: boolean;
   canRedo: boolean;
   canSink: boolean;
@@ -71,6 +72,7 @@ const DEFAULT_STATE: ToolbarState = {
   isBulletList: false,
   isOrderedList: false,
   isLink: false,
+  isTable: false,
   canUndo: false,
   canRedo: false,
   canSink: false,
@@ -120,6 +122,7 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
           isBulletList: e.isActive("bulletList"),
           isOrderedList: e.isActive("orderedList"),
           isLink: e.isActive("link"),
+          isTable: e.isActive("table"),
           canUndo: e.can().undo(),
           canRedo: e.can().redo(),
           canSink: e.can().sinkListItem("listItem"),
@@ -350,6 +353,18 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
                 <ImageIcon /> Hình ảnh
               </MenuRow>
             </MenuGroup>
+            {state.isTable ? (
+              <MenuGroup label="Chỉnh sửa bảng">
+                <MenuRow onClick={() => chain().addRowBefore().run()}>Thêm hàng phía trên</MenuRow>
+                <MenuRow onClick={() => chain().addRowAfter().run()}>Thêm hàng phía dưới</MenuRow>
+                <MenuRow onClick={() => chain().addColumnBefore().run()}>Thêm cột bên trái</MenuRow>
+                <MenuRow onClick={() => chain().addColumnAfter().run()}>Thêm cột bên phải</MenuRow>
+                <MenuRow onClick={() => chain().deleteRow().run()}>Xóa hàng hiện tại</MenuRow>
+                <MenuRow onClick={() => chain().deleteColumn().run()}>Xóa cột hiện tại</MenuRow>
+                <MenuRow onClick={() => chain().mergeOrSplit().run()}>Gộp hoặc tách ô</MenuRow>
+                <MenuRow onClick={() => chain().deleteTable().run()}>Xóa bảng</MenuRow>
+              </MenuGroup>
+            ) : null}
           </Popup>
         ) : null}
 

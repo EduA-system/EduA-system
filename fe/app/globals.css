@@ -363,6 +363,52 @@ body::-webkit-scrollbar {
   pointer-events: none;
 }
 
+.exam-matrix-editor {
+  font-family: var(--font-libertine), Georgia, serif;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.exam-matrix-editor h2 {
+  margin: 0 0 24px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.exam-matrix-editor h2:not(:first-child) {
+  margin-top: 52px;
+}
+
+.exam-matrix-editor .tableWrapper {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.exam-matrix-editor table {
+  min-width: 1080px;
+  color: #000000;
+}
+
+.exam-matrix-editor th,
+.exam-matrix-editor td {
+  height: 32px;
+  border-color: #000000;
+  padding: 4px 6px;
+  vertical-align: middle;
+}
+
+.exam-matrix-editor th {
+  background: #ffffff;
+  text-align: center;
+}
+
+.exam-matrix-editor td p,
+.exam-matrix-editor th p {
+  margin: 0;
+}
+
 .lesson-document-editor img {
   max-width: 100%;
   height: auto;
