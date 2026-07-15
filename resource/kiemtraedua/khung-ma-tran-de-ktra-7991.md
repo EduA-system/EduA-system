@@ -1,7 +1,8 @@
 # Khung Ma trận & Bản đặc tả Đề kiểm tra định kì — CV 7991/BGDĐT-GDTrH
 
 > Giáo viên là người **chủ động nhập và chốt cấu trúc đề**: số câu, điểm/câu,
-> tổng điểm từng dạng và tỉ lệ mức độ nhận thức.
+> tổng điểm từng dạng, tỉ lệ mức độ nhận thức và mức độ chung của đề
+> (**Dễ / Vừa / Khó**).
 > Hệ thống tự tính toán, kiểm tra và cảnh báo sai lệch so với khung tham khảo
 > của Công văn 7991; AI **không được tự chọn hoặc tự sửa các con số này**.
 > Sau khi giáo viên xác nhận, cấu hình đã chốt là đầu vào bắt buộc cho Ma trận,
@@ -18,6 +19,7 @@ Bước 1: Chọn thông tin và cấu hình đề
   └─ Môn học (Toán / Lý / Hoá)
   └─ Lớp (10 / 11 / 12)
   └─ Loại kiểm tra (Giữa HK1 / Giữa HK2 / Cuối HK1 / Cuối HK2)
+  └─ Mức độ đề (Dễ / Vừa / Khó)
   └─ Giáo viên nhập số câu + điểm/câu cho từng dạng
   └─ Giáo viên nhập tỉ lệ Biết / Hiểu / Vận dụng
   └─ Hệ thống tính tổng và đối chiếu khung tham khảo CV 7991
@@ -49,7 +51,25 @@ Bước 4: Soạn đề thi (file riêng)
   vẫn hợp lệ, nhưng phải chỉ rõ phần sai lệch so với cấu trúc tham khảo.
 - AI chỉ phân bổ nội dung theo cấu hình cuối cùng do giáo viên xác nhận.
 
-### 2.2. Khóa mềm Tự luận đối với Lớp 12
+### 2.2. Mức độ chung của đề
+
+Giáo viên bắt buộc chọn một trong ba mức:
+
+| Giá trị | Nhãn hiển thị | Cách AI sử dụng |
+|---|---|---|
+| `EASY` | Dễ | Câu hỏi trực tiếp, dữ kiện rõ, ít bước suy luận, bám sát yêu cầu cần đạt cơ bản |
+| `MEDIUM` | Vừa | Cân bằng câu trực tiếp và câu cần liên hệ, suy luận; đây là giá trị mặc định |
+| `HARD` | Khó | Tăng độ phức tạp của dữ kiện, ngữ cảnh và số bước suy luận nhưng không vượt chương trình |
+
+Mức độ chung của đề **không thay thế** ba mức độ nhận thức `Biết – Hiểu – Vận
+dụng` và không tự động sửa tỉ lệ của chúng. Ví dụ, đề `HARD` vẫn có thể giữ tỉ
+lệ `40%-30%-30%`; AI làm câu hỏi khó hơn trong phạm vi từng mức nhận thức bằng
+cách điều chỉnh ngữ cảnh, độ nhiễu, số bước xử lý và mức độ liên kết kiến thức.
+
+AI không được vì lựa chọn `HARD` mà đưa kiến thức ngoài chương trình, cũng không
+được vì lựa chọn `EASY` mà đổi câu Vận dụng thành câu Biết.
+
+### 2.3. Khóa mềm Tự luận đối với Lớp 12
 
 Khi chọn Lớp 12, giao diện áp dụng preset nhằm gợi ý cấu trúc gần với đề thi
 tốt nghiệp THPT, nhưng đây **không phải lệnh cấm tự luận của CV 7991**:
@@ -84,6 +104,7 @@ chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuy
   },
   "configuration": {
     "mode": "cv7991 | custom",
+    "difficulty": "EASY | MEDIUM | HARD",
     "confirmedByTeacher": true,
     "allowEssayForGrade12": false,
     "complianceStatus": "MATCHED | DEVIATED | INVALID",
@@ -303,6 +324,7 @@ ExamMatrixDto
  ├─ MetadataDto metadata                    (subject, grade, examType, duration, totalScore)
  ├─ ExamConfigurationDto configuration
  │    ├─ String mode                        (cv7991 | custom)
+ │    ├─ ExamDifficulty difficulty          (EASY | MEDIUM | HARD)
  │    ├─ boolean confirmedByTeacher
  │    ├─ boolean allowEssayForGrade12
  │    ├─ String complianceStatus            (MATCHED | DEVIATED | INVALID)
@@ -362,14 +384,15 @@ QuestionAllocationDto
 
 ```
 Call 0  → Giáo viên cấu hình và xác nhận cấu trúc đề
-          Input:  subject + grade + examType + số câu + điểm + tỉ lệ mức độ
+          Input:  subject + grade + examType + difficulty
+                  + số câu + điểm + tỉ lệ mức độ
           Output: ExamConfigurationDto đã tính tổng + cảnh báo đối chiếu
           Điều kiện: confirmedByTeacher = true
 
 Call 1  → Tạo Ma trận
           Input:  ExamConfigurationDto đã được giáo viên xác nhận
           Output: ExamMatrixDto (questionTypes, assessmentLevels, chapterDistribution)
-          Ràng buộc: AI không được thay đổi số câu, điểm và tỉ lệ mức độ
+          Ràng buộc: AI không được thay đổi difficulty, số câu, điểm và tỉ lệ mức độ
           → publish MATRIX_READY
 
 Call 2  → Tạo Bản đặc tả (dựa vào Ma trận)
@@ -393,6 +416,7 @@ Call 3..N → Tạo đề thi (file riêng)
 | Tổng câu = Tổng TNKQ + Đ-S + TL ngắn + Tự luận | Số câu phải khớp |
 | Đối chiếu cấu trúc tham khảo | Sai lệch `3-2-2-3` tạo cảnh báo cụ thể, không chặn giáo viên tiếp tục |
 | Tổng tỉ lệ mức độ = 100% | Biết + Hiểu + Vận dụng phải cộng đúng 100% |
+| Mức độ đề hợp lệ | `difficulty` bắt buộc thuộc `EASY`, `MEDIUM`, `HARD` |
 | Mỗi đơn vị kiến thức phải có câu hỏi | Không được bỏ trống đơn vị nào |
 | Cảnh báo mức độ tham khảo | So sánh với `40%-30%-30%`; sai lệch được cảnh báo, không tự sửa |
 | Tự luận Lớp 12 | Mặc định 0; chỉ cho nhập khi `allowEssayForGrade12 = true` |
@@ -421,6 +445,7 @@ bổ `3.5-3.0-1.5-2.0` khác preset `3-2-2-3`, trạng thái đối chiếu củ
   },
   "configuration": {
     "mode": "cv7991",
+    "difficulty": "MEDIUM",
     "confirmedByTeacher": true,
     "allowEssayForGrade12": false,
     "complianceStatus": "DEVIATED",
@@ -562,6 +587,7 @@ bổ `3.5-3.0-1.5-2.0` khác preset `3-2-2-3`, trạng thái đối chiếu củ
 | Preset `3-2-2-3` và `40-30-30` | Hệ thống | Gợi ý và mốc cảnh báo theo CV 7991 |
 | Số câu, điểm/câu, tổng điểm mỗi dạng | **Giáo viên** | AI không được thay đổi |
 | Tỉ lệ Biết/Hiểu/Vận dụng | **Giáo viên** | Tổng bắt buộc bằng 100% |
+| Mức độ đề Dễ/Vừa/Khó | **Giáo viên** | Mặc định `MEDIUM`; định hướng cách AI viết câu hỏi |
 | Cho phép tự luận ở Lớp 12 | **Giáo viên** | Toggle Nâng cao, mặc định tắt |
 | Tính tổng và cảnh báo sai lệch | Hệ thống | Cảnh báo rõ từng dạng, không tự sửa |
 | Chương/chủ đề theo lớp | AI đề xuất | Dựa trên syllabus, giáo viên có thể duyệt |
@@ -576,6 +602,6 @@ bổ `3.5-3.0-1.5-2.0` khác preset `3-2-2-3`, trạng thái đối chiếu củ
 `Cấu hình giáo viên xác nhận → Ma trận → Bản đặc tả → Đề kiểm tra`
 
 Ba sản phẩm phía sau phải dùng cùng một phiên bản cấu hình. Nếu giáo viên sửa
-số câu, điểm hoặc tỉ lệ sau khi đã sinh Ma trận, hệ thống phải đánh dấu Ma trận,
-Bản đặc tả và Đề cũ là cần tạo lại; không được âm thầm ghép cấu hình mới với kết
-quả cũ.
+mức độ đề, số câu, điểm hoặc tỉ lệ sau khi đã sinh Ma trận, hệ thống phải đánh
+dấu Ma trận, Bản đặc tả và Đề cũ là cần tạo lại; không được âm thầm ghép cấu
+hình mới với kết quả cũ.
