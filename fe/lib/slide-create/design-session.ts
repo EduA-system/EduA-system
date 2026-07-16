@@ -1,4 +1,5 @@
 import type { SlideItem } from "@/lib/api/slides";
+import type { SlideContentSlot } from "@/lib/slide-create/layout-templates";
 
 /**
  * In-memory state shared by the three manually triggered design steps.
@@ -11,6 +12,7 @@ export type SlideDesignContext = {
   styleHint?: string;
   skinHtml: string;
   structuralHtmlBySlide: Map<string, string>;
+  contentSlotsBySlide: Map<string, SlideContentSlot[]>;
   bgImageUrl: string | null;
   decoIconUrls: string[];
   slidesById: Map<string, SlideItem>;

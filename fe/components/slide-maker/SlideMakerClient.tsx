@@ -14,6 +14,8 @@ import {
   runStructuralStep,
 } from "@/lib/slide-create/run-design-pipeline";
 import { useEditorStore } from "@/stores/slide-editor-store";
+import { applyContentSlots } from "@/lib/slide-create/apply-content-slots";
+import type { SlideContentFillResponse } from "@/lib/api/slide-design";
 
 type StepStates = {
   step1: DesignStepStatus;
@@ -24,7 +26,7 @@ type StepStates = {
 const INITIAL_STEPS: StepStates = { step1: "idle", step2: "idle", step3: "idle" };
 
 function stepLabel(step: 1 | 2 | 3) {
-  return step === 1 ? "Bước 1: Giao diện deck" : step === 2 ? "Bước 2: Bố cục slide" : "Bước 3: Điền nội dung";
+  return step === 1 ? "Bước 1: Giao diện deck" : step === 2 ? "Bước 2: Bố cục mẫu" : "Bước 3: Điền nội dung";
 }
 
 export function SlideMakerClient() {
@@ -37,38 +39,46 @@ export function SlideMakerClient() {
   const [message, setMessage] = useState<string | null>(null);
   const replaceSlides = useEditorStore((s) => s.replaceSlides);
 
-  const upsertSlide = useCallback((slide: Slide) => {
-    useEditorStore.setState((state) => ({
-      slides: state.slides.map((current) => (current.id === slide.id ? slide : current)),
-      selectedIds: state.currentSlideId === slide.id ? [] : state.selectedIds,
-    }));
-  }, []);
-
   const handleSlideFrames = useCallback((slideId: string, result: { bg: string; elements: Slide["elements"] }) => {
     useEditorStore.setState((state) => ({
       slides: state.slides.map((slide) =>
         slide.id === slideId
-          ? { ...slide, bg: result.bg, elements: result.elements.map((element) => ({ ...element })), generationStatus: "framing" }
+          ? {
+              ...slide,
+              bg: result.bg,
+              elements: result.elements.map((element) => ({ ...element })),
+              generationStatus: "framing",
+              generationError: undefined,
+            }
           : slide,
       ),
       selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,
     }));
   }, []);
 
-  const handleSlideReady = useCallback((slideId: string, result: { bg: string; elements: Slide["elements"] }, title: string) => {
-    upsertSlide({ id: slideId, bg: result.bg, elements: result.elements, aiPrompt: title, generationStatus: "ready" });
-  }, [upsertSlide]);
+  const handleSlideReady = useCallback((slideId: string, result: SlideContentFillResponse, title: string) => {
+    useEditorStore.setState((state) => ({
+      slides: state.slides.map((slide) =>
+        slide.id === slideId
+          ? { ...slide, elements: applyContentSlots(slide.elements, result), aiPrompt: title, generationStatus: "ready", generationError: undefined }
+          : slide,
+      ),
+      selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,
+    }));
+  }, []);
 
   const markSlidesPending = useCallback(() => {
     useEditorStore.setState((state) => ({
-      slides: state.slides.map((slide) => ({ ...slide, generationStatus: "pending" })),
+      slides: state.slides.map((slide) => ({ ...slide, generationStatus: "pending", generationError: undefined })),
       selectedIds: [],
     }));
   }, []);
 
-  const handleSlideFailed = useCallback((slideId: string) => {
+  const handleSlideFailed = useCallback((slideId: string, message: string) => {
     useEditorStore.setState((state) => ({
-      slides: state.slides.map((slide) => slide.id === slideId ? { ...slide, generationStatus: "failed" } : slide),
+      slides: state.slides.map((slide) =>
+        slide.id === slideId ? { ...slide, generationStatus: "failed", generationError: message } : slide,
+      ),
       selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,
     }));
   }, []);

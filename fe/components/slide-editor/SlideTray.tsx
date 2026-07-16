@@ -71,6 +71,7 @@ function Thumbnail({
       )}
       <button
         onClick={onClick}
+        title={slide.generationStatus === "failed" ? slide.generationError || "Tạo slide thất bại" : undefined}
         style={{ width: THUMB_W, height: THUMB_H }}
         className={`overflow-hidden rounded-[8px] bg-white transition ${
           active

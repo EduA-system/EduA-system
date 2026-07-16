@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { slideRoleLabel, type SlideItem, type SlideVisual } from "@/lib/api/slides";
+import { SLIDE_LAYOUT_TEMPLATES, SLIDE_LAYOUT_VARIANTS, type SlideLayoutTemplate } from "@/lib/slide-create/layout-templates";
 
 const VISUAL_TYPES: { value: SlideVisual["type"]; label: string }[] = [
   { value: "none", label: "Không" },
@@ -10,6 +11,17 @@ const VISUAL_TYPES: { value: SlideVisual["type"]; label: string }[] = [
   { value: "formula", label: "Công thức" },
   { value: "table", label: "Bảng" },
 ];
+
+const LAYOUT_LABELS: Record<SlideLayoutTemplate, string> = {
+  title: "Tiêu đề",
+  content: "Nội dung",
+  "text-image": "Chữ và hình",
+  comparison: "So sánh",
+  formula: "Công thức",
+  process: "Quy trình",
+  "exercise-quiz": "Bài tập / trắc nghiệm",
+  summary: "Tổng kết",
+};
 
 const inputClass =
   "w-full rounded-lg border border-[rgba(26,26,46,0.12)] px-3 py-2 text-sm text-[#1a1a2e] outline-none transition focus:border-[#c27aff]/60 focus:ring-1 focus:ring-[#8200db]";
@@ -145,6 +157,45 @@ export function SlideDetailModal({
               onChange={(e) => onChange({ ...slide, title: e.target.value })}
               className={inputClass}
             />
+          </label>
+
+          <label className="flex w-56 flex-col gap-1.5">
+            <span className="text-xs font-medium text-[#5c5b6e]">Bố cục</span>
+            <select
+              value={SLIDE_LAYOUT_TEMPLATES.includes(slide.layoutHint as SlideLayoutTemplate) ? slide.layoutHint : ""}
+              onChange={(e) => onChange({ ...slide, layoutHint: e.target.value || undefined, layoutVariant: undefined })}
+              className={inputClass}
+            >
+              <option value="">Tự chọn theo nội dung</option>
+              {SLIDE_LAYOUT_TEMPLATES.map((template) => (
+                <option key={template} value={template}>{LAYOUT_LABELS[template]}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex w-full flex-col gap-1.5">
+            <span className="text-xs font-medium text-[#5c5b6e]">Kiểu thiết kế</span>
+            <select
+              value={slide.layoutVariant ?? ""}
+              onChange={(e) => {
+                const variant = SLIDE_LAYOUT_VARIANTS.find((item) => item.id === e.target.value);
+                onChange({
+                  ...slide,
+                  layoutVariant: variant?.id || undefined,
+                  layoutHint: variant?.template ?? slide.layoutHint,
+                });
+              }}
+              className={inputClass}
+            >
+              <option value="">Tự chọn thông minh</option>
+              {SLIDE_LAYOUT_TEMPLATES.map((template) => (
+                <optgroup key={template} label={LAYOUT_LABELS[template]}>
+                  {SLIDE_LAYOUT_VARIANTS.filter((variant) => variant.template === template).map((variant) => (
+                    <option key={variant.id} value={variant.id}>{variant.label}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </label>
 
           <label className="flex flex-col gap-1.5">

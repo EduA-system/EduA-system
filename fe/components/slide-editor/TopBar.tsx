@@ -302,7 +302,7 @@ export function TopBar({
             const previousComplete = step === 1 || designSteps[`step${step - 1}` as "step1" | "step2"] === "complete";
             const disabled = status === "complete" || status === "running" || !previousComplete ||
               Object.values(designSteps).some((value) => value === "running");
-            const label = step === 1 ? "Bước 1: Giao diện" : step === 2 ? "Bước 2: Bố cục" : "Bước 3: Nội dung";
+            const label = step === 1 ? "Bước 1: Giao diện" : step === 2 ? "Bước 2: Bố cục mẫu" : "Bước 3: Nội dung";
             return (
               <ActionButton key={step} onClick={() => designSteps.onRunStep(step)} disabled={disabled} title={label} variant="ai">
                 {status === "running" ? <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <SparkIcon />}

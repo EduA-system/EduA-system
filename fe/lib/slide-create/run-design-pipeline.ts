@@ -1,9 +1,10 @@
-import { generateSlideHtmlDesign } from "@/lib/api/slide-design";
+import { fillSlideContent, generateSlideHtmlDesign, type SlideContentFillResponse } from "@/lib/api/slide-design";
 import { slideRoleLabel, type OutlinePart, type SlideItem } from "@/lib/api/slides";
 import { htmlToSlideElements } from "@/components/slide-editor/lib/html-to-slide";
 import { pickBackground, pickDecoIcons } from "@/lib/slide-assets/resolve";
 import type { SlideElement } from "@/components/slide-editor/types";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
+import { buildStructuralTemplateHtml } from "@/lib/slide-create/layout-templates";
 import {
   getSlideDesignContext,
   setSlideDesignContext,
@@ -19,7 +20,7 @@ export type DesignPipelineInput = {
 export type StepCallbacks = {
   onSkinReady?: (skin: { bg: string; elements: SlideElement[] }) => void;
   onSlideFrames?: (slideId: string, result: { bg: string; elements: SlideElement[] }) => void;
-  onSlideReady?: (slideId: string, result: { bg: string; elements: SlideElement[] }, title: string) => void;
+  onSlideReady?: (slideId: string, result: SlideContentFillResponse, title: string) => void;
   onSlideFailed?: (slideId: string, message: string) => void;
 };
 
@@ -60,6 +61,12 @@ function flattenSlides(parts: OutlinePart[]): SlideItem[] {
   return parts.flatMap((part) => part.slides);
 }
 
+function paletteFromSkin(skinHtml: string): string[] {
+  const colors = skinHtml.match(/#[0-9a-fA-F]{6}/g) ?? [];
+  const palette = [...new Set(colors.map((color) => color.toLowerCase()))].slice(0, 6);
+  return palette.length ? palette : ["#2b2926", "#ffffff", "#d97757"];
+}
+
 const SLIDE_CONCURRENCY = 4;
 
 async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
@@ -89,6 +96,7 @@ export async function runDeckSkinStep(
     styleHint,
     skinHtml: step1.html,
     structuralHtmlBySlide: new Map(),
+    contentSlotsBySlide: new Map(),
     bgImageUrl,
     decoIconUrls,
     slidesById: new Map(slides.map((slide) => [slide.id, slide])),
@@ -105,7 +113,7 @@ export async function runDeckSkinStep(
   }
 }
 
-/** Step 2: generate structural HTML for every slide and render zone previews. */
+/** Step 2: apply a deterministic content-layout template and render its preview. */
 export async function runStructuralStep(
   cb: Pick<StepCallbacks, "onSlideFrames" | "onSlideFailed"> = {},
 ): Promise<StepRunResult> {
@@ -115,22 +123,17 @@ export async function runStructuralStep(
   const failedSlideIds: string[] = [];
   await runPool([...ctx.slidesById.values()], SLIDE_CONCURRENCY, async (slide) => {
     try {
-      const response = await generateSlideHtmlDesign({
-        topic: ctx.topic,
-        outline: slideOutlineText(slide),
-        subject: ctx.subject,
-        styleHint: ctx.styleHint,
-        step: "structural",
-        priorHtml: ctx.skinHtml,
-      });
-      if (!response.html.trim()) throw new Error("AI trả về bố cục rỗng.");
-      ctx.structuralHtmlBySlide.set(slide.id, response.html);
+      const { html, template, variant, slots } = buildStructuralTemplateHtml(ctx.skinHtml, slide);
+      ctx.structuralHtmlBySlide.set(slide.id, html);
+      ctx.contentSlotsBySlide.set(slide.id, slots);
+      logSlideApi("design step 2: template applied", { slide: slide.id, template, variant: variant.id });
 
       try {
-        const frames = await htmlToSlideElements(response.html, {
+        const frames = await htmlToSlideElements(html, {
           bgImageUrl: ctx.bgImageUrl,
           decoIconUrls: ctx.decoIconUrls,
-          includeZoneFrames: true,
+          materializeZonePlaceholders: true,
+          headerLabel: [ctx.subject, ctx.topic].filter(Boolean).join(" · "),
         });
         cb.onSlideFrames?.(slide.id, { bg: frames.bg, elements: frames.elements });
       } catch (error) {
@@ -147,7 +150,7 @@ export async function runStructuralStep(
   return { failedSlideIds };
 }
 
-/** Step 3: fill the structural HTML with slide content and convert it for the editor. */
+/** Step 3: ask AI for compact slot content, then update the existing editor elements. */
 export async function runContentFillStep(
   cb: Pick<StepCallbacks, "onSlideReady" | "onSlideFailed"> = {},
 ): Promise<StepRunResult> {
@@ -157,23 +160,18 @@ export async function runContentFillStep(
   const failedSlideIds: string[] = [];
   await runPool([...ctx.slidesById.values()], SLIDE_CONCURRENCY, async (slide) => {
     try {
-      const structuralHtml = ctx.structuralHtmlBySlide.get(slide.id);
-      if (!structuralHtml) throw new Error("Slide chưa có bố cục từ Bước 2.");
-      const response = await generateSlideHtmlDesign({
+      const slots = ctx.contentSlotsBySlide.get(slide.id);
+      if (!slots?.length) throw new Error("Slide chưa có placeholder từ Bước 2.");
+      const response = await fillSlideContent({
         topic: ctx.topic,
         outline: slideOutlineText(slide),
         subject: ctx.subject,
         styleHint: ctx.styleHint,
-        step: "content_fill",
-        priorHtml: structuralHtml,
+        slots,
+        palette: paletteFromSkin(ctx.skinHtml),
       });
-      const { bg, elements, skipped } = await htmlToSlideElements(response.html, {
-        bgImageUrl: ctx.bgImageUrl,
-        decoIconUrls: ctx.decoIconUrls,
-      });
-      if (skipped.length) logSlideApi("design step 3: skipped elements", { slide: slide.id, skipped });
-      if (!elements.length) throw new Error("AI trả về slide rỗng, không có nội dung.");
-      cb.onSlideReady?.(slide.id, { bg, elements }, slide.title);
+      if (!response.slots.length) throw new Error("AI trả về rỗng, không có nội dung slot.");
+      cb.onSlideReady?.(slide.id, response, slide.title);
     } catch (error) {
       failedSlideIds.push(slide.id);
       cb.onSlideFailed?.(slide.id, error instanceof Error ? error.message : String(error));

@@ -88,6 +88,7 @@ export function Canvas({
 
   const scale = zoomMode === "fit" ? fitScale : zoomMode;
   const slideLocked = isSlideLockedForGeneration(slide);
+  const slideFailed = slide?.generationStatus === "failed";
 
   useLayoutEffect(() => {
     scaleRef.current = scale;
@@ -592,6 +593,21 @@ export function Canvas({
               style={{ width: CANVAS_W, height: CANVAS_H }}
             >
               <span className="size-11 animate-spin rounded-full border-[5px] border-[#d97757] border-t-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.55)]" />
+            </div>
+          )}
+
+          {slideFailed && (
+            <div
+              className="absolute inset-0 z-[29999] flex items-center justify-center bg-[#160b0b]/58 p-12"
+              style={{ width: CANVAS_W, height: CANVAS_H }}
+            >
+              <div className="w-full max-w-[640px] rounded-2xl border border-red-200/40 bg-[#fff8f7] p-7 text-left shadow-2xl">
+                <p className="text-sm font-semibold text-[#b42318]">Không thể tạo nội dung cho slide này</p>
+                <p className="mt-2 text-sm leading-6 text-[#4f4943]">
+                  {slide.generationError || "Đã xảy ra lỗi không xác định khi tạo slide."}
+                </p>
+                <p className="mt-4 text-xs text-[#7b7169]">Chạy lại bước hiện tại để thử tạo lại slide này.</p>
+              </div>
             </div>
           )}
         </div>

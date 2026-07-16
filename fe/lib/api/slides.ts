@@ -20,6 +20,8 @@ export type SlideItem = {
   kind: string;
   pedagogicalRole?: string;
   layoutHint?: string;
+  /** Biến thể bố cục FE chọn/lưu trong phiên tạo slide. */
+  layoutVariant?: string;
   /** Nội dung thật của slide, trích từ giáo án ở bước outline (cách B). */
   content?: string;
   /** Thời lượng dự kiến của slide (phút). */
