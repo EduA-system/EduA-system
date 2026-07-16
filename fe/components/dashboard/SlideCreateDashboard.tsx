@@ -1,28 +1,49 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sidebar } from "../layout/Sidebar";
 import { DashboardIcon } from "../ui/DashboardIcon";
-import {
-  buildInlinePlan,
-  lessons,
-  STYLE_OPTIONS,
-  type LessonCard,
-} from "./slideData";
+import { STYLE_OPTIONS } from "./slideData";
 import { writeSlideCreateSession } from "@/lib/slide-create/session";
+import { getLibraryContent, listLibrary, type LibraryContent } from "@/lib/library";
+import { getTiptapDocument, tiptapToStructuredText } from "@/lib/tiptap-to-text";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 type Tab = "library" | "upload";
+type LessonCard = { id: string; title: string; description: string; subject: string; grade: string; updatedAt: string; icon: "book" };
+const subjectLabel: Record<string, string> = { PHYSICS: "Vật lý", CHEMISTRY: "Hóa học", MATH: "Toán học" };
 
 export function SlideCreateDashboard() {
   const router = useRouter();
+  const { authFetch, status: authStatus } = useAuth();
   const [tab, setTab] = useState<Tab>("library");
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "Vật lý" | "Hóa học">("all");
-  const [selectedId, setSelectedId] = useState<string>("bai-19-toc-do-phan-ung");
+  const [filter, setFilter] = useState<string>("all");
+  const [items, setItems] = useState<LibraryContent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [libraryError, setLibraryError] = useState("");
+  const [selectedId, setSelectedId] = useState<string>("");
   const [slideCount, setSlideCount] = useState(12);
   const [styleHint, setStyleHint] = useState<string>(STYLE_OPTIONS[0]);
 
+  const loadLibrary = useCallback(async () => {
+    if (authStatus === "loading") return;
+    if (authStatus !== "authenticated") { setLoading(false); setLibraryError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."); return; }
+    setLoading(true); setLibraryError("");
+    try {
+      const page = await listLibrary(authFetch, new URLSearchParams({ type: "LESSON_PLAN", size: "100", sort: "updatedAt" }));
+      setItems(page.items);
+      setSelectedId((id) => id && page.items.some((item) => item.id === id) ? id : (page.items[0]?.id ?? ""));
+    } catch (error) { setLibraryError(error instanceof Error ? error.message : "Không thể tải thư viện giáo án."); }
+    finally { setLoading(false); }
+  }, [authFetch, authStatus]);
+  useEffect(() => { void loadLibrary(); }, [loadLibrary]);
+
+  const lessons = useMemo<LessonCard[]>(() => items.map((item) => ({
+    id: item.id, title: item.title, description: "Giáo án đã lưu trong thư viện", subject: item.subject ? subjectLabel[item.subject] ?? item.subject : "Chưa phân môn",
+    grade: "Giáo án", updatedAt: new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(new Date(item.updatedAt)), icon: "book",
+  })), [items]);
   const visible = useMemo<LessonCard[]>(() => {
     return lessons.filter((lesson) => {
       const matchesQuery =
@@ -32,24 +53,20 @@ export function SlideCreateDashboard() {
       const matchesFilter = filter === "all" || lesson.subject === filter;
       return matchesQuery && matchesFilter;
     });
-  }, [query, filter]);
+  }, [lessons, query, filter]);
 
   const selected =
     lessons.find((lesson) => lesson.id === selectedId) ?? null;
 
-  function handleCreateSlide() {
+  async function handleCreateSlide() {
     if (!selected) return;
-    writeSlideCreateSession({
-      lessonCardId: selected.id,
-      lessonTitle: selected.title,
-      lessonSummary: selected.description,
-      subject: selected.subject,
-      grade: selected.grade,
-      styleHint,
-      slideCount,
-      inlinePlan: buildInlinePlan(selected),
-    });
-    router.push("/slide-create/outline");
+    try {
+      const detail = await getLibraryContent(authFetch, selected.id);
+      const lessonContent = tiptapToStructuredText(getTiptapDocument(detail.payload));
+      writeSlideCreateSession({ lessonCardId: detail.id, libraryContentId: detail.id, lessonTitle: detail.title, lessonSummary: selected.description,
+        subject: detail.subject ? subjectLabel[detail.subject] ?? detail.subject : "", grade: selected.grade, styleHint, slideCount, lessonContent });
+      router.push("/slide-create/outline");
+    } catch (error) { setLibraryError(error instanceof Error ? error.message : "Không thể đọc giáo án đã chọn."); }
   }
 
   return (
@@ -115,11 +132,7 @@ export function SlideCreateDashboard() {
                   </div>
 
                   {/* Cards */}
-                  <CardGrid
-                    lessons={visible}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                  />
+                  {loading ? <p className="mt-6 text-[13px] text-[#9998be]">Đang tải giáo án…</p> : libraryError ? <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-700">{libraryError} <button type="button" onClick={() => void loadLibrary()} className="underline">Thử lại</button></div> : <CardGrid lessons={visible} selectedId={selectedId} onSelect={setSelectedId} />}
                 </>
               ) : (
                 <UploadPanel />
@@ -134,7 +147,7 @@ export function SlideCreateDashboard() {
             styleHint={styleHint}
             onSlideCountChange={setSlideCount}
             onStyleChange={setStyleHint}
-            onCreate={handleCreateSlide}
+            onCreate={() => void handleCreateSlide()}
           />
         </div>
       </section>
@@ -210,21 +223,20 @@ function FilterSelect({
   value,
   onChange,
 }: {
-  value: "all" | "Vật lý" | "Hóa học";
-  onChange: (value: "all" | "Vật lý" | "Hóa học") => void;
+  value: string;
+  onChange: (value: string) => void;
 }) {
   return (
     <div className="relative h-[38px] w-[150px]">
       <select
         value={value}
-        onChange={(event) =>
-          onChange(event.target.value as "all" | "Vật lý" | "Hóa học")
-        }
+        onChange={(event) => onChange(event.target.value)}
         className="h-full w-full cursor-pointer appearance-none rounded-xl border border-[rgba(26,26,46,0.09)] bg-white pl-[15px] pr-8 text-[12px] font-medium text-[#1a1a2e] focus:outline-none"
       >
         <option value="all">Tất cả môn</option>
         <option value="Vật lý">Vật lý</option>
         <option value="Hóa học">Hóa học</option>
+        <option value="Toán học">Toán học</option>
       </select>
       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#aeacb8]">
         <DashboardIcon name="chevronDown" className="size-3" />
@@ -324,7 +336,7 @@ function LessonCardItem({
   );
 }
 
-function SubjectBadge({ subject }: { subject: "Vật lý" | "Hóa học" }) {
+function SubjectBadge({ subject }: { subject: string }) {
   // Figma uses the purple pill for both subjects (#faf5ff / #8200db)
   return (
     <span className="flex items-center gap-1 rounded-full border border-[#f3e8ff] bg-[#faf5ff] px-2.5 py-[3px] text-[10px] font-medium text-[#8200db]">

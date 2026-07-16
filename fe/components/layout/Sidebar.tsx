@@ -5,7 +5,7 @@ import { useState } from "react";
 import { navGroups } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { hasAnyRole } from "@/lib/auth/permissions";
+import { canAccessRoute, hasAnyRole } from "@/lib/auth/permissions";
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -48,7 +48,9 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false, responsi
   const filteredGroups = navGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.requiredRole || hasAnyRole(user, item.requiredRole)),
+      items: group.items.filter((item) =>
+        (!item.requiredRole || hasAnyRole(user, item.requiredRole)) && canAccessRoute(item.href, user),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 
