@@ -63,12 +63,22 @@ class FillSlideContentUseCaseTests {
         assertNull(result.slots().getFirst().style().color());
     }
 
+    @Test
+    void keepsTextLongerThanTheSuggestedBudget() {
+        String fullText = "Đây là dữ kiện bắt buộc phải được giữ nguyên dù dài hơn ngân sách gợi ý.";
+        when(aiClient.generate(anyString())).thenReturn("{\"slots\":[{\"slotId\":\"hero-1\",\"text\":\"" + fullText + "\"}]}" );
+
+        var result = useCase.execute(request());
+
+        assertEquals(fullText, result.slots().getFirst().text());
+    }
+
     private static SlideContentFillRequest request() {
         return new SlideContentFillRequest(
                 "Newton", "Nội dung nguồn", null, "Vật lý",
                 List.of(
-                        new SlideContentSlotRequest("hero-1", "text", "hero", 90, 3, "slide title"),
-                        new SlideContentSlotRequest("aside-1", "image", "aside", 70, 2, "illustration")
+                        new SlideContentSlotRequest("hero-1", "text", "hero", "title", null, "Định luật II Newton", 90, 3, "slide title"),
+                        new SlideContentSlotRequest("aside-1", "image", "aside", "visual", null, "Sơ đồ lực", 70, 2, "illustration")
                 ),
                 List.of("#2b2926", "#d97757")
         );

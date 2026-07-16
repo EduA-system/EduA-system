@@ -59,12 +59,16 @@ public class SlideDesignPromptBuilder {
             <canvas>
             Exactly 960×540 px. The root MUST be a single &lt;div&gt;:
               &lt;div data-layer="bg"
+                   data-surface-color="#[your light surface hex]"
                    style="position:relative; width:960px; height:540px;
                    overflow:hidden; font-family:Inter,sans-serif;
                    background:[your mood's background]"&gt;
                 ...decoration children only...
               &lt;/div&gt;
             data-layer="bg" on the root signals the L0 background layer.
+            data-surface-color MUST be a light, low-saturation 6-digit hex
+            color chosen by you from the mood. It will be rendered at 60%
+            opacity behind body content, so it must keep dark text readable.
             </canvas>
 
             <mood_palette required="true">
@@ -85,6 +89,9 @@ public class SlideDesignPromptBuilder {
                  Inter.
 
             Use exactly 3 colors total: 1 dominant + 1 accent + 1 neutral.
+            The neutral MUST be the light surface color written to
+            data-surface-color. Even for dark moods, choose a pale neutral
+            such as off-white rather than a second dark color.
             FORBIDDEN: more than 4 colors, pure saturated primaries
             (#ff0000, #00ff00, #ffff00).
             </mood_palette>
@@ -760,6 +767,8 @@ public class SlideDesignPromptBuilder {
         }
         user.append("</request>\n\n");
         user.append("Pick a mood (A–E or invent one). Emit the L0 root background, ");
+        user.append("choose one light neutral content-surface color and write it as ");
+        user.append("data-surface-color=\"#RRGGBB\" on the root, then emit ");
         user.append("1–3 L1 decoration children, AND the L2 HEADER PLACEHOLDER ");
         user.append("that reserves the deck-level masthead bbox. Render the header ");
         user.append("as a dashed-outline debug placeholder INSET from the canvas ");
@@ -892,11 +901,14 @@ public class SlideDesignPromptBuilder {
             prompt.append("- id=").append(slot.id()).append(", kind=").append(slot.kind())
                     .append(", zone=").append(slot.zone()).append(", maxChars=").append(slot.maxChars())
                     .append(", maxLines=").append(slot.maxLines()).append(", hint=").append(slot.hint()).append("\n");
+            prompt.append("  sourceBlockId=").append(slot.sourceBlockId())
+                    .append(", sourcePartId=").append(slot.sourcePartId())
+                    .append(", sourceText=").append(slot.sourceText()).append("\n");
         }
         prompt.append("\nRules:\n")
                 .append("- Use only facts supplied in the outline; do not invent examples, questions, or activities.\n")
                 .append("- Allocate distinct content across repeated zones in listed order; do not repeat text.\n")
-                .append("- Text must be Vietnamese and fit maxChars/maxLines. Use line breaks or bullet character • when useful.\n")
+                .append("- Text must be Vietnamese. maxChars/maxLines are writing guidance only: never truncate a fact or answer. Use line breaks or bullet character • when useful.\n")
                 .append("- For image slots, text must be null and imagePrompt must be a specific English image prompt; do not provide an image URL.\n")
                 .append("- Text style is optional. fontSize must suit the zone, color must be one of ALLOWED COLORS, align is left/center/right.\n")
                 .append("- Return every requested slot and no other slot.\n\n")

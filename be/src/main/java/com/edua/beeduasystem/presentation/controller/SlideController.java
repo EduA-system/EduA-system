@@ -2,6 +2,7 @@ package com.edua.beeduasystem.presentation.controller;
 
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineRequest;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineResponse;
+import com.edua.beeduasystem.presentation.dto.slides.RetryOutlinePartRequest;
 import com.edua.beeduasystem.service.slides.GenerateSlideOutlineUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,5 +24,11 @@ public class SlideController {
     @Operation(summary = "Sinh đề cương slide từ giáo án inline")
     public GenerateOutlineResponse generateOutline(@RequestBody GenerateOutlineRequest request) {
         return generateSlideOutlineUseCase.execute(request);
+    }
+
+    @PostMapping("/retry-outline-part")
+    @Operation(summary = "Thử lại soạn nội dung cho một phần của đề cương")
+    public void retryOutlinePart(@RequestBody RetryOutlinePartRequest request) {
+        generateSlideOutlineUseCase.retryPart(request);
     }
 }

@@ -79,16 +79,15 @@ public class FillSlideContentUseCase {
                 continue;
             }
             result.add(new SlideContentFillSlotResponse(
-                    requestedSlot.id(), cleanText(filled == null ? null : filled.text(), requestedSlot.maxChars()), null,
+                    requestedSlot.id(), cleanText(filled == null ? null : filled.text()), null,
                     cleanStyle(filled == null ? null : filled.style(), requestedSlot.zone(), palette)));
         }
         return new SlideContentFillResponse(result, latencyMs, modelLabel, null);
     }
 
-    private static String cleanText(String text, int maxChars) {
+    private static String cleanText(String text) {
         if (text == null || text.isBlank()) return null;
-        String value = text.strip();
-        return maxChars > 0 && value.length() > maxChars ? value.substring(0, maxChars).strip() : value;
+        return text.strip();
     }
 
     private static String cleanPrompt(String prompt) {
