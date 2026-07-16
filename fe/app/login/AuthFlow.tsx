@@ -18,7 +18,7 @@ function AuthPanel() {
       setError(null);
       try {
         await signIn(credential);
-        router.push("/blog");
+        router.push("/dashboard");
       } catch (err) {
         setError(getAuthErrorMessage(err));
       } finally {
@@ -78,7 +78,7 @@ export function AuthFlow({ fontClassName }: { fontClassName: string }) {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/blog");
+      router.replace("/dashboard");
     }
   }, [router, status]);
 
