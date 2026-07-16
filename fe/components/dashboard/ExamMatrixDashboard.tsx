@@ -21,7 +21,7 @@ export interface ExamMatrixSession {
     allowEssayForGrade12: boolean;
     complianceStatus: "MATCHED" | "DEVIATED";
     warnings: string[];
-    questionTypes: Record<string, { questionCount: number; score: number }>;
+    questionTypes: Record<string, { questionCount: number; pointsPerQuestion: number | null; score: number }>;
     assessmentRatios: { recognition: number; comprehension: number; application: number };
   };
 }

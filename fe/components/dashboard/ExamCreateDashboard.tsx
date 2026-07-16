@@ -34,13 +34,13 @@ const DIFFICULTY_OPTIONS = [
 
 type Difficulty = (typeof DIFFICULTY_OPTIONS)[number]["value"];
 type QuestionTypeKey = "multipleChoice" | "trueFalse" | "shortAnswer" | "essay";
-type QuestionConfig = Record<QuestionTypeKey, { label: string; count: number; score: number; reference: number }>;
+type QuestionConfig = Record<QuestionTypeKey, { label: string; count: number; pointsPerQuestion: number | null; score: number; reference: number }>;
 
 const INITIAL_QUESTION_CONFIG: QuestionConfig = {
-  multipleChoice: { label: "TNKQ nhiều lựa chọn", count: 12, score: 3, reference: 3 },
-  trueFalse: { label: "Đúng – Sai", count: 2, score: 2, reference: 2 },
-  shortAnswer: { label: "Trả lời ngắn", count: 4, score: 2, reference: 2 },
-  essay: { label: "Tự luận", count: 2, score: 3, reference: 3 },
+  multipleChoice: { label: "TNKQ nhiều lựa chọn", count: 12, pointsPerQuestion: 0.25, score: 3, reference: 3 },
+  trueFalse: { label: "Đúng – Sai", count: 2, pointsPerQuestion: 1, score: 2, reference: 2 },
+  shortAnswer: { label: "Trả lời ngắn", count: 4, pointsPerQuestion: 0.5, score: 2, reference: 2 },
+  essay: { label: "Tự luận", count: 2, pointsPerQuestion: null, score: 3, reference: 3 },
 };
 
 const SCOPE_INFO: Record<string, { scope: string; detail: string }> = {
@@ -125,9 +125,15 @@ export function ExamCreateDashboard() {
     }
   }
 
-  function updateQuestionConfig(key: QuestionTypeKey, field: "count" | "score", value: string) {
+  function updateQuestionConfig(key: QuestionTypeKey, field: "count" | "pointsPerQuestion" | "score", value: string) {
     const parsed = Math.max(0, Number(value) || 0);
-    setQuestionConfig((current) => ({ ...current, [key]: { ...current[key], [field]: parsed } }));
+    setQuestionConfig((current) => {
+      const nextItem = { ...current[key], [field]: parsed };
+      if (key !== "essay" && (field === "count" || field === "pointsPerQuestion")) {
+        nextItem.score = nextItem.count * (nextItem.pointsPerQuestion ?? 0);
+      }
+      return { ...current, [key]: nextItem };
+    });
   }
 
   function toggleGrade12Essay() {
@@ -155,7 +161,7 @@ export function ExamCreateDashboard() {
         complianceStatus: warnings.length === 0 ? "MATCHED" : "DEVIATED",
         warnings,
         questionTypes: Object.fromEntries(
-          Object.entries(questionConfig).map(([key, item]) => [key, { questionCount: item.count, score: item.score }]),
+          Object.entries(questionConfig).map(([key, item]) => [key, { questionCount: item.count, pointsPerQuestion: item.pointsPerQuestion, score: item.score }]),
         ),
         assessmentRatios: ratios,
       },
@@ -207,19 +213,20 @@ export function ExamCreateDashboard() {
 
               <div className="mt-6 overflow-x-auto">
                 <table className="w-full min-w-[600px] text-left text-[12px]">
-                  <thead className="border-b border-[#e8e2d9] text-[#6b6b6b]"><tr><th className="pb-2 font-medium">Dạng câu hỏi</th><th className="pb-2 font-medium">Số câu</th><th className="pb-2 font-medium">Tổng điểm</th><th className="pb-2 text-right font-medium">Tỉ lệ</th></tr></thead>
+                  <thead className="border-b border-[#e8e2d9] text-[#6b6b6b]"><tr><th className="pb-2 font-medium">Dạng câu hỏi</th><th className="pb-2 font-medium">Số câu</th><th className="pb-2 font-medium">Điểm / Câu</th><th className="pb-2 font-medium">Tổng điểm</th><th className="pb-2 text-right font-medium">Tỉ lệ</th></tr></thead>
                   <tbody>
                     {(Object.entries(questionConfig) as [QuestionTypeKey, QuestionConfig[QuestionTypeKey]][]).map(([key, item]) => {
                       const essayDisabled = grade === "12" && !allowEssayForGrade12 && key === "essay";
                       return <tr key={key} className="border-b border-[#f0ece7]">
                         <td className="py-3 font-medium text-[#2b2926]">{item.label}</td>
                         <td className="py-3"><NumberInput value={item.count} disabled={essayDisabled} step={1} onChange={(value) => updateQuestionConfig(key, "count", value)} /></td>
-                        <td className="py-3"><NumberInput value={item.score} disabled={essayDisabled} step={0.25} onChange={(value) => updateQuestionConfig(key, "score", value)} /></td>
+                        <td className="py-3">{key === "essay" ? <span className="pl-8 text-[#aaa39a]">—</span> : <NumberInput value={item.pointsPerQuestion ?? 0} disabled={essayDisabled} step={0.05} onChange={(value) => updateQuestionConfig(key, "pointsPerQuestion", value)} />}</td>
+                        <td className="py-3">{key === "essay" ? <NumberInput value={item.score} disabled={essayDisabled} step={0.25} onChange={(value) => updateQuestionConfig(key, "score", value)} /> : <span className="inline-flex h-9 w-24 items-center rounded-lg bg-[#f3efe9] px-3 font-medium text-[#4f4943]">{item.score.toFixed(2)}</span>}</td>
                         <td className="py-3 text-right font-medium text-[#6b6b6b]">{(item.score * 10).toFixed(0)}%</td>
                       </tr>;
                     })}
                   </tbody>
-                  <tfoot><tr className="font-semibold"><td className="pt-3">Tổng</td><td className="pt-3">{Object.values(questionConfig).reduce((sum, item) => sum + item.count, 0)} câu</td><td className={`pt-3 ${Math.abs(totalScore - 10) < 0.001 ? "text-[#27845b]" : "text-[#c65a3a]"}`}>{totalScore.toFixed(2)} / 10 điểm</td><td className="pt-3 text-right">{(totalScore * 10).toFixed(0)}%</td></tr></tfoot>
+                  <tfoot><tr className="font-semibold"><td className="pt-3">Tổng</td><td className="pt-3">{Object.values(questionConfig).reduce((sum, item) => sum + item.count, 0)} câu</td><td className="pt-3 text-[#aaa39a]">—</td><td className={`pt-3 ${Math.abs(totalScore - 10) < 0.001 ? "text-[#27845b]" : "text-[#c65a3a]"}`}>{totalScore.toFixed(2)} / 10 điểm</td><td className="pt-3 text-right">{(totalScore * 10).toFixed(0)}%</td></tr></tfoot>
                 </table>
               </div>
 
