@@ -26,7 +26,7 @@ type StepStates = {
 const INITIAL_STEPS: StepStates = { step1: "idle", step2: "idle", step3: "idle" };
 
 function stepLabel(step: 1 | 2 | 3) {
-  return step === 1 ? "Bước 1: Giao diện deck" : step === 2 ? "Bước 2: Bố cục mẫu" : "Bước 3: Điền nội dung";
+  return step === 1 ? "Bước 1: Giao diện deck" : step === 2 ? "Bước 2: Bố cục động" : "Bước 3: Điền nội dung";
 }
 
 export function SlideMakerClient() {

@@ -1,5 +1,4 @@
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
-import type { SlideContentSlot } from "@/lib/slide-create/layout-templates";
 
 const BE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -52,6 +51,18 @@ export type SlideContentFillRequest = {
   subject?: string;
   slots: SlideContentSlot[];
   palette: string[];
+};
+
+export type SlideContentSlot = {
+  id: string;
+  kind: "text" | "image";
+  zone: string;
+  sourceBlockId: string;
+  sourcePartId?: string;
+  sourceText: string;
+  maxChars: number;
+  maxLines: number;
+  hint: string;
 };
 
 export async function generateSlideHtmlDesign(

@@ -1,5 +1,6 @@
 import type { SlideElement } from "@/components/slide-editor/types";
 import type { SlideContentFillResponse } from "@/lib/api/slide-design";
+import { textBoxMinHeight } from "@/components/slide-editor/lib/text-box";
 
 /** Applies validated AI content to the step-2 placeholder elements only. */
 export function applyContentSlots(elements: SlideElement[], response: SlideContentFillResponse): SlideElement[] {
@@ -10,7 +11,7 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
 
     if (element.type === "text") {
       if (element.contentSlot === "header-1") return element;
-      return {
+      const next = {
         ...element,
         text: fill.text ?? "",
         ...(fill.style?.fontSize != null ? { fontSize: fill.style.fontSize } : {}),
@@ -19,6 +20,7 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
         ...(fill.style?.italic != null ? { italic: fill.style.italic } : {}),
         ...(fill.style?.align ? { align: fill.style.align } : {}),
       };
+      return { ...next, h: Math.max(next.h, textBoxMinHeight(next)) };
     }
 
     if (element.type === "image") {

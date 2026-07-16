@@ -1,10 +1,14 @@
 import { fillSlideContent, generateSlideHtmlDesign, type SlideContentFillResponse } from "@/lib/api/slide-design";
-import { slideRoleLabel, type OutlinePart, type SlideItem } from "@/lib/api/slides";
+import type { OutlinePart, SlideItem } from "@/lib/api/slides";
 import { htmlToSlideElements } from "@/components/slide-editor/lib/html-to-slide";
 import { pickBackground, pickDecoIcons } from "@/lib/slide-assets/resolve";
 import type { SlideElement } from "@/components/slide-editor/types";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
-import { buildStructuralTemplateHtml } from "@/lib/slide-create/layout-templates";
+import { bodyTopFromSkinHtml, slideToLayoutInput } from "@/lib/slide-layout/adapter";
+import { generateSlideLayout } from "@/lib/slide-layout/engine";
+import { renderSlideLayout } from "@/lib/slide-layout/renderer";
+import { randomRunNonce } from "@/lib/slide-layout/random";
+import { blockText } from "@/lib/slide-layout/metrics";
 import {
   getSlideDesignContext,
   setSlideDesignContext,
@@ -29,32 +33,9 @@ export type StepRunResult = {
 };
 
 function slideOutlineText(slide: SlideItem): string {
-  const role = slideRoleLabel(slide);
-  const title = slide.title.trim();
-  const head = role && role !== title ? `${title} (${role})` : title;
-  const sections: string[] = [];
-  const body = slide.content?.trim();
-  if (body) sections.push(`Nội dung hiển thị:\n${body}`);
-  if (slide.requiredFacts?.length) {
-    sections.push(`Dữ kiện bắt buộc:\n${slide.requiredFacts.map((fact) => `- ${fact}`).join("\n")}`);
-  }
-  if (slide.quizItems?.length) {
-    const quizText = slide.quizItems
-      .map((quiz, index) => {
-        const lines = [`${index + 1}. ${quiz.question}`];
-        if (quiz.choices?.length) lines.push(...quiz.choices.map((choice) => `   ${choice}`));
-        if (quiz.answer?.trim()) lines.push(`   Đáp án: ${quiz.answer.trim()}`);
-        if (quiz.explanation?.trim()) lines.push(`   Giải thích: ${quiz.explanation.trim()}`);
-        return lines.join("\n");
-      })
-      .join("\n");
-    sections.push(`Câu hỏi luyện tập / phiếu học tập:\n${quizText}`);
-  }
-  if (slide.visual && slide.visual.type !== "none" && slide.visual.spec.trim()) {
-    sections.push(`Trực quan cần có (${slide.visual.type}):\n${slide.visual.spec.trim()}`);
-  }
-  if (slide.aiNote?.trim()) sections.push(`AI note:\n${slide.aiNote.trim()}`);
-  return sections.length ? `${head}\n\n${sections.join("\n\n")}` : head;
+  const sections = slide.contentPlan.blocks.map((block) => `[${block.id}/${block.kind}] ${blockText(block)}`);
+  if (slide.aiNote?.trim()) sections.push(`AI note: ${slide.aiNote.trim()}`);
+  return [`${slide.title} (${slide.pedagogicalRole})`, ...sections].join("\n\n");
 }
 
 function flattenSlides(parts: OutlinePart[]): SlideItem[] {
@@ -62,9 +43,24 @@ function flattenSlides(parts: OutlinePart[]): SlideItem[] {
 }
 
 function paletteFromSkin(skinHtml: string): string[] {
-  const colors = skinHtml.match(/#[0-9a-fA-F]{6}/g) ?? [];
+  const skinWithoutSurfaceMetadata = skinHtml.replace(/data-surface-color=["']#[0-9a-fA-F]{6}["']/gi, "");
+  const colors = skinWithoutSurfaceMetadata.match(/#[0-9a-fA-F]{6}/g) ?? [];
   const palette = [...new Set(colors.map((color) => color.toLowerCase()))].slice(0, 6);
   return palette.length ? palette : ["#2b2926", "#ffffff", "#d97757"];
+}
+
+function relativeLuminance(hex: string): number {
+  const weights = [0.2126, 0.7152, 0.0722];
+  return [1, 3, 5]
+    .map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255)
+    .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, channel, index) => sum + channel * weights[index], 0);
+}
+
+function surfaceColorFromSkin(skinHtml: string, palette: string[]): string {
+  const selected = skinHtml.match(/data-surface-color=["'](#[0-9a-fA-F]{6})["']/i)?.[1];
+  if (selected) return selected.toLowerCase();
+  return [...palette].sort((left, right) => relativeLuminance(right) - relativeLuminance(left))[0] ?? "#ffffff";
 }
 
 const SLIDE_CONCURRENCY = 4;
@@ -95,7 +91,10 @@ export async function runDeckSkinStep(
     subject,
     styleHint,
     skinHtml: step1.html,
-    structuralHtmlBySlide: new Map(),
+    skinBg: "#ffffff",
+    bodyTop: bodyTopFromSkinHtml(step1.html),
+    deckSeed: `${topic}:${slides.map((slide) => slide.id).join(",")}`,
+    layoutResultsBySlide: new Map(),
     contentSlotsBySlide: new Map(),
     bgImageUrl,
     decoIconUrls,
@@ -104,6 +103,8 @@ export async function runDeckSkinStep(
 
   try {
     const { bg, elements, skipped } = await htmlToSlideElements(step1.html, { bgImageUrl, decoIconUrls });
+    const current = getSlideDesignContext();
+    if (current) current.skinBg = bg;
     if (skipped.length) logSlideApi("design step 1: skin skipped elements", { skipped });
     cb.onSkinReady?.({ bg, elements });
   } catch (error) {
@@ -113,7 +114,7 @@ export async function runDeckSkinStep(
   }
 }
 
-/** Step 2: apply a deterministic content-layout template and render its preview. */
+/** Step 2: generate a constraint-based layout and render editor elements directly. */
 export async function runStructuralStep(
   cb: Pick<StepCallbacks, "onSlideFrames" | "onSlideFailed"> = {},
 ): Promise<StepRunResult> {
@@ -121,27 +122,37 @@ export async function runStructuralStep(
   if (!ctx) throw new Error("Chưa có kết quả Bước 1. Vui lòng chạy Bước 1 trước.");
 
   const failedSlideIds: string[] = [];
+  const runNonce = randomRunNonce();
+  ctx.layoutResultsBySlide.clear();
+  ctx.contentSlotsBySlide.clear();
   await runPool([...ctx.slidesById.values()], SLIDE_CONCURRENCY, async (slide) => {
     try {
-      const { html, template, variant, slots } = buildStructuralTemplateHtml(ctx.skinHtml, slide);
-      ctx.structuralHtmlBySlide.set(slide.id, html);
+      const input = slideToLayoutInput(slide, { deckSeed: ctx.deckSeed, runNonce, bodyTop: ctx.bodyTop });
+      const result = generateSlideLayout(input);
+      const slots = result.slots.map((slot) => ({
+        id: slot.id,
+        kind: slot.kind,
+        zone: slot.zone,
+        sourceBlockId: slot.sourceBlockId,
+        sourcePartId: slot.sourcePartId,
+        sourceText: slot.sourceText,
+        maxChars: slot.maxChars,
+        maxLines: slot.maxLines,
+        hint: slot.contentHint,
+      }));
+      ctx.layoutResultsBySlide.set(slide.id, result);
       ctx.contentSlotsBySlide.set(slide.id, slots);
-      logSlideApi("design step 2: template applied", { slide: slide.id, template, variant: variant.id });
-
-      try {
-        const frames = await htmlToSlideElements(html, {
-          bgImageUrl: ctx.bgImageUrl,
+      logSlideApi("design step 2: dynamic layout generated", { slide: slide.id, family: result.family, topology: result.topology, seed: result.seed });
+      const palette = paletteFromSkin(ctx.skinHtml);
+      cb.onSlideFrames?.(slide.id, {
+        bg: ctx.skinBg,
+        elements: renderSlideLayout(result, {
+          palette,
+          surfaceColor: surfaceColorFromSkin(ctx.skinHtml, palette),
           decoIconUrls: ctx.decoIconUrls,
-          materializeZonePlaceholders: true,
           headerLabel: [ctx.subject, ctx.topic].filter(Boolean).join(" · "),
-        });
-        cb.onSlideFrames?.(slide.id, { bg: frames.bg, elements: frames.elements });
-      } catch (error) {
-        logSlideApi("design step 2: frame preview failed", {
-          slide: slide.id,
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
+        }),
+      });
     } catch (error) {
       failedSlideIds.push(slide.id);
       cb.onSlideFailed?.(slide.id, error instanceof Error ? error.message : String(error));

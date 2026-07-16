@@ -30,4 +30,15 @@ describe("applyContentSlots", () => {
     expect(result[1]).toMatchObject({ type: "image", src: "placeholder", imagePrompt: "free body diagram" });
     expect(result[2]).toEqual(shape);
   });
+
+  it("keeps full text and grows the box instead of truncating it", () => {
+    const longText = "Nội dung đầy đủ ".repeat(80);
+    const result = applyContentSlots([{ ...text, w: 180, h: 40, fontSize: 18 }], {
+      slots: [{ slotId: "hero-1", text: longText, imagePrompt: null, style: null }],
+      latencyMs: 10,
+      modelUsed: "test",
+    });
+    expect(result[0]).toMatchObject({ text: longText });
+    expect(result[0].h).toBeGreaterThan(40);
+  });
 });

@@ -4,13 +4,15 @@ export const SLIDE_CREATE_SESSION_KEY = "eduaSlide:create";
 
 export type SlideGenerationSession = {
   lessonCardId: string;
+  libraryContentId?: string;
   lessonTitle: string;
   lessonSummary: string;
   subject: string;
   grade: string;
   styleHint: string;
   slideCount: number;
-  inlinePlan: InlineLessonPlan;
+  inlinePlan?: InlineLessonPlan;
+  lessonContent: string;
   sessionId?: string;
   topic?: string;
   outlineParts?: import("@/lib/api/slides").OutlinePart[];
