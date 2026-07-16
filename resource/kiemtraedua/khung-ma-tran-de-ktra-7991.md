@@ -29,16 +29,21 @@ Bước 1: Chọn thông tin và cấu hình đề
 Bước 2: Lập Ma trận
   └─ Dùng nguyên cấu trúc và tỉ lệ giáo viên đã xác nhận
   └─ Backend nạp knowledge_json của các bài thuộc phạm vi đã xác định
-  └─ AI phân tích dữ liệu SGK để đề xuất chương, chủ đề và đơn vị kiến thức
-  └─ Phân bổ điểm theo chương/chủ đề
+  └─ Hệ thống tính trọng số chương theo dữ liệu phân phối chương trình
+  └─ Hệ thống khóa quota chương × dạng câu hỏi × mức độ nhận thức
+  └─ AI phân tích dữ liệu SGK và ánh xạ nội dung vào quota đã khóa
 
 Bước 3: Biên soạn Bản đặc tả
   └─ Liệt kê đơn vị kiến thức theo từng chương
   └─ Gán yêu cầu cần đạt (Biết/Hiểu/Vận dụng)
-  └─ Xác định số câu hỏi theo từng mức + dạng thức
+  └─ Ánh xạ số câu/ý đã khóa vào từng đơn vị kiến thức
 
-Bước 4: Soạn đề thi (file riêng)
+Bước 4: Giáo viên xem và xác nhận Ma trận + Bản đặc tả
+  └─ Nếu chỉnh cấu hình hoặc phạm vi, hệ thống tạo phiên bản mới và lập lại
+
+Bước 5: Soạn đề thi (file riêng)
   └─ Dựa vào Ma trận + Bản đặc tả + dữ liệu SGK trong phạm vi để tạo đề
+  └─ Có thể sinh song song theo chương/quota, sau đó hợp nhất và kiểm tra toàn cục
 ```
 
 ### 1.1. Nguyên tắc xác định phạm vi kiến thức SGK
@@ -77,6 +82,37 @@ vi đã chốt để:
 Mức độ chung `EASY`, `MEDIUM`, `HARD` chỉ điều chỉnh cách viết câu hỏi, độ nhiễu,
 số bước suy luận và mức độ liên kết kiến thức. Mức độ chung **không được mở rộng
 hoặc thu hẹp phạm vi bài học** đã xác định từ loại kiểm tra.
+
+### 1.2. Nguồn dữ liệu SGK runtime
+
+Nguồn dữ liệu chính thức của chức năng tạo đề là PostgreSQL cloud được cấu hình
+qua `DB_URL`, không phải các file seed trong repository.
+
+Trạng thái dữ liệu runtime đã được xác nhận ngày 16/07/2026:
+
+- có đủ Vật lí, Hóa học và Toán lớp 10–12;
+- có 12 sách và 277 bài học;
+- `lessons.knowledge_json` của các bài là JSON object có nội dung, không phải
+  `null` hoặc object rỗng; kích thước trung bình khoảng 9–15 KB/bài;
+- API `/api/textbooks` trả catalog đầy đủ của 12 sách.
+
+Dữ liệu seed trong repository hiện chưa đủ để dựng lại toàn bộ database
+runtime:
+
+- `be/src/main/resources/physics-textbooks.json` chỉ chứa 3 sách Vật lí;
+- `be/src/main/resources/lessons/10.json`, `11.json`, `12.json` chỉ chứa dữ liệu
+  Vật lí;
+- `TextbookCatalogImporter` bỏ qua import khi bảng `textbooks` đã có dữ liệu.
+
+Vì vậy, khi lập kế hoạch hoặc triển khai chức năng tạo đề, **không được suy luận
+độ phủ dữ liệu runtime từ các file seed local**. Backend phải lấy catalog và
+`knowledge_json` từ PostgreSQL thông qua `TextbookCatalogRepository`.
+
+`knowledge_json` chỉ được đọc nội bộ tại backend để xác định phạm vi, lập Ma
+trận, Bản đặc tả và sinh câu hỏi. Không tạo endpoint public trả toàn bộ
+`knowledge_json` xuống frontend. API nghiệp vụ tạo Ma trận/Bản đặc tả chỉ trả
+dữ liệu đầu ra đã được chuẩn hóa cùng các mã tham chiếu sách/chương/bài cần
+thiết.
 
 ---
 
@@ -143,6 +179,7 @@ chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuy
     "totalScore": 10.0,
     "knowledgeScope": {
       "resolution": "CURRICULUM | ESTIMATED_BY_ORDER",
+      "scopeVersion": 1,
       "semester": 1,
       "fromWeek": 1,
       "toWeek": 9,
@@ -154,6 +191,7 @@ chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuy
     }
   },
   "configuration": {
+    "configurationVersion": 1,
     "mode": "cv7991 | custom",
     "difficulty": "EASY | MEDIUM | HARD",
     "confirmedByTeacher": true,
@@ -176,6 +214,7 @@ chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuy
       "ratio": 0.20,
       "score": 2.0,
       "itemsPerQuestion": 4,
+      "planningScorePerItem": 0.25,
       "scoringRule": "Chính xác 1 ý: 0.1đ | 2 ý: 0.25đ | 3 ý: 0.5đ | 4 ý: 1.0đ",
       "questionCount": 2
     },
@@ -193,8 +232,11 @@ chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuy
       "ratio": 0.30,
       "score": 3.0,
       "questionCount": 2,
-      "pointsPerSubQuestion": [0.5, 0.5, 0.5],
-      "note": "Chỉ có ở lớp 10, 11. Lớp 12 bỏ dạng này."
+      "subQuestionPointsByQuestion": [
+        [0.5, 0.5, 0.5],
+        [0.5, 0.5, 0.5]
+      ],
+      "note": "Lớp 12 mặc định không có tự luận; chỉ sử dụng khi allowEssayForGrade12 = true."
     }
   },
   "assessmentLevels": {
@@ -205,6 +247,11 @@ chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuy
       "van_dung": 0.30
     }
   },
+  "allocationMetadata": {
+    "allocationPlanVersion": 1,
+    "method": "LARGEST_REMAINDER_WITH_CONSTRAINTS",
+    "algorithmVersion": "1.0"
+  },
   "chapterDistribution": [
     {
       "chapterId": 1,
@@ -212,6 +259,12 @@ chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuy
       "knowledgeUnits": ["Đơn vị 1", "Đơn vị 2"],
       "ratio": 0.25,
       "score": 2.5,
+      "allocationTrace": {
+        "weightSource": "CURRICULUM_PERIODS | CURRICULUM_WEEKS | LEARNING_OUTCOMES | LESSON_COUNT | EQUAL",
+        "rawWeight": 5.0,
+        "normalizedWeight": 0.25,
+        "fallbackUsed": false
+      },
       "questionDistribution": {
         "multipleChoice": { "nhan_biet": 1, "thong_hieu": 1, "van_dung": 0 },
         "trueFalse": { "nhan_biet": 0, "thong_hieu": 1, "van_dung": 1 },
@@ -223,7 +276,49 @@ chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuy
 }
 ```
 
-### 3.2. Giá trị gợi ý theo CV 7991
+### 3.2. Nguyên tắc phân bổ deterministic
+
+Mọi con số trong Ma trận phải do backend tính và khóa trước khi gọi AI. AI chỉ
+được ánh xạ chương, đơn vị kiến thức và yêu cầu cần đạt vào quota đã khóa; AI
+không được tự tăng, giảm hoặc chuyển quota giữa các ô.
+
+Đơn vị phân bổ chuẩn là `chương × dạng câu hỏi × mức độ nhận thức`. Với từng
+dạng câu hỏi, cần phân biệt:
+
+- TNKQ nhiều lựa chọn và Trả lời ngắn: phân bổ theo câu;
+- Đúng–Sai: lưu cả số câu (`questionBlock`) và số ý (`assessmentItem`); mức độ
+  nhận thức có thể được gán ở cấp ý;
+- Tự luận: lưu số câu và điểm từng ý; mức độ nhận thức có thể được gán ở cấp ý.
+
+Tỉ lệ Nhận biết/Thông hiểu/Vận dụng được bảo toàn và kiểm tra **theo điểm**.
+Tỉ lệ số câu theo mức độ có thể khác vì điểm của các dạng câu hỏi không bằng
+nhau.
+
+Với dạng Đúng–Sai có quy tắc chấm lũy tiến, backend dùng `planningScore` cố
+định cho từng ý để lập Ma trận (mặc định chia đều điểm tối đa của câu cho các
+ý). `planningScore` chỉ dùng để phân bổ tỉ lệ mức độ; điểm thực tế của học sinh
+vẫn tính theo `scoringRule`. Không dùng điểm thực tế lũy tiến để tính quota.
+
+Thứ tự chọn dữ liệu để tính trọng số chương:
+
+1. Số tiết thực dạy trong phân phối chương trình;
+2. Số tuần dạy;
+3. Số yêu cầu cần đạt hoặc đơn vị kiến thức;
+4. Số bài;
+5. Chia đều nếu không có các dữ liệu trên.
+
+Backend dùng Largest Remainder Method để tạo quota nguyên sơ bộ, sau đó chạy bộ
+điều chỉnh ràng buộc để đồng thời bảo toàn tổng theo chương, dạng câu hỏi, mức
+độ và điểm. Không chạy Largest Remainder độc lập cho từng chiều vì có thể đúng
+tổng hàng nhưng sai tổng cột. Nếu không tồn tại phương án thỏa tất cả ràng buộc,
+hệ thống phải báo cấu hình không khả thi để giáo viên điều chỉnh, không giao AI
+tự sửa.
+
+Mỗi lần phân bổ phải lưu ít nhất `weightSource`, `rawWeight`,
+`normalizedWeight`, `fallbackUsed`, thuật toán/phiên bản thuật toán và các bước
+điều chỉnh quota để có thể giải thích và tái lập kết quả.
+
+### 3.3. Giá trị gợi ý theo CV 7991
 
 Đây là preset để điền ban đầu và làm mốc đối chiếu, **không phải dữ liệu do AI
 sinh và cũng không phải giá trị khóa cứng trên giao diện**.
@@ -244,7 +339,7 @@ Preset này phải được ghi rõ là **gợi ý theo định hướng cấu t
 không được ghi là yêu cầu bắt buộc của CV 7991. Giáo viên có thể bật
 `Cho phép tự luận` trong phần Nâng cao.
 
-### 3.3. Ví dụ đối chiếu cấu hình giáo viên nhập
+### 3.4. Ví dụ đối chiếu cấu hình giáo viên nhập
 
 Giáo viên nhập:
 
@@ -293,7 +388,7 @@ nhận, Ma trận, Bản đặc tả và Đề kiểm tra đều phải tuân th
           "unitId": 1,
           "unitName": "Tên đơn vị kiến thức",
           "content": "Nội dung chi tiết đơn vị kiến thức",
-          "durationInWeeks": 8,
+          "durationInPeriods": 8,
           "learningOutcomes": {
             "nhan_biet": [
               "Yêu cầu cần đạt mức Nhận biết 1",
@@ -328,30 +423,33 @@ nhận, Ma trận, Bản đặc tả và Đề kiểm tra đều phải tuân th
               "van_dung": 1
             }
           },
-          "totalQuestions": 7,
-          "totalScore": 2.25
+          "totalQuestionBlocks": 6,
+          "totalAssessmentItems": 11,
+          "totalScore": 3.75
         }
       ],
       "chapterSummary": {
-        "totalQuestions": 12,
-        "totalScore": 3.5,
-        "ratioPercent": 35
+        "totalQuestionBlocks": 6,
+        "totalAssessmentItems": 11,
+        "totalScore": 3.75,
+        "ratioPercent": 37.5
       }
     }
   ],
   "grandTotal": {
-    "totalQuestions": 30,
+    "totalQuestionBlocks": 20,
+    "totalAssessmentItems": 30,
     "totalScore": 10.0,
     "byType": {
       "multipleChoice": { "count": 12, "score": 3.0 },
       "trueFalse": { "count": 2, "items": 8, "score": 2.0 },
       "shortAnswer": { "count": 4, "score": 2.0 },
-      "essay": { "count": 3, "score": 3.0 }
+      "essay": { "count": 2, "items": 6, "score": 3.0 }
     },
     "byLevel": {
-      "nhan_biet": { "count": 12, "score": 4.0, "ratio": 0.40 },
-      "thong_hieu": { "count": 10, "score": 3.0, "ratio": 0.30 },
-      "van_dung": { "count": 8, "score": 3.0, "ratio": 0.30 }
+      "nhan_biet": { "itemCount": 12, "score": 4.0, "ratio": 0.40 },
+      "thong_hieu": { "itemCount": 9, "score": 3.0, "ratio": 0.30 },
+      "van_dung": { "itemCount": 9, "score": 3.0, "ratio": 0.30 }
     }
   }
 }
@@ -375,6 +473,7 @@ ExamMatrixDto
  ├─ MetadataDto metadata                    (subject, grade, examType, duration, totalScore)
  │    └─ KnowledgeScopeDto knowledgeScope
  │         ├─ ScopeResolution resolution    (CURRICULUM | ESTIMATED_BY_ORDER)
+ │         ├─ int scopeVersion
  │         ├─ int semester
  │         ├─ int fromWeek
  │         ├─ int toWeek
@@ -382,6 +481,7 @@ ExamMatrixDto
  │         ├─ List<LessonRefDto> lessonRefs (bookCode, chapterCode, lessonCode)
  │         └─ boolean confirmedByTeacher
  ├─ ExamConfigurationDto configuration
+ │    ├─ int configurationVersion
  │    ├─ String mode                        (cv7991 | custom)
  │    ├─ ExamDifficulty difficulty          (EASY | MEDIUM | HARD)
  │    ├─ boolean confirmedByTeacher
@@ -390,17 +490,28 @@ ExamMatrixDto
  │    └─ List<String> warnings
  ├─ Map<String, QuestionTypeDto> questionTypes
  │    ├─ multipleChoice  (label, ratio, score, pointsPerQuestion, questionCount)
- │    ├─ trueFalse       (label, ratio, score, itemsPerQuestion, scoringRule, questionCount)
+ │    ├─ trueFalse       (label, ratio, score, itemsPerQuestion, planningScorePerItem,
+ │    │                    scoringRule, questionCount)
  │    ├─ shortAnswer     (label, ratio, score, pointsPerQuestion, questionCount)
- │    └─ essay           (label, ratio, score, questionCount, pointsPerSubQuestion) [lớp 10-11 only]
+ │    └─ essay           (label, ratio, score, questionCount, subQuestionPointsByQuestion)
+ │                        [Lớp 12 mặc định 0; dùng khi allowEssayForGrade12 = true]
  ├─ AssessmentLevelsDto assessmentLevels
  │    ├─ List<String> levels
  │    └─ Map<String, Double> ratioByLevel
+ ├─ AllocationMetadataDto allocationMetadata
+ │    ├─ int allocationPlanVersion
+ │    ├─ String method
+ │    └─ String algorithmVersion
  └─ List<ChapterDistributionDto> chapterDistribution
       ├─ int chapterId
       ├─ String chapterName
       ├─ double ratio
       ├─ double score
+      ├─ AllocationTraceDto allocationTrace
+      │    ├─ WeightSource weightSource
+      │    ├─ double rawWeight
+      │    ├─ double normalizedWeight
+      │    └─ boolean fallbackUsed
       └─ Map<String, Map<String, Integer>> questionDistribution
 
 ExamSpecificationDto
@@ -413,14 +524,16 @@ ExamSpecificationDto
  │    │    ├─ int unitId
  │    │    ├─ String unitName
  │    │    ├─ String content
- │    │    ├─ int durationInWeeks
+ │    │    ├─ int durationInPeriods
  │    │    ├─ LearningOutcomesDto learningOutcomes   (nhan_biet, thong_hieu, van_dung)
  │    │    ├─ QuestionAllocationDto questionAllocation
- │    │    ├─ int totalQuestions
+ │    │    ├─ int totalQuestionBlocks
+ │    │    ├─ int totalAssessmentItems
  │    │    └─ double totalScore
  │    └─ ChapterSummaryDto chapterSummary
  └─ GrandTotalDto grandTotal
-      ├─ int totalQuestions
+      ├─ int totalQuestionBlocks
+      ├─ int totalAssessmentItems
       ├─ double totalScore
       ├─ Map<String, ByTypeSummary> byType
       └─ Map<String, ByLevelSummary> byLevel
@@ -457,24 +570,42 @@ Call 1  → Hệ thống xác định phạm vi kiến thức
           Lưu ý:  Nếu chỉ suy ra theo sort_order, đánh dấu ESTIMATED_BY_ORDER
                    và yêu cầu giáo viên xác nhận phạm vi ước lượng
 
-Call 2  → Tạo Ma trận
+Call 2A → Tính trọng số và khóa quota (không dùng AI)
           Input:  ExamConfigurationDto đã được giáo viên xác nhận
                   + KnowledgeScopeDto + ExamKnowledgeContext
+          Xử lý:  Chọn nguồn trọng số theo thứ tự ưu tiên
+                   → Largest Remainder tạo quota sơ bộ
+                   → điều chỉnh ràng buộc chương × dạng × mức độ × điểm
+          Output: AllocationPlan đã khóa + AllocationTrace
+          Ràng buộc: Tổng theo dạng, mức độ và điểm phải khớp cấu hình
+                     Nếu không có phương án khả thi, trả lỗi để giáo viên điều chỉnh
+
+Call 2B → Hoàn thiện nội dung Ma trận
+          Input:  AllocationPlan đã khóa + KnowledgeScopeDto + ExamKnowledgeContext
+          Xử lý:  AI đề xuất chương/chủ đề, đơn vị kiến thức và ánh xạ vào quota
           Output: ExamMatrixDto (questionTypes, assessmentLevels, chapterDistribution)
-          Ràng buộc: AI không được thay đổi difficulty, số câu, điểm và tỉ lệ mức độ
+          Ràng buộc: AI không được thay đổi difficulty, quota, số câu, điểm và tỉ lệ
                      AI không được dùng kiến thức ngoài KnowledgeScopeDto
           → publish MATRIX_READY
 
 Call 3  → Tạo Bản đặc tả (dựa vào Ma trận)
           Input:  ExamMatrixDto + ExamKnowledgeContext
           Output: ExamSpecificationDto (chapters → knowledgeUnits → learningOutcomes + questionAllocation)
+          Ràng buộc: questionAllocation phải khớp tuyệt đối AllocationPlan
           → publish SPEC_READY
 
-Call 4..N → Tạo đề thi (file riêng)
+Call 4  → Giáo viên xác nhận Ma trận + Bản đặc tả
+          Input:  ExamMatrixDto + ExamSpecificationDto
+          Output: Phiên bản Ma trận và Bản đặc tả đã xác nhận
+
+Call 5..N → Tạo đề thi song song (file riêng)
           Input:  ExamMatrixDto + ExamSpecificationDto + ExamKnowledgeContext
-          Output: File đề thi
+          Xử lý:  Mỗi tác vụ nhận chapter context + quota bất biến
+                   → sinh câu hỏi theo chương/quota
+                   → hợp nhất và kiểm tra toàn cục
+          Output: File đề thi + đáp án + hướng dẫn chấm
           Ràng buộc: difficulty chỉ điều chỉnh độ phức tạp câu hỏi;
-                     không thay đổi phạm vi SGK
+                     không thay đổi phạm vi SGK hoặc quota đã khóa
           → publish EXAM_READY
 ```
 
@@ -485,15 +616,20 @@ Call 4..N → Tạo đề thi (file riêng)
 | Kiểm tra | Mô tả |
 |---|---|
 | Tổng điểm = 10.0 | Ma trận phải cộng đúng 10 điểm |
-| Tổng câu = Tổng TNKQ + Đ-S + TL ngắn + Tự luận | Số câu phải khớp |
+| Tổng khối câu hỏi | `totalQuestionBlocks` phải bằng tổng số câu của các dạng |
+| Tổng ý đánh giá | `totalAssessmentItems` phải bằng tổng câu đơn + ý Đúng–Sai + ý Tự luận |
 | Đối chiếu cấu trúc tham khảo | Sai lệch `3-2-2-3` tạo cảnh báo cụ thể, không chặn giáo viên tiếp tục |
 | Tổng tỉ lệ mức độ = 100% | Biết + Hiểu + Vận dụng phải cộng đúng 100% |
 | Mức độ đề hợp lệ | `difficulty` bắt buộc thuộc `EASY`, `MEDIUM`, `HARD` |
-| Mỗi đơn vị kiến thức phải có câu hỏi | Không được bỏ trống đơn vị nào |
+| Phủ đơn vị kiến thức đã chọn | Mỗi đơn vị được chọn vào Bản đặc tả phải có ít nhất một câu hoặc một ý; đơn vị không được chọn phải được ghi nhận là không đánh giá trong phiên bản đề |
 | Cảnh báo mức độ tham khảo | So sánh với `40%-30%-30%`; sai lệch được cảnh báo, không tự sửa |
 | Tự luận Lớp 12 | Mặc định 0; chỉ cho nhập khi `allowEssayForGrade12 = true` |
 | Giáo viên đã xác nhận | Không gọi AI tạo Ma trận khi `confirmedByTeacher = false` |
-| Bảo toàn cấu hình | AI trả về khác số câu/điểm/tỉ lệ đã chốt thì kết quả không hợp lệ |
+| Tỉ lệ mức độ theo điểm | Điểm Nhận biết + Thông hiểu + Vận dụng phải khớp tỉ lệ đã xác nhận; không chỉ kiểm tra theo số câu |
+| Điểm quy hoạch Đúng–Sai | Tổng `planningScore` của các ý phải bằng điểm tối đa của khối câu hỏi; `scoringRule` chỉ dùng khi chấm bài |
+| Quota khả thi | Không gọi AI nếu không tồn tại phân bổ nguyên thỏa tổng theo chương, dạng, mức độ và điểm |
+| Bảo toàn cấu hình | AI trả về khác quota/số câu/điểm/tỉ lệ đã chốt thì kết quả không hợp lệ |
+| Tái lập phân bổ | Phải lưu nguồn trọng số, trọng số chuẩn hóa, thuật toán và các bước điều chỉnh quota |
 | Phạm vi theo loại đề | Danh sách bài phải thuộc đúng học kỳ và mốc tuần của loại kiểm tra |
 | Xác nhận phạm vi ước lượng | Không tạo Ma trận nếu phạm vi `ESTIMATED_BY_ORDER` chưa được giáo viên xác nhận |
 | Không vượt phạm vi SGK | Ma trận, Bản đặc tả và câu hỏi chỉ được dùng các bài trong `KnowledgeScopeDto` |
@@ -548,6 +684,7 @@ bổ `3.5-3.0-1.5-2.0` khác preset `3-2-2-3`, trạng thái đối chiếu củ
       "ratio": 0.30,
       "score": 3.0,
       "itemsPerQuestion": 4,
+      "planningScorePerItem": 0.25,
       "scoringRule": "Chính xác 1 ý: 0.1đ | 2 ý: 0.25đ | 3 ý: 0.5đ | 4 ý: 1.0đ",
       "questionCount": 3
     },
@@ -565,7 +702,10 @@ bổ `3.5-3.0-1.5-2.0` khác preset `3-2-2-3`, trạng thái đối chiếu củ
       "ratio": 0.20,
       "score": 2.0,
       "questionCount": 2,
-      "pointsPerSubQuestion": [0.5, 0.5],
+      "subQuestionPointsByQuestion": [
+        [0.5, 0.5],
+        [0.5, 0.5]
+      ],
       "note": "Lớp 11 có tự luận"
     }
   },
@@ -644,8 +784,9 @@ bổ `3.5-3.0-1.5-2.0` khác preset `3-2-2-3`, trạng thái đối chiếu củ
             "shortAnswer": { "nhan_biet": 0, "thong_hieu": 0, "van_dung": 0 },
             "essay": { "nhan_biet": 0, "thong_hieu": 0, "van_dung": 1 }
           },
-          "totalQuestions": 5,
-          "totalScore": 1.75
+          "totalQuestionBlocks": 5,
+          "totalAssessmentItems": 9,
+          "totalScore": 2.75
         }
       ]
     }
@@ -670,18 +811,21 @@ bổ `3.5-3.0-1.5-2.0` khác preset `3-2-2-3`, trạng thái đối chiếu củ
 | Phạm vi sách/chương/bài | Hệ thống | Ánh xạ từ phân phối chương trình; giáo viên chỉ xác nhận nếu là phạm vi ước lượng |
 | Đọc `knowledge_json` | Hệ thống backend | Thực hiện nội bộ qua repository, không trả toàn bộ nội dung SGK xuống frontend |
 | Tính tổng và cảnh báo sai lệch | Hệ thống | Cảnh báo rõ từng dạng, không tự sửa |
+| Tính trọng số chương | Hệ thống backend | Theo thứ tự số tiết → số tuần → YCCĐ/đơn vị → số bài → chia đều; lưu nguồn đã dùng |
+| Khóa quota chương × dạng × mức độ | Hệ thống backend | Largest Remainder kết hợp bộ điều chỉnh ràng buộc; không dùng AI |
 | Chương/chủ đề theo loại đề | AI đề xuất | Chỉ từ `knowledge_json` trong phạm vi hệ thống đã xác định |
 | Đơn vị kiến thức + YCCĐ | AI sinh | Từ `knowledge_json` của các bài thuộc phạm vi |
-| Phân bổ câu hỏi theo đơn vị | AI sinh | Phải khớp cấu hình giáo viên đã chốt |
+| Ánh xạ quota vào đơn vị kiến thức | AI đề xuất | Không được tăng, giảm hoặc chuyển quota đã khóa |
 | Nội dung câu hỏi và đáp án | AI sinh | Bám sát dữ liệu SGK; mức độ chung không làm thay đổi phạm vi |
 
 ---
 
 ## 10. Nguyên tắc xuyên suốt
 
-`Loại đề → Phạm vi SGK → Cấu hình giáo viên xác nhận → Ma trận → Bản đặc tả → Đề kiểm tra`
+`Thông tin + cấu hình giáo viên → Phạm vi SGK → Trọng số → Quota đã khóa → Ma trận → Bản đặc tả → Giáo viên xác nhận → Đề kiểm tra`
 
-Ma trận, Bản đặc tả và Đề kiểm tra phải dùng cùng một phiên bản phạm vi SGK và
-cấu hình. Nếu giáo viên sửa loại đề, mức độ đề, số câu, điểm hoặc tỉ lệ sau khi
-đã sinh Ma trận, hệ thống phải đánh dấu Ma trận, Bản đặc tả và Đề cũ là cần tạo
-lại; không được âm thầm ghép phạm vi hoặc cấu hình mới với kết quả cũ.
+Ma trận, Bản đặc tả và Đề kiểm tra phải dùng cùng một `configurationVersion`,
+`scopeVersion` và phiên bản AllocationPlan. Nếu giáo viên sửa loại đề, mức độ
+đề, số câu, điểm, tỉ lệ hoặc xác nhận lại phạm vi, hệ thống phải tạo phiên bản
+mới và đánh dấu Ma trận, Bản đặc tả, Đề cũ là cần tạo lại; không được âm thầm
+ghép phạm vi, cấu hình hoặc quota mới với kết quả cũ.
