@@ -2,342 +2,208 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { generateExamMatrix, previewExamScope } from "@/lib/exam-matrix/api";
+import { storeExamWorkspace } from "@/lib/exam-matrix/session";
+import type { ExamScope, QuestionTypeKey } from "@/lib/exam-matrix/types";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { Dropdown, type DropdownOption } from "../ui/Dropdown";
 import { Sidebar } from "../layout/Sidebar";
-import { storeExamMatrixSession } from "./ExamMatrixDashboard";
 
 const SUBJECT_OPTIONS: DropdownOption[] = [
   { value: "PHYSICS", label: "Vật lí" },
   { value: "CHEMISTRY", label: "Hóa học" },
   { value: "MATH", label: "Toán" },
 ];
-
-const GRADE_OPTIONS: DropdownOption[] = [
-  { value: "10", label: "Lớp 10" },
-  { value: "11", label: "Lớp 11" },
-  { value: "12", label: "Lớp 12" },
-];
-
+const GRADE_OPTIONS: DropdownOption[] = ["10", "11", "12"].map((value) => ({ value, label: `Lớp ${value}` }));
 const EXAM_TYPE_OPTIONS: DropdownOption[] = [
-  { value: "GIUA_HK1", label: "Giữa HK1" },
-  { value: "CUOI_HK1", label: "Cuối HK1" },
-  { value: "GIUA_HK2", label: "Giữa HK2" },
-  { value: "CUOI_HK2", label: "Cuối HK2" },
+  { value: "GIUA_HK1", label: "Giữa HK1" }, { value: "CUOI_HK1", label: "Cuối HK1" },
+  { value: "GIUA_HK2", label: "Giữa HK2" }, { value: "CUOI_HK2", label: "Cuối HK2" },
 ];
-
-const DIFFICULTY_OPTIONS = [
+const DIFFICULTIES = [
   { value: "EASY", label: "Dễ", description: "Trực tiếp, dữ kiện rõ ràng" },
   { value: "MEDIUM", label: "Vừa", description: "Cân bằng nhận biết và suy luận" },
   { value: "HARD", label: "Khó", description: "Nhiều bước xử lý và liên kết kiến thức" },
 ] as const;
 
-type Difficulty = (typeof DIFFICULTY_OPTIONS)[number]["value"];
-type QuestionTypeKey = "multipleChoice" | "trueFalse" | "shortAnswer" | "essay";
-type QuestionConfig = Record<QuestionTypeKey, { label: string; count: number; pointsPerQuestion: number | null; score: number; reference: number }>;
+type Difficulty = (typeof DIFFICULTIES)[number]["value"];
+type Draft = { label: string; count: number; pointsCents: number | null; scoreCents: number; itemsPerQuestion: number | null; essayParts: number[][] };
+type Drafts = Record<QuestionTypeKey, Draft>;
 
-const INITIAL_QUESTION_CONFIG: QuestionConfig = {
-  multipleChoice: { label: "TNKQ nhiều lựa chọn", count: 12, pointsPerQuestion: 0.25, score: 3, reference: 3 },
-  trueFalse: { label: "Đúng – Sai", count: 2, pointsPerQuestion: 1, score: 2, reference: 2 },
-  shortAnswer: { label: "Trả lời ngắn", count: 4, pointsPerQuestion: 0.5, score: 2, reference: 2 },
-  essay: { label: "Tự luận", count: 2, pointsPerQuestion: null, score: 3, reference: 3 },
+const STANDARD: Drafts = {
+  multipleChoice: { label: "TNKQ nhiều lựa chọn", count: 12, pointsCents: 25, scoreCents: 300, itemsPerQuestion: null, essayParts: [] },
+  trueFalse: { label: "Đúng – Sai", count: 2, pointsCents: 100, scoreCents: 200, itemsPerQuestion: 4, essayParts: [] },
+  shortAnswer: { label: "Trả lời ngắn", count: 4, pointsCents: 50, scoreCents: 200, itemsPerQuestion: null, essayParts: [] },
+  essay: { label: "Tự luận", count: 2, pointsCents: null, scoreCents: 300, itemsPerQuestion: null, essayParts: [[75, 75], [75, 75]] },
 };
-
-const SCOPE_INFO: Record<string, { scope: string; detail: string }> = {
-  GIUA_HK1: {
-    scope: "Khoảng 40–50% nội dung học kỳ I",
-    detail: "Đến khoảng tuần 8–9. Kiến thức từ đầu năm đến giữa học kỳ I.",
-  },
-  CUOI_HK1: {
-    scope: "Toàn bộ học kỳ I",
-    detail: "Tất cả nội dung từ tuần 1 đến hết học kỳ I. Bao gồm ôn tập tổng hợp.",
-  },
-  GIUA_HK2: {
-    scope: "Khoảng 40–50% nội dung học kỳ II",
-    detail: "Đến khoảng tuần 26–27. Kiến thức từ đầu học kỳ II đến giữa kỳ.",
-  },
-  CUOI_HK2: {
-    scope: "Toàn bộ học kỳ II",
-    detail: "Tất cả nội dung từ tuần 15/16 đến hết năm học. Bao gồm ôn tập tổng hợp cuối năm.",
-  },
+const GRADE_12: Drafts = {
+  multipleChoice: { ...STANDARD.multipleChoice, count: 18, scoreCents: 450 },
+  trueFalse: { ...STANDARD.trueFalse, count: 4, scoreCents: 400 },
+  shortAnswer: { ...STANDARD.shortAnswer, count: 6, pointsCents: 25, scoreCents: 150 },
+  essay: { ...STANDARD.essay, count: 0, scoreCents: 0, essayParts: [] },
 };
 
 export function ExamCreateDashboard() {
   const router = useRouter();
-  const [subjectCode, setSubjectCode] = useState<string | null>(null);
+  const [subject, setSubject] = useState<string | null>(null);
   const [grade, setGrade] = useState<string | null>(null);
   const [examType, setExamType] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>("MEDIUM");
-  const [questionConfig, setQuestionConfig] = useState<QuestionConfig>(INITIAL_QUESTION_CONFIG);
+  const [drafts, setDrafts] = useState<Drafts>(() => structuredClone(STANDARD));
   const [ratios, setRatios] = useState({ recognition: 40, comprehension: 30, application: 30 });
   const [allowEssayForGrade12, setAllowEssayForGrade12] = useState(false);
+  const [scope, setScope] = useState<ExamScope | null>(null);
+  const [scopeConfirmed, setScopeConfirmed] = useState(false);
+  const [scopeLoading, setScopeLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const selectedSubject = useMemo(
-    () => SUBJECT_OPTIONS.find((o) => o.value === subjectCode) ?? null,
-    [subjectCode],
-  );
-
-  const selectedGrade = useMemo(
-    () => GRADE_OPTIONS.find((o) => o.value === grade) ?? null,
-    [grade],
-  );
-
-  const selectedExamType = useMemo(
-    () => EXAM_TYPE_OPTIONS.find((o) => o.value === examType) ?? null,
-    [examType],
-  );
-
-  const scopeInfo = useMemo(
-    () => (examType ? SCOPE_INFO[examType] ?? null : null),
-    [examType],
-  );
-
-  const totalScore = useMemo(
-    () => Object.values(questionConfig).reduce((sum, item) => sum + item.score, 0),
-    [questionConfig],
-  );
+  const totalCents = Object.values(drafts).reduce((sum, value) => sum + value.scoreCents, 0);
   const totalRatio = ratios.recognition + ratios.comprehension + ratios.application;
-  const warnings = useMemo(
-    () => Object.values(questionConfig).flatMap((item) => {
-      const difference = item.score - item.reference;
-      if (Math.abs(difference) < 0.001) return [];
-      return [`${item.label} ${difference > 0 ? "vượt" : "thiếu"} ${Math.abs(difference).toFixed(1)} điểm`];
-    }),
-    [questionConfig],
-  );
-  const isConfigurationValid = Math.abs(totalScore - 10) < 0.001 && totalRatio === 100;
-  const canSubmit = Boolean(subjectCode && grade && examType && isConfigurationValid);
+  const essayValid = drafts.essay.essayParts.length === drafts.essay.count
+    && drafts.essay.essayParts.every((parts) => parts.length > 0 && parts.every((point) => point > 0));
+  const warnings = useMemo(() => {
+    const refs: Record<QuestionTypeKey, number> = { multipleChoice: 300, trueFalse: 200, shortAnswer: 200, essay: 300 };
+    return (Object.entries(drafts) as [QuestionTypeKey, Draft][]).flatMap(([key, value]) => {
+      const difference = value.scoreCents - refs[key];
+      return difference === 0 ? [] : [`${value.label} ${difference > 0 ? "vượt" : "thiếu"} ${(Math.abs(difference) / 100).toFixed(2)} điểm`];
+    });
+  }, [drafts]);
+  const configValid = totalCents === 1000 && totalRatio === 100 && essayValid;
 
-  function handleSubjectChange(value: string) {
-    setSubjectCode(value);
-    setGrade(null);
-    setExamType(null);
+  function setGradeValue(value: string) {
+    setGrade(value); setExamType(null); setScope(null); setScopeConfirmed(false); setAllowEssayForGrade12(false);
+    setDrafts(structuredClone(value === "12" ? GRADE_12 : STANDARD));
   }
 
-  function handleGradeChange(value: string) {
-    setGrade(value);
-    setExamType(null);
-    if (value === "12") {
-      setAllowEssayForGrade12(false);
-      setQuestionConfig((current) => ({ ...current, essay: { ...current.essay, count: 0, score: 0 } }));
-    } else if (grade === "12") {
-      setQuestionConfig(INITIAL_QUESTION_CONFIG);
-    }
+  async function setExamTypeValue(value: string) {
+    setExamType(value); setScope(null); setScopeConfirmed(false); setError(null);
+    if (!subject || !grade) return;
+    setScopeLoading(true);
+    try { setScope(await previewExamScope(fetch, subject, Number(grade), value)); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Không tải được phạm vi SGK."); }
+    finally { setScopeLoading(false); }
   }
 
-  function updateQuestionConfig(key: QuestionTypeKey, field: "count" | "pointsPerQuestion" | "score", value: string) {
-    const parsed = Math.max(0, Number(value) || 0);
-    setQuestionConfig((current) => {
-      const nextItem = { ...current[key], [field]: parsed };
-      if (key !== "essay" && (field === "count" || field === "pointsPerQuestion")) {
-        nextItem.score = nextItem.count * (nextItem.pointsPerQuestion ?? 0);
-      }
-      return { ...current, [key]: nextItem };
+  function updateSimple(key: Exclude<QuestionTypeKey, "essay">, field: "count" | "pointsCents", value: number) {
+    setDrafts((current) => {
+      const item = { ...current[key], [field]: Math.max(0, value) };
+      item.scoreCents = item.count * (item.pointsCents ?? 0);
+      return { ...current, [key]: item };
     });
   }
 
-  function toggleGrade12Essay() {
+  function resizeEssay(count: number) {
+    setDrafts((current) => {
+      const essayParts = current.essay.essayParts.map((parts) => [...parts]);
+      while (essayParts.length < count) essayParts.push([50]);
+      essayParts.length = count;
+      return { ...current, essay: essayDraft(essayParts) };
+    });
+  }
+
+  function updateEssayPart(question: number, part: number, cents: number) {
+    setDrafts((current) => {
+      const parts = current.essay.essayParts.map((values) => [...values]);
+      parts[question][part] = Math.max(0, cents);
+      return { ...current, essay: essayDraft(parts) };
+    });
+  }
+
+  function addEssayPart(question: number) {
+    setDrafts((current) => {
+      const parts = current.essay.essayParts.map((values) => [...values]); parts[question].push(50);
+      return { ...current, essay: essayDraft(parts) };
+    });
+  }
+
+  function removeEssayPart(question: number, part: number) {
+    setDrafts((current) => {
+      const parts = current.essay.essayParts.map((values) => [...values]);
+      if (parts[question].length > 1) parts[question].splice(part, 1);
+      return { ...current, essay: essayDraft(parts) };
+    });
+  }
+
+  function toggleEssay() {
     const next = !allowEssayForGrade12;
+    if (!next && drafts.essay.scoreCents > 0 && !window.confirm("Tắt Tự luận sẽ xóa toàn bộ cấu hình điểm từng ý. Tiếp tục?")) return;
     setAllowEssayForGrade12(next);
-    setQuestionConfig((current) => ({
-      ...current,
-      essay: { ...current.essay, count: next ? 2 : 0, score: next ? 3 : 0 },
-    }));
+    setDrafts((current) => ({ ...current, essay: next ? structuredClone(STANDARD.essay) : essayDraft([]) }));
   }
 
-  function handleSubmit() {
-    if (!canSubmit || !selectedSubject || !selectedGrade || !selectedExamType) return;
-    storeExamMatrixSession({
-      subject: subjectCode!,
-      subjectLabel: selectedSubject.label,
-      grade: grade!,
-      examType: examType!,
-      examTypeLabel: selectedExamType.label,
-      configuration: {
-        mode: "cv7991",
-        difficulty,
-        confirmedByTeacher: true,
-        allowEssayForGrade12,
-        complianceStatus: warnings.length === 0 ? "MATCHED" : "DEVIATED",
-        warnings,
-        questionTypes: Object.fromEntries(
-          Object.entries(questionConfig).map(([key, item]) => [key, { questionCount: item.count, pointsPerQuestion: item.pointsPerQuestion, score: item.score }]),
-        ),
-        assessmentRatios: ratios,
-      },
-    });
-    router.push("/exam-matrix");
+  async function submit() {
+    const selectedSubject = SUBJECT_OPTIONS.find((item) => item.value === subject);
+    const selectedType = EXAM_TYPE_OPTIONS.find((item) => item.value === examType);
+    if (!subject || !grade || !examType || !selectedSubject || !selectedType || !scope || !scopeConfirmed || !configValid) return;
+    setSubmitting(true); setError(null);
+    try {
+      const questionTypes = Object.fromEntries((Object.entries(drafts) as [QuestionTypeKey, Draft][]).map(([key, value]) => [key, {
+        label: value.label, questionCount: value.count, itemsPerQuestion: value.itemsPerQuestion,
+        pointsPerQuestionCents: value.pointsCents, scoreCents: value.scoreCents, essayPartPointsCents: value.essayParts,
+      }])) as Record<QuestionTypeKey, { label: string; questionCount: number; itemsPerQuestion: number | null; pointsPerQuestionCents: number | null; scoreCents: number; essayPartPointsCents: number[][] }>;
+      const workspace = await generateExamMatrix(fetch, {
+        subject, subjectLabel: selectedSubject.label, grade: Number(grade), examType, examTypeLabel: selectedType.label,
+        scopeToken: scope.token, scopeConfirmed: true,
+        configuration: { mode: "cv7991", difficulty, confirmedByTeacher: true, allowEssayForGrade12, questionTypes, assessmentRatios: ratios },
+      });
+      storeExamWorkspace(workspace);
+      router.push("/exam-matrix");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không tạo được Ma trận và Bản đặc tả.");
+    } finally { setSubmitting(false); }
   }
 
+  const canSubmit = configValid && Boolean(scope && scopeConfirmed) && !scopeLoading && !submitting;
   return (
     <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] text-[#171717]">
-      <div className="flex h-full w-full">
-        <Sidebar />
-        <section className="relative min-w-0 flex-1 overflow-y-auto bg-[#f5f1ec] px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
-          <div className="mx-auto w-full max-w-[980px]">
-            <div>
-              <div className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 text-[11px] font-medium text-[#d97757]">
-                <DashboardIcon name="aiBadge" />
-                Tạo đề kiểm tra bằng AI
-              </div>
-              <h1 className="font-libertine mt-4 text-[48px] font-normal leading-none text-[#1f1f1f] sm:text-[64px]">
-                Tạo đề kiểm tra
-              </h1>
-              <p className="mt-4 max-w-[440px] text-[13px] leading-[23px] text-[#6b6b6b]">
-                Chọn môn học, lớp và kiểu bài kiểm tra để bắt đầu soạn đề với hỗ trợ của AI.
-              </p>
+      <div className="flex h-full"><Sidebar /><section className="min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8 lg:py-12">
+        <div className="mx-auto max-w-[980px]">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 py-1 text-[11px] font-medium text-[#d97757]"><DashboardIcon name="aiBadge" />Tạo đề kiểm tra bằng AI</span>
+          <h1 className="font-libertine mt-4 text-[48px] leading-none sm:text-[64px]">Tạo đề kiểm tra</h1>
+          <p className="mt-4 text-[13px] text-[#6b6b6b]">Chốt cấu trúc đề và xác nhận phạm vi SGK trước khi lập Ma trận.</p>
+
+          <Card title="1. Thông tin kiểm tra">
+            <div className="flex flex-wrap items-center gap-2">
+              <Dropdown placeholder="Môn học" value={subject} options={SUBJECT_OPTIONS} onChange={(value) => { setSubject(value); setGrade(null); setExamType(null); setScope(null); setScopeConfirmed(false); }} />
+              <span>›</span><Dropdown placeholder="Lớp" value={grade} options={GRADE_OPTIONS} onChange={setGradeValue} disabled={!subject} />
+              <span>›</span><Dropdown placeholder="Kiểu bài" value={examType} options={EXAM_TYPE_OPTIONS} onChange={(value) => void setExamTypeValue(value)} disabled={!grade} />
             </div>
+            <p className="mt-5 text-[12px] font-semibold text-[#4f4943]">Mức độ chung của đề</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">{DIFFICULTIES.map((item) => <button key={item.value} type="button" onClick={() => setDifficulty(item.value)} className={`rounded-lg border px-4 py-3 text-left ${difficulty === item.value ? "border-[#e8724a] bg-[#fff7f1]" : "border-[#e0dbd5] bg-[#faf9f7]"}`}><b className="block text-[13px]">{item.label}</b><span className="text-[11px] text-[#6b6b6b]">{item.description}</span></button>)}</div>
+          </Card>
 
-            <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white px-5 py-[22px] sm:px-7">
-              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                <div>
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
-                    Nhập cấu trúc đề và tỉ lệ
-                  </div>
-                  <p className="mt-1 text-[12px] text-[#85807a]">Preset tham khảo CV 7991: 3–2–2–3 điểm và 40–30–30%.</p>
-                </div>
-                <span className="w-fit rounded-full bg-[#fff4ed] px-3 py-1 text-[11px] font-medium text-[#d97757]">Theo CV 7991</span>
-              </div>
+          <Card title="2. Cấu trúc đề và tỉ lệ">
+            <p className="mb-4 text-[12px] text-[#85807a]">Preset tham khảo CV 7991: 3–2–2–3 điểm và 40–30–30%.</p>
+            <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-[12px]"><thead><tr className="border-b"><th className="pb-2">Dạng câu hỏi</th><th>Số câu</th><th>Điểm/câu</th><th>Tổng điểm</th><th className="text-right">Tỉ lệ</th></tr></thead><tbody>
+              {(Object.entries(drafts) as [QuestionTypeKey, Draft][]).map(([key, item]) => <tr key={key} className="border-b border-[#f0ece7]"><td className="py-3 font-medium">{item.label}</td><td><NumberBox value={item.count} step={1} disabled={key === "essay" && grade === "12" && !allowEssayForGrade12} onChange={(value) => key === "essay" ? resizeEssay(value) : updateSimple(key, "count", value)} /></td><td>{key === "essay" ? <span className="text-[#aaa39a]">Theo từng ý</span> : <NumberBox value={(item.pointsCents ?? 0) / 100} step={0.05} onChange={(value) => updateSimple(key, "pointsCents", Math.round(value * 100))} />}</td><td>{(item.scoreCents / 100).toFixed(2)}đ</td><td className="text-right">{(item.scoreCents / 10).toFixed(0)}%</td></tr>)}
+            </tbody><tfoot><tr className="font-semibold"><td className="pt-3">Tổng</td><td /><td /><td className={totalCents === 1000 ? "pt-3 text-[#27845b]" : "pt-3 text-[#c65a3a]"}>{(totalCents / 100).toFixed(2)} / 10 điểm</td><td /></tr></tfoot></table></div>
+            {grade === "12" && <label className="mt-4 flex gap-3 rounded-lg border bg-[#faf9f7] px-4 py-3 text-[12px]"><input type="checkbox" checked={allowEssayForGrade12} onChange={toggleEssay} /><span><b>Cho phép tự luận lớp 12</b> — tùy chọn nâng cao, mặc định tắt.</span></label>}
+            {drafts.essay.count > 0 && <div className="mt-5 rounded-lg border border-[#e8e2d9] bg-[#faf9f7] p-4"><p className="text-[12px] font-semibold">Điểm từng ý Tự luận</p>{drafts.essay.essayParts.map((parts, q) => <div key={q} className="mt-3 flex flex-wrap items-center gap-2"><b className="w-14 text-[12px]">Câu {q + 1}</b>{parts.map((point, p) => <span key={p} className="flex items-center gap-1"><span className="text-[11px]">{String.fromCharCode(97 + p)})</span><NumberBox value={point / 100} step={0.05} onChange={(value) => updateEssayPart(q, p, Math.round(value * 100))} /><button type="button" title="Xóa ý" onClick={() => removeEssayPart(q, p)} className="text-[#b85c45]">×</button></span>)}<button type="button" onClick={() => addEssayPart(q)} className="rounded border px-2 py-1 text-[11px]">+ Thêm ý</button></div>)}</div>}
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">{(["recognition", "comprehension", "application"] as const).map((level) => <RatioBox key={level} label={level === "recognition" ? "Biết" : level === "comprehension" ? "Hiểu" : "Vận dụng"} value={ratios[level]} onChange={(value) => setRatios((current) => ({ ...current, [level]: value }))} />)}</div>
+            {(!configValid || warnings.length > 0) && <Notice error={!configValid}>{totalCents !== 1000 && <p>Tổng điểm phải bằng 10,00.</p>}{totalRatio !== 100 && <p>Tổng tỉ lệ nhận thức đang là {totalRatio}%.</p>}{!essayValid && <p>Mỗi câu Tự luận phải có ít nhất một ý với điểm lớn hơn 0.</p>}{warnings.map((warning) => <p key={warning}>Sai lệch tham khảo: {warning}.</p>)}</Notice>}
+          </Card>
 
-              <div className="mt-5">
-                <p className="text-[12px] font-semibold text-[#4f4943]">Mức độ chung của đề</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  {DIFFICULTY_OPTIONS.map((option) => (
-                    <button key={option.value} type="button" onClick={() => setDifficulty(option.value)} className={`rounded-lg border px-4 py-3 text-left transition ${difficulty === option.value ? "border-[#e8724a] bg-[#fff7f1]" : "border-[#e0dbd5] bg-[#faf9f7] hover:border-[#c9bfb2]"}`}>
-                      <span className="block text-[13px] font-semibold text-[#1f1f1f]">{option.label}</span>
-                      <span className="mt-1 block text-[11px] leading-[17px] text-[#6b6b6b]">{option.description}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <Card title="3. Xác nhận phạm vi SGK">
+            {scopeLoading && <p className="text-[13px] text-[#6b6b6b]">Đang xác định phạm vi...</p>}
+            {!scopeLoading && !scope && <p className="text-[13px] text-[#6b6b6b]">Chọn đủ môn, lớp và loại kiểm tra để xem phạm vi.</p>}
+            {scope && <><Notice><p><b>Phạm vi ước lượng theo thứ tự bài học.</b> Hệ thống không dùng AI để chọn phạm vi.</p></Notice><div className="mt-3 max-h-64 overflow-y-auto rounded-lg border bg-white p-3 text-[12px]">{groupScope(scope).map(([chapter, lessons]) => <div key={chapter} className="mb-3"><b>{chapter}</b><ul className="mt-1 list-disc pl-5 text-[#6b6b6b]">{lessons.map((lesson) => <li key={`${lesson.bookCode}:${lesson.lessonCode}`}>{lesson.lessonName}</li>)}</ul></div>)}</div><label className="mt-4 flex items-start gap-2 text-[12px]"><input type="checkbox" checked={scopeConfirmed} onChange={(event) => setScopeConfirmed(event.target.checked)} /><span>Tôi đã kiểm tra và xác nhận phạm vi SGK ước lượng này.</span></label></>}
+          </Card>
 
-              <div className="mt-6 overflow-x-auto">
-                <table className="w-full min-w-[600px] text-left text-[12px]">
-                  <thead className="border-b border-[#e8e2d9] text-[#6b6b6b]"><tr><th className="pb-2 font-medium">Dạng câu hỏi</th><th className="pb-2 font-medium">Số câu</th><th className="pb-2 font-medium">Điểm / Câu</th><th className="pb-2 font-medium">Tổng điểm</th><th className="pb-2 text-right font-medium">Tỉ lệ</th></tr></thead>
-                  <tbody>
-                    {(Object.entries(questionConfig) as [QuestionTypeKey, QuestionConfig[QuestionTypeKey]][]).map(([key, item]) => {
-                      const essayDisabled = grade === "12" && !allowEssayForGrade12 && key === "essay";
-                      return <tr key={key} className="border-b border-[#f0ece7]">
-                        <td className="py-3 font-medium text-[#2b2926]">{item.label}</td>
-                        <td className="py-3"><NumberInput value={item.count} disabled={essayDisabled} step={1} onChange={(value) => updateQuestionConfig(key, "count", value)} /></td>
-                        <td className="py-3">{key === "essay" ? <span className="pl-8 text-[#aaa39a]">—</span> : <NumberInput value={item.pointsPerQuestion ?? 0} disabled={essayDisabled} step={0.05} onChange={(value) => updateQuestionConfig(key, "pointsPerQuestion", value)} />}</td>
-                        <td className="py-3">{key === "essay" ? <NumberInput value={item.score} disabled={essayDisabled} step={0.25} onChange={(value) => updateQuestionConfig(key, "score", value)} /> : <span className="inline-flex h-9 w-24 items-center rounded-lg bg-[#f3efe9] px-3 font-medium text-[#4f4943]">{item.score.toFixed(2)}</span>}</td>
-                        <td className="py-3 text-right font-medium text-[#6b6b6b]">{(item.score * 10).toFixed(0)}%</td>
-                      </tr>;
-                    })}
-                  </tbody>
-                  <tfoot><tr className="font-semibold"><td className="pt-3">Tổng</td><td className="pt-3">{Object.values(questionConfig).reduce((sum, item) => sum + item.count, 0)} câu</td><td className="pt-3 text-[#aaa39a]">—</td><td className={`pt-3 ${Math.abs(totalScore - 10) < 0.001 ? "text-[#27845b]" : "text-[#c65a3a]"}`}>{totalScore.toFixed(2)} / 10 điểm</td><td className="pt-3 text-right">{(totalScore * 10).toFixed(0)}%</td></tr></tfoot>
-                </table>
-              </div>
-
-              {grade === "12" && <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-lg border border-[#e8e2d9] bg-[#faf9f7] px-4 py-3 text-[12px]"><input type="checkbox" checked={allowEssayForGrade12} onChange={toggleGrade12Essay} className="size-4 accent-[#e8724a]" /><span><span className="font-semibold text-[#2b2926]">Cho phép tự luận lớp 12</span><span className="ml-2 text-[#6b6b6b]">Tùy chọn nâng cao, mặc định tắt.</span></span></label>}
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <RatioInput label="Biết" value={ratios.recognition} onChange={(value) => setRatios((current) => ({ ...current, recognition: value }))} />
-                <RatioInput label="Hiểu" value={ratios.comprehension} onChange={(value) => setRatios((current) => ({ ...current, comprehension: value }))} />
-                <RatioInput label="Vận dụng" value={ratios.application} onChange={(value) => setRatios((current) => ({ ...current, application: value }))} />
-              </div>
-
-              {(!isConfigurationValid || warnings.length > 0) && <div className={`mt-4 rounded-lg border px-4 py-3 text-[12px] leading-5 ${isConfigurationValid ? "border-[#ead8b2] bg-[#fffaf0] text-[#805f20]" : "border-[#efc8ba] bg-[#fff7f3] text-[#a3482e]"}`}>
-                {Math.abs(totalScore - 10) >= 0.001 && <p>Tổng điểm phải bằng 10 (hiện tại {totalScore.toFixed(2)} điểm).</p>}
-                {totalRatio !== 100 && <p>Tổng tỉ lệ nhận thức phải bằng 100% (hiện tại {totalRatio}%).</p>}
-                {warnings.map((warning) => <p key={warning}>Sai lệch tham khảo: {warning}.</p>)}
-              </div>}
-            </div>
-
-            <div className="mt-9 rounded-[14px] border border-[#d8d1c9] bg-white px-7 py-[22px]">
-              <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
-                <DashboardIcon name="formTitle" />
-                Chọn thông tin kiểm tra
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <Dropdown
-                  placeholder="Môn học"
-                  value={subjectCode}
-                  options={SUBJECT_OPTIONS}
-                  onChange={handleSubjectChange}
-                />
-                <span className="text-[#d8d1c9]">›</span>
-                <Dropdown
-                  placeholder="Lớp"
-                  value={grade}
-                  options={GRADE_OPTIONS}
-                  onChange={handleGradeChange}
-                  disabled={!subjectCode}
-                />
-                <span className="text-[#d8d1c9]">›</span>
-                <Dropdown
-                  placeholder="Kiểu bài"
-                  value={examType}
-                  options={EXAM_TYPE_OPTIONS}
-                  onChange={setExamType}
-                  disabled={!grade}
-                />
-              </div>
-
-              {scopeInfo && (
-                <div className="mt-5 rounded-lg border border-[#e0dbd5] bg-[#faf9f7] px-5 py-4">
-                  <div className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
-                    <svg
-                      className="size-4 text-[#d97757]"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Phạm vi kiến thức — {selectedExamType?.label}
-                  </div>
-                  <p className="mt-2 text-[13px] font-medium text-[#1f1f1f]">
-                    {scopeInfo.scope}
-                  </p>
-                  <p className="mt-1 text-[12px] leading-[20px] text-[#6b6b6b]">
-                    {scopeInfo.detail}
-                  </p>
-                  {selectedSubject && selectedGrade && (
-                    <p className="mt-2 text-[12px] leading-[20px] text-[#6b6b6b]">
-                      Môn <span className="font-medium text-[#1f1f1f]">{selectedSubject.label}</span> — Lớp{" "}
-                      <span className="font-medium text-[#1f1f1f]">{selectedGrade.label}</span>
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                className={`flex h-[46px] w-[168px] items-center justify-center gap-2 rounded-[12px] text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(232,114,74,0.28)] transition ${
-                  canSubmit ? "bg-[#e8724a] hover:bg-[#d96a42]" : "cursor-not-allowed bg-[#e8b9a7]"
-                }`}
-              >
-                <DashboardIcon name="generate" />
-                Tiếp tục
-              </button>
-              <span className="text-center text-[12px] text-[#6b6b6b]">
-                {canSubmit
-                  ? `${selectedSubject?.label} — ${selectedGrade?.label} — ${selectedExamType?.label}`
-                  : "Chọn đủ môn, lớp và kiểu bài để tiếp tục"}
-              </span>
-            </div>
-          </div>
-        </section>
-      </div>
+          {error && <Notice error><p>{error}</p></Notice>}
+          <div className="my-7 flex justify-center"><button type="button" disabled={!canSubmit} onClick={() => void submit()} className="h-12 rounded-xl bg-[#e8724a] px-8 text-[13px] font-medium text-white disabled:cursor-not-allowed disabled:bg-[#e8b9a7]">{submitting ? "Đang lập Ma trận..." : "Tạo Ma trận & Đặc tả"}</button></div>
+        </div>
+      </section></div>
     </main>
   );
 }
 
-function NumberInput({ value, onChange, step, disabled = false }: { value: number; onChange: (value: string) => void; step: number; disabled?: boolean }) {
-  return <input type="number" min="0" step={step} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} className="h-9 w-24 rounded-lg border border-[#d8d1c9] bg-white px-3 text-[12px] outline-none transition focus:border-[#e8724a] disabled:cursor-not-allowed disabled:bg-[#eeeae5] disabled:text-[#aaa39a]" />;
+function essayDraft(parts: number[][]): Draft { return { ...STANDARD.essay, count: parts.length, essayParts: parts, scoreCents: parts.flat().reduce((sum, value) => sum + value, 0) }; }
+function groupScope(scope: ExamScope) {
+  const grouped = new Map<string, ExamScope["lessons"]>();
+  for (const lesson of scope.lessons) { const key = `${lesson.bookName} — ${lesson.chapterName}`; grouped.set(key, [...(grouped.get(key) ?? []), lesson]); }
+  return [...grouped.entries()];
 }
-
-function RatioInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return <label className="rounded-lg border border-[#e0dbd5] bg-[#faf9f7] px-4 py-3"><span className="block text-[12px] font-medium text-[#4f4943]">{label}</span><span className="mt-2 flex items-center gap-2"><input type="number" min="0" max="100" value={value} onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))} className="h-9 min-w-0 flex-1 rounded-lg border border-[#d8d1c9] bg-white px-3 outline-none focus:border-[#e8724a]" /><span className="text-[#6b6b6b]">%</span></span></label>;
-}
+function Card({ title, children }: { title: string; children: React.ReactNode }) { return <section className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white px-5 py-6 sm:px-7"><h2 className="mb-5 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">{title}</h2>{children}</section>; }
+function NumberBox({ value, step, onChange, disabled = false }: { value: number; step: number; onChange: (value: number) => void; disabled?: boolean }) { return <input type="number" min="0" step={step} value={value} disabled={disabled} onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))} className="h-9 w-20 rounded-lg border border-[#d8d1c9] px-2 outline-none focus:border-[#e8724a] disabled:bg-[#eeeae5]" />; }
+function RatioBox({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) { return <label className="rounded-lg border bg-[#faf9f7] p-3 text-[12px]"><span>{label}</span><span className="mt-2 flex items-center gap-2"><NumberBox value={value} step={1} onChange={onChange} />%</span></label>; }
+function Notice({ children, error = false }: { children: React.ReactNode; error?: boolean }) { return <div className={`mt-4 rounded-lg border px-4 py-3 text-[12px] leading-5 ${error ? "border-[#efc8ba] bg-[#fff7f3] text-[#a3482e]" : "border-[#ead8b2] bg-[#fffaf0] text-[#805f20]"}`}>{children}</div>; }

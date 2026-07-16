@@ -6,7 +6,11 @@ import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.exception.MoleculeBuildException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.exception.ExamAllocationException;
+import com.edua.beeduasystem.domain.exception.ExamGenerationException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -15,13 +19,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     private static final String MSG13 =
             "Unsupported file type or file exceeds the maximum size. "
                     + "Allowed: .docx, .pdf, .pptx, .png, .jpg, .jpeg (max 10 MB).";
 
-    public record ErrorResponse(String message) {
+    public record ErrorResponse(String message, String requestId) {
+        public ErrorResponse(String message) {
+            this(message, MDC.get("examRequestId"));
+        }
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -35,6 +43,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("EXAM_REQUEST_INVALID message={}", ex.getMessage());
         return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
     }
 
@@ -51,6 +60,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(LessonPlanGenerationException.class)
     public ResponseEntity<ErrorResponse> handleLessonPlanGeneration(LessonPlanGenerationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ExamAllocationException.class)
+    public ResponseEntity<ErrorResponse> handleExamAllocation(ExamAllocationException ex) {
+        log.warn("EXAM_ALLOCATION_REJECTED message={}", ex.getMessage());
+        return ResponseEntity.unprocessableEntity().body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ExamGenerationException.class)
+    public ResponseEntity<ErrorResponse> handleExamGeneration(ExamGenerationException ex) {
+        log.error("EXAM_GENERATION_FAILED message={}", ex.getMessage(), ex);
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        log.error("UNEXPECTED_REQUEST_FAILURE", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("Lỗi hệ thống không mong đợi. Tra log bằng requestId để xem chi tiết."));
     }
 
     @ExceptionHandler(InvalidTokenException.class)

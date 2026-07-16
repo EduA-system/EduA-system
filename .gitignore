@@ -1,5 +1,6 @@
 # Root-level deps (husky tooling)
 /node_modules/
+/be/logs/
 
 # Environment variables (credentials)
 .env*

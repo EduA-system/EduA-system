@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import {
   getMe,
   loginWithGoogle,
@@ -45,6 +46,7 @@ function withAuthHeaders(init: RequestInit, token: string | null): RequestInit {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
@@ -92,8 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearSession, setSession]);
 
   useEffect(() => {
+    if (pathname === "/exam-create" || pathname === "/exam-matrix") return;
     void refreshToken();
-  }, [refreshToken]);
+  }, [pathname, refreshToken]);
 
   const signIn = useCallback(
     async (idToken: string) => {

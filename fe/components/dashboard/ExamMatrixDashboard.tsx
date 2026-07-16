@@ -1,191 +1,67 @@
 "use client";
 
-import { useState } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
-import { EditorTools, Ruler } from "../LessonEditor";
-import { createEditorExtensions } from "../LessonEditor/editorConfig";
-import { examMatrixTemplateHtml } from "../exam-matrix/ExamMatrixTables";
-
-export interface ExamMatrixSession {
-  subject: string;
-  subjectLabel: string;
-  grade: string;
-  examType: string;
-  examTypeLabel: string;
-  configuration: {
-    mode: "cv7991";
-    difficulty: "EASY" | "MEDIUM" | "HARD";
-    confirmedByTeacher: true;
-    allowEssayForGrade12: boolean;
-    complianceStatus: "MATCHED" | "DEVIATED";
-    warnings: string[];
-    questionTypes: Record<string, { questionCount: number; pointsPerQuestion: number | null; score: number }>;
-    assessmentRatios: { recognition: number; comprehension: number; application: number };
-  };
-}
-
-const SESSION_KEY = "edua:examMatrixSession";
-
-export function storeExamMatrixSession(session: ExamMatrixSession): void {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-export function readExamMatrixSession(): ExamMatrixSession | null {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as ExamMatrixSession) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function clearExamMatrixSession(): void {
-  sessionStorage.removeItem(SESSION_KEY);
-}
+import { ExamMatrixTables } from "../exam-matrix/ExamMatrixTables";
+import { readExamWorkspace, storeExamWorkspace } from "@/lib/exam-matrix/session";
+import { validateWorkspace } from "@/lib/exam-matrix/validation";
+import type { ExamMatrixWorkspace } from "@/lib/exam-matrix/types";
 
 export function ExamMatrixDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiCollapsed, setAiCollapsed] = useState(false);
-  const [margins, setMargins] = useState({ left: 80, right: 80 });
-  const [session] = useState(() => readExamMatrixSession());
+  const [workspace, setWorkspace] = useState<ExamMatrixWorkspace | null>(() => readExamWorkspace());
+  const [saved, setSaved] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const validation = useMemo(() => workspace ? validateWorkspace(workspace) : null, [workspace]);
 
-  const [extensions] = useState(() => createEditorExtensions());
-  const editor = useEditor({
-    extensions,
-    content: examMatrixTemplateHtml(),
-    immediatelyRender: false,
-    editorProps: {
-      attributes: {
-        class: "lesson-document-editor exam-matrix-editor min-h-[calc(100vh-188px)] text-[#2b2926] outline-none",
-      },
-    },
-  });
+  useEffect(() => {
+    if (!workspace) return;
+    const timer = window.setTimeout(() => storeExamWorkspace(workspace), 250);
+    return () => window.clearTimeout(timer);
+  }, [workspace]);
 
-  return (
-    <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
-      <div className="flex h-full w-full">
-        <Sidebar collapsed={sidebarCollapsed} />
+  function save() {
+    if (!workspace) return;
+    storeExamWorkspace(workspace); setSaved(true);
+    window.setTimeout(() => setSaved(false), 1800);
+  }
 
-        <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
-            <div className="@container flex h-12 items-center gap-2 px-3">
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed((current) => !current)}
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#e8e2d9] bg-white text-[#6b6b6b] shadow-sm transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
-                aria-label={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
-              >
-                <SidebarToggleIcon />
-              </button>
+  if (!workspace) {
+    return <main className="grid min-h-screen place-items-center bg-[#f7f5f2] p-6"><div className="max-w-md rounded-2xl border border-[#e0d9d0] bg-white p-8 text-center shadow-sm"><h1 className="text-xl font-semibold">Chưa có Ma trận trong phiên này</h1><p className="mt-3 text-sm leading-6 text-[#6b6b6b]">Hãy quay lại bước cấu hình, xác nhận phạm vi SGK và tạo Ma trận/Bản đặc tả.</p><Link href="/exam-create" className="mt-5 inline-flex rounded-lg bg-[#d97757] px-4 py-2 text-sm font-medium text-white">Quay lại tạo đề</Link></div></main>;
+  }
 
-              <div className="flex shrink-0 items-center gap-1.5">
-                <HeaderActionButton label="Lưu">
-                  <SaveIcon />
-                </HeaderActionButton>
-                <HeaderActionButton label="Tạo đề thi" primary>
-                  <CreateExamIcon />
-                </HeaderActionButton>
-              </div>
-
-              <div className="flex min-w-0 flex-1 items-center justify-center px-2">
-                <EditorTools editor={editor} />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setAiCollapsed((current) => !current)}
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#e8e2d9] bg-white text-[#d97757] shadow-sm transition hover:bg-[#fff4ed]"
-                aria-label={aiCollapsed ? "Show AI sidebar" : "Hide AI sidebar"}
-              >
-                <AiToggleIcon />
-              </button>
-            </div>
-            <Ruler bare margins={margins} onMarginsChange={setMargins} />
-          </header>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-[1280px]">
-              {session && (
-                <p className="mb-4 text-[13px] text-[#6b6b6b]">
-                  {session.subjectLabel} — Lớp {session.grade} — {session.examTypeLabel}
-                </p>
-              )}
-              <div
-                className="bg-white py-10 shadow-[0_1px_2px_rgba(43,41,38,0.06),0_4px_14px_rgba(43,41,38,0.05)]"
-                style={{ paddingLeft: margins.left, paddingRight: margins.right }}
-              >
-                <EditorContent editor={editor} />
-              </div>
-            </div>
+  return <main className="relative h-screen w-full overflow-hidden bg-[#f7f5f2] text-[#2b2926]">
+    <div className="flex h-full"><Sidebar collapsed={sidebarCollapsed} />
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-sm">
+          <div className="flex h-12 items-center gap-2 px-3">
+            <button type="button" onClick={() => setSidebarCollapsed((value) => !value)} className="header-icon" aria-label={sidebarCollapsed ? "Hiện thanh bên" : "Ẩn thanh bên"}>☰</button>
+            <button type="button" onClick={save} className="header-action">{saved ? "Đã lưu phiên" : "Lưu"}</button>
+            <Link href="/exam-create" className="header-action">Sửa cấu hình</Link>
+            <div className="min-w-0 flex-1 text-center text-[12px] text-[#6b6b6b]">{workspace.metadata.subjectLabel} — Lớp {workspace.metadata.grade} — {workspace.metadata.examTypeLabel}</div>
+            <button type="button" disabled={!validation?.valid} onClick={() => setNotice("Chức năng sinh đề thi sẽ được triển khai ở giai đoạn tiếp theo.")} className="header-action primary disabled:cursor-not-allowed disabled:opacity-40" title={!validation?.valid ? "Cần sửa hết lỗi trước khi tạo đề" : "Tạo đề thi"}>Tạo đề thi</button>
+            <button type="button" onClick={() => setAiCollapsed((value) => !value)} className="header-icon text-[#d97757]" aria-label="Bật/tắt trợ lý AI">✦</button>
           </div>
-        </section>
-
-        <AssistantPanel collapsed={aiCollapsed} />
-      </div>
-    </main>
-  );
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="mx-auto max-w-[1800px]">
+          <section className="mb-5 grid gap-3 rounded-xl border border-[#e0d9d0] bg-white p-4 text-[12px] sm:grid-cols-4">
+            <LockedInfo label="Độ khó" value={difficultyLabel(workspace.configuration.difficulty)} />
+            <LockedInfo label="Cấu trúc" value={Object.values(workspace.configuration.questionTypes).map((value) => `${value.questionCount} ${value.label}`).join(" · ")} />
+            <LockedInfo label="Tỉ lệ nhận thức" value={`${workspace.configuration.assessmentRatios.recognition}% – ${workspace.configuration.assessmentRatios.comprehension}% – ${workspace.configuration.assessmentRatios.application}%`} />
+            <LockedInfo label="Phạm vi" value={`${workspace.scope.lessons.length} bài · ước lượng đã xác nhận`} />
+          </section>
+          {workspace.configuration.warnings.length > 0 && <div className="mb-4 rounded-lg border border-[#ead8b2] bg-[#fffaf0] px-4 py-3 text-xs text-[#805f20]">{workspace.configuration.warnings.map((warning) => <p key={warning}>Sai lệch CV 7991: {warning}.</p>)}</div>}
+          {validation && !validation.valid && <div className="mb-5 rounded-lg border border-[#efc8ba] bg-[#fff7f3] px-4 py-3 text-xs leading-5 text-[#a3482e]"><b>Chưa thể tạo đề:</b>{validation.errors.slice(0, 8).map((error) => <p key={error}>• {error}</p>)}{validation.errors.length > 8 && <p>• Và {validation.errors.length - 8} lỗi khác.</p>}</div>}
+          {notice && <div className="mb-5 flex items-center justify-between rounded-lg border border-[#c9decf] bg-[#f2fbf5] px-4 py-3 text-xs text-[#276844]"><span>{notice}</span><button type="button" onClick={() => setNotice(null)}>×</button></div>}
+          <div className="rounded-xl bg-white p-5 shadow-sm sm:p-8"><ExamMatrixTables workspace={workspace} onChange={setWorkspace} /></div>
+        </div></div>
+      </section><AssistantPanel collapsed={aiCollapsed} />
+    </div>
+  </main>;
 }
 
-function HeaderActionButton({
-  children,
-  label,
-  primary = false,
-}: {
-  children: React.ReactNode;
-  label: string;
-  primary?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium shadow-sm transition @min-[1100px]:px-3 ${
-        primary
-          ? "border border-[#d97757] bg-[#d97757] text-white hover:bg-[#c96545]"
-          : "border border-[#e8e2d9] bg-white text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
-      }`}
-    >
-      {children}
-      <span className="hidden @min-[1100px]:inline">{label}</span>
-    </button>
-  );
-}
-
-function SidebarToggleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect x="2.5" y="3" width="11" height="10" rx="2" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M6 3v10" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
-  );
-}
-
-function SaveIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M5 4h12l2 2v14H5V4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M8 4v6h8V4M8 20v-6h8v6" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CreateExamIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function AiToggleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-    </svg>
-  );
-}
+function LockedInfo({ label, value }: { label: string; value: string }) { return <div className="rounded-lg bg-[#f5f2ee] px-3 py-2" title="Đã xác nhận ở bước Cấu hình đề"><span className="block text-[10px] font-semibold uppercase text-[#8a847d]">{label} · Đã khóa</span><span className="mt-1 block line-clamp-2 font-medium">{value}</span></div>; }
+function difficultyLabel(value: string) { return value === "EASY" ? "Dễ" : value === "HARD" ? "Khó" : "Vừa"; }
