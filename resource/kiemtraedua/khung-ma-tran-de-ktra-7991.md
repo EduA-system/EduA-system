@@ -19,6 +19,7 @@ Bước 1: Chọn thông tin và cấu hình đề
   └─ Môn học (Toán / Lý / Hoá)
   └─ Lớp (10 / 11 / 12)
   └─ Loại kiểm tra (Giữa HK1 / Giữa HK2 / Cuối HK1 / Cuối HK2)
+  └─ Hệ thống tự xác định phạm vi SGK theo loại kiểm tra và phân phối chương trình
   └─ Mức độ đề (Dễ / Vừa / Khó)
   └─ Giáo viên nhập số câu + điểm/câu cho từng dạng
   └─ Giáo viên nhập tỉ lệ Biết / Hiểu / Vận dụng
@@ -27,6 +28,8 @@ Bước 1: Chọn thông tin và cấu hình đề
 
 Bước 2: Lập Ma trận
   └─ Dùng nguyên cấu trúc và tỉ lệ giáo viên đã xác nhận
+  └─ Backend nạp knowledge_json của các bài thuộc phạm vi đã xác định
+  └─ AI phân tích dữ liệu SGK để đề xuất chương, chủ đề và đơn vị kiến thức
   └─ Phân bổ điểm theo chương/chủ đề
 
 Bước 3: Biên soạn Bản đặc tả
@@ -35,8 +38,45 @@ Bước 3: Biên soạn Bản đặc tả
   └─ Xác định số câu hỏi theo từng mức + dạng thức
 
 Bước 4: Soạn đề thi (file riêng)
-  └─ Dựa vào Ma trận + Bản đặc tả để tạo đề
+  └─ Dựa vào Ma trận + Bản đặc tả + dữ liệu SGK trong phạm vi để tạo đề
 ```
+
+### 1.1. Nguyên tắc xác định phạm vi kiến thức SGK
+
+Giáo viên **không phải chọn thủ công từng sách, chương hoặc bài**. Giáo viên chỉ
+chọn môn, lớp và loại kiểm tra; hệ thống tự ánh xạ các lựa chọn đó sang phạm vi
+SGK tương ứng:
+
+| Loại kiểm tra | Phạm vi kiến thức |
+|---|---|
+| Giữa HK1 | Từ đầu năm đến khoảng tuần 8–9, tương đương khoảng 40–50% nội dung học kỳ I |
+| Cuối HK1 | Toàn bộ nội dung thuộc học kỳ I |
+| Giữa HK2 | Từ đầu học kỳ II đến khoảng tuần 26–27, tương đương khoảng 40–50% nội dung học kỳ II |
+| Cuối HK2 | Toàn bộ nội dung thuộc học kỳ II |
+
+Phạm vi phải được xác định bằng dữ liệu phân phối chương trình do hệ thống quản
+lý, gồm tối thiểu môn, lớp, sách, bài học, học kỳ và tuần dạy. Không giao hoàn
+toàn cho AI tự ước lượng “40–50%” từ toàn bộ cuốn sách vì kết quả có thể thay
+đổi giữa các lần sinh.
+
+Nếu chưa có dữ liệu tuần dạy, hệ thống có thể tạm xác định phạm vi theo
+`sort_order` của chương/bài, nhưng phải đánh dấu đây là phạm vi ước lượng để
+giáo viên biết và xác nhận trước khi lập Ma trận.
+
+Sau khi xác định phạm vi, backend dùng mã sách, mã chương và mã bài nội bộ để
+đọc `lessons.knowledge_json` qua
+`TextbookCatalogRepository.findLessonKnowledge(...)`. Nội dung SGK đầy đủ không
+cần trả xuống frontend. AI chỉ nhận `knowledge_json` của các bài nằm trong phạm
+vi đã chốt để:
+
+- nhận diện chương/chủ đề và đơn vị kiến thức;
+- trích xuất yêu cầu cần đạt;
+- phân loại nội dung theo Nhận biết, Thông hiểu và Vận dụng;
+- lập Ma trận, Bản đặc tả và sinh câu hỏi bám sát SGK.
+
+Mức độ chung `EASY`, `MEDIUM`, `HARD` chỉ điều chỉnh cách viết câu hỏi, độ nhiễu,
+số bước suy luận và mức độ liên kết kiến thức. Mức độ chung **không được mở rộng
+hoặc thu hẹp phạm vi bài học** đã xác định từ loại kiểm tra.
 
 ---
 
@@ -100,7 +140,18 @@ chỉ đưa ra gợi ý mặc định, không chặn cứng quyết định chuy
     "grade": "10 | 11 | 12",
     "examType": "giua_hk1 | giua_hk2 | cuoi_hk1 | cuoi_hk2",
     "duration": "45 phút | 60 phút | 90 phút",
-    "totalScore": 10.0
+    "totalScore": 10.0,
+    "knowledgeScope": {
+      "resolution": "CURRICULUM | ESTIMATED_BY_ORDER",
+      "semester": 1,
+      "fromWeek": 1,
+      "toWeek": 9,
+      "bookCodes": ["LI10"],
+      "lessonRefs": [
+        { "bookCode": "LI10", "chapterCode": "C1", "lessonCode": "b1" }
+      ],
+      "confirmedByTeacher": true
+    }
   },
   "configuration": {
     "mode": "cv7991 | custom",
@@ -322,6 +373,14 @@ nhận, Ma trận, Bản đặc tả và Đề kiểm tra đều phải tuân th
 ```
 ExamMatrixDto
  ├─ MetadataDto metadata                    (subject, grade, examType, duration, totalScore)
+ │    └─ KnowledgeScopeDto knowledgeScope
+ │         ├─ ScopeResolution resolution    (CURRICULUM | ESTIMATED_BY_ORDER)
+ │         ├─ int semester
+ │         ├─ int fromWeek
+ │         ├─ int toWeek
+ │         ├─ List<String> bookCodes
+ │         ├─ List<LessonRefDto> lessonRefs (bookCode, chapterCode, lessonCode)
+ │         └─ boolean confirmedByTeacher
  ├─ ExamConfigurationDto configuration
  │    ├─ String mode                        (cv7991 | custom)
  │    ├─ ExamDifficulty difficulty          (EASY | MEDIUM | HARD)
@@ -383,26 +442,39 @@ QuestionAllocationDto
 ## 6. Pipeline sinh Ma trận + Bản đặc tả
 
 ```
-Call 0  → Giáo viên cấu hình và xác nhận cấu trúc đề
+Call 0  → Giáo viên chọn thông tin và cấu hình đề
           Input:  subject + grade + examType + difficulty
                   + số câu + điểm + tỉ lệ mức độ
           Output: ExamConfigurationDto đã tính tổng + cảnh báo đối chiếu
           Điều kiện: confirmedByTeacher = true
 
-Call 1  → Tạo Ma trận
+Call 1  → Hệ thống xác định phạm vi kiến thức
+          Input:  subject + grade + examType
+          Xử lý:  ExamScopeResolver ánh xạ theo phân phối chương trình
+                   → bookCode/chapterCode/lessonCode
+                   → TextbookCatalogRepository.findLessonKnowledge(...)
+          Output: KnowledgeScopeDto + ExamKnowledgeContext từ knowledge_json
+          Lưu ý:  Nếu chỉ suy ra theo sort_order, đánh dấu ESTIMATED_BY_ORDER
+                   và yêu cầu giáo viên xác nhận phạm vi ước lượng
+
+Call 2  → Tạo Ma trận
           Input:  ExamConfigurationDto đã được giáo viên xác nhận
+                  + KnowledgeScopeDto + ExamKnowledgeContext
           Output: ExamMatrixDto (questionTypes, assessmentLevels, chapterDistribution)
           Ràng buộc: AI không được thay đổi difficulty, số câu, điểm và tỉ lệ mức độ
+                     AI không được dùng kiến thức ngoài KnowledgeScopeDto
           → publish MATRIX_READY
 
-Call 2  → Tạo Bản đặc tả (dựa vào Ma trận)
-          Input:  ExamMatrixDto + chương trình môn học (syllabus)
+Call 3  → Tạo Bản đặc tả (dựa vào Ma trận)
+          Input:  ExamMatrixDto + ExamKnowledgeContext
           Output: ExamSpecificationDto (chapters → knowledgeUnits → learningOutcomes + questionAllocation)
           → publish SPEC_READY
 
-Call 3..N → Tạo đề thi (file riêng)
-          Input:  ExamMatrixDto + ExamSpecificationDto
+Call 4..N → Tạo đề thi (file riêng)
+          Input:  ExamMatrixDto + ExamSpecificationDto + ExamKnowledgeContext
           Output: File đề thi
+          Ràng buộc: difficulty chỉ điều chỉnh độ phức tạp câu hỏi;
+                     không thay đổi phạm vi SGK
           → publish EXAM_READY
 ```
 
@@ -422,6 +494,11 @@ Call 3..N → Tạo đề thi (file riêng)
 | Tự luận Lớp 12 | Mặc định 0; chỉ cho nhập khi `allowEssayForGrade12 = true` |
 | Giáo viên đã xác nhận | Không gọi AI tạo Ma trận khi `confirmedByTeacher = false` |
 | Bảo toàn cấu hình | AI trả về khác số câu/điểm/tỉ lệ đã chốt thì kết quả không hợp lệ |
+| Phạm vi theo loại đề | Danh sách bài phải thuộc đúng học kỳ và mốc tuần của loại kiểm tra |
+| Xác nhận phạm vi ước lượng | Không tạo Ma trận nếu phạm vi `ESTIMATED_BY_ORDER` chưa được giáo viên xác nhận |
+| Không vượt phạm vi SGK | Ma trận, Bản đặc tả và câu hỏi chỉ được dùng các bài trong `KnowledgeScopeDto` |
+| Mức độ không đổi phạm vi | `EASY`, `MEDIUM`, `HARD` không được thêm hoặc loại bài khỏi phạm vi đã chốt |
+| Nội dung SGK tồn tại | Mọi bài trong phạm vi phải có `knowledge_json`; thiếu dữ liệu phải báo lỗi hoặc yêu cầu điều chỉnh phạm vi |
 
 ---
 
@@ -589,19 +666,22 @@ bổ `3.5-3.0-1.5-2.0` khác preset `3-2-2-3`, trạng thái đối chiếu củ
 | Tỉ lệ Biết/Hiểu/Vận dụng | **Giáo viên** | Tổng bắt buộc bằng 100% |
 | Mức độ đề Dễ/Vừa/Khó | **Giáo viên** | Mặc định `MEDIUM`; định hướng cách AI viết câu hỏi |
 | Cho phép tự luận ở Lớp 12 | **Giáo viên** | Toggle Nâng cao, mặc định tắt |
+| Môn, lớp, loại kiểm tra | **Giáo viên** | Đầu vào để hệ thống xác định phạm vi SGK |
+| Phạm vi sách/chương/bài | Hệ thống | Ánh xạ từ phân phối chương trình; giáo viên chỉ xác nhận nếu là phạm vi ước lượng |
+| Đọc `knowledge_json` | Hệ thống backend | Thực hiện nội bộ qua repository, không trả toàn bộ nội dung SGK xuống frontend |
 | Tính tổng và cảnh báo sai lệch | Hệ thống | Cảnh báo rõ từng dạng, không tự sửa |
-| Chương/chủ đề theo lớp | AI đề xuất | Dựa trên syllabus, giáo viên có thể duyệt |
-| Đơn vị kiến thức + YCCĐ | AI sinh | Từ chương trình/tài liệu đầu vào |
+| Chương/chủ đề theo loại đề | AI đề xuất | Chỉ từ `knowledge_json` trong phạm vi hệ thống đã xác định |
+| Đơn vị kiến thức + YCCĐ | AI sinh | Từ `knowledge_json` của các bài thuộc phạm vi |
 | Phân bổ câu hỏi theo đơn vị | AI sinh | Phải khớp cấu hình giáo viên đã chốt |
-| Nội dung câu hỏi và đáp án | AI sinh | Tạo sau Ma trận và Bản đặc tả |
+| Nội dung câu hỏi và đáp án | AI sinh | Bám sát dữ liệu SGK; mức độ chung không làm thay đổi phạm vi |
 
 ---
 
 ## 10. Nguyên tắc xuyên suốt
 
-`Cấu hình giáo viên xác nhận → Ma trận → Bản đặc tả → Đề kiểm tra`
+`Loại đề → Phạm vi SGK → Cấu hình giáo viên xác nhận → Ma trận → Bản đặc tả → Đề kiểm tra`
 
-Ba sản phẩm phía sau phải dùng cùng một phiên bản cấu hình. Nếu giáo viên sửa
-mức độ đề, số câu, điểm hoặc tỉ lệ sau khi đã sinh Ma trận, hệ thống phải đánh
-dấu Ma trận, Bản đặc tả và Đề cũ là cần tạo lại; không được âm thầm ghép cấu
-hình mới với kết quả cũ.
+Ma trận, Bản đặc tả và Đề kiểm tra phải dùng cùng một phiên bản phạm vi SGK và
+cấu hình. Nếu giáo viên sửa loại đề, mức độ đề, số câu, điểm hoặc tỉ lệ sau khi
+đã sinh Ma trận, hệ thống phải đánh dấu Ma trận, Bản đặc tả và Đề cũ là cần tạo
+lại; không được âm thầm ghép phạm vi hoặc cấu hình mới với kết quả cũ.
