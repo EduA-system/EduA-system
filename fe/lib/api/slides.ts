@@ -63,6 +63,8 @@ export function slideRoleLabel(slide: Pick<SlideItem, "pedagogicalRole" | "conte
       return "Luyện tập";
     case "recap":
       return "Tổng kết";
+    case "other":
+      return "Khác";
     default:
       switch (slide.contentPlan.slideType) {
         case "intro":
@@ -95,6 +97,8 @@ export function slideRoleTone(slide: Pick<SlideItem, "pedagogicalRole" | "conten
     case "practice":
       return "bg-green-50 text-green-600";
     case "recap":
+      return "bg-slate-100 text-slate-600";
+    case "other":
       return "bg-slate-100 text-slate-600";
     default:
       switch (slide.contentPlan.slideType) {
@@ -160,7 +164,7 @@ export type GenerateOutlineRequest = {
 };
 
 export async function generateOutline(authFetch: AuthFetch, request: GenerateOutlineRequest): Promise<GenerateOutlineResponse> {
-  logSlideApi("POST /api/slides/generate-outline", request);
+  logSlideApi("generate-outline: started");
   const res = await authFetch(`${BE}/api/slides/generate-outline`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -173,12 +177,7 @@ export async function generateOutline(authFetch: AuthFetch, request: GenerateOut
     throw new Error(message);
   }
   const data = (await res.json()) as GenerateOutlineResponse;
-  logSlideApi("generate-outline OK", {
-    sessionId: data.sessionId,
-    topic: data.topic,
-    partCount: data.outline.parts.length,
-    slideCount: data.outline.parts.reduce((sum, part) => sum + part.slides.length, 0),
-  });
+  logSlideApi("generate-outline: succeeded");
   return data;
 }
 

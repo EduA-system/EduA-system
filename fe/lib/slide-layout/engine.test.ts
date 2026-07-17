@@ -78,4 +78,13 @@ describe("dynamic slide layout engine", () => {
     const formula = renderSlideLayout(generateSlideLayout(fixture("formula")), { palette: ["#222222"] });
     expect(formula.find((element) => element.contentSlot === "slot:formula:expression")).toMatchObject({ type: "text", fontSize: 24 });
   });
+
+  it("keeps illustration slots within a usable, non-banner aspect ratio", () => {
+    for (const slideType of ["text-image", "experiment"] as const) {
+      const image = generateSlideLayout(fixture(slideType)).slots.find((slot) => slot.kind === "image");
+      expect(image).toBeDefined();
+      expect(image!.rect.w / image!.rect.h).toBeGreaterThanOrEqual(0.75);
+      expect(image!.rect.w / image!.rect.h).toBeLessThanOrEqual(1.5);
+    }
+  });
 });

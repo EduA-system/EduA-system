@@ -29,9 +29,13 @@ export const dragRefGlobal = {
 export function SlideEditor({
   skipInitialLoad = false,
   designSteps,
+  onSaveToLibrary,
+  savingToLibrary = false,
 }: {
   skipInitialLoad?: boolean;
   designSteps?: DesignStepControls;
+  onSaveToLibrary?: () => void;
+  savingToLibrary?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomMode, setZoomMode] = useState<"fit" | number>("fit");
@@ -235,6 +239,8 @@ export function SlideEditor({
         showRightPanel={showRightPanel}
         onToggleRightPanel={() => setShowRightPanel((value) => !value)}
         designSteps={designSteps}
+        onSaveToLibrary={onSaveToLibrary}
+        savingToLibrary={savingToLibrary}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <LeftPanel

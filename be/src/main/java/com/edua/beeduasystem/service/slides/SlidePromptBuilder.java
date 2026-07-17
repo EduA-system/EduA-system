@@ -67,7 +67,7 @@ public class SlidePromptBuilder {
                 Tạo CHÍNH XÁC %d slide. Đây là slide thật của deck, không phải placeholder hay tóm tắt hoạt động.
                 Không tạo part khác, không đổi id part, không đổi sourceChunkIds, không thêm nguồn mới.
                 Mỗi slide chỉ có id, title, pedagogicalRole, brief, contentPlan{slideType,headerMode}.
-                pedagogicalRole: hook|explain|derive|demonstrate|practice|recap.
+                pedagogicalRole: hook|explain|derive|demonstrate|practice|recap|other. Dùng other khi không khớp sáu vai trò đầu.
                 slideType: intro|section|concept|text-image|experiment|comparison|table|process|formula|exercise|quiz|summary.
                 headerMode: hidden cho intro/section, fixed cho các loại khác.
                 Trả JSON thuần, không markdown:
@@ -82,7 +82,7 @@ public class SlidePromptBuilder {
                 Bạn là giáo viên đang lập bản đồ nội dung nguồn để thiết kế slide. Chỉ phân tích chunk được cung cấp,
                 không bỏ qua dữ kiện, công thức, câu hỏi hoặc đáp án. Trả JSON thuần, không markdown, đúng schema:
                 {"chunkId":"%s","contentUnits":[{"title":"...","summary":"..."}],"requiredFacts":["..."],
-                "formulas":["..."],"questionsAndAnswers":["..."],"suggestedSlideRoles":["hook|explain|derive|demonstrate|practice|recap"]}
+                "formulas":["..."],"questionsAndAnswers":["..."],"suggestedSlideRoles":["hook|explain|derive|demonstrate|practice|recap|other"]}
 
                 BÀI HỌC: %s
                 CHUNK %s:
@@ -159,7 +159,7 @@ public class SlidePromptBuilder {
                 chia theo lượng dữ liệu thật, không tạo slide rỗng và không lặp nội dung.
 
                 Mỗi slide chỉ trả `id`, `title`, `pedagogicalRole`, `brief` và `contentPlan`.
-                - pedagogicalRole: hook | explain | derive | demonstrate | practice | recap.
+                - pedagogicalRole: hook | explain | derive | demonstrate | practice | recap | other; dùng other khi không khớp sáu vai trò đầu.
                 - contentPlan.slideType: intro | section | concept | text-image | experiment | comparison | table | process |
                   formula | exercise | quiz | summary. Đây là phân loại ý nghĩa nội dung.
                 - contentPlan.headerMode: hidden cho intro/section, fixed cho các loại còn lại.
@@ -236,6 +236,42 @@ public class SlidePromptBuilder {
                 ],"relationships":[]}}]}
                 """);
         return sb.toString();
+    }
+
+    /** Splits one already-expanded outline item; it does not alter the original outline prompts. */
+    public String splitOutlineItemPrompt(
+            LessonContext lesson,
+            String partTitle,
+            String itemJson,
+            List<String> reasons,
+            String subject) {
+        return """
+                Bạn là %s. Hãy chia ĐÚNG MỘT MỤC OUTLINE quá tải thành ĐÚNG HAI mục outline liên tiếp.
+
+                BÀI HỌC: %s (lớp %s)
+                PART: %s
+                Lý do cần chia: %s
+
+                MỤC OUTLINE GỐC (đây là toàn bộ dữ liệu thật, không được tự thêm hoặc bỏ kiến thức):
+                %s
+
+                QUY TẮC:
+                - Chia theo nhóm ý nghĩa, không cắt giữa bullet, câu hỏi/đáp án, công thức, hàng bảng hoặc mô tả visual.
+                - Mỗi mục con có title riêng, pedagogicalRole và contentPlan hoàn chỉnh. pedagogicalRole là hook|explain|derive|demonstrate|practice|recap|other; dùng other khi không khớp sáu vai trò đầu.
+                - Nếu có nhiều câu hỏi trắc nghiệm, mỗi mục con chỉ giữ một câu hỏi.
+                - Nếu là bảng, chia theo nhóm hàng và lặp header ở cả hai mục nếu cần.
+                - Visual thuộc về ý nào thì đi cùng ý đó; visual dùng chung chỉ xuất hiện ở mục đầu.
+                - Không tạo id: hệ thống sẽ tự cấp id. Không thêm phần giải thích ngoài JSON.
+                - contentPlan.slideType chỉ được là intro|section|concept|text-image|experiment|comparison|table|process|formula|exercise|quiz|summary;
+                  headerMode là hidden cho intro/section, fixed cho các loại còn lại.
+
+                Trả JSON thuần:
+                {"slides":[
+                  {"title":"...","pedagogicalRole":"explain","durationMinutes":2,"aiNote":"","contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[...],"relationships":[...]}},
+                  {"title":"...","pedagogicalRole":"explain","durationMinutes":2,"aiNote":"","contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[...],"relationships":[...]}}
+                ]}
+                """.formatted(teacherPersona(subject), lesson.title(), lesson.grade(),
+                partTitle == null ? "" : partTitle, String.join("; ", reasons), itemJson);
     }
 
     private void appendPlanSummary(StringBuilder sb, InlineLessonPlanDto plan) {
