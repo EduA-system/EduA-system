@@ -24,12 +24,12 @@ import { createEditorExtensions, type MathClickInfo } from "../LessonEditor/edit
 import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
+import { openLessonPlanPrintDialog } from "@/lib/lesson-plan-pdf-export";
 
 export function LessonEditDashboard() {
   const { authFetch } = useAuth();
   const searchParams = useSearchParams();
   const libraryId = searchParams.get("libraryId");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiCollapsed, setAiCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
   // Đọc một lần lúc mount (lazy initializer) — tránh đọc lại sau khi
@@ -171,6 +171,15 @@ export function LessonEditDashboard() {
     [authFetch, editor, lessonSession],
   );
 
+  const exportPdf = useCallback(() => {
+    if (!editor) return;
+    const title = editor.state.doc.firstChild?.textContent.trim() || "Giáo án";
+    if (!openLessonPlanPrintDialog(title, editor.getHTML())) {
+      setSaveStatus("error");
+      setSaveError("Trình duyệt đã chặn cửa sổ in. Hãy cho phép popup rồi thử lại.");
+    }
+  }, [editor]);
+
   // Khi AI đã hoàn thành toàn bộ activity, lưu bản giáo án đầu tiên vào thư viện.
   useLessonPlanStream(editor, (session) => {
     setLessonSession(session);
@@ -180,23 +189,17 @@ export function LessonEditDashboard() {
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
       <div className="flex h-full w-full">
-        <Sidebar collapsed={sidebarCollapsed} />
+        <Sidebar />
 
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
             <div className="@container flex h-12 items-center gap-2 px-3">
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed((current) => !current)}
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#e8e2d9] bg-white text-[#6b6b6b] shadow-sm transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
-                aria-label={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
-              >
-                <SidebarToggleIcon />
-              </button>
-
               <div className="flex shrink-0 items-center gap-1.5">
                 <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
                   <SaveIcon />
+                </HeaderActionButton>
+                <HeaderActionButton onClick={exportPdf} label="Xuất PDF">
+                  <PrintIcon />
                 </HeaderActionButton>
                 <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>
                   <CreateLessonIcon />
@@ -283,15 +286,6 @@ function HeaderActionButton({
   );
 }
 
-function SidebarToggleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect x="2.5" y="3" width="11" height="10" rx="2" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M6 3v10" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
-  );
-}
-
 function SaveIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -306,6 +300,14 @@ function CreateLessonIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M12 4l1.3 4.4L18 10l-4.7 1.6L12 16l-1.3-4.4L6 10l4.7-1.6L12 4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
       <path d="M5 17h4M7 15v4M17 17h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PrintIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M7 8V3h10v5M6 18H4V9h16v9h-2M7 14h10v7H7z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
     </svg>
   );
 }

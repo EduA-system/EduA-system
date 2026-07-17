@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
-import { generateOutline, type OutlinePart } from "@/lib/api/slides";
+import { generateOutline, retryOutlineSessionPart, startOutlineSession, type OutlinePart } from "@/lib/api/slides";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { connectOutlineStream, type OutlineEvent } from "@/lib/ws/outline-client";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 import {
@@ -43,34 +44,45 @@ function loadOutlineBoot(): OutlineBoot {
 
 export default function SlideOutlinePage() {
   const router = useRouter();
+  const { accessToken, authFetch, status: authStatus } = useAuth();
   const [boot] = useState(loadOutlineBoot);
   const [session, setSession] = useState<SlideGenerationSession | null>(boot.session);
   const [status, setStatus] = useState<Status>(boot.status);
   const [parts, setParts] = useState<OutlinePart[]>(boot.parts);
   const [error, setError] = useState<string | undefined>(boot.error);
   const [expandingPartIds, setExpandingPartIds] = useState<string[]>([]);
+  const [failedPartMessages, setFailedPartMessages] = useState<Record<string, string>>({});
   const [confirming, setConfirming] = useState(false);
 
   const disconnectRef = useRef<(() => void) | null>(null);
+  const outlineRequestRef = useRef<ReturnType<typeof generateOutline> | null>(null);
 
   const handleOutlineEvent = useCallback((event: OutlineEvent) => {
-    if (event.type === "OUTLINE_PART_READY") {
+    if (event.type === "OUTLINE_PART_SKELETON_READY") {
+      setParts((prev) => prev.map((part) => (part.id === event.part.id ? event.part : part)));
+    } else if (event.type === "OUTLINE_PART_READY") {
       setParts((prev) =>
         prev.map((p) =>
           p.id !== event.partId
             ? p
             : {
                 ...p,
-                slides: p.slides.map((s) => {
-                  const filled = event.slides.find((x) => x.id === s.id);
-                  return filled ? { ...s, ...filled } : s;
-                }),
+                // The backend may replace one dense outline item with two items.
+                // Use the completed ordered list rather than merging only matching ids.
+                slides: event.slides,
               },
         ),
       );
       setExpandingPartIds((prev) => prev.filter((id) => id !== event.partId));
+      setFailedPartMessages((prev) => {
+        const next = { ...prev };
+        delete next[event.partId];
+        return next;
+      });
     } else if (event.type === "OUTLINE_PART_FAILED") {
+      logSlideApi(`outline part failed: ${event.partId}`);
       setExpandingPartIds((prev) => prev.filter((id) => id !== event.partId));
+      setFailedPartMessages((prev) => ({ ...prev, [event.partId]: event.message || "AI chưa thể soạn phần này." }));
     } else if (event.type === "DONE" || event.type === "ERROR") {
       setExpandingPartIds([]);
     }
@@ -79,7 +91,18 @@ export default function SlideOutlinePage() {
   // Sinh khung (pha 1) + subscribe stream (pha 2) một lần.
   useEffect(() => {
     if (status !== "outlining" || !session) return;
+    if (authStatus === "loading") return;
     let cancelled = false;
+    if (authStatus !== "authenticated" || !accessToken) {
+      queueMicrotask(() => {
+        if (cancelled) return;
+        setStatus("error");
+      setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tạo slide.");
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     void (async () => {
       logSlideApi("outline page: generating structure…", {
@@ -87,25 +110,31 @@ export default function SlideOutlinePage() {
         lessonTitle: session.lessonTitle,
       });
       try {
-        const res = await generateOutline({
-          lessonId: session.lessonCardId,
-          lessonTitle: session.lessonTitle,
-          lessonSummary: session.lessonSummary,
-          grade: session.grade,
-          subject: session.subject,
-          plan: session.inlinePlan,
-          styleHint: session.styleHint,
-        });
+        const request =
+          outlineRequestRef.current ??
+          generateOutline(authFetch, {
+            lessonId: session.lessonCardId,
+            libraryContentId: session.libraryContentId,
+            lessonTitle: session.lessonTitle,
+            lessonSummary: session.lessonSummary,
+            grade: session.grade,
+            subject: session.subject,
+            lessonContent: session.lessonContent,
+            plan: session.inlinePlan,
+            styleHint: session.styleHint,
+          });
+        outlineRequestRef.current = request;
+        const res = await request;
         if (cancelled) return;
 
         patchSlideCreateSession({
           sessionId: res.sessionId,
-          topic: res.topic,
+          topic: session.lessonTitle,
           outlineParts: res.outline.parts,
         });
         setSession((prev) =>
           prev
-            ? { ...prev, sessionId: res.sessionId, topic: res.topic, outlineParts: res.outline.parts }
+            ? { ...prev, sessionId: res.sessionId, topic: prev.lessonTitle, outlineParts: res.outline.parts }
             : prev,
         );
         setParts(res.outline.parts);
@@ -114,7 +143,16 @@ export default function SlideOutlinePage() {
 
         const { disconnect } = connectOutlineStream({
           topic: res.outlineTopic,
+          accessToken,
           onEvent: handleOutlineEvent,
+          onReady: () => {
+            void startOutlineSession(authFetch, res.sessionId).catch((startError) => {
+              if (!cancelled) {
+                setStatus("error");
+                setError(startError instanceof Error ? startError.message : String(startError));
+              }
+            });
+          },
           onClose: () => {
             disconnectRef.current = null;
           },
@@ -131,44 +169,28 @@ export default function SlideOutlinePage() {
     return () => {
       cancelled = true;
     };
-  }, [status, session, handleOutlineEvent]);
+  }, [accessToken, authFetch, authStatus, status, session, handleOutlineEvent]);
+
+  const handleRetryPart = useCallback(async (partId: string) => {
+    if (!session?.sessionId) return;
+    setExpandingPartIds((prev) => [...new Set([...prev, partId])]);
+    setFailedPartMessages((prev) => {
+      const next = { ...prev };
+      delete next[partId];
+      return next;
+    });
+    try {
+      await retryOutlineSessionPart(authFetch, session.sessionId, partId);
+    } catch (err) {
+      setExpandingPartIds((prev) => prev.filter((id) => id !== partId));
+      setFailedPartMessages((prev) => ({ ...prev, [partId]: err instanceof Error ? err.message : String(err) }));
+    }
+  }, [authFetch, session]);
 
   // Ngắt kết nối khi rời trang.
   useEffect(() => () => disconnectRef.current?.(), []);
 
   // DEBUG: log toàn bộ nội dung outline mỗi khi thay đổi.
-  useEffect(() => {
-    console.log(
-      "[EDUA slide] OUTLINE FULL",
-      JSON.stringify(
-        {
-          status,
-          partCount: parts.length,
-          slideCount: parts.reduce((sum, p) => sum + p.slides.length, 0),
-          parts: parts.map((p) => ({
-            id: p.id,
-            title: p.title,
-            slides: p.slides.map((s) => ({
-              id: s.id,
-              title: s.title,
-              kind: s.kind,
-              pedagogicalRole: s.pedagogicalRole,
-              layoutHint: s.layoutHint,
-              durationMinutes: s.durationMinutes,
-              content: s.content,
-              requiredFacts: s.requiredFacts,
-              quizItems: s.quizItems,
-              visual: s.visual,
-              aiNote: s.aiNote,
-            })),
-          })),
-        },
-        null,
-        2,
-      ),
-    );
-  }, [parts, status]);
-
   // Lưu outline (khung + nội dung stream + sửa tay) vào session để giữ khi quay lại.
   useEffect(() => {
     if (status === "ready" && parts.length > 0) {
@@ -182,7 +204,7 @@ export default function SlideOutlinePage() {
       setConfirming(true);
       writeActiveGeneration({
         sessionId: session.sessionId,
-        topic: session.topic,
+        topic: session.lessonTitle,
         lessonId: session.lessonCardId,
         lessonTitle: session.lessonTitle,
         lessonSummary: session.lessonSummary,
@@ -239,6 +261,8 @@ export default function SlideOutlinePage() {
               onConfirm={handleConfirm}
               confirming={confirming}
               expandingPartIds={expandingPartIds}
+              failedPartMessages={failedPartMessages}
+              onRetryPart={handleRetryPart}
             />
           ) : null}
         </div>

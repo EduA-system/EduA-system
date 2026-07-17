@@ -12,6 +12,7 @@ import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import com.edua.beeduasystem.service.slides.SlideAiResponseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -86,6 +87,11 @@ public class GlobalExceptionHandler {
         log.error("UNEXPECTED_REQUEST_FAILURE", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse("Lỗi hệ thống không mong đợi. Tra log bằng requestId để xem chi tiết."));
+    }
+
+    @ExceptionHandler(SlideAiResponseException.class)
+    public ResponseEntity<ErrorResponse> handleSlideAiResponse(SlideAiResponseException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidTokenException.class)

@@ -1,17 +1,10 @@
 const PREFIX = "[EDUA slide]";
 
-export function logSlideStreamLifecycle(message: string, detail?: unknown) {
-  if (detail !== undefined) {
-    console.log(`${PREFIX} [WS] ${message}`, detail);
-  } else {
-    console.log(`${PREFIX} [WS] ${message}`);
-  }
+/** Client diagnostics must never write lesson, outline, or AI payloads to the console. */
+export function logSlideStreamLifecycle(message: string, _detail?: unknown) {
+  console.log(`${PREFIX} [WS] ${message}`);
 }
 
-export function logSlideApi(message: string, detail?: unknown) {
-  if (detail !== undefined) {
-    console.log(`${PREFIX} [API] ${message}`, detail);
-  } else {
-    console.log(`${PREFIX} [API] ${message}`);
-  }
+export function logSlideApi(message: string, _detail?: unknown) {
+  console.log(`${PREFIX} [API] ${message}`);
 }

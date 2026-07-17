@@ -10,6 +10,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/home":            { requireAuth: false },
   "/homepage":        { requireAuth: false },
   "/login":           { requireAuth: false },
+  "/dashboard":       { requireAuth: true },
   "/help":            { requireAuth: false },
   "/lesson-create":   { requireAuth: true },
   "/lesson-edit":     { requireAuth: true },

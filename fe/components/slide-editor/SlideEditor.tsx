@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
 import { isSlideLockedForGeneration } from "./types";
-import { TopBar } from "./TopBar";
+import { TopBar, type DesignStepControls } from "./TopBar";
 import { ContextualToolbar } from "./ContextualToolbar";
 import { LeftPanel } from "./LeftPanel";
 import { Canvas, type ActiveTool } from "./Canvas";
@@ -28,15 +28,16 @@ export const dragRefGlobal = {
 
 export function SlideEditor({
   skipInitialLoad = false,
-  onRetrySlide,
-  pageSidebarCollapsed = false,
-  onTogglePageSidebar,
+  designSteps,
+  onSaveToLibrary,
+  savingToLibrary = false,
+  onPresent,
 }: {
   skipInitialLoad?: boolean;
-  /** AI-regenerate one slide (header retry button). Omitted outside the AI slide-maker flow. */
-  onRetrySlide?: (slideId: string) => void;
-  pageSidebarCollapsed?: boolean;
-  onTogglePageSidebar?: () => void;
+  designSteps?: DesignStepControls;
+  onSaveToLibrary?: () => void;
+  savingToLibrary?: boolean;
+  onPresent?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomMode, setZoomMode] = useState<"fit" | number>("fit");
@@ -237,11 +238,12 @@ export function SlideEditor({
       onMouseDown={handleMouseDown}
     >
       <TopBar
-        pageSidebarCollapsed={pageSidebarCollapsed}
         showRightPanel={showRightPanel}
-        onTogglePageSidebar={onTogglePageSidebar ?? (() => undefined)}
         onToggleRightPanel={() => setShowRightPanel((value) => !value)}
-        onRetrySlide={onRetrySlide}
+        designSteps={designSteps}
+        onSaveToLibrary={onSaveToLibrary}
+        savingToLibrary={savingToLibrary}
+        onPresent={onPresent}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <LeftPanel
@@ -268,6 +270,7 @@ export function SlideEditor({
               drawColor={drawColor}
               drawSize={drawSize}
               onScaleChange={setCurrentScale}
+              onZoomModeChange={setZoomMode}
             />
             <BottomBar
               zoomMode={zoomMode}

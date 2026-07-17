@@ -1,11 +1,15 @@
 package com.edua.beeduasystem.service.slides;
 
-import com.edua.beeduasystem.domain.model.lesson.LessonContext;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineRequest;
 import com.edua.beeduasystem.presentation.dto.slides.InlineActivityDto;
 import com.edua.beeduasystem.presentation.dto.slides.InlineLessonPlanDto;
+import com.edua.beeduasystem.presentation.dto.slides.PartDto;
+import com.edua.beeduasystem.presentation.dto.slides.SlideItemDto;
+import com.edua.beeduasystem.domain.model.lesson.LessonContext;
+import com.edua.beeduasystem.domain.model.slide.ContentPlan;
 import com.edua.beeduasystem.repository.gateways.AiClient;
 import com.edua.beeduasystem.repository.gateways.OutlineStreamPort;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -13,158 +17,138 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class GenerateSlideOutlineUseCaseTest {
-
-    @Mock
-    private AiClient aiClient;
-
-    @Mock
-    private SlidePromptBuilder promptBuilder;
-
-    @Mock
-    private OutlineStreamPort outlineStream;
+    @Mock private AiClient aiClient;
+    @Mock private OutlineStreamPort outlineStream;
 
     @Test
-    void parsesValidOutlineFromAi() {
-        when(promptBuilder.outlineStructurePrompt(any(LessonContext.class), any(), any(), any(), any()))
-                .thenReturn("prompt");
-        // Pha 2 (expand) chạy nền với cùng mock — không ảnh hưởng response pha 1.
-        lenient().when(promptBuilder.expandPartPrompt(any(LessonContext.class), any(), any(), any(), any(), any()))
-                .thenReturn("expand");
-        when(aiClient.generate(anyString())).thenReturn("""
-                {
-                  "lessonTitle": "Định luật II Newton",
-                  "parts": [
-                    {
-                      "id": "p1",
-                      "title": "Mở đầu",
-                      "slides": [
-                        {"id": "p1s1", "title": "Hook", "pedagogicalRole": "hook", "layoutHint": "title", "brief": "Bìa"}
-                      ]
-                    }
-                  ]
-                }
-                """);
+    void returnsPedagogicalBlueprintInsteadOfLessonActivityTitles() {
+        when(aiClient.generate(anyString())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(0);
+            if (prompt.contains("KNOWLEDGE MAP")) return blueprint();
+            return "{\"chunkId\":\"c1\",\"contentUnits\":[{\"title\":\"Sóng\",\"summary\":\"Kiến thức\"}],\"requiredFacts\":[],\"formulas\":[],\"questionsAndAnswers\":[],\"suggestedSlideRoles\":[\"explain\"]}";
+        });
+        var response = useCase().execute(request());
 
-        var useCase = new GenerateSlideOutlineUseCase(
-                aiClient, promptBuilder, outlineStream, Executors.newSingleThreadExecutor());
-
-        var req = new GenerateOutlineRequest(
-                "newton-2",
-                "Định luật II Newton",
-                "F = ma",
-                "Lớp 10",
-                "Vật lý",
-                new InlineLessonPlanDto(
-                        "Định luật II Newton",
-                        10,
-                        45,
-                        List.of("Hiểu F = ma"),
-                        List.of("Thuyết trình"),
-                        List.of(new InlineActivityDto("a1", "Khởi động", 10, "Mở bài", "", "", "")),
-                        "",
-                        ""),
-                null,
-                "Tối giản");
-
-        var res = useCase.execute(req);
-
-        assertFalse(res.sessionId().isBlank());
-        assertEquals("/topic/slides/" + res.sessionId(), res.topic());
-        assertEquals("/topic/outline/" + res.sessionId(), res.outlineTopic());
-        assertEquals("Định luật II Newton", res.outline().lessonTitle());
-        assertEquals(1, res.outline().parts().size());
-        assertEquals("p1s1", res.outline().parts().get(0).slides().get(0).id());
+        assertEquals(4, response.outline().parts().size());
+        assertEquals("Mở đầu vấn đề", response.outline().parts().getFirst().title());
+        assertFalse(response.outline().parts().stream().anyMatch(part -> part.title().contains("Hoạt động")));
     }
 
     @Test
-    void parsesExpandedSlideSchemaFields() throws Exception {
-        when(promptBuilder.outlineStructurePrompt(any(LessonContext.class), any(), any(), any(), any()))
-                .thenReturn("structure");
-        when(promptBuilder.expandPartPrompt(any(LessonContext.class), any(), any(), any(), any(), any()))
-                .thenReturn("expand");
-        when(aiClient.generate("structure")).thenReturn("""
-                {
-                  "lessonTitle": "Bài 19",
-                  "parts": [
-                    {
-                      "id": "p1",
-                      "title": "Luyện tập",
-                      "slides": [
-                        {"id": "p1s1", "title": "Trắc nghiệm", "pedagogicalRole": "practice", "layoutHint": "bullets"}
-                      ]
-                    }
-                  ]
-                }
-                """);
-        when(aiClient.generate("expand")).thenReturn("""
-                {
-                  "slides": [
-                    {
-                      "id": "p1s1",
-                      "content": "Trắc nghiệm củng cố",
-                      "durationMinutes": 5,
-                      "requiredFacts": ["Tốc độ phản ứng là C"],
-                      "quizItems": [
-                        {
-                          "question": "Tốc độ phản ứng là gì?",
-                          "choices": ["A. ...", "B. ...", "C. Độ biến thiên nồng độ trong một đơn vị thời gian"],
-                          "answer": "C",
-                          "explanation": "Theo định nghĩa tốc độ phản ứng."
-                        }
-                      ],
-                      "visual": {"type": "none", "spec": ""},
-                      "aiNote": ""
-                    }
-                  ]
-                }
-                """);
+    void insertsSectionSlideWhenPartDoesNotStartWithOpeningSlide() {
+        SlideItemDto content = new SlideItemDto("p2s1", "Khái niệm", "explain", null, null,
+                new ContentPlan("concept", "fixed", List.of(), List.of()));
+        PartDto result = GenerateSlideOutlineUseCase.ensureOpeningSlide(
+                new PartDto("p2", "Hình thành kiến thức", List.of(content), List.of("c1")));
 
-        var useCase = new GenerateSlideOutlineUseCase(
-                aiClient, promptBuilder, outlineStream, Executors.newSingleThreadExecutor());
+        assertEquals(2, result.slides().size());
+        assertEquals("p2-section", result.slides().getFirst().id());
+        assertEquals("section", result.slides().getFirst().contentPlan().slideType());
+        assertEquals("hidden", result.slides().getFirst().contentPlan().headerMode());
+    }
 
-        var req = new GenerateOutlineRequest(
-                "bai19",
-                "Bài 19",
-                "",
-                "Lớp 10",
-                "Hóa học",
-                new InlineLessonPlanDto(
-                        "Bài 19",
-                        10,
-                        45,
-                        List.of("Hiểu tốc độ phản ứng"),
-                        List.of("Trắc nghiệm"),
-                        List.of(new InlineActivityDto("a1", "Luyện tập", 5, "Củng cố", "", "", "")),
-                        "",
-                        ""),
-                null,
-                "Tối giản");
+    @Test
+    void normalizesUnknownContentMapRoleToOther() throws Exception {
+        var map = new ObjectMapper().readTree("{\"suggestedSlideRoles\":[\"discuss\",\"explain\",\"other\"]}");
 
-        var res = useCase.execute(req);
+        GenerateSlideOutlineUseCase.normalizeContentMapSuggestedRoles(map);
 
-        @SuppressWarnings("unchecked")
-        org.mockito.ArgumentCaptor<List<com.edua.beeduasystem.presentation.dto.slides.SlideItemDto>> captor =
-                org.mockito.ArgumentCaptor.forClass(List.class);
-        verify(outlineStream, timeout(TimeUnit.SECONDS.toMillis(2)))
-                .publishPartReady(org.mockito.ArgumentMatchers.eq(res.sessionId()),
-                        org.mockito.ArgumentMatchers.eq("p1"), captor.capture());
+        assertEquals("other", map.path("suggestedSlideRoles").get(0).asText());
+        assertEquals("explain", map.path("suggestedSlideRoles").get(1).asText());
+        assertEquals("other", map.path("suggestedSlideRoles").get(2).asText());
+    }
 
-        var slide = captor.getValue().get(0);
-        assertEquals(List.of("Tốc độ phản ứng là C"), slide.requiredFacts());
-        assertEquals("Tốc độ phản ứng là gì?", slide.quizItems().get(0).question());
-        assertEquals("C", slide.quizItems().get(0).answer());
+    @Test
+    void normalizesUnknownSkeletonRoleToOtherWhilePreservingKnownRoles() {
+        var skeleton = useCase().parseSkeleton(lesson(), """
+                {"parts":[{"id":"p1","title":"Phần một","slides":[
+                  {"id":"p1s1","title":"Thảo luận","pedagogicalRole":"discuss","contentPlan":{"slideType":"concept","headerMode":"fixed"}},
+                  {"id":"p1s2","title":"Giải thích","pedagogicalRole":"explain","contentPlan":{"slideType":"concept","headerMode":"fixed"}}
+                ]}]}
+                """, List.of(), false);
+
+        assertEquals(List.of("other", "explain"), skeleton.outline().parts().getFirst().slides().stream()
+                .map(SlideItemDto::pedagogicalRole).toList());
+    }
+
+    @Test
+    void automaticallyReplacesDenseOutlineItemBeforePartIsPublished() {
+        when(aiClient.generate(anyString())).thenReturn(splitResponse());
+        SlideItemDto dense = new SlideItemDto("p2s3", "Nội dung dài", "explain", null, null,
+                new ContentPlan("concept", "fixed", List.of(
+                        new ContentPlan.TextBlock("b1", "text", "body", "explanation", "primary", true, null,
+                                "x".repeat(451))), List.of()));
+
+        List<SlideItemDto> result = useCase().autoSplitDenseOutlineItems(
+                lesson(), request(), new PartDto("p2", "Khám phá", List.of(dense), List.of("c1")), List.of(dense));
+
+        assertEquals(List.of("p2s3-a", "p2s3-b"), result.stream().map(SlideItemDto::id).toList());
+        assertEquals(List.of("Ý thứ nhất", "Ý thứ hai"), result.stream().map(SlideItemDto::title).toList());
+        assertEquals(List.of("other", "explain"), result.stream().map(SlideItemDto::pedagogicalRole).toList());
+        verify(aiClient, times(1)).generate(anyString());
+    }
+
+    @Test
+    void keepsOriginalOutlineItemWhenAutomaticSplitCannotBeValidated() {
+        when(aiClient.generate(anyString())).thenReturn("{\"slides\":[]}");
+        SlideItemDto dense = new SlideItemDto("p2s3", "Nội dung dài", "explain", null, null,
+                new ContentPlan("concept", "fixed", List.of(
+                        new ContentPlan.TextBlock("b1", "text", "body", "explanation", "primary", true, null,
+                                "x".repeat(451))), List.of()));
+
+        List<SlideItemDto> result = useCase().autoSplitDenseOutlineItems(
+                lesson(), request(), new PartDto("p2", "Khám phá", List.of(dense), List.of("c1")), List.of(dense));
+
+        assertEquals(List.of(dense), result);
+        verify(aiClient, times(2)).generate(anyString());
+    }
+
+    private GenerateSlideOutlineUseCase useCase() {
+        return new GenerateSlideOutlineUseCase(aiClient, new SlidePromptBuilder(), outlineStream,
+                Executors.newThreadPerTaskExecutor(Thread.ofVirtual().factory()));
+    }
+
+    private static GenerateOutlineRequest request() {
+        return new GenerateOutlineRequest("lesson", "Giao thoa sóng", "", "12", "Vật lí",
+                new InlineLessonPlanDto("Giao thoa sóng", 12, 45, List.of(), List.of(),
+                        List.of(new InlineActivityDto("a1", "Hoạt động 1", 45, "Hiểu bài", "", "", "")), "", ""),
+                null, null, "# Bài\n\nNội dung giao thoa.", "library");
+    }
+
+    private static LessonContext lesson() {
+        return new LessonContext("lesson", "Giao thoa sóng", 12, "", List.of(), List.of(), List.of(), List.of(), List.of());
+    }
+
+    private static String splitResponse() {
+        return """
+                {"slides":[
+                  {"title":"Ý thứ nhất","pedagogicalRole":"discuss","durationMinutes":1,
+                   "contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[
+                     {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung thứ nhất"}
+                   ],"relationships":[]}},
+                  {"title":"Ý thứ hai","pedagogicalRole":"explain","durationMinutes":1,
+                   "contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[
+                     {"id":"b2","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung thứ hai"}
+                   ],"relationships":[]}}
+                ]}
+                """;
+    }
+
+    private static String blueprint() {
+        return "{\"chapters\":["
+                + "{\"id\":\"p1\",\"title\":\"Mở đầu vấn đề\",\"learningGoal\":\"Gợi vấn đề\",\"slideBudget\":3,\"sourceChunkIds\":[\"c1\"]},"
+                + "{\"id\":\"p2\",\"title\":\"Khám phá hiện tượng\",\"learningGoal\":\"Quan sát\",\"slideBudget\":6,\"sourceChunkIds\":[\"c1\"]},"
+                + "{\"id\":\"p3\",\"title\":\"Hình thành kiến thức\",\"learningGoal\":\"Giải thích\",\"slideBudget\":7,\"sourceChunkIds\":[\"c1\"]},"
+                + "{\"id\":\"p4\",\"title\":\"Luyện tập và củng cố\",\"learningGoal\":\"Vận dụng\",\"slideBudget\":5,\"sourceChunkIds\":[\"c1\"]}]}";
     }
 }

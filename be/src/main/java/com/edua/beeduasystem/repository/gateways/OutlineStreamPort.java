@@ -1,10 +1,13 @@
 package com.edua.beeduasystem.repository.gateways;
 
 import com.edua.beeduasystem.presentation.dto.slides.SlideItemDto;
+import com.edua.beeduasystem.presentation.dto.slides.PartDto;
 
 import java.util.List;
 
 public interface OutlineStreamPort {
+
+    void publishPartSkeletonReady(String sessionId, PartDto part);
 
     void publishPartReady(String sessionId, String partId, List<SlideItemDto> slides);
 

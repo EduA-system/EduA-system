@@ -1,21 +1,24 @@
 # Iteration 2 — Remaining Tasks
 
-> Branch reviewed: `main` at commit `38962d8`.
+> Last audited on `feat/slide-presentation-mode` after implementing presentation mode
+> and offline HTML slide export (2026-07-17).
 >
 > Source of scope: Report 2 Project Tracking, WBS sheet. This checklist reflects
 > the current codebase, not only the status recorded in the tracking workbook.
 
 ## Priority 1 — Complete the teaching flow
 
-- [ ] **Add a dedicated slide presentation mode**
-  - Create a presenter/full-screen route or view with next/previous slide controls,
-    keyboard navigation, and an exit action.
-  - Reuse the current slide data model; do not expose editor controls in presenter mode.
-  - The existing fullscreen button in the editor is not sufficient as a presentation mode.
+- [x] **Add a dedicated slide presentation mode**
+  - [x] Create `/slide-present` with next/previous controls, keyboard navigation,
+    slide picker, fullscreen, and an exit action.
+  - [x] Reuse the current slide data model; presenter mode does not expose editor controls.
+  - [x] Load a saved deck through `libraryId`, or the current local deck when opened from the editor.
 
-- [ ] **Export a slide deck as offline HTML**
-  - Export the edited deck as a self-contained HTML file, including required assets.
-  - Keep the current JSON download only as an optional developer/export format.
+- [x] **Export a slide deck as offline HTML**
+  - [x] Export the edited deck as one self-contained HTML file with embedded assets where available.
+  - [x] Include presenter controls, keyboard navigation, slide picker, and fullscreen in the exported file.
+  - [x] Keep JSON download as an optional technical import/export format.
+  - [x] Replace non-embeddable images with a placeholder and show an export warning.
 
 - [ ] **Export lesson plans to PDF and/or DOCX**
   - Export the rendered 5512 lesson plan with Vietnamese text and the activity tables intact.
@@ -27,12 +30,15 @@
 
 ## Priority 2 — Persist and organize generated content
 
-- [ ] **Implement Personal Library**
-  - Add persistence for lesson plans, slide decks, and custom simulations.
-  - Add APIs to list, search, open, update, and delete only the current user's content.
-  - Create the library screen and content-detail screen.
-  - Save generated content to the library and persist edits instead of relying on
-    `localStorage`/session-only data.
+- [ ] **Complete Personal Library**
+  - [x] Persist lesson plans, slide decks, and saved molecule simulations in `library_contents`.
+  - [x] Add owner-scoped APIs to list, search, open, update, and soft-delete content.
+  - [x] Create `/library` with filters, search, open, rename, and delete actions.
+  - [x] Save and reopen lesson-plan and slide-deck edits through the library API.
+  - [ ] Add backend service/controller coverage for the library APIs.
+  - [ ] Persist customized Physics Hub simulations when Physics Hub is implemented.
+  - [ ] Decide whether a dedicated library-detail route is needed; current Open actions route
+    directly into the relevant lesson, slide, or molecule workflow.
 
 - [ ] **Connect simulations to lessons and slides**
   - Allow a teacher to select a periodic-table element, atom model, or molecule model
@@ -84,13 +90,12 @@
 
 ## Suggested implementation order
 
-1. Personal Library data model and APIs.
-2. Persist lesson/slide content and connect the library UI.
-3. Slide presentation mode and HTML export.
-4. Lesson/test export.
+1. Add tests for the completed Personal Library APIs and run the full backend/frontend checks.
+2. Lesson-plan export.
+3. Connect molecule/periodic-table/simulation references to lessons and slides.
+4. Blog editing and authorization hardening.
 5. Chemistry Virtual Lab and Physics Hub.
-6. Simulation/asset embedding and shared library.
-7. Blog gaps and authorization hardening.
+6. Shared Simulation & Asset Library and test/exam export, or defer these to Iteration 3.
 
 ## Status corrections for Project Tracking
 

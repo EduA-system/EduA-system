@@ -50,6 +50,8 @@ interface ElementBase {
   hidden?: boolean;
   // Group / Ungroup
   groupId?: string;
+  /** Stable semantic slot created by slide-design step 2. */
+  contentSlot?: string;
 }
 
 export interface TextElement extends ElementBase {
@@ -92,6 +94,8 @@ export interface ImageElement extends ElementBase {
   flipV?: boolean;
   brightness?: number; // %, mặc định 100
   contrast?: number; // %, mặc định 100
+  /** AI-generated English prompt retained while this image is still a placeholder. */
+  imagePrompt?: string;
 }
 
 export interface LineElement extends ElementBase {
@@ -172,6 +176,8 @@ export interface Slide {
   elements: SlideElement[];
   aiPrompt?: string;
   generationStatus?: SlideGenerationStatus;
+  /** Error returned while generating this specific slide, shown on its canvas. */
+  generationError?: string;
 }
 
 export function isSlideLockedForGeneration(slide: Slide | undefined): boolean {
