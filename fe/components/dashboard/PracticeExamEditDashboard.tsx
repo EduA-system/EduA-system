@@ -9,6 +9,38 @@ import { readPracticeExam, type PracticeExam } from "@/services/practiceExamServ
 
 type Metadata = { subject: string; grade: string; duration: number; difficulty: string };
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function mathAttribute(value: string) {
+  return escapeHtml(value.trim());
+}
+
+function inlineRichText(value: string) {
+  return escapeHtml(value).replace(
+    /\\\((.+?)\\\)|(?<!\$)\$([^$\n]+?)\$(?!\$)/g,
+    (_match, parenLatex: string | undefined, dollarLatex: string | undefined) => {
+      const latex = parenLatex ?? dollarLatex ?? "";
+      return `<span data-type="inline-math" data-latex="${mathAttribute(latex)}"></span>`;
+    },
+  );
+}
+
+function richTextBlocks(value: string) {
+  return value.split(/(\\\[[\s\S]+?\\\]|\$\$[\s\S]+?\$\$)/).filter(Boolean).map((part) => {
+    const parenBlock = part.match(/^\\\[([\s\S]+)\\\]$/);
+    const dollarBlock = part.match(/^\$\$([\s\S]+)\$\$$/);
+    if (parenBlock || dollarBlock) return `<div data-type="block-math" data-latex="${mathAttribute((parenBlock ?? dollarBlock)![1])}"></div>`;
+    return `<p>${inlineRichText(part).replaceAll("\n", "<br>")}</p>`;
+  }).join("");
+}
+
 function draftMetadata(): Metadata {
   const generated = typeof window === "undefined" ? null : readPracticeExam();
   if (generated) return { subject: "", grade: "", duration: generated.durationMinutes, difficulty: "MEDIUM" };
@@ -32,8 +64,8 @@ function examHtml(metadata: Metadata, generated: PracticeExam | null) {
     ] as const;
     const formatScore = (scoreCentiPoints: number) => (scoreCentiPoints / 100).toFixed(2);
     const questionContent = (question: PracticeExam["questions"][number]) => {
-      const options = question.options?.map((option) => `<p class="mc-option"><b>${option.key}.</b> ${option.content}</p>`).join("") ?? "";
-      return `<p><b>Câu ${question.order}. (${formatScore(question.scoreCentiPoints)} điểm)</b> ${question.content}</p>${options}`;
+      const options = question.options?.map((option) => `<p class="mc-option"><b>${escapeHtml(option.key)}.</b> ${inlineRichText(option.content)}</p>`).join("") ?? "";
+      return `<section><p><b>Câu ${question.order}. (${formatScore(question.scoreCentiPoints)} điểm)</b></p>${richTextBlocks(question.content)}${options}</section>`;
     };
     const textValue = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
     const trueFalseAnswer = (value: unknown) => {
@@ -66,8 +98,8 @@ function examHtml(metadata: Metadata, generated: PracticeExam | null) {
     }).join("");
     const answers = generated.questions.map((question) => {
       const answer = answerText(question);
-      const rubric = question.rubric?.map((item) => `<li>${item.criterion}: ${formatScore(item.scoreCentiPoints)} điểm</li>`).join("") ?? "";
-      return `<p><b>Câu ${question.order} (${formatScore(question.scoreCentiPoints)} điểm)</b></p><p><b>Đáp án:</b> ${answer}</p><p><b>Hướng dẫn:</b> ${question.explanation}</p>${rubric ? `<ul>${rubric}</ul>` : ""}`;
+      const rubric = question.rubric?.map((item) => `<li>${inlineRichText(item.criterion)}: ${formatScore(item.scoreCentiPoints)} điểm</li>`).join("") ?? "";
+      return `<section><p><b>Câu ${question.order} (${formatScore(question.scoreCentiPoints)} điểm)</b></p><p><b>Đáp án:</b> ${inlineRichText(answer)}</p><p><b>Hướng dẫn:</b></p>${richTextBlocks(question.explanation)}${rubric ? `<ul>${rubric}</ul>` : ""}</section>`;
     }).join("");
     return `<h1>${generated.title}</h1><p class="document-meta">${generated.instructions} · Tổng điểm: 10 điểm</p><section><h2>I. ĐỀ KIỂM TRA</h2>${sections}</section><section><h2>II. ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM</h2>${answers}</section>`;
   }
