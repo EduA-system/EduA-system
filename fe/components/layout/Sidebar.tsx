@@ -5,10 +5,11 @@ import { useState } from "react";
 import { navGroups } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { hasAnyRole } from "@/lib/auth/permissions";
+import { canAccessRoute, hasAnyRole } from "@/lib/auth/permissions";
 
 interface SidebarProps {
   collapsed?: boolean;
+  onToggleCollapsed?: () => void;
   activeHref?: string;
   fixed?: boolean;
   responsive?: boolean;
@@ -23,16 +24,26 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export function Sidebar({ collapsed = false, activeHref, fixed = false, responsive = false, mobileOpen = false }: SidebarProps) {
+export function Sidebar({
+  collapsed,
+  onToggleCollapsed,
+  activeHref,
+  fixed = false,
+  responsive = false,
+  mobileOpen = false,
+}: SidebarProps) {
   const { user } = useAuth();
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const isCollapsed = collapsed ?? internalCollapsed;
+  const toggleCollapsed = onToggleCollapsed ?? (() => setInternalCollapsed((current) => !current));
   const position = fixed
     ? "fixed top-12 left-0 z-40 flex flex-col"
     : responsive
       ? "fixed inset-y-0 left-0 z-40 flex h-screen flex-col transition-transform duration-300 md:relative md:inset-auto md:z-auto md:h-full md:translate-x-0"
       : "flex flex-col";
-  const visibility = collapsed
-    ? "w-0 min-w-0 border-r-0 p-0 opacity-0 pointer-events-none"
+  const visibility = isCollapsed
+    ? "w-[72px] min-w-[72px] border-r border-black/10 px-2 opacity-100"
     : responsive
       ? `w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100 ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`
       : "w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100";
@@ -48,45 +59,57 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false, responsi
   const filteredGroups = navGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.requiredRole || hasAnyRole(user, item.requiredRole)),
+      items: group.items.filter((item) =>
+        (!item.requiredRole || hasAnyRole(user, item.requiredRole)) && canAccessRoute(item.href, user),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 
   return (
     <aside
       className={`shrink-0 overflow-hidden bg-[#f7f5f2] transition-[width,min-width,opacity,padding,border,transform] duration-300 ${position} ${visibility}`}
-      aria-hidden={collapsed}
+      aria-hidden={false}
       style={fixed ? { height: "calc(100% - 48px)" } : undefined}
     >
-      <div className={collapsed ? "flex h-full w-0 flex-col overflow-hidden" : "flex h-full w-[256px] flex-col"}>
-        <div className="flex h-[56px] shrink-0 items-center px-2">
+      <div className={isCollapsed ? "flex h-full w-full flex-col overflow-hidden" : "flex h-full w-[256px] flex-col"}>
+        <div className={`relative flex shrink-0 px-2 ${isCollapsed ? "h-[88px] flex-col items-center justify-center gap-2" : "h-[56px] items-center justify-between"}`}>
           <div className="flex items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-[9px] bg-[#1f1f1f] text-white">
               <DashboardIcon name="spark" />
             </div>
-            <div>
+            <div className={isCollapsed ? "hidden" : ""}>
               <div className="text-sm font-semibold leading-none tracking-[-0.01em] text-[#1f1f1f]">EDUA</div>
               <div className="mt-1 text-[9px] uppercase leading-none tracking-[0.12em] text-[#6b6b6b]">AI for Educators</div>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#6b6b6b] transition hover:bg-[#edeae5] hover:text-[#1f1f1f]"
+            aria-label={isCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+            title={isCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          >
+            <SidebarCollapseIcon collapsed={isCollapsed} />
+          </button>
         </div>
 
         <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
           {filteredGroups.map((group) => (
             <div key={group.label} className="pb-2">
-              <div className="px-2 text-[9px] font-semibold uppercase leading-[14px] tracking-[0.11em] text-[#6b6b6b]">{group.label}</div>
+              <div className={isCollapsed ? "sr-only" : "px-2 text-[9px] font-semibold uppercase leading-[14px] tracking-[0.11em] text-[#6b6b6b]"}>{group.label}</div>
               <div className="mt-1 space-y-px">
                 {group.items.map((item) => {
                   const active = activeHref ? item.href === activeHref : item.active;
                   return (
                     <Link
                       key={item.label}
-                      className={`flex h-9 items-center gap-2.5 rounded-[9px] px-3 text-[13px] font-medium tracking-[-0.01em] transition hover:bg-[#edeae5] hover:text-[#1f1f1f] ${active ? "bg-[#edeae5] text-[#1f1f1f]" : "text-[#6b6b6b]"} ${item.child ? "ml-6 w-[calc(100%-24px)]" : ""}`}
+                      title={isCollapsed ? item.label : undefined}
+                      className={`flex h-9 items-center rounded-[9px] text-[13px] font-medium tracking-[-0.01em] transition hover:bg-[#edeae5] hover:text-[#1f1f1f] ${isCollapsed ? "justify-center px-0" : "gap-2.5 px-3"} ${active ? "bg-[#edeae5] text-[#1f1f1f]" : "text-[#6b6b6b]"} ${!isCollapsed && item.child ? "ml-6 w-[calc(100%-24px)]" : ""}`}
                       href={item.href}
                     >
                       <DashboardIcon name={item.icon} />
-                      <span className="flex-1">{item.label}</span>
-                      {item.expanded ? <DashboardIcon name="chevronUp" className="size-[13px]" /> : null}
+                      <span className={isCollapsed ? "sr-only" : "flex-1"}>{item.label}</span>
+                      {!isCollapsed && item.expanded ? <DashboardIcon name="chevronUp" className="size-[13px]" /> : null}
                     </Link>
                   );
                 })}
@@ -96,7 +119,7 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false, responsi
         </nav>
 
         <div className="mt-auto shrink-0 border-t border-[#d8d1c9] py-3">
-          <Link href="/user-profile" className={`flex items-center gap-2 rounded-xl px-3 py-3 transition hover:bg-[#edeae5] ${activeHref === "/user-profile" ? "bg-[#edeae5]" : ""}`}>
+          <Link href="/user-profile" title={isCollapsed ? displayName : undefined} className={`flex items-center rounded-xl py-3 transition hover:bg-[#edeae5] ${isCollapsed ? "justify-center px-0" : "gap-2 px-3"} ${activeHref === "/user-profile" ? "bg-[#edeae5]" : ""}`}>
             <div className="relative flex size-[34px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#1f1f1f] text-xs font-semibold text-white">
               {user?.avatarUrl && failedAvatarUrl !== user.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -104,7 +127,7 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false, responsi
               ) : initials}
               <span className="absolute bottom-0 right-0 size-2 rounded-full border border-white bg-[#80cfa0]" />
             </div>
-            <div className="min-w-0 flex-1">
+            <div className={isCollapsed ? "hidden" : "min-w-0 flex-1"}>
               <div className="truncate text-[13px] font-medium text-[#1f1f1f]">{displayName}</div>
               <div className="truncate text-[11px] text-[#6b6b6b]">{displayRole}{user?.subject ? ` · ${user.subject}` : ""}</div>
             </div>
@@ -112,5 +135,15 @@ export function Sidebar({ collapsed = false, activeHref, fixed = false, responsi
         </div>
       </div>
     </aside>
+  );
+}
+
+function SidebarCollapseIcon({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2.5" y="3" width="11" height="10" rx="2" />
+      <path d="M6 3v10" />
+      <path d={collapsed ? "M8.5 6 11 8 8.5 10" : "M11 6 8.5 8 11 10"} />
+    </svg>
   );
 }

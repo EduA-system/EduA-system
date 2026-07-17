@@ -2,9 +2,9 @@
 
 import { useRef, useState } from "react";
 import {
-  resolveSlideMetadata,
   slideRoleLabel,
   slideRoleTone,
+  validateContentPlan,
   type OutlinePart,
   type SlideItem,
 } from "@/lib/api/slides";
@@ -14,15 +14,24 @@ function createDefaultSlide(id: string): SlideItem {
   return {
     id,
     title: "Slide mới",
-    kind: "concept",
     pedagogicalRole: "explain",
-    layoutHint: "bullets",
+    contentPlan: {
+      slideType: "concept",
+      headerMode: "fixed",
+      blocks: [{
+        id: `${id}-b1`, kind: "text", role: "body", semanticType: "explanation",
+        priority: "primary", required: true, text: "Nội dung slide",
+      }],
+      relationships: [],
+    },
   };
 }
 
-function contentPreview(content?: string): string {
-  if (!content) return "";
-  return content.replace(/\s+/g, " ").trim();
+function contentPreview(slide: SlideItem): string {
+  const block = slide.contentPlan.blocks[0];
+  if (!block) return "";
+  const value = block.kind === "text" ? block.text : block.kind === "visual" ? block.description : block.kind === "formula" ? block.expression : block.kind === "quiz" ? block.question : "Nội dung có cấu trúc";
+  return value.replace(/\s+/g, " ").trim();
 }
 
 export function OutlineEditor({
@@ -32,6 +41,8 @@ export function OutlineEditor({
   onConfirm,
   confirming = false,
   expandingPartIds = [],
+  failedPartMessages = {},
+  onRetryPart,
 }: {
   lessonTitle: string;
   parts: OutlinePart[];
@@ -39,6 +50,8 @@ export function OutlineEditor({
   onConfirm: (parts: OutlinePart[]) => void;
   confirming?: boolean;
   expandingPartIds?: string[];
+  failedPartMessages?: Record<string, string>;
+  onRetryPart?: (partId: string) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detail, setDetail] = useState<{ partId: string; slideId: string } | null>(null);
@@ -46,6 +59,7 @@ export function OutlineEditor({
 
   const totalSlides = parts.reduce((sum, p) => sum + (p.slides?.length ?? 0), 0);
   const expanding = expandingPartIds.length > 0;
+  const invalidSlides = parts.flatMap((part) => part.slides).filter((slide) => validateContentPlan(slide.contentPlan).length > 0);
 
   function update(next: OutlinePart[]) {
     onChange(next);
@@ -135,6 +149,10 @@ export function OutlineEditor({
         <div className="divide-y divide-[rgba(26,26,46,0.06)]">
           {parts.map((part, partIndex) => {
             const partExpanding = expandingPartIds.includes(part.id);
+            const failureMessage = failedPartMessages[part.id];
+            const partHasInvalidSlide = (part.slides ?? []).some(
+              (slide) => validateContentPlan(slide.contentPlan).length > 0,
+            );
             return (
               <div
                 key={part.id}
@@ -172,6 +190,17 @@ export function OutlineEditor({
                       đang soạn…
                     </span>
                   ) : null}
+                  {failureMessage || (!partExpanding && partHasInvalidSlide) ? (
+                    <button
+                      type="button"
+                      title={failureMessage ?? "Soạn lại nội dung cho phần này."}
+                      onClick={() => onRetryPart?.(part.id)}
+                      className="shrink-0 rounded-lg bg-red-50 px-2 py-1 text-[11px] font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                      disabled={!onRetryPart}
+                    >
+                      {failureMessage ? "Thử lại" : "Soạn lại"}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => deletePart(part.id)}
@@ -184,16 +213,10 @@ export function OutlineEditor({
 
                 <ul className="mt-2 space-y-1 pl-6">
                   {(part.slides ?? []).map((slide) => {
-                    const metadata = resolveSlideMetadata(slide);
-                    const label = slideRoleLabel({
-                      kind: metadata.kind,
-                      pedagogicalRole: metadata.pedagogicalRole,
-                    });
-                    const tone = slideRoleTone({
-                      kind: metadata.kind,
-                      pedagogicalRole: metadata.pedagogicalRole,
-                    });
-                    const preview = contentPreview(slide.content);
+                    const label = slideRoleLabel(slide);
+                    const tone = slideRoleTone(slide);
+                    const preview = contentPreview(slide);
+                    const invalid = validateContentPlan(slide.contentPlan).length > 0;
                     return (
                       <li key={slide.id} className="flex items-start gap-2">
                         <span className="mt-1 text-[#d8d1c9]">└</span>
@@ -210,6 +233,7 @@ export function OutlineEditor({
                             AI
                           </span>
                         ) : null}
+                        {invalid ? <span className="mt-0.5 rounded bg-red-50 px-1.5 py-0.5 text-[10px] text-red-600">Lỗi</span> : null}
                         <button
                           type="button"
                           onClick={() => setDetail({ partId: part.id, slideId: slide.id })}
@@ -263,10 +287,11 @@ export function OutlineEditor({
         </div>
 
         <div className="border-t border-[rgba(26,26,46,0.09)] px-5 py-4">
+          {invalidSlides.length ? <p className="mb-2 text-center text-xs text-red-600">Có {invalidSlides.length} slide chứa block hoặc quan hệ chưa hợp lệ.</p> : null}
           <button
             type="button"
             onClick={() => onConfirm(parts)}
-            disabled={totalSlides === 0 || confirming || expanding}
+            disabled={totalSlides === 0 || confirming || expanding || invalidSlides.length > 0}
             className="flex h-[44px] w-full items-center justify-center rounded-xl bg-[#1c1b2e] text-sm font-medium text-[#f9f8f3] transition enabled:hover:bg-[#2a2940] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {confirming

@@ -7,6 +7,11 @@ export default defineConfig({
   resolve: { alias: { "@": resolve(__dirname, ".") } },
   test: {
     environment: "node",
-    include: ["components/simulations/**/*.test.ts"],
+    include: [
+      "components/simulations/**/*.test.ts",
+      "components/slide-editor/lib/**/*.test.ts",
+      "lib/slide-create/**/*.test.ts",
+      "lib/slide-layout/**/*.test.ts",
+    ],
   },
 });

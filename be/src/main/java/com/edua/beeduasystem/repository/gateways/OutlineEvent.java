@@ -1,6 +1,7 @@
 package com.edua.beeduasystem.repository.gateways;
 
 import com.edua.beeduasystem.presentation.dto.slides.SlideItemDto;
+import com.edua.beeduasystem.presentation.dto.slides.PartDto;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -12,6 +13,7 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
+        @JsonSubTypes.Type(value = OutlineEvent.OutlinePartSkeletonReady.class, name = "OUTLINE_PART_SKELETON_READY"),
         @JsonSubTypes.Type(value = OutlineEvent.OutlinePartReady.class, name = "OUTLINE_PART_READY"),
         @JsonSubTypes.Type(value = OutlineEvent.OutlinePartFailed.class, name = "OUTLINE_PART_FAILED"),
         @JsonSubTypes.Type(value = OutlineEvent.Done.class, name = "DONE"),
@@ -20,6 +22,9 @@ import java.util.List;
 public sealed interface OutlineEvent {
 
     String sessionId();
+
+    record OutlinePartSkeletonReady(String sessionId, PartDto part) implements OutlineEvent {
+    }
 
     record OutlinePartReady(String sessionId, String partId, List<SlideItemDto> slides) implements OutlineEvent {
     }

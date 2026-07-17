@@ -20,6 +20,8 @@ import { makeDraw } from "./lib/factory";
 export type ActiveTool = "select" | "brush" | "pencil" | "eraser";
 
 const PADDING = 72;
+const ZOOM_MIN = 0.1;
+const ZOOM_MAX = 4;
 
 interface DragRef {
   current: {
@@ -48,6 +50,7 @@ export function Canvas({
   drawColor = "#2b2926",
   drawSize = 6,
   onScaleChange,
+  onZoomModeChange,
 }: {
   dragRef: DragRef;
   zoomMode: "fit" | number;
@@ -56,6 +59,7 @@ export function Canvas({
   drawColor?: string;
   drawSize?: number;
   onScaleChange?: (scale: number) => void;
+  onZoomModeChange: (zoom: number) => void;
 }) {
   const slide = useEditorStore((s) =>
     s.slides.find((sl) => sl.id === s.currentSlideId)
@@ -67,6 +71,8 @@ export function Canvas({
   const areaRef = useRef<HTMLDivElement>(null);
   const canvasInnerRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(1);
+  const zoomFrameRef = useRef<number | null>(null);
+  const pendingZoomRef = useRef<number | null>(null);
   const [fitScale, setFitScale] = useState(1);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -82,6 +88,7 @@ export function Canvas({
 
   const scale = zoomMode === "fit" ? fitScale : zoomMode;
   const slideLocked = isSlideLockedForGeneration(slide);
+  const slideFailed = slide?.generationStatus === "failed";
 
   useLayoutEffect(() => {
     scaleRef.current = scale;
@@ -110,6 +117,41 @@ export function Canvas({
     ro.observe(area);
     return () => ro.disconnect();
   }, [zoomMode]);
+
+  // Ctrl/⌘ + wheel (kể cả pinch trên touchpad) chỉ zoom canvas, không zoom browser.
+  // Touchpad có thể bắn nhiều wheel event trong cùng một lượt xử lý, nên chỉ
+  // đưa giá trị zoom mới vào React một lần mỗi frame.
+  useEffect(() => {
+    const area = areaRef.current;
+    if (!area) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+
+      event.preventDefault();
+      const factor = Math.exp(-event.deltaY * 0.0015);
+      const nextScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, scaleRef.current * factor));
+      scaleRef.current = nextScale;
+      pendingZoomRef.current = nextScale;
+
+      if (zoomFrameRef.current !== null) return;
+      zoomFrameRef.current = requestAnimationFrame(() => {
+        zoomFrameRef.current = null;
+        if (pendingZoomRef.current !== null) {
+          onZoomModeChange(pendingZoomRef.current);
+          pendingZoomRef.current = null;
+        }
+      });
+    };
+
+    area.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      area.removeEventListener("wheel", handleWheel);
+      if (zoomFrameRef.current !== null) cancelAnimationFrame(zoomFrameRef.current);
+      zoomFrameRef.current = null;
+      pendingZoomRef.current = null;
+    };
+  }, [onZoomModeChange]);
 
   const toCanvas = useCallback((clientX: number, clientY: number) => {
     const rect = canvasInnerRef.current?.getBoundingClientRect();
@@ -551,6 +593,21 @@ export function Canvas({
               style={{ width: CANVAS_W, height: CANVAS_H }}
             >
               <span className="size-11 animate-spin rounded-full border-[5px] border-[#d97757] border-t-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.55)]" />
+            </div>
+          )}
+
+          {slideFailed && (
+            <div
+              className="absolute inset-0 z-[29999] flex items-center justify-center bg-[#160b0b]/58 p-12"
+              style={{ width: CANVAS_W, height: CANVAS_H }}
+            >
+              <div className="w-full max-w-[640px] rounded-2xl border border-red-200/40 bg-[#fff8f7] p-7 text-left shadow-2xl">
+                <p className="text-sm font-semibold text-[#b42318]">Không thể tạo nội dung cho slide này</p>
+                <p className="mt-2 text-sm leading-6 text-[#4f4943]">
+                  {slide.generationError || "Đã xảy ra lỗi không xác định khi tạo slide."}
+                </p>
+                <p className="mt-4 text-xs text-[#7b7169]">Chạy lại bước hiện tại để thử tạo lại slide này.</p>
+              </div>
             </div>
           )}
         </div>

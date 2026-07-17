@@ -4,9 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
 import { isSlideLockedForGeneration, type Slide } from "./types";
 
+export type DesignStepStatus = "idle" | "running" | "complete" | "error";
+
+export interface DesignStepControls {
+  step1: DesignStepStatus;
+  step2: DesignStepStatus;
+  step3: DesignStepStatus;
+  onRunStep: (step: 1 | 2 | 3) => void;
+}
+
 interface TopBarProps {
   showRightPanel: boolean;
   onToggleRightPanel: () => void;
+  designSteps?: DesignStepControls;
   onRetrySlide?: (slideId: string) => void;
 }
 
@@ -67,22 +77,12 @@ function SidebarRightIcon() {
   );
 }
 
-function RetrySvg() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M13 8A5 5 0 1 1 11.5 4.2M13 2v3h-3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function Divider() {
   return <div className="mx-1 h-5 w-px shrink-0 bg-[#e8e2d9]" />;
+}
+
+function RetrySvg() {
+  return <SparkIcon />;
 }
 
 function IconButton({
@@ -118,10 +118,14 @@ function ActionButton({
   children,
   onClick,
   variant = "ghost",
+  disabled = false,
+  title,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   variant?: "ghost" | "ai" | "dark";
+  disabled?: boolean;
+  title?: string;
 }) {
   const cls =
     variant === "dark"
@@ -133,7 +137,9 @@ function ActionButton({
   return (
     <button
       onClick={onClick}
-      className={`flex h-8 items-center gap-1.5 rounded-[10px] px-3 text-[12px] font-medium transition-colors ${cls}`}
+      disabled={disabled}
+      title={title}
+      className={`flex h-8 items-center gap-1.5 rounded-[10px] px-3 text-[12px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-35 ${cls}`}
     >
       {children}
     </button>
@@ -211,6 +217,7 @@ function deckTitle(slide: Slide | undefined) {
 export function TopBar({
   showRightPanel,
   onToggleRightPanel,
+  designSteps,
   onRetrySlide,
 }: TopBarProps) {
   const undo = useEditorStore((s) => s.undo);
@@ -284,6 +291,25 @@ export function TopBar({
           >
             <RetrySvg />
           </IconButton>
+        </>
+      ) : null}
+
+      {designSteps ? (
+        <>
+          <Divider />
+          {([1, 2, 3] as const).map((step) => {
+            const status = designSteps[`step${step}`];
+            const previousComplete = step === 1 || designSteps[`step${step - 1}` as "step1" | "step2"] === "complete";
+            const disabled = status === "complete" || status === "running" || !previousComplete ||
+              Object.values(designSteps).some((value) => value === "running");
+            const label = step === 1 ? "Bước 1: Giao diện" : step === 2 ? "Bước 2: Bố cục mẫu" : "Bước 3: Nội dung";
+            return (
+              <ActionButton key={step} onClick={() => designSteps.onRunStep(step)} disabled={disabled} title={label} variant="ai">
+                {status === "running" ? <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <SparkIcon />}
+                {label}
+              </ActionButton>
+            );
+          })}
         </>
       ) : null}
 

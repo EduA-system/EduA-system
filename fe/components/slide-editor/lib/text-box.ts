@@ -35,7 +35,11 @@ function applyTextStyles(node: HTMLElement, el: TextElement, width: number) {
 }
 
 export function textBoxMinHeight(el: TextElement, width = el.w): number {
-  if (typeof document === "undefined" || !document.body) return MIN_TEXT_BOX_HEIGHT;
+  if (typeof document === "undefined" || !document.body) {
+    const charsPerLine = Math.max(1, Math.floor(width / Math.max(1, el.fontSize * 0.56)));
+    const lines = (el.text || " ").split("\n").reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
+    return Math.max(MIN_TEXT_BOX_HEIGHT, Math.ceil(lines * el.fontSize * (el.lineHeight ?? 1.2) + 8));
+  }
 
   const isList = el.listStyle === "bullet" || el.listStyle === "numbered";
   const probe = document.createElement(isList ? (el.listStyle === "numbered" ? "ol" : "ul") : "div");

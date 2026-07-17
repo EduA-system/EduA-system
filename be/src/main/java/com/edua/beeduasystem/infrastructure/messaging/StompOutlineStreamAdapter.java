@@ -1,6 +1,7 @@
 package com.edua.beeduasystem.infrastructure.messaging;
 
 import com.edua.beeduasystem.presentation.dto.slides.SlideItemDto;
+import com.edua.beeduasystem.presentation.dto.slides.PartDto;
 import com.edua.beeduasystem.repository.gateways.OutlineEvent;
 import com.edua.beeduasystem.repository.gateways.OutlineStreamPort;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,11 @@ public class StompOutlineStreamAdapter implements OutlineStreamPort {
     private static final String TOPIC_PREFIX = "/topic/outline/";
 
     private final SimpMessagingTemplate messagingTemplate;
+
+    @Override
+    public void publishPartSkeletonReady(String sessionId, PartDto part) {
+        send(sessionId, new OutlineEvent.OutlinePartSkeletonReady(sessionId, part));
+    }
 
     @Override
     public void publishPartReady(String sessionId, String partId, List<SlideItemDto> slides) {
