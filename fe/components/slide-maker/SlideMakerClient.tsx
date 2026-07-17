@@ -15,6 +15,7 @@ import {
 } from "@/lib/slide-create/run-design-pipeline";
 import { useEditorStore } from "@/stores/slide-editor-store";
 import { applyContentSlots } from "@/lib/slide-create/apply-content-slots";
+import { mergeStep2LayoutElements } from "@/lib/slide-create/merge-step2-layout";
 import type { SlideContentFillResponse } from "@/lib/api/slide-design";
 
 type StepStates = {
@@ -46,7 +47,7 @@ export function SlideMakerClient() {
           ? {
               ...slide,
               bg: result.bg,
-              elements: result.elements.map((element) => ({ ...element })),
+              elements: mergeStep2LayoutElements(slide.elements, result.elements),
               generationStatus: "framing",
               generationError: undefined,
             }
@@ -60,7 +61,7 @@ export function SlideMakerClient() {
     useEditorStore.setState((state) => ({
       slides: state.slides.map((slide) =>
         slide.id === slideId
-          ? { ...slide, elements: applyContentSlots(slide.elements, result), aiPrompt: title, generationStatus: "ready", generationError: undefined }
+          ? { ...slide, elements: applyContentSlots(slide.elements, result, slide.bg), aiPrompt: title, generationStatus: "ready", generationError: undefined }
           : slide,
       ),
       selectedIds: state.currentSlideId === slideId ? [] : state.selectedIds,

@@ -15,11 +15,11 @@ import type {
 type Candidate = Pick<SlideLayoutResult, "topology" | "structures" | "slots" | "warnings" | "score">;
 
 const fontByToken: Record<string, number> = {
-  "text-hero": 34,
-  "text-body": 18,
-  "text-caption": 14,
-  "text-formula": 28,
-  "text-cell": 13,
+  "text-hero": 30,
+  "text-body": 16,
+  "text-caption": 12,
+  "text-formula": 24,
+  "text-cell": 11,
 };
 
 function makeSlot(

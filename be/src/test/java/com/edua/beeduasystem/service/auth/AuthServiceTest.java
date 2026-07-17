@@ -1,6 +1,7 @@
 package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
+import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.GoogleIdentity;
 import com.edua.beeduasystem.domain.model.auth.RefreshToken;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AuthServiceTest {
@@ -84,6 +86,30 @@ class AuthServiceTest {
     }
 
     @Test
+    void loginWithGoogle_unverifiedEmail_rejectsLogin() {
+        when(verifier.verify("idtok")).thenReturn(new GoogleIdentity("sub-x", "teacher@fpt.edu.vn", "Teacher", false));
+
+        assertThatThrownBy(() -> authService.loginWithGoogle("idtok"))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verifyNoInteractions(userRepository, tokenService, refreshTokenRepository);
+    }
+
+    @Test
+    void loginWithGoogle_disabledUser_rejectsLogin() {
+        String email = "disabled@fpt.edu.vn";
+        AppUser disabledUser = new AppUser(UUID.randomUUID(), email, "sub-1", "Disabled User",
+                null, null, null, UserStatus.DISABLED, Instant.now(), null);
+        when(verifier.verify("idtok")).thenReturn(new GoogleIdentity("sub-1", email, "Disabled User", true));
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(disabledUser));
+
+        assertThatThrownBy(() -> authService.loginWithGoogle("idtok"))
+                .isInstanceOf(EmailNotAllowedException.class);
+
+        verifyNoInteractions(tokenService, refreshTokenRepository);
+    }
+
+    @Test
     void refresh_returnsUserAndRolesWithNewTokens() {
         UUID userId = UUID.randomUUID();
         AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Teacher",
@@ -101,5 +127,33 @@ class AuthServiceTest {
         assertThat(result.roles()).containsExactly(Role.TEACHER);
         assertThat(result.tokens().accessToken()).isEqualTo("new-access-jwt");
         verify(refreshTokenRepository).revoke(refreshToken.id());
+    }
+
+    @Test
+    void refresh_missingToken_rejectsRequest() {
+        assertThatThrownBy(() -> authService.refresh("  "))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    void refresh_revokedToken_revokesAllUserTokens() {
+        UUID userId = UUID.randomUUID();
+        RefreshToken revokedToken = new RefreshToken(UUID.randomUUID(), userId, "hash",
+                Instant.now().plus(Duration.ofHours(1)), true, Instant.now());
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(revokedToken));
+
+        assertThatThrownBy(() -> authService.refresh("reused-token"))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verify(refreshTokenRepository).revokeAllByUserId(userId);
+    }
+
+    @Test
+    void logout_blankToken_doesNotRevokeAnything() {
+        authService.logout(" ");
+
+        verifyNoInteractions(refreshTokenRepository);
     }
 }

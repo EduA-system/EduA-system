@@ -1,10 +1,12 @@
 import { PLACEHOLDER_IMAGE } from "@/components/slide-editor/lib/be-mapper";
 import type { ImageElement, LineElement, ShapeElement, SlideElement, TextElement } from "@/components/slide-editor/types";
+import { blendSurface, contrastingTextColor } from "./contrast";
 import type { LayoutSlot, LayoutStructure, SlideLayoutResult } from "./types";
 
 export type RenderLayoutOptions = {
   palette: string[];
   surfaceColor?: string;
+  backgroundColor?: string;
   headerLabel?: string;
   decoIconUrls?: string[];
 };
@@ -64,7 +66,7 @@ function structureElements(structure: LayoutStructure, palette: string[], surfac
 function textStyle(slot: LayoutSlot): Pick<TextElement, "fontSize" | "bold" | "italic" | "color" | "align" | "fontFamily" | "lineHeight"> {
   const token = slot.defaultStyleToken;
   return {
-    fontSize: token === "text-hero" ? 34 : token === "text-formula" ? 28 : token === "text-caption" ? 14 : token === "text-cell" ? 13 : 18,
+    fontSize: token === "text-hero" ? 30 : token === "text-formula" ? 24 : token === "text-caption" ? 12 : token === "text-cell" ? 11 : 16,
     bold: token === "text-hero" || token === "text-formula" || token === "text-caption",
     italic: false,
     color: "#2b2926",
@@ -74,7 +76,7 @@ function textStyle(slot: LayoutSlot): Pick<TextElement, "fontSize" | "bold" | "i
   };
 }
 
-function slotElement(slot: LayoutSlot, palette: string[]): TextElement | ImageElement {
+function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string, backgroundColor?: string): TextElement | ImageElement {
   if (slot.kind === "image") {
     return {
       ...base(`layout:${slot.id}`, slot.rect, slot.zIndex),
@@ -92,24 +94,27 @@ function slotElement(slot: LayoutSlot, palette: string[]): TextElement | ImageEl
     contentSlot: slot.id,
     text: slot.sourceText,
     ...textStyle(slot),
-    color: palette[0] ?? "#2b2926",
+    color: contrastingTextColor(
+      slot.zone === "hero" ? backgroundColor : blendSurface(surfaceColor ?? palette[1], backgroundColor, 0.6),
+      palette[0],
+    ),
   };
 }
 
 export function renderSlideLayout(result: SlideLayoutResult, options: RenderLayoutOptions): SlideElement[] {
   const elements: SlideElement[] = [];
   for (const structure of result.structures) elements.push(...structureElements(structure, options.palette, options.surfaceColor));
-  for (const slot of result.slots) elements.push(slotElement(slot, options.palette));
+  for (const slot of result.slots) elements.push(slotElement(slot, options.palette, options.surfaceColor, options.backgroundColor));
   if (result.headerMode === "fixed" && options.headerLabel) {
     elements.push({
       ...base(`layout:${result.slideId}:header`, { x: 40, y: 24, w: 880, h: 30 }, 40),
       type: "text",
       contentSlot: "header-1",
       text: options.headerLabel,
-      fontSize: 13,
+      fontSize: 12,
       bold: true,
       italic: false,
-      color: options.palette[0] ?? "#2b2926",
+      color: contrastingTextColor(options.backgroundColor, options.palette[0]),
       align: "left",
       fontFamily: "Inter, sans-serif",
       lineHeight: 1.2,

@@ -68,4 +68,14 @@ describe("dynamic slide layout engine", () => {
     const intro = renderSlideLayout(generateSlideLayout(fixture("intro")), { palette: ["#222222"], headerLabel: "Hóa học" });
     expect(intro.some((element) => element.contentSlot === "header-1")).toBe(false);
   });
+
+  it("uses compact default typography for generated content", () => {
+    const concept = renderSlideLayout(generateSlideLayout(fixture("concept")), { palette: ["#222222"], headerLabel: "Hóa học" });
+    expect(concept.find((element) => element.contentSlot === "slot:title")).toMatchObject({ type: "text", fontSize: 30 });
+    expect(concept.find((element) => element.contentSlot === "slot:body")).toMatchObject({ type: "text", fontSize: 16 });
+    expect(concept.find((element) => element.contentSlot === "header-1")).toMatchObject({ type: "text", fontSize: 12 });
+
+    const formula = renderSlideLayout(generateSlideLayout(fixture("formula")), { palette: ["#222222"] });
+    expect(formula.find((element) => element.contentSlot === "slot:formula:expression")).toMatchObject({ type: "text", fontSize: 24 });
+  });
 });

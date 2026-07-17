@@ -149,7 +149,7 @@ export async function runStructuralStep(
         elements: renderSlideLayout(result, {
           palette,
           surfaceColor: surfaceColorFromSkin(ctx.skinHtml, palette),
-          decoIconUrls: ctx.decoIconUrls,
+          backgroundColor: ctx.skinBg,
           headerLabel: [ctx.subject, ctx.topic].filter(Boolean).join(" · "),
         }),
       });

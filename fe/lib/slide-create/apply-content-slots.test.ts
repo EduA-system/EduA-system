@@ -26,7 +26,7 @@ describe("applyContentSlots", () => {
       modelUsed: "test",
     });
 
-    expect(result[0]).toMatchObject({ type: "text", text: "Định luật II Newton", fontSize: 44, color: "#d97757", align: "center" });
+    expect(result[0]).toMatchObject({ type: "text", text: "Định luật II Newton", fontSize: 44, color: "#1f2937", align: "center" });
     expect(result[1]).toMatchObject({ type: "image", src: "placeholder", imagePrompt: "free body diagram" });
     expect(result[2]).toEqual(shape);
   });
@@ -40,5 +40,15 @@ describe("applyContentSlots", () => {
     });
     expect(result[0]).toMatchObject({ text: longText });
     expect(result[0].h).toBeGreaterThan(40);
+  });
+
+  it("replaces an unreadable AI color with an opposing text color", () => {
+    const result = applyContentSlots([{ ...text, zIndex: 2 }, { ...shape, fill: "#f4f1ec", zIndex: 1 }], {
+      slots: [{ slotId: "hero-1", text: "Nội dung", imagePrompt: null, style: { color: "#ffffff" } }],
+      latencyMs: 10,
+      modelUsed: "test",
+    });
+
+    expect(result[0]).toMatchObject({ type: "text", color: "#1f2937" });
   });
 });
