@@ -198,3 +198,15 @@ export async function retryOutlinePart(authFetch: AuthFetch, request: {
     throw new Error(`Không thể thử lại phần đề cương: ${detail || res.statusText}`);
   }
 }
+
+export async function startOutlineSession(authFetch: AuthFetch, sessionId: string): Promise<void> {
+  const res = await authFetch(`${BE}/api/slides/outline-sessions/${sessionId}/start`, { method: "POST" });
+  if (!res.ok) throw new Error(`Không thể bắt đầu tạo outline: ${await res.text().catch(() => res.statusText)}`);
+}
+
+export async function retryOutlineSessionPart(authFetch: AuthFetch, sessionId: string, partId: string): Promise<void> {
+  const res = await authFetch(`${BE}/api/slides/retry-outline-session-part`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, partId }),
+  });
+  if (!res.ok) throw new Error(`Không thể thử lại phần đề cương: ${await res.text().catch(() => res.statusText)}`);
+}

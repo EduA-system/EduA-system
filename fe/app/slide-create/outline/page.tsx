@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
-import { generateOutline, retryOutlinePart, type OutlinePart } from "@/lib/api/slides";
+import { generateOutline, retryOutlineSessionPart, startOutlineSession, type OutlinePart } from "@/lib/api/slides";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { connectOutlineStream, type OutlineEvent } from "@/lib/ws/outline-client";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
@@ -58,7 +58,9 @@ export default function SlideOutlinePage() {
   const outlineRequestRef = useRef<ReturnType<typeof generateOutline> | null>(null);
 
   const handleOutlineEvent = useCallback((event: OutlineEvent) => {
-    if (event.type === "OUTLINE_PART_READY") {
+    if (event.type === "OUTLINE_PART_SKELETON_READY") {
+      setParts((prev) => prev.map((part) => (part.id === event.part.id ? event.part : part)));
+    } else if (event.type === "OUTLINE_PART_READY") {
       setParts((prev) =>
         prev.map((p) =>
           p.id !== event.partId
@@ -143,6 +145,14 @@ export default function SlideOutlinePage() {
           topic: res.outlineTopic,
           accessToken,
           onEvent: handleOutlineEvent,
+          onReady: () => {
+            void startOutlineSession(authFetch, res.sessionId).catch((startError) => {
+              if (!cancelled) {
+                setStatus("error");
+                setError(startError instanceof Error ? startError.message : String(startError));
+              }
+            });
+          },
           onClose: () => {
             disconnectRef.current = null;
           },
@@ -170,27 +180,12 @@ export default function SlideOutlinePage() {
       return next;
     });
     try {
-      await retryOutlinePart(authFetch, {
-        sessionId: session.sessionId,
-        generationRequest: {
-          lessonId: session.lessonCardId,
-          libraryContentId: session.libraryContentId,
-          lessonTitle: session.lessonTitle,
-          lessonSummary: session.lessonSummary,
-          grade: session.grade,
-          subject: session.subject,
-          lessonContent: session.lessonContent,
-          plan: session.inlinePlan,
-          styleHint: session.styleHint,
-        },
-        outline: { lessonId: session.lessonCardId, lessonTitle: session.lessonTitle, parts },
-        partId,
-      });
+      await retryOutlineSessionPart(authFetch, session.sessionId, partId);
     } catch (err) {
       setExpandingPartIds((prev) => prev.filter((id) => id !== partId));
       setFailedPartMessages((prev) => ({ ...prev, [partId]: err instanceof Error ? err.message : String(err) }));
     }
-  }, [authFetch, parts, session]);
+  }, [authFetch, session]);
 
   // Ngắt kết nối khi rời trang.
   useEffect(() => () => disconnectRef.current?.(), []);

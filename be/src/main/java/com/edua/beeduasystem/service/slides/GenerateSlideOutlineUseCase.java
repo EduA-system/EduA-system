@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.CompletableFuture;
@@ -43,6 +44,7 @@ public class GenerateSlideOutlineUseCase {
     private final OutlineStreamPort outlineStream;
     private final ExecutorService executor;
     private final LessonContentChunker chunker;
+    private final OutlineGenerationSessionStore sessions;
 
     @Autowired
     public GenerateSlideOutlineUseCase(
@@ -50,17 +52,19 @@ public class GenerateSlideOutlineUseCase {
             SlidePromptBuilder promptBuilder,
             OutlineStreamPort outlineStream,
             @Qualifier("slideSessionExecutor") ExecutorService executor,
-            LessonContentChunker chunker) {
+            LessonContentChunker chunker,
+            OutlineGenerationSessionStore sessions) {
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
         this.outlineStream = outlineStream;
         this.executor = executor;
         this.chunker = chunker;
+        this.sessions = sessions;
     }
 
     GenerateSlideOutlineUseCase(AiClient aiClient, SlidePromptBuilder promptBuilder,
                                 OutlineStreamPort outlineStream, ExecutorService executor) {
-        this(aiClient, promptBuilder, outlineStream, executor, new LessonContentChunker());
+        this(aiClient, promptBuilder, outlineStream, executor, new LessonContentChunker(), new OutlineGenerationSessionStore());
     }
 
     public GenerateOutlineResponse execute(GenerateOutlineRequest req) {
@@ -69,18 +73,152 @@ public class GenerateSlideOutlineUseCase {
         String sessionId = UUID.randomUUID().toString();
         String topic = "/topic/slides/" + sessionId;
         String outlineTopic = "/topic/outline/" + sessionId;
+        LessonSourceContext source = LessonSourceContext.from(req, chunker);
+        List<JsonNode> contentMaps = createContentMaps(lesson, source.chunks());
+        source = source.withActivities(createDeckBlueprint(lesson, req, contentMaps, chunkIds(source.chunks())));
+        List<PartDto> placeholders = manifestParts(source);
+        Map<String, PartDto> parts = new java.util.LinkedHashMap<>();
+        placeholders.forEach(part -> parts.put(part.id(), part));
+        sessions.create(sessionId, req, source, parts);
+        log.info("slide outline manifest session={} snapshot={} chunks={} parts={}", sessionId,
+                source.snapshotId(), source.chunks().size(), placeholders.size());
+        return new GenerateOutlineResponse(sessionId, topic, outlineTopic,
+                new OutlineDto(lesson.id(), lesson.title(), placeholders));
+    }
 
-        // PHA 1 — khung (sync, 1 call nhẹ).
-        List<LessonContentChunker.Chunk> chunks = chunksFor(req);
-        log.info("slide outline source length={} chunks={}",
-                req.lessonContent() == null ? 0 : req.lessonContent().length(), chunks.size());
-        ParsedSkeleton skeleton = createSkeleton(lesson, req, chunks);
-        GenerateOutlineResponse response =
-                new GenerateOutlineResponse(sessionId, topic, outlineTopic, skeleton.outline());
+    /** Starts only after the client subscribed to the session topic. */
+    public void start(String sessionId) {
+        OutlineGenerationSessionStore.Session session = sessions.find(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Phiên tạo outline đã hết hạn. Hãy tạo lại."));
+        if (!session.startOnce()) return;
+        LessonContext lesson = SlideLessonContextFactory.fromOutlineRequest(session.request());
+        List<PartDto> placeholders = new ArrayList<>(session.parts().values());
+        AtomicInteger remaining = new AtomicInteger(placeholders.size());
+        AtomicInteger failures = new AtomicInteger();
+        for (PartDto placeholder : placeholders) {
+            executor.submit(() -> {
+                try {
+                    generateAndExpandPart(sessionId, lesson, session, placeholder.id());
+                } catch (Exception e) {
+                    failures.incrementAndGet();
+                    log.warn("Outline part {} failed: {}", placeholder.id(), e.getMessage());
+                    outlineStream.publishPartError(sessionId, placeholder.id(), e.getMessage());
+                } finally {
+                    if (remaining.decrementAndGet() == 0) outlineStream.publishDone(sessionId, failures.get());
+                }
+            });
+        }
+    }
 
-        // PHA 2 — expand từng phần (nền, stream qua STOMP). Trả response pha 1 trước.
-        startExpansion(sessionId, lesson, req, skeleton);
-        return response;
+    public void retrySessionPart(String sessionId, String partId) {
+        OutlineGenerationSessionStore.Session session = sessions.find(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Phiên tạo outline đã hết hạn. Hãy tạo lại."));
+        if (!session.parts().containsKey(partId)) throw new IllegalArgumentException("Không tìm thấy phần cần thử lại.");
+        LessonContext lesson = SlideLessonContextFactory.fromOutlineRequest(session.request());
+        executor.submit(() -> {
+            try { generateAndExpandPart(sessionId, lesson, session, partId); }
+            catch (Exception e) { outlineStream.publishPartError(sessionId, partId, e.getMessage()); }
+        });
+    }
+
+    private List<PartDto> manifestParts(LessonSourceContext source) {
+        List<PartDto> parts = new ArrayList<>();
+        for (LessonSourceContext.Activity activity : source.activities()) {
+            parts.add(new PartDto(activity.id(), activity.title(), List.of(), activity.chunkIds()));
+        }
+        return parts;
+    }
+
+    private void generateAndExpandPart(String sessionId, LessonContext lesson, OutlineGenerationSessionStore.Session session, String partId) {
+        PartDto placeholder = session.parts().get(partId);
+        PartDto skeleton = placeholder.slides().isEmpty()
+                ? generatePartSkeleton(lesson, session.request(), session.source(), placeholder)
+                : placeholder;
+        session.parts().put(partId, skeleton);
+        outlineStream.publishPartSkeletonReady(sessionId, skeleton);
+        String partSkeletonJson;
+        try { partSkeletonJson = LENIENT_MAPPER.writeValueAsString(new OutlineDto(lesson.id(), lesson.title(), List.of(skeleton))); }
+        catch (Exception e) { throw new IllegalStateException("Không thể chuẩn bị khung part.", e); }
+        if (!expandPart(sessionId, lesson, session.request(), partSkeletonJson, skeleton)) {
+            throw new IllegalStateException("AI không thể soạn nội dung cho part " + partId);
+        }
+    }
+
+    private PartDto generatePartSkeleton(LessonContext lesson, GenerateOutlineRequest req,
+                                          LessonSourceContext source, PartDto placeholder) {
+        List<String> ids = placeholder.sourceChunkIds() == null ? List.of() : placeholder.sourceChunkIds();
+        String learningGoal = source.activities().stream().filter(chapter -> chapter.id().equals(placeholder.id()))
+                .findFirst().map(LessonSourceContext.Activity::goal).orElse("");
+        String prompt = promptBuilder.partSkeletonPrompt(lesson, req.plan(), req.userPrompt(), req.subject(),
+                placeholder.id(), placeholder.title(), ids, slideBudget(placeholder.id(), source))
+                + "\nCHAPTER TEACHING GOAL: " + learningGoal;
+        prompt = withLessonSource(prompt, source.readSource(ids));
+        ParsedSkeleton parsed = generateSkeletonWithRetry(lesson, prompt, ids, !ids.isEmpty(), "part-skeleton " + placeholder.id());
+        if (parsed.outline().parts().size() != 1) throw new IllegalArgumentException("Part skeleton phải chỉ có một part");
+        PartDto result = parsed.outline().parts().getFirst();
+        if (!placeholder.id().equals(result.id())) throw new IllegalArgumentException("Part skeleton trả sai id");
+        return result;
+    }
+
+    private static int slideBudget(String partId, LessonSourceContext source) {
+        return source.activities().stream().filter(chapter -> chapter.id().equals(partId))
+                .findFirst().map(LessonSourceContext.Activity::slideBudget).orElse(4);
+    }
+
+    private List<LessonSourceContext.Activity> createDeckBlueprint(
+            LessonContext lesson, GenerateOutlineRequest request, List<JsonNode> maps, List<String> allowedChunkIds) {
+        String mapsJson;
+        try { mapsJson = LENIENT_MAPPER.writeValueAsString(maps); }
+        catch (Exception e) { throw new SlideAiResponseException("Không thể chuẩn bị knowledge map cho deck.", e); }
+        String originalPrompt = promptBuilder.deckBlueprintPrompt(lesson, request.subject(), request.userPrompt(), mapsJson, allowedChunkIds);
+        String prompt = originalPrompt;
+        Exception first = null;
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                log.info("slide deck-blueprint attempt={} promptLength={} chunks={}", attempt, prompt.length(), allowedChunkIds.size());
+                String raw = aiClient.generate(prompt);
+                log.info("slide deck-blueprint attempt={} responseLength={}", attempt, raw == null ? 0 : raw.length());
+                return parseDeckBlueprint(raw, allowedChunkIds);
+            } catch (Exception e) {
+                if (attempt == 1) { first = e; prompt = promptBuilder.strictJsonRetryPrompt(originalPrompt, "deck-blueprint"); }
+                else throw new SlideAiResponseException("AI không thể lập kịch bản deck sau 2 lần thử: " + e.getMessage(), first);
+            }
+        }
+        throw new IllegalStateException("Unreachable");
+    }
+
+    private static List<LessonSourceContext.Activity> parseDeckBlueprint(String raw, List<String> allowedChunkIds) throws Exception {
+        JsonNode chapters = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(raw)).path("chapters");
+        if (!chapters.isArray() || chapters.size() < 4 || chapters.size() > 6) throw new IllegalArgumentException("chapters phải có 4 đến 6 phần");
+        List<LessonSourceContext.Activity> result = new ArrayList<>();
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        java.util.Set<String> covered = new java.util.HashSet<>();
+        int total = 0;
+        for (JsonNode chapter : chapters) {
+            String id = requiredText(chapter, "id");
+            if (!ids.add(id) || !id.matches("p[1-6]")) throw new IllegalArgumentException("chapter id không hợp lệ: " + id);
+            String title = requiredText(chapter, "title");
+            String normalizedTitle = java.text.Normalizer.normalize(title, java.text.Normalizer.Form.NFD)
+                    .replaceAll("\\p{M}", "").toUpperCase(java.util.Locale.ROOT);
+            if (normalizedTitle.startsWith("HOAT DONG") || normalizedTitle.startsWith("TEN BAI DAY")
+                    || normalizedTitle.startsWith("TIEN TRINH DAY HOC")) {
+                throw new IllegalArgumentException("chapter title không được là heading giáo án");
+            }
+            String goal = requiredText(chapter, "learningGoal");
+            int budget = chapter.path("slideBudget").asInt(0);
+            if (budget < 2 || budget > 10) throw new IllegalArgumentException("slideBudget phải từ 2 đến 10");
+            List<String> chunkIds = stringList(chapter.path("sourceChunkIds"));
+            if (!allowedChunkIds.isEmpty() && chunkIds.isEmpty()) throw new IllegalArgumentException("chapter cần sourceChunkIds");
+            for (String chunkId : chunkIds) {
+                if (!allowedChunkIds.contains(chunkId)) throw new IllegalArgumentException("sourceChunkId không hợp lệ: " + chunkId);
+                covered.add(chunkId);
+            }
+            total += budget;
+            result.add(new LessonSourceContext.Activity(id, title, goal, chunkIds, budget));
+        }
+        if (total < 20 || total > 30) throw new IllegalArgumentException("Tổng số slide phải từ 20 đến 30");
+        if (!covered.containsAll(allowedChunkIds)) throw new IllegalArgumentException("Deck blueprint bỏ sót source chunk");
+        return result;
     }
 
     private ParsedSkeleton createSkeleton(
@@ -136,7 +274,7 @@ public class GenerateSlideOutlineUseCase {
     }
 
     private JsonNode generateContentMapWithRetry(LessonContext lesson, LessonContentChunker.Chunk chunk) {
-        String originalPrompt = promptBuilder.contentMapPrompt(lesson, chunk);
+        String originalPrompt = promptBuilder.semanticIndexPrompt(lesson, chunk);
         String prompt = originalPrompt;
         Exception first = null;
         for (int attempt = 1; attempt <= 2; attempt++) {
@@ -185,7 +323,9 @@ public class GenerateSlideOutlineUseCase {
         for (int attempt = 1; attempt <= 2; attempt++) {
             try {
                 log.info("slide {} attempt={} promptLength={} chunks={}", phase, attempt, prompt.length(), allowedIds.size());
-                return parseSkeleton(lesson, aiClient.generate(prompt), allowedIds, requireCoverage);
+                String raw = aiClient.generate(prompt);
+                log.info("slide {} attempt={} responseLength={}", phase, attempt, raw == null ? 0 : raw.length());
+                return parseSkeleton(lesson, raw, allowedIds, requireCoverage);
             } catch (Exception e) {
                 if (attempt == 1) {
                     first = e;

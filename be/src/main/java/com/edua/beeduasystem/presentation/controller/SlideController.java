@@ -3,6 +3,7 @@ package com.edua.beeduasystem.presentation.controller;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineRequest;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineResponse;
 import com.edua.beeduasystem.presentation.dto.slides.RetryOutlinePartRequest;
+import com.edua.beeduasystem.presentation.dto.slides.RetryOutlineSessionPartRequest;
 import com.edua.beeduasystem.service.slides.GenerateSlideOutlineUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +25,18 @@ public class SlideController {
     @Operation(summary = "Sinh đề cương slide từ giáo án inline")
     public GenerateOutlineResponse generateOutline(@RequestBody GenerateOutlineRequest request) {
         return generateSlideOutlineUseCase.execute(request);
+    }
+
+    @PostMapping("/outline-sessions/{sessionId}/start")
+    @Operation(summary = "Bắt đầu sinh outline sau khi client đã subscribe STOMP")
+    public void startOutlineSession(@org.springframework.web.bind.annotation.PathVariable String sessionId) {
+        generateSlideOutlineUseCase.start(sessionId);
+    }
+
+    @PostMapping("/retry-outline-session-part")
+    @Operation(summary = "Thử lại một part bằng snapshot của phiên tạo outline")
+    public void retryOutlineSessionPart(@RequestBody RetryOutlineSessionPartRequest request) {
+        generateSlideOutlineUseCase.retrySessionPart(request.sessionId(), request.partId());
     }
 
     @PostMapping("/retry-outline-part")
