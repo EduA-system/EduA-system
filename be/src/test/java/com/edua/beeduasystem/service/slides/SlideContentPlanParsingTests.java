@@ -100,4 +100,12 @@ class SlideContentPlanParsingTests {
         var root = MAPPER.readTree(SlidePromptBuilder.stripFences(raw));
         assertEquals("Newton", root.path("lessonTitle").asText());
     }
+
+    @Test
+    void stripsFencesOnlyWhenPresentAndHandlesNullInput() {
+        assertEquals("{\"a\":1}", SlidePromptBuilder.stripFences("```json\n{\"a\":1}\n```"));
+        assertEquals("{\"a\":1}", SlidePromptBuilder.stripFences("  {\"a\":1}  "));
+        assertEquals("", SlidePromptBuilder.stripFences(null));
+        assertEquals("không phải JSON", SlidePromptBuilder.stripFences("không phải JSON"));
+    }
 }
