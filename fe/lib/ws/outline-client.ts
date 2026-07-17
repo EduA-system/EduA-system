@@ -24,7 +24,7 @@ export function connectOutlineStream({
 }): { disconnect: () => void } {
   const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080";
   const brokerURL = `${wsBase}/ws`;
-  logSlideStreamLifecycle("outline connecting", { brokerURL, topic });
+  logSlideStreamLifecycle("outline connecting");
 
   const client = new Client({
     brokerURL,
@@ -33,14 +33,14 @@ export function connectOutlineStream({
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,
     onConnect: () => {
-      logSlideStreamLifecycle("outline connected, subscribing", { topic });
+      logSlideStreamLifecycle("outline connected, subscribing");
       client.subscribe(topic, (message) => {
         try {
           const payload = JSON.parse(message.body) as OutlineEvent;
-          logSlideApi("outline event", payload);
+          logSlideApi(`outline event: ${payload.type}`);
           onEvent(payload);
           if (payload.type === "DONE" || payload.type === "ERROR") {
-            logSlideStreamLifecycle("outline stream finished", { type: payload.type });
+            logSlideStreamLifecycle(`outline stream finished: ${payload.type}`);
             onClose();
           }
         } catch (error) {
@@ -50,7 +50,7 @@ export function connectOutlineStream({
       onReady();
     },
     onDisconnect: () => {
-      logSlideStreamLifecycle("outline disconnected", { topic });
+      logSlideStreamLifecycle("outline disconnected");
       onClose();
     },
     onStompError: (frame) => {
@@ -61,7 +61,7 @@ export function connectOutlineStream({
   client.activate();
   return {
     disconnect: () => {
-      logSlideStreamLifecycle("outline disconnect requested", { topic });
+      logSlideStreamLifecycle("outline disconnect requested");
       void client.deactivate();
     },
   };

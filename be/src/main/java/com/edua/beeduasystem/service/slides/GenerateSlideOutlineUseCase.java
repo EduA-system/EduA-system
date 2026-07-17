@@ -2,6 +2,7 @@ package com.edua.beeduasystem.service.slides;
 
 import com.edua.beeduasystem.domain.model.lesson.LessonContext;
 import com.edua.beeduasystem.domain.model.slide.ContentPlan;
+import com.edua.beeduasystem.domain.model.slide.OutlineItemSplitPolicy;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineRequest;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineResponse;
 import com.edua.beeduasystem.presentation.dto.slides.OutlineDto;
@@ -38,6 +39,8 @@ public class GenerateSlideOutlineUseCase {
     /** Số phần expand chạy song song tối đa (khớp SLIDE_CONCURRENCY=4 ở FE). */
     private static final int EXPAND_CONCURRENCY = 4;
     private static final int CONTENT_MAP_CONCURRENCY = 3;
+    private static final java.util.Set<String> PEDAGOGICAL_ROLES = java.util.Set.of(
+            "hook", "explain", "derive", "demonstrate", "practice", "recap", "other");
 
     private final AiClient aiClient;
     private final SlidePromptBuilder promptBuilder;
@@ -98,7 +101,9 @@ public class GenerateSlideOutlineUseCase {
         for (PartDto placeholder : placeholders) {
             executor.submit(() -> {
                 try {
-                    generateAndExpandPart(sessionId, lesson, session, placeholder.id());
+                    if (!generateAndExpandPart(sessionId, lesson, session, placeholder.id())) {
+                        failures.incrementAndGet();
+                    }
                 } catch (Exception e) {
                     failures.incrementAndGet();
                     log.warn("Outline part {} failed: {}", placeholder.id(), e.getMessage());
@@ -129,7 +134,7 @@ public class GenerateSlideOutlineUseCase {
         return parts;
     }
 
-    private void generateAndExpandPart(String sessionId, LessonContext lesson, OutlineGenerationSessionStore.Session session, String partId) {
+    private boolean generateAndExpandPart(String sessionId, LessonContext lesson, OutlineGenerationSessionStore.Session session, String partId) {
         PartDto placeholder = session.parts().get(partId);
         PartDto skeleton = placeholder.slides().isEmpty()
                 ? generatePartSkeleton(lesson, session.request(), session.source(), placeholder)
@@ -139,9 +144,9 @@ public class GenerateSlideOutlineUseCase {
         String partSkeletonJson;
         try { partSkeletonJson = LENIENT_MAPPER.writeValueAsString(new OutlineDto(lesson.id(), lesson.title(), List.of(skeleton))); }
         catch (Exception e) { throw new IllegalStateException("Không thể chuẩn bị khung part.", e); }
-        if (!expandPart(sessionId, lesson, session.request(), partSkeletonJson, skeleton)) {
-            throw new IllegalStateException("AI không thể soạn nội dung cho part " + partId);
-        }
+        // expandPart has already published the detailed cause to the client when it fails.
+        // Return the outcome so the caller can count failures without overwriting that cause.
+        return expandPart(sessionId, lesson, session.request(), partSkeletonJson, skeleton);
     }
 
     private PartDto generatePartSkeleton(LessonContext lesson, GenerateOutlineRequest req,
@@ -157,7 +162,34 @@ public class GenerateSlideOutlineUseCase {
         if (parsed.outline().parts().size() != 1) throw new IllegalArgumentException("Part skeleton phải chỉ có một part");
         PartDto result = parsed.outline().parts().getFirst();
         if (!placeholder.id().equals(result.id())) throw new IllegalArgumentException("Part skeleton trả sai id");
-        return result;
+        return ensureOpeningSlide(result);
+    }
+
+    /** Adds a deterministic transition slide when the AI skeleton starts directly with lesson content. */
+    static PartDto ensureOpeningSlide(PartDto part) {
+        if (part.slides() == null || part.slides().isEmpty()) {
+            throw new IllegalArgumentException("Part phải có ít nhất một slide");
+        }
+        String firstType = part.slides().getFirst().contentPlan().slideType();
+        if ("intro".equals(firstType) || "section".equals(firstType)) return part;
+
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        part.slides().forEach(slide -> ids.add(slide.id()));
+        String id = part.id() + "-section";
+        int suffix = 2;
+        while (!ids.add(id)) id = part.id() + "-section-" + suffix++;
+
+        List<SlideItemDto> slides = new ArrayList<>(part.slides().size() + 1);
+        slides.add(new SlideItemDto(
+                id,
+                part.title(),
+                "explain",
+                null,
+                null,
+                new ContentPlan("section", "hidden", List.of(), List.of())
+        ));
+        slides.addAll(part.slides());
+        return new PartDto(part.id(), part.title(), slides, part.sourceChunkIds());
     }
 
     private static int slideBudget(String partId, LessonSourceContext source) {
@@ -282,6 +314,7 @@ public class GenerateSlideOutlineUseCase {
                 log.info("content-map chunk={} heading={} attempt={} promptLength={}",
                         chunk.id(), headingLabel(chunk), attempt, prompt.length());
                 JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(aiClient.generate(prompt)));
+                normalizeContentMapSuggestedRoles(root);
                 validateContentMap(root, chunk.id());
                 return root;
             } catch (Exception e) {
@@ -310,10 +343,18 @@ public class GenerateSlideOutlineUseCase {
             stringList(root.path(field));
         }
         for (String role : stringList(root.path("suggestedSlideRoles"))) {
-            if (!List.of("hook", "explain", "derive", "demonstrate", "practice", "recap").contains(role)) {
+            if (!PEDAGOGICAL_ROLES.contains(role)) {
                 throw new IllegalArgumentException("suggestedSlideRoles chứa giá trị không hợp lệ: " + role);
             }
         }
+    }
+
+    /** Content-map roles are advisory only; preserve the map when an AI uses a non-standard label. */
+    static void normalizeContentMapSuggestedRoles(JsonNode root) {
+        if (!(root instanceof com.fasterxml.jackson.databind.node.ObjectNode objectRoot)) return;
+        List<String> roles = stringList(objectRoot.path("suggestedSlideRoles"));
+        com.fasterxml.jackson.databind.node.ArrayNode normalized = objectRoot.putArray("suggestedSlideRoles");
+        for (String role : roles) normalized.add(normalizePedagogicalRole(role));
     }
 
     private ParsedSkeleton generateSkeletonWithRetry(
@@ -434,7 +475,7 @@ public class GenerateSlideOutlineUseCase {
         return result;
     }
 
-    private ParsedSkeleton parseSkeleton(
+    ParsedSkeleton parseSkeleton(
             LessonContext lesson, String raw, List<String> allowedChunkIds, boolean requireCoverage) {
         try {
             String json = SlidePromptBuilder.stripFences(raw);
@@ -449,7 +490,7 @@ public class GenerateSlideOutlineUseCase {
                     String id = requiredText(s, "id");
                     if (!slideIds.add(id)) throw new IllegalArgumentException("Duplicate slide id: " + id);
                     String title = requiredText(s, "title");
-                    String pedagogicalRole = requiredText(s, "pedagogicalRole");
+                    String pedagogicalRole = normalizePedagogicalRole(requiredText(s, "pedagogicalRole"));
                     JsonNode semantic = semanticNode(s);
                     String slideType = normalizeSkeletonSlideType(
                             requiredText(semantic, "slideType"), pedagogicalRole, title);
@@ -518,6 +559,7 @@ public class GenerateSlideOutlineUseCase {
                     }
                 }
             }
+            filled = autoSplitDenseOutlineItems(lesson, req, part, filled);
             outlineStream.publishPartReady(sessionId, part.id(), filled);
             return true;
         } catch (Exception e) {
@@ -525,6 +567,105 @@ public class GenerateSlideOutlineUseCase {
             outlineStream.publishPartError(sessionId, part.id(), e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * This happens while the outline is being generated, before the completed
+     * part is sent to the client and before any visual-design step starts.
+     */
+    List<SlideItemDto> autoSplitDenseOutlineItems(
+            LessonContext lesson, GenerateOutlineRequest req, PartDto part, List<SlideItemDto> items) {
+        java.util.Set<String> usedIds = new java.util.HashSet<>();
+        items.forEach(item -> usedIds.add(item.id()));
+        List<SlideItemDto> result = new ArrayList<>();
+
+        for (SlideItemDto item : items) {
+            OutlineItemSplitPolicy.Decision decision = OutlineItemSplitPolicy.evaluate(item.contentPlan());
+            if (!decision.shouldSplit()) {
+                result.add(item);
+                continue;
+            }
+
+            try {
+                usedIds.remove(item.id());
+                List<SlideItemDto> splitItems = splitOutlineItemWithRetry(lesson, req, part, item, decision.reasons(), usedIds);
+                usedIds.addAll(splitItems.stream().map(SlideItemDto::id).toList());
+                result.addAll(splitItems);
+                log.info("Auto-split dense outline item={} into={} reasons={}", item.id(),
+                        splitItems.stream().map(SlideItemDto::id).toList(), decision.reasons());
+            } catch (Exception e) {
+                usedIds.add(item.id());
+                result.add(item);
+                log.warn("Keeping dense outline item={} because automatic split failed: {}", item.id(), e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    private List<SlideItemDto> splitOutlineItemWithRetry(
+            LessonContext lesson,
+            GenerateOutlineRequest req,
+            PartDto part,
+            SlideItemDto item,
+            List<String> reasons,
+            java.util.Set<String> usedIds) throws Exception {
+        String itemJson = LENIENT_MAPPER.writeValueAsString(item);
+        String originalPrompt = promptBuilder.splitOutlineItemPrompt(lesson, part.title(), itemJson, reasons, req.subject());
+        String prompt = originalPrompt;
+        Exception first = null;
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                log.info("split outline item={} part={} attempt={} promptLength={}", item.id(), part.id(), attempt, prompt.length());
+                return parseSplitOutlineItems(aiClient.generate(prompt), item, usedIds);
+            } catch (Exception e) {
+                if (attempt == 1) {
+                    first = e;
+                    prompt = promptBuilder.strictJsonRetryPrompt(originalPrompt, "split outline item " + item.id());
+                } else {
+                    throw new SlideAiResponseException("AI không thể tách mục outline " + item.id() + " sau 2 lần thử: " + e.getMessage(), first);
+                }
+            }
+        }
+        throw new IllegalStateException("Unreachable");
+    }
+
+    static List<SlideItemDto> parseSplitOutlineItems(String raw, SlideItemDto original, java.util.Set<String> usedIds) throws Exception {
+        JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(raw));
+        JsonNode slides = root.path("slides");
+        if (!slides.isArray() || slides.size() != 2) {
+            throw new IllegalArgumentException("Split response must contain exactly two slides");
+        }
+
+        java.util.Set<String> allocatedIds = new java.util.HashSet<>(usedIds);
+        List<SlideItemDto> result = new ArrayList<>(2);
+        for (int index = 0; index < 2; index++) {
+            JsonNode node = slides.get(index);
+            String title = requiredText(node, "title");
+            String role = normalizePedagogicalRole(requiredText(node, "pedagogicalRole"));
+            JsonNode semantic = semanticNode(node);
+            String slideType = normalizeSkeletonSlideType(requiredText(semantic, "slideType"), role, title);
+            String headerMode = requiredText(semantic, "headerMode");
+            ContentPlan contentPlan = parseContentPlan(slideType, headerMode,
+                    semantic.path("blocks"), semantic.path("relationships"));
+            String id = nextSplitId(original.id(), index == 0 ? "a" : "b", allocatedIds);
+            result.add(new SlideItemDto(id, title, role, intOrNull(node, "durationMinutes"),
+                    textOrNull(node, "aiNote"), contentPlan));
+            allocatedIds.add(id);
+        }
+        usedIds.addAll(result.stream().map(SlideItemDto::id).toList());
+        return result;
+    }
+
+    private static String nextSplitId(String originalId, String suffix, java.util.Set<String> usedIds) {
+        String candidate = originalId + "-" + suffix;
+        int duplicate = 2;
+        while (usedIds.contains(candidate)) candidate = originalId + "-" + suffix + "-" + duplicate++;
+        return candidate;
+    }
+
+    /** Pedagogical roles are metadata; preserve known roles and safely bucket every other AI label. */
+    static String normalizePedagogicalRole(String role) {
+        return PEDAGOGICAL_ROLES.contains(role) ? role : "other";
     }
 
     /** Semantic fields may be emitted directly or under the public contentPlan envelope. */
@@ -713,6 +854,6 @@ public class GenerateSlideOutlineUseCase {
     }
 
     /** Khung pha 1 đã parse + chuỗi JSON gốc (chứa brief) để làm context cho pha 2. */
-    private record ParsedSkeleton(OutlineDto outline, String skeletonJson, boolean fallback) {
+    record ParsedSkeleton(OutlineDto outline, String skeletonJson, boolean fallback) {
     }
 }

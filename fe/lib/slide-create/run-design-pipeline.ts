@@ -42,6 +42,10 @@ function flattenSlides(parts: OutlinePart[]): SlideItem[] {
   return parts.flatMap((part) => part.slides);
 }
 
+function isTitleSlot(slot: { id: string; sourceBlockId: string }): boolean {
+  return slot.id.endsWith(":title") || slot.sourceBlockId.endsWith(":title");
+}
+
 function paletteFromSkin(skinHtml: string): string[] {
   const skinWithoutSurfaceMetadata = skinHtml.replace(/data-surface-color=["']#[0-9a-fA-F]{6}["']/gi, "");
   const colors = skinWithoutSurfaceMetadata.match(/#[0-9a-fA-F]{6}/g) ?? [];
@@ -173,12 +177,17 @@ export async function runContentFillStep(
     try {
       const slots = ctx.contentSlotsBySlide.get(slide.id);
       if (!slots?.length) throw new Error("Slide chưa có placeholder từ Bước 2.");
+      const fillableSlots = slots.filter((slot) => !isTitleSlot(slot));
+      if (!fillableSlots.length) {
+        cb.onSlideReady?.(slide.id, { slots: [], latencyMs: 0, modelUsed: "outline-title" }, slide.title);
+        return;
+      }
       const response = await fillSlideContent({
         topic: ctx.topic,
         outline: slideOutlineText(slide),
         subject: ctx.subject,
         styleHint: ctx.styleHint,
-        slots,
+        slots: fillableSlots,
         palette: paletteFromSkin(ctx.skinHtml),
       });
       if (!response.slots.length) throw new Error("AI trả về rỗng, không có nội dung slot.");

@@ -59,7 +59,11 @@ export function OutlineEditor({
 
   const totalSlides = parts.reduce((sum, p) => sum + (p.slides?.length ?? 0), 0);
   const expanding = expandingPartIds.length > 0;
-  const invalidSlides = parts.flatMap((part) => part.slides).filter((slide) => validateContentPlan(slide.contentPlan).length > 0);
+  const failedPartIds = new Set(Object.keys(failedPartMessages));
+  const invalidSlides = parts
+    .filter((part) => !expandingPartIds.includes(part.id) && !failedPartIds.has(part.id))
+    .flatMap((part) => part.slides)
+    .filter((slide) => validateContentPlan(slide.contentPlan).length > 0);
 
   function update(next: OutlinePart[]) {
     onChange(next);
@@ -150,7 +154,8 @@ export function OutlineEditor({
           {parts.map((part, partIndex) => {
             const partExpanding = expandingPartIds.includes(part.id);
             const failureMessage = failedPartMessages[part.id];
-            const partHasInvalidSlide = (part.slides ?? []).some(
+            const contentIsPending = partExpanding || Boolean(failureMessage);
+            const partHasInvalidSlide = !contentIsPending && (part.slides ?? []).some(
               (slide) => validateContentPlan(slide.contentPlan).length > 0,
             );
             return (
@@ -190,15 +195,15 @@ export function OutlineEditor({
                       đang soạn…
                     </span>
                   ) : null}
-                  {failureMessage || (!partExpanding && partHasInvalidSlide) ? (
+                  {!partExpanding && !failureMessage && partHasInvalidSlide ? (
                     <button
                       type="button"
-                      title={failureMessage ?? "Soạn lại nội dung cho phần này."}
+                      title="Soạn lại nội dung cho phần này."
                       onClick={() => onRetryPart?.(part.id)}
                       className="shrink-0 rounded-lg bg-red-50 px-2 py-1 text-[11px] font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50"
                       disabled={!onRetryPart}
                     >
-                      {failureMessage ? "Thử lại" : "Soạn lại"}
+                      Soạn lại
                     </button>
                   ) : null}
                   <button
@@ -211,12 +216,29 @@ export function OutlineEditor({
                   </button>
                 </div>
 
+                {failureMessage ? (
+                  <div role="alert" className="mt-2 flex items-start justify-between gap-3 rounded-lg bg-red-50 px-3 py-2 text-left">
+                    <p className="text-xs leading-5 text-red-700">
+                      <span className="font-medium">Chưa thể soạn nội dung: </span>
+                      {failureMessage}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onRetryPart?.(part.id)}
+                      className="shrink-0 rounded-md bg-white px-2 py-1 text-[11px] font-medium text-red-600 shadow-sm transition hover:bg-red-100 disabled:opacity-50"
+                      disabled={!onRetryPart}
+                    >
+                      Thử lại
+                    </button>
+                  </div>
+                ) : null}
+
                 <ul className="mt-2 space-y-1 pl-6">
                   {(part.slides ?? []).map((slide) => {
                     const label = slideRoleLabel(slide);
                     const tone = slideRoleTone(slide);
                     const preview = contentPreview(slide);
-                    const invalid = validateContentPlan(slide.contentPlan).length > 0;
+                    const invalid = !contentIsPending && validateContentPlan(slide.contentPlan).length > 0;
                     return (
                       <li key={slide.id} className="flex items-start gap-2">
                         <span className="mt-1 text-[#d8d1c9]">└</span>
@@ -246,7 +268,11 @@ export function OutlineEditor({
                             <span className="block truncate text-[11px] text-[#aeacb8]">{preview}</span>
                           ) : (
                             <span className="block text-[11px] text-[#c9c6d6]">
-                              {partExpanding ? "đang soạn nội dung…" : "bấm để soạn nội dung"}
+                              {partExpanding
+                                ? "đang soạn nội dung…"
+                                : failureMessage
+                                  ? "nội dung chưa được tạo"
+                                  : "bấm để soạn nội dung"}
                             </span>
                           )}
                         </button>
@@ -287,11 +313,12 @@ export function OutlineEditor({
         </div>
 
         <div className="border-t border-[rgba(26,26,46,0.09)] px-5 py-4">
+          {Object.keys(failedPartMessages).length ? <p className="mb-2 text-center text-xs text-red-600">Có phần chưa soạn được; hãy thử lại trước khi tạo slide.</p> : null}
           {invalidSlides.length ? <p className="mb-2 text-center text-xs text-red-600">Có {invalidSlides.length} slide chứa block hoặc quan hệ chưa hợp lệ.</p> : null}
           <button
             type="button"
             onClick={() => onConfirm(parts)}
-            disabled={totalSlides === 0 || confirming || expanding || invalidSlides.length > 0}
+            disabled={totalSlides === 0 || confirming || expanding || Object.keys(failedPartMessages).length > 0 || invalidSlides.length > 0}
             className="flex h-[44px] w-full items-center justify-center rounded-xl bg-[#1c1b2e] text-sm font-medium text-[#f9f8f3] transition enabled:hover:bg-[#2a2940] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {confirming

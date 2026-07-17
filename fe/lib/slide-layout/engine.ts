@@ -22,6 +22,20 @@ const fontByToken: Record<string, number> = {
   "text-cell": 11,
 };
 
+/** Keep illustration crops useful: neither a banner nor a thin portrait strip. */
+function balancedImageRect(rect: Rect): Rect {
+  const ratio = rect.w / rect.h;
+  const minRatio = 0.75;
+  const maxRatio = 1.5;
+  if (ratio >= minRatio && ratio <= maxRatio) return rect;
+  if (ratio > maxRatio) {
+    const w = Math.round(rect.h * maxRatio);
+    return { ...rect, x: rect.x + Math.round((rect.w - w) / 2), w };
+  }
+  const h = Math.round(rect.w / minRatio);
+  return { ...rect, y: rect.y + Math.round((rect.h - h) / 2), h };
+}
+
 function makeSlot(
   block: ContentBlock,
   rect: Rect,
@@ -30,7 +44,8 @@ function makeSlot(
   sourcePartId?: string,
   token = zone === "hero" ? "text-hero" : zone === "formula" ? "text-formula" : zone === "caption" ? "text-caption" : "text-body",
 ): LayoutSlot {
-  const limits = capacity(rect, fontByToken[token] ?? 18);
+  const fittedRect = block.kind === "visual" ? balancedImageRect(rect) : rect;
+  const limits = capacity(fittedRect, fontByToken[token] ?? 18);
   return {
     id: `slot:${block.id}${sourcePartId ? `:${sourcePartId}` : ""}`,
     sourceBlockId: block.id,
@@ -38,7 +53,7 @@ function makeSlot(
     sourceText,
     zone,
     kind: block.kind === "visual" ? "image" : "text",
-    rect,
+    rect: fittedRect,
     ...limits,
     contentHint: `${block.semanticType}; ${block.priority}; ${block.required ? "required" : "optional"}`,
     defaultStyleToken: token,

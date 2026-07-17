@@ -67,10 +67,9 @@ export default function SlideOutlinePage() {
             ? p
             : {
                 ...p,
-                slides: p.slides.map((s) => {
-                  const filled = event.slides.find((x) => x.id === s.id);
-                  return filled ? { ...s, ...filled } : s;
-                }),
+                // The backend may replace one dense outline item with two items.
+                // Use the completed ordered list rather than merging only matching ids.
+                slides: event.slides,
               },
         ),
       );
@@ -81,6 +80,7 @@ export default function SlideOutlinePage() {
         return next;
       });
     } else if (event.type === "OUTLINE_PART_FAILED") {
+      logSlideApi(`outline part failed: ${event.partId}`);
       setExpandingPartIds((prev) => prev.filter((id) => id !== event.partId));
       setFailedPartMessages((prev) => ({ ...prev, [event.partId]: event.message || "AI chưa thể soạn phần này." }));
     } else if (event.type === "DONE" || event.type === "ERROR") {
@@ -191,33 +191,6 @@ export default function SlideOutlinePage() {
   useEffect(() => () => disconnectRef.current?.(), []);
 
   // DEBUG: log toàn bộ nội dung outline mỗi khi thay đổi.
-  useEffect(() => {
-    console.log(
-      "[EDUA slide] OUTLINE FULL",
-      JSON.stringify(
-        {
-          status,
-          partCount: parts.length,
-          slideCount: parts.reduce((sum, p) => sum + p.slides.length, 0),
-          parts: parts.map((p) => ({
-            id: p.id,
-            title: p.title,
-            slides: p.slides.map((s) => ({
-              id: s.id,
-              title: s.title,
-              pedagogicalRole: s.pedagogicalRole,
-              durationMinutes: s.durationMinutes,
-              contentPlan: s.contentPlan,
-              aiNote: s.aiNote,
-            })),
-          })),
-        },
-        null,
-        2,
-      ),
-    );
-  }, [parts, status]);
-
   // Lưu outline (khung + nội dung stream + sửa tay) vào session để giữ khi quay lại.
   useEffect(() => {
     if (status === "ready" && parts.length > 0) {

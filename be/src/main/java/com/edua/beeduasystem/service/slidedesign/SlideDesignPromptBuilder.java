@@ -75,6 +75,12 @@ public class SlideDesignPromptBuilder {
             Pick ONE mood (A–E) or invent one following the 3-color ×
             3-typeface principle:
 
+            LIGHT-ONLY POLICY: the root canvas background MUST be a light
+            color (relative luminance suitable for dark text). Do not use
+            navy, black, charcoal, or any dark full-canvas background.
+            Mood B/E may contribute a pale grid or small dark decorations,
+            but must use their light variants as the canvas background.
+
               A. EDITORIAL ACADEMIC — cream #faf7f2 + navy #0b2545 + coral
                  #e63946. Newsreader serif + Inter.
               B. NEO-PHYSICS BLUEPRINT — deep navy #0a1929 OR dark cream
@@ -766,7 +772,7 @@ public class SlideDesignPromptBuilder {
             user.append("  <teacher_style_hint>").append(styleHint).append("</teacher_style_hint>\n");
         }
         user.append("</request>\n\n");
-        user.append("Pick a mood (A–E or invent one). Emit the L0 root background, ");
+        user.append("Pick a LIGHT mood (A–E or invent one). The L0 root background must be pale and readable with dark text; never use a dark full-canvas background. Emit the L0 root background, ");
         user.append("choose one light neutral content-surface color and write it as ");
         user.append("data-surface-color=\"#RRGGBB\" on the root, then emit ");
         user.append("1–3 L1 decoration children, AND the L2 HEADER PLACEHOLDER ");
@@ -908,7 +914,8 @@ public class SlideDesignPromptBuilder {
         prompt.append("\nRules:\n")
                 .append("- Use only facts supplied in the outline; do not invent examples, questions, or activities.\n")
                 .append("- Allocate distinct content across repeated zones in listed order; do not repeat text.\n")
-                .append("- Text must be Vietnamese. maxChars/maxLines are writing guidance only: never truncate a fact or answer. Use line breaks or bullet character • when useful.\n")
+                .append("- Text must be Vietnamese. maxChars/maxLines are writing guidance only: never truncate a fact or answer.\n")
+                .append("- When a text slot contains 2 or more distinct facts, steps, causes, features, examples, or answers, return 2–4 short lines beginning with `• `; do not write one long paragraph. Keep a single-sentence definition, conclusion, or transition as prose.\n")
                 .append("- For image slots, text must be null and imagePrompt must be a specific English image prompt; do not provide an image URL.\n")
                 .append("- Text style is optional. fontSize must suit the zone, color must be one of ALLOWED COLORS, align is left/center/right.\n")
                 .append("- Return every requested slot and no other slot.\n\n")
