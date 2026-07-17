@@ -38,7 +38,12 @@ export function SlideCreateDashboard() {
     } catch (error) { setLibraryError(error instanceof Error ? error.message : "Không thể tải thư viện giáo án."); }
     finally { setLoading(false); }
   }, [authFetch, authStatus]);
-  useEffect(() => { void loadLibrary(); }, [loadLibrary]);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      void loadLibrary();
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [loadLibrary]);
 
   const lessons = useMemo<LessonCard[]>(() => items.map((item) => ({
     id: item.id, title: item.title, description: "Giáo án đã lưu trong thư viện", subject: item.subject ? subjectLabel[item.subject] ?? item.subject : "Chưa phân môn",
