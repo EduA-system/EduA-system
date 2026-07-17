@@ -129,12 +129,12 @@ export default function SlideOutlinePage() {
 
         patchSlideCreateSession({
           sessionId: res.sessionId,
-          topic: res.topic,
+          topic: session.lessonTitle,
           outlineParts: res.outline.parts,
         });
         setSession((prev) =>
           prev
-            ? { ...prev, sessionId: res.sessionId, topic: res.topic, outlineParts: res.outline.parts }
+            ? { ...prev, sessionId: res.sessionId, topic: prev.lessonTitle, outlineParts: res.outline.parts }
             : prev,
         );
         setParts(res.outline.parts);
@@ -231,7 +231,7 @@ export default function SlideOutlinePage() {
       setConfirming(true);
       writeActiveGeneration({
         sessionId: session.sessionId,
-        topic: session.topic,
+        topic: session.lessonTitle,
         lessonId: session.lessonCardId,
         lessonTitle: session.lessonTitle,
         lessonSummary: session.lessonSummary,

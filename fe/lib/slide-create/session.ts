@@ -53,19 +53,31 @@ export type ActiveGeneration = {
   parts: import("@/lib/api/slides").OutlinePart[];
 };
 
+function displayTopic(topic: string, lessonTitle: string): string {
+  const normalizedTopic = topic.trim();
+  // `topic` used to be populated from the server's STOMP destination
+  // (`/topic/slides/<session-id>`). Never expose that transport detail in
+  // the slide header or send it to the design prompts.
+  return normalizedTopic.startsWith("/topic/") ? lessonTitle.trim() : normalizedTopic;
+}
+
+function normalizeActiveGeneration(active: ActiveGeneration): ActiveGeneration {
+  return { ...active, topic: displayTopic(active.topic, active.lessonTitle) };
+}
+
 export function readActiveGeneration(): ActiveGeneration | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(SLIDE_GENERATION_ACTIVE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as ActiveGeneration;
+    return normalizeActiveGeneration(JSON.parse(raw) as ActiveGeneration);
   } catch {
     return null;
   }
 }
 
 export function writeActiveGeneration(active: ActiveGeneration) {
-  sessionStorage.setItem(SLIDE_GENERATION_ACTIVE_KEY, JSON.stringify(active));
+  sessionStorage.setItem(SLIDE_GENERATION_ACTIVE_KEY, JSON.stringify(normalizeActiveGeneration(active)));
 }
 
 export function clearActiveGeneration() {
