@@ -1,19 +1,73 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { PanelLeft } from "lucide-react";
 import { navGroups } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { canAccessRoute, hasAnyRole } from "@/lib/auth/permissions";
 
 interface SidebarProps {
-  collapsed?: boolean;
-  onToggleCollapsed?: () => void;
   activeHref?: string;
+  /** Render as a fixed full-height overlay layer instead of an in-flow column. */
   fixed?: boolean;
   responsive?: boolean;
   mobileOpen?: boolean;
+}
+
+// Chuyển trạng thái mở/thu gọn tự quản lý ngay trong Sidebar — CHỈ một nút
+// toggle duy nhất, sống trong component này (không còn các bản sao rải rác ở
+// từng trang). Rail 60px = 2×12px padding hàng (px-3) + 36px ô icon (size-9)
+// khớp khít, icon không cần tự dịch chuyển bằng transform: nó vốn đã nằm giữa
+// ô icon cố định của nó, chỉ có phần chữ bên cạnh biến mất kéo hàng co lại.
+const RAIL_WIDTH = "w-[66px]";
+const FULL_WIDTH = "w-[264px]";
+// MỘT cặp duration/easing DUY NHẤT dùng cho mọi phần tử đang chuyển động cùng
+// lúc (chiều rộng sidebar, chữ mờ/dịch/co, icon toggle xoay) — trước đó mỗi
+// chỗ một tốc độ khác nhau (150/200/220ms) khiến các phần tử "lệch nhịp" nhau,
+// đây chính là nguyên nhân hiệu ứng nhìn thô/giật thay vì 1 chuyển động mượt.
+const EASE = "ease-[cubic-bezier(0.32,0.72,0,1)]";
+const DURATION = "duration-[340ms]";
+const MAIN_TRANSITION = `${DURATION} ${EASE}`;
+
+// Mỗi trang tự dựng <Sidebar> riêng (không có layout chung giữ nó sống xuyên
+// suốt điều hướng) — chuyển trang là component này unmount/mount lại từ đầu,
+// state `collapsed` nội bộ sẽ mất. Lưu vào localStorage để trang MỚI đọc lại
+// đúng lựa chọn trước đó thay vì luôn bật lại về mở rộng.
+//
+// Đọc qua useSyncExternalStore (không phải useState+useEffect) — đây là API
+// React dành riêng cho việc này: getSnapshot đọc localStorage đồng bộ ngay
+// trong render (không lệch hydration vì getServerSnapshot luôn trả "mở",
+// khớp với HTML server render), và set-state-trong-effect (bị lint chặn vì
+// gây render dồn) là không cần thiết.
+const COLLAPSED_STORAGE_KEY = "edua-sidebar-collapsed";
+const COLLAPSED_CHANGE_EVENT = "edua-sidebar-collapsed-change";
+
+function readCollapsed(): boolean {
+  return localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1";
+}
+
+function writeCollapsed(value: boolean) {
+  localStorage.setItem(COLLAPSED_STORAGE_KEY, value ? "1" : "0");
+  // Tự bắn sự kiện — localStorage.setItem KHÔNG tự kích hoạt "storage" event
+  // ở CHÍNH tab vừa ghi (event đó chỉ bắn sang các tab khác), nên phải tự báo
+  // cho useSyncExternalStore biết snapshot vừa đổi để render lại ngay.
+  window.dispatchEvent(new Event(COLLAPSED_CHANGE_EVENT));
+}
+
+function subscribeCollapsed(callback: () => void): () => void {
+  window.addEventListener(COLLAPSED_CHANGE_EVENT, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(COLLAPSED_CHANGE_EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function getServerSnapshot(): boolean {
+  return false;
 }
 
 function getInitials(name: string): string {
@@ -24,29 +78,34 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export function Sidebar({
-  collapsed,
-  onToggleCollapsed,
-  activeHref,
-  fixed = false,
-  responsive = false,
-  mobileOpen = false,
-}: SidebarProps) {
+function IconSlot({ children }: { children: React.ReactNode }) {
+  return <span className="flex size-10 shrink-0 items-center justify-center">{children}</span>;
+}
+
+/** Tooltip bên phải — chỉ render khi thu gọn (chữ đã ẩn khỏi hàng). */
+function Tooltip({ label }: { label: string }) {
+  return (
+    <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-[#1f1f1f] px-3 py-1.5 text-[13px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+      {label}
+    </span>
+  );
+}
+
+export function Sidebar({ activeHref, fixed = false, responsive = false, mobileOpen = false }: SidebarProps) {
   const { user } = useAuth();
-  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
-  const [internalCollapsed, setInternalCollapsed] = useState(false);
-  const isCollapsed = collapsed ?? internalCollapsed;
-  const toggleCollapsed = onToggleCollapsed ?? (() => setInternalCollapsed((current) => !current));
+  const pathname = usePathname();
+  const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, getServerSnapshot);
+
+  const setCollapsed = (next: boolean | ((c: boolean) => boolean)) => {
+    const value = typeof next === "function" ? next(collapsed) : next;
+    writeCollapsed(value);
+  };
+
   const position = fixed
     ? "fixed top-12 left-0 z-40 flex flex-col"
     : responsive
-      ? "fixed inset-y-0 left-0 z-40 flex h-screen flex-col transition-transform duration-300 md:relative md:inset-auto md:z-auto md:h-full md:translate-x-0"
+      ? `fixed inset-y-0 left-0 z-40 flex h-screen flex-col md:sticky md:top-0 md:z-auto md:self-start ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`
       : "flex flex-col";
-  const visibility = isCollapsed
-    ? "w-[72px] min-w-[72px] border-r border-black/10 px-2 opacity-100"
-    : responsive
-      ? `w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100 ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`
-      : "w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100";
 
   const displayName = user?.fullName ?? user?.email ?? "Nguyen Thi Hoa";
   const initials = user ? getInitials(displayName) : "NH";
@@ -65,51 +124,110 @@ export function Sidebar({
     }))
     .filter((group) => group.items.length > 0);
 
+  // Chữ/nội dung phụ: thu gọn → mờ + dịch trái + co bề rộng về 0, TẤT CẢ cùng
+  // lúc với chiều rộng sidebar co lại (cùng MAIN_TRANSITION, không lệch nhịp).
+  // Mở lại → đợi 1 nhịp (delay) để sidebar nở gần xong rồi chữ mới hiện ra.
+  // max-width (không chỉ opacity) để chữ thật sự "co vào" theo đúng chuyển
+  // động của hàng, không phải biến mất đột ngột giữa chừng animation.
+  const textCls = collapsed
+    ? `max-w-0 opacity-0 -translate-x-2 ${MAIN_TRANSITION} delay-0`
+    : `max-w-[165px] opacity-100 translate-x-0 ${MAIN_TRANSITION} delay-150`;
+
   return (
     <aside
-      className={`shrink-0 overflow-hidden bg-[#f7f5f2] transition-[width,min-width,opacity,padding,border,transform] duration-300 ${position} ${visibility}`}
-      aria-hidden={false}
+      className={`shrink-0 overflow-hidden border-r border-black/10 bg-[#f7f5f2] transition-[width] ${MAIN_TRANSITION} ${position} ${collapsed ? RAIL_WIDTH : FULL_WIDTH}`}
       style={fixed ? { height: "calc(100% - 48px)" } : undefined}
     >
-      <div className={isCollapsed ? "flex h-full w-full flex-col overflow-hidden" : "flex h-full w-[256px] flex-col"}>
-        <div className={`relative flex shrink-0 px-2 ${isCollapsed ? "h-[88px] flex-col items-center justify-center gap-2" : "h-[56px] items-center justify-between"}`}>
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-[9px] bg-[#1f1f1f] text-white">
-              <DashboardIcon name="spark" />
-            </div>
-            <div className={isCollapsed ? "hidden" : ""}>
-              <div className="text-sm font-semibold leading-none tracking-[-0.01em] text-[#1f1f1f]">EDUA</div>
-              <div className="mt-1 text-[9px] uppercase leading-none tracking-[0.12em] text-[#6b6b6b]">AI for Educators</div>
+      <div className="flex h-full w-full flex-col overflow-hidden">
+        {/* Logo + nút thu gọn/mở rộng — CÙNG 1 hàng, luôn ở trên cùng. Khi thu
+            gọn, nút toggle nằm ĐÈ đúng lên vị trí logo (padding hàng khớp
+            khít với logo nên 2 ô icon trùng khít nhau — xem RAIL_WIDTH ở
+            trên): mặc định hiện logo, di chuột vào mới đổi sang icon toggle. */}
+        <div className="group/brand relative flex h-[57px] shrink-0 items-center px-[13px]">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <IconSlot>
+              <div
+                className={`flex size-9 items-center justify-center rounded-[10px] bg-[#1f1f1f] text-white transition-opacity duration-150 ${
+                  collapsed ? "opacity-100 group-hover/brand:opacity-0" : "opacity-100"
+                }`}
+              >
+                <DashboardIcon name="spark" className="size-[18px]" />
+              </div>
+            </IconSlot>
+            <div className={`overflow-hidden whitespace-nowrap transition-[opacity,transform,max-width] ${textCls}`}>
+              <div className="text-[15px] font-semibold leading-none tracking-[-0.01em] text-[#1f1f1f]">
+                EDUA
+              </div>
+              <div className="mt-1 text-[10px] uppercase leading-none tracking-[0.12em] text-[#6b6b6b]">
+                AI for Educators
+              </div>
             </div>
           </div>
           <button
             type="button"
-            onClick={toggleCollapsed}
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#6b6b6b] transition hover:bg-[#edeae5] hover:text-[#1f1f1f]"
-            aria-label={isCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
-            title={isCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+            onClick={() => setCollapsed((c) => !c)}
+            title={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+            className={`absolute right-[13px] top-1/2 z-10 flex size-10 shrink-0 -translate-y-1/2 items-center justify-center rounded-[10px] text-[#6b6b6b] transition-colors duration-150 hover:bg-[#edeae5] hover:text-[#1f1f1f] ${
+              collapsed ? "opacity-0 transition-opacity duration-150 group-hover/brand:opacity-100" : "opacity-100"
+            }`}
           >
-            <SidebarCollapseIcon collapsed={isCollapsed} />
+            <PanelLeft
+              className={`size-[19px] transition-transform ${MAIN_TRANSITION} ${collapsed ? "rotate-180" : ""}`}
+              strokeWidth={2}
+            />
           </button>
         </div>
 
-        <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
-          {filteredGroups.map((group) => (
+        <div className="mx-[13px] my-3 h-px shrink-0 bg-black/10" aria-hidden />
+
+        <nav className="min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto pb-3">
+          {filteredGroups.map((group, gi) => (
             <div key={group.label} className="pb-2">
-              <div className={isCollapsed ? "sr-only" : "px-2 text-[9px] font-semibold uppercase leading-[14px] tracking-[0.11em] text-[#6b6b6b]"}>{group.label}</div>
+              {collapsed ? (
+                gi > 0 && <div className="mx-3 my-1.5 h-px shrink-0 bg-black/10" />
+              ) : (
+                <div
+                  className={`overflow-hidden whitespace-nowrap px-[13px] text-[10px] font-semibold uppercase leading-4 tracking-[0.11em] text-[#6b6b6b] transition-[opacity,transform,max-width] ${textCls}`}
+                >
+                  {group.label}
+                </div>
+              )}
               <div className="mt-1 space-y-px">
                 {group.items.map((item) => {
-                  const active = activeHref ? item.href === activeHref : item.active;
+                  // Submenu (vd "Vật lý"/"Hóa học" lồng dưới "Mô phỏng") ẩn hẳn
+                  // khi thu gọn — không đủ chỗ, và cha đã mất chỉ báo "expanded".
+                  if (collapsed && item.child) return null;
+                  const active = item.href === (activeHref ?? pathname);
+
+                  // "Mô phỏng" (và mọi mục có chevron mở nhóm con) chỉ là nhãn
+                  // mở/đóng — không tô nền hover/active như link thường, tránh
+                  // nhìn giống đang chọn trong khi thật ra là tiêu đề nhóm.
+                  const isGroupHeader = Boolean(item.expanded);
+
                   return (
                     <Link
                       key={item.label}
-                      title={isCollapsed ? item.label : undefined}
-                      className={`flex h-9 items-center rounded-[9px] text-[13px] font-medium tracking-[-0.01em] transition hover:bg-[#edeae5] hover:text-[#1f1f1f] ${isCollapsed ? "justify-center px-0" : "gap-2.5 px-3"} ${active ? "bg-[#edeae5] text-[#1f1f1f]" : "text-[#6b6b6b]"} ${!isCollapsed && item.child ? "ml-6 w-[calc(100%-24px)]" : ""}`}
+                      className={`group relative flex h-10 items-center overflow-hidden rounded-[10px] text-[14px] font-medium tracking-[-0.01em] transition-colors duration-150 ${
+                        isGroupHeader
+                          ? "text-[#6b6b6b]"
+                          : `hover:bg-[#edeae5] hover:text-[#1f1f1f] ${active ? "bg-[#edeae5] text-[#1f1f1f]" : "text-[#6b6b6b]"}`
+                      } ${
+                        collapsed
+                          ? "mx-auto w-10 justify-center"
+                          : `w-full gap-3 px-[13px] ${item.child ? "ml-6 w-[calc(100%-24px)]" : ""}`
+                      }`}
                       href={item.href}
                     >
-                      <DashboardIcon name={item.icon} />
-                      <span className={isCollapsed ? "sr-only" : "flex-1"}>{item.label}</span>
-                      {!isCollapsed && item.expanded ? <DashboardIcon name="chevronUp" className="size-[13px]" /> : null}
+                      <IconSlot>
+                        <DashboardIcon name={item.icon} className="size-[18px]" />
+                      </IconSlot>
+                      <span className={`min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-[opacity,transform,max-width] ${textCls}`}>
+                        {item.label}
+                      </span>
+                      {item.expanded && !collapsed ? (
+                        <DashboardIcon name="chevronUp" className="size-[13px] shrink-0" />
+                      ) : null}
+                      {collapsed ? <Tooltip label={item.label} /> : null}
                     </Link>
                   );
                 })}
@@ -118,32 +236,26 @@ export function Sidebar({
           ))}
         </nav>
 
-        <div className="mt-auto shrink-0 border-t border-[#d8d1c9] py-3">
-          <Link href="/user-profile" title={isCollapsed ? displayName : undefined} className={`flex items-center rounded-xl py-3 transition hover:bg-[#edeae5] ${isCollapsed ? "justify-center px-0" : "gap-2 px-3"} ${activeHref === "/user-profile" ? "bg-[#edeae5]" : ""}`}>
-            <div className="relative flex size-[34px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#1f1f1f] text-xs font-semibold text-white">
-              {user?.avatarUrl && failedAvatarUrl !== user.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.avatarUrl} alt="" className="size-full object-cover" onError={() => setFailedAvatarUrl(user.avatarUrl)} />
-              ) : initials}
-              <span className="absolute bottom-0 right-0 size-2 rounded-full border border-white bg-[#80cfa0]" />
+        <div className="mt-auto shrink-0 border-t border-[#d8d1c9] py-[13px]">
+          <Link href="/user-profile" className={`group relative flex items-center rounded-xl px-[13px] py-1 transition-colors hover:bg-[#edeae5] ${collapsed ? "" : "gap-2"}`}>
+            <IconSlot>
+              <div className="relative flex size-[37px] items-center justify-center rounded-xl bg-[#1f1f1f] text-[13px] font-semibold text-white">
+                {initials}
+                <span className="absolute bottom-0 right-0 size-2 rounded-full border border-white bg-[#80cfa0]" />
+              </div>
+            </IconSlot>
+            <div className={`min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-[opacity,transform,max-width] ${textCls}`}>
+              <div className="truncate text-[14px] font-medium text-[#1f1f1f]">
+                {displayName}
+              </div>
+              <div className="truncate text-[12px] text-[#6b6b6b]">
+                {displayRole}{user?.subject ? ` · ${user.subject}` : ""}
+              </div>
             </div>
-            <div className={isCollapsed ? "hidden" : "min-w-0 flex-1"}>
-              <div className="truncate text-[13px] font-medium text-[#1f1f1f]">{displayName}</div>
-              <div className="truncate text-[11px] text-[#6b6b6b]">{displayRole}{user?.subject ? ` · ${user.subject}` : ""}</div>
-            </div>
+            {collapsed ? <Tooltip label={displayName} /> : null}
           </Link>
         </div>
       </div>
     </aside>
-  );
-}
-
-function SidebarCollapseIcon({ collapsed }: { collapsed: boolean }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="2.5" y="3" width="11" height="10" rx="2" />
-      <path d="M6 3v10" />
-      <path d={collapsed ? "M8.5 6 11 8 8.5 10" : "M11 6 8.5 8 11 10"} />
-    </svg>
   );
 }

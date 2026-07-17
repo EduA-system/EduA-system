@@ -119,7 +119,7 @@ export function HeroSection() {
         </div>
 
         <Link
-          href="/lesson-create"
+          href="/dashboard"
           style={{
             ...regionStyle(CTA_PRIMARY),
             backgroundColor: COLOR.ink,
@@ -136,7 +136,7 @@ export function HeroSection() {
         </Link>
 
         <a
-          href="/lesson-create"
+          href="/dashboard"
           style={{
             ...regionStyle(CTA_OUTLINE),
             border: `1px solid ${COLOR.border}`,

@@ -88,7 +88,7 @@ export function HeaderBar() {
         </div>
 
         <a
-          href="#features"
+          href="/dashboard"
           style={{
             ...box(1027, 24, 100, 26),
             border: `1px solid ${COLOR.border}`,

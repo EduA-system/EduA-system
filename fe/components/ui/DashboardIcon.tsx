@@ -12,6 +12,8 @@ const iconFiles: Record<string, string> = {
   createSlide: "create-slide.svg",
   formTitle: "form-title.svg",
   grid: "periodic-table.svg",
+  library: "/Group.svg",
+  chemistryLight: "/lets-icons_chemistry-light.png",
   headerBadge: "header-badge.svg",
   help: "help.svg",
   notification: "notification.svg",

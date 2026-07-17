@@ -15,7 +15,7 @@ const descriptions: Record<string, string> = {
   "/library": "Lưu trữ, quản lý và sử dụng lại tài liệu giảng dạy của bạn.",
   "/lesson-edit": "Soạn thảo và hoàn thiện bài giảng với sự hỗ trợ của AI.",
   "/slide-create": "Tạo slide trình bày rõ ràng, sinh động chỉ trong vài phút.",
-  "/lesson-create": "Thiết kế bài kiểm tra phù hợp với mục tiêu bài học.",
+  "/lesson-create": "Soạn thảo bài giảng phù hợp với mục tiêu bài học cùng sự hỗ trợ của AI.",
   "/mo-phong-vat-ly": "Thực hành và trực quan hóa các hiện tượng vật lý.",
   "/periodic-table": "Tra cứu bảng tuần hoàn tương tác một cách dễ dàng.",
   "/molecules": "Khám phá cấu tạo chất qua các mô hình trực quan.",
