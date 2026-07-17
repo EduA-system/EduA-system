@@ -18,6 +18,8 @@ interface TopBarProps {
   onToggleRightPanel: () => void;
   designSteps?: DesignStepControls;
   onRetrySlide?: (slideId: string) => void;
+  onSaveToLibrary?: () => void;
+  savingToLibrary?: boolean;
 }
 
 function UndoSvg() {
@@ -219,6 +221,8 @@ export function TopBar({
   onToggleRightPanel,
   designSteps,
   onRetrySlide,
+  onSaveToLibrary,
+  savingToLibrary = false,
 }: TopBarProps) {
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
@@ -324,9 +328,9 @@ export function TopBar({
 
       <Divider />
 
-      <ActionButton onClick={() => saveDraft()}>
+      <ActionButton onClick={onSaveToLibrary ?? saveDraft} disabled={savingToLibrary}>
         <SaveIcon />
-        Save
+        {savingToLibrary ? "Đang lưu..." : "Lưu"}
       </ActionButton>
       <ActionButton onClick={() => undefined} variant="ai">
         <SparkIcon />

@@ -11,6 +11,7 @@ export default defineConfig({
       "components/simulations/**/*.test.ts",
       "components/slide-editor/lib/**/*.test.ts",
       "lib/slide-create/**/*.test.ts",
+      "lib/slide-deck-library.test.ts",
       "lib/slide-layout/**/*.test.ts",
     ],
   },
