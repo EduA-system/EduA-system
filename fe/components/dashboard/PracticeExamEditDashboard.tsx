@@ -19,7 +19,13 @@ function escapeHtml(value: string) {
 }
 
 function mathAttribute(value: string) {
-  return escapeHtml(value.trim());
+  const normalized = value.trim()
+    // AI đôi khi thiếu ngoặc sau \vec hoặc bỏ luôn dấu gạch chéo của lệnh vector.
+    .replace(/\\vec\s*([A-Za-z](?:_\{?[A-Za-z0-9]+\}?)?)/g, "\\\\vec{$1}")
+    .replace(/\bvec\s*([A-Za-z](?:_\{?[A-Za-z0-9]+\}?)?)/g, "\\\\vec{$1}")
+    // Chỉ chuẩn hoá các lệnh toán học thường bị AI bỏ dấu gạch chéo trong vùng LaTeX.
+    .replace(/(?<!\\)\b(frac|sqrt|cdot|times|approx|cos|sin|tan|theta|alpha|beta|gamma|pi|Rightarrow|leftarrow|leq|geq)\b/g, "\\\\$1");
+  return escapeHtml(normalized);
 }
 
 function inlineRichText(value: string) {
@@ -33,10 +39,11 @@ function inlineRichText(value: string) {
 }
 
 function richTextBlocks(value: string) {
-  return value.split(/(\\\[[\s\S]+?\\\]|\$\$[\s\S]+?\$\$)/).filter(Boolean).map((part) => {
-    const parenBlock = part.match(/^\\\[([\s\S]+)\\\]$/);
+  // Chỉ nhận $$...$$ làm display math. Không tách theo \[...\] vì \[ có thể xuất
+  // hiện bên trong một công thức LaTeX và khiến các lệnh phía sau bị rơi thành text.
+  return value.split(/(\$\$[\s\S]+?\$\$)/).filter(Boolean).map((part) => {
     const dollarBlock = part.match(/^\$\$([\s\S]+)\$\$$/);
-    if (parenBlock || dollarBlock) return `<div data-type="block-math" data-latex="${mathAttribute((parenBlock ?? dollarBlock)![1])}"></div>`;
+    if (dollarBlock) return `<div data-type="block-math" data-latex="${mathAttribute(dollarBlock[1])}"></div>`;
     return `<p>${inlineRichText(part).replaceAll("\n", "<br>")}</p>`;
   }).join("");
 }
