@@ -124,7 +124,7 @@ function LibraryScreen() {
           <div className="mx-auto w-full max-w-[1400px] px-5 py-8 sm:px-8 sm:py-10">
             <header className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
               <div className="space-y-2">
-                <h1 className="font-libertine text-[36px] font-bold leading-none tracking-[-0.025em] text-[#1e1e1e]">
+                <h1 className="font-libertine text-[43px] leading-none tracking-[-0.025em] text-[#1e1e1e]">
                   Thư viện của tôi
                 </h1>
                 <p className="text-sm leading-[21px] text-[#999]">
