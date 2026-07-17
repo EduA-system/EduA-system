@@ -2,6 +2,7 @@ package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
+import com.edua.beeduasystem.domain.model.auth.AccessTokenClaims;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.GoogleIdentity;
 import com.edua.beeduasystem.domain.model.auth.RefreshToken;
@@ -13,8 +14,11 @@ import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -38,6 +42,7 @@ class AuthServiceTest {
     private AppUserRepository userRepository;
     private RefreshTokenRepository refreshTokenRepository;
     private UserRoleRepository userRoleRepository;
+    private CurrentUserProvider currentUserProvider;
     private AuthService authService;
 
     @BeforeEach
@@ -47,8 +52,14 @@ class AuthServiceTest {
         userRepository = mock(AppUserRepository.class);
         refreshTokenRepository = mock(RefreshTokenRepository.class);
         userRoleRepository = mock(UserRoleRepository.class);
+        currentUserProvider = new CurrentUserProvider();
         authService = new AuthService(verifier, tokenService, userRepository, refreshTokenRepository,
-                userRoleRepository, new CurrentUserProvider(), Duration.ofHours(24));
+                userRoleRepository, currentUserProvider, Duration.ofHours(24));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     private AppUser invitedUser(String email) {
@@ -260,9 +271,66 @@ class AuthServiceTest {
     }
 
     @Test
-    void logout_blankToken_doesNotRevokeAnything() {
+    void logout_knownToken_revokesStoredToken() {
+        RefreshToken refreshToken = new RefreshToken(UUID.randomUUID(), UUID.randomUUID(), "hash",
+                Instant.now().plus(Duration.ofHours(1)), false, Instant.now());
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(refreshToken));
+
+        authService.logout("refresh-token");
+
+        verify(refreshTokenRepository).revoke(refreshToken.id());
+    }
+
+    @Test
+    void logout_unknownToken_doesNotRevokeAnything() {
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
+
+        authService.logout("unknown-token");
+
+        verify(refreshTokenRepository, never()).revoke(any());
+    }
+
+    @Test
+    void logout_blankToken_doesNotLookUpOrRevokeAnything() {
         authService.logout(" ");
 
         verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    void currentUser_returnsUserAndRolesForAuthenticatedClaims() {
+        UUID userId = UUID.randomUUID();
+        AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Teacher",
+                null, null, null, UserStatus.ACTIVE, Instant.now(), Instant.now());
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                new AccessTokenClaims(userId, user.email(), Set.of(Role.TEACHER), null), null));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRoleRepository.findRolesByUserId(userId)).thenReturn(Set.of(Role.TEACHER));
+
+        AuthService.CurrentUserInfo result = authService.currentUser();
+
+        assertThat(result.user()).isEqualTo(user);
+        assertThat(result.roles()).containsExactly(Role.TEACHER);
+    }
+
+    @Test
+    void currentUser_missingUser_rejectsRequest() {
+        UUID userId = UUID.randomUUID();
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                new AccessTokenClaims(userId, "teacher@fpt.edu.vn", Set.of(Role.TEACHER), null), null));
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.currentUser())
+                .isInstanceOf(InvalidTokenException.class);
+
+        verifyNoInteractions(userRoleRepository);
+    }
+
+    @Test
+    void currentUser_unauthenticatedRequest_rejectsRequest() {
+        assertThatThrownBy(() -> authService.currentUser())
+                .isInstanceOf(InvalidTokenException.class);
+
+        verifyNoInteractions(userRepository, userRoleRepository);
     }
 }
