@@ -99,18 +99,20 @@ export function PracticeExamCreateDashboard() {
     (sum, type) => sum + counts[type] * TIMES[type][index],
     0,
   );
+  const allowedOverrunMinutes = durationMinutes < 30 ? 5 : 10;
+  const maximumEstimatedMinutes = durationMinutes + allowedOverrunMinutes;
+  const hasValidDuration = Number.isInteger(durationMinutes) && durationMinutes > 0 && durationMinutes <= 90;
   const status =
-    estimated > durationMinutes
+    !hasValidDuration || estimated > maximumEstimatedMinutes
       ? "INFEASIBLE"
-      : estimated > durationMinutes * 0.85
+      : estimated > durationMinutes
         ? "WARNING"
         : "FEASIBLE";
   const hasValidScoreDistribution = TYPES.every(
     (type) => (counts[type] === 0) === (scores[type] === 0),
   );
   const canGenerate =
-    Number.isInteger(durationMinutes) &&
-    durationMinutes > 0 &&
+    hasValidDuration &&
     totalScore === 1000 &&
     totalQuestions > 0 &&
     hasValidScoreDistribution &&
@@ -237,6 +239,7 @@ export function PracticeExamCreateDashboard() {
                       <input
                         type="number"
                         min="1"
+                        max="90"
                         value={duration}
                         onChange={(event) => setDuration(event.target.value)}
                         className="mt-2 h-10 w-full rounded-lg border border-[#ddd5cc] px-3"
@@ -402,7 +405,12 @@ export function PracticeExamCreateDashboard() {
                       : "Không khả thi"}
                 </p>
                 <p className="mt-2 text-xs leading-5">
-                  Ước tính {estimated.toFixed(1)} phút / đề {duration} phút.
+                  {!hasValidDuration
+                    ? "Thời lượng phải là số nguyên từ 1 đến 90 phút."
+                    : <>Ước tính {estimated.toFixed(1)} phút / đề {duration} phút
+                  {durationMinutes > 0 && durationMinutes <= 90
+                    ? ` (tối đa ${maximumEstimatedMinutes} phút được phép).`
+                    : "."}</>}
                 </p>
                 {status === "WARNING" && (
                   <label className="mt-4 flex gap-2 text-xs">

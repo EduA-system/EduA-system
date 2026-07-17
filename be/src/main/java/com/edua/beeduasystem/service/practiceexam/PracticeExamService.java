@@ -121,7 +121,7 @@ public class PracticeExamService {
     }
 
     private void validateStructure(PracticeExamRequest request) {
-        if (request == null || blank(request.subject()) || request.grade() == null || request.grade() < 1 || request.durationMinutes() == null || request.durationMinutes() <= 0) throw new IllegalArgumentException("Thiếu môn, lớp hoặc thời lượng hợp lệ.");
+        if (request == null || blank(request.subject()) || request.grade() == null || request.grade() < 1 || request.durationMinutes() == null || request.durationMinutes() <= 0 || request.durationMinutes() > 90) throw new IllegalArgumentException("Thời lượng đề phải từ 1 đến 90 phút.");
         if (!Set.of("EASY", "MEDIUM", "HARD").contains(request.difficulty())) throw new IllegalArgumentException("Mức độ đề không hợp lệ.");
         if (request.questionTypes() == null || request.questionTypes().isEmpty()) throw new IllegalArgumentException("Cần chọn ít nhất một dạng câu hỏi.");
         int count = 0; int score = 0;
@@ -141,10 +141,11 @@ public class PracticeExamService {
         int index = "EASY".equals(request.difficulty()) ? 0 : "HARD".equals(request.difficulty()) ? 2 : 1;
         List<PracticeExamValidation.Breakdown> breakdown = new ArrayList<>(); double total = 0;
         for (PracticeExamRequest.QuestionType type : request.questionTypes()) { double estimated = type.questionCount() * minutes.get(type.type())[index]; total += estimated; breakdown.add(new PracticeExamValidation.Breakdown(type.type(), type.questionCount(), estimated)); }
-        double working = request.durationMinutes() * .85;
-        String status = total > request.durationMinutes() ? "INFEASIBLE" : total > working ? "WARNING" : "FEASIBLE";
-        String message = switch (status) { case "INFEASIBLE" -> "Cấu hình cần khoảng %.1f phút nhưng thời lượng đề chỉ là %d phút.".formatted(total, request.durationMinutes()); case "WARNING" -> "Thời lượng ước tính %.1f phút, cao hơn ngưỡng an toàn %.1f phút.".formatted(total, working); default -> "Cấu hình phù hợp với thời lượng đã chọn."; };
-        return new PracticeExamValidation(status, total, working, Math.max(0, total - working), message, breakdown);
+        double allowedOverrun = request.durationMinutes() < 30 ? 5 : 10;
+        double maximumEstimated = request.durationMinutes() + allowedOverrun;
+        String status = total > maximumEstimated ? "INFEASIBLE" : total > request.durationMinutes() ? "WARNING" : "FEASIBLE";
+        String message = switch (status) { case "INFEASIBLE" -> "Cấu hình cần khoảng %.1f phút, vượt mức tối đa %.1f phút được phép cho đề %d phút.".formatted(total, maximumEstimated, request.durationMinutes()); case "WARNING" -> "Thời lượng ước tính %.1f phút, vượt %d phút nhưng vẫn trong dung sai %.0f phút. Vui lòng xác nhận để tiếp tục.".formatted(total, request.durationMinutes(), allowedOverrun); default -> "Cấu hình phù hợp với thời lượng đã chọn."; };
+        return new PracticeExamValidation(status, total, maximumEstimated, Math.max(0, total - request.durationMinutes()), message, breakdown);
     }
 
     private Map<String, String> loadKnowledge(PracticeExamRequest request) {
