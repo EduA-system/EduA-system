@@ -8,6 +8,7 @@ import com.edua.beeduasystem.domain.exception.MoleculeBuildException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.exception.ExamAllocationException;
 import com.edua.beeduasystem.domain.exception.ExamGenerationException;
+import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -72,6 +73,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleExamGeneration(ExamGenerationException ex) {
         log.error("EXAM_GENERATION_FAILED message={}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PracticeExamGenerationException.class)
+    public ResponseEntity<ErrorResponse> handlePracticeExamGeneration(PracticeExamGenerationException ex) {
+        log.error("PRACTICE_EXAM_GENERATION_FAILED message={}", ex.getMessage(), ex);
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

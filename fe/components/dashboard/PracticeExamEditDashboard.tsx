@@ -5,10 +5,13 @@ import Link from "next/link";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { EditorTools, MathEditPopup, Ruler, createEditorExtensions, type MathClickInfo } from "@/components/LessonEditor";
+import { readPracticeExam, type PracticeExam } from "@/services/practiceExamService";
 
 type Metadata = { subject: string; grade: string; duration: number; difficulty: string };
 
 function draftMetadata(): Metadata {
+  const generated = typeof window === "undefined" ? null : readPracticeExam();
+  if (generated) return { subject: "", grade: "", duration: generated.durationMinutes, difficulty: "MEDIUM" };
   const fallback = { subject: "Vật lí", grade: "10", duration: 15, difficulty: "MEDIUM" };
   if (typeof window === "undefined") return fallback;
   const draft = sessionStorage.getItem("edua-practice-exam-draft");
@@ -19,7 +22,55 @@ function draftMetadata(): Metadata {
   } catch { return fallback; }
 }
 
-function examHtml(metadata: Metadata) {
+function examHtml(metadata: Metadata, generated: PracticeExam | null) {
+  if (generated) {
+    const sectionDefinitions = [
+      ["MULTIPLE_CHOICE", "Câu hỏi trắc nghiệm nhiều phương án lựa chọn"],
+      ["TRUE_FALSE", "Câu trắc nghiệm đúng sai"],
+      ["SHORT_ANSWER", "Câu trắc nghiệm yêu cầu trả lời ngắn"],
+      ["ESSAY", "Tự luận"],
+    ] as const;
+    const formatScore = (scoreCentiPoints: number) => (scoreCentiPoints / 100).toFixed(2);
+    const questionContent = (question: PracticeExam["questions"][number]) => {
+      const options = question.options?.map((option) => `<p class="mc-option"><b>${option.key}.</b> ${option.content}</p>`).join("") ?? "";
+      return `<p><b>Câu ${question.order}. (${formatScore(question.scoreCentiPoints)} điểm)</b> ${question.content}</p>${options}`;
+    };
+    const textValue = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
+    const trueFalseAnswer = (value: unknown) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+      return Object.entries(value)
+        .filter(([key, answer]) => /^[a-d]$/i.test(key) && typeof answer === "boolean")
+        .sort(([first], [second]) => first.localeCompare(second))
+        .map(([key, answer]) => `Phát biểu ${key.toUpperCase()}: ${answer ? "Đúng" : "Sai"}.`)
+        .join(" ");
+    };
+    const answerText = (question: PracticeExam["questions"][number]) => {
+      const answer = question.answer;
+      if (question.type === "MULTIPLE_CHOICE") {
+        const key = textValue(answer.correctOptionKey) ?? textValue(answer.answerKey) ?? textValue(answer.key);
+        return key ? `Chọn đáp án ${key}.` : "Xem hướng dẫn chấm bên dưới.";
+      }
+      if (question.type === "TRUE_FALSE") {
+        const statements = trueFalseAnswer(answer) || trueFalseAnswer(answer.values);
+        return statements || "Xem hướng dẫn chấm bên dưới.";
+      }
+      const content = textValue(answer.content) ?? textValue(answer.answer) ?? textValue(answer.value) ?? textValue(answer.sampleAnswer);
+      if (content) return content;
+      return question.type === "ESSAY" ? "Chấm theo hướng dẫn và rubric bên dưới." : "Xem hướng dẫn chấm bên dưới.";
+    };
+    const sections = sectionDefinitions.map(([type, label], index) => {
+      const questions = generated.questions.filter((question) => question.type === type);
+      if (!questions.length) return "";
+      const score = questions.reduce((total, question) => total + question.scoreCentiPoints, 0);
+      return `<section><h3>PHẦN ${index + 1}. ${label} (${formatScore(score)} điểm)</h3>${questions.map(questionContent).join("")}</section>`;
+    }).join("");
+    const answers = generated.questions.map((question) => {
+      const answer = answerText(question);
+      const rubric = question.rubric?.map((item) => `<li>${item.criterion}: ${formatScore(item.scoreCentiPoints)} điểm</li>`).join("") ?? "";
+      return `<p><b>Câu ${question.order} (${formatScore(question.scoreCentiPoints)} điểm)</b></p><p><b>Đáp án:</b> ${answer}</p><p><b>Hướng dẫn:</b> ${question.explanation}</p>${rubric ? `<ul>${rubric}</ul>` : ""}`;
+    }).join("");
+    return `<h1>${generated.title}</h1><p class="document-meta">${generated.instructions} · Tổng điểm: 10 điểm</p><section><h2>I. ĐỀ KIỂM TRA</h2>${sections}</section><section><h2>II. ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM</h2>${answers}</section>`;
+  }
   return `
     <h1>KIỂM TRA ${metadata.duration} PHÚT</h1>
     <p class="document-meta">Môn ${metadata.subject} · Lớp ${metadata.grade} · Thời gian làm bài: ${metadata.duration} phút · Tổng điểm: 10 điểm</p>
@@ -60,6 +111,7 @@ const questionLinks = [
 ] as const;
 
 export function PracticeExamEditDashboard() {
+  const [generated] = useState<PracticeExam | null>(() => typeof window === "undefined" ? null : readPracticeExam());
   const [metadata] = useState(draftMetadata);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
@@ -69,7 +121,7 @@ export function PracticeExamEditDashboard() {
   const [extensions] = useState(() => createEditorExtensions({ onMathClick: setMathClick }));
   const editor = useEditor({
     extensions,
-    content: examHtml(metadata),
+    content: examHtml(metadata, generated),
     immediatelyRender: false,
     editorProps: { attributes: { class: "lesson-document-editor min-h-[calc(100vh-230px)] text-[#2b2926] outline-none" } },
   });
