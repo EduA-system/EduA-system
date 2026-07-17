@@ -22,7 +22,7 @@
 
 ### RBAC
 
-- [ ] Add frontend route guards for Teacher, Moderator, and Admin roles.
+- [ ] Complete frontend route guards for Teacher, Moderator, and Admin roles (lesson and slide authoring routes are now guarded; molecule/upload coverage still needs audit).
 - [ ] Verify direct navigation to protected URLs is blocked for unauthorized users.
 
 ### Molecule models
@@ -41,7 +41,7 @@
 
 ### Blog
 
-- [ ] Add an edit-post UI that calls `PATCH /api/blog-posts/{id}`.
+- [x] Add an edit-post UI that calls `PATCH /api/blog-posts/{id}`.
 - [ ] Decide whether guest post preview belongs to Iteration 2 or is deferred to Iteration 3.
 
 ## 3. Implement currently missing Iteration 2 features
