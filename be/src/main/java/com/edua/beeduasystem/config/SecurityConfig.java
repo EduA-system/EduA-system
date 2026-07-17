@@ -40,7 +40,6 @@ public class SecurityConfig {
             "/api/slide-design/**",
             "/api/molecules/**",
             "/api/exams/**",
-            "/api/practice-exams/**",
             "/api/uploads/**"
     };
 

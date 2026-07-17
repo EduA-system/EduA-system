@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { useAuth } from "@/lib/auth/AuthContext";
 import {
   fetchChapterLessons,
   fetchTextbookChapters,
@@ -40,6 +41,7 @@ const TIMES: Record<TypeKey, number[]> = {
 
 export function PracticeExamCreateDashboard() {
   const router = useRouter();
+  const { authFetch } = useAuth();
   const [subject, setSubject] =
     useState<PracticeExamRequest["subject"]>("PHYSICS");
   const [grade, setGrade] = useState(10);
@@ -177,7 +179,7 @@ export function PracticeExamCreateDashboard() {
           }),
         },
       };
-      storePracticeExam(await generatePracticeExam(request));
+      storePracticeExam(await generatePracticeExam(request, authFetch));
       router.push("/exam-edit-new");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tạo đề.");
