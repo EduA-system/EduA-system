@@ -30,6 +30,7 @@ export const navGroups: NavGroup[] = [
       { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-edit", active: true },
       { label: "Slide", icon: "slides", href: "/slide-create" },
       { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/exam-create" },
+      { label: "\u0110\u1ec1 luy\u1ec7n t\u1eadp", icon: "check", href: "/exam-create-new" },
     ],
   },
   {
