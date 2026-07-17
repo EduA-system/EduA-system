@@ -72,6 +72,7 @@ export function BlogCommunityPage() {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [msg, setMsg] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [activeSubjectFilter, setActiveSubjectFilter] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [copiedDetailLink, setCopiedDetailLink] = useState(false);
@@ -256,6 +257,15 @@ export function BlogCommunityPage() {
                       {detail.authorId === user.id && (
                         <button
                           type="button"
+                          onClick={() => setEditOpen(true)}
+                          className="h-8 rounded-[14px] border-[0.8px] border-[#eaeae7] px-3 text-[12px] font-medium text-[#4a4b5e] transition-colors hover:bg-[#f7f7f5]"
+                        >
+                          Sửa bài
+                        </button>
+                      )}
+                      {detail.authorId === user.id && (
+                        <button
+                          type="button"
                           onClick={() => deletePost(detail.id)}
                           className="h-8 rounded-[14px] border-[0.8px] border-red-100 px-3 text-[12px] font-medium text-red-600 transition-colors hover:bg-red-50"
                         >
@@ -366,6 +376,19 @@ export function BlogCommunityPage() {
             onClose={() => setCreateOpen(false)}
             token={token}
             onCreated={() => loadPosts(token, activeSubjectFilter)}
+          />
+        )}
+        {token && detail && (
+          <CreatePostModal
+            open={editOpen}
+            onClose={() => setEditOpen(false)}
+            token={token}
+            post={detail}
+            onCreated={() => {
+              setEditOpen(false);
+              void openDetail(detail.id);
+              void loadPosts(token, activeSubjectFilter);
+            }}
           />
         )}
       </main>

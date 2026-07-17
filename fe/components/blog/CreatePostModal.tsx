@@ -9,11 +9,13 @@ export function CreatePostModal({
   onClose,
   token,
   onCreated,
+  post,
 }: {
   open: boolean;
   onClose: () => void;
   token: string;
   onCreated: () => void;
+  post?: Detail | null;
 }) {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState<SubjectValue>(SUBJECTS[0]);
@@ -26,6 +28,11 @@ export function CreatePostModal({
 
   useEffect(() => {
     if (!open) return;
+    queueMicrotask(() => {
+      setTitle(post?.title ?? "");
+      setSubject((post?.subject as SubjectValue | undefined) ?? SUBJECTS[0]);
+      setContent(post?.content ?? "");
+    });
     document.body.style.overflow = "hidden";
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -35,7 +42,7 @@ export function CreatePostModal({
       document.body.style.overflow = "";
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, onClose]);
+  }, [open, onClose, post]);
 
   function reset() {
     setTitle("");
@@ -73,8 +80,8 @@ export function CreatePostModal({
       const finalContent = coverImageUrl
         ? `<p><img src="${coverImageUrl}" alt="" /></p>${content}`
         : content;
-      await api<Detail>("/blog-posts", token, {
-        method: "POST",
+      await api<Detail>(post ? `/blog-posts/${post.id}` : "/blog-posts", token, {
+        method: post ? "PATCH" : "POST",
         body: JSON.stringify({ title, content: finalContent, subject }),
       });
       onCreated();
@@ -181,7 +188,7 @@ export function CreatePostModal({
           <div className="mt-4">
             <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Nội dung</span>
             <div className="mt-1.5">
-              <RichEditor token={token} onChange={setContent} />
+              <RichEditor token={token} initialContent={post?.content ?? ""} onChange={setContent} />
             </div>
           </div>
 

@@ -71,14 +71,15 @@
   - Make published blog list/detail readable without authentication as defined in the WBS.
   - Keep authoring, commenting, editing, and moderation authenticated.
 
-- [ ] **Add the blog post edit UI**
-  - Reuse the rich editor for an author-owned post.
-  - Call the existing `PATCH /api/blog-posts/{id}` endpoint.
-  - Show validation and success/error feedback.
+- [x] **Add the blog post edit UI**
+  - [x] Reuse the rich editor for an author-owned post.
+  - [x] Call the existing `PATCH /api/blog-posts/{id}` endpoint.
+  - [x] Show validation and success/error feedback.
 
 ## Cross-cutting fixes required before marking Iteration 2 complete
 
 - [ ] **Complete route and API authorization**
+  - [x] Require authentication for slide creation and slide editing routes in the frontend.
   - Require authentication for lesson creation/editing, slide creation/editing, uploads,
     and molecule generation.
   - Apply role checks where necessary; do not leave protected features in `PUBLIC_PATHS`.
