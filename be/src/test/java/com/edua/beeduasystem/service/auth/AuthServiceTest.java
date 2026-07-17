@@ -110,6 +110,59 @@ class AuthServiceTest {
     }
 
     @Test
+    void loginWithGoogle_missingGoogleSub_populatesItFromGoogle() {
+        String email = "teacher@fpt.edu.vn";
+        AppUser userWithoutGoogleSub = new AppUser(UUID.randomUUID(), email, null, "Existing Teacher",
+                null, null, null, UserStatus.INVITED, Instant.now(), null);
+        when(verifier.verify("idtok")).thenReturn(new GoogleIdentity("sub-9", email, "Teacher Name", true));
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(userWithoutGoogleSub));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(userRoleRepository.findRolesByUserId(userWithoutGoogleSub.id())).thenReturn(Set.of(Role.TEACHER));
+        when(tokenService.issueAccessToken(any(), any())).thenReturn("access-jwt");
+
+        authService.loginWithGoogle("idtok");
+
+        ArgumentCaptor<AppUser> saved = ArgumentCaptor.forClass(AppUser.class);
+        verify(userRepository).save(saved.capture());
+        assertThat(saved.getValue().googleSub()).isEqualTo("sub-9");
+        assertThat(saved.getValue().fullName()).isEqualTo("Existing Teacher");
+    }
+
+    @Test
+    void loginWithGoogle_blankFullName_populatesItFromGoogle() {
+        String email = "teacher@fpt.edu.vn";
+        AppUser userWithoutFullName = new AppUser(UUID.randomUUID(), email, "existing-sub", " ",
+                null, null, null, UserStatus.INVITED, Instant.now(), null);
+        when(verifier.verify("idtok")).thenReturn(new GoogleIdentity("sub-9", email, "Teacher Name", true));
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(userWithoutFullName));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(userRoleRepository.findRolesByUserId(userWithoutFullName.id())).thenReturn(Set.of(Role.TEACHER));
+        when(tokenService.issueAccessToken(any(), any())).thenReturn("access-jwt");
+
+        authService.loginWithGoogle("idtok");
+
+        ArgumentCaptor<AppUser> saved = ArgumentCaptor.forClass(AppUser.class);
+        verify(userRepository).save(saved.capture());
+        assertThat(saved.getValue().googleSub()).isEqualTo("existing-sub");
+        assertThat(saved.getValue().fullName()).isEqualTo("Teacher Name");
+    }
+
+    @Test
+    void loginWithGoogle_normalizesGoogleEmailBeforeLookingUpUser() {
+        String normalizedEmail = "teacher@fpt.edu.vn";
+        when(verifier.verify("idtok"))
+                .thenReturn(new GoogleIdentity("sub-9", "  Teacher@FPT.EDU.VN  ", "Teacher", true));
+        when(userRepository.findByEmail(normalizedEmail)).thenReturn(Optional.of(invitedUser(normalizedEmail)));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(userRoleRepository.findRolesByUserId(any())).thenReturn(Set.of(Role.TEACHER));
+        when(tokenService.issueAccessToken(any(), any())).thenReturn("access-jwt");
+
+        authService.loginWithGoogle("idtok");
+
+        verify(userRepository).findByEmail(normalizedEmail);
+    }
+
+    @Test
     void refresh_returnsUserAndRolesWithNewTokens() {
         UUID userId = UUID.randomUUID();
         AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Teacher",
