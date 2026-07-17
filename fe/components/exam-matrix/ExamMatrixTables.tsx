@@ -36,18 +36,29 @@ export function ExamMatrixTables({ workspace, onChange }: Props) {
     mutate((next) => { const unit = findUnit(next, chapterId, unitId); if (unit) unit.learningOutcomes[level] = value.split("\n").map((line) => line.trim()).filter(Boolean); });
   }
 
-  function moveItem(chapterId: string, unitId: string, type: QuestionTypeKey, level: AssessmentLevel, itemId: string) {
-    if (!itemId) return;
+  function setAllocationCount(chapterId: string, unitId: string, type: QuestionTypeKey, level: AssessmentLevel, requestedCount: number) {
     mutate((next) => {
-      removeItemEverywhere(next, itemId);
       const unit = findUnit(next, chapterId, unitId);
-      if (unit) unit.allocation[type][level].push(itemId);
-      const item = next.assessmentItems.find((value) => value.id === itemId);
-      if (item) item.level = level;
+      if (!unit) return;
+      const assigned = unit.allocation[type][level];
+      const count = Math.max(0, Math.floor(requestedCount));
+
+      if (count < assigned.length) {
+        assigned.splice(count);
+        return;
+      }
+
+      const allocatedIds = new Set(next.chapters.flatMap((chapter) => chapter.knowledgeUnits.flatMap((knowledgeUnit) =>
+        QUESTION_TYPES.flatMap((questionType) => LEVELS.flatMap((assessmentLevel) => knowledgeUnit.allocation[questionType][assessmentLevel])),
+      )));
+      const needed = count - assigned.length;
+      const available = next.assessmentItems.filter((item) => item.questionType === type && !allocatedIds.has(item.id)).slice(0, needed);
+      for (const item of available) {
+        assigned.push(item.id);
+        item.level = level;
+      }
     });
   }
-
-  function unassign(itemId: string) { mutate((next) => removeItemEverywhere(next, itemId)); }
 
   function deleteUnit(chapterId: string, unitId: string) {
     const unit = findUnit(workspace, chapterId, unitId);
@@ -87,12 +98,13 @@ export function ExamMatrixTables({ workspace, onChange }: Props) {
 
   return <div className="space-y-12">
     <section><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">1. MA TRẬN ĐỀ KIỂM TRA ĐỊNH KÌ</h2><select defaultValue="" onChange={(event) => { addChapter(event.target.value); event.target.value = ""; }} className="rounded border px-3 py-2 text-xs"><option value="">+ Thêm chương trong phạm vi</option>{availableChapters.map((lesson) => <option key={`${lesson.bookCode}:${lesson.chapterCode}`} value={`${lesson.bookCode}:${lesson.chapterCode}`}>{lesson.chapterName}</option>)}</select></div>
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-[#e8e2d9] bg-[#faf9f7] px-4 py-3 text-xs text-[#625c55]"><span><b>Nhập số câu/ý</b> trực tiếp vào từng ô như bảng Word.</span><span className="text-[#8a847d]">Để trống nghĩa là 0; chỉ nhận số nguyên.</span></div>
       <div className="overflow-x-auto"><table className="exam-structured-table"><TableHead />
         <tbody>{workspace.chapters.flatMap((chapter, chapterIndex) => chapter.knowledgeUnits.map((unit, unitIndex) => <tr key={unit.id}>
           {unitIndex === 0 && <td rowSpan={Math.max(1, chapter.knowledgeUnits.length)} className="locked-cell align-top">{chapterIndex + 1}</td>}
           {unitIndex === 0 && <td rowSpan={Math.max(1, chapter.knowledgeUnits.length)} className="editable-cell min-w-48 align-top"><input value={chapter.name} onChange={(event) => updateChapter(chapter.id, event.target.value)} /><button type="button" onClick={() => deleteChapter(chapter.id)} className="danger-link">Xóa chương</button></td>}
           <td className="editable-cell min-w-56"><input value={unit.name} onChange={(event) => updateUnit(chapter.id, unit.id, "name", event.target.value)} /><textarea value={unit.content} placeholder="Nội dung chuyên môn" onChange={(event) => updateUnit(chapter.id, unit.id, "content", event.target.value)} /><button type="button" onClick={() => deleteUnit(chapter.id, unit.id)} className="danger-link">Xóa đơn vị</button></td>
-          {QUESTION_TYPES.flatMap((type) => LEVELS.map((level) => <AllocationCell key={`${type}:${level}`} assigned={unit.allocation[type][level]} candidates={workspace.assessmentItems.filter((item) => item.questionType === type)} itemMap={itemMap} onAssign={(id) => moveItem(chapter.id, unit.id, type, level, id)} onRemove={unassign} />))}
+          {QUESTION_TYPES.flatMap((type) => LEVELS.map((level) => <AllocationCell key={`${type}:${level}`} count={unit.allocation[type][level].length} availableCount={workspace.assessmentItems.filter((item) => item.questionType === type && !isItemAllocated(workspace, item.id)).length} label={`${unit.name} · ${TYPE_LABELS[type]} · ${LEVEL_LABELS[level]}`} onChange={(count) => setAllocationCount(chapter.id, unit.id, type, level, count)} />))}
           <CalculatedCells unit={unit} itemMap={itemMap} />
         </tr>))}
         {workspace.chapters.map((chapter) => { const used = new Set(chapter.knowledgeUnits.map((unit) => unit.sourceLessonCode)); const lessons = workspace.scope.lessons.filter((lesson) => lesson.bookCode === chapter.sourceBookCode && lesson.chapterCode === chapter.sourceChapterCode && !used.has(lesson.lessonCode)); return <tr key={`${chapter.id}:add`}><td colSpan={18} className="bg-[#faf9f7] p-2 text-left"><select defaultValue="" onChange={(event) => { addUnit(chapter.id, event.target.value); event.target.value = ""; }} className="rounded border px-2 py-1 text-xs"><option value="">+ Thêm đơn vị từ {chapter.name}</option>{lessons.map((lesson) => <option key={lesson.lessonCode} value={lesson.lessonCode}>{lesson.lessonName}</option>)}</select></td></tr>; })}
@@ -116,8 +128,9 @@ function TableHead({ specification = false }: { specification?: boolean }) {
   return <thead><tr><th rowSpan={3}>TT</th><th rowSpan={3}>Chủ đề/Chương</th><th rowSpan={3}>Nội dung/đơn vị kiến thức</th>{specification && <th rowSpan={3}>Yêu cầu cần đạt</th>}<th colSpan={12}>{specification ? "Số câu hỏi ở các mức độ đánh giá" : "Mức độ đánh giá"}</th>{!specification && <><th rowSpan={3}>Tổng item</th><th rowSpan={3}>Điểm</th><th rowSpan={3}>Tỉ lệ</th></>}</tr><tr>{QUESTION_TYPES.map((type) => <th key={type} colSpan={3}>{TYPE_LABELS[type]}</th>)}</tr><tr>{QUESTION_TYPES.flatMap((type) => LEVELS.map((level) => <th key={`${type}:${level}`}>{LEVEL_LABELS[level]}</th>))}</tr></thead>;
 }
 
-function AllocationCell({ assigned, candidates, itemMap, onAssign, onRemove }: { assigned: string[]; candidates: AssessmentItem[]; itemMap: Map<string, AssessmentItem>; onAssign: (id: string) => void; onRemove: (id: string) => void }) {
-  return <td className="editable-cell min-w-24"><div className="flex flex-wrap gap-1">{assigned.map((id) => { const item = itemMap.get(id); return item ? <button type="button" key={id} title="Bỏ phân bổ" onClick={() => onRemove(id)} className="rounded bg-[#fff1e9] px-1.5 py-0.5 text-[10px] text-[#a84f32]">{itemLabel(item)} ×</button> : null; })}</div><select value="" onChange={(event) => onAssign(event.target.value)} className="mt-1 w-full rounded border px-1 py-1 text-[10px]"><option value="">+ Gán</option>{candidates.filter((item) => !assigned.includes(item.id)).map((item) => <option key={item.id} value={item.id}>{itemLabel(item)} ({(item.scoreCents / 100).toFixed(2)}đ)</option>)}</select></td>;
+function AllocationCell({ count, availableCount, label, onChange }: { count: number; availableCount: number; label: string; onChange: (count: number) => void }) {
+  const maximum = count + availableCount;
+  return <td className="allocation-cell"><input type="text" inputMode="numeric" pattern="[0-9]*" value={count || ""} placeholder="–" aria-label={`${label}, hiện có ${count} câu hoặc ý`} title={`${label} · nhập từ 0 đến ${maximum}`} className={count > 0 ? "allocation-input has-value" : "allocation-input"} onFocus={(event) => event.currentTarget.select()} onChange={(event) => { const value = event.target.value; if (!/^\d*$/.test(value)) return; onChange(Math.min(maximum, value === "" ? 0 : Number(value))); }} /> </td>;
 }
 
 function CalculatedCells({ unit, itemMap }: { unit: KnowledgeUnit; itemMap: Map<string, AssessmentItem> }) {
@@ -135,5 +148,5 @@ function SummaryRows({ workspace, itemMap, leading, specification = false }: { w
 }
 
 function findUnit(workspace: ExamMatrixWorkspace, chapterId: string, unitId: string) { return workspace.chapters.find((chapter) => chapter.id === chapterId)?.knowledgeUnits.find((unit) => unit.id === unitId); }
-function removeItemEverywhere(workspace: ExamMatrixWorkspace, itemId: string) { for (const chapter of workspace.chapters) for (const unit of chapter.knowledgeUnits) for (const type of QUESTION_TYPES) for (const level of LEVELS) unit.allocation[type][level] = unit.allocation[type][level].filter((id) => id !== itemId); }
+function isItemAllocated(workspace: ExamMatrixWorkspace, itemId: string) { return workspace.chapters.some((chapter) => chapter.knowledgeUnits.some((unit) => QUESTION_TYPES.some((type) => LEVELS.some((level) => unit.allocation[type][level].includes(itemId))))); }
 function uniqueBy<T>(items: T[], key: (item: T) => string) { const seen = new Set<string>(); return items.filter((item) => { const value = key(item); if (seen.has(value)) return false; seen.add(value); return true; }); }

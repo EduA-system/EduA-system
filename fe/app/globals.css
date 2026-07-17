@@ -442,7 +442,7 @@ body::-webkit-scrollbar {
 
 .exam-structured-table {
   width: 100%;
-  min-width: 1480px;
+  min-width: 1280px;
   border-collapse: collapse;
   table-layout: auto;
   color: #38332e;
@@ -469,6 +469,38 @@ body::-webkit-scrollbar {
 .exam-structured-table .editable-cell:focus-within {
   background: #fffaf6;
   box-shadow: inset 0 0 0 1px #d97757;
+}
+
+.exam-structured-table .allocation-cell {
+  min-width: 58px;
+  padding: 4px;
+  background: #fff;
+}
+
+.exam-structured-table .allocation-input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 4px;
+  color: #aaa198;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.exam-structured-table .allocation-input:hover,
+.exam-structured-table .allocation-input:focus {
+  border-color: #d97757;
+  background: #fff7f2;
+  color: #a84f32;
+  outline: none;
+}
+
+.exam-structured-table .allocation-input.has-value {
+  background: #fff1e9;
+  color: #9f4d32;
 }
 
 .exam-structured-table .locked-cell {
