@@ -179,6 +179,7 @@ export function PracticeExamCreateDashboard() {
           }),
         },
       };
+      sessionStorage.setItem("edua-practice-exam-draft", JSON.stringify({ subject, grade: String(grade), duration: durationMinutes, difficulty }));
       storePracticeExam(await generatePracticeExam(request, authFetch));
       router.push("/exam-edit-new");
     } catch (reason) {

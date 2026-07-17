@@ -20,6 +20,7 @@ public class LibraryContentEntity {
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private LibraryContentType type;
     @Column(nullable = false) private String title;
     @Enumerated(EnumType.STRING) private Subject subject;
+    private Integer grade;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private LibraryContentStatus status;
     @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false, columnDefinition = "jsonb") private JsonNode payload;
     @Column(name = "thumbnail_url", columnDefinition = "TEXT") private String thumbnailUrl;
