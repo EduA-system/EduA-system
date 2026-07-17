@@ -1,20 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions } from "@/components/LessonEditor/editorConfig";
 import { uploadFile } from "@/lib/blog";
 
 // ---- editor dùng đúng cấu hình lesson (TipTap) ----
-export function RichEditor({ onChange, token }: { onChange: (html: string) => void; token: string }) {
+export function RichEditor({ onChange, token, initialContent = "" }: { onChange: (html: string) => void; token: string; initialContent?: string }) {
   const editor = useEditor({
     extensions: createEditorExtensions(),
-    content: "",
+    content: initialContent,
     immediatelyRender: false,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (editor && editor.getHTML() !== initialContent) editor.commands.setContent(initialContent);
+  }, [editor, initialContent]);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
