@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
 import { isSlideLockedForGeneration, type Slide } from "./types";
+import { downloadOfflineHtml, exportOfflineHtml } from "@/lib/slide-html-export";
 
 export type DesignStepStatus = "idle" | "running" | "complete" | "error";
 
@@ -20,6 +21,7 @@ interface TopBarProps {
   onRetrySlide?: (slideId: string) => void;
   onSaveToLibrary?: () => void;
   savingToLibrary?: boolean;
+  onPresent?: () => void;
 }
 
 function UndoSvg() {
@@ -75,6 +77,16 @@ function SidebarRightIcon() {
       <rect x="2.2" y="2.4" width="11.6" height="11.2" rx="2" />
       <path d="M10 2.4v11.2" />
       <path d="M11.9 7.9h.01" />
+    </svg>
+  );
+}
+
+function PresentIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.8" y="2.3" width="12.4" height="9.1" rx="1.4" />
+      <path d="m6.5 5.1 3.2 1.75L6.5 8.6z" fill="currentColor" stroke="none" />
+      <path d="M5.4 13.5h5.2M8 11.4v2.1" />
     </svg>
   );
 }
@@ -194,17 +206,20 @@ function Dropdown({
 function DropdownItem({
   onClick,
   active,
+  disabled = false,
   children,
 }: {
   onClick: () => void;
   active?: boolean;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={`flex w-full items-center px-3 py-1.5 text-left text-[12px] transition-colors ${
-        active ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee]"
+        active ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee] disabled:cursor-wait disabled:opacity-50"
       }`}
     >
       {children}
@@ -223,6 +238,7 @@ export function TopBar({
   onRetrySlide,
   onSaveToLibrary,
   savingToLibrary = false,
+  onPresent,
 }: TopBarProps) {
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
@@ -235,6 +251,8 @@ export function TopBar({
   const hasLockedSlides = useEditorStore((s) => s.slides.some(isSlideLockedForGeneration));
 
   const [menu, setMenu] = useState<string | null>(null);
+  const [exportingHtml, setExportingHtml] = useState(false);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function exportJSON() {
@@ -276,6 +294,24 @@ export function TopBar({
       }
     };
     reader.readAsText(file);
+  }
+
+  async function exportHtml() {
+    if (exportingHtml) return;
+    setExportingHtml(true);
+    setExportNotice(null);
+    try {
+      const state = useEditorStore.getState();
+      const title = deckTitle(state.currentSlide());
+      const result = await exportOfflineHtml(state.slides, title);
+      downloadOfflineHtml(result.html, title);
+      setExportNotice(result.warnings.length ? `Đã xuất HTML; ${result.warnings.length} ảnh được thay bằng placeholder.` : "Đã tải file HTML offline.");
+    } catch {
+      setExportNotice("Không thể tạo file HTML offline. Vui lòng thử lại.");
+    } finally {
+      setExportingHtml(false);
+      setMenu(null);
+    }
   }
 
   return (
@@ -332,6 +368,12 @@ export function TopBar({
         <SaveIcon />
         {savingToLibrary ? "Đang lưu..." : "Lưu"}
       </ActionButton>
+      {onPresent ? (
+        <ActionButton onClick={onPresent} variant="dark" title="Trình chiếu bộ slide">
+          <PresentIcon />
+          Trình chiếu
+        </ActionButton>
+      ) : null}
       <ActionButton onClick={() => undefined} variant="ai">
         <SparkIcon />
         AI
@@ -350,6 +392,9 @@ export function TopBar({
         onToggle={() => setMenu(menu === "export" ? null : "export")}
         align="right"
       >
+        <DropdownItem onClick={() => void exportHtml()} disabled={exportingHtml}>
+          {exportingHtml ? "Đang đóng gói..." : "Export HTML offline"}
+        </DropdownItem>
         <DropdownItem onClick={() => { exportJSON(); setMenu(null); }}>
           Export JSON
         </DropdownItem>
@@ -375,6 +420,7 @@ export function TopBar({
           e.target.value = "";
         }}
       />
+      {exportNotice ? <p role="status" className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 rounded-lg bg-[#2b2926] px-4 py-2 text-xs text-white shadow-lg">{exportNotice}</p> : null}
     </header>
   );
 }

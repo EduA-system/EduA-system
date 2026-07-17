@@ -31,11 +31,13 @@ export function SlideEditor({
   designSteps,
   onSaveToLibrary,
   savingToLibrary = false,
+  onPresent,
 }: {
   skipInitialLoad?: boolean;
   designSteps?: DesignStepControls;
   onSaveToLibrary?: () => void;
   savingToLibrary?: boolean;
+  onPresent?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomMode, setZoomMode] = useState<"fit" | number>("fit");
@@ -241,6 +243,7 @@ export function SlideEditor({
         designSteps={designSteps}
         onSaveToLibrary={onSaveToLibrary}
         savingToLibrary={savingToLibrary}
+        onPresent={onPresent}
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <LeftPanel

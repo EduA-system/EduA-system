@@ -25,6 +25,7 @@ import {
   type LibrarySubject,
 } from "@/lib/library";
 import { parseSlideDeck, serializeSlideDeck } from "@/lib/slide-deck-library";
+import { saveSlides } from "@/components/slide-editor/lib/storage";
 
 type StepStates = {
   step1: DesignStepStatus;
@@ -206,6 +207,12 @@ export function SlideMakerClient() {
     void saveDeck({ title, subject: deckSubject });
   }, [deckSubject, deckTitle, saveDeck]);
 
+  const openPresentation = useCallback(() => {
+    saveSlides(useEditorStore.getState().slides);
+    const query = savedLibraryId ? `?libraryId=${encodeURIComponent(savedLibraryId)}` : "";
+    router.push(`/slide-present${query}`);
+  }, [router, savedLibraryId]);
+
   const finishStep = useCallback((step: 1 | 2 | 3, failedSlideIds: string[] = []) => {
     const key = `step${step}` as keyof StepStates;
     setSteps((current) => ({ ...current, [key]: failedSlideIds.length ? "error" : "complete" }));
@@ -288,6 +295,7 @@ export function SlideMakerClient() {
                 designSteps={designSteps}
                 onSaveToLibrary={openSaveDialog}
                 savingToLibrary={saving}
+                onPresent={openPresentation}
               />
             )}
           </section>
