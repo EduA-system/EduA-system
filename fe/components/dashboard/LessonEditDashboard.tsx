@@ -24,6 +24,7 @@ import { createEditorExtensions, type MathClickInfo } from "../LessonEditor/edit
 import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
+import { openLessonPlanPrintDialog } from "@/lib/lesson-plan-pdf-export";
 
 export function LessonEditDashboard() {
   const { authFetch } = useAuth();
@@ -170,6 +171,15 @@ export function LessonEditDashboard() {
     [authFetch, editor, lessonSession],
   );
 
+  const exportPdf = useCallback(() => {
+    if (!editor) return;
+    const title = editor.state.doc.firstChild?.textContent.trim() || "Giáo án";
+    if (!openLessonPlanPrintDialog(title, editor.getHTML())) {
+      setSaveStatus("error");
+      setSaveError("Trình duyệt đã chặn cửa sổ in. Hãy cho phép popup rồi thử lại.");
+    }
+  }, [editor]);
+
   // Khi AI đã hoàn thành toàn bộ activity, lưu bản giáo án đầu tiên vào thư viện.
   useLessonPlanStream(editor, (session) => {
     setLessonSession(session);
@@ -187,6 +197,9 @@ export function LessonEditDashboard() {
               <div className="flex shrink-0 items-center gap-1.5">
                 <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
                   <SaveIcon />
+                </HeaderActionButton>
+                <HeaderActionButton onClick={exportPdf} label="Xuất PDF">
+                  <PrintIcon />
                 </HeaderActionButton>
                 <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>
                   <CreateLessonIcon />
@@ -287,6 +300,14 @@ function CreateLessonIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M12 4l1.3 4.4L18 10l-4.7 1.6L12 16l-1.3-4.4L6 10l4.7-1.6L12 4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
       <path d="M5 17h4M7 15v4M17 17h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PrintIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M7 8V3h10v5M6 18H4V9h16v9h-2M7 14h10v7H7z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
     </svg>
   );
 }
