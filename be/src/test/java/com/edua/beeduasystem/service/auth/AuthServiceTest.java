@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -191,6 +192,16 @@ class AuthServiceTest {
     }
 
     @Test
+    void refresh_unknownTokenHash_rejectsRequest() {
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.refresh("unknown-token"))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verifyNoInteractions(userRepository, userRoleRepository, tokenService);
+    }
+
+    @Test
     void refresh_revokedToken_revokesAllUserTokens() {
         UUID userId = UUID.randomUUID();
         RefreshToken revokedToken = new RefreshToken(UUID.randomUUID(), userId, "hash",
@@ -201,6 +212,51 @@ class AuthServiceTest {
                 .isInstanceOf(InvalidTokenException.class);
 
         verify(refreshTokenRepository).revokeAllByUserId(userId);
+    }
+
+    @Test
+    void refresh_expiredToken_rejectsRequestWithoutRevokingIt() {
+        RefreshToken expiredToken = new RefreshToken(UUID.randomUUID(), UUID.randomUUID(), "hash",
+                Instant.now().minusSeconds(1), false, Instant.now().minus(Duration.ofHours(1)));
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(expiredToken));
+
+        assertThatThrownBy(() -> authService.refresh("expired-token"))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verify(refreshTokenRepository, never()).revoke(any());
+        verifyNoInteractions(userRepository, userRoleRepository, tokenService);
+    }
+
+    @Test
+    void refresh_missingUser_revokesOldTokenAndRejectsRequest() {
+        UUID userId = UUID.randomUUID();
+        RefreshToken refreshToken = new RefreshToken(UUID.randomUUID(), userId, "hash",
+                Instant.now().plus(Duration.ofHours(1)), false, Instant.now());
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(refreshToken));
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.refresh("refresh-token"))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verify(refreshTokenRepository).revoke(refreshToken.id());
+        verifyNoInteractions(userRoleRepository, tokenService);
+    }
+
+    @Test
+    void refresh_disabledUser_revokesOldTokenAndRejectsRequest() {
+        UUID userId = UUID.randomUUID();
+        AppUser disabledUser = new AppUser(userId, "disabled@fpt.edu.vn", "sub-1", "Disabled User",
+                null, null, null, UserStatus.DISABLED, Instant.now(), Instant.now());
+        RefreshToken refreshToken = new RefreshToken(UUID.randomUUID(), userId, "hash",
+                Instant.now().plus(Duration.ofHours(1)), false, Instant.now());
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(refreshToken));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(disabledUser));
+
+        assertThatThrownBy(() -> authService.refresh("refresh-token"))
+                .isInstanceOf(EmailNotAllowedException.class);
+
+        verify(refreshTokenRepository).revoke(refreshToken.id());
+        verifyNoInteractions(userRoleRepository, tokenService);
     }
 
     @Test
