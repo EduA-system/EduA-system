@@ -1,6 +1,7 @@
 # Iteration 2 — Remaining Tasks
 
-> Branch reviewed: `main` at commit `38962d8`.
+> Last audited on `feat/slide-presentation-mode` after implementing presentation mode
+> and offline HTML slide export (2026-07-17).
 >
 > Source of scope: Report 2 Project Tracking, WBS sheet. This checklist reflects
 > the current codebase, not only the status recorded in the tracking workbook.

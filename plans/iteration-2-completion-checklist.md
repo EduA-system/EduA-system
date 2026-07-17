@@ -6,7 +6,7 @@
 - [ ] Run the backend test suite and retain the resulting test report.
 - [ ] Add focused tests for `LibraryContentService`, blog flows, and molecule APIs.
 - [ ] Verify `.env` contains the required database, Google OAuth, AI provider, and R2 settings for a local demo.
-- [ ] Run frontend checks: `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build` from `fe/`.
+- [x] Run frontend checks: `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build` from `fe/` (validated for presentation mode and HTML export on 2026-07-17; existing lint warnings remain outside this flow).
 
 ## 2. Finish partially implemented features
 
