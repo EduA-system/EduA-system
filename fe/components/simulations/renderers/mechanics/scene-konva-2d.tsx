@@ -30,6 +30,13 @@ const GRID_EXTENT_FACTOR = 7;
 type Vec2 = { x: number; y: number };
 type Box = { minX: number; maxX: number; minY: number; maxY: number };
 
+function formatGridValue(value: number, step: number): string {
+  const decimals = Math.max(0, Math.ceil(-Math.log10(step)));
+  const rounded = Number((Math.round(value / step) * step).toFixed(decimals));
+  if (Object.is(rounded, -0) || rounded === 0) return "0";
+  return rounded.toFixed(decimals).replace(/\.0+$/, "");
+}
+
 // Mô phỏng trước ~5 s để biết quỹ đạo → hộp bao. LUÔN gồm mặt đất y=0.
 function fitBox(scene: Scene): Box {
   const xs = scene.bodies.map((b) => b.x);
@@ -257,11 +264,17 @@ export function SceneKonva2D({
     const cxWorld = (wl + wr) / 2, cyWorld = (wb + wt) / 2;
     const gx0 = cxWorld - (GRID_EXTENT_FACTOR * (wr - wl)) / 2, gx1 = cxWorld + (GRID_EXTENT_FACTOR * (wr - wl)) / 2;
     const gy0 = cyWorld - (GRID_EXTENT_FACTOR * (wt - wb)) / 2, gy1 = cyWorld + (GRID_EXTENT_FACTOR * (wt - wb)) / 2;
-    for (let gx = Math.ceil(gx0 / step) * step; gx <= gx1; gx += step) {
+    const gridXStart = Math.ceil(gx0 / step);
+    const gridXEnd = Math.floor(gx1 / step);
+    for (let gridIndex = gridXStart; gridIndex <= gridXEnd; gridIndex += 1) {
+      const gx = gridIndex * step;
       const x = toScreen(gx, 0).x;
       layer.add(new Konva.Line({ points: [x, toScreen(0, gy1).y, x, toScreen(0, gy0).y], stroke: gridColor, strokeWidth: 1 }));
     }
-    for (let gy = Math.ceil(gy0 / step) * step; gy <= gy1; gy += step) {
+    const gridYStart = Math.ceil(gy0 / step);
+    const gridYEnd = Math.floor(gy1 / step);
+    for (let gridIndex = gridYStart; gridIndex <= gridYEnd; gridIndex += 1) {
+      const gy = gridIndex * step;
       const y = toScreen(0, gy).y;
       layer.add(new Konva.Line({ points: [toScreen(gx0, 0).x, y, toScreen(gx1, 0).x, y], stroke: gridColor, strokeWidth: 1 }));
     }
@@ -280,14 +293,20 @@ export function SceneKonva2D({
       if (yAxisOnScreen) {
         layer.add(new Konva.Line({ points: [yAxisX, toScreen(0, gy1).y, yAxisX, groundY], stroke: "#3f4d63", strokeWidth: 1.5 })); // trục Oy
       }
-      for (let gx = Math.ceil(wl / step) * step; gx <= wr; gx += step) {
+      const axisXStart = Math.ceil(wl / step);
+      const axisXEnd = Math.floor(wr / step);
+      for (let gridIndex = axisXStart; gridIndex <= axisXEnd; gridIndex += 1) {
+        const gx = gridIndex * step;
         if (gx === 0) continue;
-        layer.add(new Konva.Text({ x: toScreen(gx, 0).x + 2, y: groundY - 15, text: `${gx}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
+        layer.add(new Konva.Text({ x: toScreen(gx, 0).x + 2, y: groundY - 15, text: formatGridValue(gx, step), fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
       }
       if (yAxisOnScreen) {
-        for (let gy = Math.ceil(wb / step) * step; gy <= wt; gy += step) {
+        const axisYStart = Math.ceil(wb / step);
+        const axisYEnd = Math.floor(wt / step);
+        for (let gridIndex = axisYStart; gridIndex <= axisYEnd; gridIndex += 1) {
+          const gy = gridIndex * step;
           if (gy <= 0) continue;
-          layer.add(new Konva.Text({ x: yAxisX + 4, y: toScreen(0, gy).y - 6, text: `${gy}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
+          layer.add(new Konva.Text({ x: yAxisX + 4, y: toScreen(0, gy).y - 6, text: formatGridValue(gy, step), fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
         }
       }
       const o = toScreen(0, 0); // gốc toạ độ O
@@ -479,7 +498,9 @@ export function SceneKonva2D({
     // Bán kính hiển thị — dùng chung cho vật thật lẫn tàn ảnh (ghost).
     const radiusFor = (b: Scene["bodies"][number]): number => {
       const worldR = b.radius ?? Math.min(0.25 + b.mass * 0.04, 0.5);
-      return Math.max(8, worldR * scale);
+      // Bán kính vật lý vẫn dùng cho kernel; bán kính vẽ có giới hạn để vật
+      // không phủ kín canvas khi cảnh có phạm vi world rất nhỏ.
+      return Math.min(34, Math.max(8, worldR * scale));
     };
 
     // Tàn ảnh (ghost) — vị trí các vật động tại mốc VỪA đi qua trước đó, vẽ nét

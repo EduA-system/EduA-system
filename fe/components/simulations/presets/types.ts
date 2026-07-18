@@ -12,6 +12,11 @@ import type { WaveFieldScene } from "../engines/wave-field/types";
 import type { PointChargeFieldScene } from "../engines/point-charge-field/types";
 import type { ParamDef } from "../shared/param-panel";
 import type { SceneAnnotation } from "../shared/scene-types";
+import type { HeatingCurveScene } from "../heating-curve/types";
+import type { CorkPopScene } from "../cork-pop/types";
+import type { PendulumResonanceScene } from "../pendulum-resonance/types";
+import type { HeatTransferScene } from "../heat-transfer/types";
+import type { IsothermalBoyleScene } from "../isothermal-boyle/types";
 
 export type Domain = "Cơ học" | "Dao động & Sóng" | "Quang học" | "Điện & Từ" | "Nhiệt & Khí" | "Hạt nhân";
 
@@ -57,7 +62,7 @@ type PresetBase = {
   quickPresets?: { label: string; params: Record<string, number> }[];
 };
 
-/** Preset chạy trên engine mechanics 2D + renderer mechanics. */
+/** Preset chạy trên kernel Cơ học 2D (kernel/*.ts) + SceneKonva2D. */
 export type MechanicsPreset = PresetBase & {
   kind?: "mechanics";
   applyParams: (p: Record<string, number>) => Scene;
@@ -80,13 +85,13 @@ export type MechanicsPreset = PresetBase & {
   minimalOverlay?: boolean;
 };
 
-/** Preset sóng trường (giao thoa…) — biên độ là hàm giải tích, xem engines/wave. */
+/** Preset sóng trường (giao thoa…) — biên độ là hàm giải tích, xem wave/types.ts. */
 export type WavePreset = PresetBase & {
   kind: "wave";
   applyParams: (p: Record<string, number>) => WaveScene;
 };
 
-/** Preset sóng cơ 1 chiều trên dây (sóng trên dây, sóng dừng) — xem engines/string-wave. */
+/** Preset sóng cơ 1 chiều trên dây (sóng trên dây, sóng dừng) — xem string-wave/types.ts. */
 export type StringWavePreset = PresetBase & {
   kind: "string-wave";
   applyParams: (p: Record<string, number>) => StringWaveScene;
@@ -94,7 +99,7 @@ export type StringWavePreset = PresetBase & {
 
 /**
  * Preset giao thoa Y-âng ĐẦY ĐỦ — trường sóng thực tính từ phương trình sóng
- * (không vẽ vân trang trí), xem engines/wave-field.
+ * (không vẽ vân trang trí), xem wave-field/types.ts + wave-field/physics.ts.
  */
 export type WaveFieldPreset = PresetBase & {
   kind: "wave-field";
@@ -103,11 +108,42 @@ export type WaveFieldPreset = PresetBase & {
 
 /**
  * Preset điện phổ 2 điện tích điểm — chồng chất Coulomb THẬT, đường sức truy
- * vết bằng RK4 (không hardcode hình), xem engines/point-charge-field.
+ * vết bằng RK4 (không hardcode hình), xem point-charge-field/*.ts.
  */
 export type PointChargeFieldPreset = PresetBase & {
   kind: "point-charge-field";
   applyParams: (p: Record<string, number>) => PointChargeFieldScene;
 };
 
-export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset;
+/** Mô phỏng Brown có renderer Canvas và bộ điều khiển riêng, không dùng Scene cơ học. */
+export type BrownianPreset = PresetBase & {
+  kind: "brownian";
+  applyParams: (p: Record<string, number>) => Record<string, never>;
+};
+
+export type HeatingCurvePreset = PresetBase & {
+  kind: "heating-curve";
+  applyParams: (p: Record<string, number>) => HeatingCurveScene;
+};
+
+export type CorkPopPreset = PresetBase & {
+  kind: "cork-pop";
+  applyParams: (p: Record<string, number>) => CorkPopScene;
+};
+
+export type PendulumResonancePreset = PresetBase & {
+  kind: "pendulum-resonance";
+  applyParams: (p: Record<string, number>) => PendulumResonanceScene;
+};
+
+export type HeatTransferPreset = PresetBase & {
+  kind: "heat-transfer";
+  applyParams: (p: Record<string, number>) => HeatTransferScene;
+};
+
+export type IsothermalBoylePreset = PresetBase & {
+  kind: "isothermal-boyle";
+  applyParams: (p: Record<string, number>) => IsothermalBoyleScene;
+};
+
+export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset | BrownianPreset | HeatingCurvePreset | CorkPopPreset | PendulumResonancePreset | HeatTransferPreset | IsothermalBoylePreset;

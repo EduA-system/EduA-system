@@ -262,7 +262,7 @@ export function SceneCanvasPointChargeField({
     const applyTransform = () => {
       if (transformEl) transformEl.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${zoomRef.current})`;
     };
-    const minZoom = 0.7;
+    const minZoom = 1;
     const maxZoom = 6;
     const clampPan = (pan: Point, zoom: number): Point => ({
       x: Math.min(0, Math.max(w * (1 - zoom), pan.x)),

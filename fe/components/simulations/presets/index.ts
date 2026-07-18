@@ -22,6 +22,11 @@ import { dienTruong2BanSongSong } from "./dien-truong-2-ban-song-song";
 import { dienPhoHaiDienTich } from "./dien-pho-hai-dien-tich";
 import { nutBacBat } from "./nut-bac-bat";
 import { becquerelUraniumKinhAnh } from "./becquerel-uranium-kinh-anh";
+import { brownianPollen } from "./brownian";
+import { dunNong } from "./dun-nong";
+import { corkPop } from "./cork-pop";
+import { nguyenLyTruyenNhiet } from "./nguyen-ly-truyen-nhiet";
+import { isothermalBoyle } from "./isothermal-boyle";
 
 export type { Preset, PresetParam, Domain } from "./types";
 
@@ -46,6 +51,11 @@ export const PRESETS: Preset[] = [
   dienPhoHaiDienTich,
   nutBacBat,
   becquerelUraniumKinhAnh,
+  brownianPollen,
+  dunNong,
+  corkPop,
+  nguyenLyTruyenNhiet,
+  isothermalBoyle,
 ];
 
 export function getPreset(id: string): Preset | undefined {

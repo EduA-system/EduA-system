@@ -12,6 +12,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import {
   Search,
   ChevronLeft,
@@ -33,6 +34,12 @@ import type { WaveFieldScene } from "@/components/simulations/engines/wave-field
 import type { PointChargeFieldScene } from "@/components/simulations/engines/point-charge-field/types";
 import { CorkExperiment } from "@/components/simulations/thermodynamics/cork-experiment";
 import { BecquerelExperiment } from "@/components/simulations/radiography/becquerel-experiment";
+import { BrownianDetailView } from "@/components/simulations/brownian/BrownianDetailView";
+import { HeatingCurveDetailView } from "@/components/simulations/heating-curve/HeatingCurveDetailView";
+import { CorkPopDetailView } from "@/components/simulations/cork-pop/CorkPopDetailView";
+import { PendulumResonanceDetailView } from "@/components/simulations/pendulum-resonance/PendulumResonanceDetailView";
+import { HeatTransferDetailView } from "@/components/simulations/heat-transfer/HeatTransferDetailView";
+import { IsothermalBoyleDetailView } from "@/components/simulations/isothermal-boyle/IsothermalBoyleDetailView";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
@@ -70,7 +77,6 @@ type Placeholder = { id: string; title: string; domain: Domain; grade: 10 | 11 |
 const PLACEHOLDERS: Placeholder[] = [
   { id: "ohm", title: "Định luật Ohm", domain: "Điện & Từ", grade: 11, desc: "Mạch điện cơ bản, khảo sát quan hệ U – I – R." },
   { id: "induction", title: "Cảm ứng điện từ", domain: "Điện & Từ", grade: 12, desc: "Nam châm chuyển động qua cuộn dây sinh dòng cảm ứng." },
-  { id: "boyle", title: "Định luật Boyle", domain: "Nhiệt & Khí", grade: 12, desc: "Nén khí đẳng nhiệt, quan sát quan hệ p – V." },
   { id: "decay", title: "Phóng xạ & chu kỳ bán rã", domain: "Hạt nhân", grade: 12, desc: "Mô phỏng phân rã ngẫu nhiên theo thời gian." },
 ];
 
@@ -132,15 +138,42 @@ function Thumb({ id }: { id: string }) {
     case "cong-huong-con-lac":
       return frame(
         <>
-          <line x1="30" y1="18" x2="170" y2="18" stroke="#475569" strokeWidth="3" />
-          <line x1="60" y1="18" x2="86" y2="74" stroke="#94a3b8" strokeWidth="2" />
-          <line x1="100" y1="18" x2="100" y2="80" stroke="#94a3b8" strokeWidth="2" />
-          <line x1="140" y1="18" x2="140" y2="80" stroke="#94a3b8" strokeWidth="2" />
-          <line x1="86" y1="74" x2="100" y2="80" stroke="#34d399" strokeWidth="1.5" strokeDasharray="2 2" />
-          <line x1="100" y1="80" x2="140" y2="80" stroke="#34d399" strokeWidth="1.5" strokeDasharray="2 2" />
-          <circle cx="86" cy="74" r="7" fill="#f472b6" />
-          <circle cx="100" cy="80" r="7" fill="#a78bfa" />
-          <circle cx="140" cy="80" r="7" fill="#60a5fa" />
+          <rect x="27" y="18" width="146" height="8" rx="2" fill="#e2e8f0" stroke="#67e8f9" strokeWidth="1.5" />
+          <path d="M35 26 V40 M165 26 V40 M28 40 H42 M158 40 H172" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" />
+          {[{ pivot: 47, bob: 44, y: 82 }, { pivot: 73, bob: 75, y: 77 }, { pivot: 100, bob: 100, y: 87 }, { pivot: 127, bob: 124, y: 76 }, { pivot: 153, bob: 157, y: 82 }].map(({ pivot, bob, y }, index) => <g key={pivot}><circle cx={pivot} cy="26" r="2" fill="#cbd5e1" /><line x1={pivot} y1="27" x2={bob} y2={y - 5} stroke="#a8b4c4" strokeWidth="1.5" /><circle cx={bob} cy={y} r="6" fill={["#fb7185", "#fb923c", "#facc15", "#4ade80", "#67e8f9"][index]} stroke="#fff7ed" strokeWidth="1.2" /></g>)}
+          <path d="M47 45 Q39 58 44 72 M127 45 Q135 57 124 70" fill="none" stroke="#fbbf24" strokeWidth="1.4" strokeDasharray="3 3" opacity=".7" />
+        </>,
+      );
+    case "nguyen-ly-truyen-nhiet":
+      return frame(
+        <>
+          <rect x="31" y="55" width="53" height="35" rx="7" fill="#f97316" stroke="#fed7aa" strokeWidth="1.5" />
+          <rect x="116" y="55" width="53" height="35" rx="7" fill="#38bdf8" stroke="#cffafe" strokeWidth="1.5" />
+          <path d="M53 50 V27 M147 50 V27" stroke="#cbd5e1" strokeWidth="2" />
+          <circle cx="53" cy="23" r="5" fill="#fb923c" stroke="#fed7aa" />
+          <circle cx="147" cy="23" r="5" fill="#67e8f9" stroke="#cffafe" />
+          <path d="M88 72 H112" stroke="#fbbf24" strokeWidth="2.5" />
+          <path d="M112 72 l-6 -4 v8 z" fill="#fbbf24" />
+          {[0, 1, 2].map((index) => <circle key={index} cx={91 + index * 7} cy={68 + (index % 2) * 8} r="1.7" fill="#fde68a" />)}
+        </>,
+      );
+    case "isothermal-boyle":
+      return frame(
+        <>
+          <rect x="78" y="20" width="44" height="78" rx="7" fill="rgba(103,232,249,.12)" stroke="#cbd5e1" strokeWidth="1.8" />
+          <rect x="84" y="52" width="32" height="42" rx="5" fill="rgba(103,232,249,.42)" stroke="#67e8f9" strokeWidth="1" />
+          <rect x="70" y="45" width="60" height="10" rx="3" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1.2" />
+          <line x1="100" y1="22" x2="100" y2="45" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="100" cy="18" r="5" fill="#e8724a" stroke="#fed7aa" />
+          {[0, 1, 2, 3, 4, 5].map((index) => <circle key={index} cx={88 + (index % 3) * 10} cy={64 + Math.floor(index / 3) * 14} r="1.7" fill="#cffafe" />)}
+          <circle cx="154" cy="55" r="22" fill="none" stroke="#cbd5e1" strokeWidth="1.8" />
+          <path d="M140 70 A20 20 0 0 1 168 70" fill="none" stroke="#67e8f9" strokeWidth="3" opacity=".45" />
+          <line x1="154" y1="55" x2="166" y2="43" stroke="#e8724a" strokeWidth="2.2" strokeLinecap="round" />
+          <circle cx="154" cy="55" r="2.5" fill="#e8724a" />
+          <path d="M43 35 V82" stroke="#cbd5e1" strokeWidth="2" />
+          <circle cx="43" cy="88" r="6" fill="#fb923c" stroke="#fed7aa" />
+          <line x1="34" y1="76" x2="52" y2="76" stroke="#fb923c" strokeWidth="3" strokeLinecap="round" />
+          <text x="32" y="25" fill="#67e8f9" fontSize="10" fontWeight="700">T = const</text>
         </>,
       );
     case "dao-dong-tat-dan":
@@ -335,6 +368,45 @@ function Thumb({ id }: { id: string }) {
           <path d="M160 28v-8M160 28l6 4" stroke="#f8fafc" strokeWidth="2" strokeLinecap="round" />
         </>,
       );
+    case "brownian-pollen":
+      return frame(
+        <>
+          <path d="M24 78 L38 64 L48 74 L61 51 L75 66 L88 46 L105 57 L119 38 L135 54 L151 34 L174 45" fill="none" stroke="#fbbf24" strokeWidth="2.2" strokeLinejoin="miter" />
+          {[24, 38, 48, 61, 75, 88, 105, 119, 135, 151, 174].map((x, i) => (
+            <circle key={`${x}-${i}`} cx={x} cy={[78, 64, 74, 51, 66, 46, 57, 38, 54, 34, 45][i]} r="1.5" fill="#fdba74" />
+          ))}
+          {["34,22", "54,88", "88,20", "132,78", "168,24", "180,84", "20,42", "105,98"].map((point) => {
+            const [x, y] = point.split(",");
+            return <circle key={point} cx={x} cy={y} r="2" fill="#67e8f9" opacity="0.85" />;
+          })}
+          <circle cx="104" cy="57" r="3.8" fill="#f59e0b" stroke="#fed7aa" strokeWidth="1" />
+          <circle cx="103" cy="56" r="1" fill="#fff7ed" opacity="0.7" />
+        </>,
+      );
+    case "dun-nong-nhiet-do-thoi-gian":
+      return frame(
+        <>
+          <line x1="30" y1="96" x2="180" y2="96" stroke="#cbd5e1" strokeWidth="1.2" />
+          <line x1="30" y1="96" x2="30" y2="18" stroke="#cbd5e1" strokeWidth="1.2" />
+          <path d="M30 84 L82 68 L82 56 L116 56 L162 30" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M82 56 H116" fill="none" stroke="#fb7185" strokeWidth="2.5" />
+          <rect x="45" y="31" width="34" height="9" rx="3" fill="#b91c1c" stroke="#fed7aa" strokeWidth="1" />
+          <path d="M48 48 Q62 34 76 48 Q70 64 62 68 Q54 63 48 48" fill="#fb923c" />
+          <path d="M50 93 H75" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="162" cy="30" r="3" fill="#fff7ed" />
+        </>,
+      );
+    case "nut-bac-bat-noi-nang-cong":
+      return frame(
+        <>
+          <path d="M68 88 L72 42 H128 L132 88 Q100 102 68 88" fill="rgba(103,232,249,0.08)" stroke="#67e8f9" strokeWidth="2" />
+          <path d="M87 42 V26 H113 V42" fill="none" stroke="#67e8f9" strokeWidth="2" />
+          <rect x="84" y="22" width="32" height="8" rx="2" fill="#f97316" stroke="#fed7aa" strokeWidth="1" />
+          <circle cx="82" cy="65" r="2" fill="#67e8f9" /><circle cx="110" cy="72" r="2" fill="#67e8f9" /><circle cx="96" cy="54" r="2" fill="#67e8f9" />
+          <path d="M100 105 Q86 84 100 72 Q114 84 100 105" fill="#fb923c" />
+          <path d="M42 96 H158" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" />
+        </>,
+      );
     default: {
       const icons: Record<string, string> = {
         ohm: "M30 60h30l10-25 20 50 10-25h70",
@@ -407,6 +479,7 @@ function DomainChip({
 /* ─────────────────────────── Trang chính ─────────────────────────── */
 
 export default function MoPhongHubPage() {
+  const router = useRouter();
   const [selected, setSelected] = useState<Preset | null>(null);
   const [domainFilter, setDomainFilter] = useState<Set<Domain>>(new Set(DOMAINS));
   const [query, setQuery] = useState("");
@@ -433,7 +506,18 @@ export default function MoPhongHubPage() {
 
   const filtered = domainFilter.size < DOMAINS.length;
 
-  if (selected) return <DetailView preset={selected} onBack={() => setSelected(null)} />;
+  const backToLibrary = () => {
+    setSelected(null);
+    router.replace("/mo-phong-vat-ly");
+  };
+
+  if (selected?.kind === "brownian") return <BrownianDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "heating-curve") return <HeatingCurveDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "cork-pop") return <CorkPopDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "pendulum-resonance") return <PendulumResonanceDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "heat-transfer") return <HeatTransferDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected?.kind === "isothermal-boyle") return <IsothermalBoyleDetailView preset={selected} onBack={backToLibrary} />;
+  if (selected) return <DetailView preset={selected} onBack={backToLibrary} />;
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
