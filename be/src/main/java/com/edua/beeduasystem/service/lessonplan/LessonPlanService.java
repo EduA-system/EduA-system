@@ -7,6 +7,8 @@ import com.edua.beeduasystem.domain.model.lessonplan.Objectives;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateActivityDetailsRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanRequest;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.service.ai.AiSystemPromptService;
+import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,24 +43,27 @@ public class LessonPlanService {
     private final LessonPlan5512PromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
     private final ExecutorService executor;
+    private final AiSystemPromptService systemPromptService;
 
     public LessonPlanService(TextbookCatalogRepository catalogRepository,
                              AiClient aiClient,
                              LessonPlan5512PromptBuilder promptBuilder,
                              ObjectMapper objectMapper,
-                             @Qualifier("slideSessionExecutor") ExecutorService executor) {
+                             @Qualifier("slideSessionExecutor") ExecutorService executor,
+                             AiSystemPromptService systemPromptService) {
         this.catalogRepository = catalogRepository;
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
         this.executor = executor;
+        this.systemPromptService = systemPromptService;
     }
 
     /** Sinh phần I. MỤC TIÊU cho bài đã chọn. */
     public LessonPlan5512 generateObjectives(GenerateLessonPlanRequest request) {
         String knowledge = loadKnowledge(request);
         String prompt = promptBuilder.buildObjectivesPrompt(knowledge, request.userPrompt());
-        String raw = generate(prompt, "AI không sinh được mục tiêu giáo án.");
+        String raw = generate(AiPromptKey.LESSON_PLAN_OBJECTIVES, prompt, "AI không sinh được mục tiêu giáo án.");
 
         Objectives objectives = parseJson(raw, Objectives.class, "Kết quả AI không đúng định dạng mục tiêu.");
         return new LessonPlan5512(null, objectives, null, null);
@@ -68,7 +73,7 @@ public class LessonPlanService {
     public LessonPlan5512 generateMaterials(GenerateLessonPlanRequest request) {
         String knowledge = loadKnowledge(request);
         String prompt = promptBuilder.buildMaterialsPrompt(knowledge, request.userPrompt());
-        String raw = generate(prompt, "AI không sinh được thiết bị và học liệu.");
+        String raw = generate(AiPromptKey.LESSON_PLAN_MATERIALS, prompt, "AI không sinh được thiết bị và học liệu.");
 
         Materials materials = parseJson(raw, Materials.class, "Kết quả AI không đúng định dạng thiết bị và học liệu.");
         return new LessonPlan5512(null, null, materials, null);
@@ -78,7 +83,7 @@ public class LessonPlanService {
     public LessonPlan5512 generateActivitiesFrame(GenerateLessonPlanRequest request) {
         String knowledge = loadKnowledge(request);
         String prompt = promptBuilder.buildActivitiesFramePrompt(knowledge, request.userPrompt());
-        String raw = generate(prompt, "AI không sinh được khung tiến trình dạy học.");
+        String raw = generate(AiPromptKey.LESSON_PLAN_ACTIVITIES_FRAME, prompt, "AI không sinh được khung tiến trình dạy học.");
 
         ActivitiesFrame frame = parseJson(raw, ActivitiesFrame.class,
                 "Kết quả AI không đúng định dạng tiến trình dạy học.");
@@ -147,7 +152,7 @@ public class LessonPlanService {
         String targetJson = toJson(frameActivity);
         String prompt = promptBuilder.buildActivityDetailPrompt(knowledge, objectivesJson,
                 materialsJson, frameOutlineJson, targetJson, frameActivity, userPrompt);
-        String raw = generate(prompt, "AI không sinh được nội dung hoạt động.");
+        String raw = generate(AiPromptKey.LESSON_PLAN_ACTIVITY_DETAIL, prompt, "AI không sinh được nội dung hoạt động.");
         Activity5512 detail = parseJson(raw, Activity5512.class,
                 "Kết quả AI không đúng định dạng hoạt động.");
         return mergeDetail(frameActivity, detail);
@@ -205,9 +210,9 @@ public class LessonPlanService {
     }
 
     /** Gọi AI, bọc lỗi runtime thành {@link LessonPlanGenerationException} (→ 502). */
-    private String generate(String prompt, String errorMessage) {
+    private String generate(AiPromptKey key, String prompt, String errorMessage) {
         try {
-            return aiClient.generate(prompt);
+            return aiClient.generate(systemPromptService.apply(key, prompt));
         } catch (RuntimeException e) {
             throw new LessonPlanGenerationException(errorMessage, e);
         }

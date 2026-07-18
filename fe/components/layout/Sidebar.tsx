@@ -54,6 +54,8 @@ export function Sidebar({
     ? "Quản trị viên"
     : user?.role === "MODERATOR"
       ? "Người kiểm duyệt"
+      : user?.role === "IT_MANAGEMENT"
+        ? "Quản lý CNTT"
       : "Giáo viên";
 
   const filteredGroups = navGroups
