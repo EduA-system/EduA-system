@@ -15,8 +15,6 @@ import dynamic from "next/dynamic";
 import {
   Search,
   ChevronLeft,
-  Play,
-  Pause,
   RotateCcw,
   CheckCircle2,
   X,
@@ -24,6 +22,8 @@ import {
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ParamPanel } from "@/components/simulations/shared/param-panel";
 import { LandmarksPanel, type JumpMark } from "@/components/simulations/shared/landmarks-panel";
+import { SimulationToolbar } from "@/components/simulations/shared/simulation-toolbar";
+import { SimulationTabs } from "@/components/simulations/shared/simulation-tabs";
 import { PRESETS, type Preset, type Domain } from "@/components/simulations/presets";
 import type { SceneReadout } from "@/components/simulations/shared/scene-types";
 import type { Scene } from "@/components/simulations/engines/mechanics/types";
@@ -31,6 +31,8 @@ import type { WaveScene } from "@/components/simulations/engines/wave/types";
 import type { StringWaveScene } from "@/components/simulations/engines/string-wave/types";
 import type { WaveFieldScene } from "@/components/simulations/engines/wave-field/types";
 import type { PointChargeFieldScene } from "@/components/simulations/engines/point-charge-field/types";
+import { CorkExperiment } from "@/components/simulations/thermodynamics/cork-experiment";
+import { BecquerelExperiment } from "@/components/simulations/radiography/becquerel-experiment";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
@@ -301,6 +303,36 @@ function Thumb({ id }: { id: string }) {
           <circle cx="80" cy="60" r="6" fill="#f472b6" />
           <path d="M87 60 h14" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" />
           <path d="M97 56 L101 60 L97 64" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </>,
+      );
+    case "nut-bac-bat-noi-nang-thanh-cong":
+      return frame(
+        <>
+          <line x1="48" y1="14" x2="48" y2="108" stroke="#64748b" strokeWidth="5" strokeLinecap="round" />
+          <line x1="28" y1="108" x2="142" y2="108" stroke="#64748b" strokeWidth="5" strokeLinecap="round" />
+          <path d="M72 36v45q0 12 12 12h32q12 0 12-12V36" fill="rgba(110,231,211,.14)" stroke="#bae6fd" strokeWidth="3" />
+          <rect x="76" y="29" width="48" height="14" rx="4" fill="#c58b55" stroke="#8a5a32" strokeWidth="1.5" />
+          <rect x="84" y="41" width="32" height="8" rx="2" fill="#b97842" />
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((index) => <circle key={index} cx={84 + index % 4 * 10} cy={58 + Math.floor(index / 4) * 18} r="2.5" fill={index % 2 ? "#fde68a" : "#6ee7d3"} />)}
+          <rect x="82" y="99" width="36" height="12" rx="5" fill="#64748b" />
+          <path d="M100 98c-12-12-5-24 0-31 7 9 13 19 0 31Z" fill="#f59e0b" />
+          <path d="M100 98c-5-7-2-13 0-17 4 5 6 11 0 17Z" fill="#38bdf8" />
+          <path d="M132 42q18-22 34-8" fill="none" stroke="#e8724a" strokeWidth="2" strokeDasharray="4 3" />
+          <rect x="158" y="22" width="30" height="10" rx="3" fill="#c58b55" stroke="#8a5a32" strokeWidth="1" transform="rotate(24 173 27)" />
+        </>,
+      );
+    case "becquerel-uranium-lam-den-kinh-anh":
+      return frame(
+        <>
+          <rect x="24" y="91" width="152" height="9" rx="4" fill="#475569" />
+          <rect x="55" y="50" width="92" height="36" rx="5" fill="#111827" stroke="#64748b" strokeWidth="2" />
+          <rect x="63" y="57" width="76" height="22" rx="3" fill="#a7c7d8" />
+          <path d="M101 57v22M78 68h46" stroke="#334155" strokeWidth="8" />
+          <rect x="73" y="23" width="56" height="19" rx="6" fill="#b89b3c" stroke="#fef08a" strokeWidth="1.5" />
+          <text x="83" y="36" fontSize="10" fontWeight="bold" fill="#fff7c2">URANIUM</text>
+          {[68, 82, 96, 110, 124, 138].map((x) => <path key={x} d={`M${x} 43L${x + (x % 3 - 1) * 5} 55`} stroke="#fde68a" strokeWidth="1" strokeDasharray="3 3" opacity=".7" />)}
+          <circle cx="160" cy="28" r="14" fill="#1e293b" stroke="#94a3b8" strokeWidth="2" />
+          <path d="M160 28v-8M160 28l6 4" stroke="#f8fafc" strokeWidth="2" strokeLinecap="round" />
         </>,
       );
     default: {
@@ -629,7 +661,17 @@ function StringWaveLegend({ mode }: { mode: "traveling" | "standing" }) {
 
 type AiState = "idle" | "thinking" | "review";
 
-function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) {
+function DetailView(props: { preset: Preset; onBack: () => void }) {
+  if (props.preset.id === "nut-bac-bat-noi-nang-thanh-cong") {
+    return <div className="flex h-screen"><Sidebar activeHref="/mo-phong-vat-ly" /><CorkExperiment onBack={props.onBack} /></div>;
+  }
+  if (props.preset.id === "becquerel-uranium-lam-den-kinh-anh") {
+    return <div className="flex h-screen"><Sidebar activeHref="/mo-phong-vat-ly" /><BecquerelExperiment onBack={props.onBack} /></div>;
+  }
+  return <GenericDetailView {...props} />;
+}
+
+function GenericDetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) {
   const baseParams = Object.fromEntries(preset.params.map((p) => [p.key, p.default]));
 
   const [params, setParams] = useState<Record<string, number>>(baseParams);
@@ -824,55 +866,18 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                 )}
               </div>
 
-              {/* Floating tool panel */}
-              <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
-                <div className="pointer-events-auto flex items-center gap-0.5 rounded-[11px] border border-[#e8e2d9] bg-white p-1 shadow-[0_8px_24px_rgba(43,41,38,0.12),0_2px_8px_rgba(43,41,38,0.08)]">
-                  <button
-                    onClick={() => setRunning((r) => !r)}
-                    title={running ? "Tạm dừng" : "Bắt đầu"}
-                    className={`flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors duration-150 ease-out ${
-                      running
-                        ? "bg-[#e8724a] text-white hover:bg-[#d96a42]"
-                        : "text-[#4f4943] hover:bg-[#f7f3ee]"
-                    }`}
-                  >
-                    {running ? (
-                      <Pause className="h-4 w-4" strokeWidth={2} />
-                    ) : (
-                      <Play className="h-4 w-4" strokeWidth={2} />
-                    )}
-                  </button>
-                  <div className="mx-0.5 h-4 w-px shrink-0 bg-black/10" />
-                  <button
-                    onClick={() => {
-                      setActiveMark(null);
-                      setPrevMark(null);
-                      setResetSignal((n) => n + 1);
-                      setRunning(true);
-                    }}
-                    title="Đặt lại"
-                    className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[#4f4943] transition-colors duration-150 ease-out hover:bg-[#f7f3ee]"
-                  >
-                    <RotateCcw className="h-4 w-4" strokeWidth={2} />
-                  </button>
-                  <div className="mx-0.5 h-4 w-px shrink-0 bg-black/10" />
-                  {/* Tốc độ mô phỏng — chỉ nhân vào dt mỗi khung hình, không đụng độ chính xác. */}
-                  <div className="flex items-center gap-0.5 rounded-[9px] bg-[#f5f1ec] p-0.5">
-                    {[0.5, 1, 2].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setSpeed(s)}
-                        title={`Tốc độ ${s}×`}
-                        className={`h-6 rounded-[7px] px-1.5 text-[11px] font-semibold transition-colors duration-150 ease-out ${
-                          speed === s ? "bg-[#e8724a] text-white" : "text-[#6b6b6b] hover:bg-white hover:text-[#171717]"
-                        }`}
-                      >
-                        {s}×
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <SimulationToolbar
+                running={running}
+                speed={speed}
+                onRunningChange={setRunning}
+                onSpeedChange={setSpeed}
+                onReset={() => {
+                  setActiveMark(null);
+                  setPrevMark(null);
+                  setResetSignal((n) => n + 1);
+                  setRunning(true);
+                }}
+              />
             </div>
             <p className="mt-3 shrink-0 text-center text-[13px] text-[#6b6b6b]">{preset.objective}</p>
           </div>
@@ -919,24 +924,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
               </div>
             )}
             {/* Tabs */}
-            <div className="flex shrink-0 border-b border-[#e8e2d9] px-2">
-              {([
-                ["params", "Tham số"],
-                ["analysis", "Phân tích"],
-                ["ai", "Sửa bằng AI"],
-              ] as const).map(([k, label]) => (
-                <button
-                  key={k}
-                  onClick={() => setTab(k)}
-                  className={`relative px-3 py-3 text-sm font-medium transition-colors duration-150 ease-out ${
-                    tab === k ? "text-[#c96545]" : "text-[#6b6b6b] hover:text-[#171717]"
-                  }`}
-                >
-                  {label}
-                  {tab === k && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded bg-[#e8724a]" />}
-                </button>
-              ))}
-            </div>
+            <SimulationTabs value={tab} onChange={setTab} />
 
             <div className="flex-1 overflow-y-auto p-5">
               {/* TẦNG 1 — tham số (Tweakpane) */}

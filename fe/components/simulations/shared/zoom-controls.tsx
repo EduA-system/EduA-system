@@ -16,7 +16,7 @@ function ZoomButton({ title, onClick, children }: { title: string; onClick: () =
   );
 }
 
-/** Cụm nút zoom nổi phía dưới canvas — dùng chung cho mọi renderer Konva. */
+/** Cụm nút zoom nổi ở góc phải phía trên — dùng chung cho mọi renderer. */
 export function ZoomControls({
   percent,
   onZoomIn,
@@ -27,7 +27,7 @@ export function ZoomControls({
   onZoomOut: () => void;
 }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+    <div className="pointer-events-none absolute right-3 top-3 z-20">
       <div className="pointer-events-auto flex items-center gap-0.5 rounded-[10px] border border-white/10 bg-[#0f172a]/90 px-1 py-1 shadow-lg backdrop-blur">
         <ZoomButton title="Thu nhỏ" onClick={onZoomOut}>
           <ZoomOut className="h-4 w-4" strokeWidth={2} />

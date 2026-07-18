@@ -20,6 +20,8 @@ import { nhiemDienDay } from "./nhiem-dien-day";
 import { nhiemDienHut } from "./nhiem-dien-hut";
 import { dienTruong2BanSongSong } from "./dien-truong-2-ban-song-song";
 import { dienPhoHaiDienTich } from "./dien-pho-hai-dien-tich";
+import { nutBacBat } from "./nut-bac-bat";
+import { becquerelUraniumKinhAnh } from "./becquerel-uranium-kinh-anh";
 
 export type { Preset, PresetParam, Domain } from "./types";
 
@@ -42,6 +44,8 @@ export const PRESETS: Preset[] = [
   nhiemDienHut,
   dienTruong2BanSongSong,
   dienPhoHaiDienTich,
+  nutBacBat,
+  becquerelUraniumKinhAnh,
 ];
 
 export function getPreset(id: string): Preset | undefined {
