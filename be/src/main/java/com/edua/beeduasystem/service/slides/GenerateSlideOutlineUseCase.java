@@ -11,6 +11,8 @@ import com.edua.beeduasystem.presentation.dto.slides.RetryOutlinePartRequest;
 import com.edua.beeduasystem.presentation.dto.slides.SlideItemDto;
 import com.edua.beeduasystem.repository.gateways.AiClient;
 import com.edua.beeduasystem.repository.gateways.OutlineStreamPort;
+import com.edua.beeduasystem.service.ai.AiSystemPromptService;
+import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,6 +50,7 @@ public class GenerateSlideOutlineUseCase {
     private final ExecutorService executor;
     private final LessonContentChunker chunker;
     private final OutlineGenerationSessionStore sessions;
+    private final AiSystemPromptService systemPromptService;
 
     @Autowired
     public GenerateSlideOutlineUseCase(
@@ -56,18 +59,20 @@ public class GenerateSlideOutlineUseCase {
             OutlineStreamPort outlineStream,
             @Qualifier("slideSessionExecutor") ExecutorService executor,
             LessonContentChunker chunker,
-            OutlineGenerationSessionStore sessions) {
+            OutlineGenerationSessionStore sessions,
+            AiSystemPromptService systemPromptService) {
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
         this.outlineStream = outlineStream;
         this.executor = executor;
         this.chunker = chunker;
         this.sessions = sessions;
+        this.systemPromptService = systemPromptService;
     }
 
     GenerateSlideOutlineUseCase(AiClient aiClient, SlidePromptBuilder promptBuilder,
                                 OutlineStreamPort outlineStream, ExecutorService executor) {
-        this(aiClient, promptBuilder, outlineStream, executor, new LessonContentChunker(), new OutlineGenerationSessionStore());
+        this(aiClient, promptBuilder, outlineStream, executor, new LessonContentChunker(), new OutlineGenerationSessionStore(), null);
     }
 
     public GenerateOutlineResponse execute(GenerateOutlineRequest req) {
@@ -208,7 +213,7 @@ public class GenerateSlideOutlineUseCase {
         for (int attempt = 1; attempt <= 2; attempt++) {
             try {
                 log.info("slide deck-blueprint attempt={} promptLength={} chunks={}", attempt, prompt.length(), allowedChunkIds.size());
-                String raw = aiClient.generate(prompt);
+                String raw = generate(AiPromptKey.SLIDE_OUTLINE_DECK_BLUEPRINT, prompt);
                 log.info("slide deck-blueprint attempt={} responseLength={}", attempt, raw == null ? 0 : raw.length());
                 return parseDeckBlueprint(raw, allowedChunkIds);
             } catch (Exception e) {
@@ -313,7 +318,7 @@ public class GenerateSlideOutlineUseCase {
             try {
                 log.info("content-map chunk={} heading={} attempt={} promptLength={}",
                         chunk.id(), headingLabel(chunk), attempt, prompt.length());
-                JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(aiClient.generate(prompt)));
+                JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(generate(AiPromptKey.SLIDE_OUTLINE_CONTENT_MAP, prompt)));
                 normalizeContentMapSuggestedRoles(root);
                 validateContentMap(root, chunk.id());
                 return root;
@@ -364,7 +369,7 @@ public class GenerateSlideOutlineUseCase {
         for (int attempt = 1; attempt <= 2; attempt++) {
             try {
                 log.info("slide {} attempt={} promptLength={} chunks={}", phase, attempt, prompt.length(), allowedIds.size());
-                String raw = aiClient.generate(prompt);
+                String raw = generate(keyForPhase(phase), prompt);
                 log.info("slide {} attempt={} responseLength={}", phase, attempt, raw == null ? 0 : raw.length());
                 return parseSkeleton(lesson, raw, allowedIds, requireCoverage);
             } catch (Exception e) {
@@ -547,7 +552,7 @@ public class GenerateSlideOutlineUseCase {
             for (int attempt = 1; attempt <= 2; attempt++) {
                 try {
                     log.info("expand part={} chunks={} attempt={} promptLength={}", part.id(), chunkIds(selected), attempt, prompt.length());
-                    filled = mergeExpanded(part, aiClient.generate(prompt));
+                    filled = mergeExpanded(part, generate(AiPromptKey.SLIDE_OUTLINE_EXPAND_PART, prompt));
                     break;
                 } catch (Exception e) {
                     if (attempt == 1) {
@@ -616,7 +621,7 @@ public class GenerateSlideOutlineUseCase {
         for (int attempt = 1; attempt <= 2; attempt++) {
             try {
                 log.info("split outline item={} part={} attempt={} promptLength={}", item.id(), part.id(), attempt, prompt.length());
-                return parseSplitOutlineItems(aiClient.generate(prompt), item, usedIds);
+                return parseSplitOutlineItems(generate(AiPromptKey.SLIDE_OUTLINE_SPLIT_ITEM, prompt), item, usedIds);
             } catch (Exception e) {
                 if (attempt == 1) {
                     first = e;
@@ -627,6 +632,16 @@ public class GenerateSlideOutlineUseCase {
             }
         }
         throw new IllegalStateException("Unreachable");
+    }
+
+    private String generate(AiPromptKey key, String prompt) {
+        return aiClient.generate(systemPromptService == null ? prompt : systemPromptService.apply(key, prompt));
+    }
+
+    private static AiPromptKey keyForPhase(String phase) {
+        if (phase.startsWith("part-skeleton")) return AiPromptKey.SLIDE_OUTLINE_PART_SKELETON;
+        if (phase.startsWith("merge-outline")) return AiPromptKey.SLIDE_OUTLINE_MERGED;
+        return AiPromptKey.SLIDE_OUTLINE_STRUCTURE;
     }
 
     static List<SlideItemDto> parseSplitOutlineItems(String raw, SlideItemDto original, java.util.Set<String> usedIds) throws Exception {

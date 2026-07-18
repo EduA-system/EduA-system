@@ -1,9 +1,12 @@
 package com.edua.beeduasystem.presentation.controller;
 
 import com.edua.beeduasystem.presentation.dto.auth.AddModeratorRequest;
+import com.edua.beeduasystem.presentation.dto.auth.AddItManagerRequest;
+import com.edua.beeduasystem.presentation.dto.auth.ItManagerDto;
 import com.edua.beeduasystem.presentation.dto.auth.ModeratorDto;
 import com.edua.beeduasystem.presentation.dto.auth.ReplaceModeratorRequest;
 import com.edua.beeduasystem.service.auth.AdminModeratorService;
+import com.edua.beeduasystem.service.auth.AdminItManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -32,9 +35,11 @@ import java.util.UUID;
 public class AdminController {
 
     private final AdminModeratorService adminModeratorService;
+    private final AdminItManagementService adminItManagementService;
 
-    public AdminController(AdminModeratorService adminModeratorService) {
+    public AdminController(AdminModeratorService adminModeratorService, AdminItManagementService adminItManagementService) {
         this.adminModeratorService = adminModeratorService;
+        this.adminItManagementService = adminItManagementService;
     }
 
     @GetMapping("/moderators")
@@ -85,5 +90,27 @@ public class AdminController {
     public ModeratorDto reactivateModerator(@PathVariable UUID id) {
         var user = adminModeratorService.reactivateModerator(id);
         return ModeratorDto.from(user, null, null);
+    }
+
+    @GetMapping("/it-managers")
+    public Page<ItManagerDto> listItManagers(@RequestParam(defaultValue = "0") int page,
+                                             @RequestParam(defaultValue = "20") int size) {
+        return adminItManagementService.list(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")))
+                .map(ItManagerDto::from);
+    }
+
+    @PostMapping("/it-managers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ItManagerDto addItManager(@Valid @RequestBody AddItManagerRequest request) {
+        return ItManagerDto.from(adminItManagementService.add(request.email(), request.fullName()));
+    }
+
+    @DeleteMapping("/it-managers/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void disableItManager(@PathVariable UUID id) { adminItManagementService.disable(id); }
+
+    @PatchMapping("/it-managers/{id}/reactivate")
+    public ItManagerDto reactivateItManager(@PathVariable UUID id) {
+        return ItManagerDto.from(adminItManagementService.reactivate(id));
     }
 }

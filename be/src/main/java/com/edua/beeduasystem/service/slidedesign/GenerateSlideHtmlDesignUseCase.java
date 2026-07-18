@@ -3,6 +3,8 @@ package com.edua.beeduasystem.service.slidedesign;
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideHtmlDesignRequest;
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideHtmlDesignResponse;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.service.ai.AiSystemPromptService;
+import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -28,14 +30,17 @@ public class GenerateSlideHtmlDesignUseCase {
     private final AiClient aiClient;
     private final SlideDesignPromptBuilder promptBuilder;
     private final String modelLabel;
+    private final AiSystemPromptService systemPromptService;
 
     public GenerateSlideHtmlDesignUseCase(
             AiClient aiClient,
             SlideDesignPromptBuilder promptBuilder,
+            AiSystemPromptService systemPromptService,
             @Value("${app.ai.openai.default-model:gpt-4o-mini}") String openaiModel,
             @Value("${app.ai.deepseek.default-model:deepseek-chat}") String deepseekModel) {
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
+        this.systemPromptService = systemPromptService;
         this.modelLabel = openaiModel + " → " + deepseekModel;
     }
 
@@ -81,7 +86,13 @@ public class GenerateSlideHtmlDesignUseCase {
         log.info("slide-design.html step={} prompt length={}", stepLabel, prompt.length());
 
         long t0 = System.currentTimeMillis();
-        String raw = aiClient.generate(prompt);
+        AiPromptKey key = switch (step) {
+            case "bg_deco" -> AiPromptKey.SLIDE_DESIGN_BACKGROUND;
+            case "structural" -> AiPromptKey.SLIDE_DESIGN_STRUCTURE;
+            case "content_fill" -> AiPromptKey.SLIDE_DESIGN_CONTENT_FILL;
+            default -> throw new IllegalStateException("Unknown slide design step: " + step);
+        };
+        String raw = aiClient.generate(systemPromptService.apply(key, prompt));
         long latencyMs = System.currentTimeMillis() - t0;
 
         String html = SlideHtmlExtractor.extract(raw);

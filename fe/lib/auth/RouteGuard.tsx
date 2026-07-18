@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "./AuthContext";
-import { canAccessRoute } from "./permissions";
+import { canAccessRoute, routePermissions } from "./permissions";
 
 interface RouteGuardProps {
   pathname: string;
@@ -20,7 +20,9 @@ export function RouteGuard({
 }: RouteGuardProps) {
   const { user, status } = useAuth();
 
-  if (status === "loading") {
+  const requiresAuth = routePermissions[pathname]?.requireAuth ?? true;
+
+  if (requiresAuth && status === "loading") {
     return (
       <div className="mx-auto max-w-md p-8 text-sm text-gray-600">
         Đang kiểm tra phiên đăng nhập...
