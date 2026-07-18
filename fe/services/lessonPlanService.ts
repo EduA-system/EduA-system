@@ -17,12 +17,28 @@ export interface CatalogChapter {
   lessons: CatalogLesson[];
 }
 
+export interface CatalogChapterSummary {
+  id: string;
+  name: string;
+}
+
 export interface CatalogBook {
   id: string;
   name: string;
   grade: number;
   source?: string;
   chapters: CatalogChapter[];
+}
+
+export interface CatalogBookName {
+  id: string;
+  name: string;
+  grade: number;
+  subjectCode: string;
+  subjectName: string;
+  volume: number | null;
+  publisher?: string | null;
+  series?: string | null;
 }
 
 export interface TextbookCatalog {
@@ -52,6 +68,36 @@ export async function fetchTextbookCatalog(): Promise<TextbookCatalog> {
   const res = await fetch("/api/textbooks", { headers: { Accept: "application/json" } });
   if (!res.ok) {
     throw new Error(`Không tải được danh mục SGK (HTTP ${res.status}).`);
+  }
+  return res.json();
+}
+
+export async function fetchTextbookNames(subject = "PHYSICS"): Promise<CatalogBookName[]> {
+  const params = new URLSearchParams({ subject });
+  const res = await fetch(`/api/textbooks/names?${params.toString()}`, { headers: { Accept: "application/json" } });
+  if (!res.ok) {
+    throw new Error(`Khong tai duoc danh sach SGK (HTTP ${res.status}).`);
+  }
+  return res.json();
+}
+
+export async function fetchTextbookChapters(bookId: string): Promise<CatalogChapterSummary[]> {
+  const res = await fetch(`/api/textbooks/${encodeURIComponent(bookId)}/chapters`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(`Khong tai duoc danh sach chuong (HTTP ${res.status}).`);
+  }
+  return res.json();
+}
+
+export async function fetchChapterLessons(bookId: string, chapterId: string): Promise<CatalogLesson[]> {
+  const res = await fetch(
+    `/api/textbooks/${encodeURIComponent(bookId)}/chapters/${encodeURIComponent(chapterId)}/lessons`,
+    { headers: { Accept: "application/json" } },
+  );
+  if (!res.ok) {
+    throw new Error(`Khong tai duoc danh sach bai hoc (HTTP ${res.status}).`);
   }
   return res.json();
 }
@@ -160,8 +206,13 @@ export interface StartLessonPlanStreamRequest extends GenerateLessonPlanRequest 
   sessionId: string;
 }
 
-export async function startLessonPlanStream(req: StartLessonPlanStreamRequest): Promise<void> {
-  const res = await fetch("/api/lesson-plans/generate-stream", {
+export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export async function startLessonPlanStream(
+  req: StartLessonPlanStreamRequest,
+  authFetch: AuthFetch,
+): Promise<void> {
+  const res = await authFetch("/api/lesson-plans/generate-stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),
@@ -187,6 +238,7 @@ const SESSION_KEY = "edua:lessonPlanSession";
 export interface LessonPlanDisplayMetadata {
   title: string;
   subject: string;
+  subjectCode?: "MATH" | "CHEMISTRY" | "PHYSICS";
   grade: string;
   duration: string;
 }

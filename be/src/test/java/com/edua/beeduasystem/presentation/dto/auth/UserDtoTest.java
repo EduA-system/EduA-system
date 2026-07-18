@@ -21,6 +21,8 @@ class UserDtoTest {
                 "admin@fpt.edu.vn",
                 "sub-1",
                 "Admin",
+                "https://cdn.example.com/avatar.png",
+                "0900000000",
                 Subject.CHEMISTRY,
                 UserStatus.ACTIVE,
                 Instant.now(),
@@ -30,5 +32,7 @@ class UserDtoTest {
 
         assertThat(dto.role()).isEqualTo("ADMINISTRATOR");
         assertThat(dto.roles()).containsExactly("ADMINISTRATOR", "MODERATOR", "TEACHER");
+        assertThat(dto.avatarUrl()).isEqualTo("https://cdn.example.com/avatar.png");
+        assertThat(dto.contactInfo()).isEqualTo("0900000000");
     }
 }

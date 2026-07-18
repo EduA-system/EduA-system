@@ -51,7 +51,6 @@ export function SlideMakerClient() {
   const [streaming, setStreaming] = useState(
     () => generating && initialBootstrap.active !== null,
   );
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [doneMessage, setDoneMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryError, setRetryError] = useState<string | null>(null);
@@ -217,7 +216,7 @@ export function SlideMakerClient() {
   return (
     <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] font-sans text-[#2b2926]">
       <div className="flex h-full w-full">
-        <Sidebar collapsed={sidebarCollapsed} activeHref="/slide-create" />
+        <Sidebar activeHref="/slide-create" />
         <div className="flex min-w-0 flex-1 flex-col">
           {streaming ? (
             <div className="flex h-9 shrink-0 items-center gap-3 border-b border-[#eadfd7] bg-[#fff7f1] px-4 text-xs text-[#9f5a3e]">
@@ -254,8 +253,6 @@ export function SlideMakerClient() {
             <SlideEditor
               skipInitialLoad={generating}
               onRetrySlide={retrySlide}
-              pageSidebarCollapsed={sidebarCollapsed}
-              onTogglePageSidebar={() => setSidebarCollapsed((current) => !current)}
             />
           </section>
         </div>

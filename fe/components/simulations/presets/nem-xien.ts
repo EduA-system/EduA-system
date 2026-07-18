@@ -5,8 +5,8 @@ export const nemXien: Preset = {
   title: "Chuyển động ném xiên",
   domain: "Cơ học",
   grade: 10,
-  desc: "Bắn vật với vận tốc đầu và góc bất kỳ, quan sát quỹ đạo parabol và tầm xa.",
-  objective: "Hiểu quỹ đạo parabol và sự phụ thuộc tầm xa vào góc ném, vận tốc đầu.",
+  desc: "Ném một vật lên cao theo phương xiên góc và quan sát quỹ đạo rơi",
+  objective: "Ném một vật lên cao theo phương xiên góc và quan sát quỹ đạo rơi",
   sgkRef: "Vật lí 10",
   params: [
     { key: "v0", label: "Vận tốc đầu", unit: "m/s", min: 5, max: 40, step: 1, default: 22 },
@@ -28,7 +28,7 @@ export const nemXien: Preset = {
       {
         key: "launch",
         label: "Lúc ném",
-        description: "Vận tốc đầu tách thành thành phần ngang (không đổi) và thẳng đứng.",
+        description: "Tách vận tốc thành 2 thành phần.",
         atTime: () => 0,
         values: (p) => {
           const v0 = p.v0 ?? 22;
@@ -42,7 +42,7 @@ export const nemXien: Preset = {
       {
         key: "apex",
         label: "Đỉnh quỹ đạo",
-        description: "Thành phần vận tốc thẳng đứng = 0 — chỉ còn chuyển động ngang, độ cao lớn nhất.",
+        description: "v_y = 0, độ cao lớn nhất.",
         atTime: (p) => {
           const v0 = p.v0 ?? 22;
           const ang = ((p.angle ?? 55) * Math.PI) / 180;
@@ -61,7 +61,7 @@ export const nemXien: Preset = {
       {
         key: "landing",
         label: "Chạm đất & tầm xa",
-        description: "Vật quay về độ cao ban đầu — tầm xa R phụ thuộc góc ném và vận tốc đầu.",
+        description: "Chạm đất — tầm xa R.",
         atTime: (p) => {
           const v0 = p.v0 ?? 22;
           const ang = ((p.angle ?? 55) * Math.PI) / 180;

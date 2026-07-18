@@ -22,7 +22,7 @@ export const roiTuDo: Preset = {
       {
         key: "release",
         label: "Lúc thả",
-        description: "Vật đứng yên ở độ cao h — thế năng lớn nhất, động năng = 0.",
+        description: "Đứng yên, thế năng lớn nhất.",
         atTime: () => 0,
         values: (p) => [
           { label: "Độ cao h", value: (p.h ?? 10).toFixed(1), unit: "m" },
@@ -32,7 +32,7 @@ export const roiTuDo: Preset = {
       {
         key: "ground",
         label: "Lúc chạm đất",
-        description: "Toàn bộ thế năng chuyển thành động năng (bỏ qua sức cản không khí).",
+        description: "Thế năng chuyển hết thành động năng.",
         atTime: (p) => Math.sqrt((2 * (p.h ?? 10)) / (p.g ?? 9.8)),
         values: (p) => {
           const h = p.h ?? 10;

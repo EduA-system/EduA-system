@@ -7,7 +7,9 @@ import type { LessonPlan5512 } from "@/data/lessonPlan5512Mock";
 import {
   clearLessonPlanSession,
   readLessonPlanSession,
+  type LessonPlanSession,
 } from "@/services/lessonPlanService";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { connectLessonPlanStream, lessonPlanTopic } from "@/lib/ws/lesson-plan-client";
 import { activityHtml, lessonPlan5512ToHtml, lessonPlanErrorHtml } from "./LessonEditor";
 import { LP_STREAM_META } from "./pendingActivityNode";
@@ -44,15 +46,33 @@ function replacePendingBlock(editor: Editor, order: number, html: string) {
  * vào editor: FRAME_READY đổ khung (I + II + dàn ý III, các HĐ là block "đang soạn"),
  * mỗi ACTIVITY_READY/FAILED thay đúng block của HĐ đó. Không có phiên → giữ khung mock.
  */
-export function useLessonPlanStream(editor: Editor | null) {
+export function useLessonPlanStream(
+  editor: Editor | null,
+  onComplete?: (session: LessonPlanSession) => void,
+  enabled = true,
+) {
+  const { accessToken, status } = useAuth();
   const startedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
   // Đánh dấu khung (I/II/III-skeleton) đã từng về — dùng để quyết định có nên
   // ghi đè toàn bộ tài liệu bằng thông báo lỗi hay không (khung về rồi thì giữ
   // nguyên phần đã render, không phá dữ liệu GV có thể đã bắt đầu chỉnh sửa).
   const frameReceivedRef = useRef(false);
 
   useEffect(() => {
-    if (!editor || startedRef.current) return;
+    if (!enabled || !editor || startedRef.current) return;
+
+    // Đợi AuthProvider hoàn tất refresh phiên. STOMP bắt buộc có JWT nên không được
+    // mở socket trong lúc token còn null.
+    if (status === "loading") return;
+
+    if (status !== "authenticated" || !accessToken) {
+      console.error("[lesson-edit] Không thể mở stream: chưa đăng nhập.");
+      return;
+    }
 
     const session = readLessonPlanSession();
     if (!session) {
@@ -81,6 +101,7 @@ export function useLessonPlanStream(editor: Editor | null) {
 
     const { disconnect } = connectLessonPlanStream({
       topic: lessonPlanTopic(session.sessionId),
+      accessToken,
       onEvent: (event) => {
         switch (event.type) {
           case "FRAME_READY": {
@@ -147,6 +168,7 @@ export function useLessonPlanStream(editor: Editor | null) {
               "color:#2e7d32;font-weight:bold",
               event,
             );
+            onCompleteRef.current?.(session);
             break;
           }
           case "ERROR": {
@@ -168,5 +190,5 @@ export function useLessonPlanStream(editor: Editor | null) {
       cancelled = true;
       disconnect();
     };
-  }, [editor]);
+  }, [accessToken, editor, enabled, status]);
 }

@@ -2,9 +2,9 @@ import type { Preset } from "./types";
 
 const BASE_DRAG = 0.32; // N.s/m, model tuyến tính F = -c.v trong kernel hiện tại
 const SHAPES = [
-  { id: "vat-thuon", label: "Vật thuôn", coeff: 0.25, x: -1.4, color: "#60a5fa", shape: "streamlined" as const },
-  { id: "vat-cau", label: "Vật cầu", coeff: 1, x: 0, color: "#f472b6", shape: "circle" as const },
-  { id: "vat-be", label: "Vật bè", coeff: 2.5, x: 1.4, color: "#fbbf24", shape: "plate" as const },
+  { id: "vat-thuon", label: "Vật thuôn", coeff: 0.25, x: -1.4, color: "#60a5fa", shape: "streamlined" as const, angle: 90 },
+  { id: "vat-cau", label: "Vật cầu", coeff: 1, x: 0, color: "#f472b6", shape: "circle" as const, angle: 0 },
+  { id: "vat-be", label: "Vật bè", coeff: 2.5, x: 1.4, color: "#fbbf24", shape: "plate" as const, angle: 0 },
 ];
 
 function derive(p: Record<string, number>) {
@@ -77,7 +77,7 @@ export const lucCanChatLuu: Preset = {
         vy: 0,
         mass: m,
         radius: 0.22,
-        visual: { shape: item.shape, color: item.color, label: item.label },
+        visual: { shape: item.shape, color: item.color, label: item.label, angle: item.angle },
       })),
       forces: [
         { kind: "gravity", g },

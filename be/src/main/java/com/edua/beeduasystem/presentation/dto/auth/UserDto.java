@@ -12,6 +12,8 @@ public record UserDto(
         UUID id,
         String email,
         String fullName,
+        String avatarUrl,
+        String contactInfo,
         String role,
         List<String> roles,
         String subject
@@ -22,6 +24,8 @@ public record UserDto(
                 user.id(),
                 user.email(),
                 user.fullName(),
+                user.avatarUrl(),
+                user.contactInfo(),
                 orderedRoles.isEmpty() ? null : orderedRoles.getFirst(),
                 orderedRoles,
                 user.subject() != null ? user.subject().name() : null);

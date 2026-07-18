@@ -53,8 +53,8 @@ export const ongNewtonKhongKhi: Preset = {
   title: "Ống Newton trong không khí",
   domain: "Cơ học",
   grade: 10,
-  desc: "Thả viên bi và lông chim trong ống có không khí để thấy lực cản làm vật nhẹ, rộng rơi chậm hơn.",
-  objective: "Hiểu rằng trong không khí, các vật rơi khác nhau vì lực cản trên mỗi đơn vị khối lượng khác nhau.",
+  desc: "Thả viên bi và lông chim trong môi trường không khí để thấy lực cản làm vật nhẹ, rộng rơi chậm hơn",
+  objective: "Thả viên bi và lông chim trong môi trường không khí để thấy lực cản làm vật nhẹ, rộng rơi chậm hơn",
   sgkRef: "Vật lí 10",
   params: [
     { key: "h", label: "Độ cao thả", unit: "m", min: 2, max: 20, step: 0.5, default: 9 },
@@ -70,7 +70,7 @@ export const ongNewtonKhongKhi: Preset = {
     return {
       bodies: [
         { id: "vien-bi", x: -0.45, y: h, vx: 0, vy: 0, mass: ballMass(p) },
-        { id: "long-chim", x: 0.45, y: h, vx: 0, vy: 0, mass: featherMass(p) },
+        { id: "long-chim", x: 0.45, y: h, vx: 0, vy: 0, mass: featherMass(p), visual: { shape: "box", color: "#a78bfa", label: "lông chim" } },
       ],
       forces: [
         { kind: "gravity", g },

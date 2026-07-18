@@ -31,4 +31,7 @@ public interface AppUserRepository {
 
     /** Danh sách user theo role + subject (phân trang). */
     Page<AppUser> findAllByRoleAndSubject(Role role, Subject subject, Pageable pageable);
+
+    /** Kiểm tra có user active với role + subject đã cho không (dùng cho ràng buộc 1 moderator/subject). */
+    boolean existsActiveByRoleAndSubject(Role role, Subject subject);
 }

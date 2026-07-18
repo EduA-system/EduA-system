@@ -60,6 +60,12 @@ public class JpaAppUserRepository implements AppUserRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean existsActiveByRoleAndSubject(Role role, Subject subject) {
+        return jpa.existsActiveByRoleNameAndSubject(role.name(), subject);
+    }
+
+    @Override
     @Transactional
     public AppUser save(AppUser user) {
         AppUserEntity e = jpa.findById(user.id()).orElseGet(AppUserEntity::new);
@@ -67,6 +73,8 @@ public class JpaAppUserRepository implements AppUserRepository {
         e.setEmail(user.email());
         e.setGoogleSub(user.googleSub());
         e.setFullName(user.fullName());
+        e.setAvatarUrl(user.avatarUrl());
+        e.setContactInfo(user.contactInfo());
         e.setSubject(user.subject());
         e.setStatus(user.status());
         e.setCreatedAt(user.createdAt() != null ? user.createdAt() : Instant.now());
@@ -80,6 +88,8 @@ public class JpaAppUserRepository implements AppUserRepository {
                 e.getEmail(),
                 e.getGoogleSub(),
                 e.getFullName(),
+                e.getAvatarUrl(),
+                e.getContactInfo(),
                 e.getSubject(),
                 e.getStatus(),
                 e.getCreatedAt(),

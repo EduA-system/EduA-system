@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, RotateCcw } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { ParamPanel } from "@/components/simulations/param-panel";
+import { ParamPanel } from "@/components/simulations/shared/param-panel";
 import type { FluidSim } from "./types";
 
 const H = 520; // chiều cao khung SVG (px)

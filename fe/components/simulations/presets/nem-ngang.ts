@@ -13,8 +13,8 @@ export const nemNgang: Preset = {
   title: "Chuyển động ném ngang",
   domain: "Cơ học",
   grade: 10,
-  desc: "Ném một vật theo phương ngang từ độ cao h và so sánh với vật thả rơi cùng lúc.",
-  objective: "Hiểu ném ngang là tổng hợp của chuyển động ngang đều và rơi tự do theo phương thẳng đứng.",
+  desc: "Ném một vật theo phương ngang và một vật thả rơi tự do từ cùng một độ cao và so sánh",
+  objective: "Ném một vật theo phương ngang và một vật thả rơi tự do từ cùng một độ cao và so sánh",
   sgkRef: "Vật lí 10",
   params: [
     { key: "h", label: "Độ cao ném", unit: "m", min: 2, max: 20, step: 0.5, default: 8 },

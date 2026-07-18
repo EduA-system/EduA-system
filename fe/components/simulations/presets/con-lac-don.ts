@@ -31,7 +31,7 @@ export const conLacDon: Preset = {
       {
         key: "extreme-start",
         label: "Biên ban đầu",
-        description: "Vị trí thả — góc lệch cực đại, tốc độ = 0, thế năng lớn nhất.",
+        description: "Góc lệch cực đại, tốc độ = 0.",
         atTime: () => 0,
         values: (p) => [
           { label: "Biên độ góc", value: (p.angle ?? 40).toFixed(0), unit: "°" },
@@ -41,7 +41,7 @@ export const conLacDon: Preset = {
       {
         key: "equilibrium",
         label: "Vị trí cân bằng (đáy)",
-        description: "Dây thẳng đứng, sau 1/4 chu kỳ — thế năng thấp nhất, tốc độ lớn nhất.",
+        description: "Tốc độ lớn nhất, thế năng nhỏ nhất.",
         atTime: (p) => {
           const L = p.L ?? 1.6;
           const g = p.g ?? 9.8;
@@ -61,7 +61,7 @@ export const conLacDon: Preset = {
       {
         key: "extreme-far",
         label: "Biên đối diện",
-        description: "Sau nửa chu kỳ — vật sang hẳn phía bên kia, tốc độ lại về 0.",
+        description: "Sang biên đối diện, tốc độ = 0.",
         atTime: (p) => {
           const L = p.L ?? 1.6;
           const g = p.g ?? 9.8;

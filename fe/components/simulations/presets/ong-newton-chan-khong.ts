@@ -24,8 +24,8 @@ export const ongNewtonChanKhong: Preset = {
   title: "Ống Newton trong chân không",
   domain: "Cơ học",
   grade: 10,
-  desc: "Hút hết không khí trong ống Newton để viên bi và lông chim rơi cùng gia tốc.",
-  objective: "Hiểu rằng trong chân không, mọi vật rơi như nhau với gia tốc g nếu chỉ chịu trọng lực.",
+  desc: "Thả viên bi và lông chim trong môi trường Chân không để chúng rơi cùng gia tốc",
+  objective: "Thả viên bi và lông chim trong môi trường Chân không để chúng rơi cùng gia tốc",
   sgkRef: "Vật lí 10",
   params: [
     { key: "h", label: "Độ cao thả", unit: "m", min: 2, max: 20, step: 0.5, default: 9 },
@@ -39,7 +39,7 @@ export const ongNewtonChanKhong: Preset = {
     return {
       bodies: [
         { id: "vien-bi", x: -0.45, y: h, vx: 0, vy: 0, mass: ballMass(p) },
-        { id: "long-chim", x: 0.45, y: h, vx: 0, vy: 0, mass: featherMass(p) },
+        { id: "long-chim", x: 0.45, y: h, vx: 0, vy: 0, mass: featherMass(p), visual: { shape: "box", color: "#a78bfa", label: "lông chim" } },
       ],
       forces: [{ kind: "gravity", g }],
       constraints: [{ kind: "surface", x: 0, y: 0, angle: 0, length: 400, friction: 0.8 }],

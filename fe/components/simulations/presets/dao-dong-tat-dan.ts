@@ -52,7 +52,7 @@ export const daoDongTatDan: Preset = {
       {
         key: "decay",
         label: "Sau 3 chu kỳ",
-        description: "Biên độ suy giảm theo hàm mũ A(t) = A₀·e^(−γt) — càng cản mạnh, tắt càng nhanh.",
+        description: "Biên độ giảm dần theo hàm mũ.",
         atTime: (p) => {
           const k = p.k ?? 30;
           const m = p.m ?? 1;

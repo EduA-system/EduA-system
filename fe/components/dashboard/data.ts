@@ -18,11 +18,15 @@ export type NavGroup = {
 export const navGroups: NavGroup[] = [
   {
     label: "COMMUNITY",
-    items: [{ label: "Community Hub", icon: "community", href: "/homepage" }],
+    items: [
+      { label: "Community Hub", icon: "community", href: "/homepage" },
+      { label: "Blog", icon: "community", href: "/blog" },
+    ],
   },
   {
     label: "CONTENT",
     items: [
+      { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-edit", active: true },
       { label: "Slide", icon: "slides", href: "/slide-create" },
       { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/lesson-create" },
@@ -31,10 +35,11 @@ export const navGroups: NavGroup[] = [
   {
     label: "SIMULATIONS",
     items: [
-      { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/mo-phong-vat-ly", expanded: true },
+      { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/homepage", expanded: true },
       { label: "V\u1eadt l\u00fd", icon: "physics", href: "/mo-phong-vat-ly", child: true },
       { label: "H\u00f3a h\u1ecdc", icon: "chemistry", href: "/homepage", child: true },
-      { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/homepage", child: true },
+      { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/periodic-table", child: true },
+      { label: "C\u1ea5u t\u1ea1o ch\u1ea5t", icon: "atom", href: "/molecules", child: true },
     ],
   },
   {

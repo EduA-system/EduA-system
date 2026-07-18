@@ -7,6 +7,6 @@ export default defineConfig({
   resolve: { alias: { "@": resolve(__dirname, ".") } },
   test: {
     environment: "node",
-    include: ["components/simulations/kernel/**/*.test.ts"],
+    include: ["components/simulations/**/*.test.ts"],
   },
 });

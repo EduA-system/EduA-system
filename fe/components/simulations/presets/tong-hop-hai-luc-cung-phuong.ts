@@ -2,7 +2,7 @@ import type { Preset } from "./types";
 
 // Hệ số quy đổi Newton → mét để VẼ vector (renderer chỉ vẽ theo world-units).
 // 1 N ↦ 0.04 m: với lực tối đa 20 N mũi tên dài 0.8 m — đủ rõ, không tràn khung.
-const N_TO_M = 0.04;
+const N_TO_M = 0.08;
 
 function values(p: Record<string, number>) {
   const F1 = p.F1 ?? 10; // lực bên trái (hướng −x)
@@ -18,12 +18,11 @@ function values(p: Record<string, number>) {
 
 export const tongHopHaiLucCungPhuong: Preset = {
   id: "tong-hop-hai-luc-cung-phuong",
-  title: "Tổng hợp hai lực cùng phương",
+  title: "Tổng hợp lực",
   domain: "Cơ học",
   grade: 10,
-  desc: "Một vật chịu hai lực cùng phương, ngược chiều. Điều chỉnh độ lớn hai lực để quan sát hợp lực và chuyển động của vật.",
-  objective:
-    "Hiểu hợp lực của hai lực cùng phương ngược chiều là R = |F₂ − F₁|, hướng về phía lực lớn hơn. Khi hai lực bằng nhau vật cân bằng; khi lệch nhau, hợp lực gây gia tốc theo định luật II Newton a = R/m. Mô hình lí tưởng: bỏ qua trọng lực và ma sát.",
+  desc: "Quan sát trạng thái cân bằng và không cân bằng của 2 lực cùng phương ngược chiều cùng tác dụng lên một vật",
+  objective: "Quan sát trạng thái cân bằng và không cân bằng của 2 lực cùng phương ngược chiều cùng tác dụng lên một vật",
   sgkRef: "Vật lí 10",
   params: [
     { key: "F1", label: "Lực F₁ (sang trái)", unit: "N", min: 0, max: 20, step: 1, default: 10 },
@@ -55,8 +54,8 @@ export const tongHopHaiLucCungPhuong: Preset = {
       constraints: [],
       // Vector minh hoạ hai lực, gốc bám theo vật khi nó di chuyển (chỉ để VẼ).
       annotations: [
-        { kind: "vector", anchor: "block", dx: -F1 * N_TO_M, dy: 0, color: "#60a5fa", label: `F₁ = ${F1} N` },
-        { kind: "vector", anchor: "block", dx: F2 * N_TO_M, dy: 0, color: "#f59e0b", label: `F₂ = ${F2} N` },
+        { kind: "vector", anchor: "block", dx: -F1 * N_TO_M, dy: 0, color: "#60a5fa", label: `F₁ = ${F1} N`, labelPosition: "outside" },
+        { kind: "vector", anchor: "block", dx: F2 * N_TO_M, dy: 0, color: "#f59e0b", label: `F₂ = ${F2} N`, labelPosition: "outside" },
       ],
       // Khung nhìn CỐ ĐỊNH: vật gia tốc chạy xa nên quỹ đạo không bị chặn — khai
       // báo khung để camera KHÔNG tự zoom lại mỗi lần đổi F₁/F₂. Đủ rộng để thấy

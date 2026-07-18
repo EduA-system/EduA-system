@@ -5,9 +5,7 @@ import { useEditorStore } from "@/stores/slide-editor-store";
 import { isSlideLockedForGeneration, type Slide } from "./types";
 
 interface TopBarProps {
-  pageSidebarCollapsed: boolean;
   showRightPanel: boolean;
-  onTogglePageSidebar: () => void;
   onToggleRightPanel: () => void;
   onRetrySlide?: (slideId: string) => void;
 }
@@ -55,16 +53,6 @@ function ExportIcon() {
       <path d="M8 2v7" />
       <path d="M5.5 6.5 8 9l2.5-2.5" />
       <path d="M3 10.5V13h10v-2.5" />
-    </svg>
-  );
-}
-
-function SidebarLeftIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2.2" y="2.4" width="11.6" height="11.2" rx="2" />
-      <path d="M6 2.4v11.2" />
-      <path d="M4.1 7.9h.01" />
     </svg>
   );
 }
@@ -221,9 +209,7 @@ function deckTitle(slide: Slide | undefined) {
 }
 
 export function TopBar({
-  pageSidebarCollapsed,
   showRightPanel,
-  onTogglePageSidebar,
   onToggleRightPanel,
   onRetrySlide,
 }: TopBarProps) {
@@ -287,12 +273,6 @@ export function TopBar({
         <span className="truncate">{deckTitle(currentSlide)}</span>
         <span className="text-[#b8aea5]">&gt;</span>
       </button>
-
-      <Divider />
-
-      <IconButton onClick={onTogglePageSidebar} active={!pageSidebarCollapsed} title="Toggle page sidebar">
-        <SidebarLeftIcon />
-      </IconButton>
 
       {onRetrySlide ? (
         <>

@@ -33,11 +33,11 @@ function vectorParts(alpha: number) {
 
 export const phanTichLuc: Preset = {
   id: "phan-tich-luc",
-  title: "Phân tích lực trên mặt phẳng nghiêng",
+  title: "Phân tích lực",
   domain: "Cơ học",
   grade: 10,
-  desc: "Tái hiện hình SGK: phân tích trọng lực của vật trên mặt phẳng nghiêng thành hai thành phần vuông góc và song song với mặt phẳng.",
-  objective: "Hiểu trọng lực P có thể phân tích thành P1 ép vật vào mặt phẳng nghiêng và P2 kéo vật trượt xuống dọc mặt phẳng nghiêng.",
+  desc: "Quan sát trọng lực được phân tích thành hai lực thành phần",
+  objective: "Quan sát trọng lực được phân tích thành hai lực thành phần",
   sgkRef: "Vật lí 10 - phân tích lực",
   params: [
     { key: "alpha", label: "Góc nghiêng", unit: "°", min: 5, max: 50, step: 1, default: 25 },
@@ -65,7 +65,7 @@ export const phanTichLuc: Preset = {
           vy: 0,
           mass: m,
           radius: 0.24,
-          visual: { shape: "box", color: "#86efac", label: "vật", angle: -alpha },
+          visual: { shape: "box", color: "#86efac", label: "vật", angle: alpha },
         },
       ],
       forces: [{ kind: "gravity" as const, g }],

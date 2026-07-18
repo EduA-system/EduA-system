@@ -1,4 +1,4 @@
-import type { TrackPoint } from "../kernel/types";
+import type { TrackPoint } from "../engines/mechanics/types";
 import type { Preset } from "./types";
 
 // Bề rộng nhánh dốc (m) và đoạn chạy ngang sau đáy (m).

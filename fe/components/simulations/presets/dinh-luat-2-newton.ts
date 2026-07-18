@@ -1,7 +1,7 @@
 import type { Preset } from "./types";
 
-// Dùng lực "applied" (F ngoài không đổi) — kernel đã hỗ trợ (kind "applied" trong
-// kernel/types.ts, cộng lực trong kernel/forces.ts) nhưng chưa preset nào dùng tới.
+// Dùng lực "applied" (F ngoài không đổi) — engines/mechanics đã hỗ trợ (kind "applied" trong
+// engines/mechanics/types.ts, cộng lực trong engines/mechanics/forces.ts) nhưng chưa preset nào dùng tới.
 // Vật nằm trên mặt sàn (surface, ma sát tuỳ chỉnh) và bị kéo ngang bằng lực không đổi F.
 
 export const dinhLuat2Newton: Preset = {
@@ -9,8 +9,8 @@ export const dinhLuat2Newton: Preset = {
   title: "Định luật II Newton",
   domain: "Cơ học",
   grade: 10,
-  desc: "Vật bị kéo bằng lực không đổi trên mặt sàn, khảo sát mối quan hệ giữa lực, khối lượng và gia tốc.",
-  objective: "Kiểm chứng định luật II Newton: a = F/m khi mặt nhẵn, hoặc a = (F − μmg)/m khi có ma sát.",
+  desc: "Quan sát gia tốc của vật bị thay đổi bởi lực kéo và trọng lượng của vật",
+  objective: "Quan sát gia tốc của vật bị thay đổi bởi lực kéo và trọng lượng của vật",
   sgkRef: "Vật lí 10",
   params: [
     { key: "F", label: "Lực kéo", unit: "N", min: 1, max: 30, step: 1, default: 10 },
@@ -38,7 +38,7 @@ export const dinhLuat2Newton: Preset = {
       {
         key: "forces",
         label: "Phân tích lực (lúc thả)",
-        description: "Hợp lực = lực kéo trừ lực ma sát trượt; gia tốc theo định luật II Newton.",
+        description: "Hợp lực = F kéo − ma sát.",
         atTime: () => 0,
         values: (p) => {
           const F = p.F ?? 10;
@@ -58,7 +58,7 @@ export const dinhLuat2Newton: Preset = {
       {
         key: "after2s",
         label: "Sau 2 giây",
-        description: "Chuyển động nhanh dần đều: v = a·t (xuất phát từ trạng thái nghỉ).",
+        description: "Chuyển động nhanh dần đều.",
         atTime: () => 2,
         values: (p) => {
           const F = p.F ?? 10;

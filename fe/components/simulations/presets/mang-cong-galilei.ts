@@ -1,4 +1,4 @@
-import type { TrackPoint } from "../kernel/types";
+import type { TrackPoint } from "../engines/mechanics/types";
 import type { Preset } from "./types";
 
 function degToRad(deg: number): number {
@@ -42,8 +42,8 @@ export const mangCongGalilei: Preset = {
   title: "Máng cong Galilei",
   domain: "Cơ học",
   grade: 10,
-  desc: "Viên bi trượt trên máng cong để quan sát quán tính và sự bảo toàn độ cao trong trường hợp lí tưởng.",
-  objective: "Hiểu rằng nếu bỏ qua ma sát, vật đi lên nhánh bên kia gần bằng độ cao ban đầu; nhánh càng thoải thì vật đi càng xa.",
+  desc: "Quan sát viên bi lăn theo máng nghiêng",
+  objective: "Quan sát viên bi lăn theo máng nghiêng",
   sgkRef: "Vật lí 10",
   params: [
     { key: "h", label: "Độ cao ban đầu", unit: "m", min: 0.8, max: 4, step: 0.1, default: 2.6 },

@@ -64,13 +64,14 @@ function weightVector(weight: number) {
 
 export const quyTacMoment: Preset = {
   id: "quy-tac-moment",
-  title: "Quy tắc moment lực",
+  title: "Quy tắc moment bập bênh",
   domain: "Cơ học",
   grade: 10,
   desc: "Mô phỏng bập bênh có hai vật ở hai phía trục quay để khảo sát moment lực và điều kiện cân bằng.",
   objective:
     "Hiểu moment lực M = F.d. Với vật đặt trên bập bênh, lực gây quay là trọng lực P = m.g, nên moment quanh trục là M = P.d = m.g.d.",
   sgkRef: "Vật lí 10",
+  hideFixedSupportDecoration: true,
   params: [
     { key: "mLeft", label: "Khối lượng vật trái", unit: "kg", min: 0.1, max: 20, step: 0.1, default: 2 },
     { key: "dLeft", label: "Khoảng cách bên trái", unit: "m", min: 0.2, max: 3, step: 0.1, default: 1.5 },

@@ -1,11 +1,13 @@
 // Thư viện preset cơ học — bản gốc đã kiểm duyệt cho /mo-phong-hub.
-// Tất cả chạy trên kernel Cơ học 2D (kernel/*.ts). Thêm preset = thêm 1 file + 1 dòng ở đây.
+// Preset cơ học chạy trên engine mechanics; các preset khác chọn engine theo `kind`.
 
 import type { Preset } from "./types";
 import { dinhLuat2Newton } from "./dinh-luat-2-newton";
+import { dinhLuat3Newton } from "./dinh-luat-3-newton";
 import { lucTuongTacHaiXe } from "./luc-tuong-tac-hai-xe";
 import { doPTBangLucKe } from "./do-p-t-bang-luc-ke";
 import { quyTacMoment } from "./quy-tac-moment";
+import { quyTacMomentDiaTron } from "./quy-tac-moment-dia-tron";
 import { tongHopLucDongQuy } from "./tong-hop-luc-dong-quy";
 import { phanTichLuc } from "./phan-tich-luc";
 import { lucCanChatLuu } from "./luc-can-chat-luu";
@@ -28,14 +30,24 @@ import { vaChamDanHoi } from "./va-cham-dan-hoi";
 import { vaChamMem } from "./va-cham-mem";
 import { ongNewtonKhongKhi } from "./ong-newton-khong-khi";
 import { ongNewtonChanKhong } from "./ong-newton-chan-khong";
+import { giaoThoaSongNuoc } from "./giao-thoa-song-nuoc";
+import { songTrenDay } from "./song-tren-day";
+import { songDung } from "./song-dung";
+import { giaoThoaAnhSangDayDu } from "./giao-thoa-anh-sang-day-du";
+import { nhiemDienDay } from "./nhiem-dien-day";
+import { nhiemDienHut } from "./nhiem-dien-hut";
+import { dienTruong2BanSongSong } from "./dien-truong-2-ban-song-song";
+import { dienPhoHaiDienTich } from "./dien-pho-hai-dien-tich";
 
 export type { Preset, PresetParam, Domain } from "./types";
 
 export const PRESETS: Preset[] = [
   dinhLuat2Newton,
+  dinhLuat3Newton,
   lucTuongTacHaiXe,
   doPTBangLucKe,
   quyTacMoment,
+  quyTacMomentDiaTron,
   tongHopLucDongQuy,
   phanTichLuc,
   lucCanChatLuu,
@@ -58,6 +70,14 @@ export const PRESETS: Preset[] = [
   vaChamMem,
   ongNewtonKhongKhi,
   ongNewtonChanKhong,
+  giaoThoaSongNuoc,
+  songTrenDay,
+  songDung,
+  giaoThoaAnhSangDayDu,
+  nhiemDienDay,
+  nhiemDienHut,
+  dienTruong2BanSongSong,
+  dienPhoHaiDienTich,
 ];
 
 export function getPreset(id: string): Preset | undefined {

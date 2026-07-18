@@ -20,4 +20,7 @@ public interface AppUserJpaRepository extends JpaRepository<AppUserEntity, UUID>
 
     @Query("SELECT u FROM AppUserEntity u JOIN UserRoleEntity ur ON u.id = ur.userId JOIN RoleEntity r ON ur.roleId = r.id WHERE r.name = :roleName AND u.subject = :subject")
     Page<AppUserEntity> findByRoleNameAndSubject(@Param("roleName") String roleName, @Param("subject") Subject subject, Pageable pageable);
+
+    @Query("SELECT COUNT(u) > 0 FROM AppUserEntity u JOIN UserRoleEntity ur ON u.id = ur.userId JOIN RoleEntity r ON ur.roleId = r.id WHERE r.name = :roleName AND u.subject = :subject AND u.status <> 'DISABLED'")
+    boolean existsActiveByRoleNameAndSubject(@Param("roleName") String roleName, @Param("subject") Subject subject);
 }
