@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
-import { generateOutline, retryOutlineSessionPart, startOutlineSession, type OutlinePart } from "@/lib/api/slides";
+import { generateOutline, retryOutlineSessionSlide, startOutlineSession, type OutlinePart } from "@/lib/api/slides";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { connectOutlineStream, type OutlineEvent } from "@/lib/ws/outline-client";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
@@ -24,6 +24,14 @@ type OutlineBoot = {
   parts: OutlinePart[];
   error?: string;
 };
+
+function slideKey(partId: string, slideId: string) {
+  return `${partId}:${slideId}`;
+}
+
+function sameItems(left: string[], right: string[]) {
+  return left.length === right.length && left.every((item, index) => item === right[index]);
+}
 
 function loadOutlineBoot(): OutlineBoot {
   const stored = readSlideCreateSession();
@@ -51,7 +59,9 @@ export default function SlideOutlinePage() {
   const [parts, setParts] = useState<OutlinePart[]>(boot.parts);
   const [error, setError] = useState<string | undefined>(boot.error);
   const [expandingPartIds, setExpandingPartIds] = useState<string[]>([]);
+  const [expandingSlideIds, setExpandingSlideIds] = useState<string[]>([]);
   const [failedPartMessages, setFailedPartMessages] = useState<Record<string, string>>({});
+  const [failedSlideMessages, setFailedSlideMessages] = useState<Record<string, string>>({});
   const [confirming, setConfirming] = useState(false);
 
   const disconnectRef = useRef<(() => void) | null>(null);
@@ -60,6 +70,12 @@ export default function SlideOutlinePage() {
   const handleOutlineEvent = useCallback((event: OutlineEvent) => {
     if (event.type === "OUTLINE_PART_SKELETON_READY") {
       setParts((prev) => prev.map((part) => (part.id === event.part.id ? event.part : part)));
+      setExpandingSlideIds((prev) => [
+        ...new Set([
+          ...prev,
+          ...(event.part.slides ?? []).map((slide) => slideKey(event.part.id, slide.id)),
+        ]),
+      ]);
     } else if (event.type === "OUTLINE_PART_READY") {
       setParts((prev) =>
         prev.map((p) =>
@@ -74,6 +90,7 @@ export default function SlideOutlinePage() {
         ),
       );
       setExpandingPartIds((prev) => prev.filter((id) => id !== event.partId));
+      setExpandingSlideIds((prev) => prev.filter((id) => !id.startsWith(`${event.partId}:`)));
       setFailedPartMessages((prev) => {
         const next = { ...prev };
         delete next[event.partId];
@@ -82,11 +99,59 @@ export default function SlideOutlinePage() {
     } else if (event.type === "OUTLINE_PART_FAILED") {
       logSlideApi(`outline part failed: ${event.partId}`);
       setExpandingPartIds((prev) => prev.filter((id) => id !== event.partId));
-      setFailedPartMessages((prev) => ({ ...prev, [event.partId]: event.message || "AI chưa thể soạn phần này." }));
+      setExpandingSlideIds((prev) => prev.filter((id) => !id.startsWith(`${event.partId}:`)));
+      const part = parts.find((candidate) => candidate.id === event.partId);
+      const message = event.message || "AI chưa thể soạn slide này.";
+      if (part?.slides?.length) {
+        setFailedSlideMessages((prev) => {
+          const next = { ...prev };
+          for (const slide of part.slides) next[slideKey(event.partId, slide.id)] = message;
+          return next;
+        });
+        setFailedPartMessages((prev) => {
+          const next = { ...prev };
+          delete next[event.partId];
+          return next;
+        });
+      } else {
+        setFailedPartMessages((prev) => ({ ...prev, [event.partId]: event.message || "AI chưa thể tạo khung slide cho phần này." }));
+      }
+    } else if (event.type === "OUTLINE_SLIDE_READY") {
+      const key = slideKey(event.partId, event.slide.id);
+      setParts((prev) =>
+        prev.map((part) => {
+          if (part.id !== event.partId) return part;
+          const slides = part.slides ?? [];
+          const exists = slides.some((slide) => slide.id === event.slide.id);
+          return {
+            ...part,
+            slides: exists
+              ? slides.map((slide) => (slide.id === event.slide.id ? event.slide : slide))
+              : [...slides, event.slide],
+          };
+        }),
+      );
+      setExpandingSlideIds((prev) => prev.filter((id) => id !== key));
+      setFailedSlideMessages((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      setFailedPartMessages((prev) => {
+        const next = { ...prev };
+        delete next[event.partId];
+        return next;
+      });
+    } else if (event.type === "OUTLINE_SLIDE_FAILED") {
+      const key = slideKey(event.partId, event.slideId);
+      logSlideApi(`outline slide failed: ${event.partId}/${event.slideId}`);
+      setExpandingSlideIds((prev) => prev.filter((id) => id !== key));
+      setFailedSlideMessages((prev) => ({ ...prev, [key]: event.message || "AI chưa thể soạn slide này." }));
     } else if (event.type === "DONE" || event.type === "ERROR") {
       setExpandingPartIds([]);
+      setExpandingSlideIds([]);
     }
-  }, []);
+  }, [parts]);
 
   // Sinh khung (pha 1) + subscribe stream (pha 2) một lần.
   useEffect(() => {
@@ -139,6 +204,9 @@ export default function SlideOutlinePage() {
         );
         setParts(res.outline.parts);
         setExpandingPartIds(res.outline.parts.map((p) => p.id));
+        setExpandingSlideIds([]);
+        setFailedPartMessages({});
+        setFailedSlideMessages({});
         setStatus("ready");
 
         const { disconnect } = connectOutlineStream({
@@ -171,21 +239,51 @@ export default function SlideOutlinePage() {
     };
   }, [accessToken, authFetch, authStatus, status, session, handleOutlineEvent]);
 
-  const handleRetryPart = useCallback(async (partId: string) => {
+  const handleRetrySlide = useCallback(async (partId: string, slideId: string) => {
     if (!session?.sessionId) return;
-    setExpandingPartIds((prev) => [...new Set([...prev, partId])]);
-    setFailedPartMessages((prev) => {
+    const key = slideKey(partId, slideId);
+    setExpandingSlideIds((prev) => [...new Set([...prev, key])]);
+    setFailedSlideMessages((prev) => {
       const next = { ...prev };
-      delete next[partId];
+      delete next[key];
       return next;
     });
     try {
-      await retryOutlineSessionPart(authFetch, session.sessionId, partId);
+      await retryOutlineSessionSlide(authFetch, session.sessionId, partId, slideId);
     } catch (err) {
-      setExpandingPartIds((prev) => prev.filter((id) => id !== partId));
-      setFailedPartMessages((prev) => ({ ...prev, [partId]: err instanceof Error ? err.message : String(err) }));
+      setExpandingSlideIds((prev) => prev.filter((id) => id !== key));
+      setFailedSlideMessages((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : String(err) }));
     }
   }, [authFetch, session]);
+
+  useEffect(() => {
+    if (status !== "ready") return;
+
+    const slideKeysByPart = new Map<string, Set<string>>();
+    for (const part of parts) {
+      slideKeysByPart.set(part.id, new Set((part.slides ?? []).map((slide) => slideKey(part.id, slide.id))));
+    }
+
+    const validExpandingSlideIds = expandingSlideIds.filter((key) => {
+      const separator = key.indexOf(":");
+      if (separator < 0) return false;
+      const partId = key.slice(0, separator);
+      return slideKeysByPart.get(partId)?.has(key) ?? false;
+    });
+
+    if (!sameItems(expandingSlideIds, validExpandingSlideIds)) {
+      setExpandingSlideIds(validExpandingSlideIds);
+    }
+
+    setExpandingPartIds((current) => {
+      const next = current.filter((partId) => {
+        const slideKeys = slideKeysByPart.get(partId);
+        if (!slideKeys || slideKeys.size === 0) return true;
+        return validExpandingSlideIds.some((key) => slideKeys.has(key));
+      });
+      return sameItems(current, next) ? current : next;
+    });
+  }, [expandingSlideIds, parts, status]);
 
   // Ngắt kết nối khi rời trang.
   useEffect(() => () => disconnectRef.current?.(), []);
@@ -261,8 +359,10 @@ export default function SlideOutlinePage() {
               onConfirm={handleConfirm}
               confirming={confirming}
               expandingPartIds={expandingPartIds}
+              expandingSlideIds={expandingSlideIds}
               failedPartMessages={failedPartMessages}
-              onRetryPart={handleRetryPart}
+              failedSlideMessages={failedSlideMessages}
+              onRetrySlide={handleRetrySlide}
             />
           ) : null}
         </div>

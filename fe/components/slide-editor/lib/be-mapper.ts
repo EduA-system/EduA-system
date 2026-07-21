@@ -1,4 +1,6 @@
 import type { Slide, SlideElement } from "@/components/slide-editor/types";
+import type { OutlinePart } from "@/lib/api/slides";
+import { slidesWithQuizAnswerReveals } from "@/lib/slide-create/quiz-answer-slides";
 
 export const PLACEHOLDER_IMAGE =
   "data:image/svg+xml," +
@@ -168,15 +170,13 @@ export function mapBeSlide(
 }
 
 export function skeletonSlidesFromParts(
-  parts: { slides: { id: string; title: string }[] }[],
+  parts: OutlinePart[],
 ): Slide[] {
-  return parts.flatMap((part) =>
-    part.slides.map((sl) => ({
+  return slidesWithQuizAnswerReveals(parts).map((sl) => ({
       id: sl.id,
       bg: "#ffffff",
       elements: [],
       aiPrompt: sl.title,
       generationStatus: "pending" as const,
-    })),
-  );
+    }));
 }
