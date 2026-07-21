@@ -30,7 +30,7 @@ export type Body = {
   // nguyên hành vi cũ). Có → tham gia va chạm tròn-tròn (xem collisions.ts).
   radius?: number;
   visual?: {
-    shape?: "circle" | "streamlined" | "plate" | "box" | "forceMeter";
+    shape?: "circle" | "metalBall" | "feather" | "streamlined" | "plate" | "box" | "forceMeter";
     color?: string;
     label?: string;
     reading?: string;

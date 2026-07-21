@@ -517,6 +517,11 @@ export function SceneKonva2D({
       const worldR = b.radius ?? Math.min(0.25 + b.mass * 0.04, 0.5);
       return Math.max(8, worldR * scale);
     };
+    const featherAsset = new window.Image();
+    featherAsset.decoding = "async";
+    featherAsset.onload = () => layer.batchDraw();
+    featherAsset.src = "/simulations/newton/feather.png";
+
 
     // Tàn ảnh (ghost) — vị trí các vật động tại mốc VỪA đi qua trước đó, vẽ nét
     // Ghost body positions at a previous seek point.
@@ -561,10 +566,80 @@ export function SceneKonva2D({
       return group;
     };
 
+    const makeMetalBallNode = (p: Vec2, radius: number, draggable: boolean): Konva.Group => {
+      const ballRadius = Math.min(18, Math.max(10, radius * 1.08));
+      const group = new Konva.Group({ x: p.x, y: p.y, draggable });
+      group.add(
+        new Konva.Circle({
+          radius: ballRadius,
+          fillRadialGradientStartPoint: { x: -ballRadius * 0.38, y: -ballRadius * 0.42 },
+          fillRadialGradientStartRadius: 0,
+          fillRadialGradientEndPoint: { x: ballRadius * 0.12, y: ballRadius * 0.18 },
+          fillRadialGradientEndRadius: ballRadius * 1.18,
+          fillRadialGradientColorStops: [
+            0, "#f8fafc",
+            0.2, "#cbd5e1",
+            0.52, "#64748b",
+            0.82, "#334155",
+            1, "#111827",
+          ],
+          stroke: "#e2e8f0",
+          strokeWidth: 1.2,
+          shadowBlur: 9,
+          shadowColor: "#020617",
+          shadowOpacity: 0.5,
+          shadowOffset: { x: 2, y: 4 },
+        }),
+        new Konva.Ellipse({
+          x: -ballRadius * 0.32,
+          y: -ballRadius * 0.38,
+          radiusX: ballRadius * 0.24,
+          radiusY: ballRadius * 0.13,
+          rotation: -32,
+          fill: "#f8fafc",
+          opacity: 0.72,
+          listening: false,
+        }),
+        new Konva.Arc({
+          x: ballRadius * 0.03,
+          y: ballRadius * 0.04,
+          innerRadius: ballRadius * 0.72,
+          outerRadius: ballRadius * 0.78,
+          angle: 76,
+          rotation: 34,
+          fill: "#94a3b8",
+          opacity: 0.32,
+          listening: false,
+        }),
+      );
+      return group;
+    };
+
+    const makeFeatherNode = (p: Vec2, radius: number, angle: number, draggable: boolean): Konva.Group => {
+      const size = Math.min(62, Math.max(46, radius * 5.2));
+      const group = new Konva.Group({ x: p.x, y: p.y, rotation: angle, draggable });
+      group.add(
+        new Konva.Image({
+          x: -size / 2,
+          y: -size / 2,
+          width: size,
+          height: size,
+          image: featherAsset,
+          shadowBlur: 7,
+          shadowColor: "#020617",
+          shadowOpacity: 0.34,
+          shadowOffset: { x: 2, y: 3 },
+        }),
+      );
+      return group;
+    };
+
     const makeBodyNode = (b: Scene["bodies"][number], p: Vec2, radius: number, fill: string, draggable: boolean): Konva.Shape | Konva.Group => {
       const shape = b.visual?.shape ?? "circle";
       const angle = b.visual?.angle ?? 0;
       if (shape === "forceMeter") return makeForceMeterNode(p, radius, b, fill, draggable);
+      if (shape === "metalBall") return makeMetalBallNode(p, radius, draggable);
+      if (shape === "feather") return makeFeatherNode(p, radius, angle, draggable);
       if (shape === "box") {
         const width = Math.max(22, radius * 2.4);
         const height = Math.max(18, radius * 1.5);
@@ -990,6 +1065,7 @@ export function SceneKonva2D({
 
     return () => {
       anim.stop();
+      featherAsset.onload = null;
       stage.destroy();
     };
     // resetSignal/seekToken: tăng → dựng lại cảnh từ đầu (reset/đi tới mốc).

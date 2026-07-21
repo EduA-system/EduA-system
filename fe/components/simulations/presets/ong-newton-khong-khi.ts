@@ -48,13 +48,13 @@ function timeToFall(height: number, mass: number, c: number, g: number): number 
   return hi;
 }
 
-export const ongNewtonKhongKhi: Preset = {
-  id: "ong-newton-khong-khi",
-  title: "Ống Newton trong không khí",
+export const ongNewton: Preset = {
+  id: "ong-newton",
+  title: "Ống Newton: không khí và chân không",
   domain: "Cơ học",
   grade: 10,
-  desc: "Thả viên bi và lông chim trong môi trường không khí để thấy lực cản làm vật nhẹ, rộng rơi chậm hơn",
-  objective: "Thả viên bi và lông chim trong môi trường không khí để thấy lực cản làm vật nhẹ, rộng rơi chậm hơn",
+  desc: "So sánh đồng thời chuyển động của viên bi và lông chim trong không khí và trong chân không.",
+  objective: "Quan sát trực tiếp ảnh hưởng của lực cản không khí và kiểm chứng các vật rơi cùng gia tốc trong chân không.",
   sgkRef: "Vật lí 10",
   params: [
     { key: "h", label: "Độ cao thả", unit: "m", min: 2, max: 20, step: 0.5, default: 9 },
@@ -67,25 +67,66 @@ export const ongNewtonKhongKhi: Preset = {
     const h = p.h ?? 9;
     const g = p.g ?? 9.8;
     const airScale = p.airScale ?? 1;
+    const tubeWidth = Math.max(2.2, h * 0.18);
+    const tubeGap = Math.max(0.38, h * 0.035);
+    const leftTubeX = -(tubeWidth + tubeGap) / 2;
+    const rightTubeX = (tubeWidth + tubeGap) / 2;
+    const objectOffset = tubeWidth * 0.23;
+
     return {
       bodies: [
-        { id: "vien-bi", x: -0.45, y: h, vx: 0, vy: 0, mass: ballMass(p) },
-        { id: "long-chim", x: 0.45, y: h, vx: 0, vy: 0, mass: featherMass(p), visual: { shape: "box", color: "#a78bfa", label: "lông chim" } },
+        { id: "khong-khi-vien-bi", x: leftTubeX - objectOffset, y: h, vx: 0, vy: 0, mass: ballMass(p), radius: 0.18, visual: { shape: "metalBall", label: "viên bi" } },
+        { id: "khong-khi-long-chim", x: leftTubeX + objectOffset, y: h, vx: 0, vy: 0, mass: featherMass(p), radius: 0.22, visual: { shape: "feather", label: "lông chim", angle: -48 } },
+        { id: "chan-khong-vien-bi", x: rightTubeX - objectOffset, y: h, vx: 0, vy: 0, mass: ballMass(p), radius: 0.18, visual: { shape: "metalBall", label: "viên bi" } },
+        { id: "chan-khong-long-chim", x: rightTubeX + objectOffset, y: h, vx: 0, vy: 0, mass: featherMass(p), radius: 0.22, visual: { shape: "feather", label: "lông chim", angle: -48 } },
       ],
       forces: [
         { kind: "gravity", g },
-        { kind: "drag", body: "vien-bi", c: BALL_DRAG * airScale },
-        { kind: "drag", body: "long-chim", c: FEATHER_DRAG * airScale },
+        { kind: "drag", body: "khong-khi-vien-bi", c: BALL_DRAG * airScale },
+        { kind: "drag", body: "khong-khi-long-chim", c: FEATHER_DRAG * airScale },
       ],
       constraints: [{ kind: "surface", x: 0, y: 0, angle: 0, length: 400, friction: 0.8 }],
+      view: {
+        minX: leftTubeX - tubeWidth / 2 - 0.2,
+        maxX: rightTubeX + tubeWidth / 2 + 0.2,
+        minY: -0.2,
+        maxY: h + 0.85,
+      },
     };
   },
+  annotations: (p) => {
+    const h = p.h ?? 9;
+    const tubeWidth = Math.max(2.2, h * 0.18);
+    const tubeGap = Math.max(0.38, h * 0.035);
+    const leftTubeX = -(tubeWidth + tubeGap) / 2;
+    const rightTubeX = (tubeWidth + tubeGap) / 2;
+    const tubeBottom = -0.1;
+    const tubeTop = h + 0.38;
+    const tubeHeight = tubeTop - tubeBottom;
+    const tubeCenterY = (tubeTop + tubeBottom) / 2;
+    const capHeight = Math.max(0.05, h * 0.018);
+    const makeTube = (x: number, tint: string) => [
+      { kind: "rect" as const, x, y: tubeCenterY, width: tubeWidth, height: tubeHeight, fill: tint, stroke: "rgba(186, 230, 253, 0.78)", strokeWidth: 2.2 },
+      { kind: "rect" as const, x, y: tubeCenterY, width: tubeWidth - 0.14, height: tubeHeight - 0.12, fill: "rgba(224, 242, 254, 0.02)", stroke: "rgba(125, 211, 252, 0.22)", strokeWidth: 1 },
+      { kind: "rect" as const, x: x - tubeWidth * 0.36, y: tubeCenterY, width: Math.max(0.035, tubeWidth * 0.035), height: tubeHeight - 0.2, fill: "rgba(240, 249, 255, 0.24)", stroke: "rgba(240, 249, 255, 0)", strokeWidth: 0 },
+      { kind: "rect" as const, x, y: tubeTop, width: tubeWidth + 0.12, height: capHeight, fill: "rgba(100, 116, 139, 0.84)", stroke: "rgba(226, 232, 240, 0.82)", strokeWidth: 1.4 },
+      { kind: "rect" as const, x, y: tubeBottom, width: tubeWidth + 0.12, height: capHeight, fill: "rgba(51, 65, 85, 0.96)", stroke: "rgba(203, 213, 225, 0.72)", strokeWidth: 1.4 },
+    ];
+
+    return [
+      ...makeTube(leftTubeX, "rgba(251, 191, 36, 0.045)"),
+      ...makeTube(rightTubeX, "rgba(125, 211, 252, 0.07)"),
+      { kind: "label", x: leftTubeX - tubeWidth * 0.38, y: tubeTop + 0.15, text: "KHÔNG KHÍ", color: "#fbbf24", fontSize: 13, fontStyle: "bold" },
+      { kind: "label", x: rightTubeX - tubeWidth * 0.4, y: tubeTop + 0.15, text: "CHÂN KHÔNG", color: "#7dd3fc", fontSize: 13, fontStyle: "bold" },
+    ];
+  },
+  minimalOverlay: true,
   analysis: {
     landmarks: [
       {
         key: "release",
         label: "Lúc thả",
-        description: "Hai vật được thả cùng lúc, cùng độ cao và cùng vận tốc đầu bằng 0.",
+        description: "Bốn vật trong hai ống được thả cùng lúc, cùng độ cao và cùng vận tốc đầu bằng 0.",
         atTime: () => 0,
         values: (p) => [
           { label: "Độ cao ban đầu", value: (p.h ?? 9).toFixed(1), unit: "m" },
@@ -123,24 +164,24 @@ export const ongNewtonKhongKhi: Preset = {
       {
         key: "after-1s",
         label: "Sau 1 giây",
-        description: "Viên bi chịu lực cản nhỏ hơn nhiều, còn lông chim bị lực cản hãm rõ rệt.",
+        description: "Trong chân không hai vật đi cùng nhau; trong không khí lông chim bị hãm rõ rệt.",
         atTime: () => 1,
         values: (p) => {
           const g = p.g ?? 9.8;
           const cBall = dragCoeff(BALL_DRAG, p);
           const cFeather = dragCoeff(FEATHER_DRAG, p);
           return [
-            { label: "v viên bi", value: downwardSpeed(1, ballMass(p), cBall, g).toFixed(2), unit: "m/s" },
-            { label: "v lông chim", value: downwardSpeed(1, featherMass(p), cFeather, g).toFixed(2), unit: "m/s" },
-            { label: "s viên bi", value: fallDistance(1, ballMass(p), cBall, g).toFixed(2), unit: "m" },
-            { label: "s lông chim", value: fallDistance(1, featherMass(p), cFeather, g).toFixed(2), unit: "m" },
+            { label: "v bi - không khí", value: downwardSpeed(1, ballMass(p), cBall, g).toFixed(2), unit: "m/s" },
+            { label: "v lông - không khí", value: downwardSpeed(1, featherMass(p), cFeather, g).toFixed(2), unit: "m/s" },
+            { label: "v cả hai - chân không", value: g.toFixed(2), unit: "m/s" },
+            { label: "s cả hai - chân không", value: Math.min(p.h ?? 9, 0.5 * g).toFixed(2), unit: "m" },
           ];
         },
       },
       {
         key: "ball-ground",
-        label: "Khi viên bi chạm đáy",
-        description: "Nếu hình dạng khác nhau, lông chim có thể vẫn rơi chậm hơn dù chỉnh khối lượng bằng viên bi.",
+        label: "Khi bi trong không khí chạm đáy",
+        description: "Hai vật trong chân không đã chạm đáy cùng nhau; lông chim trong không khí vẫn còn ở phía trên.",
         atTime: (p) => {
           const h = p.h ?? 9;
           const g = p.g ?? 9.8;

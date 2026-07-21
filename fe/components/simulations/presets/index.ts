@@ -28,8 +28,7 @@ import { congHuongConLac } from "./cong-huong-con-lac";
 import { matNghiengMaSat } from "./mat-nghieng-ma-sat";
 import { vaChamDanHoi } from "./va-cham-dan-hoi";
 import { vaChamMem } from "./va-cham-mem";
-import { ongNewtonKhongKhi } from "./ong-newton-khong-khi";
-import { ongNewtonChanKhong } from "./ong-newton-chan-khong";
+import { ongNewton } from "./ong-newton-khong-khi";
 import { giaoThoaSongNuoc } from "./giao-thoa-song-nuoc";
 import { songTrenDay } from "./song-tren-day";
 import { songDung } from "./song-dung";
@@ -74,8 +73,7 @@ export const PRESETS: Preset[] = [
   matNghiengMaSat,
   vaChamDanHoi,
   vaChamMem,
-  ongNewtonKhongKhi,
-  ongNewtonChanKhong,
+  ongNewton,
   giaoThoaSongNuoc,
   songTrenDay,
   songDung,

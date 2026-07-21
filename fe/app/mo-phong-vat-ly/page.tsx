@@ -103,8 +103,7 @@ const SceneCanvasPointChargeField = dynamic(
 const DOMAINS: Domain[] = ["Cơ học", "Dao động & Sóng", "Quang học", "Điện & Từ", "Nhiệt & Khí", "Hạt nhân"];
 // Các mô phỏng đã được rà lại sau đợt cập nhật nội dung và trực quan hoá.
 const REVIEWED_SIMULATION_IDS = new Set([
-  "ong-newton-khong-khi",
-  "ong-newton-chan-khong",
+  "ong-newton",
   "nem-ngang",
   "nem-xien",
   "tong-hop-hai-luc-cung-phuong",
@@ -411,31 +410,19 @@ function Thumb({ id }: { id: string }) {
           <line x1="40" y1="100" x2="160" y2="100" stroke="#475569" strokeWidth="2" />
         </>,
       );
-    case "ong-newton-khong-khi":
+    case "ong-newton":
       return frame(
         <>
-          <rect x="58" y="10" width="84" height="98" rx="20" fill="#111827" stroke="#64748b" strokeWidth="2" />
-          <rect x="66" y="18" width="68" height="82" rx="16" fill="#0f172a" stroke="#334155" strokeWidth="1" />
-          <line x1="100" y1="24" x2="100" y2="94" stroke="#334155" strokeWidth="1" strokeDasharray="3 4" />
-          <circle cx="84" cy="78" r="8" fill="#f472b6" />
-          <rect x="108" y="40" width="18" height="22" fill="#a78bfa" />
-          <path d="M75 54 L84 66 L93 54" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M108 70 L116 80 L124 70" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="66" y1="94" x2="134" y2="94" stroke="#475569" strokeWidth="2" />
-        </>,
-      );
-    case "ong-newton-chan-khong":
-      return frame(
-        <>
-          <rect x="58" y="10" width="84" height="98" rx="20" fill="#111827" stroke="#64748b" strokeWidth="2" />
-          <rect x="66" y="18" width="68" height="82" rx="16" fill="#0f172a" stroke="#334155" strokeWidth="1" />
-          <line x1="100" y1="24" x2="100" y2="94" stroke="#334155" strokeWidth="1" strokeDasharray="3 4" />
-          <circle cx="84" cy="70" r="8" fill="#f472b6" />
-          <rect x="108" y="59" width="18" height="22" fill="#a78bfa" />
-          <path d="M75 43 L84 55 L93 43" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M108 43 L116 55 L124 43" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M73 88 H127" fill="none" stroke="#60a5fa" strokeWidth="2" strokeDasharray="4 4" />
-          <line x1="66" y1="94" x2="134" y2="94" stroke="#475569" strokeWidth="2" />
+          <rect x="18" y="10" width="76" height="98" rx="16" fill="#111827" stroke="#94a3b8" strokeWidth="2" />
+          <rect x="106" y="10" width="76" height="98" rx="16" fill="#111827" stroke="#7dd3fc" strokeWidth="2" />
+          <line x1="22" y1="18" x2="90" y2="18" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+          <line x1="110" y1="18" x2="178" y2="18" stroke="#7dd3fc" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="43" cy="79" r="7" fill="#94a3b8" stroke="#e2e8f0" strokeWidth="1.5" />
+          <image href="/simulations/newton/feather.png" x="57" y="38" width="30" height="30" transform="rotate(-48 72 53)" />
+          <circle cx="131" cy="72" r="7" fill="#94a3b8" stroke="#e2e8f0" strokeWidth="1.5" />
+          <image href="/simulations/newton/feather.png" x="145" y="57" width="30" height="30" transform="rotate(-48 160 72)" />
+          <line x1="22" y1="100" x2="90" y2="100" stroke="#64748b" strokeWidth="4" />
+          <line x1="110" y1="100" x2="178" y2="100" stroke="#64748b" strokeWidth="4" />
         </>,
       );
     case "con-lac-don":
