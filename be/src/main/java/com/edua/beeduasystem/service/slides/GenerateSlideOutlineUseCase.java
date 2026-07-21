@@ -5,6 +5,7 @@ import com.edua.beeduasystem.domain.model.slide.ContentPlan;
 import com.edua.beeduasystem.domain.model.slide.OutlineItemSplitPolicy;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineRequest;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineResponse;
+import com.edua.beeduasystem.presentation.dto.slides.InlineLessonPlanDto;
 import com.edua.beeduasystem.presentation.dto.slides.OutlineDto;
 import com.edua.beeduasystem.presentation.dto.slides.PartDto;
 import com.edua.beeduasystem.presentation.dto.slides.RetryOutlinePartRequest;
@@ -41,6 +42,7 @@ public class GenerateSlideOutlineUseCase {
     /** Số phần expand chạy song song tối đa (khớp SLIDE_CONCURRENCY=4 ở FE). */
     private static final int EXPAND_CONCURRENCY = 4;
     private static final int CONTENT_MAP_CONCURRENCY = 3;
+    private static final int MAX_AUTO_SPLIT_DEPTH = 3;
     private static final java.util.Set<String> PEDAGOGICAL_ROLES = java.util.Set.of(
             "hook", "explain", "derive", "demonstrate", "practice", "recap", "other");
 
@@ -131,6 +133,26 @@ public class GenerateSlideOutlineUseCase {
         });
     }
 
+    public void retrySessionSlide(String sessionId, String partId, String slideId) {
+        OutlineGenerationSessionStore.Session session = sessions.find(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Phiên tạo outline đã hết hạn. Hãy tạo lại."));
+        if (partId == null || partId.isBlank() || slideId == null || slideId.isBlank()) {
+            throw new IllegalArgumentException("Thiếu part hoặc slide cần thử lại.");
+        }
+        PartDto part = session.parts().get(partId);
+        if (part == null) throw new IllegalArgumentException("Không tìm thấy phần cần thử lại.");
+        SlideItemDto target = findSlide(part, slideId);
+        LessonContext lesson = SlideLessonContextFactory.fromOutlineRequest(session.request());
+        executor.submit(() -> {
+            try {
+                retrySingleSlide(sessionId, lesson, session, partId, target);
+            } catch (Exception e) {
+                log.warn("Retry outline slide {} in part {} failed: {}", slideId, partId, e.getMessage());
+                outlineStream.publishSlideError(sessionId, partId, slideId, e.getMessage());
+            }
+        });
+    }
+
     private List<PartDto> manifestParts(LessonSourceContext source) {
         List<PartDto> parts = new ArrayList<>();
         for (LessonSourceContext.Activity activity : source.activities()) {
@@ -151,7 +173,7 @@ public class GenerateSlideOutlineUseCase {
         catch (Exception e) { throw new IllegalStateException("Không thể chuẩn bị khung part.", e); }
         // expandPart has already published the detailed cause to the client when it fails.
         // Return the outcome so the caller can count failures without overwriting that cause.
-        return expandPart(sessionId, lesson, session.request(), partSkeletonJson, skeleton);
+        return expandPart(sessionId, lesson, session.request(), partSkeletonJson, skeleton, session);
     }
 
     private PartDto generatePartSkeleton(LessonContext lesson, GenerateOutlineRequest req,
@@ -537,41 +559,111 @@ public class GenerateSlideOutlineUseCase {
     }
 
     private boolean expandPart(String sessionId, LessonContext lesson, GenerateOutlineRequest req, String skeletonJson, PartDto part) {
+        return expandPart(sessionId, lesson, req, skeletonJson, part, null);
+    }
+
+    private boolean expandPart(String sessionId, LessonContext lesson, GenerateOutlineRequest req, String skeletonJson,
+                               PartDto part, OutlineGenerationSessionStore.Session session) {
         try {
             List<LessonContentChunker.Chunk> chunks = chunksFor(req);
             List<LessonContentChunker.Chunk> selected = selectChunks(part, chunks);
             String source = selected.stream()
                     .map(chunk -> "CHUNK " + chunk.id() + ":\n" + chunk.contextualText())
                     .reduce("", (left, right) -> left.isEmpty() ? right : left + "\n\n" + right);
-            String prompt = withLessonSource(promptBuilder.expandPartPrompt(
-                    lesson, selected.isEmpty() ? req.plan() : null,
-                    skeletonJson, part.id(), part.title(), req.subject()), source);
-            List<SlideItemDto> filled = null;
-            Exception first = null;
-            String originalPrompt = prompt;
-            for (int attempt = 1; attempt <= 2; attempt++) {
+            List<SlideItemDto> filled = new ArrayList<>();
+            int failures = 0;
+            for (SlideItemDto slide : part.slides()) {
                 try {
-                    log.info("expand part={} chunks={} attempt={} promptLength={}", part.id(), chunkIds(selected), attempt, prompt.length());
-                    filled = mergeExpanded(part, generate(AiPromptKey.SLIDE_OUTLINE_EXPAND_PART, prompt));
-                    break;
+                    SlideItemDto expanded = expandSingleSlideWithRetry(
+                            lesson, req, skeletonJson, part, slide, source,
+                            selected.isEmpty() ? req.plan() : null, chunkIds(selected));
+                    filled.add(expanded);
+                    if (session != null) updateSessionSlide(session, part.id(), expanded);
+                    outlineStream.publishSlideReady(sessionId, part.id(), expanded);
                 } catch (Exception e) {
-                    if (attempt == 1) {
-                        first = e;
-                        prompt = promptBuilder.strictJsonRetryPrompt(originalPrompt, "expand part " + part.id());
-                    } else {
-                        throw new SlideAiResponseException("AI trả JSON không hợp lệ ở pha expand part " + part.id()
-                                + " sau 2 lần thử: " + e.getMessage(), first);
-                    }
+                    failures++;
+                    filled.add(slide);
+                    log.warn("Expand slide {} in part {} failed: {}", slide.id(), part.id(), e.getMessage());
+                    outlineStream.publishSlideError(sessionId, part.id(), slide.id(), e.getMessage());
                 }
             }
             filled = autoSplitDenseOutlineItems(lesson, req, part, filled);
+            if (session != null) updateSessionPart(session, new PartDto(part.id(), part.title(), filled, part.sourceChunkIds()));
             outlineStream.publishPartReady(sessionId, part.id(), filled);
-            return true;
+            return failures == 0;
         } catch (Exception e) {
             log.warn("Expand part {} failed: {}", part.id(), e.getMessage());
             outlineStream.publishPartError(sessionId, part.id(), e.getMessage());
             return false;
         }
+    }
+
+    private void retrySingleSlide(String sessionId, LessonContext lesson, OutlineGenerationSessionStore.Session session,
+                                  String partId, SlideItemDto target) {
+        PartDto part = session.parts().get(partId);
+        if (part == null) throw new IllegalArgumentException("Không tìm thấy phần cần thử lại.");
+        String skeletonJson;
+        try {
+            skeletonJson = LENIENT_MAPPER.writeValueAsString(new OutlineDto(lesson.id(), lesson.title(), List.of(part)));
+        } catch (Exception e) {
+            throw new IllegalStateException("Không thể chuẩn bị khung slide.", e);
+        }
+        List<LessonContentChunker.Chunk> selected = selectChunks(part, chunksFor(session.request()));
+        String source = selected.stream()
+                .map(chunk -> "CHUNK " + chunk.id() + ":\n" + chunk.contextualText())
+                .reduce("", (left, right) -> left.isEmpty() ? right : left + "\n\n" + right);
+        SlideItemDto expanded = expandSingleSlideWithRetry(
+                lesson, session.request(), skeletonJson, part, target, source,
+                selected.isEmpty() ? session.request().plan() : null, chunkIds(selected));
+        List<SlideItemDto> replacement = autoSplitDenseOutlineItems(lesson, session.request(), part, List.of(expanded));
+        replaceSessionSlide(session, partId, target.id(), replacement);
+        replacement.forEach(slide -> outlineStream.publishSlideReady(sessionId, partId, slide));
+        PartDto updated = session.parts().get(partId);
+        outlineStream.publishPartReady(sessionId, partId, updated == null ? replacement : updated.slides());
+    }
+
+    private static SlideItemDto findSlide(PartDto part, String slideId) {
+        return part.slides().stream()
+                .filter(slide -> slideId.equals(slide.id()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy slide cần thử lại."));
+    }
+
+    private static void updateSessionSlide(OutlineGenerationSessionStore.Session session, String partId, SlideItemDto slide) {
+        session.parts().computeIfPresent(partId, (id, part) -> {
+            List<SlideItemDto> slides = new ArrayList<>(part.slides());
+            for (int index = 0; index < slides.size(); index++) {
+                if (slides.get(index).id().equals(slide.id())) {
+                    slides.set(index, slide);
+                    return new PartDto(part.id(), part.title(), slides, part.sourceChunkIds());
+                }
+            }
+            return part;
+        });
+    }
+
+    private static void updateSessionPart(OutlineGenerationSessionStore.Session session, PartDto part) {
+        session.parts().put(part.id(), part);
+    }
+
+    private static void replaceSessionSlide(
+            OutlineGenerationSessionStore.Session session,
+            String partId,
+            String slideId,
+            List<SlideItemDto> replacement) {
+        session.parts().computeIfPresent(partId, (id, part) -> {
+            List<SlideItemDto> slides = new ArrayList<>();
+            boolean replaced = false;
+            for (SlideItemDto slide : part.slides()) {
+                if (slide.id().equals(slideId)) {
+                    slides.addAll(replacement);
+                    replaced = true;
+                } else {
+                    slides.add(slide);
+                }
+            }
+            return replaced ? new PartDto(part.id(), part.title(), slides, part.sourceChunkIds()) : part;
+        });
     }
 
     /**
@@ -585,26 +677,41 @@ public class GenerateSlideOutlineUseCase {
         List<SlideItemDto> result = new ArrayList<>();
 
         for (SlideItemDto item : items) {
-            OutlineItemSplitPolicy.Decision decision = OutlineItemSplitPolicy.evaluate(item.contentPlan());
-            if (!decision.shouldSplit()) {
-                result.add(item);
-                continue;
-            }
-
-            try {
-                usedIds.remove(item.id());
-                List<SlideItemDto> splitItems = splitOutlineItemWithRetry(lesson, req, part, item, decision.reasons(), usedIds);
-                usedIds.addAll(splitItems.stream().map(SlideItemDto::id).toList());
-                result.addAll(splitItems);
-                log.info("Auto-split dense outline item={} into={} reasons={}", item.id(),
-                        splitItems.stream().map(SlideItemDto::id).toList(), decision.reasons());
-            } catch (Exception e) {
-                usedIds.add(item.id());
-                result.add(item);
-                log.warn("Keeping dense outline item={} because automatic split failed: {}", item.id(), e.getMessage());
-            }
+            result.addAll(autoSplitDenseOutlineItem(lesson, req, part, item, usedIds, 0));
         }
         return result;
+    }
+
+    private List<SlideItemDto> autoSplitDenseOutlineItem(
+            LessonContext lesson,
+            GenerateOutlineRequest req,
+            PartDto part,
+            SlideItemDto item,
+            java.util.Set<String> usedIds,
+            int depth) {
+        OutlineItemSplitPolicy.Decision decision = OutlineItemSplitPolicy.evaluate(item.contentPlan());
+        if (!decision.shouldSplit()) return List.of(item);
+        if (depth >= MAX_AUTO_SPLIT_DEPTH) {
+            log.warn("Keeping dense outline item={} because automatic split reached max depth={} reasons={}",
+                    item.id(), MAX_AUTO_SPLIT_DEPTH, decision.reasons());
+            return List.of(item);
+        }
+
+        try {
+            usedIds.remove(item.id());
+            List<SlideItemDto> splitItems = splitOutlineItemWithRetry(lesson, req, part, item, decision.reasons(), usedIds);
+            log.info("Auto-split dense outline item={} into={} reasons={}", item.id(),
+                    splitItems.stream().map(SlideItemDto::id).toList(), decision.reasons());
+            List<SlideItemDto> result = new ArrayList<>();
+            for (SlideItemDto splitItem : splitItems) {
+                result.addAll(autoSplitDenseOutlineItem(lesson, req, part, splitItem, usedIds, depth + 1));
+            }
+            return result;
+        } catch (Exception e) {
+            usedIds.add(item.id());
+            log.warn("Keeping dense outline item={} because automatic split failed: {}", item.id(), e.getMessage());
+            return List.of(item);
+        }
     }
 
     private List<SlideItemDto> splitOutlineItemWithRetry(
@@ -632,6 +739,84 @@ public class GenerateSlideOutlineUseCase {
             }
         }
         throw new IllegalStateException("Unreachable");
+    }
+
+    private List<SlideItemDto> expandSlidesOneByOne(
+            LessonContext lesson,
+            GenerateOutlineRequest req,
+            String skeletonJson,
+            PartDto part,
+            String source,
+            InlineLessonPlanDto plan,
+            List<String> selectedChunkIds) {
+        List<SlideItemDto> result = new ArrayList<>(part.slides().size());
+        for (SlideItemDto slide : part.slides()) {
+            result.add(expandSingleSlideWithRetry(lesson, req, skeletonJson, part, slide, source, plan, selectedChunkIds));
+        }
+        return result;
+    }
+
+    private SlideItemDto expandSingleSlideWithRetry(
+            LessonContext lesson,
+            GenerateOutlineRequest req,
+            String skeletonJson,
+            PartDto part,
+            SlideItemDto slide,
+            String source,
+            InlineLessonPlanDto plan,
+            List<String> selectedChunkIds) {
+        String originalPrompt = withLessonSource(promptBuilder.expandSlidePrompt(
+                lesson, plan, skeletonJson, part.id(), part.title(), slide, req.subject()), source);
+        String prompt = originalPrompt;
+        Exception first = null;
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                log.info("expand slide={} part={} chunks={} attempt={} promptLength={}",
+                        slide.id(), part.id(), selectedChunkIds, attempt, prompt.length());
+                return parseExpandedSlide(slide, generate(AiPromptKey.SLIDE_OUTLINE_EXPAND_PART, prompt));
+            } catch (Exception e) {
+                if (attempt == 1) {
+                    first = e;
+                    prompt = promptBuilder.strictJsonRetryPrompt(originalPrompt, "expand slide " + slide.id());
+                } else {
+                    throw new SlideAiResponseException("AI trả JSON không hợp lệ ở pha expand slide " + slide.id()
+                            + " sau 2 lần thử: " + e.getMessage(), first);
+                }
+            }
+        }
+        throw new IllegalStateException("Unreachable");
+    }
+
+    static SlideItemDto parseExpandedSlide(SlideItemDto skeleton, String raw) {
+        try {
+            JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(raw));
+            JsonNode node;
+            if (root.path("slide").isObject()) {
+                node = root.path("slide");
+            } else if (root.path("slides").isArray() && root.path("slides").size() == 1) {
+                node = root.path("slides").get(0);
+            } else {
+                node = root;
+            }
+            String id = requiredText(node, "id");
+            if (!skeleton.id().equals(id)) throw new IllegalArgumentException("Expanded slide trả sai id: " + id);
+            JsonNode semantic = semanticNode(node);
+            ContentPlan contentPlan = parseContentPlan(
+                    skeleton.contentPlan().slideType(),
+                    skeleton.contentPlan().headerMode(),
+                    semantic.path("blocks"),
+                    semantic.path("relationships"));
+            return new SlideItemDto(
+                    skeleton.id(),
+                    skeleton.title(),
+                    skeleton.pedagogicalRole(),
+                    intOrNull(node, "durationMinutes"),
+                    textOrNull(node, "aiNote"),
+                    contentPlan
+            );
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Expand parse failed for slide " + skeleton.id() + ": " + e.getMessage(), e);
+        }
     }
 
     private String generate(AiPromptKey key, String prompt) {

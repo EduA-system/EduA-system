@@ -282,6 +282,67 @@ public class SlidePromptBuilder {
         return sb.toString();
     }
 
+    /** Phase 2 variant used in production: fill exactly one slide to keep prompts small and failures isolated. */
+    public String expandSlidePrompt(
+            LessonContext lesson,
+            InlineLessonPlanDto plan,
+            String partSkeletonJson,
+            String targetPartId,
+            String targetPartTitle,
+            com.edua.beeduasystem.presentation.dto.slides.SlideItemDto targetSlide,
+            String subject) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Bạn là ").append(teacherPersona(subject))
+                .append(". Hãy SOẠN NỘI DUNG CHI TIẾT cho ĐÚNG MỘT slide trong một phần của bộ slide.\n\n");
+        sb.append("BÀI HỌC: ").append(lesson.title()).append(" (lớp ").append(lesson.grade()).append(")\n\n");
+
+        sb.append("GIÁO ÁN ĐÃ DUYỆT (dữ liệu gốc — bám sát, KHÔNG cắt bớt):\n");
+        appendPlanFull(sb, plan);
+        sb.append("\n");
+
+        sb.append("KHUNG CỦA PART (để giữ mạch và tránh trùng ý với slide lân cận):\n");
+        sb.append(partSkeletonJson).append("\n\n");
+
+        sb.append("PART CỐ ĐỊNH: id=\"").append(targetPartId).append("\"");
+        if (targetPartTitle != null && !targetPartTitle.isBlank()) sb.append(" — ").append(targetPartTitle);
+        sb.append("\n");
+
+        sb.append("SLIDE CẦN SOẠN: id=\"").append(targetSlide.id())
+                .append("\", title=\"").append(targetSlide.title())
+                .append("\", pedagogicalRole=\"").append(targetSlide.pedagogicalRole())
+                .append("\", slideType=\"").append(targetSlide.contentPlan().slideType())
+                .append("\", headerMode=\"").append(targetSlide.contentPlan().headerMode())
+                .append("\"\n\n");
+
+        sb.append("""
+                Chỉ trả dữ liệu cho slide trên, không trả slide khác và không đổi id/title/pedagogicalRole.
+                Trả `durationMinutes`, `aiNote` và `contentPlan` chứa `blocks`, `relationships`.
+                Mỗi block có id duy nhất, kind, role, semanticType, priority (primary|secondary|supporting), required.
+                Các kind:
+                - text: thêm `text`.
+                - visual: thêm `description`, `requirement` (required|optional), có thể có `preferredAspectRatio`.
+                - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]` đúng kích thước,
+                  `preferredPresentation` (auto|table|panels).
+                - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
+                - sequence: thêm `steps:[{id,label,text}]` theo đúng thứ tự bắt buộc.
+                - formula: thêm `expression`, có thể có `explanation`.
+                - quiz: thêm `question`, có thể có `choices`, `answer`, `explanation`.
+                Quan hệ chỉ dùng một trong:
+                {"type":"illustrates","visualBlockId":"...","targetBlockId":"..."},
+                {"type":"supports","supportingBlockId":"...","targetBlockId":"..."},
+                {"type":"follows","beforeBlockId":"...","afterBlockId":"..."}.
+                Mọi reference phải trỏ tới block tồn tại. Không tạo block title vì `title` đã là nguồn chuẩn.
+                Giữ nguyên văn dữ kiện, câu hỏi, đáp án, công thức từ giáo án. Nội dung AI bổ sung phải khai báo aiNote.
+                Không trả tọa độ, kích thước, font, màu, tỷ lệ cột hoặc quyết định trình bày.
+
+                Trả JSON thuần, không markdown:
+                {"slide":{"id":"%s","durationMinutes":3,"aiNote":"","contentPlan":{"blocks":[
+                  {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung"}
+                ],"relationships":[]}}}
+                """.formatted(targetSlide.id()));
+        return sb.toString();
+    }
+
     /** Splits one already-expanded outline item; it does not alter the original outline prompts. */
     public String splitOutlineItemPrompt(
             LessonContext lesson,

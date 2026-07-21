@@ -13,6 +13,10 @@ public interface OutlineStreamPort {
 
     void publishPartError(String sessionId, String partId, String message);
 
+    void publishSlideReady(String sessionId, String partId, SlideItemDto slide);
+
+    void publishSlideError(String sessionId, String partId, String slideId, String message);
+
     void publishDone(String sessionId, int partFailures);
 
     void publishFailed(String sessionId, String message);

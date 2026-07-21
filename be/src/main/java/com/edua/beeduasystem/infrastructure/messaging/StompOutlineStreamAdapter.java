@@ -36,6 +36,16 @@ public class StompOutlineStreamAdapter implements OutlineStreamPort {
     }
 
     @Override
+    public void publishSlideReady(String sessionId, String partId, SlideItemDto slide) {
+        send(sessionId, new OutlineEvent.OutlineSlideReady(sessionId, partId, slide));
+    }
+
+    @Override
+    public void publishSlideError(String sessionId, String partId, String slideId, String message) {
+        send(sessionId, new OutlineEvent.OutlineSlideFailed(sessionId, partId, slideId, message));
+    }
+
+    @Override
     public void publishDone(String sessionId, int partFailures) {
         send(sessionId, new OutlineEvent.Done(sessionId, partFailures));
     }

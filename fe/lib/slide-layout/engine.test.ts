@@ -48,6 +48,13 @@ describe("dynamic slide layout engine", () => {
     expect(process.slots.filter((slot) => slot.sourcePartId?.startsWith("step:")).map((slot) => slot.sourcePartId)).toEqual(["step:one", "step:two", "step:three"]);
   });
 
+  it("does not reveal quiz answers on the question slide", () => {
+    const result = generateSlideLayout(fixture("quiz"));
+
+    expect(result.slots.some((slot) => slot.sourcePartId === "answer")).toBe(false);
+    expect(result.slots.map((slot) => slot.sourcePartId).filter(Boolean)).toEqual(["question", "choices"]);
+  });
+
   it("gives experiment text and visual at least thirty percent of body width", () => {
     const result = generateSlideLayout(fixture("experiment"));
     const visual = result.slots.find((slot) => slot.kind === "image");
