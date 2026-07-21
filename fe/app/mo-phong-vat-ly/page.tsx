@@ -112,7 +112,6 @@ const REVIEWED_SIMULATION_IDS = new Set([
   "dinh-luat-2-newton",
   "dinh-luat-3-newton",
   "do-p-t-bang-luc-ke",
-  "luc-can-chat-luu",
 ]);
 
 // Lĩnh vực chưa có kernel → hiển thị thẻ disabled để giữ bản đồ chương trình đầy đủ.
@@ -215,22 +214,6 @@ function Thumb({ id }: { id: string }) {
           <text x="50" y="45" fontSize="10" fontWeight="700" fill="#93c5fd">d₁</text>
           <text x="130" y="45" fontSize="10" fontWeight="700" fill="#f9a8d4">d₂</text>
           <text x="61" y="117" fontSize="10" fontWeight="700" fill="#fbbf24">M₁ = M₂</text>
-        </>,
-      );
-    case "luc-can-chat-luu":
-      return frame(
-        <>
-          <path d="M34 18 c14 10 14 24 0 34 c-14 -10 -14 -24 0 -34Z" fill="#60a5fa" />
-          <circle cx="96" cy="52" r="10" fill="#f472b6" />
-          <rect x="146" y="44" width="28" height="14" rx="3" fill="#fbbf24" />
-          <path d="M34 58 V94" stroke="#60a5fa" strokeWidth="2" strokeDasharray="4 4" />
-          <path d="M96 68 V96" stroke="#f472b6" strokeWidth="2" strokeDasharray="4 4" />
-          <path d="M160 64 V104" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 4" />
-          <path d="M22 34 h-12 M48 34 h12 M84 52 h-14 M108 52 h14 M138 51 h-18 M180 51 h10" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
-          <path d="M28 78 L34 90 L40 78" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M90 76 L96 88 L102 76" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M154 82 L160 94 L166 82" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="20" y1="104" x2="180" y2="104" stroke="#475569" strokeWidth="2" />
         </>,
       );
     case "dinh-luat-2-newton":

@@ -10,7 +10,6 @@ import { quyTacMoment } from "./quy-tac-moment";
 import { quyTacMomentDiaTron } from "./quy-tac-moment-dia-tron";
 import { tongHopLucDongQuy } from "./tong-hop-luc-dong-quy";
 import { phanTichLuc } from "./phan-tich-luc";
-import { lucCanChatLuu } from "./luc-can-chat-luu";
 import { tongHopHaiLucCungPhuong } from "./tong-hop-hai-luc-cung-phuong";
 import { roiTuDo } from "./roi-tu-do";
 import { nemXien } from "./nem-xien";
@@ -55,7 +54,6 @@ export const PRESETS: Preset[] = [
   quyTacMomentDiaTron,
   tongHopLucDongQuy,
   phanTichLuc,
-  lucCanChatLuu,
   tongHopHaiLucCungPhuong,
   roiTuDo,
   nemXien,
