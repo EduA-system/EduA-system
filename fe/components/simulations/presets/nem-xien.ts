@@ -23,6 +23,9 @@ export const nemXien: Preset = {
       constraints: [{ kind: "surface", x: 30, y: 0, angle: 0, length: 400, friction: 0.6 }],
     };
   },
+  bodyTrails: {
+    ball: { color: "#f472b6", width: 2.5, dash: [8, 7] },
+  },
   analysis: {
     landmarks: [
       {

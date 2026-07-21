@@ -31,7 +31,7 @@ export const tongHopHaiLucCungPhuong: Preset = {
   ],
   applyParams: (p) => {
     const { F1, F2, m } = values(p);
-    const y = 0.6; // vật "lơ lửng" trên đường nền y=0 để vector nằm ngang dễ nhìn
+    const y = 0.28;
     return {
       bodies: [
         {
@@ -42,7 +42,7 @@ export const tongHopHaiLucCungPhuong: Preset = {
           vy: 0,
           mass: m,
           radius: 0.24,
-          visual: { shape: "box", color: "#f472b6", label: "m" },
+          visual: { shape: "box", color: "#f472b6", label: "m", wheels: true },
         },
       ],
       // Hai lực ngược chiều CÙNG đặt lên vật. Kernel tự cộng dồn thành hợp lực
@@ -61,6 +61,7 @@ export const tongHopHaiLucCungPhuong: Preset = {
       // báo khung để camera KHÔNG tự zoom lại mỗi lần đổi F₁/F₂. Đủ rộng để thấy
       // hai vector (lực tối đa 20 N ↦ 0.8 m) và một đoạn vật trôi ban đầu.
       view: { minX: -3.5, maxX: 3.5, minY: 0, maxY: 2.2 },
+      groundPadding: 96,
     };
   },
   analysis: {

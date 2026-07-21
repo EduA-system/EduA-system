@@ -66,6 +66,31 @@ export function projectConstraints(
 
   for (let iter = 0; iter < ITERATIONS; iter++) {
     for (const c of scene.constraints) {
+      if (c.kind === "rightAngleRope") {
+        const cart = pts[c.horizontal];
+        const hanger = pts[c.vertical];
+        if (!cart || !hanger) continue;
+        const cartWeight = invMass[c.horizontal] ?? 0;
+        const hangerWeight = invMass[c.vertical] ?? 0;
+        const weightSum = cartWeight + hangerWeight;
+        if (weightSum <= 0) continue;
+
+        // Giữ quả nặng trên phương thẳng đứng ngay dưới tâm ròng rọc.
+        hanger.x = c.corner.x;
+        hanger.vx = 0;
+
+        // (x_ròng_rọc - x_xe) + (y_ròng_rọc - y_quả_nặng) = chiều dài dây.
+        const error = (c.corner.x - cart.x) + (c.corner.y - hanger.y) - c.length;
+        cart.x += (cartWeight / weightSum) * error;
+        hanger.y += (hangerWeight / weightSum) * error;
+
+        // Đạo hàm ràng buộc: vx_xe + vy_quả_nặng = 0.
+        const velocityError = cart.vx + hanger.vy;
+        cart.vx -= (cartWeight / weightSum) * velocityError;
+        hanger.vy -= (hangerWeight / weightSum) * velocityError;
+        continue;
+      }
+
       // Mặt phẳng cứng: chặn mọi vật động ở phía trên mặt (va chạm một chiều).
       if (c.kind === "surface") {
         const rad = (c.angle * Math.PI) / 180;

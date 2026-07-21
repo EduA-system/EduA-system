@@ -1,4 +1,4 @@
-import type { MagneticLoopDynamics, MagneticLoopScene, MagneticLoopState } from "./types";
+import type { AcGeneratorDynamics, MagneticLoopDynamics, MagneticLoopScene, MagneticLoopState } from "./types";
 
 const EPSILON = 1e-9;
 
@@ -31,6 +31,24 @@ export function magneticLoopDynamics(
   const torque = -magneticMoment * scene.magneticField * Math.sin(state.angle);
   const angularAcceleration = (torque - scene.angularDamping * state.angularVelocity) / inertia;
   return { area, inertia, effectiveCurrent, magneticMoment, sideForce, torque, angularAcceleration };
+}
+
+/** Các đại lượng tức thời của máy phát xoay chiều nối với tải thuần trở. */
+export function acGeneratorDynamics(scene: MagneticLoopScene, angle: number): AcGeneratorDynamics {
+  const area = loopArea(scene);
+  const omega = scene.driveAngularVelocity;
+  const sinAngle = Math.sin(angle);
+  const magneticFlux = scene.turns * scene.magneticField * area * Math.cos(angle);
+  const inducedEmf = scene.turns * scene.magneticField * area * omega * sinAngle;
+  const inducedCurrent = inducedEmf / Math.max(scene.loadResistance, EPSILON);
+  const sideForce = scene.turns * Math.abs(inducedCurrent) * scene.height * scene.magneticField;
+  // Theo Lenz, mô-men điện từ luôn chống lại chuyển động quay do nguồn cơ ngoài duy trì.
+  const resistingTorque = -scene.turns * inducedCurrent * area * scene.magneticField * sinAngle;
+  return { area, magneticFlux, inducedEmf, inducedCurrent, sideForce, resistingTorque };
+}
+
+export function generatorAngleAt(scene: MagneticLoopScene, seconds: number): number {
+  return scene.initialAngle + scene.driveAngularVelocity * Math.max(0, seconds);
 }
 
 export function initialMagneticLoopState(scene: MagneticLoopScene): MagneticLoopState {

@@ -8,56 +8,62 @@ export const khungDayQuayTrongTuTruong: Preset = {
   title: "Khung dây quay trong từ trường",
   domain: "Điện & Từ",
   grade: 11,
-  desc: "Quan sát ngẫu lực từ và cổ góp làm khung dây MNPQ quay liên tục quanh trục OO′.",
-  objective: "Xác định hai lực từ trên MN, QP và quan sát cổ góp đảo dòng sau mỗi nửa vòng.",
-  sgkRef: "Vật lí 11 - Lực từ tác dụng lên khung dây có dòng điện",
+  desc: "Máy phát xoay chiều: khung MNPQ quay giữa hai cực từ, cấp điện cho tải qua vành trượt.",
+  objective: "Quan sát từ thông, suất điện động hình sin và hai lực từ cản chuyển động theo định luật Lenz.",
+  sgkRef: "Vật lí 11 - Khung dây quay trong từ trường và cảm ứng điện từ",
   startPaused: true,
   params: [
     { key: "magneticField", label: "Cảm ứng từ", unit: "T", min: 0, max: 0.8, step: 0.01, default: 0.3 },
-    { key: "current", label: "Dòng điện (dấu chỉ chiều)", unit: "A", min: -4, max: 4, step: 0.1, default: 1.5 },
-    { key: "turns", label: "Số vòng dây", unit: "vòng", min: 1, max: 50, step: 1, default: 20 },
+    { key: "speedRpm", label: "Tốc độ quay", unit: "vòng/phút", min: 10, max: 180, step: 5, default: 60 },
+    { key: "turns", label: "Số vòng dây", unit: "vòng", min: 5, max: 100, step: 5, default: 30 },
     { key: "widthCm", label: "Chiều rộng khung", unit: "cm", min: 6, max: 24, step: 1, default: 12 },
     { key: "heightCm", label: "Chiều cao khung", unit: "cm", min: 10, max: 30, step: 1, default: 18 },
-    { key: "massG", label: "Khối lượng khung", unit: "g", min: 30, max: 200, step: 5, default: 80 },
-    { key: "initialAngleDeg", label: "Góc α ban đầu", unit: "°", min: 10, max: 170, step: 1, default: 58 },
-    { key: "dampingMilli", label: "Mô-men cản", unit: "mN·m·s/rad", min: 0, max: 40, step: 1, default: 18 },
+    { key: "loadResistance", label: "Điện trở tải", unit: "Ω", min: 1, max: 50, step: 1, default: 10 },
+    { key: "initialAngleDeg", label: "Góc α ban đầu", unit: "°", min: 0, max: 180, step: 5, default: 25 },
   ],
   quickPresets: [
-    { label: "Đảo chiều dòng điện", params: { current: -1.5, initialAngleDeg: 58 } },
-    { label: "Mô-men lớn", params: { current: 3, magneticField: 0.6, turns: 35 } },
-    { label: "Không có lực từ", params: { magneticField: 0 } },
+    { label: "Quay chậm", params: { speedRpm: 25 } },
+    { label: "Điện áp lớn", params: { speedRpm: 140, magneticField: 0.6, turns: 80 } },
+    { label: "Tải nhẹ", params: { loadResistance: 40 } },
   ],
   applyParams: (p) => ({
     kind: "magnetic-loop" as const,
     width: (p.widthCm ?? 12) / 100,
     height: (p.heightCm ?? 18) / 100,
-    mass: (p.massG ?? 80) / 1000,
-    turns: Math.round(p.turns ?? 20),
-    current: p.current ?? 1.5,
+    mass: 0.08,
+    turns: Math.round(p.turns ?? 30),
+    current: 0,
     magneticField: p.magneticField ?? 0.3,
-    angularDamping: (p.dampingMilli ?? 18) / 1000,
-    initialAngle: (p.initialAngleDeg ?? 58) * DEG_TO_RAD,
+    driveAngularVelocity: ((p.speedRpm ?? 60) * 2 * Math.PI) / 60,
+    loadResistance: p.loadResistance ?? 10,
+    angularDamping: 0,
+    initialAngle: (p.initialAngleDeg ?? 25) * DEG_TO_RAD,
   }),
   analysis: {
     landmarks: [
       {
-        key: "luc-tu-hai-canh",
-        label: "Hai lực từ trên MN và QP",
-        description: "MN và QP song song với trục quay, vuông góc với B. Hai lực cùng độ lớn, ngược chiều và tạo thành ngẫu lực.",
+        key: "suat-dien-dong-cuc-dai",
+        label: "Suất điện động cực đại",
+        description: "Điện áp đạt biên độ khi pháp tuyến n vuông góc B và bằng 0 khi n song song B.",
         values: (p) => {
-          const force = Math.round(p.turns ?? 20) * Math.abs(p.current ?? 1.5) * ((p.heightCm ?? 18) / 100) * (p.magneticField ?? 0.3);
-          return [{ label: "F = NIlB", value: force.toFixed(2), unit: "N" }];
+          const area = ((p.widthCm ?? 12) * (p.heightCm ?? 18)) / 10000;
+          const omega = ((p.speedRpm ?? 60) * 2 * Math.PI) / 60;
+          const emfMax = Math.round(p.turns ?? 30) * (p.magneticField ?? 0.3) * area * omega;
+          return [{ label: "E₀ = NBAω", value: emfMax.toFixed(3), unit: "V" }];
         },
       },
       {
-        key: "moment-luc-tu",
-        label: "Mô-men lực từ ban đầu",
-        description: "Mô-men lớn nhất khi pháp tuyến n vuông góc B và bằng 0 khi n song song B.",
+        key: "luc-tu-hai-canh",
+        label: "Lực từ trên MN và QP",
+        description: "Dòng cảm ứng tạo hai lực từ cùng độ lớn, ngược chiều. Mô-men của chúng chống lại chuyển động quay.",
         values: (p) => {
           const area = ((p.widthCm ?? 12) * (p.heightCm ?? 18)) / 10000;
-          const alpha = (p.initialAngleDeg ?? 58) * DEG_TO_RAD;
-          const torque = Math.round(p.turns ?? 20) * Math.abs(p.current ?? 1.5) * area * (p.magneticField ?? 0.3) * Math.sin(alpha);
-          return [{ label: "|τ₀| = NIAB sin α₀", value: torque.toFixed(3), unit: "N·m" }];
+          const omega = ((p.speedRpm ?? 60) * 2 * Math.PI) / 60;
+          const alpha = (p.initialAngleDeg ?? 25) * DEG_TO_RAD;
+          const emf = Math.round(p.turns ?? 30) * (p.magneticField ?? 0.3) * area * omega * Math.sin(alpha);
+          const current = emf / Math.max(p.loadResistance ?? 10, 1e-9);
+          const force = Math.round(p.turns ?? 30) * Math.abs(current) * ((p.heightCm ?? 18) / 100) * (p.magneticField ?? 0.3);
+          return [{ label: "F₀ = NI₀lB", value: force.toFixed(3), unit: "N" }];
         },
       },
     ],

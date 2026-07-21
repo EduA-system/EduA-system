@@ -4,6 +4,33 @@ function degToRad(deg: number): number {
   return (deg * Math.PI) / 180;
 }
 
+const RAMP_LENGTH = 5.2;
+const RAMP_RIGHT_X = 2.7;
+const BLOCK_CLEARANCE = 0.2;
+
+function rampGeometry(alpha: number) {
+  const rad = degToRad(alpha);
+  const tangent = { x: Math.cos(rad), y: -Math.sin(rad) };
+  const normal = { x: Math.sin(rad), y: Math.cos(rad) };
+  const leftTop = {
+    x: RAMP_RIGHT_X - RAMP_LENGTH * Math.cos(rad),
+    y: RAMP_LENGTH * Math.sin(rad),
+  };
+  const displayMidpoint = {
+    x: (leftTop.x + RAMP_RIGHT_X) / 2,
+    y: leftTop.y / 2,
+  };
+  return {
+    leftTop,
+    rightBase: { x: RAMP_RIGHT_X, y: 0 },
+    surfaceCenter: {
+      x: displayMidpoint.x + normal.x * BLOCK_CLEARANCE,
+      y: displayMidpoint.y + normal.y * BLOCK_CLEARANCE,
+    },
+    tangent,
+  };
+}
+
 function values(p: Record<string, number>) {
   const alpha = p.alpha ?? 25;
   const m = p.m ?? 2;
@@ -39,6 +66,7 @@ export const phanTichLuc: Preset = {
   desc: "Quan sát trọng lực được phân tích thành hai lực thành phần",
   objective: "Quan sát trọng lực được phân tích thành hai lực thành phần",
   sgkRef: "Vật lí 10 - phân tích lực",
+  startPaused: true,
   params: [
     { key: "alpha", label: "Góc nghiêng", unit: "°", min: 5, max: 50, step: 1, default: 25 },
     { key: "m", label: "Khối lượng vật", unit: "kg", min: 0.5, max: 8, step: 0.1, default: 2 },
@@ -46,12 +74,19 @@ export const phanTichLuc: Preset = {
   ],
   applyParams: (p) => {
     const { alpha, m, g } = values(p);
-    const theta = -degToRad(alpha);
-    const surface = { kind: "surface" as const, x: 0, y: 1.65, angle: -alpha, length: 8.8, friction: 0.35 };
-    const startS = -2.35;
+    const geometry = rampGeometry(alpha);
+    const surface = {
+      kind: "surface" as const,
+      x: geometry.surfaceCenter.x,
+      y: geometry.surfaceCenter.y,
+      angle: -alpha,
+      length: RAMP_LENGTH,
+      friction: 0.35,
+    };
+    const startS = -1.15;
     const block = {
-      x: surface.x + startS * Math.cos(theta),
-      y: surface.y + startS * Math.sin(theta),
+      x: surface.x + startS * geometry.tangent.x,
+      y: surface.y + startS * geometry.tangent.y,
     };
     const vectors = vectorParts(alpha);
 
@@ -75,9 +110,36 @@ export const phanTichLuc: Preset = {
         { kind: "vector" as const, anchor: "vat", ...vectors.p1, color: "#fbbf24", label: "P1", width: 3 },
         { kind: "vector" as const, anchor: "vat", ...vectors.p2, color: "#60a5fa", label: "P2", width: 3 },
       ],
-      view: { minX: -4.7, maxX: 4.9, minY: 0, maxY: 4.4 },
+      view: { minX: -4.1, maxX: 4.1, minY: 0, maxY: 4.4 },
+      groundPadding: 96,
     };
   },
+  annotations: (p) => {
+    const geometry = rampGeometry(p.alpha ?? 25);
+    return [
+      {
+        kind: "polygon",
+        points: [
+          geometry.leftTop,
+          { x: geometry.leftTop.x, y: 0 },
+          geometry.rightBase,
+        ],
+        fill: "#1e293b",
+        stroke: "#64748b",
+        strokeWidth: 2.5,
+        opacity: 0.96,
+      },
+      {
+        kind: "label",
+        x: geometry.rightBase.x - 0.48,
+        y: 0.22,
+        text: `α = ${(p.alpha ?? 25).toFixed(0)}°`,
+        color: "#cbd5e1",
+        fontSize: 13,
+      },
+    ];
+  },
+  minimalOverlay: true,
   analysis: {
     landmarks: [
       {

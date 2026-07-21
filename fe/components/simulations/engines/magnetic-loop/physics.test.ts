@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialMagneticLoopState, magneticLoopDynamics, stepMagneticLoop } from "./physics";
+import { acGeneratorDynamics, generatorAngleAt, initialMagneticLoopState, magneticLoopDynamics, stepMagneticLoop } from "./physics";
 import type { MagneticLoopScene } from "./types";
 
 const scene: MagneticLoopScene = {
@@ -10,6 +10,8 @@ const scene: MagneticLoopScene = {
   turns: 20,
   current: 1.5,
   magneticField: 0.3,
+  driveAngularVelocity: 2 * Math.PI,
+  loadResistance: 10,
   angularDamping: 0.002,
   initialAngle: Math.PI / 3,
 };
@@ -51,5 +53,22 @@ describe("magnetic loop physics", () => {
     const dynamics = magneticLoopDynamics(scene, { angle: 0, angularVelocity: 0 });
     expect(dynamics.torque).toBeCloseTo(0, 10);
     expect(dynamics.angularAcceleration).toBeCloseTo(0, 10);
+  });
+
+  it("produces sinusoidal emf while the frame rotates", () => {
+    const atZero = acGeneratorDynamics(scene, 0);
+    const atQuarterTurn = acGeneratorDynamics(scene, Math.PI / 2);
+    expect(atZero.inducedEmf).toBeCloseTo(0, 10);
+    expect(atQuarterTurn.inducedEmf).toBeCloseTo(
+      scene.turns * scene.magneticField * scene.width * scene.height * scene.driveAngularVelocity,
+      8,
+    );
+  });
+
+  it("creates an electromagnetic torque opposing the external drive", () => {
+    const dynamics = acGeneratorDynamics(scene, Math.PI / 2);
+    expect(dynamics.inducedCurrent).toBeGreaterThan(0);
+    expect(dynamics.resistingTorque).toBeLessThan(0);
+    expect(generatorAngleAt(scene, 0.25)).toBeCloseTo(scene.initialAngle + Math.PI / 2, 8);
   });
 });

@@ -130,6 +130,7 @@ export function SceneKonva2D({
   bodyLabels,
   annotations,
   bodyColors,
+  bodyTrails,
   bodySigns,
   minimalOverlay,
   hideFixedSupportDecoration,
@@ -162,6 +163,8 @@ export function SceneKonva2D({
   // Màu riêng cho từng vật (id → mã màu), ghi đè màu hồng mặc định — vd hạt
   // mang điện vẽ xanh dương thay vì hồng cho preset điện trường.
   bodyColors?: Record<string, string>;
+  // Vệt quỹ đạo nối dần theo vị trí thực tế của vật khi mô phỏng đang chạy.
+  bodyTrails?: Record<string, { color?: string; width?: number; dash?: number[] }>;
   // Ký hiệu ngắn (1-2 ký tự, vd "+"/"−"/"0") vẽ ĐÈ LÊN TÂM vật, bám theo vật
   // khi di chuyển — khác bodyLabels (vẽ DƯỚI vật). Dùng cho dấu điện tích
   // ngay trên hạt, giống hạt mang điện trong sách giáo khoa.
@@ -213,9 +216,11 @@ export function SceneKonva2D({
       restitution: scene.restitution,
       annotations: scene.annotations,
       view: scene.view,
+      groundPadding: scene.groundPadding,
     };
     let kernel = buildKernel(work);
     let state = kernel.project(kernel.initialState);
+    let simulationSeconds = 0;
 
     // Đi tới mốc thời gian: tích phân xác định (không phụ thuộc frame rate)
     // từ trạng thái đầu tới seekSeconds, rồi dừng lại đúng đó để xem/đối chiếu.
@@ -223,13 +228,14 @@ export function SceneKonva2D({
       const seekSub = 1 / 240;
       const seekSteps = Math.round(seekSeconds / seekSub);
       for (let i = 0; i < seekSteps; i++) state = stepScene(kernel, state, seekSub);
+      simulationSeconds = seekSeconds;
       runningRef.current = false;
       onRunningChange(false);
     }
 
     // world→screen: mặt đất (y=0) ghim gần đáy, vật scale vừa khung.
     const box = fitBox(work);
-    const sidePad = 70, topPad = 50, groundPad = 46;
+    const sidePad = 70, topPad = 50, groundPad = work.groundPadding ?? 46;
     const bboxW = Math.max(box.maxX - box.minX, 1);
     const worldH = Math.max(box.maxY, 1) + Math.max(-box.minY, 0);
     const scale = Math.min((W - 2 * sidePad) / bboxW, (H - topPad - groundPad) / worldH);
@@ -429,6 +435,23 @@ export function SceneKonva2D({
             listening: false,
           }),
         );
+      } else if (ann.kind === "polygon") {
+        const points = ann.points.flatMap((point) => {
+          const screenPoint = toScreen(point.x, point.y);
+          return [screenPoint.x, screenPoint.y];
+        });
+        layer.add(
+          new Konva.Line({
+            points,
+            closed: true,
+            fill: ann.fill ?? "#1e293b",
+            stroke: ann.stroke ?? "#64748b",
+            strokeWidth: ann.strokeWidth ?? 2,
+            opacity: ann.opacity ?? 1,
+            lineJoin: "round",
+            listening: false,
+          }),
+        );
       } else if (ann.kind === "curve") {
         const p1 = toScreen(ann.x1, ann.y1);
         const c1 = toScreen(ann.cx1, ann.cy1);
@@ -479,8 +502,31 @@ export function SceneKonva2D({
       springs.push({ a: f.a, b: f.b, line, restLength: f.restLength, compressionOnly: f.compressionOnly });
     }
     const links: { a: string; b: string; line: Konva.Line }[] = [];
+    const rightAngleLinks: {
+      horizontal: string;
+      vertical: string;
+      corner: Vec2;
+      line: Konva.Line;
+    }[] = [];
     for (const c of work.constraints) {
       if (c.kind === "surface" || c.kind === "curveTrack") continue;
+      if (c.kind === "rightAngleRope") {
+        const line = new Konva.Line({
+          stroke: "#cbd5e1",
+          strokeWidth: 2,
+          lineCap: "round",
+          lineJoin: "round",
+          listening: false,
+        });
+        layer.add(line);
+        rightAngleLinks.push({
+          horizontal: c.horizontal,
+          vertical: c.vertical,
+          corner: c.corner,
+          line,
+        });
+        continue;
+      }
       const line = new Konva.Line({ stroke: "#64748b", strokeWidth: c.kind === "rod" ? 3 : 1.5 });
       layer.add(line);
       links.push({ a: c.a, b: c.b, line });
@@ -512,6 +558,25 @@ export function SceneKonva2D({
       return posOf(id);
     };
 
+    const trailNodes: Record<string, { line: Konva.Line; points: number[]; last: Vec2 }> = {};
+    for (const [bodyId, style] of Object.entries(bodyTrails ?? {})) {
+      const body = work.bodies.find((candidate) => candidate.id === bodyId);
+      if (!body || body.fixed) continue;
+      const initial = toScreen(readPosition(state, body.id).x, readPosition(state, body.id).y);
+      const line = new Konva.Line({
+        points: [],
+        stroke: style.color ?? "#f59e0b",
+        strokeWidth: style.width ?? 2,
+        dash: style.dash ?? [8, 7],
+        lineCap: "round",
+        lineJoin: "round",
+        listening: false,
+        opacity: 0.9,
+      });
+      layer.add(line);
+      trailNodes[bodyId] = { line, points: [], last: initial };
+    }
+
     // Bán kính hiển thị — dùng chung cho vật thật lẫn tàn ảnh (ghost).
     const radiusFor = (b: Scene["bodies"][number]): number => {
       const worldR = b.radius ?? Math.min(0.25 + b.mass * 0.04, 0.5);
@@ -529,29 +594,70 @@ export function SceneKonva2D({
       const visual = b.visual;
       const group = new Konva.Group({ x: p.x, y: p.y, rotation: visual?.angle ?? 0, draggable });
       if (visual?.orientation === "vertical") {
-        const bodyW = Math.max(42, radius * 1.6);
+        const bodyW = Math.max(48, radius * 1.75);
         const bodyH = Math.max(112, radius * 4.5);
         const top = -bodyH / 2;
         const bottom = bodyH / 2;
-        const scaleTop = top + 34;
-        const scaleBottom = bottom - 25;
         const readingRatio = Math.max(0, Math.min(1, visual.readingRatio ?? 0));
-        const markerY = scaleTop + (scaleBottom - scaleTop) * readingRatio;
+        const springTop = top + 13;
+        const springMinEnd = top + 36;
+        const springMaxEnd = bottom - 22;
+        const springEnd = springMinEnd + (springMaxEnd - springMinEnd) * readingRatio;
 
         group.add(new Konva.Line({ points: [0, top - 20, 0, top - 5], stroke: "#94a3b8", strokeWidth: 3, lineCap: "round" }));
         group.add(new Konva.Circle({ x: 0, y: top - 25, radius: 7, stroke: "#cbd5e1", strokeWidth: 3 }));
-        group.add(new Konva.Rect({ x: -bodyW / 2, y: top, width: bodyW, height: bodyH, cornerRadius: 7, fill: "#e5e7eb", stroke: "#334155", strokeWidth: 2 }));
-        group.add(new Konva.Rect({ x: -bodyW / 2 + 5, y: top + 5, width: bodyW - 10, height: bodyH - 10, cornerRadius: 4, fill, opacity: 0.2 }));
-        group.add(new Konva.Text({ x: -bodyW / 2, y: top + 10, width: bodyW, align: "center", text: visual.reading ?? "0.0 N", fontSize: 12, fontStyle: "bold", fill: "#0f172a", fontFamily: "monospace" }));
-        group.add(new Konva.Line({ points: [0, scaleTop, 0, scaleBottom], stroke: "#475569", strokeWidth: 2 }));
-        for (let i = 0; i <= 10; i += 1) {
-          const y = scaleTop + ((scaleBottom - scaleTop) * i) / 10;
-          const tick = i % 5 === 0 ? 9 : 5;
-          group.add(new Konva.Line({ points: [-tick / 2, y, tick / 2, y], stroke: "#475569", strokeWidth: 1.5 }));
+        group.add(new Konva.Rect({ x: -bodyW / 2, y: top, width: bodyW, height: bodyH, cornerRadius: 4, fill: "#f8fafc", opacity: 0.92, stroke: "#334155", strokeWidth: 2 }));
+        group.add(new Konva.Rect({ x: -bodyW / 2 + 5, y: top + 5, width: bodyW - 10, height: bodyH - 10, cornerRadius: 2, fill, opacity: 0.1 }));
+
+        const springPoints = [0, springTop];
+        const coils = 9;
+        for (let i = 1; i < coils; i += 1) {
+          const t = i / coils;
+          springPoints.push((i % 2 === 0 ? -1 : 1) * 8, springTop + (springEnd - springTop) * t);
         }
-        group.add(new Konva.Line({ points: [-bodyW / 2 + 5, markerY, bodyW / 2 - 5, markerY], stroke: "#ef4444", strokeWidth: 3, lineCap: "round" }));
-        group.add(new Konva.Line({ points: [0, bottom, 0, bottom + 17], stroke: "#64748b", strokeWidth: 3, lineCap: "round" }));
-        group.add(new Konva.Line({ points: [0, bottom + 17, 7, bottom + 24, 0, bottom + 31, -7, bottom + 24], stroke: "#64748b", strokeWidth: 3, lineCap: "round", lineJoin: "round" }));
+        springPoints.push(0, springEnd);
+        group.add(new Konva.Line({ points: springPoints, stroke: "#64748b", strokeWidth: 3, lineCap: "round", lineJoin: "round" }));
+
+        const scaleX = bodyW / 2 - 8;
+        group.add(new Konva.Line({ points: [scaleX, springMinEnd - 5, scaleX, springMaxEnd + 5], stroke: "#94a3b8", strokeWidth: 1 }));
+        for (let i = 0; i <= 10; i += 1) {
+          const y = springMinEnd + ((springMaxEnd - springMinEnd) * i) / 10;
+          const tick = i % 5 === 0 ? 8 : 4;
+          group.add(new Konva.Line({ points: [scaleX - tick, y, scaleX, y], stroke: "#64748b", strokeWidth: 1.2 }));
+        }
+        group.add(new Konva.Line({ points: [-bodyW / 2 + 5, springEnd, bodyW / 2 - 4, springEnd], stroke: "#ef4444", strokeWidth: 3, lineCap: "round" }));
+        group.add(new Konva.Arrow({
+          points: [bodyW / 2 + 42, springEnd, bodyW / 2 + 5, springEnd],
+          stroke: "#e2e8f0",
+          fill: "#e2e8f0",
+          strokeWidth: 2,
+          pointerLength: 7,
+          pointerWidth: 7,
+          listening: false,
+        }));
+        group.add(new Konva.Text({
+          x: bodyW / 2 + 47,
+          y: springEnd - 8,
+          width: 72,
+          text: visual.reading ?? "0.0 N",
+          fontSize: 12,
+          fontStyle: "bold",
+          fill: "#f8fafc",
+          fontFamily: "monospace",
+          listening: false,
+        }));
+
+        const linkedHook = visual.forceMeterHookBody ? screenOf(visual.forceMeterHookBody) : null;
+        if (linkedHook) {
+          const hookX = linkedHook.x - p.x;
+          const hookY = linkedHook.y - p.y;
+          group.add(new Konva.Line({ points: [0, springEnd, 0, bottom + 2, hookX, hookY - 6], stroke: "#64748b", strokeWidth: 3, lineCap: "round", lineJoin: "round" }));
+          group.add(new Konva.Rect({ x: -bodyW / 2 - 4, y: bottom - 3, width: bodyW + 8, height: 6, fill: "#d6a15f", stroke: "#92400e", strokeWidth: 1 }));
+          group.add(new Konva.Circle({ x: hookX, y: hookY, radius: 6, stroke: "#cbd5e1", strokeWidth: 3 }));
+        } else {
+          group.add(new Konva.Line({ points: [0, bottom, 0, bottom + 17], stroke: "#64748b", strokeWidth: 3, lineCap: "round" }));
+          group.add(new Konva.Line({ points: [0, bottom + 17, 7, bottom + 24, 0, bottom + 31, -7, bottom + 24], stroke: "#64748b", strokeWidth: 3, lineCap: "round", lineJoin: "round" }));
+        }
         return group;
       }      const bodyW = Math.max(44, radius * 3.2);
       const bodyH = Math.max(22, radius * 1.45);
@@ -566,8 +672,28 @@ export function SceneKonva2D({
       return group;
     };
 
-    const makeMetalBallNode = (p: Vec2, radius: number, draggable: boolean): Konva.Group => {
+    const makeMetalBallNode = (
+      p: Vec2,
+      radius: number,
+      draggable: boolean,
+      tone: "steel" | "brass" = "steel",
+    ): Konva.Group => {
       const ballRadius = Math.min(18, Math.max(10, radius * 1.08));
+      const gradientStops = tone === "brass"
+        ? [
+            0, "#fff7c2",
+            0.2, "#f5d76e",
+            0.5, "#c99722",
+            0.8, "#73510f",
+            1, "#2f2108",
+          ]
+        : [
+            0, "#f8fafc",
+            0.2, "#cbd5e1",
+            0.52, "#64748b",
+            0.82, "#334155",
+            1, "#111827",
+          ];
       const group = new Konva.Group({ x: p.x, y: p.y, draggable });
       group.add(
         new Konva.Circle({
@@ -576,14 +702,8 @@ export function SceneKonva2D({
           fillRadialGradientStartRadius: 0,
           fillRadialGradientEndPoint: { x: ballRadius * 0.12, y: ballRadius * 0.18 },
           fillRadialGradientEndRadius: ballRadius * 1.18,
-          fillRadialGradientColorStops: [
-            0, "#f8fafc",
-            0.2, "#cbd5e1",
-            0.52, "#64748b",
-            0.82, "#334155",
-            1, "#111827",
-          ],
-          stroke: "#e2e8f0",
+          fillRadialGradientColorStops: gradientStops,
+          stroke: tone === "brass" ? "#fde68a" : "#e2e8f0",
           strokeWidth: 1.2,
           shadowBlur: 9,
           shadowColor: "#020617",
@@ -596,7 +716,7 @@ export function SceneKonva2D({
           radiusX: ballRadius * 0.24,
           radiusY: ballRadius * 0.13,
           rotation: -32,
-          fill: "#f8fafc",
+          fill: tone === "brass" ? "#fff7c2" : "#f8fafc",
           opacity: 0.72,
           listening: false,
         }),
@@ -607,7 +727,7 @@ export function SceneKonva2D({
           outerRadius: ballRadius * 0.78,
           angle: 76,
           rotation: 34,
-          fill: "#94a3b8",
+          fill: tone === "brass" ? "#d6a62b" : "#94a3b8",
           opacity: 0.32,
           listening: false,
         }),
@@ -638,11 +758,100 @@ export function SceneKonva2D({
       const shape = b.visual?.shape ?? "circle";
       const angle = b.visual?.angle ?? 0;
       if (shape === "forceMeter") return makeForceMeterNode(p, radius, b, fill, draggable);
-      if (shape === "metalBall") return makeMetalBallNode(p, radius, draggable);
+      if (shape === "metalBall") return makeMetalBallNode(p, radius, draggable, b.visual?.metalTone);
       if (shape === "feather") return makeFeatherNode(p, radius, angle, draggable);
+      if (shape === "pulley") {
+        const pulleyRadius = Math.min(22, Math.max(13, radius));
+        const group = new Konva.Group({ x: p.x, y: p.y, draggable });
+        group.add(
+          new Konva.Circle({
+            radius: pulleyRadius,
+            fill: "#1e293b",
+            stroke: "#cbd5e1",
+            strokeWidth: 3,
+            shadowBlur: 8,
+            shadowColor: "#020617",
+            shadowOpacity: 0.45,
+          }),
+          new Konva.Circle({
+            radius: pulleyRadius * 0.7,
+            stroke: "#64748b",
+            strokeWidth: 2,
+          }),
+          new Konva.Circle({
+            radius: Math.max(4, pulleyRadius * 0.22),
+            fill: "#cbd5e1",
+            stroke: "#334155",
+            strokeWidth: 1.5,
+          }),
+        );
+        return group;
+      }
       if (shape === "box") {
         const width = Math.max(22, radius * 2.4);
         const height = Math.max(18, radius * 1.5);
+        if (b.visual?.wheels) {
+          const wheelRadius = Math.min(12, Math.max(6, radius * 0.28));
+          const wheelY = height / 2 + wheelRadius * 0.35;
+          const group = new Konva.Group({ x: p.x, y: p.y, rotation: angle, draggable });
+          group.add(
+            new Konva.Rect({
+              x: -width / 2,
+              y: -height / 2,
+              width,
+              height,
+              fill,
+              cornerRadius: 4,
+              shadowBlur: draggable ? 8 : 0,
+              shadowColor: "#020617",
+              shadowOpacity: 0.45,
+              shadowOffset: { x: 2, y: 4 },
+            }),
+          );
+          if (b.visual.photogateFlag) {
+            const mastX = -width * 0.18;
+            const mastTop = -height / 2 - 32;
+            group.add(
+              new Konva.Line({
+                points: [mastX, -height / 2, mastX, mastTop],
+                stroke: "#cbd5e1",
+                strokeWidth: 2,
+                lineCap: "round",
+              }),
+              new Konva.Rect({
+                x: mastX,
+                y: mastTop,
+                width: 13,
+                height: 21,
+                fill: "#e2e8f0",
+                stroke: "#475569",
+                strokeWidth: 1,
+                cornerRadius: 1,
+              }),
+            );
+          }
+          for (const wheelX of [-width * 0.28, width * 0.28]) {
+            group.add(
+              new Konva.Circle({
+                x: wheelX,
+                y: wheelY,
+                radius: wheelRadius,
+                fill: "#111827",
+                stroke: "#94a3b8",
+                strokeWidth: 2,
+              }),
+              new Konva.Circle({
+                x: wheelX,
+                y: wheelY,
+                radius: Math.max(2.5, wheelRadius * 0.34),
+                fill: "#cbd5e1",
+                stroke: "#475569",
+                strokeWidth: 1,
+              }),
+            );
+          }
+          return group;
+        }
         return new Konva.Rect({
           x: p.x,
           y: p.y,
@@ -719,6 +928,8 @@ export function SceneKonva2D({
       }
     }
 
+    const dynamicAnnotationResetters: (() => void)[] = [];
+
     for (const b of work.bodies) {
       const p = b.fixed ? toScreen(b.x, b.y) : toScreen(readPosition(state, b.id).x, readPosition(state, b.id).y);
       const radius = radiusFor(b);
@@ -747,6 +958,14 @@ export function SceneKonva2D({
           body.x = wpt.x; body.y = wpt.y; body.vx = 0; body.vy = 0;
           kernel = buildKernel(work);
           state = kernel.project(kernel.initialState);
+          simulationSeconds = 0;
+          for (const resetAnnotation of dynamicAnnotationResetters) resetAnnotation();
+          const trail = trailNodes[b.id];
+          if (trail) {
+            trail.points = [];
+            trail.last = { x: dragNode.x(), y: dragNode.y() };
+            trail.line.points([]);
+          }
           draggingId = null;
           onRunningChange(resumeAfterDrag);
         });
@@ -808,7 +1027,60 @@ export function SceneKonva2D({
     };
 
     for (const ann of work.annotations ?? []) {
-      if (ann.kind === "vector") {
+      if (ann.kind === "photogateTimer") {
+        const position = toScreen(ann.at.x, ann.at.y);
+        const timer = new Konva.Text({
+          x: position.x - 34,
+          y: position.y - 8,
+          width: 68,
+          align: "center",
+          text: "0.000 s",
+          fontSize: 14,
+          fontStyle: "bold",
+          fill: ann.color ?? "#86efac",
+          fontFamily: "monospace",
+          listening: false,
+        });
+        layer.add(timer);
+        let startTime: number | null = null;
+        let measuredTime = 0;
+        let finished = false;
+        let previousX: number | null = null;
+        let previousTime = 0;
+        dynamicAnnotationResetters.push(() => {
+          startTime = null;
+          measuredTime = 0;
+          finished = false;
+          previousX = null;
+          previousTime = 0;
+          timer.text("0.000 s");
+        });
+        dynamicAnnotationUpdaters.push(() => {
+          const x = worldOf(ann.body).x;
+          // This experiment begins with the flag beside gate 1. Starting from
+          // zero also keeps the display correct when the user seeks to gate 2.
+          if (startTime == null && x >= ann.startX) startTime = 0;
+          if (startTime != null && !finished) {
+            if (x >= ann.endX) {
+              let stopTime = simulationSeconds;
+              // Interpolate within the rendered frame so the frozen display
+              // represents the instant the flag crosses gate 2, not the next
+              // animation frame.
+              if (previousX != null && previousX < ann.endX && x > previousX) {
+                const crossingFraction = (ann.endX - previousX) / (x - previousX);
+                stopTime = previousTime + crossingFraction * (simulationSeconds - previousTime);
+              }
+              measuredTime = Math.max(0, stopTime - startTime);
+              finished = true;
+            } else {
+              measuredTime = Math.max(0, simulationSeconds - startTime);
+            }
+          }
+          previousX = x;
+          previousTime = simulationSeconds;
+          timer.text(`${measuredTime.toFixed(3)} s`);
+        });
+      } else if (ann.kind === "vector") {
         const color = ann.color ?? "#f59e0b";
         const arrow = new Konva.Arrow({
           points: [0, 0, 0, 0],
@@ -994,6 +1266,18 @@ export function SceneKonva2D({
     }
     let readoutTick = 0;
     const syncShapes = () => {
+      if (runningRef.current) {
+        for (const [bodyId, trail] of Object.entries(trailNodes)) {
+          const current = screenOf(bodyId);
+          if (Math.hypot(current.x - trail.last.x, current.y - trail.last.y) < 1.5) continue;
+          if (trail.points.length === 0) trail.points.push(trail.last.x, trail.last.y);
+          if (trail.points.length < 4000) {
+            trail.points.push(current.x, current.y);
+            trail.line.points(trail.points);
+          }
+          trail.last = current;
+        }
+      }
       for (const b of work.bodies) {
         if (b.fixed || b.id === draggingId) continue;
         circles[b.id]!.position(screenOf(b.id));
@@ -1015,6 +1299,12 @@ export function SceneKonva2D({
       for (const l of links) {
         const pa = screenOf(l.a), pb = screenOf(l.b);
         l.line.points([pa.x, pa.y, pb.x, pb.y]);
+      }
+      for (const rope of rightAngleLinks) {
+        const cart = screenOf(rope.horizontal);
+        const hanger = screenOf(rope.vertical);
+        const corner = toScreen(rope.corner.x, rope.corner.y);
+        rope.line.points([cart.x, cart.y, corner.x, corner.y, hanger.x, hanger.y]);
       }
       for (const updateAnnotation of dynamicAnnotationUpdaters) updateAnnotation();
       // nhãn toạ độ bám theo vật + thu dữ liệu tracking
@@ -1049,6 +1339,7 @@ export function SceneKonva2D({
         const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
         const sub = dt / steps;
         for (let i = 0; i < steps; i++) state = stepScene(kernel, state, sub);
+        simulationSeconds += dt;
       }
       syncShapes();
       // Nét đứt "chảy" trên đường sức animated — LUÔN chạy (kể cả lúc dừng mô
@@ -1082,6 +1373,7 @@ export function SceneKonva2D({
     bodyLabels,
     annotations,
     bodyColors,
+    bodyTrails,
     bodySigns,
     minimalOverlay,
     hideFixedSupportDecoration,

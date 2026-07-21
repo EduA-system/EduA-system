@@ -6,6 +6,17 @@ import type { Scene } from "../engines/mechanics/types";
 import { dinhLuat3Newton } from "./dinh-luat-3-newton";
 
 describe("Định luật III Newton — lò xo nén", () => {
+  it("hiển thị hai xe có đủ bánh, sát mặt đường và chừa vùng an toàn cho ô zoom", () => {
+    const scene = dinhLuat3Newton.applyParams({ mA: 1, mB: 1, k: 40, compression: 0.4 }) as Scene;
+    const carts = scene.bodies.filter((body) => body.id === "vat-a" || body.id === "vat-b");
+
+    expect(carts).toHaveLength(2);
+    expect(carts.every((body) => body.visual?.shape === "box" && body.visual.wheels)).toBe(true);
+    expect(carts.every((body) => body.y === 0.28)).toBe(true);
+    expect(scene.constraints).toContainEqual(expect.objectContaining({ kind: "surface", y: 0 }));
+    expect(scene.groundPadding).toBe(120);
+  });
+
   it("tác dụng hai lực bằng nhau và ngược chiều lên A, B", () => {
     const scene = dinhLuat3Newton.applyParams({ mA: 1, mB: 2, k: 40, compression: 0.4 }) as Scene;
     const positions = Object.fromEntries(scene.bodies.map((body) => [body.id, { x: body.x, y: body.y }]));

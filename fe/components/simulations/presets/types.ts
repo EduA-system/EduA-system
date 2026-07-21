@@ -83,6 +83,8 @@ export type MechanicsPreset = PresetBase & {
   // Màu riêng cho từng vật (id → mã màu) — TĨNH, giống bodyLabels (không phải
   // hàm của params) để tránh tạo reference mới mỗi render.
   bodyColors?: Record<string, string>;
+  // Vệt chuyển động được renderer nối dần theo vị trí thật của từng vật.
+  bodyTrails?: Record<string, { color?: string; width?: number; dash?: number[] }>;
   // Ký hiệu ngắn đè lên TÂM vật (vd "+"/"−"/"0" dấu điện tích), bám theo vật
   // khi di chuyển — khác bodyLabels (vẽ dưới vật). Object tĩnh hoặc hàm params.
   bodySigns?: Record<string, string> | ((p: Record<string, number>) => Record<string, string>);

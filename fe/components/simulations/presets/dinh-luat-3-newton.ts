@@ -32,8 +32,8 @@ export const dinhLuat3Newton: Preset = {
     const initialLength = REST_LENGTH - compression;
     return {
       bodies: [
-        { id: "vat-a", x: -initialLength / 2, y: TRACK_Y, vx: 0, vy: 0, mass: mA, radius: 0.24, visual: { shape: "box", color: "#60a5fa", label: "A" } },
-        { id: "vat-b", x: initialLength / 2, y: TRACK_Y, vx: 0, vy: 0, mass: mB, radius: 0.24, visual: { shape: "box", color: "#f59e0b", label: "B" } },
+        { id: "vat-a", x: -initialLength / 2, y: TRACK_Y, vx: 0, vy: 0, mass: mA, radius: 0.24, visual: { shape: "box", color: "#60a5fa", label: "A", wheels: true } },
+        { id: "vat-b", x: initialLength / 2, y: TRACK_Y, vx: 0, vy: 0, mass: mB, radius: 0.24, visual: { shape: "box", color: "#f59e0b", label: "B", wheels: true } },
       ],
       forces: [{ kind: "spring", a: "vat-a", b: "vat-b", k, restLength: REST_LENGTH, damping: 0, compressionOnly: true }],
       constraints: [{ kind: "surface", x: 0, y: 0, angle: 0, length: 400, friction: 0 }],
@@ -50,6 +50,8 @@ export const dinhLuat3Newton: Preset = {
         },
       ],
       view: { minX: -5, maxX: 5, minY: 0, maxY: 2.2 },
+      // Keep the road and both carts above the shared zoom controls.
+      groundPadding: 120,
     };
   },
   analysis: {

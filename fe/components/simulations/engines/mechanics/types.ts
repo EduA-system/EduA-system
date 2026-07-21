@@ -30,11 +30,17 @@ export type Body = {
   // nguyên hành vi cũ). Có → tham gia va chạm tròn-tròn (xem collisions.ts).
   radius?: number;
   visual?: {
-    shape?: "circle" | "metalBall" | "feather" | "streamlined" | "plate" | "box" | "forceMeter";
+    shape?: "circle" | "metalBall" | "feather" | "streamlined" | "plate" | "box" | "forceMeter" | "pulley";
+    metalTone?: "steel" | "brass";
+    wheels?: boolean;
+    photogateFlag?: boolean;
     color?: string;
     label?: string;
     reading?: string;
     readingRatio?: number;
+    // Optional fixed body marking the moving lower hook of a vertical force
+    // meter. The renderer stretches the visible spring exactly to this point.
+    forceMeterHookBody?: string;
     orientation?: "horizontal" | "vertical";
     angle?: number;
   };
@@ -122,7 +128,19 @@ export type CurveTrackConstraint = {
   friction?: number;
 };
 
-export type Constraint = RodConstraint | RopeConstraint | SurfaceConstraint | CurveTrackConstraint;
+/**
+ * Dây không dãn đổi hướng 90° qua một ròng rọc cố định. Vật `horizontal` chuyển
+ * động ngang về phía ròng rọc bao nhiêu thì vật `vertical` đi xuống bấy nhiêu.
+ */
+export type RightAngleRopeConstraint = {
+  kind: "rightAngleRope";
+  horizontal: string;
+  vertical: string;
+  corner: { x: number; y: number };
+  length: number;
+};
+
+export type Constraint = RodConstraint | RopeConstraint | SurfaceConstraint | CurveTrackConstraint | RightAngleRopeConstraint;
 // Giai đoạn 2: pin (chốt quay), ma sát trên mặt.
 
 // ── Annotation (lớp chú thích hình học) ────────────────────────────────────────
@@ -188,7 +206,17 @@ export type SpringActionReactionAnnotation = {
   labelB?: string;
 };
 
-export type Annotation = VectorAnnotation | SpringVectorAnnotation | SpringActionReactionAnnotation;
+/** Đồng hồ đo thời gian từ lúc vật qua cổng 1 đến lúc qua cổng 2. */
+export type PhotogateTimerAnnotation = {
+  kind: "photogateTimer";
+  body: string;
+  startX: number;
+  endX: number;
+  at: { x: number; y: number };
+  color?: string;
+};
+
+export type Annotation = VectorAnnotation | SpringVectorAnnotation | SpringActionReactionAnnotation | PhotogateTimerAnnotation;
 
 /**
  * Một cảnh mô phỏng = vật + lực + ràng buộc. Đây là thứ AI (tầng 2) khai báo;
@@ -209,4 +237,6 @@ export type Scene = {
   // tự zoom lại mỗi lần đổi tham số. Vắng → renderer tự đo khung theo quỹ đạo
   // (hành vi mặc định cũ). Renderer vẫn luôn đảm bảo thấy mặt đất y=0.
   view?: { minX: number; maxX: number; minY: number; maxY: number };
+  // Khoảng cách từ mặt đất tới đáy canvas (px), dùng khi cần tránh lớp điều khiển nổi.
+  groundPadding?: number;
 };

@@ -38,13 +38,50 @@ export const ongNewtonChanKhong: Preset = {
     const g = p.g ?? 9.8;
     return {
       bodies: [
-        { id: "vien-bi", x: -0.45, y: h, vx: 0, vy: 0, mass: ballMass(p) },
-        { id: "long-chim", x: 0.45, y: h, vx: 0, vy: 0, mass: featherMass(p), visual: { shape: "box", color: "#a78bfa", label: "lông chim" } },
+        {
+          id: "vien-bi",
+          x: -0.45,
+          y: h,
+          vx: 0,
+          vy: 0,
+          mass: ballMass(p),
+          radius: 0.18,
+          visual: { shape: "metalBall", label: "viên bi" },
+        },
+        {
+          id: "long-chim",
+          x: 0.45,
+          y: h,
+          vx: 0,
+          vy: 0,
+          mass: featherMass(p),
+          radius: 0.22,
+          visual: { shape: "feather", label: "lông chim", angle: 90 },
+        },
       ],
       forces: [{ kind: "gravity", g }],
       constraints: [{ kind: "surface", x: 0, y: 0, angle: 0, length: 400, friction: 0.8 }],
+      view: { minX: -Math.max(2.1, h * 0.18) / 2 - 0.18, maxX: Math.max(2.1, h * 0.18) / 2 + 0.18, minY: -0.2, maxY: h + 0.6 },
     };
   },
+  annotations: (p) => {
+    const h = p.h ?? 9;
+    const tubeWidth = Math.max(2.1, h * 0.18);
+    const tubeBottom = -0.12;
+    const tubeTop = h + 0.42;
+    const tubeHeight = tubeTop - tubeBottom;
+    const tubeCenterY = (tubeTop + tubeBottom) / 2;
+    const capHeight = Math.max(0.05, h * 0.018);
+
+    return [
+      { kind: "rect", x: 0, y: tubeCenterY, width: tubeWidth, height: tubeHeight, fill: "rgba(125, 211, 252, 0.07)", stroke: "rgba(186, 230, 253, 0.82)", strokeWidth: 2.4 },
+      { kind: "rect", x: 0, y: tubeCenterY, width: tubeWidth - 0.16, height: tubeHeight - 0.12, fill: "rgba(224, 242, 254, 0.025)", stroke: "rgba(125, 211, 252, 0.26)", strokeWidth: 1 },
+      { kind: "rect", x: -tubeWidth * 0.36, y: tubeCenterY, width: Math.max(0.035, tubeWidth * 0.035), height: tubeHeight - 0.2, fill: "rgba(240, 249, 255, 0.26)", stroke: "rgba(240, 249, 255, 0)", strokeWidth: 0 },
+      { kind: "rect", x: 0, y: tubeTop, width: tubeWidth + 0.14, height: capHeight, fill: "rgba(148, 163, 184, 0.72)", stroke: "rgba(226, 232, 240, 0.88)", strokeWidth: 1.5 },
+      { kind: "rect", x: 0, y: tubeBottom, width: tubeWidth + 0.14, height: capHeight, fill: "rgba(71, 85, 105, 0.92)", stroke: "rgba(203, 213, 225, 0.78)", strokeWidth: 1.5 },
+    ];
+  },
+  minimalOverlay: true,
   analysis: {
     landmarks: [
       {

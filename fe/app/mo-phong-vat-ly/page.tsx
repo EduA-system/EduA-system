@@ -66,7 +66,7 @@ const SceneKonvaRotation = dynamic(
   { ssr: false },
 );
 const SceneKonvaMagneticLoop = dynamic(
-  () => import("@/components/simulations/renderers/magnetic-loop/scene-konva-magnetic-loop").then((m) => m.SceneKonvaMagneticLoop),
+  () => import("@/components/simulations/renderers/magnetic-loop/scene-konva-ac-generator").then((m) => m.SceneKonvaAcGenerator),
   { ssr: false },
 );
 const SceneKonvaMagnetism = dynamic(
@@ -219,10 +219,32 @@ function Thumb({ id }: { id: string }) {
     case "dinh-luat-2-newton":
       return frame(
         <>
-          <line x1="20" y1="90" x2="180" y2="90" stroke="#475569" strokeWidth="2" />
-          <rect x="58" y="66" width="30" height="24" rx="3" fill="#f472b6" />
-          <path d="M96 78 h44" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" />
-          <path d="M132 70 l12 8 l-12 8" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          {/* Máng trượt, xe và tấm chắn sáng. */}
+          <rect x="18" y="72" width="156" height="10" rx="2" fill="#334155" stroke="#cbd5e1" strokeWidth="1.5" />
+          <rect x="24" y="74" width="145" height="2" fill="#dbeafe" />
+          <rect x="60" y="55" width="31" height="17" rx="3" fill="#60a5fa" stroke="#1e3a8a" strokeWidth="1.5" />
+          <circle cx="67" cy="74" r="5" fill="#111827" stroke="#cbd5e1" strokeWidth="1.5" />
+          <circle cx="84" cy="74" r="5" fill="#111827" stroke="#cbd5e1" strokeWidth="1.5" />
+          <path d="M71 55 V35" stroke="#cbd5e1" strokeWidth="2" />
+          <rect x="71" y="34" width="8" height="14" rx="1" fill="#e2e8f0" />
+
+          {/* Hai cổng quang điện. */}
+          <path d="M82 72 V32 M103 72 V32" stroke="#64748b" strokeWidth="3" />
+          <rect x="77" y="29" width="10" height="7" rx="2" fill="#2563eb" />
+          <rect x="98" y="29" width="10" height="7" rx="2" fill="#2563eb" />
+          <path d="M82 43 H103" stroke="#7dd3fc" strokeWidth="1.5" strokeDasharray="3 3" />
+          <text x="84" y="52" fontSize="8" fontWeight="700" fill="#7dd3fc">0,5 m</text>
+
+          {/* Dây, ròng rọc và quả nặng. */}
+          <path d="M91 63 H168 V101" fill="none" stroke="#cbd5e1" strokeWidth="1.8" />
+          <circle cx="168" cy="63" r="9" fill="#1e293b" stroke="#cbd5e1" strokeWidth="2" />
+          <circle cx="168" cy="63" r="3" fill="#cbd5e1" />
+          <rect x="160" y="96" width="16" height="17" rx="2" fill="#f59e0b" />
+
+          {/* Bộ đo thời gian. */}
+          <rect x="89" y="91" width="48" height="24" rx="4" fill="#111827" stroke="#94a3b8" strokeWidth="1.5" />
+          <rect x="95" y="98" width="21" height="9" rx="1" fill="#0f3d2e" stroke="#34d399" strokeWidth="1" />
+          <text x="98" y="105" fontSize="7" fontFamily="monospace" fill="#86efac">0.000</text>
         </>,
       );
     case "tong-hop-luc-dong-quy":
@@ -1328,6 +1350,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                     bodySigns={bodySigns}
                     annotations={annotations}
                     bodyColors={preset.kind === undefined || preset.kind === "mechanics" ? preset.bodyColors : undefined}
+                    bodyTrails={preset.kind === undefined || preset.kind === "mechanics" ? preset.bodyTrails : undefined}
                     minimalOverlay={preset.kind === undefined || preset.kind === "mechanics" ? preset.minimalOverlay : undefined}
                     hideFixedSupportDecoration={preset.kind === undefined || preset.kind === "mechanics" ? preset.hideFixedSupportDecoration : undefined}
                     speed={speed}
@@ -1486,7 +1509,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                       schema={preset.params}
                       values={params}
                       onChange={(key, value) => {
-                        setParams((prev) => ({ ...prev, [key]: value }));
+                        setParams((prev) => (Object.is(prev[key], value) ? prev : { ...prev, [key]: value }));
                         markEdited();
                       }}
                     />
