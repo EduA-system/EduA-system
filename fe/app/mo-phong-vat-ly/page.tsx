@@ -34,6 +34,14 @@ import type { StringWaveScene } from "@/components/simulations/engines/string-wa
 import type { WaveFieldScene } from "@/components/simulations/engines/wave-field/types";
 import type { PointChargeFieldScene } from "@/components/simulations/engines/point-charge-field/types";
 import type { RotationScene } from "@/components/simulations/engines/rotation/types";
+import type { MagneticLoopScene } from "@/components/simulations/engines/magnetic-loop/types";
+import type { MagneticScene } from "@/components/simulations/engines/magnetism/types";
+import type { ParallelCurrentSheetsScene } from "@/components/simulations/engines/parallel-current-sheets/types";
+import type { IronFilingsScene } from "@/components/simulations/engines/iron-filings/types";
+import type {
+  ElectromagneticInductionScene,
+  VariableCurrentInductionScene,
+} from "@/components/simulations/engines/electromagnetic-induction/types";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
@@ -55,6 +63,30 @@ const SceneCanvasWaveField = dynamic(
 );
 const SceneKonvaRotation = dynamic(
   () => import("@/components/simulations/renderers/rotation/scene-konva-rotation").then((m) => m.SceneKonvaRotation),
+  { ssr: false },
+);
+const SceneKonvaMagneticLoop = dynamic(
+  () => import("@/components/simulations/renderers/magnetic-loop/scene-konva-magnetic-loop").then((m) => m.SceneKonvaMagneticLoop),
+  { ssr: false },
+);
+const SceneKonvaMagnetism = dynamic(
+  () => import("@/components/simulations/renderers/magnetism/scene-konva-magnetism").then((m) => m.SceneKonvaMagnetism),
+  { ssr: false },
+);
+const SceneKonvaParallelCurrentSheets = dynamic(
+  () => import("@/components/simulations/renderers/parallel-current-sheets/scene-konva-parallel-current-sheets").then((m) => m.SceneKonvaParallelCurrentSheets),
+  { ssr: false },
+);
+const SceneKonvaElectromagneticInduction = dynamic(
+  () => import("@/components/simulations/renderers/electromagnetic-induction/scene-konva-electromagnetic-induction").then((m) => m.SceneKonvaElectromagneticInduction),
+  { ssr: false },
+);
+const SceneKonvaVariableCurrentInduction = dynamic(
+  () => import("@/components/simulations/renderers/electromagnetic-induction/scene-konva-variable-current-induction").then((m) => m.SceneKonvaVariableCurrentInduction),
+  { ssr: false },
+);
+const SceneKonvaIronFilings = dynamic(
+  () => import("@/components/simulations/renderers/iron-filings/scene-konva-iron-filings").then((m) => m.SceneKonvaIronFilings),
   { ssr: false },
 );
 // Canvas thuần — điện phổ 2 điện tích điểm (đường sức truy vết RK4 thật).
@@ -88,7 +120,6 @@ const REVIEWED_SIMULATION_IDS = new Set([
 type Placeholder = { id: string; title: string; domain: Domain; grade: 10 | 11 | 12; desc: string };
 const PLACEHOLDERS: Placeholder[] = [
   { id: "ohm", title: "Định luật Ohm", domain: "Điện & Từ", grade: 11, desc: "Mạch điện cơ bản, khảo sát quan hệ U – I – R." },
-  { id: "induction", title: "Cảm ứng điện từ", domain: "Điện & Từ", grade: 12, desc: "Nam châm chuyển động qua cuộn dây sinh dòng cảm ứng." },
   { id: "boyle", title: "Định luật Boyle", domain: "Nhiệt & Khí", grade: 12, desc: "Nén khí đẳng nhiệt, quan sát quan hệ p – V." },
   { id: "decay", title: "Phóng xạ & chu kỳ bán rã", domain: "Hạt nhân", grade: 12, desc: "Mô phỏng phân rã ngẫu nhiên theo thời gian." },
 ];
@@ -97,9 +128,9 @@ const PLACEHOLDERS: Placeholder[] = [
 
 function Thumb({ id }: { id: string }) {
   const common = "h-full w-full";
-  const frame = (children: ReactNode) => (
+  const frame = (children: ReactNode, background = "#0f172a") => (
     <svg viewBox="0 0 200 120" className={common}>
-      <rect width="200" height="120" fill="#0f172a" />
+      <rect width="200" height="120" fill={background} />
       {children}
     </svg>
   );
@@ -629,6 +660,112 @@ function Thumb({ id }: { id: string }) {
           <path d="M87 60 h14" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" />
           <path d="M97 56 L101 60 L97 64" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </>,
+      );
+    case "tuong-tac-nam-cham-va-kim-nam-cham":
+      return frame(
+        <>
+          <circle cx="132" cy="59" r="31" fill="#f8fafc" stroke="#94a3b8" strokeWidth="2" />
+          <path d="M105 59 L132 53 L159 59 L132 65 Z" fill="#dc2626" stroke="#991b1b" strokeWidth="1" />
+          <path d="M105 59 L132 53 L132 65 Z" fill="#2563eb" stroke="#1d4ed8" strokeWidth="1" />
+          <circle cx="132" cy="59" r="4" fill="#f8fafc" stroke="#475569" strokeWidth="1.5" />
+          <text x="148" y="51" fontSize="10" fontWeight="bold" fill="#dc2626">N</text>
+          <text x="108" y="72" fontSize="10" fontWeight="bold" fill="#60a5fa">S</text>
+          <rect x="22" y="45" width="60" height="28" rx="4" fill="#2563eb" stroke="#1e3a8a" strokeWidth="2" />
+          <path d="M22 45h30v28H22z" fill="#dc2626" />
+          <text x="34" y="63" fontSize="13" fontWeight="bold" fill="#fff">N</text>
+          <text x="64" y="63" fontSize="13" fontWeight="bold" fill="#fff">S</text>
+          <path d="M88 54 C98 43 105 43 113 48" fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="3 3" />
+        </>,
+      );
+    case "tuong-tac-hai-tam-kim-loai-mang-dong-dien":
+      return frame(
+        <>
+          <rect x="35" y="18" width="130" height="10" rx="2" fill="#b77945" />
+          {[65, 135].map((x, index) => (
+            <g key={x}>
+              <rect x={x - 16} y="25" width="32" height="13" rx="2" fill="#cbd5e1" stroke="#64748b" strokeWidth="1.5" />
+              <circle cx={x - 11} cy="31" r="2.5" fill="#f8fafc" stroke="#334155" />
+              <circle cx={x + 11} cy="31" r="2.5" fill="#f8fafc" stroke="#334155" />
+              <rect x={x - 11} y="38" width="22" height="48" rx="2" fill="#b9c3cc" stroke="#475569" strokeWidth="1.5" />
+              <path d={index === 0 ? "M" + x + " 76V48" : "M" + x + " 48V76"} stroke={index === 0 ? "#e11d48" : "#2563eb"} strokeWidth="3" />
+              <path d={index === 0 ? "M" + (x - 4) + " 53 L" + x + " 47 L" + (x + 4) + " 53" : "M" + (x - 4) + " 71 L" + x + " 77 L" + (x + 4) + " 71"} fill="none" stroke={index === 0 ? "#e11d48" : "#2563eb"} strokeWidth="2" />
+              <rect x={x - 16} y="84" width="32" height="10" rx="2" fill="#cbd5e1" stroke="#64748b" strokeWidth="1.5" />
+            </g>
+          ))}
+          <path d="M91 63 h18" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
+          <path d="M105 59 l6 4 l-6 4" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </>,
+      );
+
+    case "tu-pho":
+      return frame(
+        <>
+          <rect x="18" y="16" width="164" height="88" rx="6" fill="#17233a" />
+          <g stroke="#94a3b8" strokeWidth="1" opacity=".8">
+            <path d="M35 60 Q72 24 104 60 Q136 96 170 60" fill="none" />
+            <path d="M30 45 Q75 12 108 55 Q142 94 174 44" fill="none" />
+            <path d="M30 76 Q75 108 108 65 Q142 26 174 76" fill="none" />
+            <path d="M42 32 Q78 15 110 55 Q135 82 160 31" fill="none" />
+            <path d="M42 88 Q78 105 110 65 Q135 38 160 89" fill="none" />
+          </g>
+          <rect x="62" y="50" width="76" height="20" rx="3" fill="#dc2626" stroke="#7f1d1d" strokeWidth="1.5" />
+          <rect x="100" y="50" width="38" height="20" rx="3" fill="#2563eb" />
+          <text x="72" y="64" fontSize="10" fontWeight="bold" fill="#fff">N</text>
+          <text x="122" y="64" fontSize="10" fontWeight="bold" fill="#fff">S</text>
+        </>,
+      );
+    case "bien-thien-dong-dien-bang-bien-tro-khoa-k":
+      return frame(
+        <>
+          <path d="M31 79V99H94V80M45 79V59" fill="none" stroke="#60a5fa" strokeWidth="2.3" />
+          <path d="M94 80V101H166V84M114 84V59" fill="none" stroke="#f87171" strokeWidth="2.3" />
+          <rect x="22" y="28" width="38" height="31" rx="5" fill="#e2e8f0" stroke="#64748b" strokeWidth="1.5" />
+          <path d="M29 48 A12 12 0 0 1 53 48" fill="none" stroke="#64748b" strokeWidth="1.5" />
+          <line x1="41" y1="48" x2="49" y2="38" stroke="#ef4444" strokeWidth="2" />
+          <rect x="72" y="54" width="48" height="29" rx="4" fill="#8b5e3c" stroke="#5f3c27" strokeWidth="1.5" />
+          {[79, 85, 91, 101, 107, 113].map((x) => <ellipse key={x} cx={x} cy="68" rx="5" ry="11" fill="none" stroke="#f59e0b" strokeWidth="1.4" />)}
+          <rect x="133" y="27" width="42" height="30" rx="5" fill="#cbd5e1" stroke="#64748b" strokeWidth="1.5" />
+          <circle cx="144" cy="45" r="4" fill="#2563eb" />
+          <circle cx="164" cy="45" r="4" fill="#dc2626" />
+          <rect x="128" y="76" width="45" height="17" rx="4" fill="#d7a06b" stroke="#7c4a28" strokeWidth="1.5" />
+          <line x1="135" y1="84" x2="166" y2="84" stroke="#b45309" strokeWidth="4" />
+          <line x1="149" y1="76" x2="149" y2="91" stroke="#334155" strokeWidth="2" />
+        </>,
+        "#eef3f7",
+      );
+    case "cam-ung-dien-tu":
+      return frame(
+        <>
+          <path d="M42 77 C25 60 28 34 58 31 C78 29 83 43 92 48" fill="none" stroke="#60a5fa" strokeWidth="2.5" />
+          <path d="M42 82 C27 92 46 104 87 86" fill="none" stroke="#f87171" strokeWidth="2.5" />
+          <rect x="28" y="55" width="52" height="33" rx="4" fill="#a56a38" stroke="#d4a574" strokeWidth="1.5" />
+          {[36,42,48,54,60,66,72].map((x)=><ellipse key={x} cx={x} cy="71" rx="5" ry="14" fill="none" stroke="#fbbf24" strokeWidth="1.4" />)}
+          <path d="M52 25 A27 27 0 0 1 106 25" fill="none" stroke="#cbd5e1" strokeWidth="3" />
+          <line x1="79" y1="25" x2="94" y2="9" stroke="#ef4444" strokeWidth="2.5" />
+          <circle cx="79" cy="25" r="3.5" fill="#e2e8f0" />
+          <rect x="112" y="57" width="60" height="27" rx="3" fill="#2563eb" stroke="#1e3a8a" strokeWidth="1.5" />
+          <rect x="112" y="57" width="30" height="27" rx="3" fill="#dc2626" />
+          <text x="123" y="75" fontSize="12" fontWeight="bold" fill="#fff">N</text>
+          <text x="153" y="75" fontSize="12" fontWeight="bold" fill="#fff">S</text>
+          <path d="M105 70 h-14" stroke="#34d399" strokeWidth="2" strokeDasharray="3 2" />
+          <path d="M96 66 l-6 4 l6 4" fill="none" stroke="#34d399" strokeWidth="2" />
+        </>,
+      );
+    case "khung-day-quay-trong-tu-truong":
+      return frame(
+        <>
+          {[27, 49, 71, 93].map((y) => (
+            <g key={y}><line x1="12" y1={y} x2="188" y2={y} stroke="#1596b8" strokeWidth="1.4" opacity=".6" /><path d={`M181 ${y - 4} l7 4 l-7 4`} fill="none" stroke="#1596b8" strokeWidth="1.4" /></g>
+          ))}
+          <path d="M70 26 L62 91 L136 78 L145 17 Z" fill="none" stroke="#c8433b" strokeWidth="4" strokeLinejoin="round" />
+          <path d="M66 59 l-22 22" stroke="#d92d20" strokeWidth="3" strokeLinecap="round" />
+          <path d="M45 73 l-3 11 l11-3" fill="none" stroke="#d92d20" strokeWidth="3" />
+          <path d="M140 48 l22-22" stroke="#d92d20" strokeWidth="3" strokeLinecap="round" />
+          <path d="M153 28 l11-4 l-4 11" fill="none" stroke="#d92d20" strokeWidth="3" />
+          <text x="55" y="57" fontSize="13" fontWeight="700" fill="#17324d">M</text>
+          <text x="171" y="20" fontSize="14" fontWeight="700" fill="#1596b8">B</text>
+        </>,
+        "#f7faf9",
       );
     default: {
       const icons: Record<string, string> = {
@@ -1166,6 +1303,33 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                       setParams((prev) => ({ ...prev, ...patch }));
                       markEdited();
                     }}
+                  />
+                ) : preset.kind === "electromagnetic-induction" ? (
+                  <SceneKonvaElectromagneticInduction scene={scene as ElectromagneticInductionScene} running={running} resetSignal={resetSignal} onRunningChange={setRunning} speed={speed} />
+                ) : preset.kind === "variable-current-induction" ? (
+                  <SceneKonvaVariableCurrentInduction scene={scene as VariableCurrentInductionScene} running={running} resetSignal={resetSignal} onRunningChange={setRunning} speed={speed} />
+                ) : preset.kind === "iron-filings" ? (
+                  <SceneKonvaIronFilings scene={scene as IronFilingsScene} running={running} resetSignal={resetSignal} onRunningChange={setRunning} speed={speed} />
+                ) : preset.kind === "parallel-current-sheets" ? (
+                  <SceneKonvaParallelCurrentSheets scene={scene as ParallelCurrentSheetsScene} running={running} resetSignal={resetSignal} onRunningChange={setRunning} speed={speed} />
+                ) : preset.kind === "magnetism" ? (
+                  <SceneKonvaMagnetism
+                    scene={scene as MagneticScene}
+                    running={running}
+                    resetSignal={resetSignal}
+                    onRunningChange={setRunning}
+                    speed={speed}
+                  />
+                ) : preset.kind === "magnetic-loop" ? (
+                  <SceneKonvaMagneticLoop
+                    scene={scene as MagneticLoopScene}
+                    running={running}
+                    resetSignal={resetSignal}
+                    onRunningChange={setRunning}
+                    seekSeconds={activeMark?.seconds}
+                    seekToken={seekToken}
+                    markLabel={activeMark?.label}
+                    speed={speed}
                   />
                 ) : preset.kind === "rotation" ? (
                   <SceneKonvaRotation

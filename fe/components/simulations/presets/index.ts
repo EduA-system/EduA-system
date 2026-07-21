@@ -38,6 +38,12 @@ import { nhiemDienDay } from "./nhiem-dien-day";
 import { nhiemDienHut } from "./nhiem-dien-hut";
 import { dienTruong2BanSongSong } from "./dien-truong-2-ban-song-song";
 import { dienPhoHaiDienTich } from "./dien-pho-hai-dien-tich";
+import { tuongTacNamChamVaKimNamCham } from "./tuong-tac-nam-cham-va-kim-nam-cham";
+import { tuongTacHaiTamKimLoaiMangDongDien } from "./tuong-tac-hai-tam-kim-loai-mang-dong-dien";
+import { tuPho } from "./tu-pho";
+import { camUngDienTu } from "./cam-ung-dien-tu";
+import { bienThienDongDienBangBienTroKhoaK } from "./bien-thien-dong-dien-bang-bien-tro-khoa-k";
+import { khungDayQuayTrongTuTruong } from "./khung-day-quay-trong-tu-truong";
 
 export type { Preset, PresetParam, Domain } from "./types";
 
@@ -78,6 +84,12 @@ export const PRESETS: Preset[] = [
   nhiemDienHut,
   dienTruong2BanSongSong,
   dienPhoHaiDienTich,
+  tuongTacNamChamVaKimNamCham,
+  tuongTacHaiTamKimLoaiMangDongDien,
+  tuPho,
+  camUngDienTu,
+  bienThienDongDienBangBienTroKhoaK,
+  khungDayQuayTrongTuTruong,
 ];
 
 export function getPreset(id: string): Preset | undefined {

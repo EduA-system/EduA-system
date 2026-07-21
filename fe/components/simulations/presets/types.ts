@@ -11,6 +11,14 @@ import type { StringWaveScene } from "../engines/string-wave/types";
 import type { WaveFieldScene } from "../engines/wave-field/types";
 import type { PointChargeFieldScene } from "../engines/point-charge-field/types";
 import type { RotationScene } from "../engines/rotation/types";
+import type { MagneticLoopScene } from "../engines/magnetic-loop/types";
+import type { MagneticScene } from "../engines/magnetism/types";
+import type { ParallelCurrentSheetsScene } from "../engines/parallel-current-sheets/types";
+import type { IronFilingsScene } from "../engines/iron-filings/types";
+import type {
+  ElectromagneticInductionScene,
+  VariableCurrentInductionScene,
+} from "../engines/electromagnetic-induction/types";
 import type { ParamDef } from "../shared/param-panel";
 import type { SceneAnnotation } from "../shared/scene-types";
 
@@ -120,4 +128,25 @@ export type RotationPreset = PresetBase & {
   applyParams: (p: Record<string, number>) => RotationScene;
 };
 
-export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset | RotationPreset;
+export type MagneticLoopPreset = PresetBase & {
+  kind: "magnetic-loop";
+  applyParams: (p: Record<string, number>) => MagneticLoopScene;
+};
+
+export type MagneticPreset = PresetBase & {
+  kind: "magnetism";
+  applyParams: (p: Record<string, number>) => MagneticScene;
+};
+
+export type ParallelCurrentSheetsPreset = PresetBase & {
+  kind: "parallel-current-sheets";
+  applyParams: (p: Record<string, number>) => ParallelCurrentSheetsScene;
+};
+
+export type IronFilingsPreset = PresetBase & { kind: "iron-filings"; applyParams: (p: Record<string, number>) => IronFilingsScene; };
+
+export type ElectromagneticInductionPreset = PresetBase & { kind: "electromagnetic-induction"; applyParams: (p: Record<string, number>) => ElectromagneticInductionScene; };
+
+export type VariableCurrentInductionPreset = PresetBase & { kind: "variable-current-induction"; applyParams: (p: Record<string, number>) => VariableCurrentInductionScene; };
+
+export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset | RotationPreset | MagneticLoopPreset | MagneticPreset | ParallelCurrentSheetsPreset | IronFilingsPreset | ElectromagneticInductionPreset | VariableCurrentInductionPreset;
