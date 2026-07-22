@@ -1,4 +1,4 @@
-export type Role = "TEACHER" | "MODERATOR" | "ADMINISTRATOR";
+export type Role = "TEACHER" | "MODERATOR" | "ADMINISTRATOR" | "IT_MANAGEMENT";
 
 export type NavItem = {
   label: string;
@@ -55,6 +55,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog/moderation", requiredRole: ["MODERATOR", "ADMINISTRATOR"] },
       { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "ADMINISTRATOR"] },
+      { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n IT", icon: "settings", href: "/it-management-users", requiredRole: ["ADMINISTRATOR"] },
+      { label: "C\u1ea5u h\u00ecnh AI", icon: "settings", href: "/it-management", requiredRole: ["IT_MANAGEMENT"] },
     ],
   },
 ];

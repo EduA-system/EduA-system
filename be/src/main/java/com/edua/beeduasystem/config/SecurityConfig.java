@@ -3,6 +3,7 @@ package com.edua.beeduasystem.config;
 import com.edua.beeduasystem.infrastructure.security.JwtAuthenticationFilter;
 import com.edua.beeduasystem.infrastructure.security.RateLimitFilter;
 import com.edua.beeduasystem.repository.gateways.TokenService;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Bảo mật stateless (JWT). Public: login/refresh/logout, health, swagger, STOMP handshake
@@ -25,6 +28,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     private static final String[] PUBLIC_PATHS = {
             "/api/auth/google",
@@ -56,17 +61,23 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Cho phep exception handler xu ly loi goc; neu khong ERROR dispatch se bi che thanh 401.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
                         .requestMatchers(PUBLIC_PATHS).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, e) -> {
+                            log.warn("security authentication required method={} uri={} dispatcher={} reason={}",
+                                    request.getMethod(), request.getRequestURI(), request.getDispatcherType(), e.getMessage());
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             response.getWriter().write("{\"message\":\"Authentication required.\"}");
                         })
                         .accessDeniedHandler((request, response, e) -> {
+                            log.warn("security access denied method={} uri={} dispatcher={} reason={}",
+                                    request.getMethod(), request.getRequestURI(), request.getDispatcherType(), e.getMessage());
                             response.setStatus(HttpStatus.FORBIDDEN.value());
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             response.getWriter().write("{\"message\":\"Access denied.\"}");

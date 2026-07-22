@@ -13,6 +13,7 @@ import {
   getSlideDesignContext,
   setSlideDesignContext,
 } from "@/lib/slide-create/design-session";
+import { slidesWithQuizAnswerReveals } from "@/lib/slide-create/quiz-answer-slides";
 
 export type DesignPipelineInput = {
   topic: string;
@@ -39,7 +40,7 @@ function slideOutlineText(slide: SlideItem): string {
 }
 
 function flattenSlides(parts: OutlinePart[]): SlideItem[] {
-  return parts.flatMap((part) => part.slides);
+  return slidesWithQuizAnswerReveals(parts);
 }
 
 function isTitleSlot(slot: { id: string; sourceBlockId: string }): boolean {

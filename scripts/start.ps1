@@ -40,6 +40,7 @@ $feUrl     = "http://localhost:$fePort"
 
 $beDir     = Join-Path $rootDir "be"
 $feDir     = Join-Path $rootDir "fe"
+$loadedEnv = @{}
 
 $beMvw     = if ($IsWindows -or ($env:OS -eq "Windows_NT")) { "mvnw.cmd" } else { "./mvnw" }
 
@@ -62,6 +63,7 @@ if (Test-Path $envFile) {
             # Set every key as an env var. DB_URL / DB_USERNAME / DB_PASSWORD
             # are read directly by Spring Boot (application.properties).
             Set-Item "env:$key" $val
+            $loadedEnv[$key] = $val
         }
     }
     if ($env:DB_URL) {
@@ -383,7 +385,13 @@ try {
 
         $bePsi = New-Object System.Diagnostics.ProcessStartInfo
         $bePsi.FileName               = "cmd.exe"
-        $bePsi.Arguments             = "/c cd /d `"$beDir`" & $beMvw spring-boot:run"
+        # cmd.exe receives an explicit copy of every .env value as well as
+        # ProcessStartInfo.EnvironmentVariables. This avoids a stale parent
+        # APP_AUTH_JWT_SECRET winning when Maven launches the Java child.
+        $cmdEnv = ($loadedEnv.GetEnumerator() | ForEach-Object {
+            'set "' + $_.Key + '=' + $_.Value + '"'
+        }) -join ' & '
+        $bePsi.Arguments             = "/c cd /d `"$beDir`" & $cmdEnv & $beMvw spring-boot:run"
         $bePsi.WorkingDirectory       = $beDir
         $bePsi.UseShellExecute        = $false
         $bePsi.RedirectStandardOutput = $true
@@ -395,6 +403,11 @@ try {
             if ($kv.Key -notin $bePsi.EnvironmentVariables.Keys) {
                 $bePsi.EnvironmentVariables.Add($kv.Key, $kv.Value.ToString())
             }
+        }
+        # Values explicitly loaded from .env must win over variables inherited
+        # from an existing shell (especially APP_AUTH_JWT_SECRET).
+        foreach ($entry in $loadedEnv.GetEnumerator()) {
+            $bePsi.EnvironmentVariables[$entry.Key] = $entry.Value
         }
 
         $beProc = [System.Diagnostics.Process]::Start($bePsi)

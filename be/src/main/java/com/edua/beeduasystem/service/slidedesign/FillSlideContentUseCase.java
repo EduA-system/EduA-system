@@ -6,9 +6,12 @@ import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentFillSlotRe
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentSlotRequest;
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentStyleResponse;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.service.ai.AiSystemPromptService;
+import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -26,17 +29,26 @@ public class FillSlideContentUseCase {
     private final SlideDesignPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
     private final String modelLabel;
+    private final AiSystemPromptService systemPromptService;
 
+    @Autowired
     public FillSlideContentUseCase(
             AiClient aiClient,
             SlideDesignPromptBuilder promptBuilder,
             ObjectMapper objectMapper,
+            AiSystemPromptService systemPromptService,
             @Value("${app.ai.openai.default-model:gpt-4o-mini}") String openaiModel,
             @Value("${app.ai.deepseek.default-model:deepseek-chat}") String deepseekModel) {
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
+        this.systemPromptService = systemPromptService;
         this.modelLabel = openaiModel + " → " + deepseekModel;
+    }
+
+    FillSlideContentUseCase(AiClient aiClient, SlideDesignPromptBuilder promptBuilder, ObjectMapper objectMapper,
+                            String openaiModel, String deepseekModel) {
+        this(aiClient, promptBuilder, objectMapper, null, openaiModel, deepseekModel);
     }
 
     public SlideContentFillResponse execute(SlideContentFillRequest req) {
@@ -48,7 +60,7 @@ public class FillSlideContentUseCase {
         String prompt = promptBuilder.buildStep3ContentSlotsPrompt(req);
         log.info("slide-design.slot-fill prompt length={} slots={}", prompt.length(), requested.size());
         long started = System.currentTimeMillis();
-        String raw = aiClient.generate(prompt);
+        String raw = aiClient.generate(systemPromptService == null ? prompt : systemPromptService.apply(AiPromptKey.SLIDE_DESIGN_CONTENT_SLOTS, prompt));
         long latencyMs = System.currentTimeMillis() - started;
 
         RawResponse rawResponse;

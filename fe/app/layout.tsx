@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { AuthProvider } from "@/lib/auth/AuthContext";
+import { AppRouteGuard } from "@/lib/auth/AppRouteGuard";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 
@@ -53,7 +54,7 @@ export default function RootLayout({
       className={`${inter.variable} ${libertine.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider><AppRouteGuard>{children}</AppRouteGuard></AuthProvider>
       </body>
     </html>
   );

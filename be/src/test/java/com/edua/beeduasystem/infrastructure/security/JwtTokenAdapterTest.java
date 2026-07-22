@@ -64,4 +64,14 @@ class JwtTokenAdapterTest {
         JwtTokenAdapter other = new JwtTokenAdapter("ffffffffffffffffffffffffffffffffffffffffffffffff", Duration.ofMinutes(60));
         assertThatThrownBy(() -> other.parse(token)).isInstanceOf(InvalidTokenException.class);
     }
+
+    @Test
+    void constructor_missingOrWeakSecret_throws() {
+        assertThatThrownBy(() -> new JwtTokenAdapter("", Duration.ofMinutes(60)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("app.auth.jwt.secret");
+        assertThatThrownBy(() -> new JwtTokenAdapter("too-short", Duration.ofMinutes(60)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("at least 32 UTF-8 bytes");
+    }
 }

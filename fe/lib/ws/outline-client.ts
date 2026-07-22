@@ -6,6 +6,8 @@ export type OutlineEvent =
   | { type: "OUTLINE_PART_SKELETON_READY"; sessionId: string; part: import("@/lib/api/slides").OutlinePart }
   | { type: "OUTLINE_PART_READY"; sessionId: string; partId: string; slides: SlideItem[] }
   | { type: "OUTLINE_PART_FAILED"; sessionId: string; partId: string; message: string }
+  | { type: "OUTLINE_SLIDE_READY"; sessionId: string; partId: string; slide: SlideItem }
+  | { type: "OUTLINE_SLIDE_FAILED"; sessionId: string; partId: string; slideId: string; message: string }
   | { type: "DONE"; sessionId: string; partFailures: number }
   | { type: "ERROR"; sessionId: string; message: string };
 

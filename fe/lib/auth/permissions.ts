@@ -1,4 +1,4 @@
-export type Role = "TEACHER" | "MODERATOR" | "ADMINISTRATOR";
+export type Role = "TEACHER" | "MODERATOR" | "ADMINISTRATOR" | "IT_MANAGEMENT";
 
 export interface RoutePermission {
   requireAuth: boolean;
@@ -14,8 +14,9 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/help":            { requireAuth: false },
   "/lesson-create":   { requireAuth: true },
   "/lesson-edit":     { requireAuth: true },
-  "/slide-create":    { requireAuth: false },
-  "/slide-maker":     { requireAuth: false },
+  "/slide-create":    { requireAuth: true },
+  "/slide-maker":     { requireAuth: true },
+  "/molecules":       { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/exam-create":     { requireAuth: false },
   "/exam-matrix":     { requireAuth: false },
   "/exam-create-new": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
@@ -25,6 +26,8 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/blog":            { requireAuth: true },
   "/blog/moderation": { requireAuth: true, allowedRoles: ["MODERATOR"] },
   "/user-management": { requireAuth: true, allowedRoles: ["MODERATOR", "ADMINISTRATOR"] },
+  "/it-management": { requireAuth: true, allowedRoles: ["IT_MANAGEMENT"] },
+  "/it-management-users": { requireAuth: true, allowedRoles: ["ADMINISTRATOR"] },
 };
 
 export function hasAnyRole(
@@ -41,7 +44,7 @@ export function canAccessRoute(
   user?: { role?: string | null; roles?: string[] | null } | null,
 ): boolean {
   const permission = routePermissions[pathname];
-  if (!permission) return true;
+  if (!permission) return Boolean(user);
   if (!permission.requireAuth) return true;
   if (!user) return false;
   if (!permission.allowedRoles) return true;

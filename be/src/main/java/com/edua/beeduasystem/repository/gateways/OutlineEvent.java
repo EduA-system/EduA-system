@@ -16,6 +16,8 @@ import java.util.List;
         @JsonSubTypes.Type(value = OutlineEvent.OutlinePartSkeletonReady.class, name = "OUTLINE_PART_SKELETON_READY"),
         @JsonSubTypes.Type(value = OutlineEvent.OutlinePartReady.class, name = "OUTLINE_PART_READY"),
         @JsonSubTypes.Type(value = OutlineEvent.OutlinePartFailed.class, name = "OUTLINE_PART_FAILED"),
+        @JsonSubTypes.Type(value = OutlineEvent.OutlineSlideReady.class, name = "OUTLINE_SLIDE_READY"),
+        @JsonSubTypes.Type(value = OutlineEvent.OutlineSlideFailed.class, name = "OUTLINE_SLIDE_FAILED"),
         @JsonSubTypes.Type(value = OutlineEvent.Done.class, name = "DONE"),
         @JsonSubTypes.Type(value = OutlineEvent.Error.class, name = "ERROR")
 })
@@ -30,6 +32,12 @@ public sealed interface OutlineEvent {
     }
 
     record OutlinePartFailed(String sessionId, String partId, String message) implements OutlineEvent {
+    }
+
+    record OutlineSlideReady(String sessionId, String partId, SlideItemDto slide) implements OutlineEvent {
+    }
+
+    record OutlineSlideFailed(String sessionId, String partId, String slideId, String message) implements OutlineEvent {
     }
 
     record Done(String sessionId, int partFailures) implements OutlineEvent {

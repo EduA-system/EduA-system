@@ -143,7 +143,6 @@ function compositeSlots(block: ContentBlock, rect: Rect, orientation: "horizonta
     const [question, details] = splitVertical(rect, block.choices?.length ? 0.38 : 0.62, 12);
     const slots = [makeSlot(block, question, "body", block.question, "question")];
     if (block.choices?.length) slots.push(makeSlot(block, details, "body", block.choices.join("\n"), "choices"));
-    if (block.answer) slots.push(makeSlot(block, { x: details.x, y: details.y + details.h - 36, w: details.w, h: 36 }, "caption", block.answer, "answer", "text-caption"));
     return { slots, structures: [structure(`quiz:${block.id}`, "card", rect, "surface-question")] };
   }
   if (block.kind === "formula") {
