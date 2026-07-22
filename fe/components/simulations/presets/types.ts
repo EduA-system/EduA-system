@@ -18,7 +18,13 @@ import type { PendulumResonanceScene } from "../pendulum-resonance/types";
 import type { HeatTransferScene } from "../heat-transfer/types";
 import type { IsothermalBoyleScene } from "../isothermal-boyle/types";
 
-export type Domain = "Cơ học" | "Dao động & Sóng" | "Quang học" | "Điện & Từ" | "Nhiệt & Khí" | "Hạt nhân";
+export type Domain =
+  | "Cơ học"
+  | "Dao động & Sóng"
+  | "Quang học"
+  | "Điện & Từ"
+  | "Nhiệt & Khí"
+  | "Hạt nhân";
 
 /** ParamDef của panel + giá trị mặc định cho preset. */
 export type PresetParam = ParamDef & { default: number };
@@ -70,7 +76,9 @@ export type MechanicsPreset = PresetBase & {
   // bám theo vật khi di chuyển (khác annotations tĩnh), khác markLabel/ghostLabel
   // (chỉ hiện khi xem 1 mốc thời gian). Object tĩnh (đa số preset) hoặc hàm của
   // params khi nhãn cần phản ánh giá trị hiện tại (vd dấu điện tích q).
-  bodyLabels?: Record<string, string> | ((p: Record<string, number>) => Record<string, string>);
+  bodyLabels?:
+    | Record<string, string>
+    | ((p: Record<string, number>) => Record<string, string>);
   // Chú thích trực quan tuỳ chọn (mũi tên trường đều, nhãn +/− bản tụ…) — THUẦN
   // HIỂN THỊ, không ảnh hưởng vật lý. Toạ độ world tĩnh, không bám vật động.
   annotations?: (p: Record<string, number>) => SceneAnnotation[];
@@ -79,7 +87,9 @@ export type MechanicsPreset = PresetBase & {
   bodyColors?: Record<string, string>;
   // Ký hiệu ngắn đè lên TÂM vật (vd "+"/"−"/"0" dấu điện tích), bám theo vật
   // khi di chuyển — khác bodyLabels (vẽ dưới vật). Object tĩnh hoặc hàm params.
-  bodySigns?: Record<string, string> | ((p: Record<string, number>) => Record<string, string>);
+  bodySigns?:
+    | Record<string, string>
+    | ((p: Record<string, number>) => Record<string, string>);
   // Ẩn trục toạ độ/nhãn toạ độ debug (KHÔNG ẩn lưới nền) — dùng cho sơ đồ giáo
   // khoa tối giản tự vẽ mọi thứ qua annotations. Xem SceneKonva2D.
   minimalOverlay?: boolean;
@@ -146,4 +156,51 @@ export type IsothermalBoylePreset = PresetBase & {
   applyParams: (p: Record<string, number>) => IsothermalBoyleScene;
 };
 
-export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset | BrownianPreset | HeatingCurvePreset | CorkPopPreset | PendulumResonancePreset | HeatTransferPreset | IsothermalBoylePreset;
+export type ElectricBellPreset = PresetBase & {
+  kind: "electric-bell";
+  applyParams: (p: Record<string, number>) => Record<string, never>;
+};
+export type ThermalWirePreset = PresetBase & {
+  kind: "thermal-wire";
+  applyParams: (p: Record<string, number>) => Record<string, never>;
+};
+export type VaCharacteristicPreset = PresetBase & {
+  kind: "va-characteristic";
+  applyParams: (p: Record<string, number>) => Record<string, never>;
+};
+export type EmfMeasurementPreset = PresetBase & {
+  kind: "emf-measurement";
+  applyParams: (p: Record<string, number>) => Record<string, never>;
+};
+export type WaterCalorimetryPreset = PresetBase & {
+  kind: "water-calorimetry";
+  applyParams: (p: Record<string, number>) => Record<string, never>;
+};
+export type IceFusionPreset = PresetBase & {
+  kind: "ice-fusion";
+  applyParams: (p: Record<string, number>) => Record<string, never>;
+};
+export type WaterVaporizationPreset = PresetBase & {
+  kind: "water-vaporization";
+  applyParams: (p: Record<string, number>) => Record<string, never>;
+};
+
+export type Preset =
+  | MechanicsPreset
+  | WavePreset
+  | StringWavePreset
+  | WaveFieldPreset
+  | PointChargeFieldPreset
+  | BrownianPreset
+  | HeatingCurvePreset
+  | CorkPopPreset
+  | PendulumResonancePreset
+  | HeatTransferPreset
+  | IsothermalBoylePreset
+  | ElectricBellPreset
+  | ThermalWirePreset
+  | VaCharacteristicPreset
+  | EmfMeasurementPreset
+  | WaterCalorimetryPreset
+  | IceFusionPreset
+  | WaterVaporizationPreset;

@@ -24,9 +24,15 @@ import { nutBacBat } from "./nut-bac-bat";
 import { becquerelUraniumKinhAnh } from "./becquerel-uranium-kinh-anh";
 import { brownianPollen } from "./brownian";
 import { dunNong } from "./dun-nong";
-import { corkPop } from "./cork-pop";
 import { nguyenLyTruyenNhiet } from "./nguyen-ly-truyen-nhiet";
 import { isothermalBoyle } from "./isothermal-boyle";
+import { chuongDien } from "./chuong-dien";
+import { daySatDotGiay } from "./day-sat-dot-giay";
+import { dacTrungVaBongDen } from "./dac-trung-va-bong-den";
+import { doSuatDienDongPin } from "./do-suat-dien-dong-pin";
+import { doNhietDungRiengCuaNuoc } from "./do-nhiet-dung-rieng-cua-nuoc";
+import { doNhietNongChayRiengCuaNuocDa } from "./do-nhiet-nong-chay-rieng-cua-nuoc-da";
+import { doNhietHoaHoiRiengCuaNuoc } from "./do-nhiet-hoa-hoi-rieng-cua-nuoc";
 
 export type { Preset, PresetParam, Domain } from "./types";
 
@@ -53,9 +59,15 @@ export const PRESETS: Preset[] = [
   becquerelUraniumKinhAnh,
   brownianPollen,
   dunNong,
-  corkPop,
   nguyenLyTruyenNhiet,
   isothermalBoyle,
+  chuongDien,
+  daySatDotGiay,
+  dacTrungVaBongDen,
+  doSuatDienDongPin,
+  doNhietDungRiengCuaNuoc,
+  doNhietNongChayRiengCuaNuocDa,
+  doNhietHoaHoiRiengCuaNuoc,
 ];
 
 export function getPreset(id: string): Preset | undefined {
