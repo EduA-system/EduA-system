@@ -20,7 +20,7 @@ export function metrics(s: ThermalState, p: ThermalParams): ThermalMetrics {
 
 export function stepThermal(previous: ThermalState, p: ThermalParams, rawDt: number): ThermalState {
   if (previous.phase === "idle" || previous.phase === "paused" || previous.phase === "completed") return previous;
-  let s = { ...previous }; let remaining = Math.min(Math.max(rawDt, 0), MAX_DT);
+  const s = { ...previous }; let remaining = Math.min(Math.max(rawDt, 0), MAX_DT);
   while (remaining > 0) {
     const dt = Math.min(remaining, 1 / 120); remaining -= dt; s.time += dt;
     const ambient = p.initialTemperature;
@@ -29,7 +29,7 @@ export function stepThermal(previous: ThermalState, p: ThermalParams, rawDt: num
       ? Math.max(0, p.heaterPower - p.heatLoss * Math.max(0, s.temperature - ambient)) * dt
       : 0;
     s.heatIn += q; s.internalEnergy += q;
-    let force = Math.max(0, s.pressure - p.atmospherePressure * 1000) * CROSS_SECTION;
+    const force = Math.max(0, s.pressure - p.atmospherePressure * 1000) * CROSS_SECTION;
     const threshold = p.holdForce + p.corkMass * GRAVITY;
     if (s.phase === "heating" && force > threshold * 0.82) s.phase = "nearRelease";
     if ((s.phase === "heating" || s.phase === "nearRelease") && force > threshold) {

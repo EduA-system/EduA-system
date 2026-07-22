@@ -145,17 +145,6 @@ function remapGroupIds(elements: SlideElement[]): SlideElement[] {
   });
 }
 
-function normalizeSelectedIds(slides: Slide[], currentSlideId: string, ids: string[]): string[] {
-  return filterSelectionForSlides(slides, currentSlideId, ids);
-}
-
-function reindexSlides(slides: Slide[]): Slide[] {
-  return slides.map((slide) => ({
-    ...slide,
-    elements: syncElementOrder(slide.elements),
-  }));
-}
-
 function isCurrentSlideLocked(state: EditorState): boolean {
   return isSlideLockedForGeneration(state.slides.find((s) => s.id === state.currentSlideId));
 }
@@ -628,7 +617,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (state.clipboard.length === 0) return state;
       const slide = state.slides.find((s) => s.id === state.currentSlideId);
       if (!slide) return state;
-      const newEls = state.clipboard.map((el, i) => ({
+      const newEls = state.clipboard.map((el) => ({
         ...structuredClone(el),
         id: uid(),
         x: el.x + 20,

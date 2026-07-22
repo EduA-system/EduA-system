@@ -30,7 +30,7 @@ export function ThermalWireExperiment({ onBack }: { onBack: () => void }) {
     [zoom, setZoom] = useState(100),
     [tab, setTab] = useState<SimulationTab>("params"),
     [live, setLive] = useState<ThermalWireSnapshot>(() =>
-      createThermalWireState(DEFAULTS),
+      createThermalWireState(),
     ),
     [points, setPoints] = useState<ThermalWirePoint[]>([]);
   const last = useRef(-1);

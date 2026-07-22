@@ -3,9 +3,7 @@ import type { ThermalWireParams, ThermalWireState } from "./thermal-wire-types";
 const AMBIENT = 25;
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
-export function createThermalWireState(
-  params: ThermalWireParams,
-): ThermalWireState {
+export function createThermalWireState(): ThermalWireState {
   return {
     time: 0,
     phase: "idle",

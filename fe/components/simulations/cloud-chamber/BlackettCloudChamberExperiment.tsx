@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { ChevronLeft, RotateCcw } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -160,7 +161,14 @@ function AnalysisPanel({
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
         <p className="mb-3 text-[13px] font-semibold text-[#171717]">Ảnh chụp sự kiện</p>
         {observation?.imageDataUrl ? (
-          <img src={observation.imageDataUrl} alt="Ảnh chụp vệt hạt trong buồng sương của lần chạy hiện tại" className="h-auto w-full rounded-[10px] border border-[#e8e2d9] bg-[#0f172a]" />
+          <Image
+            src={observation.imageDataUrl}
+            alt="Ảnh chụp vệt hạt trong buồng sương của lần chạy hiện tại"
+            width={1000}
+            height={620}
+            unoptimized
+            className="h-auto w-full rounded-[10px] border border-[#e8e2d9] bg-[#0f172a]"
+          />
         ) : (
           <div className="flex h-32 items-center justify-center rounded-[10px] bg-[#0f172a] text-xs text-slate-400">Chạy mô phỏng để chụp ảnh sự kiện.</div>
         )}

@@ -26,13 +26,13 @@ export const ThermalWireScene = memo(function ThermalWireScene({
   onSnapshot: (value: ThermalWireSnapshot) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null),
-    stateRef = useRef(createThermalWireState(params)),
+    stateRef = useRef(createThermalWireState()),
     latest = useRef({ params, running, speed, zoom, onSnapshot }),
     frameRef = useRef(0);
   latest.current = { params, running, speed, zoom, onSnapshot };
   const { ref, size } = useContainerSize<HTMLDivElement>();
   useEffect(() => {
-    stateRef.current = createThermalWireState(latest.current.params);
+    stateRef.current = createThermalWireState();
     latest.current.onSnapshot({ ...stateRef.current });
   }, [resetSignal]);
   useEffect(() => {
