@@ -146,22 +146,6 @@ function Thumb({ id }: { id: string }) {
           <text x="58" y="105" fontSize="11" fontWeight="700" fill="#cbd5e1">A</text>
           <text x="132" y="105" fontSize="11" fontWeight="700" fill="#cbd5e1">B</text>
         </>,
-      );    case "luc-tuong-tac-hai-xe":
-      return frame(
-        <>
-          <line x1="20" y1="90" x2="180" y2="90" stroke="#475569" strokeWidth="2" />
-          <circle cx="58" cy="78" r="12" fill="#60a5fa" />
-          <circle cx="132" cy="78" r="12" fill="#f472b6" />
-          <path d="M22 78 h26" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
-          <path d="M40 69 l11 9 l-11 9" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M74 78 h42" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
-          <path d="M88 53 h28" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
-          <path d="M108 46 l10 7 l-10 7" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M118 62 h-28" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
-          <path d="M98 55 l-10 7 l10 7" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="52" y="103" fontSize="11" fontWeight="700" fill="#cbd5e1">A</text>
-          <text x="126" y="103" fontSize="11" fontWeight="700" fill="#cbd5e1">B</text>
-        </>,
       );
     case "do-p-t-bang-luc-ke":
       return frame(
@@ -245,24 +229,6 @@ function Thumb({ id }: { id: string }) {
           <text x="98" y="105" fontSize="7" fontFamily="monospace" fill="#86efac">0.000</text>
         </>,
       );
-    case "tong-hop-luc-dong-quy":
-      return frame(
-        <>
-          <circle cx="100" cy="62" r="8" fill="#fbbf24" />
-          <line x1="100" y1="62" x2="160" y2="62" stroke="#60a5fa" strokeWidth="2.5" />
-          <line x1="100" y1="62" x2="70" y2="28" stroke="#f472b6" strokeWidth="2.5" />
-          <line x1="100" y1="62" x2="64" y2="98" stroke="#34d399" strokeWidth="2.5" />
-          <rect x="152" y="49" width="34" height="24" rx="6" fill="#111827" stroke="#60a5fa" strokeWidth="2" />
-          <rect x="40" y="12" width="36" height="22" rx="6" fill="#111827" stroke="#f472b6" strokeWidth="2" transform="rotate(-28 58 23)" />
-          <rect x="34" y="88" width="38" height="22" rx="6" fill="#111827" stroke="#34d399" strokeWidth="2" transform="rotate(35 53 99)" />
-          <circle cx="162" cy="61" r="5" fill="#0f172a" stroke="#94a3b8" strokeWidth="1.5" />
-          <path d="M162 61 l6 -5" stroke="#fbbf24" strokeWidth="1.8" strokeLinecap="round" />
-          <text x="157" y="68" fontSize="8" fontWeight="700" fill="#e2e8f0">10N</text>
-          <path d="M112 54 l18 -10" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
-          <path d="M112 70 l18 10" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
-          <text x="86" y="116" fontSize="11" fontWeight="700" fill="#fbbf24">ΣF = R</text>
-        </>,
-      );
     case "tong-hop-hai-luc-cung-phuong":
       return frame(
         <>
@@ -324,20 +290,6 @@ function Thumb({ id }: { id: string }) {
           <path d="M142 56 V26" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" />
           <path d="M137 34 l5 -8 l5 8" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           <text x="150" y="40" fontSize="10" fontWeight="700" fill="#60a5fa">v</text>
-        </>,
-      );
-    case "mang-bao-toan-co-nang":
-      return frame(
-        <>
-          {/* Máng chữ U đối xứng */}
-          <path d="M26 26 C50 96 80 100 100 100 C120 100 150 96 174 26" fill="none" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" />
-          <path d="M26 26 C50 96 80 100 100 100 C120 100 150 96 174 26" fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
-          {/* Bi ở đỉnh trái + ảnh mờ ở đỉnh phải (cùng độ cao) */}
-          <circle cx="30" cy="32" r="7" fill="#f472b6" />
-          <circle cx="170" cy="32" r="7" fill="#f472b6" opacity="0.4" />
-          {/* Đường ngang nét đứt nối hai đỉnh: cùng độ cao → bảo toàn */}
-          <path d="M30 32 H170" stroke="#34d399" strokeWidth="1.5" strokeDasharray="4 4" />
-          <text x="82" y="24" fontSize="10" fontWeight="700" fill="#34d399">W = const</text>
         </>,
       );
     case "dong-nang-the-nang":
