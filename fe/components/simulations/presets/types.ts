@@ -17,6 +17,14 @@ import type { CorkPopScene } from "../cork-pop/types";
 import type { PendulumResonanceScene } from "../pendulum-resonance/types";
 import type { HeatTransferScene } from "../heat-transfer/types";
 import type { IsothermalBoyleScene } from "../isothermal-boyle/types";
+import type { IsobaricProcessScene } from "../isobaric-process/types";
+import type { CloudChamberScene } from "../engines/cloud-chamber/types";
+import type { MagneticDeflectionScene } from "../engines/magnetic-deflection/types";
+import type { CoulombTorsionBalanceScene } from "../engines/coulomb-torsion-balance/types";
+import type { OscilloscopeFrequencyScene } from "../engines/oscilloscope-frequency/types";
+import type { WaterSurfaceWaveScene } from "../engines/water-surface-wave/types";
+import type { RutherfordScene } from "../engines/rutherford-nitrogen/types";
+import type { RutherfordScatteringScene } from "../engines/rutherford-scattering/types";
 
 export type Domain =
   | "Cơ học"
@@ -156,6 +164,46 @@ export type IsothermalBoylePreset = PresetBase & {
   applyParams: (p: Record<string, number>) => IsothermalBoyleScene;
 };
 
+export type IsobaricProcessPreset = PresetBase & {
+  kind: "isobaric-process";
+  applyParams: (p: Record<string, number>) => IsobaricProcessScene;
+};
+
+export type CloudChamberPreset = PresetBase & {
+  kind: "cloud-chamber";
+  applyParams: (p: Record<string, number>) => CloudChamberScene;
+};
+
+export type MagneticDeflectionPreset = PresetBase & {
+  kind: "magnetic-deflection";
+  applyParams: (p: Record<string, number>) => MagneticDeflectionScene;
+};
+
+export type CoulombTorsionBalancePreset = PresetBase & {
+  kind: "coulomb-torsion-balance";
+  applyParams: (p: Record<string, number>) => CoulombTorsionBalanceScene;
+};
+
+export type OscilloscopeFrequencyPreset = PresetBase & {
+  kind: "oscilloscope-frequency";
+  applyParams: (p: Record<string, number>) => OscilloscopeFrequencyScene;
+};
+
+export type WaterSurfaceWavePreset = PresetBase & {
+  kind: "water-surface-wave";
+  applyParams: (p: Record<string, number>) => WaterSurfaceWaveScene;
+};
+
+export type RutherfordNitrogenPreset = PresetBase & {
+  kind: "rutherford-nitrogen";
+  applyParams: (p: Record<string, number>) => RutherfordScene;
+};
+
+export type RutherfordScatteringPreset = PresetBase & {
+  kind: "rutherford-scattering";
+  applyParams: (p: Record<string, number>) => RutherfordScatteringScene;
+};
+
 export type ElectricBellPreset = PresetBase & {
   kind: "electric-bell";
   applyParams: (p: Record<string, number>) => Record<string, never>;
@@ -197,6 +245,14 @@ export type Preset =
   | PendulumResonancePreset
   | HeatTransferPreset
   | IsothermalBoylePreset
+  | IsobaricProcessPreset
+  | CloudChamberPreset
+  | MagneticDeflectionPreset
+  | CoulombTorsionBalancePreset
+  | OscilloscopeFrequencyPreset
+  | WaterSurfaceWavePreset
+  | RutherfordNitrogenPreset
+  | RutherfordScatteringPreset
   | ElectricBellPreset
   | ThermalWirePreset
   | VaCharacteristicPreset

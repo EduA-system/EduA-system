@@ -21,6 +21,10 @@ import {
 import { IsothermalBoyleCanvas } from "./isothermal-boyle-canvas";
 import type { BoyleParams, BoyleState } from "./types";
 import { ParamRangeField } from "../shared/param-panel";
+import { SimulationToolbar } from "../shared/simulation-toolbar";
+import { ZoomControls } from "../shared/zoom-controls";
+
+const CELSIUS_OFFSET = 273.15;
 
 export function IsothermalBoyleDetailView({
   preset,
@@ -33,6 +37,9 @@ export function IsothermalBoyleDetailView({
     resetIsothermalExperiment(),
   );
   const [edited, setEdited] = useState(false);
+  const [running, setRunning] = useState(true);
+  const [speed, setSpeed] = useState(1);
+  const [zoom, setZoom] = useState(100);
   const [panelTab, setPanelTab] = useState<"params" | "analysis" | "ai">(
     "params",
   );
@@ -61,6 +68,9 @@ export function IsothermalBoyleDetailView({
   const reset = () => {
     setParams(resetIsothermalExperiment());
     setEdited(false);
+    setRunning(true);
+    setSpeed(1);
+    setZoom(100);
   };
 
   return (
@@ -105,6 +115,25 @@ export function IsothermalBoyleDetailView({
                 <IsothermalBoyleCanvas
                   params={params}
                   onParamsChange={updateParams}
+                  running={running}
+                  speed={speed}
+                  zoom={zoom}
+                />
+                <SimulationToolbar
+                  running={running}
+                  speed={speed}
+                  onRunningChange={setRunning}
+                  onReset={reset}
+                  onSpeedChange={setSpeed}
+                  showParticles={params.showMolecules}
+                  onParticlesChange={(showMolecules) =>
+                    updateParams({ showMolecules })
+                  }
+                />
+                <ZoomControls
+                  percent={zoom}
+                  onZoomIn={() => setZoom((value) => Math.min(130, value + 10))}
+                  onZoomOut={() => setZoom((value) => Math.max(70, value - 10))}
                 />
               </div>
             </div>
@@ -295,7 +324,10 @@ export function IsothermalBoylePanel({
               <Metric label="VA" value={`${format(stateA.volume)} L`} />
               <Metric label="PB" value={`${format(stateB.pressure)} atm`} />
               <Metric label="VB" value={`${format(stateB.volume)} L`} />
-              <Metric label="T" value={`${format(params.temperature, 0)} K`} />
+              <Metric
+                label="T (Nhiệt độ)"
+                value={`${format(params.temperature - CELSIUS_OFFSET, 1)} °C`}
+              />
               <Metric label="pV" value={`${format(stateA.constant)} atmL`} />
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -380,13 +412,17 @@ export function IsothermalBoylePanel({
                 Nhiệt độ & hiển thị
               </p>
               <RangeField
-                label="Nhiệt độ cài đặt T"
-                value={params.temperature}
-                min={MIN_TEMPERATURE}
-                max={MAX_TEMPERATURE}
+                label="T (Nhiệt độ cài đặt)"
+                value={params.temperature - CELSIUS_OFFSET}
+                min={MIN_TEMPERATURE - CELSIUS_OFFSET}
+                max={MAX_TEMPERATURE - CELSIUS_OFFSET}
                 step={5}
-                suffix=" K"
-                onChange={(temperature) => onParamsChange({ temperature })}
+                suffix=" °C"
+                onChange={(temperatureC) =>
+                  onParamsChange({
+                    temperature: temperatureC + CELSIUS_OFFSET,
+                  })
+                }
               />
               <ToggleField
                 label="Hiện phân tử khí"

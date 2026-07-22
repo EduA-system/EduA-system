@@ -26,6 +26,14 @@ import { brownianPollen } from "./brownian";
 import { dunNong } from "./dun-nong";
 import { nguyenLyTruyenNhiet } from "./nguyen-ly-truyen-nhiet";
 import { isothermalBoyle } from "./isothermal-boyle";
+import { isobaricProcess } from "./isobaric-process";
+import { buongSuongBlackett } from "./buong-suong-blackett";
+import { doLechTiaAlphaBetaGamma } from "./do-lech-tia-alpha-beta-gamma";
+import { canXoanCoulomb } from "./can-xoan-coulomb";
+import { doTanSoBangDaoDongKi } from "./do-tan-so-bang-dao-dong-ki";
+import { songTrenMatNuoc } from "./song-tren-mat-nuoc";
+import { rutherfordBienDoiHatNhanNito } from "./rutherford-bien-doi-hat-nhan-nito";
+import { tanXaAlphaRutherford } from "./tan-xa-alpha-rutherford";
 import { chuongDien } from "./chuong-dien";
 import { daySatDotGiay } from "./day-sat-dot-giay";
 import { dacTrungVaBongDen } from "./dac-trung-va-bong-den";
@@ -61,6 +69,14 @@ export const PRESETS: Preset[] = [
   dunNong,
   nguyenLyTruyenNhiet,
   isothermalBoyle,
+  isobaricProcess,
+  buongSuongBlackett,
+  doLechTiaAlphaBetaGamma,
+  canXoanCoulomb,
+  doTanSoBangDaoDongKi,
+  songTrenMatNuoc,
+  rutherfordBienDoiHatNhanNito,
+  tanXaAlphaRutherford,
   chuongDien,
   daySatDotGiay,
   dacTrungVaBongDen,

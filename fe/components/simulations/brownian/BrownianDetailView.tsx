@@ -778,12 +778,14 @@ export function BrownianPanel({
               <div className="mt-3 space-y-3">
                 <RangeField
                   label="Nhiệt độ T"
-                  value={params.temperature}
-                  min={250}
-                  max={380}
+                  value={params.temperature - 273.15}
+                  min={250 - 273.15}
+                  max={380 - 273.15}
                   step={1}
-                  suffix="K"
-                  onChange={updateNumber("temperature")}
+                  suffix="°C"
+                  onChange={(temperatureC) =>
+                    onParamsChange({ temperature: temperatureC + 273.15 })
+                  }
                 />
                 <RangeField
                   label="Độ nhớt η"

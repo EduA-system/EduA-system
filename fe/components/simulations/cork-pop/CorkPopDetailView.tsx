@@ -276,7 +276,7 @@ function MiniChart({
         ];
   const first =
     kind === "thermal"
-      ? points.map((point) => point.temperature)
+      ? points.map((point) => point.temperature - 273.15)
       : points.map((point) => point.internalEnergy);
   const second =
     kind === "thermal"
@@ -480,7 +480,7 @@ export function CorkPopPanel({
             <div className="grid grid-cols-2 gap-2">
               <Metric
                 label="Nhiệt độ"
-                value={`${format(latest?.temperature ?? params.initialTemperature + 273.15, 1)} K`}
+                value={`${format(latest ? latest.temperature - 273.15 : params.initialTemperature, 1)} °C`}
               />
               <Metric
                 label="Áp suất"

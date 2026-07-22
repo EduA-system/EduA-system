@@ -273,7 +273,7 @@ export function WaterCalorimetryPanel({
               />
               <Metric
                 label="ΔT (độ tăng nhiệt độ)"
-                value={`${live.deltaTemperature.toFixed(2)} K`}
+                value={`${live.deltaTemperature.toFixed(2)} °C`}
               />
               <Metric
                 label="Điện năng A (UIt)"

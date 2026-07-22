@@ -460,7 +460,7 @@ export const WaterCalorimetryScene = memo(function WaterCalorimetryScene({
         505,
       );
       ctx.fillStyle = "#fda4af";
-      ctx.fillText(`ΔT = ${snapshot.deltaTemperature.toFixed(2)} K`, 575, 505);
+      ctx.fillText(`ΔT = ${snapshot.deltaTemperature.toFixed(2)} °C`, 575, 505);
 
       ctx.restore();
       frameRef.current = requestAnimationFrame(draw);

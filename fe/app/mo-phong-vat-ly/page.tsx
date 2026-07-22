@@ -47,6 +47,14 @@ import { HeatingCurveDetailView } from "@/components/simulations/heating-curve/H
 import { PendulumResonanceDetailView } from "@/components/simulations/pendulum-resonance/PendulumResonanceDetailView";
 import { HeatTransferDetailView } from "@/components/simulations/heat-transfer/HeatTransferDetailView";
 import { IsothermalBoyleDetailView } from "@/components/simulations/isothermal-boyle/IsothermalBoyleDetailView";
+import { IsobaricProcessDetailView } from "@/components/simulations/isobaric-process/IsobaricProcessDetailView";
+import { BlackettCloudChamberExperiment } from "@/components/simulations/cloud-chamber/BlackettCloudChamberExperiment";
+import { MagneticDeflectionExperiment } from "@/components/simulations/magnetic-deflection/MagneticDeflectionExperiment";
+import { CoulombTorsionBalanceExperiment } from "@/components/simulations/coulomb-torsion-balance/CoulombTorsionBalanceExperiment";
+import { OscilloscopeFrequencyExperiment } from "@/components/simulations/oscilloscope-frequency/OscilloscopeFrequencyExperiment";
+import { WaterSurfaceWaveExperiment } from "@/components/simulations/water-surface-wave/WaterSurfaceWaveExperiment";
+import { RutherfordNitrogenExperiment } from "@/components/simulations/rutherford-nitrogen/RutherfordNitrogenExperiment";
+import { RutherfordScatteringExperiment } from "@/components/simulations/rutherford-scattering/RutherfordScatteringExperiment";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
@@ -629,6 +637,216 @@ function Thumb({ id }: { id: string }) {
           />
           <circle cx="160" cy="42" r="3" fill="#fb7185" />
           <circle cx="179" cy="42" r="3" fill="#60a5fa" />
+        </>,
+      );
+    case "isobaric-process":
+      return frame(
+        <>
+          <rect
+            x="48"
+            y="25"
+            width="58"
+            height="74"
+            rx="8"
+            fill="rgba(103,232,249,.12)"
+            stroke="#cbd5e1"
+            strokeWidth="1.8"
+          />
+          <rect
+            x="54"
+            y="55"
+            width="46"
+            height="39"
+            rx="5"
+            fill="rgba(103,232,249,.42)"
+            stroke="#67e8f9"
+          />
+          <rect
+            x="40"
+            y="49"
+            width="74"
+            height="10"
+            rx="3"
+            fill="#e2e8f0"
+            stroke="#94a3b8"
+          />
+          <line
+            x1="77"
+            y1="30"
+            x2="77"
+            y2="49"
+            stroke="#cbd5e1"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          {[0, 1, 2].map((index) => (
+            <rect
+              key={index}
+              x={59 + index * 2}
+              y={24 - index * 7}
+              width={36 - index * 4}
+              height="7"
+              rx="2"
+              fill={index === 2 ? "#fb923c" : "#64748b"}
+              stroke="#e2e8f0"
+              strokeWidth=".8"
+            />
+          ))}
+          <path
+            d="M128 31 V95 H184"
+            fill="none"
+            stroke="#cbd5e1"
+            strokeWidth="1.6"
+          />
+          <path
+            d="M132 58 H178"
+            fill="none"
+            stroke="#67e8f9"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <circle cx="154" cy="58" r="5" fill="#fb923c" stroke="#ffedd5" />
+          <text x="119" y="22" fill="#e2e8f0" fontSize="8" fontWeight="700">
+            p
+          </text>
+          <text x="181" y="108" fill="#e2e8f0" fontSize="8" fontWeight="700">
+            V
+          </text>
+          <path
+            d="M59 111 C50 102 57 92 65 85 C75 95 77 104 69 111 Z"
+            fill="#f97316"
+          />
+          <text x="10" y="18" fill="#67e8f9" fontSize="9" fontWeight="700">
+            p = const
+          </text>
+        </>,
+      );
+    case "buong-suong-blackett":
+      return frame(
+        <>
+          <ellipse cx="101" cy="62" rx="72" ry="43" fill="rgba(8,145,178,.12)" stroke="#cbd5e1" strokeWidth="2" />
+          <rect x="22" y="53" width="28" height="18" rx="4" fill="#334155" stroke="#94a3b8" />
+          <text x="31" y="66" fill="#f8fafc" fontSize="11" fontWeight="800">α</text>
+          {Array.from({ length: 23 }, (_, index) => (
+            <circle key={`a-${index}`} cx={49 + index * 3.2} cy={62 + ((index * 7) % 5 - 2) * .7} r={index % 3 === 0 ? 1.7 : 1.1} fill="#f8fafc" opacity=".88" />
+          ))}
+          {Array.from({ length: 16 }, (_, index) => (
+            <circle key={`p-${index}`} cx={120 + index * 3.2} cy={62 - index * 1.45} r=".9" fill="#e2e8f0" opacity=".82" />
+          ))}
+          {Array.from({ length: 9 }, (_, index) => (
+            <circle key={`o-${index}`} cx={120 + index * 2.5} cy={62 + index * 2.2} r={index % 2 ? 1.6 : 2} fill="#f8fafc" opacity=".9" />
+          ))}
+          <circle cx="120" cy="62" r="4" fill="none" stroke="#fde68a" strokeWidth="1.3" />
+          <rect x="62" y="96" width="79" height="8" rx="3" fill="#cbd5e1" stroke="#64748b" />
+          <rect x="91" y="104" width="20" height="11" fill="#475569" />
+          <path d="M172 39h17v24h-17z" fill="#334155" stroke="#94a3b8" /><circle cx="171" cy="51" r="6" fill="#020617" stroke="#67e8f9" />
+        </>,
+      );
+    case "rutherford-bien-doi-hat-nhan-nito":
+      return frame(
+        <>
+          <rect x="12" y="42" width="40" height="46" rx="7" fill="#334155" stroke="#94a3b8" />
+          <circle cx="38" cy="65" r="6" fill="#f59e0b" />
+          <rect x="52" y="55" width="25" height="6" rx="2" fill="#94a3b8" />
+          <rect x="52" y="70" width="25" height="6" rx="2" fill="#94a3b8" />
+          <rect x="78" y="32" width="70" height="66" rx="12" fill="rgba(14,116,144,.16)" stroke="#67e8f9" />
+          {Array.from({ length: 12 }, (_, index) => <circle key={index} cx={89 + (index % 4) * 15} cy={44 + Math.floor(index / 4) * 20} r="2" fill="#7dd3fc" opacity=".42" />)}
+          <path d="M52 65H142" stroke="#fbbf24" strokeWidth="2.4" strokeLinecap="round" />
+          <circle cx="118" cy="65" r="4" fill="none" stroke="#f8fafc" />
+          <path d="M118 65L158 55" stroke="#67e8f9" strokeWidth="1.8" />
+          <rect x="151" y="31" width="8" height="68" rx="2" fill="#cbd5e1" />
+          <rect x="171" y="26" width="10" height="78" rx="4" fill="#84cc16" stroke="#bef264" />
+          <circle cx="176" cy="55" r="4" fill="#f7fee7" stroke="#d9f99d" />
+          <path d="M184 46L197 38M184 64L197 72" stroke="#94a3b8" strokeWidth="2" />
+          <text x="93" y="113" fill="#cbd5e1" fontSize="8" fontWeight="700">N₂ → proton → ZnS</text>
+        </>,
+      );
+    case "tan-xa-alpha-rutherford":
+      return frame(
+        <>
+          <circle cx="112" cy="67" r="46" fill="rgba(22,101,52,.24)" stroke="#84cc16" strokeWidth="8" />
+          <rect x="105" y="29" width="8" height="76" rx="2" fill="#facc15" stroke="#fef08a" />
+          <rect x="12" y="50" width="38" height="34" rx="7" fill="#334155" stroke="#94a3b8" />
+          <circle cx="39" cy="67" r="5" fill="#f59e0b" />
+          <rect x="50" y="58" width="28" height="5" rx="2" fill="#94a3b8" />
+          <rect x="50" y="72" width="28" height="5" rx="2" fill="#94a3b8" />
+          <path d="M77 67H106M112 67L155 67M112 67L150 43M112 67L137 99M112 67L79 39" fill="none" stroke="#fbbf24" strokeWidth="1.7" strokeLinecap="round" />
+          <circle cx="158" cy="67" r="3.5" fill="#a7f3d0" />
+          <circle cx="149" cy="43" r="3.5" fill="#67e8f9" />
+          <circle cx="137" cy="100" r="3.5" fill="#fbbf24" />
+          <circle cx="78" cy="39" r="3.5" fill="#fb7185" />
+          <text x="83" y="119" fill="#e2e8f0" fontSize="8" fontWeight="700">lá Au · màn ZnS</text>
+        </>,
+      );
+    case "do-lech-tia-alpha-beta-gamma":
+      return frame(
+        <>
+          <rect x="18" y="43" width="42" height="42" rx="7" fill="#334155" stroke="#94a3b8" />
+          <circle cx="44" cy="64" r="6" fill="#f59e0b" />
+          <rect x="61" y="55" width="25" height="5" rx="2" fill="#94a3b8" />
+          <rect x="61" y="68" width="25" height="5" rx="2" fill="#94a3b8" />
+          {Array.from({ length: 12 }, (_, index) => (
+            <g key={index} opacity=".4">
+              <circle cx={98 + (index % 4) * 18} cy={35 + Math.floor(index / 4) * 28} r="4" fill="none" stroke="#7dd3fc" />
+              <circle cx={98 + (index % 4) * 18} cy={35 + Math.floor(index / 4) * 28} r="1.2" fill="#7dd3fc" />
+            </g>
+          ))}
+          <path d="M85 64 C120 64 145 48 174 35" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
+          <path d="M85 64 C114 64 134 83 168 103" fill="none" stroke="#22d3ee" strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M85 64 H178" fill="none" stroke="#a3e635" strokeWidth="2.6" strokeLinecap="round" />
+          <rect x="181" y="20" width="8" height="96" rx="3" fill="#cbd5e1" stroke="#64748b" />
+          <text x="143" y="26" fill="#fbbf24" fontSize="9" fontWeight="700">α</text>
+          <text x="143" y="111" fill="#67e8f9" fontSize="9" fontWeight="700">β⁻</text>
+          <text x="150" y="59" fill="#bef264" fontSize="9" fontWeight="700">γ</text>
+        </>,
+      );
+    case "can-xoan-coulomb":
+      return frame(
+        <>
+          <ellipse cx="105" cy="73" rx="79" ry="42" fill="rgba(56,189,248,.08)" stroke="#cbd5e1" strokeWidth="2" />
+          <rect x="98" y="14" width="14" height="58" rx="6" fill="rgba(186,230,253,.2)" stroke="#bae6fd" />
+          <ellipse cx="105" cy="20" rx="24" ry="8" fill="#b77935" stroke="#fde68a" />
+          <line x1="105" y1="25" x2="105" y2="73" stroke="#f5d28a" strokeWidth="1" />
+          <line x1="47" y1="77" x2="161" y2="69" stroke="#e6d2a7" strokeWidth="5" strokeLinecap="round" />
+          <circle cx="161" cy="69" r="9" fill="#d9a94c" stroke="#fde68a" />
+          <circle cx="174" cy="91" r="9" fill="#d9a94c" stroke="#fde68a" />
+          <path d="M161 69 Q181 69 174 91" fill="none" stroke="#fb7185" strokeWidth="2" />
+          <path d="M82 99 A36 22 0 0 0 130 101" fill="none" stroke="#fbbf24" strokeWidth="1.5" />
+          <text x="88" y="116" fill="#fde68a" fontSize="9" fontWeight="700">θ</text>
+          <text x="145" y="53" fill="#fef3c7" fontSize="10" fontWeight="800">+</text>
+          <text x="181" y="94" fill="#fef3c7" fontSize="10" fontWeight="800">+</text>
+        </>,
+      );
+    case "do-tan-so-bang-dao-dong-ki":
+      return frame(
+        <>
+          <rect x="17" y="88" width="48" height="20" rx="5" fill="#9a5b25" stroke="#e9b568" />
+          <path d="M41 88V62M41 65Q30 58 29 27M41 65Q52 58 53 27" fill="none" stroke="#cbd5e1" strokeWidth="5" strokeLinecap="round" />
+          <path d="M78 43V101" stroke="#64748b" strokeWidth="5" strokeLinecap="round" />
+          <path d="M66 101H91" stroke="#64748b" strokeWidth="5" strokeLinecap="round" />
+          <rect x="70" y="34" width="29" height="11" rx="5" fill="#334155" stroke="#94a3b8" />
+          <path d="M99 40C116 48 104 95 127 96" fill="none" stroke="#64748b" strokeWidth="1.7" />
+          <rect x="120" y="19" width="73" height="88" rx="9" fill="#d69237" stroke="#ffdc8b" strokeWidth="2" />
+          <rect x="128" y="29" width="48" height="48" rx="4" fill="#063344" stroke="#67e8f9" />
+          <path d="M130 53C137 35 143 71 151 53S165 35 174 53" fill="none" stroke="#d9ff57" strokeWidth="2" />
+          <circle cx="184" cy="38" r="4" fill="#94a3b8" /><circle cx="184" cy="55" r="4" fill="#94a3b8" /><circle cx="184" cy="72" r="4" fill="#86efac" />
+          <path d="M56 47Q62 53 56 59M62 40Q74 53 62 66" fill="none" stroke="#67e8f9" strokeWidth="1.5" opacity=".8" />
+        </>,
+      );
+    case "song-tren-mat-nuoc":
+      return frame(
+        <>
+          <path d="M20 33H181L194 108H8Z" fill="rgba(8,145,178,.42)" stroke="#bae6fd" strokeWidth="2" />
+          <ellipse cx="63" cy="70" rx="12" ry="6" fill="#f2c866" stroke="#fef3c7" />
+          {[18, 31, 45, 60, 76].map((radius) => (
+            <ellipse key={radius} cx="63" cy="70" rx={radius} ry={radius * .42} fill="none" stroke="#cffafe" strokeWidth={radius % 2 ? 1 : 1.4} opacity={1 - radius / 110} />
+          ))}
+          <rect x="55" y="9" width="16" height="58" rx="7" fill="#94a3b8" stroke="#e2e8f0" />
+          <rect x="31" y="8" width="64" height="17" rx="6" fill="#475569" stroke="#cbd5e1" />
+          <ellipse cx="143" cy="75" rx="8" ry="5" fill="#fbbf24" stroke="#fde68a" />
+          <path d="M143 59V91" stroke="#fde68a" strokeDasharray="3 3" />
+          <path d="M98 94H170" stroke="#fef08a" strokeWidth="1.5" /><path d="M98 89V99M170 89V99" stroke="#fef08a" strokeWidth="1.5" />
+          <text x="130" y="108" fill="#fef08a" fontSize="9" fontWeight="700">λ</text>
         </>,
       );
     case "isothermal-boyle":
@@ -1393,96 +1611,124 @@ function Thumb({ id }: { id: string }) {
     case "tac-dung-tu-cua-dong-dien-chuong-dien":
       return frame(
         <>
+          {/* Khung mạch đúng theo mô phỏng: nguồn và công tắc ở phía trên. */}
           <path
-            d="M24 96h152"
-            stroke="#64748b"
-            strokeWidth="6"
-            strokeLinecap="round"
-          />
-          <rect
-            x="28"
-            y="27"
-            width="34"
-            height="42"
-            rx="5"
-            fill="#334155"
-            stroke="#94a3b8"
-            strokeWidth="1.5"
-          />
-          <path d="M38 40h14M42 48h6" stroke="#f8fafc" strokeWidth="2" />
-          <path
-            d="M45 27V18h55m28 0h44v35"
+            d="M10 24H32M46 24H72M99 24H185V53H170M10 24V88H55V68"
             fill="none"
-            stroke="#38bdf8"
-            strokeWidth="2"
-          />
-          <circle cx="101" cy="18" r="3" fill="#e2e8f0" />
-          <circle cx="128" cy="18" r="3" fill="#e2e8f0" />
-          <path
-            d="M101 18l23-10"
-            stroke="#f59e0b"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          <path
-            d="M64 56 V89 Q64 96 71 96 H108 Q115 96 115 89 V56"
-            fill="none"
-            stroke="#94a3b8"
-            strokeWidth="7"
+            stroke="#71839b"
+            strokeWidth="2.4"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {[60, 67, 74, 81].map((y) => (
-            <g key={y}>
-              <path
-                d={`M57 ${y} H76`}
-                stroke="#fb923c"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-              <path
-                d={`M103 ${y} H122`}
-                stroke="#fb923c"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-            </g>
-          ))}
-          <text x="71" y="108" fontSize="7" fontWeight="700" fill="#cbd5e1">
-            Lõi sắt
+          <path
+            d="M35 15V33M43 18V30"
+            stroke="#f8fafc"
+            strokeWidth="3"
+          />
+          <text x="33" y="10" fontSize="7" fontWeight="800" fill="#fb7185">
+            +
           </text>
+          <text x="42" y="10" fontSize="7" fontWeight="800" fill="#7dd3fc">
+            −
+          </text>
+          <circle cx="72" cy="24" r="3.4" fill="#dbeafe" />
+          <circle cx="99" cy="24" r="3.4" fill="#dbeafe" />
           <path
-            d="M128 45 V82"
-            stroke="#cbd5e1"
+            d="M72 24L94 14"
+            stroke="#f59e0b"
+            strokeWidth="3.2"
+            strokeLinecap="round"
+          />
+
+          {/* Cuộn dây quấn quanh lõi sắt non nằm ngang. */}
+          <rect
+            x="58"
+            y="64"
+            width="72"
+            height="12"
+            rx="4"
+            fill="#dbe4ef"
+            stroke="#f8fafc"
+            strokeWidth="1.2"
+          />
+          <path
+            d="M55 68C55 52 62 52 62 68S69 84 69 68S76 52 76 68S83 84 83 68S90 52 90 68S97 84 97 68"
+            fill="none"
+            stroke="#d35f02"
             strokeWidth="4"
             strokeLinecap="round"
           />
           <path
-            d="M128 55 L153 62"
-            stroke="#cbd5e1"
-            strokeWidth="4"
+            d="M97 68H110M110 68V38H134"
+            fill="none"
+            stroke="#71839b"
+            strokeWidth="2.4"
             strokeLinecap="round"
+            strokeLinejoin="round"
           />
-          <circle cx="128" cy="55" r="4" fill="#94a3b8" />
-          <circle cx="157" cy="63" r="5" fill="#d1a45d" />
-          <path
-            d="M124 43 H139"
-            stroke="#fbbf24"
-            strokeWidth="2"
-            strokeLinecap="round"
+
+          {/* Miếng sắt, lá thép đàn hồi và chốt kẹp. */}
+          <rect
+            x="111"
+            y="64"
+            width="25"
+            height="12"
+            rx="4"
+            fill="#dbe4ef"
+            stroke="#f8fafc"
+            strokeWidth="1.2"
           />
-          <circle cx="141" cy="43" r="3" fill="#fbbf24" />
-          <path
-            d="M174 38 Q194 62 174 88 Q160 78 160 63 Q160 48 174 38 Z"
-            fill="#d9a92f"
+          <rect
+            x="138"
+            y="35"
+            width="8"
+            height="57"
+            rx="4"
+            fill="#b97820"
             stroke="#fde68a"
+            strokeWidth="1.4"
+          />
+          <rect
+            x="132"
+            y="28"
+            width="22"
+            height="15"
+            rx="3"
+            fill="#f8fafc"
+            stroke="#fb7185"
             strokeWidth="2"
           />
+          <circle cx="143" cy="35.5" r="3.8" fill="#ef4444" />
+
+          {/* Tiếp điểm cố định nối đúng vào nhánh dây bên phải. */}
           <path
-            d="M62 82 V96 M117 82 V96 M128 82 V96"
-            stroke="#38bdf8"
-            strokeWidth="2"
+            d="M146 53H170"
+            stroke="#fb7185"
+            strokeWidth="3"
+            strokeLinecap="round"
           />
+          <circle cx="148" cy="53" r="3.3" fill="#fde68a" />
+
+          {/* Chuông đỏ và cây gõ cong bên dưới, đúng vị trí mô phỏng. */}
+          <circle
+            cx="111"
+            cy="98"
+            r="18"
+            fill="#dc2626"
+            stroke="#fda4af"
+            strokeWidth="2.2"
+          />
+          <circle cx="111" cy="98" r="4.5" fill="none" stroke="#fecaca" strokeWidth="2" />
+          <path
+            d="M142 89Q139 103 128 106"
+            fill="none"
+            stroke="#dbe4ef"
+            strokeWidth="3.2"
+            strokeLinecap="round"
+          />
+          <circle cx="127" cy="106" r="5" fill="#e2e8f0" stroke="#f8fafc" />
+
+          <path d="M20 116H180" stroke="#334155" strokeWidth="6" strokeLinecap="round" />
         </>,
       );
     case "tac-dung-nhiet-dong-dien-day-sat-dot-giay":
@@ -1950,6 +2196,38 @@ export default function MoPhongHubPage() {
   if (selected?.kind === "isothermal-boyle")
     return (
       <IsothermalBoyleDetailView preset={selected} onBack={backToLibrary} />
+    );
+  if (selected?.kind === "isobaric-process")
+    return (
+      <IsobaricProcessDetailView preset={selected} onBack={backToLibrary} />
+    );
+  if (selected?.kind === "cloud-chamber")
+    return (
+      <BlackettCloudChamberExperiment preset={selected} onBack={backToLibrary} />
+    );
+  if (selected?.kind === "magnetic-deflection")
+    return (
+      <MagneticDeflectionExperiment preset={selected} onBack={backToLibrary} />
+    );
+  if (selected?.kind === "coulomb-torsion-balance")
+    return (
+      <CoulombTorsionBalanceExperiment preset={selected} onBack={backToLibrary} />
+    );
+  if (selected?.kind === "oscilloscope-frequency")
+    return (
+      <OscilloscopeFrequencyExperiment preset={selected} onBack={backToLibrary} />
+    );
+  if (selected?.kind === "water-surface-wave")
+    return (
+      <WaterSurfaceWaveExperiment preset={selected} onBack={backToLibrary} />
+    );
+  if (selected?.kind === "rutherford-nitrogen")
+    return (
+      <RutherfordNitrogenExperiment preset={selected} onBack={backToLibrary} />
+    );
+  if (selected?.kind === "rutherford-scattering")
+    return (
+      <RutherfordScatteringExperiment preset={selected} onBack={backToLibrary} />
     );
   if (selected) return <DetailView preset={selected} onBack={backToLibrary} />;
 
