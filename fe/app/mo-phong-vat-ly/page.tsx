@@ -25,8 +25,6 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { ParamPanel } from "@/components/simulations/shared/param-panel";
 import { LandmarksPanel, type JumpMark } from "@/components/simulations/shared/landmarks-panel";
 import { PRESETS, type Preset, type Domain } from "@/components/simulations/presets";
-import { FLUID_SIMS, type FluidSim } from "@/components/simulations/fluid";
-import { FluidDetailView } from "@/components/simulations/fluid/fluid-detail-view";
 import type { SceneReadout } from "@/components/simulations/shared/scene-types";
 import type { Scene } from "@/components/simulations/engines/mechanics/types";
 import type { WaveScene } from "@/components/simulations/engines/wave/types";
@@ -297,41 +295,6 @@ function Thumb({ id }: { id: string }) {
           <path d="M42 44 Q70 83 98 94" fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 4" />
           <text x="126" y="54" fontSize="11" fontWeight="700" fill="#cbd5e1">h</text>
           <path d="M158 34 V92" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
-        </>,
-      );
-    case "ap-suat-chat-long":
-      return frame(
-        <>
-          {/* Bể nước */}
-          <rect x="40" y="24" width="120" height="80" fill="#1d4ed8" opacity="0.35" stroke="#475569" strokeWidth="2" />
-          <line x1="40" y1="24" x2="160" y2="24" stroke="#93c5fd" strokeWidth="2" />
-          {/* Điểm đo + mũi tên áp suất mọi hướng */}
-          <g stroke="#fbbf24" strokeWidth="2" strokeLinecap="round">
-            <line x1="100" y1="78" x2="100" y2="64" />
-            <line x1="100" y1="78" x2="100" y2="92" />
-            <line x1="100" y1="78" x2="86" y2="78" />
-            <line x1="100" y1="78" x2="114" y2="78" />
-            <line x1="100" y1="78" x2="90" y2="68" />
-            <line x1="100" y1="78" x2="110" y2="68" />
-            <line x1="100" y1="78" x2="90" y2="88" />
-            <line x1="100" y1="78" x2="110" y2="88" />
-          </g>
-          <circle cx="100" cy="78" r="4" fill="#fbbf24" />
-          <text x="44" y="60" fontSize="11" fontWeight="700" fill="#34d399">p = ρgh</text>
-        </>,
-      );
-    case "binh-thong-nhau":
-      return frame(
-        <>
-          {/* Ống chữ U */}
-          <path d="M56 24 V96 H144 V24" fill="none" stroke="#475569" strokeWidth="3" />
-          <path d="M78 24 V96 H122 V24" fill="none" stroke="#475569" strokeWidth="3" />
-          {/* Nước hai nhánh cùng mực */}
-          <rect x="56" y="52" width="22" height="44" fill="#1d4ed8" opacity="0.4" />
-          <rect x="122" y="52" width="22" height="44" fill="#1d4ed8" opacity="0.4" />
-          <rect x="56" y="84" width="88" height="12" fill="#1d4ed8" opacity="0.4" />
-          {/* Đường ngang chuẩn nối hai mặt thoáng */}
-          <line x1="56" y1="52" x2="144" y2="52" stroke="#34d399" strokeWidth="1.5" strokeDasharray="5 4" />
         </>,
       );
     case "dinh-luat-hooke":
@@ -832,7 +795,6 @@ function DomainChip({
 
 export default function MoPhongHubPage() {
   const [selected, setSelected] = useState<Preset | null>(null);
-  const [selectedFluid, setSelectedFluid] = useState<FluidSim | null>(null);
   const [domainFilter, setDomainFilter] = useState<Set<Domain>>(new Set(DOMAINS));
   const [query, setQuery] = useState("");
 
@@ -850,19 +812,16 @@ export default function MoPhongHubPage() {
     domainFilter.has(domain) && title.toLowerCase().includes(q);
 
   const presets = PRESETS.filter((p) => matches(p.domain, p.title));
-  const fluidSims = FLUID_SIMS.filter((s) => matches(s.domain, s.title));
   const placeholders = PLACEHOLDERS.filter((p) => matches(p.domain, p.title));
-  const total = presets.length + fluidSims.length + placeholders.length;
+  const total = presets.length + placeholders.length;
 
   const countInDomain = (d: Domain) =>
     PRESETS.filter((s) => s.domain === d).length +
-    FLUID_SIMS.filter((s) => s.domain === d).length +
     PLACEHOLDERS.filter((s) => s.domain === d).length;
 
   const filtered = domainFilter.size < DOMAINS.length;
 
   if (selected) return <DetailView preset={selected} onBack={() => setSelected(null)} />;
-  if (selectedFluid) return <FluidDetailView sim={selectedFluid} onBack={() => setSelectedFluid(null)} />;
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
@@ -935,30 +894,6 @@ export default function MoPhongHubPage() {
                         <span className="sr-only">Đã kiểm tra</span>
                       </span>
                     )}
-                  </div>
-                </div>
-                <div className="space-y-1.5 p-5">
-                  <div className="flex items-center gap-2">
-                    <Badge tone="primary">Lớp {sim.grade}</Badge>
-                    <Badge tone="neutral">{sim.domain}</Badge>
-                  </div>
-                  <h3 className="text-[15px] font-semibold text-[#171717] group-hover:text-[#c96545]">
-                    {sim.title}
-                  </h3>
-                  <p className="line-clamp-2 text-[12px] leading-relaxed text-[#6b6b6b]">{sim.desc}</p>
-                </div>
-              </button>
-            ))}
-
-            {fluidSims.map((sim) => (
-              <button
-                key={sim.id}
-                onClick={() => setSelectedFluid(sim)}
-                className="group overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-white text-left shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[#d97757] hover:shadow-md"
-              >
-                <div className="aspect-[5/3] w-full overflow-hidden bg-[#0f172a] p-2.5">
-                  <div className="h-full w-full overflow-hidden rounded-[10px]">
-                    <Thumb id={sim.id} />
                   </div>
                 </div>
                 <div className="space-y-1.5 p-5">
