@@ -8,6 +8,7 @@ import Konva from "konva";
 import type { RotationScene, RotationState } from "../../engines/rotation/types";
 import { initialRotationState, rotationStateAt, rotationTorques, stepRotation } from "../../engines/rotation/physics";
 import { useContainerSize } from "../../shared/use-container-size";
+import { SceneKonvaSeesaw } from "./scene-konva-seesaw";
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -15,16 +16,7 @@ function blockSize(mass: number): number {
   return Math.min(42, Math.max(24, 20 + mass * 4));
 }
 
-export function SceneKonvaRotation({
-  scene,
-  running,
-  resetSignal,
-  onRunningChange,
-  seekSeconds,
-  seekToken,
-  markLabel,
-  speed = 1,
-}: {
+type RotationRendererProps = {
   scene: RotationScene;
   running: boolean;
   resetSignal: number;
@@ -33,7 +25,23 @@ export function SceneKonvaRotation({
   seekToken?: number;
   markLabel?: string;
   speed?: number;
-}) {
+};
+
+export function SceneKonvaRotation(props: RotationRendererProps) {
+  if (props.scene.variant === "seesaw") return <SceneKonvaSeesaw {...props} />;
+  return <SceneKonvaDiskRotation {...props} />;
+}
+
+function SceneKonvaDiskRotation({
+  scene,
+  running,
+  resetSignal,
+  onRunningChange,
+  seekSeconds,
+  seekToken,
+  markLabel,
+  speed = 1,
+}: RotationRendererProps) {
   const { ref: containerRef, size } = useContainerSize<HTMLDivElement>();
   const runningRef = useRef(running);
   const speedRef = useRef(speed);
@@ -57,10 +65,11 @@ export function SceneKonvaRotation({
 
     layer.add(new Konva.Rect({ x: 0, y: 0, width: W, height: H, fill: "#0f172a" }));
 
-    const center = { x: W * 0.5, y: H * 0.43 };
-    const diskPx = Math.min(W * 0.22, H * 0.26);
+    const center = { x: W * 0.5, y: H * 0.38 };
+    const diskPx = Math.min(W * 0.2, H * 0.25);
     const scale = diskPx / scene.diskRadius;
-    const floorY = Math.min(H - 22, center.y + diskPx + scene.ropeLength * scale + 56);
+    const baseY = H - 38;
+    const standX = center.x;
 
     for (let x = 0; x <= W; x += 38) {
       layer.add(new Konva.Line({ points: [x, 0, x, H], stroke: "#17233a", strokeWidth: 1, listening: false }));
@@ -69,20 +78,29 @@ export function SceneKonvaRotation({
       layer.add(new Konva.Line({ points: [0, y, W, y], stroke: "#17233a", strokeWidth: 1, listening: false }));
     }
 
-    layer.add(new Konva.Line({ points: [0, floorY, W, floorY], stroke: "#475569", strokeWidth: 3, listening: false }));
-    layer.add(new Konva.Rect({ x: center.x - 52, y: center.y + diskPx + 2, width: 104, height: 10, fill: "#64748b", cornerRadius: 3 }));
-    layer.add(new Konva.Line({ points: [center.x - 28, center.y + diskPx + 12, center.x, center.y + diskPx + 58, center.x + 28, center.y + diskPx + 12], closed: true, fill: "#334155", stroke: "#94a3b8", strokeWidth: 2 }));
+    const metal = "#64748b";
+    const metalDark = "#334155";
+    const accent = "#2dd4bf";
+    layer.add(new Konva.Rect({ x: 28, y: baseY + 7, width: W - 56, height: 14, fill: "#08111f", opacity: 0.62, cornerRadius: 4, listening: false }));
+    layer.add(new Konva.Rect({ x: 34, y: baseY, width: W - 68, height: 15, fill: metalDark, stroke: metal, strokeWidth: 2, cornerRadius: 4, listening: false }));
+    const postGap = diskPx + 8;
+    layer.add(new Konva.Line({ points: [standX, baseY, standX, center.y + postGap], stroke: "#1e293b", strokeWidth: 13, lineCap: "round", listening: false }));
+    layer.add(new Konva.Line({ points: [standX, baseY, standX, center.y + postGap], stroke: metal, strokeWidth: 7, lineCap: "round", listening: false }));
+    layer.add(new Konva.Line({ points: [standX, center.y - postGap, standX, 38], stroke: "#1e293b", strokeWidth: 13, lineCap: "round", listening: false }));
+    layer.add(new Konva.Line({ points: [standX, center.y - postGap, standX, 38], stroke: metal, strokeWidth: 7, lineCap: "round", listening: false }));
+    layer.add(new Konva.Line({ points: [standX - 54, baseY, standX + 54, baseY], stroke: "#94a3b8", strokeWidth: 8, lineCap: "round", listening: false }));
+    layer.add(new Konva.Line({ points: [standX - 54, baseY - 3, standX + 54, baseY - 3], stroke: accent, strokeWidth: 2, opacity: 0.8, lineCap: "round", listening: false }));
 
     const wheel = new Konva.Group({ x: center.x, y: center.y, listening: false });
     layer.add(wheel);
-    wheel.add(new Konva.Circle({ radius: diskPx, fill: "#0f6faf", opacity: 0.23, stroke: "#38bdf8", strokeWidth: 4 }));
+    wheel.add(new Konva.Circle({ radius: diskPx, fill: "#0f766e", opacity: 0.2, stroke: accent, strokeWidth: 4 }));
     const ringRadii = [0.24, 0.42, 0.6, 0.78, 1].map((ratio) => diskPx * ratio);
     for (const radius of ringRadii) {
-      wheel.add(new Konva.Circle({ radius, stroke: "#38bdf8", strokeWidth: radius === diskPx ? 4 : 2, opacity: 0.95 }));
+      wheel.add(new Konva.Circle({ radius, stroke: radius === diskPx ? accent : "#5eead4", strokeWidth: radius === diskPx ? 4 : 2, opacity: 0.9 }));
     }
     for (let i = 0; i < 8; i += 1) {
       const angle = (i * Math.PI) / 4;
-      wheel.add(new Konva.Line({ points: [0, 0, Math.cos(angle) * diskPx * 0.92, Math.sin(angle) * diskPx * 0.92], stroke: "#7dd3fc", strokeWidth: 2, opacity: 0.72 }));
+      wheel.add(new Konva.Line({ points: [0, 0, Math.cos(angle) * diskPx * 0.92, Math.sin(angle) * diskPx * 0.92], stroke: "#99f6e4", strokeWidth: 2, opacity: 0.62 }));
     }
     wheel.add(new Konva.Circle({ radius: 13, fill: "#e2e8f0", stroke: "#334155", strokeWidth: 3 }));
     wheel.add(new Konva.Circle({ radius: 4, fill: "#475569" }));
@@ -99,20 +117,21 @@ export function SceneKonvaRotation({
     const rightMass = new Konva.Group();
     layer.add(leftMass, rightMass);
 
-    const leftBox = new Konva.Rect({ cornerRadius: 5, fill: scene.left.color, stroke: "#e2e8f0", strokeWidth: 1.5, shadowColor: "#000", shadowBlur: 6, shadowOpacity: 0.35 });
-    const rightBox = new Konva.Rect({ cornerRadius: 5, fill: scene.right.color, stroke: "#e2e8f0", strokeWidth: 1.5, shadowColor: "#000", shadowBlur: 6, shadowOpacity: 0.35 });
-    const leftText = new Konva.Text({ fontSize: 11, fontStyle: "bold", fill: "#fff", align: "center", fontFamily: "monospace" });
-    const rightText = new Konva.Text({ fontSize: 11, fontStyle: "bold", fill: "#fff", align: "center", fontFamily: "monospace" });
+    const leftBox = new Konva.Rect({ cornerRadius: 5, fill: scene.left.color, stroke: "#e2e8f0", strokeWidth: 1.5, shadowColor: "#020617", shadowBlur: 6, shadowOpacity: 0.35 });
+    const rightBox = new Konva.Rect({ cornerRadius: 5, fill: scene.right.color, stroke: "#e2e8f0", strokeWidth: 1.5, shadowColor: "#020617", shadowBlur: 6, shadowOpacity: 0.35 });
+    const leftText = new Konva.Text({ fontSize: 11, fontStyle: "bold", fill: "#0f172a", align: "center", fontFamily: "monospace" });
+    const rightText = new Konva.Text({ fontSize: 11, fontStyle: "bold", fill: "#0f172a", align: "center", fontFamily: "monospace" });
     leftMass.add(leftBox, leftText);
     rightMass.add(rightBox, rightText);
 
-    const leftWeightArrow = new Konva.Arrow({ points: [], stroke: "#93c5fd", fill: "#93c5fd", strokeWidth: 2.5, pointerLength: 7, pointerWidth: 7 });
-    const rightWeightArrow = new Konva.Arrow({ points: [], stroke: "#f9a8d4", fill: "#f9a8d4", strokeWidth: 2.5, pointerLength: 7, pointerWidth: 7 });
-    const leftWeightLabel = new Konva.Text({ text: "P₁", fontSize: 12, fontStyle: "bold", fill: "#93c5fd", fontFamily: "monospace" });
-    const rightWeightLabel = new Konva.Text({ text: "P₂", fontSize: 12, fontStyle: "bold", fill: "#f9a8d4", fontFamily: "monospace" });
+    const leftWeightArrow = new Konva.Arrow({ points: [], stroke: accent, fill: accent, strokeWidth: 2.5, pointerLength: 7, pointerWidth: 7 });
+    const rightWeightArrow = new Konva.Arrow({ points: [], stroke: "#cbd5e1", fill: "#cbd5e1", strokeWidth: 2.5, pointerLength: 7, pointerWidth: 7 });
+    const leftWeightLabel = new Konva.Text({ text: "P₁", fontSize: 12, fontStyle: "bold", fill: accent, fontFamily: "monospace" });
+    const rightWeightLabel = new Konva.Text({ text: "P₂", fontSize: 12, fontStyle: "bold", fill: "#cbd5e1", fontFamily: "monospace" });
     layer.add(leftWeightArrow, rightWeightArrow, leftWeightLabel, rightWeightLabel);
 
-    const info = new Konva.Text({ x: 16, y: 16, fontSize: 12, fill: "#e2e8f0", fontFamily: "monospace", lineHeight: 1.55 });
+    layer.add(new Konva.Rect({ x: 16, y: 16, width: 220, height: 90, fill: "#111c2f", opacity: 0.94, stroke: "#334155", strokeWidth: 1, cornerRadius: 12, listening: false }));
+    const info = new Konva.Text({ x: 30, y: 29, width: 194, fontSize: 12, fill: "#e2e8f0", fontFamily: "monospace", lineHeight: 1.55 });
     const status = new Konva.Text({ x: 0, y: H - 44, width: W, align: "center", fontSize: 12, fontStyle: "bold", fill: "#fbbf24", fontFamily: "monospace" });
     layer.add(info, status);
 
@@ -158,7 +177,7 @@ export function SceneKonvaRotation({
       const balanced = Math.abs(torques.net) < 1e-6;
       const direction = balanced ? "Cân bằng" : torques.net > 0 ? "Quay ngược chiều kim đồng hồ" : "Quay theo chiều kim đồng hồ";
       info.text(`M₁ = P₁·d₁ = ${torques.left.toFixed(2)} N·m\nM₂ = P₂·d₂ = ${torques.right.toFixed(2)} N·m\nΣM = ${torques.net.toFixed(2)} N·m\nθ = ${(state.theta * RAD_TO_DEG).toFixed(1)}°   ω = ${state.omega.toFixed(2)} rad/s`);
-      status.text(state.stoppedAtLimit ? "Đã tới giới hạn hành trình dây" : direction);
+      status.text(state.stoppedAtLimit ? "Đĩa đã dừng ở giới hạn hành trình dây" : direction);
       layer.batchDraw();
     };
 

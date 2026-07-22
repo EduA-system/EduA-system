@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { angularAcceleration, initialRotationState, rotationStateAt, rotationTorques, totalInertia } from "./physics";
+import { angularAcceleration, initialRotationState, rotationStateAt, rotationTorques, stepRotation, totalInertia } from "./physics";
 import type { RotationScene } from "./types";
 
 const baseScene: RotationScene = {
@@ -34,5 +34,23 @@ describe("rotation engine", () => {
   });
   it("tính moment quán tính gồm đĩa và hai quả cân", () => {
     expect(totalInertia(baseScene)).toBeCloseTo(0.5 * 8 * 1.5 ** 2 + 2 * 1.5 ** 2 + 3);
+  });
+
+  it("dùng moment quán tính của thanh đồng chất cho bập bênh", () => {
+    const scene: RotationScene = { ...baseScene, inertiaModel: "rod" };
+    expect(totalInertia(scene)).toBeCloseTo((1 / 3) * 8 * 1.5 ** 2 + 2 * 1.5 ** 2 + 3);
+  });
+
+  it("dừng ở giới hạn nhưng có thể quay ngược lại khi moment đổi chiều", () => {
+    const maxTheta = Math.PI / 15;
+    const leftHeavy: RotationScene = { ...baseScene, left: { ...baseScene.left, mass: 4 }, maxTheta, minTheta: -maxTheta };
+    const atLimit = rotationStateAt(leftHeavy, 3);
+    expect(atLimit.theta).toBeCloseTo(maxTheta);
+    expect(atLimit.stoppedAtLimit).toBe(true);
+
+    const rightHeavy: RotationScene = { ...leftHeavy, left: { ...leftHeavy.left, mass: 1 } };
+    const movingAway = stepRotation(rightHeavy, atLimit, 1 / 60);
+    expect(movingAway.theta).toBeLessThan(maxTheta);
+    expect(movingAway.stoppedAtLimit).toBe(false);
   });
 });

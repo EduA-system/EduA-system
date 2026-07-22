@@ -1,4 +1,5 @@
-import type { TrackPoint } from "../engines/mechanics/types";
+import { firstTimeBodyReachesX } from "../engines/mechanics/sim-time";
+import type { Scene, TrackPoint } from "../engines/mechanics/types";
 import type { Preset } from "./types";
 
 // Bề rộng nhánh dốc (m) và đoạn chạy ngang sau đáy (m).
@@ -25,6 +26,12 @@ function makeTrack(h: number): TrackPoint[] {
   return points;
 }
 
+function initialTrackAngle(points: TrackPoint[]): number {
+  const from = points[0]!;
+  const to = points[1]!;
+  return (Math.atan2(-(to.y - from.y), to.x - from.x) * 180) / Math.PI;
+}
+
 function values(p: Record<string, number>) {
   const h = p.h ?? 2.5;
   const m = p.m ?? 1;
@@ -36,50 +43,58 @@ function values(p: Record<string, number>) {
   return { h, m, friction, g, Wt, vBottom, WdBottom };
 }
 
+function buildScene(p: Record<string, number>): Scene {
+  const { h, m, friction, g } = values(p);
+  const points = makeTrack(h);
+  const start = points[0]!;
+  return {
+    bodies: [
+      {
+        id: "bi",
+        x: start.x,
+        y: start.y,
+        vx: 0,
+        vy: 0,
+        mass: m,
+        radius: 0.28,
+        visual: {
+          shape: "coaster",
+          color: "#2dd4bf",
+          label: "Tàu lượn",
+          angle: initialTrackAngle(points),
+        },
+      },
+    ],
+    forces: [{ kind: "gravity", g }],
+    constraints: [{ kind: "curveTrack", body: "bi", points, friction, appearance: "rollerCoaster" }],
+    view: { minX: -DROP_SPAN - 0.7, maxX: RUNOUT + 0.7, minY: -0.7, maxY: h + 0.75 },
+    groundPadding: 72,
+  };
+}
+
 export const dongNangTheNang: Preset = {
   id: "dong-nang-the-nang",
-  title: "Tàu lượn — chuyển hoá động năng / thế năng",
+  title: "Tàu lượn: chuyển hoá động năng / thế năng",
   domain: "Cơ học",
   grade: 10,
-  desc: "Viên bi lăn trên máng cong hình chữ U, khảo sát sự chuyển hoá qua lại giữa động năng và thế năng.",
+  desc: "Quan sát tàu lượn lao từ đỉnh dốc xuống đường ray và theo dõi sự chuyển hoá giữa thế năng và động năng.",
   objective:
     "Hiểu Wđ = ½mv² và Wt = mgh chuyển hoá qua lại khi vật chuyển động: tại đỉnh Wt lớn nhất còn Wđ = 0, tại đáy Wđ lớn nhất còn Wt = 0. Khi bỏ qua ma sát, cơ năng W = Wđ + Wt được bảo toàn; có ma sát thì cơ năng giảm dần do hao phí.",
-  sgkRef: "Vật lí 10 — Bài 25",
+  sgkRef: "Vật lí 10, Bài 25",
+  startPaused: true,
   params: [
     { key: "h", label: "Độ cao thả", unit: "m", min: 0.8, max: 4, step: 0.1, default: 2.5 },
-    { key: "m", label: "Khối lượng bi", unit: "kg", min: 0.2, max: 5, step: 0.1, default: 1 },
+    { key: "m", label: "Khối lượng tàu", unit: "kg", min: 0.2, max: 5, step: 0.1, default: 1 },
     { key: "friction", label: "Ma sát ray", unit: "", min: 0, max: 0.3, step: 0.01, default: 0 },
     { key: "g", label: "Gia tốc trọng trường", unit: "m/s²", min: 1.6, max: 20, step: 0.1, default: 9.8 },
   ],
-  applyParams: (p) => {
-    const { h, m, friction, g } = values(p);
-    const points = makeTrack(h);
-    const start = points[0]!;
-    return {
-      bodies: [
-        {
-          id: "bi",
-          x: start.x,
-          y: start.y,
-          vx: 0,
-          vy: 0,
-          mass: m,
-          radius: 0.2,
-          visual: { shape: "box", color: "#f472b6", label: "xe" },
-        },
-      ],
-      forces: [{ kind: "gravity", g }],
-      constraints: [{ kind: "curveTrack", body: "bi", points, friction }],
-      // Khung nhìn cố định theo độ cao thả → camera không giật khi kéo slider.
-      view: { minX: -DROP_SPAN - 0.6, maxX: RUNOUT + 0.6, minY: 0, maxY: h + 0.6 },
-    };
-  },
+  applyParams: buildScene,
   analysis: {
     landmarks: [
       {
         key: "top",
         label: "Thả từ đỉnh",
-        description: "Bi bắt đầu đứng yên ở đỉnh máng: thế năng lớn nhất, động năng bằng 0. Toàn bộ cơ năng ban đầu là thế năng trọng trường.",
+        description: "Tàu bắt đầu đứng yên ở đỉnh dốc: thế năng lớn nhất, động năng bằng 0. Toàn bộ cơ năng ban đầu là thế năng trọng trường.",
         atTime: () => 0,
         values: (p) => {
           const { h, Wt } = values(p);
@@ -93,8 +108,9 @@ export const dongNangTheNang: Preset = {
       },
       {
         key: "bottom",
-        label: "Xuống tới chân dốc",
+        label: "Thời điểm tại đáy",
         description: "Chọn đoạn ngang làm mốc thế năng (h = 0): thế năng bằng 0, động năng lớn nhất. Nếu bỏ qua ma sát, toàn bộ thế năng đã chuyển thành động năng nên v = √(2gh); sau đó xe chạy đều trên đoạn ngang.",
+        atTime: (p) => firstTimeBodyReachesX(buildScene(p), "bi", 0),
         values: (p) => {
           const { vBottom, WdBottom } = values(p);
           return [
@@ -107,7 +123,7 @@ export const dongNangTheNang: Preset = {
       {
         key: "conservation",
         label: "Bảo toàn cơ năng",
-        description: "Khi ma sát = 0, cơ năng W = Wđ + Wt không đổi tại mọi vị trí (bằng mgh ở đỉnh) — xuống tới chân dốc thế năng đã chuyển hết thành động năng, rồi xe chạy đều mãi trên đoạn ngang. Khi có ma sát, cơ năng giảm dần nên xe chạy chậm lại rồi dừng.",
+        description: "Khi ma sát = 0, cơ năng W = Wđ + Wt không đổi tại mọi vị trí (bằng mgh ở đỉnh). Xuống tới chân dốc, thế năng đã chuyển hết thành động năng, rồi xe chạy đều trên đoạn ngang. Khi có ma sát, cơ năng giảm dần nên xe chạy chậm lại rồi dừng.",
         values: (p) => {
           const { Wt, friction } = values(p);
           return [

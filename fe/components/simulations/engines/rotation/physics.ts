@@ -3,7 +3,8 @@ import type { RotationScene, RotationState, RotationTorques } from "./types";
 const EPSILON = 1e-9;
 
 export function diskInertia(scene: RotationScene): number {
-  return 0.5 * scene.diskMass * scene.diskRadius * scene.diskRadius;
+  const factor = scene.inertiaModel === "rod" ? 1 / 3 : 1 / 2;
+  return factor * scene.diskMass * scene.diskRadius * scene.diskRadius;
 }
 
 export function totalInertia(scene: RotationScene): number {
@@ -34,16 +35,35 @@ function derivative(scene: RotationScene, theta: number, omega: number) {
 
 /** Một bước RK4 cho I.alpha = sum(tau), có chặn hành trình dây. */
 export function stepRotation(scene: RotationScene, state: RotationState, dt: number): RotationState {
-  if (state.stoppedAtLimit || dt <= 0) return state;
+  if (dt <= 0) return state;
+
+  if (state.stoppedAtLimit) {
+    const acceleration = angularAcceleration(scene, state);
+    const atMin = scene.minTheta != null && state.theta <= scene.minTheta + EPSILON;
+    const atMax = scene.maxTheta != null && state.theta >= scene.maxTheta - EPSILON;
+    if ((atMin && acceleration <= 0) || (atMax && acceleration >= 0)) return state;
+  }
 
   const k1 = derivative(scene, state.theta, state.omega);
   const k2 = derivative(scene, state.theta + (dt * k1.dTheta) / 2, state.omega + (dt * k1.dOmega) / 2);
   const k3 = derivative(scene, state.theta + (dt * k2.dTheta) / 2, state.omega + (dt * k2.dOmega) / 2);
   const k4 = derivative(scene, state.theta + dt * k3.dTheta, state.omega + dt * k3.dOmega);
 
-  const theta = state.theta + (dt * (k1.dTheta + 2 * k2.dTheta + 2 * k3.dTheta + k4.dTheta)) / 6;
-  const omega = state.omega + (dt * (k1.dOmega + 2 * k2.dOmega + 2 * k3.dOmega + k4.dOmega)) / 6;
-  return { theta, omega, stoppedAtLimit: false };
+  let theta = state.theta + (dt * (k1.dTheta + 2 * k2.dTheta + 2 * k3.dTheta + k4.dTheta)) / 6;
+  let omega = state.omega + (dt * (k1.dOmega + 2 * k2.dOmega + 2 * k3.dOmega + k4.dOmega)) / 6;
+  let stoppedAtLimit = false;
+
+  if (scene.minTheta != null && theta <= scene.minTheta) {
+    theta = scene.minTheta;
+    omega = 0;
+    stoppedAtLimit = true;
+  }
+  if (scene.maxTheta != null && theta >= scene.maxTheta) {
+    theta = scene.maxTheta;
+    omega = 0;
+    stoppedAtLimit = true;
+  }
+  return { theta, omega, stoppedAtLimit };
 }
 
 export function rotationStateAt(scene: RotationScene, seconds: number, step = 1 / 240): RotationState {

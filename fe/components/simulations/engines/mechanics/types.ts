@@ -30,7 +30,7 @@ export type Body = {
   // nguyên hành vi cũ). Có → tham gia va chạm tròn-tròn (xem collisions.ts).
   radius?: number;
   visual?: {
-    shape?: "circle" | "metalBall" | "feather" | "streamlined" | "plate" | "box" | "forceMeter" | "pulley";
+    shape?: "circle" | "metalBall" | "feather" | "streamlined" | "plate" | "box" | "forceMeter" | "pulley" | "coaster" | "collisionCart" | "pendulumBob" | "pendulumPivot" | "hangingWeight";
     metalTone?: "steel" | "brass";
     wheels?: boolean;
     photogateFlag?: boolean;
@@ -43,6 +43,7 @@ export type Body = {
     forceMeterHookBody?: string;
     orientation?: "horizontal" | "vertical";
     angle?: number;
+    collisionSide?: "left" | "right";
   };
 };
 
@@ -67,6 +68,8 @@ export type SpringForce = {
   damping: number;
   // true: lò xo chỉ đẩy khi nén, giãn đến chiều dài tự nhiên thì mất tiếp xúc.
   compressionOnly?: boolean;
+  /** Biến thể trình bày, không tham gia tính toán lực. */
+  appearance?: "hooke";
 };
 
 /** Lực cản môi trường tỉ lệ vận tốc: F = −c·v. Gây dao động tắt dần. */
@@ -100,7 +103,14 @@ export type Force = GravityForce | SpringForce | DragForce | AppliedForce | Coul
 // rk4 — không phải lực, không nằm trong `derivs`.
 
 /** Thanh cứng — giữ khoảng cách |a−b| = `length` chính xác. Cho con lắc đơn. */
-export type RodConstraint = { kind: "rod"; a: string; b: string; length: number };
+export type RodConstraint = {
+  kind: "rod";
+  a: string;
+  b: string;
+  length: number;
+  /** Biến thể trình bày, không tham gia tính toán vật lý. */
+  appearance?: "pendulum";
+};
 
 /** Dây — chỉ kéo: giới hạn |a−b| ≤ `length`, không đẩy (dây chùng thì tự do). */
 export type RopeConstraint = { kind: "rope"; a: string; b: string; length: number };
@@ -126,6 +136,8 @@ export type CurveTrackConstraint = {
   body: string;
   points: TrackPoint[];
   friction?: number;
+  /** Biến thể trình bày, không tham gia tính toán vật lý. */
+  appearance?: "rollerCoaster";
 };
 
 /**
@@ -216,7 +228,29 @@ export type PhotogateTimerAnnotation = {
   color?: string;
 };
 
-export type Annotation = VectorAnnotation | SpringVectorAnnotation | SpringActionReactionAnnotation | PhotogateTimerAnnotation;
+/**
+ * Hai vector động của chuyển động tròn đều. Preset khai báo độ dài hiển thị,
+ * renderer chỉ cập nhật hướng theo vị trí và vận tốc thực ở mỗi frame.
+ */
+export type CircularMotionVectorsAnnotation = {
+  kind: "circularMotionVectors";
+  center: string;
+  body: string;
+  tangentLength: number;
+  tensionLength: number;
+  tangentColor?: string;
+  tensionColor?: string;
+  tangentLabel?: string;
+  tensionLabel?: string;
+  orbitColor?: string;
+};
+
+export type Annotation =
+  | VectorAnnotation
+  | SpringVectorAnnotation
+  | SpringActionReactionAnnotation
+  | PhotogateTimerAnnotation
+  | CircularMotionVectorsAnnotation;
 
 /**
  * Một cảnh mô phỏng = vật + lực + ràng buộc. Đây là thứ AI (tầng 2) khai báo;

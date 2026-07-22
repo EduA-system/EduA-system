@@ -5,9 +5,9 @@ export const vaChamMem: Preset = {
   title: "Va chạm mềm",
   domain: "Cơ học",
   grade: 10,
-  desc: "Hai vật va chạm rồi dính, chuyển động cùng vận tốc — bảo toàn động lượng, mất động năng (e = 0).",
+  desc: "Hai xe va chạm rồi dính và chuyển động cùng vận tốc, bảo toàn động lượng nhưng mất động năng (e = 0).",
   objective: "Va chạm mềm: bảo toàn động lượng nhưng động năng giảm; hai vật dính cùng vận tốc.",
-  sgkRef: "Vật lí 10 — Bài 28–30",
+  sgkRef: "Vật lí 10, Bài 28-30",
   params: [
     { key: "m1", label: "Khối lượng vật 1", unit: "kg", min: 0.5, max: 4, step: 0.1, default: 1 },
     { key: "m2", label: "Khối lượng vật 2", unit: "kg", min: 0.5, max: 4, step: 0.1, default: 2 },
@@ -16,11 +16,30 @@ export const vaChamMem: Preset = {
   applyParams: (p) => ({
     restitution: 0, // va chạm mềm hoàn toàn (dính)
     bodies: [
-      { id: "b1", x: -3, y: 0.4, vx: p.v1 ?? 4, vy: 0, mass: p.m1 ?? 1, radius: 0.4 },
-      { id: "b2", x: 1, y: 0.4, vx: 0, vy: 0, mass: p.m2 ?? 2, radius: 0.4 },
+      {
+        id: "b1",
+        x: -3,
+        y: 0,
+        vx: p.v1 ?? 4,
+        vy: 0,
+        mass: p.m1 ?? 1,
+        radius: 0.4,
+        visual: { shape: "collisionCart", color: "#38bdf8", label: "m₁", collisionSide: "right" },
+      },
+      {
+        id: "b2",
+        x: 1,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        mass: p.m2 ?? 2,
+        radius: 0.4,
+        visual: { shape: "collisionCart", color: "#38bdf8", label: "m₂", collisionSide: "left" },
+      },
     ],
     forces: [{ kind: "gravity", g: 9.8 }],
     constraints: [{ kind: "surface", x: 0, y: 0, angle: 0, length: 400, friction: 0 }],
+    groundPadding: 120,
   }),
   analysis: {
     landmarks: [

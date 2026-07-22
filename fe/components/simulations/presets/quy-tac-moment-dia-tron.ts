@@ -3,8 +3,8 @@ import type { Preset } from "./types";
 const GRAVITY = 9.8;
 const DISK_RADIUS = 1.5;
 const DISK_MASS = 8;
-const ANGULAR_DAMPING = 0.8;
-const MAX_ROPE_TRAVEL = 1.2;
+const ANGULAR_DAMPING = 2.4;
+const MAX_ROTATION = Math.PI / 2;
 
 function values(p: Record<string, number>) {
   const mLeft = p.mLeft ?? 2;
@@ -29,7 +29,7 @@ export const quyTacMomentDiaTron: Preset = {
   desc: "Treo hai vật vào đĩa tròn và điều chỉnh trọng lượng, cánh tay đòn để quan sát đĩa quay hoặc cân bằng.",
   objective:
     "Hiểu quy tắc moment lực: đĩa cân bằng khi M₁ = M₂, tức P₁·d₁ = P₂·d₂. Khi hai moment không bằng nhau, đĩa quay theo chiều của moment lớn hơn.",
-  sgkRef: "Vật lí 10 — Bài 21",
+  sgkRef: "Vật lí 10, Bài 21",
   startPaused: true,
   params: [
     { key: "mLeft", label: "Khối lượng vật trái", unit: "kg", min: 0.1, max: 5, step: 0.1, default: 2 },
@@ -51,8 +51,10 @@ export const quyTacMomentDiaTron: Preset = {
       gravity: GRAVITY,
       angularDamping: ANGULAR_DAMPING,
       ropeLength: 0.72,
-      left: { mass: mLeft, radius: dLeft, label: "Vật trái", color: "#60a5fa" },
-      right: { mass: mRight, radius: dRight, label: "Vật phải", color: "#f472b6" },
+      left: { mass: mLeft, radius: dLeft, label: "Vật trái", color: "#2dd4bf" },
+      right: { mass: mRight, radius: dRight, label: "Vật phải", color: "#94a3b8" },
+      minTheta: -MAX_ROTATION,
+      maxTheta: MAX_ROTATION,
     };
   },
   analysis: {

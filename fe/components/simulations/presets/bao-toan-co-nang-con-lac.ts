@@ -16,13 +16,14 @@ function values(p: Record<string, number>) {
 
 export const baoToanCoNangConLac: Preset = {
   id: "bao-toan-co-nang-con-lac",
-  title: "Bảo toàn cơ năng — con lắc",
+  title: "Bảo toàn cơ năng: con lắc",
   domain: "Dao động & Sóng",
   grade: 10,
   desc: "Con lắc dao động quanh vị trí cân bằng, khảo sát sự chuyển hoá và bảo toàn cơ năng khi chỉ có trọng lực.",
   objective:
     "Chứng minh cơ năng W = Wđ + Wt được bảo toàn khi vật chỉ chịu trọng lực: tại biên Wt lớn nhất còn Wđ = 0, tại vị trí thấp nhất Wđ lớn nhất còn Wt = 0, và tổng cơ năng không đổi trong suốt quá trình dao động.",
-  sgkRef: "Vật lí 10 — Bài 26",
+  sgkRef: "Vật lí 10, Bài 26",
+  minimalOverlay: true,
   params: [
     { key: "L", label: "Chiều dài dây", unit: "m", min: 0.4, max: 3, step: 0.1, default: 1.2 },
     { key: "angle", label: "Góc thả", unit: "°", min: 5, max: 75, step: 1, default: 40 },
@@ -34,7 +35,16 @@ export const baoToanCoNangConLac: Preset = {
     const px = 0, py = 3;
     return {
       bodies: [
-        { id: "pivot", x: px, y: py, vx: 0, vy: 0, mass: 1, fixed: true },
+        {
+          id: "pivot",
+          x: px,
+          y: py,
+          vx: 0,
+          vy: 0,
+          mass: 1,
+          fixed: true,
+          visual: { shape: "pendulumPivot", color: "#2dd4bf" },
+        },
         {
           id: "bob",
           x: px + L * Math.sin(th),
@@ -43,11 +53,11 @@ export const baoToanCoNangConLac: Preset = {
           vy: 0,
           mass: m,
           radius: 0.16,
-          visual: { shape: "circle", color: "#f472b6", label: "m" },
+          visual: { shape: "pendulumBob", color: "#2dd4bf", label: "m" },
         },
       ],
       forces: [{ kind: "gravity", g }],
-      constraints: [{ kind: "rod", a: "pivot", b: "bob", length: L }],
+      constraints: [{ kind: "rod", a: "pivot", b: "bob", length: L, appearance: "pendulum" }],
       // Khung nhìn cố định: bob quét cung bán kính L quanh pivot ở (0, 3).
       view: { minX: -L - 0.4, maxX: L + 0.4, minY: 0, maxY: py + 0.4 },
     };
@@ -57,7 +67,7 @@ export const baoToanCoNangConLac: Preset = {
       {
         key: "extreme",
         label: "Tại biên (góc thả)",
-        description: "Vị trí thả — góc lệch cực đại: vật đứng yên nên động năng bằng 0, còn thế năng lớn nhất. Toàn bộ cơ năng lúc này là thế năng.",
+        description: "Vị trí thả có góc lệch cực đại. Vật đứng yên nên động năng bằng 0, còn thế năng lớn nhất. Toàn bộ cơ năng lúc này là thế năng.",
         atTime: () => 0,
         values: (p) => {
           const { angleDeg, hMax, WtMax } = values(p);

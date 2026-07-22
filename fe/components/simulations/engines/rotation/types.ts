@@ -10,8 +10,10 @@ export type RotationSide = {
 
 export type RotationScene = {
   kind: "rotation";
+  variant?: "disk" | "seesaw";
   diskRadius: number; // m
   diskMass: number; // kg, đĩa đồng chất
+  inertiaModel?: "disk" | "rod";
   gravity: number; // m/s²
   angularDamping: number; // N.m.s/rad, mô-men cản ổ trục
   ropeLength: number; // m, chiều dài không đổi của dây treo
@@ -19,6 +21,12 @@ export type RotationScene = {
   right: RotationSide;
   initialTheta?: number; // rad
   initialOmega?: number; // rad/s
+  minTheta?: number;
+  maxTheta?: number;
+  visual?: {
+    personImageSrc: string;
+    personCrop?: { x: number; y: number; width: number; height: number };
+  };
 };
 
 export type RotationState = {

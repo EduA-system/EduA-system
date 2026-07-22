@@ -6,6 +6,19 @@ import { readPosition, readVelocity } from "./build-derivs";
 import { run } from "./sim-test-helpers";
 import type { StateVec } from "./ode";
 import type { Scene } from "./types";
+import { firstTimeBodyReachesX } from "./sim-time";
+
+describe("Mốc thời gian theo vị trí", () => {
+  it("nội suy đúng lần đầu vật đi qua hoành độ đích", () => {
+    const scene: Scene = {
+      bodies: [{ id: "cart", x: -1, y: 0, vx: 2, vy: 0, mass: 1 }],
+      forces: [],
+      constraints: [],
+    };
+
+    expect(firstTimeBodyReachesX(scene, "cart", 2)).toBeCloseTo(1.5, 3);
+  });
+});
 
 describe("Rơi tự do", () => {
   const g = 9.8;

@@ -2,7 +2,7 @@ import type { Preset } from "./types";
 
 // Hệ số quy đổi để VẼ vector (renderer vẽ theo world-units, m).
 const V_TO_M = 0.12; // 1 m/s ↦ 0.12 m
-const F_TO_M = 0.012; // 1 N ↦ 0.012 m
+const F_TO_M = 0.12; // 1 N ↦ 0.12 m trước khi giới hạn theo bán kính
 
 function values(p: Record<string, number>) {
   const r = p.r ?? 1.2;
@@ -17,13 +17,14 @@ function values(p: Record<string, number>) {
 
 export const lucHuongTam: Preset = {
   id: "luc-huong-tam",
-  title: "Lực hướng tâm — quay vật trên dây",
+  title: "Lực hướng tâm: quay vật trên dây",
   domain: "Cơ học",
   grade: 10,
   desc: "Vật buộc vào dây quay tròn đều trên mặt phẳng ngang (nhìn từ trên), khảo sát lực hướng tâm giữ vật trên quỹ đạo tròn.",
   objective:
-    "Hiểu chuyển động tròn đều cần lực hướng tâm hướng vào tâm với độ lớn Fht = mv²/r = mω²r; lực này do dây căng cung cấp. Vận tốc luôn tiếp tuyến quỹ đạo — nếu dây đứt, vật văng theo phương tiếp tuyến. Bỏ qua trọng lực vì nhìn từ trên xuống.",
-  sgkRef: "Vật lí 10 — Bài 32",
+    "Hiểu chuyển động tròn đều cần lực hướng tâm hướng vào tâm với độ lớn Fht = mv²/r = mω²r; lực này do dây căng cung cấp. Vận tốc luôn tiếp tuyến quỹ đạo. Nếu dây đứt, vật văng theo phương tiếp tuyến. Bỏ qua trọng lực vì nhìn từ trên xuống.",
+  sgkRef: "Vật lí 10, Bài 32",
+  minimalOverlay: true,
   params: [
     { key: "r", label: "Bán kính quỹ đạo", unit: "m", min: 0.5, max: 2, step: 0.1, default: 1.2 },
     { key: "omega", label: "Tốc độ góc ω", unit: "rad/s", min: 0.5, max: 5, step: 0.1, default: 2.5 },
@@ -32,11 +33,13 @@ export const lucHuongTam: Preset = {
   applyParams: (p) => {
     const { r, v, Fht } = values(p);
     const cx = 0, cy = 2;
+    const tangentLength = Math.min(r * 0.68, Math.max(r * 0.4, v * V_TO_M));
+    const tensionLength = Math.min(r * 0.72, Math.max(r * 0.42, Fht * F_TO_M));
     // Vật đặt tại (r, 0) so với tâm, vận tốc đầu (0, v) — vuông góc bán kính →
     // rod giữ khoảng cách r, kernel tự sinh chuyển động tròn đều. KHÔNG trọng lực.
     return {
       bodies: [
-        { id: "tam", x: cx, y: cy, vx: 0, vy: 0, mass: 1, fixed: true, radius: 0.08, visual: { shape: "circle", color: "#94a3b8", label: "O" } },
+        { id: "tam", x: cx, y: cy, vx: 0, vy: 0, mass: 1, fixed: true, radius: 0.08, visual: { shape: "pulley", color: "#94a3b8", label: "O" } },
         {
           id: "vat",
           x: cx + r,
@@ -45,17 +48,26 @@ export const lucHuongTam: Preset = {
           vy: v, // vận tốc tiếp tuyến (vuông góc bán kính)
           mass: p.m ?? 0.5,
           radius: 0.16,
-          visual: { shape: "circle", color: "#f472b6", label: "m" },
+          visual: { shape: "pendulumBob", color: "#2dd4bf", label: "m" },
         },
       ],
       forces: [], // không trọng lực: mặt phẳng ngang nhìn từ trên
       constraints: [{ kind: "rod", a: "tam", b: "vat", length: r }],
-      // Vector lực căng (hướng tâm) + vận tốc (tiếp tuyến), gốc bám theo vật.
+      // Vector vận tốc tiếp tuyến và lực căng dọc dây được renderer xoay theo
+      // trạng thái thật ở mỗi frame. Độ dài mỗi vector giữ nguyên trong một lượt.
       annotations: [
-        // Lực căng hướng từ vật về tâm: tại vị trí đầu (r,0) → hướng −x.
-        { kind: "vector", anchor: "vat", dx: -Fht * F_TO_M, dy: 0, color: "#f59e0b", label: "Fht" },
-        // Vận tốc tiếp tuyến tại vị trí đầu → hướng +y.
-        { kind: "vector", anchor: "vat", dx: 0, dy: v * V_TO_M, color: "#60a5fa", label: "v" },
+        {
+          kind: "circularMotionVectors",
+          center: "tam",
+          body: "vat",
+          tangentLength,
+          tensionLength,
+          tangentColor: "#38bdf8",
+          tensionColor: "#f59e0b",
+          tangentLabel: "v",
+          tensionLabel: "T",
+          orbitColor: "#475569",
+        },
       ],
       // Khung nhìn cố định: quỹ đạo tròn bán kính r quanh tâm (0, 2).
       view: { minX: -r - 0.6, maxX: r + 0.6, minY: 0, maxY: cy + r + 0.6 },
@@ -80,7 +92,7 @@ export const lucHuongTam: Preset = {
       {
         key: "centripetal",
         label: "Gia tốc và lực hướng tâm",
-        description: "Vì hướng vận tốc luôn đổi nên vật có gia tốc hướng vào tâm aht = v²/r = ω²r. Lực gây ra gia tốc này là lực hướng tâm Fht = m·aht, do dây căng cung cấp — luôn hướng từ vật về tâm.",
+        description: "Vì hướng vận tốc luôn đổi nên vật có gia tốc hướng vào tâm aht = v²/r = ω²r. Lực gây ra gia tốc này là lực hướng tâm Fht = m·aht, do dây căng cung cấp và luôn hướng từ vật về tâm.",
         values: (p) => {
           const { aHt, Fht } = values(p);
           return [

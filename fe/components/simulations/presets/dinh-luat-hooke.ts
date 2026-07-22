@@ -14,13 +14,14 @@ function values(p: Record<string, number>) {
 
 export const dinhLuatHooke: Preset = {
   id: "dinh-luat-hooke",
-  title: "Định luật Hooke — biến dạng lò xo",
+  title: "Định luật Hooke: biến dạng lò xo",
   domain: "Cơ học",
   grade: 10,
   desc: "Treo quả cân vào lò xo thẳng đứng, đo độ giãn để khảo sát quan hệ giữa lực đàn hồi và độ biến dạng.",
   objective:
-    "Hiểu định luật Hooke: trong giới hạn đàn hồi, lực đàn hồi tỉ lệ thuận với độ biến dạng Fđh = k·|Δℓ|. Tại vị trí cân bằng lực đàn hồi cân bằng trọng lực nên k·Δℓ = mg, từ đó đo được độ cứng k. Mô hình lò xo là tuyến tính lí tưởng — thực tế chỉ đúng trong giới hạn đàn hồi.",
-  sgkRef: "Vật lí 10 — Bài 33",
+    "Hiểu định luật Hooke: trong giới hạn đàn hồi, lực đàn hồi tỉ lệ thuận với độ biến dạng Fđh = k·|Δℓ|. Tại vị trí cân bằng lực đàn hồi cân bằng trọng lực nên k·Δℓ = mg, từ đó đo được độ cứng k. Mô hình lò xo tuyến tính lí tưởng chỉ đúng trong giới hạn đàn hồi.",
+  sgkRef: "Vật lí 10, Bài 33",
+  minimalOverlay: true,
   params: [
     { key: "k", label: "Độ cứng lò xo", unit: "N/m", min: 20, max: 300, step: 5, default: 100 },
     { key: "m", label: "Khối lượng quả cân", unit: "kg", min: 0.1, max: 3, step: 0.1, default: 0.5 },
@@ -34,7 +35,16 @@ export const dinhLuatHooke: Preset = {
     const naturalEndY = ANCHOR_Y - REST;
     return {
       bodies: [
-        { id: "moc", x: 0, y: ANCHOR_Y, vx: 0, vy: 0, mass: 1, fixed: true },
+        {
+          id: "moc",
+          x: 0,
+          y: ANCHOR_Y,
+          vx: 0,
+          vy: 0,
+          mass: 1,
+          fixed: true,
+          visual: { shape: "pendulumPivot", color: "#2dd4bf" },
+        },
         {
           id: "qua-can",
           x: 0,
@@ -43,12 +53,12 @@ export const dinhLuatHooke: Preset = {
           vy: 0,
           mass: m,
           radius: 0.18,
-          visual: { shape: "box", color: "#f472b6", label: "m" },
+          visual: { shape: "hangingWeight", color: "#38bdf8", label: "m" },
         },
       ],
       forces: [
         { kind: "gravity", g },
-        { kind: "spring", a: "moc", b: "qua-can", k, restLength: REST, damping: 3 },
+        { kind: "spring", a: "moc", b: "qua-can", k, restLength: REST, damping: 3, appearance: "hooke" },
       ],
       constraints: [],
       // Hai vector ĐỘNG bám lò xo — độ dài tính lại mỗi frame theo Δℓ thực (đúng
@@ -102,8 +112,8 @@ export const dinhLuatHooke: Preset = {
       },
       {
         key: "proportional",
-        label: "Quan hệ Fđh — Δℓ",
-        description: "Định luật Hooke: lực đàn hồi tỉ lệ thuận với độ giãn. Treo quả cân nặng gấp đôi thì lò xo giãn gấp đôi — đồ thị Fđh theo Δℓ là đường thẳng qua gốc toạ độ, hệ số góc chính là k.",
+        label: "Quan hệ Fđh và Δℓ",
+        description: "Định luật Hooke: lực đàn hồi tỉ lệ thuận với độ giãn. Treo quả cân nặng gấp đôi thì lò xo giãn gấp đôi. Đồ thị Fđh theo Δℓ là đường thẳng qua gốc tọa độ, hệ số góc chính là k.",
         values: (p) => {
           const { k, stretch } = values(p);
           const stretch2 = (2 * (p.m ?? 0.5) * (p.g ?? 9.8)) / k;
