@@ -56,23 +56,23 @@ Chỉ dùng cho backend API. Không gồm FE.
 
 ## Teacher
 
-Trong code hi?n t?i kh?ng c? `TeacherController` ri?ng. Role `TEACHER` d?ng c?c API ? `BlogController` v? `LibraryContentController`.
+Trong code hiện tại không có `TeacherController` riêng. Role `TEACHER` dùng các API ở `BlogController` và `LibraryContentController`.
 
-| ID         | Sheet/Tab              | API                                     | Lo?i | Input                                                 | Precondition                                                       | Expected                              |
+| ID         | Sheet/Tab              | API                                     | Loại | Input                                                 | Precondition                                                       | Expected                              |
 | ---------- | ---------------------- | --------------------------------------- | ---- | ----------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------- |
-| API-TEA-01 | `createBlogPost`       | `POST /api/blog-posts`                  | N    | `title`, `content`, `subject`                         | Current user l? TEACHER; sanitize tr? n?i dung h?p l?              | T?o b?i `PUBLISHED`                   |
-| API-TEA-02 | `createBlogPost`       | `POST /api/blog-posts`                  | A    | `title` r?ng ho?c content r?ng sau sanitize           | Current user l? TEACHER                                            | B?o l?i validate                      |
-| API-TEA-03 | `updateBlogPost`       | `PATCH /api/blog-posts/{id}`            | N    | `title/content/subject`                               | Current user l? TEACHER v? l? owner; b?i `PUBLISHED` t?n t?i       | C?p nh?t b?i vi?t                     |
-| API-TEA-04 | `updateBlogPost`       | `PATCH /api/blog-posts/{id}`            | A    | `id` c?a b?i ng??i kh?c                               | Current user l? TEACHER nh?ng kh?ng ph?i owner                     | B?o l?i forbidden                     |
-| API-TEA-05 | `deleteBlogPost`       | `DELETE /api/blog-posts/{id}`           | N    | `id`                                                  | Current user l? TEACHER v? l? owner; b?i `PUBLISHED` t?n t?i       | Soft delete th?nh `DELETED_BY_AUTHOR` |
-| API-TEA-06 | `createBlogComment`    | `POST /api/blog-posts/{id}/comments`    | N    | `content`                                             | Current user l? TEACHER; post `PUBLISHED` t?n t?i; sanitize h?p l? | T?o comment                           |
-| API-TEA-07 | `updateBlogComment`    | `PATCH /api/blog-comments/{commentId}`  | N    | `content`                                             | Current user l? TEACHER v? l? owner comment                        | C?p nh?t comment                      |
-| API-TEA-08 | `deleteBlogComment`    | `DELETE /api/blog-comments/{commentId}` | N    | `commentId`                                           | Current user l? TEACHER v? l? owner comment                        | X?a comment                           |
-| API-TEA-09 | `listLibraryContents`  | `GET /api/library/contents`             | N    | `type`, `subject`, `q`, `page`, `size`, `sort`        | Current user l? TEACHER; repo search theo owner hi?n t?i           | Tr? page content c?a teacher          |
-| API-TEA-10 | `getLibraryContent`    | `GET /api/library/contents/{id}`        | N    | `id`                                                  | Content t?n t?i v? current user TEACHER l? owner                   | Tr? detail                            |
-| API-TEA-11 | `createLibraryContent` | `POST /api/library/contents`            | N    | `type`, `title`, `subject`, `payload`, `thumbnailUrl` | Current user l? TEACHER; type/title/subject valid                  | T?o content m?i                       |
-| API-TEA-12 | `updateLibraryContent` | `PATCH /api/library/contents/{id}`      | N    | `title`, `subject`, `payload`, `thumbnailUrl`         | Content t?n t?i v? current user TEACHER l? owner                   | C?p nh?t content                      |
-| API-TEA-13 | `deleteLibraryContent` | `DELETE /api/library/contents/{id}`     | N    | `id`                                                  | Content t?n t?i v? current user TEACHER l? owner                   | Set deleted, tr? `204`                |
+| API-TEA-01 | `createBlogPost`       | `POST /api/blog-posts`                  | N    | `title`, `content`, `subject`                         | Current user là TEACHER; sanitize trả nội dung hợp lệ              | Tạo bài `PUBLISHED`                   |
+| API-TEA-02 | `createBlogPost`       | `POST /api/blog-posts`                  | A    | `title` rỗng hoặc content rỗng sau sanitize           | Current user là TEACHER                                            | Báo lỗi validate                      |
+| API-TEA-03 | `updateBlogPost`       | `PATCH /api/blog-posts/{id}`            | N    | `title/content/subject`                               | Current user là TEACHER và là owner; bài `PUBLISHED` tồn tại       | Cập nhật bài viết                     |
+| API-TEA-04 | `updateBlogPost`       | `PATCH /api/blog-posts/{id}`            | A    | `id` của bài người khác                               | Current user là TEACHER nhưng không phải owner                     | Báo lỗi forbidden                     |
+| API-TEA-05 | `deleteBlogPost`       | `DELETE /api/blog-posts/{id}`           | N    | `id`                                                  | Current user là TEACHER và là owner; bài `PUBLISHED` tồn tại       | Soft delete thành `DELETED_BY_AUTHOR` |
+| API-TEA-06 | `createBlogComment`    | `POST /api/blog-posts/{id}/comments`    | N    | `content`                                             | Current user là TEACHER; post `PUBLISHED` tồn tại; sanitize hợp lệ | Tạo comment                           |
+| API-TEA-07 | `updateBlogComment`    | `PATCH /api/blog-comments/{commentId}`  | N    | `content`                                             | Current user là TEACHER và là owner comment                        | Cập nhật comment                      |
+| API-TEA-08 | `deleteBlogComment`    | `DELETE /api/blog-comments/{commentId}` | N    | `commentId`                                           | Current user là TEACHER và là owner comment                        | Xóa comment                           |
+| API-TEA-09 | `listLibraryContents`  | `GET /api/library/contents`             | N    | `type`, `subject`, `q`, `page`, `size`, `sort`        | Current user là TEACHER; repo search theo owner hiện tại           | Trả page content của teacher          |
+| API-TEA-10 | `getLibraryContent`    | `GET /api/library/contents/{id}`        | N    | `id`                                                  | Content tồn tại và current user TEACHER là owner                   | Trả detail                            |
+| API-TEA-11 | `createLibraryContent` | `POST /api/library/contents`            | N    | `type`, `title`, `subject`, `payload`, `thumbnailUrl` | Current user là TEACHER; type/title/subject valid                  | Tạo content mới                       |
+| API-TEA-12 | `updateLibraryContent` | `PATCH /api/library/contents/{id}`      | N    | `title`, `subject`, `payload`, `thumbnailUrl`         | Content tồn tại và current user TEACHER là owner                   | Cập nhật content                      |
+| API-TEA-13 | `deleteLibraryContent` | `DELETE /api/library/contents/{id}`     | N    | `id`                                                  | Content tồn tại và current user TEACHER là owner                   | Set deleted, trả `204`                |
 
 ## Blog chung và moderator removal
 
@@ -119,6 +119,11 @@ Trong code hi?n t?i kh?ng c? `TeacherController` ri?ng. Role `TEACHER` d?ng c?c 
 | API-LP-03 | `generateActivitiesFrame`   | `POST /api/lesson-plans/generate-activities`         | N    | cùng input                                                             | Catalog có nội dung; AI trả JSON hợp lệ                      | Trả dàn ý hoạt động                                       |
 | API-LP-04 | `generateActivitiesDetails` | `POST /api/lesson-plans/generate-activities-details` | N    | `activities`, `objectives`, `equipmentAndMaterials`, ids, `userPrompt` | Có activities; AI trả từng activity hợp lệ hoặc một phần lỗi | Trả hoạt động chi tiết, giữ skeleton nếu chỉ lỗi một phần |
 | API-LP-05 | `generateLessonPlanStream`  | `POST /api/lesson-plans/generate-stream`             | N    | stream request                                                         | Có executor; stream port nhận event                          | Trả `202`, chạy nền và đẩy event                          |
+| API-LP-06 | `generateObjectives`        | `POST /api/lesson-plans/generate`                    | A    | `bookId`, `chapterId`, hoặc `lessonId` không tồn tại                  | Catalog không tìm thấy dữ liệu theo ids                       | Báo lỗi không tìm thấy dữ liệu chương trình                |
+| API-LP-07 | `generateMaterials`         | `POST /api/lesson-plans/generate-materials`          | A    | cùng input                                                             | AI trả lỗi, timeout, hoặc JSON không hợp lệ                   | Báo lỗi sinh thiết bị/học liệu                              |
+| API-LP-08 | `generateActivitiesFrame`   | `POST /api/lesson-plans/generate-activities`         | A    | cùng input                                                             | AI trả lỗi, timeout, hoặc JSON không hợp lệ                   | Báo lỗi sinh dàn ý hoạt động                                |
+| API-LP-09 | `generateActivitiesDetails` | `POST /api/lesson-plans/generate-activities-details` | A    | `activities` rỗng hoặc JSON activity không hợp lệ                     | Request không thỏa điều kiện xử lý                             | Báo lỗi validate                                            |
+| API-LP-10 | `generateLessonPlanStream`  | `POST /api/lesson-plans/generate-stream`             | A    | stream request                                                         | Executor từ chối tác vụ hoặc stream port phát lỗi              | Báo lỗi khởi tạo sinh giáo án, không đẩy event thành công   |
 
 ## Slides
 
@@ -129,6 +134,11 @@ Trong code hi?n t?i kh?ng c? `TeacherController` ri?ng. Role `TEACHER` d?ng c?c 
 | API-SLIDE-03 | `retryOutlineSessionPart`  | `POST /api/slides/retry-outline-session-part`         | N    | `sessionId`, `partId`            | Session và part tồn tại                                        | Retry part                    |
 | API-SLIDE-04 | `retryOutlineSessionSlide` | `POST /api/slides/retry-outline-session-slide`        | N    | `sessionId`, `partId`, `slideId` | Session, part, slide tồn tại                                   | Retry slide                   |
 | API-SLIDE-05 | `retryOutlinePart`         | `POST /api/slides/retry-outline-part`                 | N    | retry request                    | Request hợp lệ                                                 | Retry nội dung part           |
+| API-SLIDE-06 | `generateOutline`          | `POST /api/slides/generate-outline`                   | A    | outline request                  | AI trả blueprint/outline không hợp lệ hoặc session store lỗi    | Báo lỗi sinh outline, không tạo session |
+| API-SLIDE-07 | `startOutlineSession`      | `POST /api/slides/outline-sessions/{sessionId}/start` | A    | `sessionId` không tồn tại hoặc đã start | Session không tồn tại hoặc đã được bắt đầu                  | Báo lỗi session không hợp lệ    |
+| API-SLIDE-08 | `retryOutlineSessionPart`  | `POST /api/slides/retry-outline-session-part`         | A    | `sessionId`, `partId`            | Session hoặc part không tồn tại                                | Báo lỗi không tìm thấy part    |
+| API-SLIDE-09 | `retryOutlineSessionSlide` | `POST /api/slides/retry-outline-session-slide`        | A    | `sessionId`, `partId`, `slideId` | Session, part, hoặc slide không tồn tại                        | Báo lỗi không tìm thấy slide   |
+| API-SLIDE-10 | `retryOutlinePart`         | `POST /api/slides/retry-outline-part`                 | A    | retry request                    | Request thiếu dữ liệu bắt buộc hoặc AI trả lỗi                 | Báo lỗi validate hoặc retry part |
 
 ## Slide design
 
@@ -136,6 +146,8 @@ Trong code hi?n t?i kh?ng c? `TeacherController` ri?ng. Role `TEACHER` d?ng c?c 
 | ------------- | ------------------- | -------------------------------------- | ---- | ---------------------------------- | ----------------------------------------------------------------- | -------------------------------- |
 | API-DESIGN-01 | `generateSlideHtml` | `POST /api/slide-design/generate-html` | N    | `step`, `priorHtml`, context slide | `bg_deco`, `structural`, hoặc `content_fill`; AI trả HTML phù hợp | Trả HTML design + warning nếu có |
 | API-DESIGN-02 | `fillSlideContent`  | `POST /api/slide-design/fill-content`  | N    | slots, palette, zones              | Có ít nhất 1 slot; AI trả JSON hợp lệ                             | Trả nội dung đã fill             |
+| API-DESIGN-03 | `generateSlideHtml` | `POST /api/slide-design/generate-html` | A    | `step` không hợp lệ hoặc context slide thiếu | Request không hợp lệ hoặc AI trả HTML không hợp lệ        | Báo lỗi validate hoặc sinh HTML  |
+| API-DESIGN-04 | `fillSlideContent`  | `POST /api/slide-design/fill-content`  | A    | slots rỗng hoặc palette/zones không hợp lệ | Không có slot hợp lệ hoặc AI trả JSON lỗi                  | Báo lỗi validate hoặc fill content |
 
 ## Molecule
 
