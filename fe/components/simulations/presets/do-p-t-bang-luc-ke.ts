@@ -34,6 +34,7 @@ export const doPTBangLucKe: Preset = {
     const { mass, weight, hookY } = values(p);
 
     return {
+      disableDragging: true,
       bodies: [
         {
           id: "luc-ke",

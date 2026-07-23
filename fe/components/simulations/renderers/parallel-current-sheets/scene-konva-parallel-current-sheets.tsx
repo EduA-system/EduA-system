@@ -30,13 +30,13 @@ export function SceneKonvaParallelCurrentSheets({ scene, running, resetSignal, o
     if (!container || !W || !H) return;
     const stage = new Konva.Stage({ container, width: W, height: H });
     const layer = new Konva.Layer(); stage.add(layer);
-    layer.add(new Konva.Rect({ x: 0, y: 0, width: W, height: H, fill: "#f8fafc" }));
+    layer.add(new Konva.Rect({ x: 0, y: 0, width: W, height: H, fill: "#0f172a" }));
 
     const beamY = H * .16, pivotY = H * .27, plateH = H * .43;
     const scale = Math.min(W * .9 / .8, H);
     const baseL = W / 2 - scene.separation * scale / 2, baseR = W / 2 + scene.separation * scale / 2;
     layer.add(new Konva.Rect({ x: W * .14, y: beamY - 12, width: W * .72, height: 24, cornerRadius: 4, fill: "#d4a574", stroke: "#8a5a34", strokeWidth: 2 }));
-    layer.add(new Konva.Text({ x: 18, y: 18, text: "Đầu trên được kẹp cố định — chỉ phần dưới lệch do lực từ", fontSize: 15, fill: "#334155" }));
+    layer.add(new Konva.Text({ x: 18, y: 18, text: "Đầu trên được kẹp cố định — chỉ phần dưới lệch do lực từ", fontSize: 15, fill: "#cbd5e1" }));
     for (const x of [baseL, baseR]) {
       layer.add(new Konva.Line({ points: [x, beamY + 12, x, pivotY - 13], stroke: "#64748b", strokeWidth: 8, lineCap: "round" }));
       addClamp(layer, x, pivotY);
@@ -49,15 +49,15 @@ export function SceneKonvaParallelCurrentSheets({ scene, running, resetSignal, o
       group.add(new Konva.Rect({ x: -27, y: 0, width: 54, height: plateH, cornerRadius: 4, fill: "#b9c3cc", stroke: "#475569", strokeWidth: 2, shadowColor: "#64748b", shadowBlur: 5, shadowOpacity: .22 }));
       group.add(new Konva.Rect({ x: -16, y: 4, width: 32, height: 11, cornerRadius: 2, fill: "#94a3b8" }));
       group.add(new Konva.Arrow({ points: [0, plateH - 22, 0, 34], stroke: color, fill: color, strokeWidth: 4, pointerLength: 10, pointerWidth: 10 }));
-      group.add(new Konva.Text({ x: -38, y: plateH + 12, width: 76, align: "center", text: label, fontSize: 14, fontStyle: "bold", fill: "#334155" }));
+      group.add(new Konva.Text({ x: -38, y: plateH + 12, width: 76, align: "center", text: label, fontSize: 14, fontStyle: "bold", fill: "#e2e8f0" }));
     };
     addPlate(left, "Tấm trái", "#e11d48"); addPlate(right, "Tấm phải", "#2563eb");
     const leftCurrentArrow = left.findOne("Arrow") as Konva.Arrow;
     const rightCurrentArrow = right.findOne("Arrow") as Konva.Arrow;
 
     // Hai dây độc lập đi ra hai phía; mỗi đầu dây được giữ bằng kẹp bám dưới đáy tấm.
-    const leftWire = new Konva.Line({ stroke: "#1f2937", strokeWidth: 4, tension: .42, lineCap: "round" });
-    const rightWire = new Konva.Line({ stroke: "#1f2937", strokeWidth: 4, tension: .42, lineCap: "round" });
+    const leftWire = new Konva.Line({ stroke: "#94a3b8", strokeWidth: 4, tension: .42, lineCap: "round" });
+    const rightWire = new Konva.Line({ stroke: "#94a3b8", strokeWidth: 4, tension: .42, lineCap: "round" });
     layer.add(leftWire, rightWire);
     const leftBottomClamp = new Konva.Group();
     const rightBottomClamp = new Konva.Group();
@@ -67,7 +67,7 @@ export function SceneKonvaParallelCurrentSheets({ scene, running, resetSignal, o
     const terminalY = H * .79;
     layer.add(new Konva.Circle({ x: 30, y: terminalY, radius: 11, fill: "#e11d48", stroke: "#881337", strokeWidth: 2 }));
     layer.add(new Konva.Circle({ x: W - 30, y: terminalY, radius: 11, fill: "#2563eb", stroke: "#1e3a8a", strokeWidth: 2 }));
-    const status = new Konva.Text({ x: 0, y: H - 42, width: W, align: "center", fontSize: 15, fontStyle: "bold", fill: "#334155" }); layer.add(status);
+    const status = new Konva.Text({ x: 0, y: H - 42, width: W, align: "center", fontSize: 15, fontStyle: "bold", fill: "#e2e8f0" }); layer.add(status);
 
     let state = initialCurrentSheetsState();
     const draw = () => {
@@ -95,5 +95,5 @@ export function SceneKonvaParallelCurrentSheets({ scene, running, resetSignal, o
     raf = requestAnimationFrame(loop);
     return () => { cancelAnimationFrame(raf); stage.destroy(); };
   }, [scene, size, resetSignal, onRunningChange, ref]);
-  return <div ref={ref} className="h-full w-full overflow-hidden rounded-lg bg-slate-50" />;
+  return <div ref={ref} className="h-full w-full overflow-hidden rounded-lg bg-slate-900" />;
 }

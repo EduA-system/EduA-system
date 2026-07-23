@@ -2,24 +2,33 @@ import type { Preset } from "./types";
 
 const GRAVITY = 9.8;
 const TRACK_Y = 0.55;
-const TRACK_VISUAL_Y = 0.28;
+const TRACK_VISUAL_Y = 0.38;
 const GATE_1_X = -0.25;
 const GATE_DISTANCE = 0.5;
 const GATE_2_X = GATE_1_X + GATE_DISTANCE;
-// The flag is mounted 0.1 m behind the cart centre, so this places it
-// immediately beside photogate 1 at the start of the measurement.
-const CART_START_X = GATE_1_X + 0.1;
-const TIMER_START_X = CART_START_X;
-const TIMER_END_X = CART_START_X + GATE_DISTANCE;
+const CART_STOP_X = GATE_2_X + 0.3;
+const GATE_POST_WIDTH = 0.055;
+const BUMPER_WIDTH = 0.08;
+const MIN_CART_MASS = 0.05;
+// Measure with the leading edge of the cart; no visible flag is required.
+const CART_SENSOR_OFFSET_X = 0.055;
+const TIMER_START_X = GATE_1_X - GATE_POST_WIDTH / 2;
+const TIMER_END_X = TIMER_START_X + GATE_DISTANCE;
+const CART_START_X = TIMER_START_X - CART_SENSOR_OFFSET_X;
+const BUMPER_X = CART_STOP_X + CART_SENSOR_OFFSET_X + BUMPER_WIDTH / 2;
 const HANGER_START_Y = -0.35;
-const PULLEY = { x: 3.25, y: TRACK_Y };
+const PULLEY = { x: 1.1, y: TRACK_Y };
 const ROPE_LENGTH = (PULLEY.x - CART_START_X) + (PULLEY.y - HANGER_START_Y);
 
 function values(p: Record<string, number>) {
   const force = p.F ?? 1;
   const totalMass = p.m ?? 0.5;
-  const hangerMass = force / GRAVITY;
+  // Keep both moving bodies physical for every selectable F/m pair. When the
+  // requested pull is greater than the available hanger weight, the remainder
+  // is represented by the existing applied-force mechanic.
+  const hangerMass = Math.min(force / GRAVITY, totalMass - MIN_CART_MASS);
   const cartMass = totalMass - hangerMass;
+  const supplementalPull = Math.max(0, force - hangerMass * GRAVITY);
   const acceleration = force / totalMass;
   const measurementTime = Math.sqrt((2 * GATE_DISTANCE) / acceleration);
   const gate2Speed = acceleration * measurementTime;
@@ -28,6 +37,7 @@ function values(p: Record<string, number>) {
     totalMass,
     hangerMass,
     cartMass,
+    supplementalPull,
     acceleration,
     measurementTime,
     gate2Speed,
@@ -55,7 +65,7 @@ export const dinhLuat2Newton: Preset = {
     { label: "3 N / 0,5 kg", params: { F: 3, m: 0.5 } },
   ],
   applyParams: (p) => {
-    const { force, hangerMass, cartMass } = values(p);
+    const { force, hangerMass, cartMass, supplementalPull } = values(p);
     return {
       bodies: [
         {
@@ -66,12 +76,12 @@ export const dinhLuat2Newton: Preset = {
           vy: 0,
           mass: cartMass,
           radius: 0.22,
+          displayScale: 0.62,
           visual: {
             shape: "box",
             color: "#60a5fa",
             label: "Xe trượt",
             wheels: true,
-            photogateFlag: true,
           },
         },
         {
@@ -82,6 +92,7 @@ export const dinhLuat2Newton: Preset = {
           vy: 0,
           mass: hangerMass,
           radius: 0.18,
+          displayScale: 0.62,
           visual: { shape: "box", color: "#f59e0b", label: "Quả nặng" },
         },
         {
@@ -93,17 +104,23 @@ export const dinhLuat2Newton: Preset = {
           mass: 1,
           fixed: true,
           radius: 0.2,
+          displayScale: 0.62,
           visual: { shape: "pulley" },
         },
       ],
-      forces: [{ kind: "gravity", g: GRAVITY }],
+      forces: [
+        { kind: "gravity", g: GRAVITY },
+        ...(supplementalPull > 1e-9
+          ? [{ kind: "applied" as const, body: "hanger", fx: 0, fy: -supplementalPull }]
+          : []),
+      ],
       constraints: [
         {
           kind: "curveTrack",
           body: "cart",
           points: [
-            { x: -4, y: TRACK_Y },
-            { x: PULLEY.x, y: TRACK_Y },
+            { x: -1.1, y: TRACK_Y },
+            { x: CART_STOP_X, y: TRACK_Y },
           ],
           friction: 0,
         },
@@ -120,51 +137,57 @@ export const dinhLuat2Newton: Preset = {
           kind: "vector",
           anchor: "hanger",
           dx: 0,
-          dy: -0.62,
+          dy: -0.4,
           color: "#fbbf24",
           label: `F = ${force.toFixed(1)} N`,
           labelPosition: "outside",
-          width: 2.5,
+          width: 2,
         },
         {
           kind: "photogateTimer",
           body: "cart",
+          bodyOffsetX: CART_SENSOR_OFFSET_X,
           startX: TIMER_START_X,
           endX: TIMER_END_X,
-          at: { x: -0.35, y: -1.02 },
+          at: { x: -0.27, y: -0.8 },
           color: "#86efac",
         },
       ],
-      view: { minX: -4, maxX: 4.25, minY: -1.8, maxY: 2.4 },
+      view: { minX: -1.25, maxX: 1.35, minY: -1.35, maxY: 2.1 },
+      displayScaleX: 3,
+      displayScaleXRange: { startX: CART_START_X, endX: BUMPER_X + BUMPER_WIDTH / 2, outsideScale: 0.7 },
       // Raise the complete apparatus into the visual centre and reserve a
       // clear lower strip for the shared zoom controls.
-      groundPadding: 230,
+      groundPadding: 300,
+      disableDragging: true,
     };
   },
   annotations: () => [
     // Máng trượt đệm khí.
-    { kind: "rect", x: -0.2, y: TRACK_VISUAL_Y, width: 7.3, height: 0.2, fill: "#334155", stroke: "#cbd5e1", strokeWidth: 2 },
-    { kind: "rect", x: -0.2, y: TRACK_VISUAL_Y + 0.075, width: 7.08, height: 0.035, fill: "#dbeafe", stroke: "#dbeafe", strokeWidth: 0 },
-    { kind: "rect", x: -2.8, y: 0.02, width: 0.18, height: 0.48, fill: "#475569", stroke: "#94a3b8", strokeWidth: 1.5 },
-    { kind: "rect", x: 2.35, y: 0.02, width: 0.18, height: 0.48, fill: "#475569", stroke: "#94a3b8", strokeWidth: 1.5 },
+    { kind: "rect", x: 0.025, y: TRACK_VISUAL_Y, width: 2.25, height: 0.1, fill: "#334155", stroke: "#cbd5e1", strokeWidth: 1.5 },
+    { kind: "rect", x: 0.025, y: TRACK_VISUAL_Y + 0.045, width: 2.15, height: 0.018, fill: "#dbeafe", stroke: "#dbeafe", strokeWidth: 0 },
+    { kind: "rect", x: -0.85, y: 0.13, width: 0.09, height: 0.4, fill: "#475569", stroke: "#94a3b8", strokeWidth: 1 },
+    { kind: "rect", x: 0.85, y: 0.13, width: 0.09, height: 0.4, fill: "#475569", stroke: "#94a3b8", strokeWidth: 1 },
+    // Soft stop immediately after gate 2.
+    { kind: "rect", x: BUMPER_X, y: 0.575, width: BUMPER_WIDTH, height: 0.29, fill: "#f97316", stroke: "#fdba74", strokeWidth: 1.5 },
 
     // Hai cổng quang điện cách nhau 0,5 m.
-    { kind: "rect", x: GATE_1_X, y: 1.05, width: 0.11, height: 1.45, fill: "#64748b", stroke: "#cbd5e1", strokeWidth: 1.5 },
-    { kind: "rect", x: GATE_1_X, y: 1.72, width: 0.36, height: 0.15, fill: "#2563eb", stroke: "#93c5fd", strokeWidth: 1.5 },
+    { kind: "rect", x: GATE_1_X, y: 1.05875, width: GATE_POST_WIDTH, height: 1.2575, fill: "#64748b", stroke: "#cbd5e1", strokeWidth: 1 },
+    { kind: "rect", x: GATE_1_X, y: 1.72, width: 0.12, height: 0.065, fill: "#2563eb", stroke: "#93c5fd", strokeWidth: 1 },
     { kind: "label", x: GATE_1_X - 0.72, y: 1.98, text: "Cổng 1", color: "#bfdbfe", fontSize: 12 },
-    { kind: "rect", x: GATE_2_X, y: 1.05, width: 0.11, height: 1.45, fill: "#64748b", stroke: "#cbd5e1", strokeWidth: 1.5 },
-    { kind: "rect", x: GATE_2_X, y: 1.72, width: 0.36, height: 0.15, fill: "#2563eb", stroke: "#93c5fd", strokeWidth: 1.5 },
+    { kind: "rect", x: GATE_2_X, y: 1.05875, width: GATE_POST_WIDTH, height: 1.2575, fill: "#64748b", stroke: "#cbd5e1", strokeWidth: 1 },
+    { kind: "rect", x: GATE_2_X, y: 1.72, width: 0.12, height: 0.065, fill: "#2563eb", stroke: "#93c5fd", strokeWidth: 1 },
     { kind: "label", x: GATE_2_X + 0.08, y: 1.98, text: "Cổng 2", color: "#bfdbfe", fontSize: 12 },
     { kind: "rect", x: (GATE_1_X + GATE_2_X) / 2, y: 1.44, width: GATE_DISTANCE, height: 0.025, fill: "#7dd3fc", stroke: "#7dd3fc", strokeWidth: 0 },
     { kind: "label", x: GATE_1_X - 0.22, y: 1.57, text: "s = 0,50 m", color: "#7dd3fc", fontSize: 11 },
 
     // Giá ròng rọc và bộ đo thời gian hiện số.
-    { kind: "rect", x: PULLEY.x, y: 0.08, width: 0.16, height: 0.8, fill: "#475569", stroke: "#94a3b8", strokeWidth: 1.5 },
-    { kind: "rect", x: 0, y: -1.08, width: 2.15, height: 0.68, fill: "#111827", stroke: "#94a3b8", strokeWidth: 2 },
-    { kind: "rect", x: -0.35, y: -1.02, width: 0.82, height: 0.28, fill: "#0f3d2e", stroke: "#34d399", strokeWidth: 1.5 },
+    { kind: "rect", x: PULLEY.x, y: 0.275, width: 0.08, height: 0.55, fill: "#475569", stroke: "#94a3b8", strokeWidth: 1 },
+    { kind: "rect", x: 0, y: -0.85, width: 1.45, height: 0.48, fill: "#111827", stroke: "#94a3b8", strokeWidth: 1.5 },
+    { kind: "rect", x: -0.27, y: -0.8, width: 0.58, height: 0.2, fill: "#0f3d2e", stroke: "#34d399", strokeWidth: 1 },
     { kind: "label", x: 0.2, y: -0.97, text: "Bộ đo thời gian", color: "#cbd5e1", fontSize: 11 },
-    { kind: "curve", x1: GATE_1_X, y1: 0.32, cx1: GATE_1_X, cy1: -0.25, cx2: -0.8, cy2: -0.52, x2: -0.55, y2: -0.75, color: "#60a5fa", strokeWidth: 1.5 },
-    { kind: "curve", x1: GATE_2_X, y1: 0.32, cx1: GATE_2_X, cy1: -0.35, cx2: 0.65, cy2: -0.52, x2: 0.55, y2: -0.75, color: "#f59e0b", strokeWidth: 1.5 },
+    { kind: "curve", x1: GATE_1_X, y1: 0.32, cx1: GATE_1_X, cy1: -0.18, cx2: -0.72, cy2: -0.48, x2: -0.56, y2: -0.61, color: "#60a5fa", strokeWidth: 1.5 },
+    { kind: "curve", x1: GATE_2_X, y1: 0.32, cx1: GATE_2_X, cy1: -0.18, cx2: 0.62, cy2: -0.48, x2: 0.55, y2: -0.61, color: "#f59e0b", strokeWidth: 1.5 },
   ],
   bodyLabels: {
     cart: "Xe trượt",

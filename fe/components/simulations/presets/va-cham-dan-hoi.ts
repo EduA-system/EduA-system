@@ -14,6 +14,7 @@ export const vaChamDanHoi: Preset = {
     { key: "v1", label: "Vận tốc vật 1", unit: "m/s", min: 0, max: 8, step: 0.5, default: 4 },
   ],
   applyParams: (p) => ({
+    disableDragging: true,
     restitution: 1, // đàn hồi hoàn toàn
     bodies: [
       {

@@ -17,6 +17,9 @@ export function SceneKonvaElectromagneticInduction({scene,running,resetSignal,on
   layer.add(new Konva.Text({x:18,y:16,text:"Kéo nam châm xuyên qua cuộn dây và quan sát chiều lệch của kim",fontSize:15,fill:"#334155"}));
 
   const coilX=sx(scene.coilX),coilY=origin.y;
+  const magneticField=new Konva.Group({listening:false});
+  addMagneticFieldLines(magneticField,scene.magnetStrength);
+  layer.add(magneticField);
   const coil=new Konva.Group();layer.add(coil);
   coil.add(new Konva.Rect({x:coilX-48,y:coilY-46,width:96,height:92,cornerRadius:8,fill:"#a56a38",stroke:"#6b4423",strokeWidth:2}));
   for(let i=0;i<13;i++){coil.add(new Konva.Ellipse({x:coilX-38+i*6.3,y:coilY,radiusX:12,radiusY:38,stroke:"#f59e0b",strokeWidth:2.2,opacity:.95}));}
@@ -43,7 +46,9 @@ export function SceneKonvaElectromagneticInduction({scene,running,resetSignal,on
   const frontWindings=new Konva.Group({listening:false});
   for(let i=0;i<13;i++){frontWindings.add(new Konva.Ellipse({x:coilX-38+i*6.3,y:coilY,radiusX:12,radiusY:38,stroke:"#fde68a",strokeWidth:1.7,opacity:.58,dash:[36,36]}));}
   layer.add(frontWindings);
-  magnet.position({x:sx(magnetX),y:coilY});magnet.on("dragstart",()=>{runningRef.current=true;onRunningChange(true)});magnet.on("dragmove",()=>{magnetX=(magnet.x()-origin.x)/scale});
+  const magnetPosition={x:sx(magnetX),y:coilY};
+  magneticField.position(magnetPosition);magnet.position(magnetPosition);
+  magnet.on("dragstart",()=>{runningRef.current=true;onRunningChange(true)});magnet.on("dragmove",()=>{magneticField.position(magnet.position());magnetX=(magnet.x()-origin.x)/scale;layer.batchDraw()});
 
   const status=new Konva.Text({x:0,y:H-42,width:W,align:"center",fontSize:14,fontStyle:"bold",fill:"#334155"});layer.add(status);
   let state=initialInductionState(scene,magnetX);
@@ -52,4 +57,38 @@ export function SceneKonvaElectromagneticInduction({scene,running,resetSignal,on
   return()=>{cancelAnimationFrame(raf);stage.destroy()};
  },[scene,size,resetSignal,onRunningChange,ref]);
  return <div ref={ref} className="h-full w-full overflow-hidden rounded-lg bg-[#eef3f7]"/>;
+}
+
+function addMagneticFieldLines(group:Konva.Group,strength:number){
+ const normalizedStrength=Math.max(0,Math.min(1,(strength-.5)/2));
+ const opacity=.42+normalizedStrength*.34;
+ const strokeWidth=1.7+normalizedStrength*.7;
+ const loops=[
+  {halfWidth:108,height:54},
+  {halfWidth:136,height:84},
+  {halfWidth:168,height:116},
+ ];
+
+ for(const {halfWidth,height} of loops){
+  for(const sign of [-1,1]){
+   const crestY=sign*height*1.08;
+   group.add(new Konva.Line({
+    points:[-70,0,-halfWidth,sign*height*.3,-halfWidth*.68,sign*height,0,crestY,halfWidth*.68,sign*height,halfWidth,sign*height*.3,70,0],
+    stroke:"#0ea5e9",
+    strokeWidth,
+    opacity,
+    tension:.42,
+    lineCap:"round",
+    lineJoin:"round",
+    shadowColor:"#38bdf8",
+    shadowBlur:3,
+    shadowOpacity:.3,
+   }));
+   group.add(new Konva.Arrow({
+    points:[-18,crestY,18,crestY],
+    stroke:"#0284c7",fill:"#0284c7",strokeWidth:strokeWidth+.3,
+    pointerLength:7,pointerWidth:7,opacity:Math.min(1,opacity+.12),
+   }));
+  }
+ }
 }

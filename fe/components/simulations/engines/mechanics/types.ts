@@ -29,6 +29,8 @@ export type Body = {
   // Bán kính va chạm (m). VẮNG → vật là chất điểm, KHÔNG va chạm vật-vật (giữ
   // nguyên hành vi cũ). Có → tham gia va chạm tròn-tròn (xem collisions.ts).
   radius?: number;
+  // Renderer-only size multiplier; collision radius and physics are unchanged.
+  displayScale?: number;
   visual?: {
     shape?: "circle" | "metalBall" | "feather" | "streamlined" | "plate" | "box" | "forceMeter" | "pulley" | "coaster" | "collisionCart" | "pendulumBob" | "pendulumPivot" | "hangingWeight";
     metalTone?: "steel" | "brass";
@@ -222,6 +224,7 @@ export type SpringActionReactionAnnotation = {
 export type PhotogateTimerAnnotation = {
   kind: "photogateTimer";
   body: string;
+  bodyOffsetX?: number;
   startX: number;
   endX: number;
   at: { x: number; y: number };
@@ -271,6 +274,14 @@ export type Scene = {
   // tự zoom lại mỗi lần đổi tham số. Vắng → renderer tự đo khung theo quỹ đạo
   // (hành vi mặc định cũ). Renderer vẫn luôn đảm bảo thấy mặt đất y=0.
   view?: { minX: number; maxX: number; minY: number; maxY: number };
+  // Optional horizontal display magnification. It changes rendering only;
+  // positions, distances, constraints and all physics remain in world units.
+  displayScaleX?: number;
+  // Restrict horizontal magnification to a focal interval and optionally
+  // compress the surrounding apparatus so the full scene remains visible.
+  displayScaleXRange?: { startX: number; endX: number; outsideScale?: number };
+  // Renderer-only switch for experiments whose apparatus must stay calibrated.
+  disableDragging?: boolean;
   // Khoảng cách từ mặt đất tới đáy canvas (px), dùng khi cần tránh lớp điều khiển nổi.
   groundPadding?: number;
 };

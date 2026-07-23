@@ -21,6 +21,7 @@ import { attachZoomPan, type ZoomActions } from "../../shared/konva-zoom";
 import { ZoomControls } from "../../shared/zoom-controls";
 import { useContainerSize } from "../../shared/use-container-size";
 import type { SceneAnnotation, SceneReadout } from "../../shared/scene-types";
+import { screenAngleAtClosestTrackSegment } from "./track-orientation";
 
 // Lưới/mặt đất vẽ rộng hơn khung nhìn ban đầu nhiều lần để còn phủ kín khi
 // zoom out / kéo canvas (lưới TĨNH, không tính lại theo viewport khi zoom).
@@ -210,6 +211,7 @@ export function SceneKonva2D({
 
     // Bản làm việc — kéo-thả/reset sửa ở đây, không đụng prop.
     const work: Scene = {
+      ...scene,
       bodies: scene.bodies.map((b) => ({ ...b })),
       forces: scene.forces,
       constraints: scene.constraints,
@@ -217,6 +219,8 @@ export function SceneKonva2D({
       annotations: scene.annotations,
       view: scene.view,
       groundPadding: scene.groundPadding,
+      displayScaleX: scene.displayScaleX,
+      displayScaleXRange: scene.displayScaleXRange,
     };
     let kernel = buildKernel(work);
     let state = kernel.project(kernel.initialState);
@@ -236,13 +240,34 @@ export function SceneKonva2D({
     // world→screen: mặt đất (y=0) ghim gần đáy, vật scale vừa khung.
     const box = fitBox(work);
     const sidePad = 70, topPad = 50, groundPad = work.groundPadding ?? 46;
-    const bboxW = Math.max(box.maxX - box.minX, 1);
+    const displayScaleX = Math.max(work.displayScaleX ?? 1, 0.01);
+    const displayRange = work.displayScaleXRange;
+    const outsideScaleX = Math.max(displayRange?.outsideScale ?? 1, 0.01);
+    const warpX = (x: number): number => {
+      if (!displayRange) return x * displayScaleX;
+      const startDisplay = displayRange.startX * outsideScaleX;
+      if (x <= displayRange.startX) return x * outsideScaleX;
+      const insideEnd = startDisplay + (displayRange.endX - displayRange.startX) * displayScaleX;
+      if (x <= displayRange.endX) return startDisplay + (x - displayRange.startX) * displayScaleX;
+      return insideEnd + (x - displayRange.endX) * outsideScaleX;
+    };
+    const unwarpX = (x: number): number => {
+      if (!displayRange) return x / displayScaleX;
+      const startDisplay = displayRange.startX * outsideScaleX;
+      if (x <= startDisplay) return x / outsideScaleX;
+      const endDisplay = startDisplay + (displayRange.endX - displayRange.startX) * displayScaleX;
+      if (x <= endDisplay) return displayRange.startX + (x - startDisplay) / displayScaleX;
+      return displayRange.endX + (x - endDisplay) / outsideScaleX;
+    };
+    const displayMinX = warpX(box.minX);
+    const displayMaxX = warpX(box.maxX);
+    const bboxW = Math.max(displayMaxX - displayMinX, 1);
     const worldH = Math.max(box.maxY, 1) + Math.max(-box.minY, 0);
     const scale = Math.min((W - 2 * sidePad) / bboxW, (H - topPad - groundPad) / worldH);
-    const cxBox = (box.minX + box.maxX) / 2;
+    const cxDisplay = (displayMinX + displayMaxX) / 2;
     const groundY = H - groundPad;
-    const toScreen = (wx: number, wy: number): Vec2 => ({ x: W / 2 + (wx - cxBox) * scale, y: groundY - wy * scale });
-    const toWorld = (sx: number, sy: number): Vec2 => ({ x: cxBox + (sx - W / 2) / scale, y: (groundY - sy) / scale });
+    const toScreen = (wx: number, wy: number): Vec2 => ({ x: W / 2 + (warpX(wx) - cxDisplay) * scale, y: groundY - wy * scale });
+    const toWorld = (sx: number, sy: number): Vec2 => ({ x: unwarpX(cxDisplay + (sx - W / 2) / scale), y: (groundY - sy) / scale });
 
     const stage = new Konva.Stage({ container, width: W, height: H });
     const layer = new Konva.Layer();
@@ -531,10 +556,11 @@ export function SceneKonva2D({
       } else if (ann.kind === "rect") {
         const corner = toScreen(ann.x - ann.width / 2, ann.y + ann.height / 2); // world top-left (y lên → screen trên)
         layer.add(
+          // Width follows the same display-only horizontal warp as positions.
           new Konva.Rect({
             x: corner.x,
             y: corner.y,
-            width: ann.width * scale,
+            width: toScreen(ann.x + ann.width / 2, ann.y).x - corner.x,
             height: ann.height * scale,
             fill: ann.fill ?? "#e2e8f0",
             stroke: ann.stroke ?? "#475569",
@@ -705,7 +731,8 @@ export function SceneKonva2D({
     // Bán kính hiển thị — dùng chung cho vật thật lẫn tàn ảnh (ghost).
     const radiusFor = (b: Scene["bodies"][number]): number => {
       const worldR = b.radius ?? Math.min(0.25 + b.mass * 0.04, 0.5);
-      return Math.max(8, worldR * scale);
+      const visualScale = Math.max(b.displayScale ?? 1, 0.1);
+      return Math.max(6, worldR * scale * visualScale);
     };
     const featherAsset = new window.Image();
     featherAsset.decoding = "async";
@@ -1243,7 +1270,7 @@ export function SceneKonva2D({
             }),
           );
           if (b.visual.photogateFlag) {
-            const mastX = -width * 0.18;
+            const mastX = width * 0.42;
             const mastTop = -height / 2 - 32;
             group.add(
               new Konva.Line({
@@ -1368,7 +1395,7 @@ export function SceneKonva2D({
       const p = b.fixed ? toScreen(b.x, b.y) : toScreen(readPosition(state, b.id).x, readPosition(state, b.id).y);
       const radius = radiusFor(b);
       const fill = b.visual?.color ?? bodyColors?.[b.id] ?? (b.fixed ? "#1e293b" : "#f472b6");
-      const node = makeBodyNode(b, p, radius, fill, !b.fixed);
+      const node = makeBodyNode(b, p, radius, fill, !b.fixed && !work.disableDragging);
       layer.add(node);
       circles[b.id] = node;
 
@@ -1379,7 +1406,7 @@ export function SceneKonva2D({
         layer.add(badge);
       }
 
-      if (!b.fixed) {
+      if (!b.fixed && !work.disableDragging) {
         const dragNode = node as Konva.Node;
         dragNode.on("dragstart", () => {
           draggingId = b.id;
@@ -1490,7 +1517,7 @@ export function SceneKonva2D({
           timer.text("0.000 s");
         });
         dynamicAnnotationUpdaters.push(() => {
-          const x = worldOf(ann.body).x;
+          const x = worldOf(ann.body).x + (ann.bodyOffsetX ?? 0);
           // This experiment begins with the flag beside gate 1. Starting from
           // zero also keeps the display correct when the user seeks to gate 2.
           if (startTime == null && x >= ann.startX) startTime = 0;
@@ -1810,6 +1837,22 @@ export function SceneKonva2D({
           const velocity = readVelocity(state, b.id);
           if (Math.hypot(velocity.x, velocity.y) > 0.03) {
             node.rotation((Math.atan2(-velocity.y, velocity.x) * 180) / Math.PI);
+          } else {
+            // A seek can land after the coaster has stopped, so velocity no
+            // longer provides an orientation. Use the local track tangent
+            // instead of leaving the coaster at its initial slope angle.
+            const track = work.constraints.find(
+              (constraint) => constraint.kind === "curveTrack" && constraint.body === b.id,
+            );
+            if (track?.kind === "curveTrack") {
+              const position = readPosition(state, b.id);
+              const trackAngle = screenAngleAtClosestTrackSegment(
+                track.points,
+                position.x,
+                position.y,
+              );
+              if (trackAngle != null) node.rotation(trackAngle);
+            }
           }
         }
       }
