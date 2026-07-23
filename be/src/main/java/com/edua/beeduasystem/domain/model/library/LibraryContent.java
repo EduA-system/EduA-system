@@ -5,6 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Instant;
 import java.util.UUID;
 
-public record LibraryContent(UUID id, UUID ownerId, LibraryContentType type, String title, Subject subject,
+public record LibraryContent(UUID id, UUID ownerId, LibraryContentType type, String title, Subject subject, Integer grade,
                              LibraryContentStatus status, JsonNode payload, String thumbnailUrl,
                              Instant createdAt, Instant updatedAt, Instant deletedAt) { }

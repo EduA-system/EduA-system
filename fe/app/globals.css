@@ -393,6 +393,187 @@ body::-webkit-scrollbar {
   pointer-events: none;
 }
 
+.exam-matrix-editor {
+  font-family: var(--font-libertine), Georgia, serif;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.exam-matrix-editor h2 {
+  margin: 0 0 24px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.exam-matrix-editor h2:not(:first-child) {
+  margin-top: 52px;
+}
+
+.exam-matrix-editor .tableWrapper {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.exam-matrix-editor table {
+  min-width: 1080px;
+  color: #000000;
+}
+
+.exam-matrix-editor th,
+.exam-matrix-editor td {
+  height: 32px;
+  border-color: #000000;
+  padding: 4px 6px;
+  vertical-align: middle;
+}
+
+.exam-matrix-editor th {
+  background: #ffffff;
+  text-align: center;
+}
+
+.exam-matrix-editor td p,
+.exam-matrix-editor th p {
+  margin: 0;
+}
+
+.header-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e8e2d9;
+  border-radius: 8px;
+  background: white;
+  font-size: 13px;
+}
+
+.header-action {
+  display: inline-flex;
+  height: 32px;
+  align-items: center;
+  border: 1px solid #e8e2d9;
+  border-radius: 8px;
+  background: white;
+  padding: 0 12px;
+  color: #4f4943;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.header-action.primary {
+  border-color: #d97757;
+  background: #d97757;
+  color: white;
+}
+
+.exam-structured-table {
+  width: 100%;
+  min-width: 1280px;
+  border-collapse: collapse;
+  table-layout: auto;
+  color: #38332e;
+  font-size: 11px;
+}
+
+.exam-structured-table th,
+.exam-structured-table td {
+  border: 1px solid #bdb5ab;
+  padding: 6px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.exam-structured-table thead th {
+  background: #eeeae5;
+  font-weight: 700;
+}
+
+.exam-structured-table .editable-cell {
+  background: #fff;
+}
+
+.exam-structured-table .editable-cell:focus-within {
+  background: #fffaf6;
+  box-shadow: inset 0 0 0 1px #d97757;
+}
+
+.exam-structured-table .allocation-cell {
+  min-width: 58px;
+  padding: 4px;
+  background: #fff;
+}
+
+.exam-structured-table .allocation-input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 4px;
+  color: #aaa198;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.exam-structured-table .allocation-input:hover,
+.exam-structured-table .allocation-input:focus {
+  border-color: #d97757;
+  background: #fff7f2;
+  color: #a84f32;
+  outline: none;
+}
+
+.exam-structured-table .allocation-input.has-value {
+  background: #fff1e9;
+  color: #9f4d32;
+}
+
+.exam-structured-table .locked-cell {
+  background: #f1efec;
+  color: #625c55;
+}
+
+.exam-structured-table .calculated-cell,
+.exam-structured-table .summary-row td,
+.exam-structured-table .summary-row th {
+  background: #f5f8f3;
+  font-weight: 600;
+}
+
+.exam-structured-table input,
+.exam-structured-table textarea {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  padding: 4px;
+  outline: none;
+  text-align: left;
+}
+
+.exam-structured-table textarea {
+  min-height: 52px;
+  resize: vertical;
+}
+
+.exam-structured-table input:focus,
+.exam-structured-table textarea:focus {
+  border-color: #d97757;
+  background: #fff;
+}
+
+.danger-link {
+  margin-top: 4px;
+  color: #ad4f39;
+  font-size: 10px;
+  text-decoration: underline;
+}
+
 .lesson-document-editor img {
   max-width: 100%;
   height: auto;
