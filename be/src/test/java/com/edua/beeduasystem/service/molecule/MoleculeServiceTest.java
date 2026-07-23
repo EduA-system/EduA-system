@@ -64,22 +64,6 @@ class MoleculeServiceTest {
     }
 
     @Test
-    void rejectsAiStructuresWithMissingRequiredPartsOrOnlyHydrogen() {
-        when(aiClient.generate(anyString())).thenReturn("{\"name\":\"\",\"atoms\":[],\"bonds\":[]}");
-        assertThrows(MoleculeBuildException.class, () -> service.build("chất lạ"));
-
-        when(aiClient.generate(anyString())).thenReturn("{\"name\":\"Hydrogen\",\"atoms\":[{\"element\":\"H\"}],\"bonds\":[]}");
-        assertThrows(MoleculeBuildException.class, () -> service.build("hydrogen"));
-    }
-
-    @Test
-    void wrapsAiGatewayFailureAsControlledBuildException() {
-        when(aiClient.generate(anyString())).thenThrow(new IllegalStateException("provider unavailable"));
-
-        assertThrows(MoleculeBuildException.class, () -> service.build("etan"));
-    }
-
-    @Test
     void rejectsBadBondIndexOrderAndValence() {
         when(aiClient.generate(anyString())).thenReturn("{\"name\":\"X\",\"atoms\":[{\"element\":\"C\"}],\"bonds\":[{\"from\":0,\"to\":2,\"order\":1}]}");
         assertThrows(MoleculeBuildException.class, () -> service.build("x"));

@@ -44,11 +44,11 @@ class JwtTokenAdapterTest {
     void issueThenParse_multipleRoles_usesDeterministicPrimaryRole() {
         JwtTokenAdapter adapter = new JwtTokenAdapter(SECRET, Duration.ofMinutes(60));
 
-        String token = adapter.issueAccessToken(user(), Set.of(Role.TEACHER, Role.ADMINISTRATOR, Role.MODERATOR));
+        String token = adapter.issueAccessToken(user(), Set.of(Role.TEACHER, Role.PRINCIPAL, Role.MODERATOR));
         AccessTokenClaims claims = adapter.parse(token);
 
-        assertThat(claims.roles()).containsExactlyInAnyOrder(Role.TEACHER, Role.MODERATOR, Role.ADMINISTRATOR);
-        assertThat(claims.primaryRole()).isEqualTo(Role.ADMINISTRATOR);
+        assertThat(claims.roles()).containsExactlyInAnyOrder(Role.TEACHER, Role.MODERATOR, Role.PRINCIPAL);
+        assertThat(claims.primaryRole()).isEqualTo(Role.PRINCIPAL);
     }
 
     @Test

@@ -7,10 +7,10 @@ import java.util.Set;
 public enum Role {
     TEACHER,
     MODERATOR,
-    ADMINISTRATOR,
-    IT_MANAGEMENT;
+    PRINCIPAL,
+    IT_STAFF;
 
-    private static final List<Role> PRIORITY = List.of(ADMINISTRATOR, IT_MANAGEMENT, MODERATOR, TEACHER);
+    private static final List<Role> PRIORITY = List.of(PRINCIPAL, IT_STAFF, MODERATOR, TEACHER);
 
     public static Role primaryOf(Set<Role> roles) {
         if (roles == null || roles.isEmpty()) {

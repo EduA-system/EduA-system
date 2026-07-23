@@ -202,7 +202,7 @@ Khi click vào ảnh đang nằm trong frame, "Detach image from frame" để g�
 - **Translate** — dịch toàn deck sang 100+ ngôn ngữ, giữ layout.
 - **Presenter notes generator** — AI gen presenter notes từ content slide.
 - **Brand Voice** (Pro) — AI write theo tone đã train với brand kit.
-- **AI access controls** (admin) — bật/tắt từng AI feature ở mức team.
+- **AI access controls** (IT Staff) — bật/tắt từng AI feature ở mức team.
 
 ## 11. Brand Kit
 

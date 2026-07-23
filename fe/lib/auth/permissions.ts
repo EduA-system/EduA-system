@@ -1,4 +1,4 @@
-export type Role = "TEACHER" | "MODERATOR" | "ADMINISTRATOR" | "IT_MANAGEMENT";
+export type Role = "TEACHER" | "MODERATOR" | "PRINCIPAL" | "IT_STAFF";
 
 export interface RoutePermission {
   requireAuth: boolean;
@@ -17,17 +17,13 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/slide-create":    { requireAuth: true },
   "/slide-maker":     { requireAuth: true },
   "/molecules":       { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
-  "/exam-create":     { requireAuth: false },
-  "/exam-matrix":     { requireAuth: false },
-  "/exam-create-new": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
-  "/exam-edit-new":   { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/library":         { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/user-profile":    { requireAuth: true },
   "/blog":            { requireAuth: true },
   "/blog/moderation": { requireAuth: true, allowedRoles: ["MODERATOR"] },
-  "/user-management": { requireAuth: true, allowedRoles: ["MODERATOR", "ADMINISTRATOR"] },
-  "/it-management": { requireAuth: true, allowedRoles: ["IT_MANAGEMENT"] },
-  "/it-management-users": { requireAuth: true, allowedRoles: ["ADMINISTRATOR"] },
+  "/user-management": { requireAuth: true, allowedRoles: ["MODERATOR", "PRINCIPAL"] },
+  "/it-staff": { requireAuth: true, allowedRoles: ["IT_STAFF"] },
+  "/it-staff-users": { requireAuth: true, allowedRoles: ["PRINCIPAL"] },
 };
 
 export function hasAnyRole(

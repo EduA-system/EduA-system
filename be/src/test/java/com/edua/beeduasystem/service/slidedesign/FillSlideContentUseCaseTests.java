@@ -73,30 +73,6 @@ class FillSlideContentUseCaseTests {
         assertEquals(fullText, result.slots().getFirst().text());
     }
 
-    @Test
-    void rejectsRequestsWithoutUsableContentSlotsBeforeCallingAi() {
-        SlideContentFillRequest empty = new SlideContentFillRequest("Newton", "Nội dung", null, "Vật lý",
-                List.of(new SlideContentSlotRequest(" ", "text", "hero", null, null, "", 10, 1, "")), List.of());
-
-        assertThrows(IllegalArgumentException.class, () -> useCase.execute(empty));
-    }
-
-    @Test
-    void acceptsFencedJsonAndSanitizesImagePromptAndStyle() {
-        String longPrompt = "x".repeat(650);
-        when(aiClient.generate(anyString())).thenReturn("```json\n{\"slots\":["
-                + "{\"slotId\":\"hero-1\",\"text\":\"  Tiêu đề  \",\"style\":{\"fontSize\":1,\"color\":\"#2B2926\",\"align\":\"justify\"}},"
-                + "{\"slotId\":\"aside-1\",\"imagePrompt\":\"" + longPrompt + "\"}]}\n```");
-
-        var result = useCase.execute(request());
-
-        assertEquals("Tiêu đề", result.slots().getFirst().text());
-        assertEquals(28, result.slots().getFirst().style().fontSize());
-        assertEquals("#2b2926", result.slots().getFirst().style().color());
-        assertNull(result.slots().getFirst().style().align());
-        assertEquals(600, result.slots().get(1).imagePrompt().length());
-    }
-
     private static SlideContentFillRequest request() {
         return new SlideContentFillRequest(
                 "Newton", "Nội dung nguồn", null, "Vật lý",

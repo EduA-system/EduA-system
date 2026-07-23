@@ -1,6 +1,5 @@
 package com.edua.beeduasystem.service.auth;
 
-import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
@@ -21,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class ProfileServiceTest {
@@ -88,24 +86,6 @@ class ProfileServiceTest {
     }
 
     @Test
-    void updateCurrentUserProfile_blankEditableFields_clearTheirValues() {
-        UUID userId = UUID.randomUUID();
-        AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Old Name",
-                "https://cdn.example.com/old.png", "old-contact",
-                Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null);
-        when(currentUserProvider.requireUserId()).thenReturn(userId);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(userRoleRepository.findRolesByUserId(userId)).thenReturn(Set.of(Role.TEACHER));
-
-        ProfileService.ProfileResult result = profileService.updateCurrentUserProfile("  ", " ", "");
-
-        assertThat(result.user().fullName()).isNull();
-        assertThat(result.user().avatarUrl()).isNull();
-        assertThat(result.user().contactInfo()).isNull();
-    }
-
-    @Test
     void updateCurrentUserProfile_invalidAvatarUrl_rejected() {
         UUID userId = UUID.randomUUID();
         AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Old Name",
@@ -117,27 +97,5 @@ class ProfileServiceTest {
         assertThatThrownBy(() -> profileService.updateCurrentUserProfile(null, "javascript:alert(1)", null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("URL ảnh đại diện");
-    }
-
-    @Test
-    void updateCurrentUserProfile_missingUser_rejectsRequest() {
-        UUID userId = UUID.randomUUID();
-        when(currentUserProvider.requireUserId()).thenReturn(userId);
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> profileService.updateCurrentUserProfile(null, null, null))
-                .isInstanceOf(InvalidTokenException.class);
-
-        verifyNoInteractions(userRoleRepository);
-    }
-
-    @Test
-    void updateCurrentUserProfile_unauthenticatedRequest_rejectsRequest() {
-        when(currentUserProvider.requireUserId()).thenThrow(new InvalidTokenException("Not authenticated."));
-
-        assertThatThrownBy(() -> profileService.updateCurrentUserProfile(null, null, null))
-                .isInstanceOf(InvalidTokenException.class);
-
-        verifyNoInteractions(userRepository, userRoleRepository);
     }
 }

@@ -72,14 +72,14 @@ export default function UserManagementPage() {
   const [disablePrevious, setDisablePrevious] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
 
-  const isAdmin = hasAnyRole(user, ["ADMINISTRATOR"]);
+  const isPrincipal = hasAnyRole(user, ["PRINCIPAL"]);
   const isModerator = hasAnyRole(user, ["MODERATOR"]);
 
   const loadItems = useCallback(async () => {
     if (status !== "authenticated" || !user) return;
     try {
-      if (isAdmin) {
-        const data = await api<PageResponse>(authFetch, "/admin/moderators");
+      if (isPrincipal) {
+        const data = await api<PageResponse>(authFetch, "/principal/moderators");
         setItems(data.content);
         setAddSubject((current) => availableSubject(data.content, current));
       } else if (isModerator) {
@@ -89,15 +89,15 @@ export default function UserManagementPage() {
     } catch (e) {
       setMsg(String(e));
     }
-  }, [authFetch, status, user, isAdmin, isModerator]);
+  }, [authFetch, status, user, isPrincipal, isModerator]);
 
   useEffect(() => {
     if (status !== "authenticated" || !user) return;
     let cancelled = false;
     const fetchData = async () => {
       try {
-        if (isAdmin) {
-          const data = await api<PageResponse>(authFetch, "/admin/moderators");
+        if (isPrincipal) {
+          const data = await api<PageResponse>(authFetch, "/principal/moderators");
           if (!cancelled) {
             setItems(data.content);
             setAddSubject((current) => availableSubject(data.content, current));
@@ -112,13 +112,13 @@ export default function UserManagementPage() {
     };
     fetchData();
     return () => { cancelled = true; };
-  }, [authFetch, status, user, isAdmin, isModerator]);
+  }, [authFetch, status, user, isPrincipal, isModerator]);
 
   async function addUser() {
     if (!addEmail.trim()) return;
     try {
-      if (isAdmin) {
-        await api<UserItem>(authFetch, "/admin/moderators", {
+      if (isPrincipal) {
+        await api<UserItem>(authFetch, "/principal/moderators", {
           method: "POST",
           body: JSON.stringify({ email: addEmail, subject: addSubject, fullName: addFullName || null }),
         });
@@ -142,15 +142,15 @@ export default function UserManagementPage() {
     if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
     try {
       if (isDisabled) {
-        if (isAdmin) {
-          await api(authFetch, `/admin/moderators/${id}/reactivate`, { method: "PATCH" });
+        if (isPrincipal) {
+          await api(authFetch, `/principal/moderators/${id}/reactivate`, { method: "PATCH" });
         } else if (isModerator) {
           await api(authFetch, `/moderator/teachers/${id}/reactivate`, { method: "PATCH" });
         }
         setMsg("Đã kích hoạt lại.");
       } else {
-        if (isAdmin) {
-          await api(authFetch, `/admin/moderators/${id}`, { method: "DELETE" });
+        if (isPrincipal) {
+          await api(authFetch, `/principal/moderators/${id}`, { method: "DELETE" });
         } else if (isModerator) {
           await api(authFetch, `/moderator/teachers/${id}`, { method: "DELETE" });
         }
@@ -177,7 +177,7 @@ export default function UserManagementPage() {
     if (!replacementTarget || !replacementEmail.trim()) return;
     setIsReplacing(true);
     try {
-      await api<UserItem>(authFetch, `/admin/moderators/${replacementTarget.id}/replacement`, {
+      await api<UserItem>(authFetch, `/principal/moderators/${replacementTarget.id}/replacement`, {
         method: "POST",
         body: JSON.stringify({ replacementEmail, disablePrevious }),
       });
@@ -196,11 +196,11 @@ export default function UserManagementPage() {
     setItems([]);
   }
 
-  const title = isAdmin ? "Quản lý Moderator" : "Quản lý Teacher";
-  const addLabel = isAdmin ? "Thêm Moderator" : "Thêm Teacher";
-  const emptyMsg = isAdmin ? "Chưa có Moderator." : "Chưa có Teacher.";
+  const title = isPrincipal ? "Quản lý Moderator" : "Quản lý Teacher";
+  const addLabel = isPrincipal ? "Thêm Moderator" : "Thêm Teacher";
+  const emptyMsg = isPrincipal ? "Chưa có Moderator." : "Chưa có Teacher.";
 
-  const takenSubjects = isAdmin
+  const takenSubjects = isPrincipal
     ? new Set(items.filter((i) => i.status !== "DISABLED").map((i) => i.subject))
     : new Set<string>();
 
@@ -240,11 +240,11 @@ export default function UserManagementPage() {
             value={addSubject}
             onChange={(e) => setAddSubject(e.target.value)}
             className="rounded border px-3 py-2 text-sm"
-            disabled={isAdmin && takenSubjects.size >= SUBJECTS.length}
+            disabled={isPrincipal && takenSubjects.size >= SUBJECTS.length}
           >
             {SUBJECTS.map((s) => (
-              <option key={s} value={s} disabled={isAdmin && takenSubjects.has(s)}>
-                {SUBJECT_LABELS[s] ?? s}{isAdmin && takenSubjects.has(s) ? " (đã có)" : ""}
+              <option key={s} value={s} disabled={isPrincipal && takenSubjects.has(s)}>
+                {SUBJECT_LABELS[s] ?? s}{isPrincipal && takenSubjects.has(s) ? " (đã có)" : ""}
               </option>
             ))}
           </select>
@@ -269,7 +269,7 @@ export default function UserManagementPage() {
                     {item.grantedByEmail ? ` · cấp bởi ${item.grantedByEmail}` : ""}
                   </div>
                 </div>
-                {isAdmin && item.status !== "DISABLED" ? (
+                {isPrincipal && item.status !== "DISABLED" ? (
                   <button
                     type="button"
                     onClick={() => openReplacement(item)}

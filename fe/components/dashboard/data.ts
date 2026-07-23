@@ -1,4 +1,4 @@
-export type Role = "TEACHER" | "MODERATOR" | "ADMINISTRATOR" | "IT_MANAGEMENT";
+export type Role = "TEACHER" | "MODERATOR" | "PRINCIPAL" | "IT_STAFF";
 
 export type NavItem = {
   label: string;
@@ -29,8 +29,7 @@ export const navGroups: NavGroup[] = [
       { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-edit", active: true },
       { label: "Slide", icon: "slides", href: "/slide-create" },
-      { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/exam-create" },
-      { label: "\u0110\u1ec1 luy\u1ec7n t\u1eadp", icon: "check", href: "/exam-create-new" },
+      { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/lesson-create" },
     ],
   },
   {
@@ -51,12 +50,12 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "ADMIN",
+    label: "MANAGEMENT",
     items: [
-      { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog/moderation", requiredRole: ["MODERATOR", "ADMINISTRATOR"] },
-      { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "ADMINISTRATOR"] },
-      { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n IT", icon: "settings", href: "/it-management-users", requiredRole: ["ADMINISTRATOR"] },
-      { label: "C\u1ea5u h\u00ecnh AI", icon: "settings", href: "/it-management", requiredRole: ["IT_MANAGEMENT"] },
+      { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog/moderation", requiredRole: ["MODERATOR"] },
+      { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "PRINCIPAL"] },
+      { label: "Qu\u1ea3n l\u00fd IT Staff", icon: "settings", href: "/it-staff-users", requiredRole: ["PRINCIPAL"] },
+      { label: "C\u1ea5u h\u00ecnh AI", icon: "settings", href: "/it-staff", requiredRole: ["IT_STAFF"] },
     ],
   },
 ];
