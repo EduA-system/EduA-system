@@ -1,6 +1,7 @@
 package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
+import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
@@ -10,9 +11,12 @@ import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -90,6 +94,63 @@ class AdminModeratorServiceTest {
         assertThatThrownBy(() -> service.replaceModerator(previous.id(), replacement.email(), false))
                 .isInstanceOf(ForbiddenOperationException.class)
                 .hasMessageContaining("cùng môn");
+    }
+
+    @Test
+    void listModerators_returnsEmptyMetadataForEmptyPage() {
+        when(userRepository.findAllByRole(eq(Role.MODERATOR), any())).thenReturn(new PageImpl<>(List.of()));
+        var result = service.listModerators(PageRequest.of(0, 10));
+        assertThat(result.grantedByNames()).isEmpty();
+        assertThat(result.granterUserIds()).isEmpty();
+        assertThat(result.grantedAts()).isEmpty();
+    }
+
+    @Test
+    void addModerator_createsInvitedModeratorAndAssignsRole() {
+        UUID adminId = UUID.randomUUID();
+        when(currentUserProvider.requireUserId()).thenReturn(adminId);
+        when(userRepository.existsActiveByRoleAndSubject(Role.MODERATOR, Subject.MATH)).thenReturn(false);
+        when(userRepository.findByEmail("moderator@edua.vn")).thenReturn(Optional.empty());
+        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppUser result = service.addModerator(" Moderator@EduA.vn ", " math ", " New Moderator ");
+
+        assertThat(result.email()).isEqualTo("moderator@edua.vn");
+        assertThat(result.subject()).isEqualTo(Subject.MATH);
+        assertThat(result.status()).isEqualTo(UserStatus.INVITED);
+        verify(userRoleRepository).replaceRole(eq(result.id()), eq(Role.MODERATOR), eq(adminId), any());
+    }
+
+    @Test
+    void addModerator_rejectsExistingActiveEmail() {
+        AppUser existing = user("moderator@edua.vn", Subject.MATH, UserStatus.ACTIVE);
+        when(userRepository.existsActiveByRoleAndSubject(Role.MODERATOR, Subject.PHYSICS)).thenReturn(false);
+        when(userRepository.findByEmail(existing.email())).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.addModerator(existing.email(), "physics", null))
+                .isInstanceOf(DuplicateEmailException.class);
+    }
+
+    @Test
+    void deleteModerator_isAlwaysForbidden() {
+        assertThatThrownBy(() -> service.deleteModerator(UUID.randomUUID()))
+                .isInstanceOf(ForbiddenOperationException.class);
+    }
+
+    @Test
+    void reactivateModerator_restoresDisabledModerator() {
+        UUID adminId = UUID.randomUUID();
+        AppUser moderator = user("moderator@edua.vn", Subject.CHEMISTRY, UserStatus.DISABLED);
+        when(userRepository.findById(moderator.id())).thenReturn(Optional.of(moderator));
+        when(userRoleRepository.findRolesByUserId(moderator.id())).thenReturn(Set.of(Role.MODERATOR));
+        when(userRepository.existsActiveByRoleAndSubject(Role.MODERATOR, Subject.CHEMISTRY)).thenReturn(false);
+        when(currentUserProvider.requireUserId()).thenReturn(adminId);
+        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppUser result = service.reactivateModerator(moderator.id());
+
+        assertThat(result.status()).isEqualTo(UserStatus.INVITED);
+        verify(userRoleRepository).replaceRole(eq(moderator.id()), eq(Role.MODERATOR), eq(adminId), any());
     }
 
     private AppUser user(String email, Subject subject, UserStatus status) {

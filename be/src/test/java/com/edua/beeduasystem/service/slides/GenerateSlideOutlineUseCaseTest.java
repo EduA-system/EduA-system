@@ -21,8 +21,10 @@ import java.util.List;
 import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -138,6 +140,74 @@ class GenerateSlideOutlineUseCaseTest {
 
         assertEquals(List.of(dense), result);
         verify(aiClient, times(2)).generate(anyString());
+    }
+
+    @Test
+    void rejectsOutlineExecutionWhenBothLessonSourceAndPlanAreMissing() {
+        GenerateOutlineRequest missingSource = new GenerateOutlineRequest(
+                "lesson", "Bài", "", "10", "Vật lí", null, null, null, " ", null);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> useCase().execute(missingSource));
+
+        assertTrue(error.getMessage().contains("Cần có nội dung giáo án"));
+    }
+
+    @Test
+    void startAndSessionRetryRejectExpiredSessions() {
+        GenerateSlideOutlineUseCase useCase = useCase();
+
+        assertThrows(IllegalArgumentException.class, () -> useCase.start("missing"));
+        assertThrows(IllegalArgumentException.class, () -> useCase.retrySessionPart("missing", "p1"));
+    }
+
+    @Test
+    void startAcceptsAnActiveSessionOnlyOnce() {
+        OutlineGenerationSessionStore store = new OutlineGenerationSessionStore();
+        store.create("s1", request(), LessonSourceContext.from(request(), new LessonContentChunker()),
+                new java.util.LinkedHashMap<>());
+        GenerateSlideOutlineUseCase configuredUseCase = new GenerateSlideOutlineUseCase(aiClient, new SlidePromptBuilder(),
+                outlineStream, Executors.newSingleThreadExecutor(), new LessonContentChunker(), store);
+
+        assertDoesNotThrow(() -> configuredUseCase.start("s1"));
+        assertDoesNotThrow(() -> configuredUseCase.start("s1"));
+    }
+
+    @Test
+    void sessionRetryRejectsUnknownPartBeforeSubmittingWork() {
+        OutlineGenerationSessionStore store = new OutlineGenerationSessionStore();
+        store.create("s1", request(), LessonSourceContext.from(request(), new LessonContentChunker()),
+                new java.util.LinkedHashMap<>(java.util.Map.of("p1", new PartDto("p1", "Phần", List.of(), List.of("c1")))));
+        GenerateSlideOutlineUseCase configuredUseCase = new GenerateSlideOutlineUseCase(aiClient, new SlidePromptBuilder(), outlineStream,
+                Executors.newSingleThreadExecutor(), new LessonContentChunker(), store);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> configuredUseCase.retrySessionPart("s1", "unknown"));
+
+        assertTrue(error.getMessage().contains("Không tìm thấy phần"));
+    }
+
+    @Test
+    void retryPartRejectsIncompleteRequestAndUnknownPart() {
+        GenerateSlideOutlineUseCase useCase = useCase();
+        assertThrows(IllegalArgumentException.class, () -> useCase.retryPart(new RetryOutlinePartRequest(null, null, null, null)));
+
+        RetryOutlinePartRequest unknownPart = new RetryOutlinePartRequest("s1", request(),
+                new OutlineDto("lesson", "Bài", List.of()), "p404");
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> useCase.retryPart(unknownPart));
+        assertTrue(error.getMessage().contains("Không tìm thấy phần"));
+    }
+
+    @Test
+    void selectsDeclaredChunksAndRejectsUnknownChunkReferences() {
+        List<LessonContentChunker.Chunk> chunks = new LessonContentChunker(25, 80)
+                .chunk("# Một\n\nNội dung một. ".repeat(3) + "\n# Hai\n\nNội dung hai. ".repeat(3));
+        PartDto selected = new PartDto("p1", "Phần", List.of(), List.of("c2"));
+
+        assertEquals(List.of("c2"), GenerateSlideOutlineUseCase.selectChunks(selected, chunks).stream()
+                .map(LessonContentChunker.Chunk::id).toList());
+        assertThrows(IllegalArgumentException.class, () -> GenerateSlideOutlineUseCase.selectChunks(
+                new PartDto("p1", "Phần", List.of(), List.of("missing")), chunks));
     }
 
     @Test

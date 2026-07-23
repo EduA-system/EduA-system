@@ -69,4 +69,18 @@ class LessonContentChunkerTests {
                 () -> new LessonContentChunker(80, 120).chunk(source));
         assertTrue(error.getMessage().contains("không có ranh giới câu"));
     }
+
+    @Test
+    void rejectsMissingLessonContent() {
+        LessonContentChunker chunker = new LessonContentChunker(80, 120);
+
+        assertThrows(IllegalArgumentException.class, () -> chunker.chunk(null));
+        assertThrows(IllegalArgumentException.class, () -> chunker.chunk(" \n\t "));
+    }
+
+    @Test
+    void rejectsInvalidChunkSizeConfiguration() {
+        assertThrows(IllegalArgumentException.class, () -> new LessonContentChunker(0, 100));
+        assertThrows(IllegalArgumentException.class, () -> new LessonContentChunker(200, 100));
+    }
 }
