@@ -51,7 +51,6 @@ type ToolbarState = {
   isBulletList: boolean;
   isOrderedList: boolean;
   isLink: boolean;
-  isTable: boolean;
   canUndo: boolean;
   canRedo: boolean;
   canSink: boolean;
@@ -72,7 +71,6 @@ const DEFAULT_STATE: ToolbarState = {
   isBulletList: false,
   isOrderedList: false,
   isLink: false,
-  isTable: false,
   canUndo: false,
   canRedo: false,
   canSink: false,
@@ -122,7 +120,6 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
           isBulletList: e.isActive("bulletList"),
           isOrderedList: e.isActive("orderedList"),
           isLink: e.isActive("link"),
-          isTable: e.isActive("table"),
           canUndo: e.can().undo(),
           canRedo: e.can().redo(),
           canSink: e.can().sinkListItem("listItem"),
@@ -177,7 +174,11 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
   const ActiveAlignIcon = activeAlign.icon;
 
   return (
-    <div ref={containerRef} className="flex min-w-0 items-center gap-1.5">
+    <div
+      ref={containerRef}
+      className="flex w-max min-w-max flex-col gap-1 text-[#4f4943]"
+    >
+      <div className="flex min-w-max items-center gap-1 whitespace-nowrap">
       <ToolButton onClick={() => chain().undo().run()} label="Hoàn tác" disabled={!state.canUndo}>
         <UndoIcon />
       </ToolButton>
@@ -192,7 +193,7 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
         setOpenMenu={setOpenMenu}
         value={state.block}
         options={[...TEXT_STYLES]}
-        widthClass="w-[116px] min-w-[72px] shrink"
+        widthClass="w-[116px] shrink-0"
         onSelect={applyTextStyle}
       />
       <TextDropdown
@@ -202,7 +203,7 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
         setOpenMenu={setOpenMenu}
         value={state.fontFamily}
         options={FONT_FAMILIES.map((font) => ({ label: font, value: font }))}
-        widthClass="w-[150px] min-w-[84px] shrink"
+        widthClass="w-[150px] shrink-0"
         onSelect={applyFontFamily}
       />
       <TextDropdown
@@ -226,7 +227,7 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
       <ToolButton onClick={() => chain().toggleUnderline().run()} label="Gạch chân" active={state.isUnderline}>
         <UnderlineIcon />
       </ToolButton>
-      <span className="hidden items-center gap-1.5 @min-[1180px]:flex">
+      <div className="flex items-center gap-1.5">
         <Divider />
         <ToolButton onClick={() => chain().setColor(TEXT_COLOR).run()} label="Màu chữ">
           <TextColorIcon />
@@ -237,12 +238,14 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
         >
           <MarkerIcon />
         </ToolButton>
-      </span>
-      <Divider />
+      </div>
+      </div>
+
+      <div className="relative flex min-w-max items-center gap-1 whitespace-nowrap border-t border-[#efe8df] pt-1">
       <ToolButton onClick={() => chain().toggleBulletList().run()} label="Danh sách dấu đầu dòng" active={state.isBulletList}>
         <BulletIcon />
       </ToolButton>
-      <div className="relative hidden shrink-0 items-center justify-center @min-[1060px]:flex">
+      <div className="relative shrink-0">
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
@@ -280,94 +283,63 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
       </ToolButton>
       <Divider />
       <div className="relative shrink-0">
-        <button
-          type="button"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => setOpenMenu((current) => (current === "more" ? null : "more"))}
-          title="Thêm công cụ"
-          aria-label="Thêm công cụ"
-          aria-expanded={openMenu === "more"}
-          className="flex size-8 shrink-0 items-center justify-center rounded text-[#4f4943] transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
-        >
-          <MoreIcon />
-        </button>
-        {openMenu === "more" ? (
-          <Popup align="right" widthClass="w-60">
-            <MenuGroup label="Định dạng">
-              <div className="flex items-center gap-1">
-                <IconChoice label="Gạch ngang" active={state.isStrike} onClick={() => chain().toggleStrike().run()}>
-                  <StrikeIcon />
-                </IconChoice>
-                <IconChoice
-                  label="Chỉ số trên"
-                  active={state.isSuperscript}
-                  onClick={() => chain().toggleSuperscript().run()}
-                >
-                  <SuperscriptIcon />
-                </IconChoice>
-                <IconChoice
-                  label="Chỉ số dưới"
-                  active={state.isSubscript}
-                  onClick={() => chain().toggleSubscript().run()}
-                >
-                  <SubscriptIcon />
-                </IconChoice>
-                <IconChoice
-                  label="Giảm thụt lề"
-                  disabled={!state.canLift}
-                  onClick={() => chain().liftListItem("listItem").run()}
-                >
-                  <OutdentIcon />
-                </IconChoice>
-                <IconChoice
-                  label="Tăng thụt lề"
-                  disabled={!state.canSink}
-                  onClick={() => chain().sinkListItem("listItem").run()}
-                >
-                  <IndentIcon />
-                </IconChoice>
-                <IconChoice label="Xóa định dạng" onClick={() => chain().unsetAllMarks().clearNodes().run()}>
-                  <ClearFormatIcon />
-                </IconChoice>
-              </div>
-            </MenuGroup>
-            <MenuGroup label="Chèn">
-              <MenuRow onClick={() => setOpenMenu("table")}>
-                <TableIcon /> Bảng
-              </MenuRow>
-              <MenuRow onClick={() => setOpenMenu("formula")}>
-                <FormulaIcon /> Công thức
-              </MenuRow>
-              <MenuRow onClick={() => setOpenMenu("link")}>
-                <LinkIcon /> Liên kết
-              </MenuRow>
-              {state.isLink ? (
-                <MenuRow onClick={() => chain().unsetLink().run()}>
-                  <UnlinkIcon /> Bỏ liên kết
-                </MenuRow>
-              ) : null}
-              <MenuRow onClick={() => setOpenMenu("symbol")}>
-                <SymbolIcon /> Ký hiệu đặc biệt
-              </MenuRow>
-              <MenuRow onClick={() => setOpenMenu("image")}>
-                <ImageIcon /> Hình ảnh
-              </MenuRow>
-            </MenuGroup>
-            {state.isTable ? (
-              <MenuGroup label="Chỉnh sửa bảng">
-                <MenuRow onClick={() => chain().addRowBefore().run()}>Thêm hàng phía trên</MenuRow>
-                <MenuRow onClick={() => chain().addRowAfter().run()}>Thêm hàng phía dưới</MenuRow>
-                <MenuRow onClick={() => chain().addColumnBefore().run()}>Thêm cột bên trái</MenuRow>
-                <MenuRow onClick={() => chain().addColumnAfter().run()}>Thêm cột bên phải</MenuRow>
-                <MenuRow onClick={() => chain().deleteRow().run()}>Xóa hàng hiện tại</MenuRow>
-                <MenuRow onClick={() => chain().deleteColumn().run()}>Xóa cột hiện tại</MenuRow>
-                <MenuRow onClick={() => chain().mergeOrSplit().run()}>Gộp hoặc tách ô</MenuRow>
-                <MenuRow onClick={() => chain().deleteTable().run()}>Xóa bảng</MenuRow>
-              </MenuGroup>
-            ) : null}
-          </Popup>
-        ) : null}
-
+        <div className="flex items-center gap-1.5">
+          <IconChoice label="Strike" active={state.isStrike} onClick={() => chain().toggleStrike().run()}>
+            <StrikeIcon />
+          </IconChoice>
+          <IconChoice
+            label="Superscript"
+            active={state.isSuperscript}
+            onClick={() => chain().toggleSuperscript().run()}
+          >
+            <SuperscriptIcon />
+          </IconChoice>
+          <IconChoice
+            label="Subscript"
+            active={state.isSubscript}
+            onClick={() => chain().toggleSubscript().run()}
+          >
+            <SubscriptIcon />
+          </IconChoice>
+          <IconChoice
+            label="Outdent"
+            disabled={!state.canLift}
+            onClick={() => chain().liftListItem("listItem").run()}
+          >
+            <OutdentIcon />
+          </IconChoice>
+          <IconChoice
+            label="Indent"
+            disabled={!state.canSink}
+            onClick={() => chain().sinkListItem("listItem").run()}
+          >
+            <IndentIcon />
+          </IconChoice>
+          <IconChoice label="Clear format" onClick={() => chain().unsetAllMarks().clearNodes().run()}>
+            <ClearFormatIcon />
+          </IconChoice>
+          <Divider />
+          <IconChoice label="Table" onClick={() => setOpenMenu("table")}>
+            <TableIcon />
+          </IconChoice>
+          <IconChoice label="Formula" onClick={() => setOpenMenu("formula")}>
+            <FormulaIcon />
+          </IconChoice>
+          <IconChoice label="Link" active={state.isLink} onClick={() => setOpenMenu("link")}>
+            <LinkIcon />
+          </IconChoice>
+          {state.isLink ? (
+            <IconChoice label="Unlink" onClick={() => chain().unsetLink().run()}>
+              <UnlinkIcon />
+            </IconChoice>
+          ) : null}
+          <IconChoice label="Symbol" onClick={() => setOpenMenu("symbol")}>
+            <SymbolIcon />
+          </IconChoice>
+          <IconChoice label="Image" onClick={() => setOpenMenu("image")}>
+            <ImageIcon />
+          </IconChoice>
+        </div>
         {openMenu === "table" ? (
           <Popup align="right" widthClass="w-max">
             <TableGrid
@@ -438,6 +410,7 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
         ) : null}
       </div>
     </div>
+    </div>
   );
 }
 
@@ -473,13 +446,13 @@ function TextDropdown<T extends string | number>({
         onClick={() => setOpenMenu((current) => (current === menuId ? null : menuId))}
         aria-label={label}
         aria-expanded={isOpen}
-        className="flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-transparent bg-transparent px-2 text-left text-[13px] text-[#4f4943] outline-none transition hover:border-[#e8e2d9] hover:bg-white"
+        className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-transparent bg-transparent px-2 text-left text-[13px] text-[#4f4943] outline-none transition hover:border-[#e8e2d9] hover:bg-white"
       >
         <span className="truncate">{selected ? selected.label : (placeholder ?? "")}</span>
         <ChevronDownIcon />
       </button>
       {isOpen ? (
-        <div className="absolute top-9 left-0 z-50 min-w-full overflow-hidden rounded-xl border border-[#e8e2d9] bg-white p-1 shadow-[0_8px_24px_rgba(43,41,38,0.12)]">
+        <div className="absolute top-9 left-0 z-50 min-w-full overflow-hidden rounded-lg border border-[#e8e2d9] bg-white p-1 shadow-[0_8px_24px_rgba(43,41,38,0.12)]">
           {options.map((option) => {
             const active = option.value === value;
 
@@ -524,28 +497,6 @@ function Popup({
   );
 }
 
-function MenuGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="px-1 py-1 [&+&]:mt-1 [&+&]:border-t [&+&]:border-[#f0eadf] [&+&]:pt-2">
-      <div className="mb-1 px-1 text-[11px] font-medium tracking-wide text-[#a99f93] uppercase">{label}</div>
-      {children}
-    </div>
-  );
-}
-
-function MenuRow({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onClick}
-      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] text-[#4f4943] transition hover:bg-[#f7f3ee] hover:text-[#2b2926]"
-    >
-      {children}
-    </button>
-  );
-}
-
 function IconChoice({
   children,
   label,
@@ -567,7 +518,7 @@ function IconChoice({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className={`flex size-8 items-center justify-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`flex size-8 items-center justify-center rounded-md transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active ? "bg-[#f3efe9] text-[#2b2926]" : "text-[#6b625a] hover:bg-[#f7f3ee] hover:text-[#2b2926]"
       }`}
     >
@@ -738,7 +689,7 @@ function ToolButton({
       title={label}
       aria-label={label}
       aria-pressed={active}
-      className={`flex size-8 shrink-0 items-center justify-center rounded transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`flex size-8 shrink-0 items-center justify-center rounded-md transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active ? "bg-[#f3efe9] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
       } ${strong ? "text-[14px] font-semibold" : ""}`}
     >
@@ -748,7 +699,7 @@ function ToolButton({
 }
 
 function Divider({ className = "" }: { className?: string }) {
-  return <div className={`mx-1.5 h-5 w-px shrink-0 bg-[#e8e2d9] ${className}`} />;
+  return <div className={`mx-1 h-5 w-px shrink-0 bg-[#e8e2d9] ${className}`} />;
 }
 
 function ChevronDownIcon() { return <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
@@ -776,4 +727,3 @@ function LinkIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fil
 function UnlinkIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M9 15l-1.5 1.5a3.5 3.5 0 01-5-5L4 10M15 9l1.5-1.5a3.5 3.5 0 015 5L20 14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M4 4l16 16" stroke="#d97757" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
 function ImageIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><rect x="3.5" y="5" width="17" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" /><circle cx="9" cy="10" r="1.6" stroke="currentColor" strokeWidth="1.4" /><path d="M5 17l4.5-4 3 2.5L16 11l4 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 function SymbolIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M16 19H8l5-7-5-7h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
-function MoreIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>; }

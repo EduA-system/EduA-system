@@ -132,25 +132,16 @@ presentation/dto/blog/       CreateBlogPostRequest, UpdateBlogPostRequest, Remov
   - Loại `script`, `on*`, `javascript:` — chống XSS (SEC).
 - Ảnh: upload qua `POST /api/uploads` (R2) → chèn URL vào `<img>` (xem `../API_designs/api-chung.md`).
 
-## 7. Tài khoản tạm (interim — chưa có Admin cấp tài khoản)
+## 7. Tài khoản test
 
-- Chưa làm chức năng Admin cấp tài khoản Teacher/Moderator → seed **2 dòng `app_users`** để test luồng:
-  - 1 **TEACHER** + `subject` (vd CHEMISTRY) — tạo/sửa/xóa bài & comment.
-  - 1 **MODERATOR** + **cùng `subject`** (CHEMISTRY) — để test gỡ bài đúng môn (BR-21).
-- Cách seed: mở rộng cơ chế `AdminSeedRunner` (thêm config `app.auth.teacher-seed-email` / `app.auth.moderator-seed-email` + subject) **hoặc** insert tay vào DB.
-- **2 email cụ thể**: `<teacher-email>` và `<mod-email>` — **chờ user cung cấp** (điền vào `.env`).
-- Sau khi login Google bằng 2 email này → JWT mang role + subject → FE điều hướng vào trang Blog theo role.
+- Không cần seed tạm Teacher/Moderator cho blog nữa.
+- Principal đăng nhập bằng tài khoản seed, cấp Moderator qua `/api/principal/moderators`.
+- Moderator cấp Teacher cùng subject qua `/api/moderator/teachers`.
+- Sau khi login Google bằng email đã được cấp quyền → JWT mang role + subject → FE điều hướng vào trang Blog theo role.
 
 ## 8. Cấu hình
 
-`.env` (bổ sung khi seed tài khoản tạm):
-```
-APP_AUTH_TEACHER_SEED_EMAIL=<hiepvthe181347@fpt.edu.vn>
-APP_AUTH_TEACHER_SEED_SUBJECT=CHEMISTRY
-APP_AUTH_MODERATOR_SEED_EMAIL=<sameriteams@gmail.com>
-APP_AUTH_MODERATOR_SEED_SUBJECT=CHEMISTRY
-```
-(Placeholder — chốt giá trị thật khi user đưa email; không commit secret.)
+Không cần cấu hình seed riêng cho blog. Dùng account management hiện có để cấp quyền trước khi test.
 
 ## 9. Thứ tự build (phase triển khai)
 
@@ -159,7 +150,7 @@ APP_AUTH_MODERATOR_SEED_SUBJECT=CHEMISTRY
 3. JPA entity + Spring Data repo + adapter (pattern `AppUserEntity`/`JpaAppUserRepository`).
 4. `BlogPostService` / `BlogCommentService` (owner-check, subject-match, Jsoup sanitize).
 5. `BlogController` + DTO + map lỗi ở `GlobalExceptionHandler`.
-6. Seed 2 tài khoản tạm (§7) + smoke test 9 endpoint bằng 2 tài khoản.
+6. Cấp tài khoản qua account management (§7) + smoke test 9 endpoint bằng Teacher/Moderator cùng subject.
 7. (Follow-up) FE màn Blog (list / detail / create / management); notification.
 
 ## 10. Điểm mở

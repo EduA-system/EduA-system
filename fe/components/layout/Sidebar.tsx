@@ -50,12 +50,12 @@ export function Sidebar({
 
   const displayName = user?.fullName ?? user?.email ?? "Nguyen Thi Hoa";
   const initials = user ? getInitials(displayName) : "NH";
-  const displayRole = user?.role === "ADMINISTRATOR"
-    ? "Quản trị viên"
+  const displayRole = user?.role === "PRINCIPAL"
+    ? "Hiệu trưởng"
     : user?.role === "MODERATOR"
       ? "Người kiểm duyệt"
-      : user?.role === "IT_MANAGEMENT"
-        ? "Quản lý CNTT"
+      : user?.role === "IT_STAFF"
+        ? "Nhân viên IT"
       : "Giáo viên";
 
   const filteredGroups = navGroups

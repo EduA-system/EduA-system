@@ -8,7 +8,7 @@ WITH ranked_user_roles AS (
             PARTITION BY ur.user_id
             ORDER BY
                 CASE r.name
-                    WHEN 'ADMINISTRATOR' THEN 1
+                    WHEN 'PRINCIPAL' THEN 1
                     WHEN 'MODERATOR' THEN 2
                     WHEN 'TEACHER' THEN 3
                     ELSE 4

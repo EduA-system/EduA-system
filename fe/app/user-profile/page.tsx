@@ -13,8 +13,9 @@ const AVATAR_TYPES = new Set(["image/png", "image/jpeg"]);
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 function roleLabel(role: string | null): string {
-  if (role === "ADMINISTRATOR") return "Quản trị viên";
+  if (role === "PRINCIPAL") return "Hiệu trưởng";
   if (role === "MODERATOR") return "Người kiểm duyệt";
+  if (role === "IT_STAFF") return "Nhân viên IT";
   return "Giáo viên";
 }
 
