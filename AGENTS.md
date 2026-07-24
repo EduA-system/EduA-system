@@ -7,6 +7,8 @@ This repository is the EDUA monorepo with two independent apps:
 - `be/`: Spring Boot 3.4.5 backend using Java 21, Maven, PostgreSQL, Flyway, Spring AI, WebSocket/STOMP, SpringDoc OpenAPI, Cloudflare R2 through the S3 SDK, Lombok, and Jsoup.
 - `designs/`: architecture, API, prompt-security, slide-generation, and slide-editor design notes.
 - `requirements/` and `sprints/`: product requirements and sprint planning notes.
+- `ITER3_CODE_CHECKLIST.md`: current code-vs-doc status for Iteration 3.
+- `.codex/skills/iter3-doc-sync/`: use this skill after Iter3 changes to sync docs with code.
 - `scripts/start.ps1`: full-stack launcher. It loads `.env`, resolves cloud PostgreSQL versus Docker fallback, starts backend, then starts frontend.
 - `.github/workflows/ci.yml`: frontend CI on Node 20, 22, and 24.
 - `.husky/pre-commit`: frontend lint, typecheck, and build before commits.
@@ -52,6 +54,12 @@ For backend changes under `be/`, follow `designs/layered-architecture.md` and `.
 - Backend uses base package `com.edua.beeduasystem`; class names are PascalCase and package names are lowercase.
 - Keep changes surgical and avoid unrelated refactors.
 - Prefer existing local helpers, component patterns, DTO style, and service/gateway boundaries over new abstractions.
+
+## Iter3 Documentation Sync
+- When Iter3-related code changes land, update the implementation docs in the same pass.
+- Keep `ITER3_CODE_CHECKLIST.md` aligned with the actual code state.
+- Use `Principal` for school-level account management, and `IT Staff` for prompt/system-prompt management.
+- Keep `AGENTS.md`, `CLAUDE.md`, and the Iter3 checklist consistent with any role, route, or workflow rename.
 
 ## Testing Guidelines
 - Frontend quality is enforced through lint, typecheck, and production build; no frontend test runner is configured yet.

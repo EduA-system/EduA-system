@@ -9,7 +9,7 @@
 - **Không self-registration** (BR-01): email phải được cấp quyền trước (allowlist). Một dòng trong `app_users` = đã được cấp quyền.
 - BE **không** làm redirect OAuth server-side. FE lấy `id_token` bằng Google Identity Services, BE chỉ **verify** token đó (1 bên thứ 3 duy nhất = Google).
 - Session = **JWT tự phát**: access 60′ (SEC-03), refresh 24h idle + rotation, lưu hash trong DB, gửi qua HttpOnly cookie.
-- **RBAC 2 chiều**: Role {TEACHER, MODERATOR, ADMINISTRATOR} + Subject {MATH, CHEMISTRY, PHYSICS} theo ma trận Screen Authorization 1.4.2.
+- **RBAC 2 chiều**: Role {TEACHER, MODERATOR, PRINCIPAL, IT_STAFF} + Subject {MATH, CHEMISTRY, PHYSICS} theo ma trận Screen Authorization 1.4.2.
 
 ## 2. Luồng đăng nhập (`POST /api/auth/google`)
 
@@ -59,7 +59,7 @@ BE:  GoogleIdentityVerifier.verify(idToken)          │  chữ ký (JWKS) + iss
 - **`app_users`**: `id uuid pk`, `email unique not null`, `google_sub unique null`, `full_name`, `role not null`, `subject null`, `status not null default 'INVITED'` (INVITED | ACTIVE | DISABLED), `created_at`, `last_login_at`.
   - Tồn tại dòng = đã được cấp quyền (allowlist). Cấp quyền = insert dòng (management API để sau).
 - **`refresh_tokens`**: `id uuid pk`, `user_id fk`, `token_hash unique`, `expires_at`, `revoked bool default false`, `created_at`.
-- **Seed admin**: insert 1 dòng role `ADMINISTRATOR`, email = `app.auth.admin-seed-email`, status `INVITED` (ACTIVE sau lần login đầu).
+- **Seed principal**: insert 1 dòng role `PRINCIPAL`, email = `app.auth.principal-seed-email`, status `INVITED` (ACTIVE sau lần login đầu).
 
 ## 8. Cấu hình & secret
 
@@ -69,7 +69,7 @@ APP_AUTH_GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 APP_AUTH_GOOGLE_CLIENT_SECRET=GOCSPX-...          # chưa dùng ở luồng verify id_token, giữ cho tương lai
 APP_AUTH_JWT_SECRET=<openssl rand -base64 48>
 APP_AUTH_COOKIE_SECURE=false                        # true ở prod (HTTPS)
-APP_AUTH_ADMIN_SEED_EMAIL=<email admin>
+APP_AUTH_PRINCIPAL_SEED_EMAIL=<email principal>
 ```
 
 ## 9. Thứ tự build

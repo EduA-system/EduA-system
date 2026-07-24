@@ -20,8 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Bảo mật stateless (JWT). Public: login/refresh/logout, health, swagger, STOMP handshake
- * và luồng tạo Ma trận/Bản đặc tả đang chạy ở chế độ thử nghiệm không cần đăng nhập.
+ * Bảo mật stateless (JWT). Public: login/refresh/logout, health, swagger và STOMP handshake.
  * Xác thực cho phiên STOMP được kiểm tra tại frame CONNECT.
  * Còn lại cần access token hợp lệ; RBAC chi tiết qua {@code @PreAuthorize} (SEC-04).
  */
@@ -44,7 +43,6 @@ public class SecurityConfig {
             "/api/slides/**",
             "/api/slide-design/**",
             "/api/molecules/**",
-            "/api/exams/**",
             "/api/uploads/**"
     };
 

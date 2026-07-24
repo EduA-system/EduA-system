@@ -193,8 +193,8 @@ export function LessonEditDashboard() {
 
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
-            <div className="@container flex h-12 items-center gap-2 px-3">
-              <div className="flex shrink-0 items-center gap-1.5">
+            <div className="@container flex min-h-12 items-center justify-between gap-3 px-3 py-1.5">
+              <div className="flex min-w-0 shrink-0 items-center gap-1.5">
                 <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
                   <SaveIcon />
                 </HeaderActionButton>
@@ -206,10 +206,6 @@ export function LessonEditDashboard() {
                 </HeaderActionButton>
               </div>
 
-              <div className="flex min-w-0 flex-1 items-center justify-center px-2">
-                <EditorTools editor={editor} />
-              </div>
-
               <button
                 type="button"
                 onClick={() => setAiCollapsed((current) => !current)}
@@ -218,6 +214,13 @@ export function LessonEditDashboard() {
               >
                 <AiToggleIcon />
               </button>
+            </div>
+            <div className="overflow-x-auto border-t border-[#efe8df] px-3 py-1.5">
+              <div className="flex w-full justify-center">
+                <div className="inline-flex max-w-full rounded-lg border border-[#e8e2d9] bg-white px-2 py-1 shadow-sm">
+                  <EditorTools editor={editor} />
+                </div>
+              </div>
             </div>
             {saveStatus !== "idle" && (
               <p

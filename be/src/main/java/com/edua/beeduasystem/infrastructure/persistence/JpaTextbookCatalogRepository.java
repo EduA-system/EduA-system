@@ -1,7 +1,6 @@
 package com.edua.beeduasystem.infrastructure.persistence;
 
 import com.edua.beeduasystem.domain.model.textbook.TextbookCatalog;
-import com.edua.beeduasystem.domain.model.exam.ExamLessonSource;
 import com.edua.beeduasystem.infrastructure.persistence.repository.LessonJpaRepository;
 import com.edua.beeduasystem.infrastructure.persistence.repository.TextbookJpaRepository;
 import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
@@ -70,20 +69,6 @@ public class JpaTextbookCatalogRepository implements TextbookCatalogRepository {
             LEFT JOIN chapters c ON c.textbook_id = t.id
             LEFT JOIN lessons l ON l.chapter_id = c.id
             ORDER BY t.grade ASC, t.code ASC, c.sort_order ASC, c.code ASC, l.sort_order ASC, l.code ASC
-            """;
-
-    private static final String EXAM_LESSONS_SQL = """
-            SELECT n.subject_code, n.grade, t.code AS book_code, t.name AS book_name,
-                   n.volume, n.sort_order AS book_order,
-                   c.code AS chapter_code, c.name AS chapter_name, c.sort_order AS chapter_order,
-                   l.code AS lesson_code, l.name AS lesson_name, l.sort_order AS lesson_order,
-                   l.knowledge_json::text AS knowledge_json
-            FROM textbook_names n
-            JOIN textbooks t ON t.id = n.textbook_id
-            JOIN chapters c ON c.textbook_id = t.id
-            JOIN lessons l ON l.chapter_id = c.id
-            WHERE n.subject_code = ? AND n.grade = ?
-            ORDER BY n.sort_order, c.sort_order, c.code, l.sort_order, l.code
             """;
 
     private final TextbookJpaRepository textbookRepo;
@@ -164,19 +149,6 @@ public class JpaTextbookCatalogRepository implements TextbookCatalogRepository {
     @Transactional(readOnly = true)
     public Optional<String> findLessonKnowledge(String bookCode, String chapterCode, String lessonCode) {
         return lessonRepo.findKnowledge(bookCode, chapterCode, lessonCode);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ExamLessonSource> findExamLessonSources(String subjectCode, int grade) {
-        return jdbcTemplate.query(EXAM_LESSONS_SQL, (rs, rowNum) -> new ExamLessonSource(
-                rs.getString("subject_code"), rs.getInt("grade"),
-                rs.getString("book_code"), rs.getString("book_name"),
-                (Integer) rs.getObject("volume"), rs.getInt("book_order"),
-                rs.getString("chapter_code"), rs.getString("chapter_name"), rs.getInt("chapter_order"),
-                rs.getString("lesson_code"), rs.getString("lesson_name"), rs.getInt("lesson_order"),
-                rs.getString("knowledge_json")
-        ), subjectCode.trim().toUpperCase(), grade);
     }
 
     private String normalizeSubjectCode(String subjectCode) {

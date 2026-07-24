@@ -1,6 +1,6 @@
 package com.edua.beeduasystem.domain.model.ai;
 
-/** Nhóm chỉ dẫn hệ thống mà IT Management có thể cấu hình. */
+/** Nhóm chỉ dẫn hệ thống mà IT Staff có thể cấu hình. */
 public enum AiPromptKey {
     LESSON_PLAN_OBJECTIVES,
     LESSON_PLAN_MATERIALS,

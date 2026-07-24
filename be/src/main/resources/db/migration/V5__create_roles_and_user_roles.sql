@@ -9,7 +9,7 @@ CREATE TABLE roles (
 INSERT INTO roles (id, name) VALUES
   ('a0000000-0000-0000-0000-000000000001', 'TEACHER'),
   ('a0000000-0000-0000-0000-000000000002', 'MODERATOR'),
-  ('a0000000-0000-0000-0000-000000000003', 'ADMINISTRATOR');
+  ('a0000000-0000-0000-0000-000000000003', 'PRINCIPAL');
 
 CREATE TABLE user_roles (
     id         UUID        PRIMARY KEY,
@@ -23,7 +23,10 @@ CREATE TABLE user_roles (
 INSERT INTO user_roles (id, user_id, role_id, granted_by, granted_at)
 SELECT gen_random_uuid(), u.id, r.id, u.granted_by, COALESCE(u.granted_at, u.created_at)
 FROM app_users u
-JOIN roles r ON r.name = u.role;
+JOIN roles r ON r.name = CASE
+    WHEN u.role = 'ADMINISTRATOR' THEN 'PRINCIPAL'
+    ELSE u.role
+END;
 
 ALTER TABLE app_users
   DROP COLUMN role,
