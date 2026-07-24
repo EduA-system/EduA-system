@@ -8,6 +8,89 @@ Chỉ dùng cho backend API. Không gồm FE.
 
 `ID | Sheet/Tab | API | Loại | Input | Precondition | Expected`
 
+## Danh sách chức năng core đại diện cho tài liệu test
+
+Mục này chốt bộ sheet/tab đại diện khi tài liệu Unit Test cần tối thiểu 10 chức năng. Vì bạn muốn bỏ nhóm AI, bộ dưới đây chỉ chọn các chức năng non-AI: CRUD, role/permission, read/list, và moderation.
+
+Khuyến nghị dùng bộ **12 chức năng core non-AI** dưới đây làm đại diện chính. Nếu chỉ cần 10 sheet/tab, lấy 10 dòng đầu và giữ 2 dòng cuối làm dự phòng.
+
+| Priority | Sheet/Tab | Nhóm nghiệp vụ | LOCS priority | Lý do chọn làm core representative |
+| -------- | --------- | -------------- | ------------- | ---------------------------------- |
+| 1 | `loginWithGoogle` | Auth | High | Luồng đăng nhập đầu vào, có verify token, allowlist và cấp role cho user. |
+| 2 | `refresh` | Auth/session | High | Luồng xoay refresh token, có revoke/expired/null và cập nhật cookie. |
+| 3 | `updateCurrentUserProfile` | Profile CRUD | Medium-High | Update hồ sơ cá nhân, có validate avatarUrl và giữ dữ liệu hiện tại. |
+| 4 | `listModerators` | Admin read/list | Medium | Core admin listing, có phân trang và phụ thuộc quyền admin. |
+| 5 | `addModerator` | Admin CRUD | High | Thêm moderator theo subject, có duplicate email và subject conflict. |
+| 6 | `replaceModerator` | Admin workflow | High | Nghiệp vụ thay thế moderator cũ, nhiều rule về email, subject, disablePrevious. |
+| 7 | `addTeacher` | Moderator CRUD | High | Thêm teacher theo subject, có rule về email và subject hợp lệ. |
+| 8 | `deleteTeacher` | Moderator CRUD | High | Disable teacher theo subject, có role/status/subject check. |
+| 9 | `createBlogPost` | Blog CRUD | Medium-High | Tạo bài viết có sanitize HTML, validate title/content/subject và publish trực tiếp. |
+| 10 | `updateBlogPost` | Blog CRUD | Medium-High | Update bài owner-only, có optional fields và preserve dữ liệu cũ. |
+| 11 | `deleteBlogPost` | Blog CRUD | Medium | Soft delete bài viết, kiểm tra ownership và trạng thái `PUBLISHED`. |
+| 12 | `removeBlogPostByModerator` | Blog moderation | Medium-High | Gỡ bài theo môn của moderator, bắt buộc reason và lưu audit. |
+
+Các sheet non-AI bổ sung nên làm nếu muốn mở rộng coverage:
+
+| Sheet/Tab | Nhóm nghiệp vụ | LOCS priority | Lý do bổ sung |
+| --------- | -------------- | ------------- | ------------ |
+| `createBlogComment` | Blog comment CRUD | Medium | Bình luận trên bài publish, có sanitize và owner/current-user rule. |
+| `updateBlogComment` | Blog comment CRUD | Medium | Sửa comment của chính mình, có owner-only check và sanitize. |
+| `deleteBlogComment` | Blog comment CRUD | Medium | Xóa comment của chính mình, kiểm tra ownership. |
+| `listBlogPosts` | Blog read/list | Medium | Danh sách bài viết có filter subject/author/q và mapping summary. |
+| `getBlogPostDetail` | Blog read/detail | Medium | Chi tiết bài + comments, kiểm tra bài published. |
+| `listLibraryContents` | Library read/list | Medium | Danh sách học liệu theo owner và filter. |
+| `getLibraryContent` | Library read/detail | Medium | Xem chi tiết học liệu owner-only. |
+| `createLibraryContent` | Library CRUD | Medium-High | Tạo học liệu cá nhân, validate type/title/subject/grade/payload. |
+| `updateLibraryContent` | Library CRUD | Medium-High | Update học liệu owner-only với nhiều field optional/provided flags. |
+| `deleteLibraryContent` | Library CRUD | Medium | Soft delete học liệu owner-only bằng `deletedAt`. |
+| `getCatalog` | Textbook read | Medium | Lấy catalog SGK đầy đủ cho các màn tra cứu. |
+| `getBookNames` | Textbook read/list | Medium | Lấy danh sách tên sách theo subject hoặc toàn bộ. |
+| `getChapters` | Textbook read/list | Medium | Lấy chapter summaries theo bookCode. |
+| `getLessons` | Textbook read/list | Medium | Lấy lesson summaries theo bookCode + chapterCode. |
+
+## Bộ dữ liệu input thật cần xác nhận
+
+Mục này dùng để ghi các giá trị input thật sẽ đưa vào Unit Test matrix trong Excel. Khi một tab cần dữ liệu cụ thể nhưng chưa có giá trị được chốt, dùng placeholder dạng `<ASK_USER_...>` và hỏi lại người dùng trước khi điền giá trị cuối cùng.
+
+### Người dùng, email và full name
+
+| Nhóm dữ liệu                        | Email                                | Full name        | Role/Subject                                   | Dùng cho tab/API                      | Ghi chú                                      |
+| ----------------------------------- | ------------------------------------ | ---------------- | ---------------------------------------------- | ------------------------------------- | -------------------------------------------- |
+| Admin đang đăng nhập                | `vutuanhiep@edua.vn`                 | Vũ Tuấn Hiệp     | ADMINISTRATOR                                  | Admin APIs                            | Tài khoản thực hiện thao tác quản trị        |
+| Moderator hiện tại                  | `vudinhdang@edua.vn`                 | Vũ Đình Đăng     | MODERATOR / `<ASK_USER_MODERATOR_SUBJECT>`     | Moderator APIs, blog moderation       | Moderator đã có trong hệ thống               |
+| Moderator mới                       | `bachnguyentuan@edua.vn`             | Bách Nguyễn Tuấn | MODERATOR / `<ASK_USER_NEW_MODERATOR_SUBJECT>` | `addModerator`, `replaceModerator`    | Email chưa tồn tại hoặc đã disabled tùy case |
+| Moderator thay thế                  | `nguyenhongnha@edua.vn`              | Nguyễn Hồng Nhạ  | MODERATOR / `<ASK_USER_REPLACEMENT_SUBJECT>`   | `replaceModerator`                    | Phải khác email moderator hiện tại           |
+| Teacher hiện tại                    | `vunhatminh@edua.vn`                 | Vũ Nhật Minh     | TEACHER / `<ASK_USER_TEACHER_SUBJECT>`         | Teacher, Blog, Library APIs           | Teacher đã có trong hệ thống                 |
+| Teacher mới                         | `vutuanhiep.teacher@edua.vn`         | Vũ Tuấn Hiệp     | TEACHER / `<ASK_USER_NEW_TEACHER_SUBJECT>`     | `addTeacher`, `reactivateTeacher`     | Email chưa tồn tại hoặc đã disabled tùy case |
+| IT manager hiện tại                 | `vudinhdang.it@edua.vn`              | Vũ Đình Đăng     | IT_MANAGEMENT                                  | IT manager APIs                       | IT manager đã có trong hệ thống              |
+| IT manager mới                      | `bachnguyentuan.it@edua.vn`          | Bách Nguyễn Tuấn | IT_MANAGEMENT                                  | `addItManager`, `reactivateItManager` | Email chưa tồn tại hoặc đã disabled tùy case |
+| Google account hợp lệ               | `vunhatminh.google@edua.vn`          | Vũ Nhật Minh     | Theo user tương ứng                            | `loginWithGoogle`                     | Email verified và có trong allowlist         |
+| Google account không được cấp quyền | `nguyenhongnha.unauthorized@edua.vn` | Nguyễn Hồng Nhạ  | N/A                                            | `loginWithGoogle`                     | Email verified nhưng không có user tương ứng |
+
+### Giá trị input dùng chung
+
+| Nhóm dữ liệu | Field                                      | Giá trị thật cần hỏi                                                                                                                                                                                             | Dùng cho tab/API                                        | Ghi chú                                            |
+| ------------ | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------- |
+| Auth token   | `idToken` hợp lệ                           | `eyJhbGciOiJSUzI1NiIsImtpZCI6ImRlbW8ifQ.eyJlbWFpbCI6InZ1dHVhbmhpZXBAZWR1YS52biIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiVuG7iSBUdeG6oW4gSGnhu4dwIiwic3ViIjoiZGVtby1nb29nbGUtMTIzNDU2In0.signature`               | `loginWithGoogle`                                       | Có thể dùng token giả lập nếu test ở service-level |
+| Auth token   | `idToken` không hợp lệ                     | `invalid.id.token`                                                                                                                                                                                               | `loginWithGoogle`                                       | Token sai, hết hạn hoặc verifier từ chối           |
+| Auth token   | refresh token hợp lệ                       | `refresh_demo_7f3d2c8a9b1e4f6a`                                                                                                                                                                                  | `refresh`, `logout`                                     | Token tồn tại, chưa revoke, chưa hết hạn           |
+| Auth token   | refresh token không tồn tại                | `refresh_unknown_0000000000000000`                                                                                                                                                                               | `refresh`, `logout`                                     | Token hash không có trong repo                     |
+| Profile      | `avatarUrl` hợp lệ                         | `https://cdn.edua.vn/avatars/demo-user.png`                                                                                                                                                                      | `updateCurrentUserProfile`                              | URL http/https và có host                          |
+| Profile      | `avatarUrl` không hợp lệ                   | `avatar-demo.png`                                                                                                                                                                                                | `updateCurrentUserProfile`                              | Sai scheme, thiếu host hoặc format lỗi             |
+| Profile      | `contactInfo`                              | `Zalo: 0901 234 567                                                                                                                                                                                              | Email: [vutuanhiep@edua.vn](mailto:vutuanhiep@edua.vn)` | `updateCurrentUserProfile`                         |
+| Subject      | subject hợp lệ                             | `MATH`                                                                                                                                                                                                           | Admin/Moderator/Blog/Library APIs                       | Ví dụ: `MATH`, `PHYSICS`, ... theo enum hiện có    |
+| Subject      | subject sai/không khớp                     | `HISTORY`                                                                                                                                                                                                        | Moderator/Blog abnormal cases                           | Dùng cho case khác môn hoặc không có quyền         |
+| Pagination   | `page`, `size`, `sort`                     | `page=0, size=20, sort=updatedAt,desc`                                                                                                                                                                           | List APIs                                               | Nếu không chốt riêng, dùng `page=0`, `size=20`     |
+| Blog         | `title`                                    | `Luyen tap bai 1 - Ham so bac nhat`                                                                                                                                                                              | Blog APIs                                               | Tiêu đề bài viết thật                              |
+| Blog         | `content` hợp lệ                           | `<p>Nội dung bài viết đã sanitize vẫn giữ được thẻ an toàn.</p>`                                                                                                                                                 | Blog APIs                                               | Nội dung sau sanitize vẫn hợp lệ                   |
+| Blog         | `reason` gỡ bài                            | `Bài viết vi phạm quy định nội dung.`                                                                                                                                                                            | `removeBlogPostByModerator`                             | Lý do moderator gỡ bài                             |
+| Library      | `type`, `title`, `payload`, `thumbnailUrl` | `type=SLIDE, title=Gioi thieu ham so, payload={"sections":[{"title":"Mo dau"}]}, thumbnailUrl=https://cdn.edua.vn/library/slide-demo.png`                                                                        | Library APIs                                            | Giá trị mẫu cho content thư viện                   |
+| Upload       | file hợp lệ                                | `lesson-outline-demo.pdf`                                                                                                                                                                                        | `upload`                                                | File đúng loại và <= 10MB                          |
+| Upload       | file không hợp lệ                          | `empty-file.txt`                                                                                                                                                                                                 | `upload`                                                | File rỗng, sai loại hoặc quá 10MB                  |
+| AI           | request sinh giáo án/slide/design          | `{"bookId":"11111111-1111-1111-1111-111111111111","chapterId":"22222222-2222-2222-2222-222222222222","lessonId":"33333333-3333-3333-3333-333333333333","userPrompt":"Tạo nội dung ngắn gọn, dễ dạy, có ví dụ."}` | Lesson plan, Slides, Slide design APIs                  | Prompt, ids sách/chương/bài và context mẫu         |
+| Molecule     | `input` hợp lệ                             | `H2O`                                                                                                                                                                                                            | `buildMolecule`                                         | Công thức hoặc tên chất hợp lệ                     |
+| Molecule     | `input` rỗng/sai                           | `abc123`                                                                                                                                                                                                         | `buildMolecule`                                         | Case validate hoặc AI lỗi                          |
+
 ## Auth + Profile
 
 | ID          | Sheet/Tab                  | API                      | Loại | Input                                             | Precondition                                                                                                     | Expected                                            |
@@ -56,50 +139,52 @@ Chỉ dùng cho backend API. Không gồm FE.
 
 ## Teacher
 
-Trong code hi?n t?i kh?ng c? `TeacherController` ri?ng. Role `TEACHER` d?ng c?c API ? `BlogController` v? `LibraryContentController`.
+Trong code hiện tại không có `TeacherController` riêng. Role `TEACHER` dùng các API ở `BlogController` và `LibraryContentController`.
 
-| ID         | Sheet/Tab              | API                                     | Lo?i | Input                                                 | Precondition                                                       | Expected                              |
-| ---------- | ---------------------- | --------------------------------------- | ---- | ----------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------- |
-| API-TEA-01 | `createBlogPost`       | `POST /api/blog-posts`                  | N    | `title`, `content`, `subject`                         | Current user l? TEACHER; sanitize tr? n?i dung h?p l?              | T?o b?i `PUBLISHED`                   |
-| API-TEA-02 | `createBlogPost`       | `POST /api/blog-posts`                  | A    | `title` r?ng ho?c content r?ng sau sanitize           | Current user l? TEACHER                                            | B?o l?i validate                      |
-| API-TEA-03 | `updateBlogPost`       | `PATCH /api/blog-posts/{id}`            | N    | `title/content/subject`                               | Current user l? TEACHER v? l? owner; b?i `PUBLISHED` t?n t?i       | C?p nh?t b?i vi?t                     |
-| API-TEA-04 | `updateBlogPost`       | `PATCH /api/blog-posts/{id}`            | A    | `id` c?a b?i ng??i kh?c                               | Current user l? TEACHER nh?ng kh?ng ph?i owner                     | B?o l?i forbidden                     |
-| API-TEA-05 | `deleteBlogPost`       | `DELETE /api/blog-posts/{id}`           | N    | `id`                                                  | Current user l? TEACHER v? l? owner; b?i `PUBLISHED` t?n t?i       | Soft delete th?nh `DELETED_BY_AUTHOR` |
-| API-TEA-06 | `createBlogComment`    | `POST /api/blog-posts/{id}/comments`    | N    | `content`                                             | Current user l? TEACHER; post `PUBLISHED` t?n t?i; sanitize h?p l? | T?o comment                           |
-| API-TEA-07 | `updateBlogComment`    | `PATCH /api/blog-comments/{commentId}`  | N    | `content`                                             | Current user l? TEACHER v? l? owner comment                        | C?p nh?t comment                      |
-| API-TEA-08 | `deleteBlogComment`    | `DELETE /api/blog-comments/{commentId}` | N    | `commentId`                                           | Current user l? TEACHER v? l? owner comment                        | X?a comment                           |
-| API-TEA-09 | `listLibraryContents`  | `GET /api/library/contents`             | N    | `type`, `subject`, `q`, `page`, `size`, `sort`        | Current user l? TEACHER; repo search theo owner hi?n t?i           | Tr? page content c?a teacher          |
-| API-TEA-10 | `getLibraryContent`    | `GET /api/library/contents/{id}`        | N    | `id`                                                  | Content t?n t?i v? current user TEACHER l? owner                   | Tr? detail                            |
-| API-TEA-11 | `createLibraryContent` | `POST /api/library/contents`            | N    | `type`, `title`, `subject`, `payload`, `thumbnailUrl` | Current user l? TEACHER; type/title/subject valid                  | T?o content m?i                       |
-| API-TEA-12 | `updateLibraryContent` | `PATCH /api/library/contents/{id}`      | N    | `title`, `subject`, `payload`, `thumbnailUrl`         | Content t?n t?i v? current user TEACHER l? owner                   | C?p nh?t content                      |
-| API-TEA-13 | `deleteLibraryContent` | `DELETE /api/library/contents/{id}`     | N    | `id`                                                  | Content t?n t?i v? current user TEACHER l? owner                   | Set deleted, tr? `204`                |
+Để làm Unit Test matrix dễ nhìn hơn, các sheet/tab trùng với phần Blog/Library chung được gộp vào bảng chung bên dưới. Khác biệt về role `TEACHER` được thể hiện trong `Precondition`, không tách thêm sheet riêng.
+
+| Teacher ID     | Sheet/Tab              | Gộp vào phần                 |
+| -------------- | ---------------------- | ---------------------------- |
+| API-TEA-01/02  | `createBlogPost`       | Blog chung                   |
+| API-TEA-03/04  | `updateBlogPost`       | Blog chung                   |
+| API-TEA-05     | `deleteBlogPost`       | Blog chung                   |
+| API-TEA-06     | `createBlogComment`    | Blog chung                   |
+| API-TEA-07     | `updateBlogComment`    | Blog chung                   |
+| API-TEA-08     | `deleteBlogComment`    | Blog chung                   |
+| API-TEA-09     | `listLibraryContents`  | Library chung Teacher/Moderator |
+| API-TEA-10     | `getLibraryContent`    | Library chung Teacher/Moderator |
+| API-TEA-11     | `createLibraryContent` | Library chung Teacher/Moderator |
+| API-TEA-12     | `updateLibraryContent` | Library chung Teacher/Moderator |
+| API-TEA-13     | `deleteLibraryContent` | Library chung Teacher/Moderator |
 
 ## Blog chung và moderator removal
 
-| ID          | Sheet/Tab                   | API                                     | Loại | Input                                         | Precondition                                                       | Expected                               |
-| ----------- | --------------------------- | --------------------------------------- | ---- | --------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------- |
-| API-BLOG-01 | `listBlogPosts`             | `GET /api/blog-posts`                   | N    | `subject`, `authorId=me`, `q`, `page`, `size` | Có current user; repo search trả dữ liệu phù hợp                   | Trả page summary                       |
-| API-BLOG-02 | `getBlogPostDetail`         | `GET /api/blog-posts/{id}`              | N    | `id`                                          | Bài `PUBLISHED` tồn tại; repo comment trả comment list             | Trả detail + comments                  |
-| API-BLOG-03 | `createBlogPost`            | `POST /api/blog-posts`                  | N    | `title`, `content`, `subject`                 | Current user là teacher; sanitize trả nội dung hợp lệ              | Tạo bài `PUBLISHED`                    |
-| API-BLOG-04 | `createBlogPost`            | `POST /api/blog-posts`                  | A    | `title` rỗng hoặc content rỗng sau sanitize   | Current user hợp lệ                                                | Báo lỗi validate                       |
-| API-BLOG-05 | `updateBlogPost`            | `PATCH /api/blog-posts/{id}`            | N    | `title/content/subject`                       | Bài tồn tại, `PUBLISHED`, current user là owner                    | Cập nhật bài viết                      |
-| API-BLOG-06 | `updateBlogPost`            | `PATCH /api/blog-posts/{id}`            | A    | `id` của bài người khác                       | Bài tồn tại nhưng current user không phải owner                    | Báo lỗi forbidden                      |
-| API-BLOG-07 | `deleteBlogPost`            | `DELETE /api/blog-posts/{id}`           | N    | `id`                                          | Bài tồn tại, `PUBLISHED`, current user là owner                    | Soft delete thành `DELETED_BY_AUTHOR`  |
-| API-BLOG-08 | `removeBlogPostByModerator` | `POST /api/blog-posts/{id}/removal`     | N    | `reason`                                      | Moderator có subject đúng; bài thuộc subject đó                    | Set `REMOVED_BY_MODERATOR`, lưu reason |
-| API-BLOG-09 | `removeBlogPostByModerator` | `POST /api/blog-posts/{id}/removal`     | A    | `reason` rỗng hoặc subject sai                | Reason rỗng hoặc moderator không đúng subject                      | Báo lỗi                                |
-| API-BLOG-10 | `createBlogComment`         | `POST /api/blog-posts/{id}/comments`    | N    | `content`                                     | Post `PUBLISHED` tồn tại; current user là teacher; sanitize hợp lệ | Tạo comment                            |
-| API-BLOG-11 | `updateBlogComment`         | `PATCH /api/blog-comments/{commentId}`  | N    | `content`                                     | Comment tồn tại, current user là owner                             | Cập nhật comment                       |
-| API-BLOG-12 | `deleteBlogComment`         | `DELETE /api/blog-comments/{commentId}` | N    | `commentId`                                   | Comment tồn tại, current user là owner                             | Xóa comment                            |
+Các dòng có nhiều ID là cùng một service-level sheet/tab; role hoặc bối cảnh khác nhau được đưa vào `Precondition`.
+
+| ID                         | Sheet/Tab                   | API                                     | Loại | Input                                         | Precondition                                                       | Expected                               |
+| -------------------------- | --------------------------- | --------------------------------------- | ---- | --------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------- |
+| API-BLOG-01                | `listBlogPosts`             | `GET /api/blog-posts`                   | N    | `subject`, `authorId=me`, `q`, `page`, `size` | Có current user; repo search trả dữ liệu phù hợp                   | Trả page summary                       |
+| API-BLOG-02                | `getBlogPostDetail`         | `GET /api/blog-posts/{id}`              | N    | `id`                                          | Bài `PUBLISHED` tồn tại; repo comment trả comment list             | Trả detail + comments                  |
+| API-TEA-01 / API-BLOG-03   | `createBlogPost`            | `POST /api/blog-posts`                  | N    | `title`, `content`, `subject`                 | Current user hợp lệ, gồm TEACHER; sanitize trả nội dung hợp lệ     | Tạo bài `PUBLISHED`                    |
+| API-TEA-02 / API-BLOG-04   | `createBlogPost`            | `POST /api/blog-posts`                  | A    | `title` rỗng hoặc content rỗng sau sanitize   | Current user hợp lệ, gồm TEACHER                                  | Báo lỗi validate                       |
+| API-TEA-03 / API-BLOG-05   | `updateBlogPost`            | `PATCH /api/blog-posts/{id}`            | N    | `title/content/subject`                       | Bài tồn tại, `PUBLISHED`; current user hợp lệ, gồm TEACHER owner   | Cập nhật bài viết                      |
+| API-TEA-04 / API-BLOG-06   | `updateBlogPost`            | `PATCH /api/blog-posts/{id}`            | A    | `id` của bài người khác                       | Bài tồn tại nhưng current user không phải owner                    | Báo lỗi forbidden                      |
+| API-TEA-05 / API-BLOG-07   | `deleteBlogPost`            | `DELETE /api/blog-posts/{id}`           | N    | `id`                                          | Bài tồn tại, `PUBLISHED`; current user hợp lệ, gồm TEACHER owner   | Soft delete thành `DELETED_BY_AUTHOR`  |
+| API-BLOG-08                | `removeBlogPostByModerator` | `POST /api/blog-posts/{id}/removal`     | N    | `reason`                                      | Moderator có subject đúng; bài thuộc subject đó                    | Set `REMOVED_BY_MODERATOR`, lưu reason |
+| API-BLOG-09                | `removeBlogPostByModerator` | `POST /api/blog-posts/{id}/removal`     | A    | `reason` rỗng hoặc subject sai                | Reason rỗng hoặc moderator không đúng subject                      | Báo lỗi                                |
+| API-TEA-06 / API-BLOG-10   | `createBlogComment`         | `POST /api/blog-posts/{id}/comments`    | N    | `content`                                     | Post `PUBLISHED` tồn tại; current user hợp lệ, gồm TEACHER; sanitize hợp lệ | Tạo comment                     |
+| API-TEA-07 / API-BLOG-11   | `updateBlogComment`         | `PATCH /api/blog-comments/{commentId}`  | N    | `content`                                     | Comment tồn tại; current user hợp lệ, gồm TEACHER owner            | Cập nhật comment                       |
+| API-TEA-08 / API-BLOG-12   | `deleteBlogComment`         | `DELETE /api/blog-comments/{commentId}` | N    | `commentId`                                   | Comment tồn tại; current user hợp lệ, gồm TEACHER owner            | Xóa comment                            |
 
 ## Library chung cho Teacher/Moderator
 
-| ID         | Sheet/Tab              | API                                 | Loại | Input                                                 | Precondition                                   | Expected               |
-| ---------- | ---------------------- | ----------------------------------- | ---- | ----------------------------------------------------- | ---------------------------------------------- | ---------------------- |
-| API-LIB-01 | `listLibraryContents`  | `GET /api/library/contents`         | N    | `type`, `subject`, `q`, `page`, `size`, `sort`        | Current user hợp lệ; repo search trả danh sách | Trả page content       |
-| API-LIB-02 | `getLibraryContent`    | `GET /api/library/contents/{id}`    | N    | `id`                                                  | Content tồn tại và current user là owner       | Trả detail             |
-| API-LIB-03 | `createLibraryContent` | `POST /api/library/contents`        | N    | `type`, `title`, `subject`, `payload`, `thumbnailUrl` | Current user hợp lệ; type/title/subject valid  | Tạo content mới        |
-| API-LIB-04 | `updateLibraryContent` | `PATCH /api/library/contents/{id}`  | N    | `title`, `subject`, `payload`, `thumbnailUrl`         | Content tồn tại và current user là owner       | Cập nhật content       |
-| API-LIB-05 | `deleteLibraryContent` | `DELETE /api/library/contents/{id}` | N    | `id`                                                  | Content tồn tại và current user là owner       | Set deleted, trả `204` |
+| ID                       | Sheet/Tab              | API                                 | Loại | Input                                                 | Precondition                                                   | Expected               |
+| ------------------------ | ---------------------- | ----------------------------------- | ---- | ----------------------------------------------------- | -------------------------------------------------------------- | ---------------------- |
+| API-TEA-09 / API-LIB-01  | `listLibraryContents`  | `GET /api/library/contents`         | N    | `type`, `subject`, `q`, `page`, `size`, `sort`        | Current user hợp lệ, gồm TEACHER; repo search trả danh sách    | Trả page content       |
+| API-TEA-10 / API-LIB-02  | `getLibraryContent`    | `GET /api/library/contents/{id}`    | N    | `id`                                                  | Content tồn tại; current user hợp lệ, gồm TEACHER owner        | Trả detail             |
+| API-TEA-11 / API-LIB-03  | `createLibraryContent` | `POST /api/library/contents`        | N    | `type`, `title`, `subject`, `payload`, `thumbnailUrl` | Current user hợp lệ, gồm TEACHER; type/title/subject valid     | Tạo content mới        |
+| API-TEA-12 / API-LIB-04  | `updateLibraryContent` | `PATCH /api/library/contents/{id}`  | N    | `title`, `subject`, `payload`, `thumbnailUrl`         | Content tồn tại; current user hợp lệ, gồm TEACHER owner        | Cập nhật content       |
+| API-TEA-13 / API-LIB-05  | `deleteLibraryContent` | `DELETE /api/library/contents/{id}` | N    | `id`                                                  | Content tồn tại; current user hợp lệ, gồm TEACHER owner        | Set deleted, trả `204` |
 
 ## Textbook
 
@@ -119,23 +204,35 @@ Trong code hi?n t?i kh?ng c? `TeacherController` ri?ng. Role `TEACHER` d?ng c?c 
 | API-LP-03 | `generateActivitiesFrame`   | `POST /api/lesson-plans/generate-activities`         | N    | cùng input                                                             | Catalog có nội dung; AI trả JSON hợp lệ                      | Trả dàn ý hoạt động                                       |
 | API-LP-04 | `generateActivitiesDetails` | `POST /api/lesson-plans/generate-activities-details` | N    | `activities`, `objectives`, `equipmentAndMaterials`, ids, `userPrompt` | Có activities; AI trả từng activity hợp lệ hoặc một phần lỗi | Trả hoạt động chi tiết, giữ skeleton nếu chỉ lỗi một phần |
 | API-LP-05 | `generateLessonPlanStream`  | `POST /api/lesson-plans/generate-stream`             | N    | stream request                                                         | Có executor; stream port nhận event                          | Trả `202`, chạy nền và đẩy event                          |
+| API-LP-06 | `generateObjectives`        | `POST /api/lesson-plans/generate`                    | A    | `bookId`, `chapterId`, hoặc `lessonId` không tồn tại                   | Catalog không tìm thấy dữ liệu theo ids                      | Báo lỗi không tìm thấy dữ liệu chương trình               |
+| API-LP-07 | `generateMaterials`         | `POST /api/lesson-plans/generate-materials`          | A    | cùng input                                                             | AI trả lỗi, timeout, hoặc JSON không hợp lệ                  | Báo lỗi sinh thiết bị/học liệu                            |
+| API-LP-08 | `generateActivitiesFrame`   | `POST /api/lesson-plans/generate-activities`         | A    | cùng input                                                             | AI trả lỗi, timeout, hoặc JSON không hợp lệ                  | Báo lỗi sinh dàn ý hoạt động                              |
+| API-LP-09 | `generateActivitiesDetails` | `POST /api/lesson-plans/generate-activities-details` | A    | `activities` rỗng hoặc JSON activity không hợp lệ                      | Request không thỏa điều kiện xử lý                           | Báo lỗi validate                                          |
+| API-LP-10 | `generateLessonPlanStream`  | `POST /api/lesson-plans/generate-stream`             | A    | stream request                                                         | Executor từ chối tác vụ hoặc stream port phát lỗi            | Báo lỗi khởi tạo sinh giáo án, không đẩy event thành công |
 
 ## Slides
 
-| ID           | Sheet/Tab                  | API                                                   | Loại | Input                            | Precondition                                                   | Expected                      |
-| ------------ | -------------------------- | ----------------------------------------------------- | ---- | -------------------------------- | -------------------------------------------------------------- | ----------------------------- |
-| API-SLIDE-01 | `generateOutline`          | `POST /api/slides/generate-outline`                   | N    | outline request                  | AI trả deck blueprint + outline hợp lệ; session store sẵn sàng | Trả sessionId, topic, outline |
-| API-SLIDE-02 | `startOutlineSession`      | `POST /api/slides/outline-sessions/{sessionId}/start` | N    | `sessionId`                      | Session tồn tại và chưa start                                  | Bắt đầu phát event outline    |
-| API-SLIDE-03 | `retryOutlineSessionPart`  | `POST /api/slides/retry-outline-session-part`         | N    | `sessionId`, `partId`            | Session và part tồn tại                                        | Retry part                    |
-| API-SLIDE-04 | `retryOutlineSessionSlide` | `POST /api/slides/retry-outline-session-slide`        | N    | `sessionId`, `partId`, `slideId` | Session, part, slide tồn tại                                   | Retry slide                   |
-| API-SLIDE-05 | `retryOutlinePart`         | `POST /api/slides/retry-outline-part`                 | N    | retry request                    | Request hợp lệ                                                 | Retry nội dung part           |
+| ID           | Sheet/Tab                  | API                                                   | Loại | Input                                   | Precondition                                                   | Expected                                |
+| ------------ | -------------------------- | ----------------------------------------------------- | ---- | --------------------------------------- | -------------------------------------------------------------- | --------------------------------------- |
+| API-SLIDE-01 | `generateOutline`          | `POST /api/slides/generate-outline`                   | N    | outline request                         | AI trả deck blueprint + outline hợp lệ; session store sẵn sàng | Trả sessionId, topic, outline           |
+| API-SLIDE-02 | `startOutlineSession`      | `POST /api/slides/outline-sessions/{sessionId}/start` | N    | `sessionId`                             | Session tồn tại và chưa start                                  | Bắt đầu phát event outline              |
+| API-SLIDE-03 | `retryOutlineSessionPart`  | `POST /api/slides/retry-outline-session-part`         | N    | `sessionId`, `partId`                   | Session và part tồn tại                                        | Retry part                              |
+| API-SLIDE-04 | `retryOutlineSessionSlide` | `POST /api/slides/retry-outline-session-slide`        | N    | `sessionId`, `partId`, `slideId`        | Session, part, slide tồn tại                                   | Retry slide                             |
+| API-SLIDE-05 | `retryOutlinePart`         | `POST /api/slides/retry-outline-part`                 | N    | retry request                           | Request hợp lệ                                                 | Retry nội dung part                     |
+| API-SLIDE-06 | `generateOutline`          | `POST /api/slides/generate-outline`                   | A    | outline request                         | AI trả blueprint/outline không hợp lệ hoặc session store lỗi   | Báo lỗi sinh outline, không tạo session |
+| API-SLIDE-07 | `startOutlineSession`      | `POST /api/slides/outline-sessions/{sessionId}/start` | A    | `sessionId` không tồn tại hoặc đã start | Session không tồn tại hoặc đã được bắt đầu                     | Báo lỗi session không hợp lệ            |
+| API-SLIDE-08 | `retryOutlineSessionPart`  | `POST /api/slides/retry-outline-session-part`         | A    | `sessionId`, `partId`                   | Session hoặc part không tồn tại                                | Báo lỗi không tìm thấy part             |
+| API-SLIDE-09 | `retryOutlineSessionSlide` | `POST /api/slides/retry-outline-session-slide`        | A    | `sessionId`, `partId`, `slideId`        | Session, part, hoặc slide không tồn tại                        | Báo lỗi không tìm thấy slide            |
+| API-SLIDE-10 | `retryOutlinePart`         | `POST /api/slides/retry-outline-part`                 | A    | retry request                           | Request thiếu dữ liệu bắt buộc hoặc AI trả lỗi                 | Báo lỗi validate hoặc retry part        |
 
 ## Slide design
 
-| ID            | Sheet/Tab           | API                                    | Loại | Input                              | Precondition                                                      | Expected                         |
-| ------------- | ------------------- | -------------------------------------- | ---- | ---------------------------------- | ----------------------------------------------------------------- | -------------------------------- |
-| API-DESIGN-01 | `generateSlideHtml` | `POST /api/slide-design/generate-html` | N    | `step`, `priorHtml`, context slide | `bg_deco`, `structural`, hoặc `content_fill`; AI trả HTML phù hợp | Trả HTML design + warning nếu có |
-| API-DESIGN-02 | `fillSlideContent`  | `POST /api/slide-design/fill-content`  | N    | slots, palette, zones              | Có ít nhất 1 slot; AI trả JSON hợp lệ                             | Trả nội dung đã fill             |
+| ID            | Sheet/Tab           | API                                    | Loại | Input                                        | Precondition                                                      | Expected                           |
+| ------------- | ------------------- | -------------------------------------- | ---- | -------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------- |
+| API-DESIGN-01 | `generateSlideHtml` | `POST /api/slide-design/generate-html` | N    | `step`, `priorHtml`, context slide           | `bg_deco`, `structural`, hoặc `content_fill`; AI trả HTML phù hợp | Trả HTML design + warning nếu có   |
+| API-DESIGN-02 | `fillSlideContent`  | `POST /api/slide-design/fill-content`  | N    | slots, palette, zones                        | Có ít nhất 1 slot; AI trả JSON hợp lệ                             | Trả nội dung đã fill               |
+| API-DESIGN-03 | `generateSlideHtml` | `POST /api/slide-design/generate-html` | A    | `step` không hợp lệ hoặc context slide thiếu | Request không hợp lệ hoặc AI trả HTML không hợp lệ                | Báo lỗi validate hoặc sinh HTML    |
+| API-DESIGN-04 | `fillSlideContent`  | `POST /api/slide-design/fill-content`  | A    | slots rỗng hoặc palette/zones không hợp lệ   | Không có slot hợp lệ hoặc AI trả JSON lỗi                         | Báo lỗi validate hoặc fill content |
 
 ## Molecule
 
