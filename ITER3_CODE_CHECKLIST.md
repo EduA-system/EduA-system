@@ -11,9 +11,9 @@ Legend:
 
 | Code reality | Count |
 | --- | ---: |
-| Coded | 5 |
+| Coded | 7 |
 | Partial | 3 |
-| Not found | 19 |
+| Not found | 17 |
 
 ## Checklist
 
@@ -29,8 +29,8 @@ Legend:
 | [ ] | Report Violating Content | Community Hub | Pending | Not found | Chưa thấy report/violation entity, API, hoặc UI cho Hub content. |
 | [x] | Moderator Account Management | User & Content Management | Pending | Coded | Backend `/api/principal/moderators`; frontend `/user-management`. Role contract hiện là `PRINCIPAL`. |
 | [x] | Teacher Account Management | User & Content Management | Pending | Coded | Backend `/api/moderator/teachers`; frontend `/user-management`. |
-| [ ] | Create Notifications (send to subject teachers) | User & Content Management | Pending | Not found | Chưa thấy notification model/API/service/UI. |
-| [ ] | View & Manage My Notifications | User & Content Management | Pending | Not found | Chưa thấy notification inbox/settings/read-state. |
+| [x] | Create Notifications (send to subject teachers) | User & Content Management | Pending | Coded | Backend `POST /api/notifications` (`NotificationController.java`, `NotificationService.create`) — Moderator broadcast tới Teacher cùng subject, fan-out `notifications`/`notification_recipients` (`V17__create_notifications.sql`) + push STOMP `/user/queue/notifications`. Frontend: form "Soạn thông báo" ở `/notifications` (chỉ hiện cho MODERATOR). Spec: `designs/API_designs/notifications.md`. |
+| [x] | View & Manage My Notifications | User & Content Management | Pending | Coded | Backend `GET /api/notifications`, `/unread-count`, `PATCH /{id}/read`, `POST /read-all`. Frontend `fe/app/notifications/page.tsx` (list, filter unread, mark read/read-all) + badge chưa đọc realtime trên `Sidebar`. |
 | [ ] | View & Filter Activity Log | User & Content Management | Pending | Not found | Có metadata `granted_by/granted_at` cho role assignment, nhưng chưa có audit/activity log module hoặc screen. |
 | [ ] | Moderate Hub Content (review, approve, reject) | User & Content Management | Pending | Not found | Chưa thấy moderation workflow cho Hub content. Blog moderation là luồng riêng. |
 | [ ] | Manage Hub (categorize, tag, organize, pin) | User & Content Management | Pending | Not found | Chưa thấy category/tag/pin/organize model hoặc API cho Hub. |
@@ -56,6 +56,8 @@ Legend:
 - Account management API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/PrincipalController.java`, `be/src/main/java/com/edua/beeduasystem/presentation/controller/ModeratorController.java`
 - Account management UI: `fe/app/user-management/page.tsx`, `fe/app/it-staff-users/page.tsx`
 - IT Staff prompt management API/UI: `be/src/main/java/com/edua/beeduasystem/presentation/controller/ItStaffController.java`, `be/src/main/java/com/edua/beeduasystem/service/ai/AiSystemPromptService.java`, `fe/app/it-staff/page.tsx`
+- Notifications API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/NotificationController.java`, `be/src/main/java/com/edua/beeduasystem/service/notification/NotificationService.java`
+- Notifications UI: `fe/app/notifications/page.tsx`, `fe/lib/notifications.ts`, `fe/lib/ws/notifications-client.ts`, badge trong `fe/components/layout/Sidebar.tsx`
 
 ## Follow-Up Notes
 
