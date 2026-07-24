@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { navGroups } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { canAccessRoute, hasAnyRole } from "@/lib/auth/permissions";
+import { getUnreadCount } from "@/lib/notifications";
+import { connectNotificationsStream } from "@/lib/ws/notifications-client";
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -32,9 +34,10 @@ export function Sidebar({
   responsive = false,
   mobileOpen = false,
 }: SidebarProps) {
-  const { user } = useAuth();
+  const { user, accessToken, authFetch } = useAuth();
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const isCollapsed = collapsed ?? internalCollapsed;
   const toggleCollapsed = onToggleCollapsed ?? (() => setInternalCollapsed((current) => !current));
   const position = fixed
@@ -57,6 +60,28 @@ export function Sidebar({
       : user?.role === "IT_STAFF"
         ? "Nhân viên IT"
       : "Giáo viên";
+
+  useEffect(() => {
+    if (!user || !accessToken) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUnreadCount(0);
+      return;
+    }
+    let cancelled = false;
+    getUnreadCount(authFetch)
+      .then((res) => {
+        if (!cancelled) setUnreadCount(res.count);
+      })
+      .catch(() => {});
+    const { disconnect } = connectNotificationsStream({
+      accessToken,
+      onEvent: () => setUnreadCount((count) => count + 1),
+    });
+    return () => {
+      cancelled = true;
+      disconnect();
+    };
+  }, [authFetch, accessToken, user]);
 
   const filteredGroups = navGroups
     .map((group) => ({
@@ -106,11 +131,16 @@ export function Sidebar({
                     <Link
                       key={item.label}
                       title={isCollapsed ? item.label : undefined}
-                      className={`flex h-9 items-center rounded-[9px] text-[13px] font-medium tracking-[-0.01em] transition hover:bg-[#edeae5] hover:text-[#1f1f1f] ${isCollapsed ? "justify-center px-0" : "gap-2.5 px-3"} ${active ? "bg-[#edeae5] text-[#1f1f1f]" : "text-[#6b6b6b]"} ${!isCollapsed && item.child ? "ml-6 w-[calc(100%-24px)]" : ""}`}
+                      className={`relative flex h-9 items-center rounded-[9px] text-[13px] font-medium tracking-[-0.01em] transition hover:bg-[#edeae5] hover:text-[#1f1f1f] ${isCollapsed ? "justify-center px-0" : "gap-2.5 px-3"} ${active ? "bg-[#edeae5] text-[#1f1f1f]" : "text-[#6b6b6b]"} ${!isCollapsed && item.child ? "ml-6 w-[calc(100%-24px)]" : ""}`}
                       href={item.href}
                     >
                       <DashboardIcon name={item.icon} />
                       <span className={isCollapsed ? "sr-only" : "flex-1"}>{item.label}</span>
+                      {item.href === "/notifications" && unreadCount > 0 ? (
+                        <span className={`flex h-4 min-w-4 items-center justify-center rounded-full bg-[#e8724a] px-1 text-[10px] font-semibold text-white ${isCollapsed ? "absolute right-1 top-0" : ""}`}>
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      ) : null}
                       {!isCollapsed && item.expanded ? <DashboardIcon name="chevronUp" className="size-[13px]" /> : null}
                     </Link>
                   );

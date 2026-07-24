@@ -20,6 +20,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/library":         { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/user-profile":    { requireAuth: true },
   "/blog":            { requireAuth: true },
+  "/notifications":   { requireAuth: true },
   "/blog/moderation": { requireAuth: true, allowedRoles: ["MODERATOR"] },
   "/user-management": { requireAuth: true, allowedRoles: ["MODERATOR", "PRINCIPAL"] },
   "/it-staff": { requireAuth: true, allowedRoles: ["IT_STAFF"] },
