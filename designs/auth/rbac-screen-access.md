@@ -8,6 +8,7 @@
 | Lesson/Slide/Test (AI) | ✓ | ✓ | ✓ | ✗ | **✓** |
 | Blog — Xem | ✓ | ✓ | ✓ | ✗ | ✗ |
 | Blog — Duyệt / Quản lý | ✗ | ✓ | ✗ | ✗ | ✗ |
+| Class Management / Class Hub | ✓ | ✗ | ✗ | ✗ | ✗ |
 | Teacher Management | ✗ | ✓ (teachers) | ✓ (mods) | ✗ | ✗ |
 | IT Staff Account Management | ✗ | ✗ | ✓ | ✗ | ✗ |
 | System Prompt Management | ✗ | ✗ | ✗ | ✓ | ✗ |
@@ -52,6 +53,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   '/lesson-edit':     { requireAuth: false },
   '/slide-create':    { requireAuth: false },
   '/slide-maker':     { requireAuth: false },
+  '/create-class':    { requireAuth: true, allowedRoles: ['TEACHER'] },
   '/blog':            { requireAuth: true },
   '/blog/moderation': { requireAuth: true, allowedRoles: ['MODERATOR'] },
   '/user-management': { requireAuth: true, allowedRoles: ['MODERATOR', 'PRINCIPAL'] },

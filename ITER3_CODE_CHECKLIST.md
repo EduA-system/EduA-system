@@ -12,8 +12,8 @@ Legend:
 | Code reality | Count |
 | --- | ---: |
 | Coded | 5 |
-| Partial | 3 |
-| Not found | 19 |
+| Partial | 4 |
+| Not found | 18 |
 
 ## Checklist
 
@@ -37,7 +37,7 @@ Legend:
 | [x] | View / Update AI System Prompts | User & Content Management | Pending | Coded | Backend `/api/it-staff/system-prompts`; frontend `/it-staff`; prompt được apply vào lesson/slide/molecule AI flows. Role contract hiện là `IT_STAFF`. |
 | [x] | View Blog List (reader + moderation) | Blog | Pending | Coded | Backend `/api/blog-posts`; frontend `/blog` và `/blog/moderation`. |
 | [x] | Remove / Delete Blog Post | Blog | Pending | Coded | Teacher delete own post; Moderator remove post with reason. |
-| [ ] | Manage Classroom Resources & Assignments | Classroom | Planned | Not found | Chưa thấy classroom/class hub/resource/assignment module. |
+| [~] | Manage Classroom Resources & Assignments | Classroom | Planned | Partial | Có backend `/api/classes` CRUD + FE `/create-class` cho Teacher tạo/xem/sửa/deactivate lớp; chưa có enrollment, resource, assignment, submission review APIs/UI. |
 | [ ] | Assign Homework with Deadline | Classroom | Planned | Not found | Chưa thấy assignment/deadline API hoặc UI. |
 | [ ] | Student View Teaching Resources | Classroom | Planned | Not found | Chưa thấy student classroom/resource access module. |
 | [ ] | Student Assignment Submission | Classroom | Planned | Not found | Chưa thấy submission/upload-text assignment module. |
@@ -51,6 +51,9 @@ Legend:
 
 - Blog API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/BlogController.java`
 - Blog UI: `fe/components/blog/BlogCommunityPage.tsx`, `fe/app/blog/moderation/page.tsx`
+- Classroom API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/ClassController.java`
+- Classroom service/persistence: `be/src/main/java/com/edua/beeduasystem/service/classroom/ClassManagementService.java`, `be/src/main/java/com/edua/beeduasystem/infrastructure/persistence/JpaClassRepository.java`
+- Classroom UI: `fe/app/create-class/page.tsx`, `fe/components/classroom/ClassManagementPage.tsx`, `fe/lib/classroom.ts`
 - Library/private content API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/LibraryContentController.java`
 - Library/private content UI: `fe/app/library/page.tsx`, `fe/lib/library.ts`
 - Account management API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/PrincipalController.java`, `be/src/main/java/com/edua/beeduasystem/presentation/controller/ModeratorController.java`
