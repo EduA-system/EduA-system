@@ -25,5 +25,6 @@ public class LibraryContentEntity {
     @Column(name = "thumbnail_url", columnDefinition = "TEXT") private String thumbnailUrl;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+    @Column(name = "submitted_at") private Instant submittedAt;
     @Column(name = "deleted_at") private Instant deletedAt;
 }

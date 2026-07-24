@@ -15,4 +15,6 @@ public class LibraryContentController {
     @PostMapping @ResponseStatus(HttpStatus.CREATED) public LibraryViews.Detail create(@RequestBody CreateLibraryContentRequest r) { return service.create(r.type(),r.title(),r.subject(),r.payload(),r.thumbnailUrl()); }
     @PatchMapping("/{id}") public LibraryViews.Detail update(@PathVariable UUID id,@RequestBody UpdateLibraryContentRequest r) { return service.update(id,r.title(),r.subject(),r.subject()!=null,r.payload(),r.payload()!=null,r.thumbnailUrl(),r.thumbnailUrl()!=null); }
     @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable UUID id) { service.delete(id); }
+    @PostMapping("/{id}/submission") public LibraryViews.Detail submit(@PathVariable UUID id) { return service.submit(id); }
+    @DeleteMapping("/{id}/submission") public LibraryViews.Detail unsubmit(@PathVariable UUID id) { return service.unsubmit(id); }
 }
