@@ -17,4 +17,7 @@ public class LibraryContentController {
     @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable UUID id) { service.delete(id); }
     @PostMapping("/{id}/submission") public LibraryViews.Detail submit(@PathVariable UUID id) { return service.submit(id); }
     @DeleteMapping("/{id}/submission") public LibraryViews.Detail unsubmit(@PathVariable UUID id) { return service.unsubmit(id); }
+    @GetMapping("/moderation-queue") @PreAuthorize("hasRole('MODERATOR')") public LibraryViews.Page moderationQueue(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size) { return service.listModerationQueue(page,size); }
+    @PostMapping("/{id}/approval") @PreAuthorize("hasRole('MODERATOR')") public LibraryViews.Detail approve(@PathVariable UUID id) { return service.approve(id); }
+    @PostMapping("/{id}/rejection") @PreAuthorize("hasRole('MODERATOR')") public LibraryViews.Detail reject(@PathVariable UUID id,@RequestBody RejectLibraryContentRequest r) { return service.reject(id,r.reason()); }
 }

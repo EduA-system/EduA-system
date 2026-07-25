@@ -27,4 +27,7 @@ public class LibraryContentEntity {
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
     @Column(name = "submitted_at") private Instant submittedAt;
     @Column(name = "deleted_at") private Instant deletedAt;
+    @Column(name = "reviewed_by") private UUID reviewedBy;
+    @Column(name = "reviewed_at") private Instant reviewedAt;
+    @Column(name = "rejection_reason", columnDefinition = "TEXT") private String rejectionReason;
 }

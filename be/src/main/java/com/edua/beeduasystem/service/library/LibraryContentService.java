@@ -23,27 +23,52 @@ public class LibraryContentService {
     public LibraryViews.Detail get(UUID id) { return toDetail(requireOwner(id)); }
     public LibraryViews.Detail create(String rawType, String title, String rawSubject, JsonNode payload, String thumbnailUrl) {
         LibraryContentType type = parseTypeRequired(rawType); Instant now = Instant.now();
-        return toDetail(repository.save(new LibraryContent(UUID.randomUUID(), currentUser.requireUserId(), type, requiredTitle(title), parseSubject(rawSubject), LibraryContentStatus.PRIVATE, payload == null ? JsonNodeFactory.instance.objectNode() : payload, cleanUrl(thumbnailUrl), now, now, null, null)));
+        return toDetail(repository.save(new LibraryContent(UUID.randomUUID(), currentUser.requireUserId(), type, requiredTitle(title), parseSubject(rawSubject), LibraryContentStatus.PRIVATE, payload == null ? JsonNodeFactory.instance.objectNode() : payload, cleanUrl(thumbnailUrl), now, now, null, null, null, null, null)));
     }
     public LibraryViews.Detail update(UUID id, String title, String rawSubject, boolean subjectProvided, JsonNode payload, boolean payloadProvided, String thumbnailUrl, boolean thumbnailProvided) {
         LibraryContent c = requireOwner(id);
-        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(), title == null ? c.title() : requiredTitle(title), subjectProvided ? parseSubject(rawSubject) : c.subject(), c.status(), payloadProvided ? (payload == null ? JsonNodeFactory.instance.objectNode() : payload) : c.payload(), thumbnailProvided ? cleanUrl(thumbnailUrl) : c.thumbnailUrl(), c.createdAt(), Instant.now(), c.submittedAt(), null)));
+        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(), title == null ? c.title() : requiredTitle(title), subjectProvided ? parseSubject(rawSubject) : c.subject(), c.status(), payloadProvided ? (payload == null ? JsonNodeFactory.instance.objectNode() : payload) : c.payload(), thumbnailProvided ? cleanUrl(thumbnailUrl) : c.thumbnailUrl(), c.createdAt(), Instant.now(), c.submittedAt(), null, c.reviewedBy(), c.reviewedAt(), c.rejectionReason())));
     }
-    public void delete(UUID id) { LibraryContent c = requireOwner(id); repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.status(),c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),Instant.now())); }
+    public void delete(UUID id) { LibraryContent c = requireOwner(id); repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.status(),c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),Instant.now(),c.reviewedBy(),c.reviewedAt(),c.rejectionReason())); }
+    /** Gửi duyệt: từ PRIVATE (lần đầu) hoặc REJECTED (gửi lại sau khi bị từ chối). */
     public LibraryViews.Detail submit(UUID id) {
         LibraryContent c = requireOwner(id);
-        if (c.status() != LibraryContentStatus.PRIVATE) throw new IllegalArgumentException("Only private content can be submitted for review.");
-        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.SUBMITTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),Instant.now(),null)));
+        if (c.status() != LibraryContentStatus.PRIVATE && c.status() != LibraryContentStatus.REJECTED) throw new IllegalArgumentException("Only private or rejected content can be submitted for review.");
+        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.SUBMITTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),Instant.now(),null,null,null,null)));
     }
     public LibraryViews.Detail unsubmit(UUID id) {
         LibraryContent c = requireOwner(id);
         if (c.status() != LibraryContentStatus.SUBMITTED) throw new IllegalArgumentException("Only submitted content can be unsubmitted.");
-        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.PRIVATE,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),null,null)));
+        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.PRIVATE,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),null,null,null,null,null)));
+    }
+    /** Moderator duyệt content SUBMITTED cùng subject với mình lên Hub công khai. */
+    public LibraryViews.Detail approve(UUID id) {
+        LibraryContent c = requireSubmittedInModeratorSubject(id);
+        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.APPROVED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,currentUser.requireUserId(),Instant.now(),null)));
+    }
+    /** Moderator từ chối content SUBMITTED cùng subject với mình, bắt buộc lý do. */
+    public LibraryViews.Detail reject(UUID id, String rawReason) {
+        if (rawReason == null || rawReason.isBlank()) throw new IllegalArgumentException("Rejection reason is required.");
+        LibraryContent c = requireSubmittedInModeratorSubject(id);
+        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.REJECTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,currentUser.requireUserId(),Instant.now(),rawReason.trim())));
+    }
+    /** Hàng đợi kiểm duyệt: content SUBMITTED cùng subject với Moderator hiện tại. */
+    public LibraryViews.Page listModerationQueue(int page, int size) {
+        Subject moderatorSubject = currentUser.require().subject();
+        if (moderatorSubject == null) throw new ForbiddenOperationException("Moderator must have a subject to review content.");
+        return toPage(repository.searchByStatusAndSubject(LibraryContentStatus.SUBMITTED, moderatorSubject, page, size), page, size);
+    }
+    private LibraryContent requireSubmittedInModeratorSubject(UUID id) {
+        LibraryContent c = repository.findActiveById(id).orElseThrow(() -> new ResourceNotFoundException("Library content not found."));
+        if (c.status() != LibraryContentStatus.SUBMITTED) throw new IllegalArgumentException("Only submitted content can be reviewed.");
+        Subject moderatorSubject = currentUser.require().subject();
+        if (moderatorSubject == null || c.subject() != moderatorSubject) throw new ForbiddenOperationException("You can only review content in your assigned subject.");
+        return c;
     }
     private LibraryContent requireOwner(UUID id) { LibraryContent c = repository.findActiveById(id).orElseThrow(() -> new ResourceNotFoundException("Library content not found.")); if (!c.ownerId().equals(currentUser.requireUserId())) throw new ForbiddenOperationException("You can only access your own library content."); return c; }
     private static LibraryViews.Page toPage(LibraryContentRepository.SearchResult r, int page, int size) { return new LibraryViews.Page(r.items().stream().map(LibraryContentService::toSummary).toList(), Math.max(0,page), Math.min(Math.max(1,size),100), r.total()); }
-    private static LibraryViews.Summary toSummary(LibraryContent c) { return new LibraryViews.Summary(c.id(),c.type(),c.title(),c.subject(),c.status(),c.thumbnailUrl(),c.createdAt(),c.updatedAt(),c.submittedAt()); }
-    private static LibraryViews.Detail toDetail(LibraryContent c) { return new LibraryViews.Detail(c.id(),c.type(),c.title(),c.subject(),c.status(),c.payload(),c.thumbnailUrl(),c.createdAt(),c.updatedAt(),c.submittedAt()); }
+    private static LibraryViews.Summary toSummary(LibraryContent c) { return new LibraryViews.Summary(c.id(),c.type(),c.title(),c.subject(),c.status(),c.thumbnailUrl(),c.createdAt(),c.updatedAt(),c.submittedAt(),c.rejectionReason()); }
+    private static LibraryViews.Detail toDetail(LibraryContent c) { return new LibraryViews.Detail(c.id(),c.type(),c.title(),c.subject(),c.status(),c.payload(),c.thumbnailUrl(),c.createdAt(),c.updatedAt(),c.submittedAt(),c.rejectionReason()); }
     private static String requiredTitle(String title) { if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required."); return title.trim(); }
     private static String cleanUrl(String url) { return url == null || url.isBlank() ? null : url.trim(); }
     private static LibraryContentType parseTypeRequired(String value) { LibraryContentType type = parseType(value); if(type == null) throw new IllegalArgumentException("Type is required. Allowed: LESSON_PLAN, SLIDE_DECK, TEST, SIMULATION."); return type; }

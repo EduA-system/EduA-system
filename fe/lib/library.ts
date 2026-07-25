@@ -1,6 +1,6 @@
 export type LibraryType = "LESSON_PLAN" | "SLIDE_DECK" | "TEST" | "SIMULATION";
 export type LibrarySubject = "MATH" | "CHEMISTRY" | "PHYSICS";
-export type LibraryContent = { id: string; type: LibraryType; title: string; subject: LibrarySubject | null; status: "PRIVATE" | "SUBMITTED"; thumbnailUrl: string | null; createdAt: string; updatedAt: string; submittedAt: string | null; payload?: unknown };
+export type LibraryContent = { id: string; type: LibraryType; title: string; subject: LibrarySubject | null; status: "PRIVATE" | "SUBMITTED" | "APPROVED" | "REJECTED"; thumbnailUrl: string | null; createdAt: string; updatedAt: string; submittedAt: string | null; rejectionReason: string | null; payload?: unknown };
 export type LibraryPage = { items: LibraryContent[]; page: number; size: number; total: number };
 async function unpack<T>(res: Response): Promise<T> { if (!res.ok) { const b = await res.json().catch(() => null) as { message?: string } | null; throw new Error(b?.message ?? "Không thể xử lý thư viện."); } return res.json() as Promise<T>; }
 export function listLibrary(authFetch: (i: RequestInfo | URL, init?: RequestInit) => Promise<Response>, params: URLSearchParams) { return authFetch(`/api/library/contents?${params}`).then(unpack<LibraryPage>); }
