@@ -8,9 +8,10 @@ public enum Role {
     TEACHER,
     MODERATOR,
     PRINCIPAL,
-    IT_STAFF;
+    IT_STAFF,
+    STUDENT;
 
-    private static final List<Role> PRIORITY = List.of(PRINCIPAL, IT_STAFF, MODERATOR, TEACHER);
+    private static final List<Role> PRIORITY = List.of(PRINCIPAL, IT_STAFF, MODERATOR, TEACHER, STUDENT);
 
     public static Role primaryOf(Set<Role> roles) {
         if (roles == null || roles.isEmpty()) {

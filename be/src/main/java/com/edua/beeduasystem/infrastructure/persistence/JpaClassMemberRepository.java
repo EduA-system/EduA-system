@@ -4,10 +4,13 @@ import com.edua.beeduasystem.domain.model.classroom.ClassMember;
 import com.edua.beeduasystem.infrastructure.persistence.entity.ClassMemberEntity;
 import com.edua.beeduasystem.infrastructure.persistence.repository.ClassMemberJpaRepository;
 import com.edua.beeduasystem.repository.repositories.ClassMemberRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -40,6 +43,14 @@ public class JpaClassMemberRepository implements ClassMemberRepository {
     @Transactional(readOnly = true)
     public boolean existsByClassIdAndStudentId(UUID classId, UUID studentId) {
         return jpa.existsByClassIdAndStudentId(classId, studentId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult findByClassId(UUID classId, int page, int size) {
+        Page<ClassMemberEntity> result = jpa.findByClassIdOrderByJoinedAtDesc(classId, PageRequest.of(page, size));
+        List<ClassMember> items = result.getContent().stream().map(JpaClassMemberRepository::toDomain).toList();
+        return new PageResult(items, result.getTotalElements());
     }
 
     private static ClassMember toDomain(ClassMemberEntity entity) {

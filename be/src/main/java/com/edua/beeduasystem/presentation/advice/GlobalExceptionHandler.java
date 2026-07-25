@@ -1,5 +1,7 @@
 package com.edua.beeduasystem.presentation.advice;
 
+import com.edua.beeduasystem.domain.exception.BulkEnrollmentFailedException;
+import com.edua.beeduasystem.domain.exception.ClassEnrollmentConflictException;
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
@@ -82,5 +84,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateEmail(DuplicateEmailException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ClassEnrollmentConflictException.class)
+    public ResponseEntity<ErrorResponse> handleClassEnrollmentConflict(ClassEnrollmentConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(BulkEnrollmentFailedException.class)
+    public ResponseEntity<ErrorResponse> handleBulkEnrollmentFailed(BulkEnrollmentFailedException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
     }
 }
