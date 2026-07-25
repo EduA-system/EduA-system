@@ -71,7 +71,8 @@ public class PrincipalModeratorService {
 
     @Transactional
     public AppUser addModerator(String email, String rawSubject, String fullName) {
-        String normalizedEmail = email.trim().toLowerCase();
+        String normalizedEmail = AppUserFieldValidator.normalizeEmail(email);
+        String normalizedFullName = AppUserFieldValidator.normalizeOptionalFullName(fullName);
         Subject subject = Subject.valueOf(rawSubject.trim().toUpperCase());
         UUID currentUserId = currentUserProvider.requireUserId();
         Instant now = Instant.now();
@@ -88,7 +89,7 @@ public class PrincipalModeratorService {
             }
             AppUser reactivated = userRepository.save(new AppUser(
                     u.id(), u.email(), u.googleSub(),
-                    fullName != null ? fullName.trim() : u.fullName(),
+                    normalizedFullName != null ? normalizedFullName : u.fullName(),
                     u.avatarUrl(), u.contactInfo(),
                     subject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
             assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
@@ -97,7 +98,7 @@ public class PrincipalModeratorService {
 
         AppUser saved = userRepository.save(new AppUser(
                 UUID.randomUUID(), normalizedEmail, null,
-                fullName != null ? fullName.trim() : null,
+                normalizedFullName,
                 null, null,
                 subject, UserStatus.INVITED, now, null));
         assignRole(saved.id(), Role.MODERATOR, currentUserId, now);
@@ -122,7 +123,7 @@ public class PrincipalModeratorService {
             throw new ForbiddenOperationException("Moderator chưa được gán môn học.");
         }
 
-        String normalizedEmail = replacementEmail.trim().toLowerCase();
+        String normalizedEmail = AppUserFieldValidator.normalizeEmail(replacementEmail);
         if (currentModerator.email().equals(normalizedEmail)) {
             throw new ForbiddenOperationException("Email moderator thay thế phải khác moderator hiện tại.");
         }

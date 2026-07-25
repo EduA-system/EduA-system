@@ -63,20 +63,21 @@ query: ?subject=MATH|CHEMISTRY|PHYSICS   (lọc theo môn — tùy chọn)
 
 ### 3. `POST /api/blog-posts` — Tạo bài (publish trực tiếp)
 ```
-body: { title, content, subject }         // subject ∈ {MATH, CHEMISTRY, PHYSICS}
+body: { title, content, subject }         // title 1..255 chars after trim; subject ∈ {MATH, CHEMISTRY, PHYSICS}
 → 201  BlogPostDetailDto
-→ 400  thiếu title/content/subject, subject không hợp lệ, hoặc content rỗng sau sanitize
+→ 400  thiếu title/content/subject, title quá 255 ký tự, subject không hợp lệ, hoặc content rỗng sau sanitize
 → 403  role ≠ TEACHER
 ```
 - `content` HTML → **sanitize (Jsoup)** trước khi lưu; XSS bị loại.
+- `title` được trim và giới hạn tối đa 255 ký tự để khớp cột `blog_posts.title`.
 - `authorId` = user hiện tại; `status = PUBLISHED` ngay (BR-20). Không giới hạn subject theo môn của Teacher (giáo viên có thể viết bài môn bất kỳ — SRS không ràng buộc; Moderator chỉ kiểm duyệt theo môn).
 - Map: UC Create Blog Post, BR-20; rate-limit chuẩn 60/phút (SEC-07).
 
 ### 4. `PATCH /api/blog-posts/{id}` — Sửa bài của mình
 ```
-body: { title?, content?, subject? }       // partial
+body: { title?, content?, subject? }       // partial; title <= 255 chars after trim when supplied
 → 200  BlogPostDetailDto
-→ 400  content rỗng sau sanitize / subject không hợp lệ
+→ 400  title rỗng/quá 255 ký tự / content rỗng sau sanitize / subject không hợp lệ
 → 403  không phải tác giả (BR-16)
 → 404  không tồn tại / không PUBLISHED
 ```

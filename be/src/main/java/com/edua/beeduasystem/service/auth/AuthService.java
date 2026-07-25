@@ -80,11 +80,17 @@ public class AuthService {
         }
 
         Instant now = Instant.now();
+        String googleSub = user.googleSub() != null
+                ? user.googleSub()
+                : AppUserFieldValidator.normalizeGoogleSubject(identity.subject());
+        String fullName = StringUtils.hasText(user.fullName())
+                ? user.fullName()
+                : AppUserFieldValidator.normalizeOptionalFullName(identity.fullName());
         AppUser activated = new AppUser(
                 user.id(),
                 user.email(),
-                user.googleSub() != null ? user.googleSub() : identity.subject(),
-                StringUtils.hasText(user.fullName()) ? user.fullName() : identity.fullName(),
+                googleSub,
+                fullName,
                 user.avatarUrl(),
                 user.contactInfo(),
                 user.subject(),

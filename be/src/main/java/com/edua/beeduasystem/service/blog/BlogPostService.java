@@ -22,6 +22,8 @@ import java.util.UUID;
 @Service
 public class BlogPostService {
 
+    private static final int MAX_TITLE_LENGTH = 255;
+
     private final BlogPostRepository postRepository;
     private final BlogCommentRepository commentRepository;
     private final BlogContentSanitizer sanitizer;
@@ -145,7 +147,11 @@ public class BlogPostService {
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("Title is required.");
         }
-        return title.trim();
+        String cleanTitle = title.trim();
+        if (cleanTitle.length() > MAX_TITLE_LENGTH) {
+            throw new IllegalArgumentException("Title must not exceed 255 characters.");
+        }
+        return cleanTitle;
     }
 
     private String requireContent(String rawContent) {

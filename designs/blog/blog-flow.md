@@ -19,7 +19,8 @@
 ```
 FE (TipTap editor.getHTML) ── { title, content, subject } ──▶ POST /api/blog-posts
                                                                │  @PreAuthorize hasRole('TEACHER')
-BE:  validate title/subject; sanitize(content) [Jsoup]         │  rỗng sau sanitize → 400
+BE:  validate title required/max 255 + subject; sanitize(content) [Jsoup]
+                                                               │  rỗng sau sanitize → 400
        │
        ▼
      BlogPost{ authorId=current, status=PUBLISHED, createdAt=now }  → BlogPostRepository.save
@@ -82,7 +83,7 @@ flowchart TD
 
 - **`blog_posts`**
   - `id uuid pk`, `author_id uuid not null → app_users(id)`
-  - `title varchar(255) not null`, `content text not null` (HTML đã sanitize)
+  - `title varchar(255) not null` (service trim + reject >255), `content text not null` (HTML đã sanitize)
   - `subject varchar(20) not null`  — MATH | CHEMISTRY | PHYSICS (reuse enum `Subject`)
   - `status varchar(20) not null default 'PUBLISHED'` — PUBLISHED | REMOVED_BY_MODERATOR | DELETED_BY_AUTHOR
   - `removed_reason text null`, `removed_by uuid null → app_users(id)`
