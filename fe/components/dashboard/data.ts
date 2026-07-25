@@ -19,8 +19,9 @@ export const navGroups: NavGroup[] = [
   {
     label: "COMMUNITY",
     items: [
-      { label: "Community Hub", icon: "community", href: "/homepage" },
+      { label: "Community Hub", icon: "community", href: "/community-hub" },
       { label: "Blog", icon: "community", href: "/blog" },
+      { label: "Thông báo", icon: "notification", href: "/notifications" },
     ],
   },
   {
@@ -54,6 +55,7 @@ export const navGroups: NavGroup[] = [
     label: "MANAGEMENT",
     items: [
       { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog/moderation", requiredRole: ["MODERATOR"] },
+      { label: "Hub Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/hub-moderation", requiredRole: ["MODERATOR"] },
       { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "PRINCIPAL"] },
       { label: "Qu\u1ea3n l\u00fd IT Staff", icon: "settings", href: "/it-staff-users", requiredRole: ["PRINCIPAL"] },
       { label: "C\u1ea5u h\u00ecnh AI", icon: "settings", href: "/it-staff", requiredRole: ["IT_STAFF"] },

@@ -15,4 +15,9 @@ public class LibraryContentController {
     @PostMapping @ResponseStatus(HttpStatus.CREATED) public LibraryViews.Detail create(@RequestBody CreateLibraryContentRequest r) { return service.create(r.type(),r.title(),r.subject(),r.payload(),r.thumbnailUrl()); }
     @PatchMapping("/{id}") public LibraryViews.Detail update(@PathVariable UUID id,@RequestBody UpdateLibraryContentRequest r) { return service.update(id,r.title(),r.subject(),r.subject()!=null,r.payload(),r.payload()!=null,r.thumbnailUrl(),r.thumbnailUrl()!=null); }
     @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable UUID id) { service.delete(id); }
+    @PostMapping("/{id}/submission") public LibraryViews.Detail submit(@PathVariable UUID id) { return service.submit(id); }
+    @DeleteMapping("/{id}/submission") public LibraryViews.Detail unsubmit(@PathVariable UUID id) { return service.unsubmit(id); }
+    @GetMapping("/moderation-queue") @PreAuthorize("hasRole('MODERATOR')") public LibraryViews.Page moderationQueue(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size) { return service.listModerationQueue(page,size); }
+    @PostMapping("/{id}/approval") @PreAuthorize("hasRole('MODERATOR')") public LibraryViews.Detail approve(@PathVariable UUID id) { return service.approve(id); }
+    @PostMapping("/{id}/rejection") @PreAuthorize("hasRole('MODERATOR')") public LibraryViews.Detail reject(@PathVariable UUID id,@RequestBody RejectLibraryContentRequest r) { return service.reject(id,r.reason()); }
 }
