@@ -139,7 +139,9 @@ export type CurveTrackConstraint = {
   points: TrackPoint[];
   friction?: number;
   /** Biến thể trình bày, không tham gia tính toán vật lý. */
-  appearance?: "rollerCoaster";
+  appearance?: "rollerCoaster" | "hidden" | "galileiRamp";
+  /** Renderer-only: draw track offset from the constraint path along local normal. */
+  visualOffset?: number;
 };
 
 /**

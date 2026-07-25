@@ -1,6 +1,6 @@
 import type { Preset } from "./types";
 export const tuPho: Preset = {
- id:"tu-pho", kind:"iron-filings", title:"Từ phổ", domain:"Điện & Từ", grade:10,
+ id:"tu-pho", kind:"iron-filings", title:"Từ phổ", domain:"Điện & Từ", grade:12,
  desc:"Quan sát các mạt sắt sắp xếp thành đường sức từ quanh nam châm thẳng.",
  objective:"Nhận biết hình dạng từ phổ và vùng từ trường mạnh quanh hai cực của nam châm thẳng.",
  sgkRef:"Khoa học tự nhiên 9 — Từ trường",

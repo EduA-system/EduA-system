@@ -5,7 +5,7 @@ export const camUngDienTu: Preset = {
   kind: "electromagnetic-induction",
   title: "Cảm ứng điện từ",
   domain: "Điện & Từ",
-  grade: 11,
+  grade: 12,
   desc: "Di chuyển nam châm lại gần hoặc ra xa cuộn dây để quan sát kim điện kế lệch do dòng điện cảm ứng.",
   objective: "Nhận biết dòng điện cảm ứng chỉ xuất hiện khi từ thông qua cuộn dây biến thiên và đổi chiều khi đổi chiều chuyển động.",
   sgkRef: "Vật lí 11 — Cảm ứng điện từ",

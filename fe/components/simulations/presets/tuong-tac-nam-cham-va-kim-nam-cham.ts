@@ -5,13 +5,13 @@ export const tuongTacNamChamVaKimNamCham: Preset = {
   kind: "magnetism",
   title: "Tương tác giữa nam châm và kim nam châm",
   domain: "Điện & Từ",
-  grade: 10,
+  grade: 12,
   desc: "Kéo thanh nam châm đến gần để quan sát kim nam châm quay do lực hút, đẩy giữa các cực từ.",
   objective: "Nhận biết: khác cực hút nhau, cùng cực đẩy nhau; kim nam châm luôn quay theo hướng của từ trường.",
   sgkRef: "Khoa học tự nhiên 9 — Nam châm",
   params: [
     { key: "strength", label: "Độ mạnh của thanh nam châm", unit: "đv", min: 0.4, max: 2.5, step: 0.1, default: 1 },
-    { key: "damping", label: "Ma sát ở trục quay", unit: "đv", min: 0.4, max: 5, step: 0.1, default: 2.2 },
+    { key: "damping", label: "Ma sát ở trục quay", unit: "đv", min: 0.4, max: 5, step: 0.1, default: 1.7 },
   ],
   quickPresets: [
     { label: "Từ trường mạnh", params: { strength: 2.1 } },
@@ -19,7 +19,7 @@ export const tuongTacNamChamVaKimNamCham: Preset = {
   ],
   applyParams: (p) => ({
     kind: "magnetism" as const,
-    compass: { x: 0, y: 0, length: 1.55, inertia: 0.72, damping: p.damping ?? 2.2 },
+    compass: { x: 0, y: 0, length: 1.55, inertia: 0.52, damping: p.damping ?? 1.7 },
     barMagnet: { x: -3.15, y: 0.25, length: 1.9, angle: Math.PI, strength: p.strength ?? 1 },
   }),
   analysis: {

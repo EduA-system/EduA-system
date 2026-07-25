@@ -28,25 +28,25 @@ export function SceneKonvaMagnetism({
     const stage = new Konva.Stage({ container, width: W, height: H });
     const layer = new Konva.Layer();
     stage.add(layer);
-    layer.add(new Konva.Rect({ x: 0, y: 0, width: W, height: H, fill: "#f8fafc" }));
+    layer.add(new Konva.Rect({ x: 0, y: 0, width: W, height: H, fill: "#0f172a" }));
 
     const scale = Math.min(W / 8.5, H / 5.3);
     const center = { x: W * 0.56, y: H * 0.56 };
     const toScreen = (p: { x: number; y: number }) => ({ x: center.x + p.x * scale, y: center.y - p.y * scale });
-    for (let x = center.x % (scale * .5); x < W; x += scale * .5) layer.add(new Konva.Line({ points: [x, 0, x, H], stroke: "#e7edf3", strokeWidth: 1 }));
-    for (let y = center.y % (scale * .5); y < H; y += scale * .5) layer.add(new Konva.Line({ points: [0, y, W, y], stroke: "#e7edf3", strokeWidth: 1 }));
+    for (let x = center.x % (scale * .5); x < W; x += scale * .5) layer.add(new Konva.Line({ points: [x, 0, x, H], stroke: "#24324b", strokeWidth: 1 }));
+    for (let y = center.y % (scale * .5); y < H; y += scale * .5) layer.add(new Konva.Line({ points: [0, y, W, y], stroke: "#24324b", strokeWidth: 1 }));
 
     const compassCenter = toScreen(scene.compass);
     const diskRadius = scene.compass.length * scale * .55;
-    layer.add(new Konva.Circle({ x: compassCenter.x, y: compassCenter.y, radius: diskRadius, fill: "#ffffff", stroke: "#94a3b8", strokeWidth: 3, shadowColor: "#64748b", shadowBlur: 10, shadowOpacity: .17 }));
-    layer.add(new Konva.Text({ x: 20, y: 18, text: "Kéo thanh nam châm; đưa các cực lại gần để quan sát kim quay.", fontSize: 15, fill: "#334155" }));
+    layer.add(new Konva.Circle({ x: compassCenter.x, y: compassCenter.y, radius: diskRadius, fill: "#111827", stroke: "#64748b", strokeWidth: 3, shadowColor: "#020617", shadowBlur: 16, shadowOpacity: .55 }));
+    layer.add(new Konva.Text({ x: 20, y: 18, text: "Kéo thanh nam châm; đưa các cực lại gần để quan sát kim quay.", fontSize: 15, fill: "#cbd5e1" }));
 
     const needle = new Konva.Group({ x: compassCenter.x, y: compassCenter.y, listening: false });
     const half = scene.compass.length * scale * .46;
     // Hai nửa tam giác riêng: N đỏ, S xanh; không chồng hình lên nhau.
     needle.add(new Konva.Line({ points: [0, -8, half, 0, 0, 8], closed: true, fill: "#dc2626", stroke: "#991b1b", strokeWidth: 1.5 }));
     needle.add(new Konva.Line({ points: [-half, 0, 0, -8, 0, 8], closed: true, fill: "#2563eb", stroke: "#1d4ed8", strokeWidth: 1.5 }));
-    needle.add(new Konva.Circle({ radius: 8, fill: "#f8fafc", stroke: "#475569", strokeWidth: 2 }));
+    needle.add(new Konva.Circle({ radius: 8, fill: "#e2e8f0", stroke: "#475569", strokeWidth: 2 }));
     needle.add(new Konva.Text({ x: half - 16, y: -28, text: "N", fontSize: 15, fontStyle: "bold", fill: "#dc2626" }));
     needle.add(new Konva.Text({ x: -half - 4, y: 12, text: "S", fontSize: 15, fontStyle: "bold", fill: "#2563eb" }));
     layer.add(needle);
@@ -61,7 +61,7 @@ export function SceneKonvaMagnetism({
     bar.add(new Konva.Text({ x: 0, y: -8, width: magnetHalf, text: "S", align: "center", fontSize: 18, fontStyle: "bold", fill: "white", listening: false }));
     layer.add(bar);
 
-    const status = new Konva.Text({ x: 0, y: H - 36, width: W, align: "center", fontSize: 14, fontStyle: "bold", fill: "#475569" });
+    const status = new Konva.Text({ x: 0, y: H - 36, width: W, align: "center", fontSize: 14, fontStyle: "bold", fill: "#fbbf24" });
     layer.add(status);
 
     let magnet = { ...scene.barMagnet };
@@ -99,5 +99,5 @@ export function SceneKonvaMagnetism({
     return () => { cancelAnimationFrame(raf); stage.destroy(); };
   }, [scene, size, resetSignal, onRunningChange, containerRef]);
 
-  return <div ref={containerRef} className="h-full w-full overflow-hidden rounded-lg bg-slate-50" />;
+  return <div ref={containerRef} className="h-full w-full overflow-hidden rounded-lg bg-[#0f172a]" />;
 }

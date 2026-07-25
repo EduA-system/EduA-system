@@ -71,6 +71,7 @@ export const lucHuongTam: Preset = {
       ],
       // Khung nhìn cố định: quỹ đạo tròn bán kính r quanh tâm (0, 2).
       view: { minX: -r - 0.6, maxX: r + 0.6, minY: 0, maxY: cy + r + 0.6 },
+      disableDragging: true,
     };
   },
   analysis: {

@@ -100,6 +100,23 @@ function springPoints(ax: number, ay: number, bx: number, by: number): number[] 
   return pts;
 }
 
+function offsetTrackPoints(points: Vec2[], offset: number): Vec2[] {
+  if (Math.abs(offset) < 1e-9) return points;
+  return points.map((point, index) => {
+    const before = points[Math.max(0, index - 1)]!;
+    const after = points[Math.min(points.length - 1, index + 1)]!;
+    const dx = after.x - before.x;
+    const dy = after.y - before.y;
+    const length = Math.hypot(dx, dy) || 1;
+    let nx = -dy / length;
+    let ny = dx / length;
+    if (ny < 0) {
+      nx *= -1;
+      ny *= -1;
+    }
+    return { x: point.x + nx * offset, y: point.y + ny * offset };
+  });
+}
 // Đầu mũi tên hình chevron tại (x,y), hướng theo `angle` (rad) — dùng chung
 // cho "arrow" (giữa đường thẳng) và "curve" (tiếp tuyến tại điểm arrowAt).
 function addArrowhead(layer: Konva.Layer, x: number, y: number, angle: number, color: string, size = 8) {
@@ -221,6 +238,7 @@ export function SceneKonva2D({
       groundPadding: scene.groundPadding,
       displayScaleX: scene.displayScaleX,
       displayScaleXRange: scene.displayScaleXRange,
+      disableDragging: scene.disableDragging,
     };
     let kernel = buildKernel(work);
     let state = kernel.project(kernel.initialState);
@@ -396,7 +414,7 @@ export function SceneKonva2D({
     // Máng/đường ray cong: ràng buộc đã được kernel xử lý, renderer chỉ chuyển
     // các điểm world sang màn hình và vẽ hai lớp nét để học sinh nhìn rõ ray.
     for (const c of work.constraints) {
-      if (c.kind !== "curveTrack" || c.points.length < 2) continue;
+      if (c.kind !== "curveTrack" || c.points.length < 2 || c.appearance === "hidden") continue;
       if (c.appearance === "rollerCoaster") {
         const centerline = c.points.map((point) => toScreen(point.x, point.y));
         const rail = centerline.map((point, index) => {
@@ -505,10 +523,49 @@ export function SceneKonva2D({
         }
         continue;
       }
-      const points = c.points.flatMap((point) => {
+      const displayPoints = c.appearance === "galileiRamp"
+        ? offsetTrackPoints(c.points, -(c.visualOffset ?? 0))
+        : c.points;
+      const points = displayPoints.flatMap((point) => {
         const screen = toScreen(point.x, point.y);
         return [screen.x, screen.y];
       });
+      if (c.appearance === "galileiRamp") {
+        layer.add(
+          new Konva.Line({
+            points,
+            stroke: "#0b1220",
+            strokeWidth: 16,
+            lineCap: "round",
+            lineJoin: "round",
+            listening: false,
+            shadowBlur: 8,
+            shadowColor: "#020617",
+            shadowOpacity: 0.45,
+          }),
+        );
+        layer.add(
+          new Konva.Line({
+            points,
+            stroke: "#64748b",
+            strokeWidth: 8,
+            lineCap: "round",
+            lineJoin: "round",
+            listening: false,
+          }),
+        );
+        layer.add(
+          new Konva.Line({
+            points,
+            stroke: "#cbd5e1",
+            strokeWidth: 2.5,
+            lineCap: "round",
+            lineJoin: "round",
+            listening: false,
+          }),
+        );
+        continue;
+      }
       layer.add(
         new Konva.Line({
           points,

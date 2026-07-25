@@ -62,6 +62,7 @@ export const tongHopHaiLucCungPhuong: Preset = {
       // hai vector (lực tối đa 20 N ↦ 0.8 m) và một đoạn vật trôi ban đầu.
       view: { minX: -3.5, maxX: 3.5, minY: 0, maxY: 2.2 },
       groundPadding: 96,
+      disableDragging: true,
     };
   },
   analysis: {

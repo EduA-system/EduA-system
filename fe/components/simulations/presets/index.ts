@@ -21,7 +21,6 @@ import { lucHuongTam } from "./luc-huong-tam";
 import { conLacLoXo } from "./con-lac-lo-xo";
 import { daoDongTatDan } from "./dao-dong-tat-dan";
 import { congHuongConLac } from "./cong-huong-con-lac";
-import { matNghiengMaSat } from "./mat-nghieng-ma-sat";
 import { vaChamDanHoi } from "./va-cham-dan-hoi";
 import { vaChamMem } from "./va-cham-mem";
 import { ongNewton } from "./ong-newton-khong-khi";
@@ -62,7 +61,6 @@ export const PRESETS: Preset[] = [
   conLacLoXo,
   daoDongTatDan,
   congHuongConLac,
-  matNghiengMaSat,
   vaChamDanHoi,
   vaChamMem,
   ongNewton,

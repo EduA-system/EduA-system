@@ -410,13 +410,6 @@ function Thumb({ id }: { id: string }) {
           <text x="160" y="81" fontSize="11" fontWeight="700" fill="#60a5fa">P2</text>
         </>,
       );
-    case "mat-nghieng-ma-sat":
-      return frame(
-        <>
-          <path d="M30 100 L170 100 L170 50 Z" fill="#1e293b" stroke="#475569" strokeWidth="2" />
-          <rect x="120" y="58" width="22" height="16" rx="2" fill="#f472b6" transform="rotate(-20 131 66)" />
-        </>,
-      );
     case "giao-thoa-song-nuoc":
       return frame(
         <>
@@ -662,17 +655,16 @@ function Thumb({ id }: { id: string }) {
       return frame(
         <>
           {[27, 49, 71, 93].map((y) => (
-            <g key={y}><line x1="12" y1={y} x2="188" y2={y} stroke="#1596b8" strokeWidth="1.4" opacity=".6" /><path d={`M181 ${y - 4} l7 4 l-7 4`} fill="none" stroke="#1596b8" strokeWidth="1.4" /></g>
+            <g key={y}><line x1="12" y1={y} x2="188" y2={y} stroke="#38bdf8" strokeWidth="1.4" opacity=".62" /><path d={`M181 ${y - 4} l7 4 l-7 4`} fill="none" stroke="#38bdf8" strokeWidth="1.4" /></g>
           ))}
-          <path d="M70 26 L62 91 L136 78 L145 17 Z" fill="none" stroke="#c8433b" strokeWidth="4" strokeLinejoin="round" />
-          <path d="M66 59 l-22 22" stroke="#d92d20" strokeWidth="3" strokeLinecap="round" />
-          <path d="M45 73 l-3 11 l11-3" fill="none" stroke="#d92d20" strokeWidth="3" />
-          <path d="M140 48 l22-22" stroke="#d92d20" strokeWidth="3" strokeLinecap="round" />
-          <path d="M153 28 l11-4 l-4 11" fill="none" stroke="#d92d20" strokeWidth="3" />
-          <text x="55" y="57" fontSize="13" fontWeight="700" fill="#17324d">M</text>
-          <text x="171" y="20" fontSize="14" fontWeight="700" fill="#1596b8">B</text>
+          <path d="M70 26 L62 91 L136 78 L145 17 Z" fill="none" stroke="#f87171" strokeWidth="4" strokeLinejoin="round" />
+          <path d="M66 59 l-22 22" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+          <path d="M45 73 l-3 11 l11-3" fill="none" stroke="#fbbf24" strokeWidth="3" />
+          <path d="M140 48 l22-22" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+          <path d="M153 28 l11-4 l-4 11" fill="none" stroke="#fbbf24" strokeWidth="3" />
+          <text x="55" y="57" fontSize="13" fontWeight="700" fill="#e2e8f0">M</text>
+          <text x="171" y="20" fontSize="14" fontWeight="700" fill="#7dd3fc">B</text>
         </>,
-        "#f7faf9",
       );
     default: {
       const icons: Record<string, string> = {

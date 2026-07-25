@@ -7,6 +7,7 @@ function degToRad(deg: number): number {
 const RAMP_LENGTH = 5.2;
 const RAMP_RIGHT_X = 2.7;
 const BLOCK_CLEARANCE = 0.2;
+const BLOCK_HALF_ALONG_RAMP = 0.48;
 
 function rampGeometry(alpha: number) {
   const rad = degToRad(alpha);
@@ -28,6 +29,7 @@ function rampGeometry(alpha: number) {
       y: displayMidpoint.y + normal.y * BLOCK_CLEARANCE,
     },
     tangent,
+    normal,
   };
 }
 
@@ -75,18 +77,18 @@ export const phanTichLuc: Preset = {
   applyParams: (p) => {
     const { alpha, m, g } = values(p);
     const geometry = rampGeometry(alpha);
-    const surface = {
-      kind: "surface" as const,
-      x: geometry.surfaceCenter.x,
-      y: geometry.surfaceCenter.y,
-      angle: -alpha,
-      length: RAMP_LENGTH,
-      friction: 0.35,
+    const trackStart = {
+      x: geometry.leftTop.x + geometry.normal.x * BLOCK_CLEARANCE,
+      y: geometry.leftTop.y + geometry.normal.y * BLOCK_CLEARANCE,
+    };
+    const trackEnd = {
+      x: geometry.rightBase.x + geometry.normal.x * BLOCK_CLEARANCE - geometry.tangent.x * BLOCK_HALF_ALONG_RAMP,
+      y: geometry.rightBase.y + geometry.normal.y * BLOCK_CLEARANCE - geometry.tangent.y * BLOCK_HALF_ALONG_RAMP,
     };
     const startS = -1.15;
     const block = {
-      x: surface.x + startS * geometry.tangent.x,
-      y: surface.y + startS * geometry.tangent.y,
+      x: geometry.surfaceCenter.x + startS * geometry.tangent.x,
+      y: geometry.surfaceCenter.y + startS * geometry.tangent.y,
     };
     const vectors = vectorParts(alpha);
 
@@ -104,7 +106,7 @@ export const phanTichLuc: Preset = {
         },
       ],
       forces: [{ kind: "gravity" as const, g }],
-      constraints: [surface],
+      constraints: [{ kind: "curveTrack" as const, body: "vat", points: [trackStart, trackEnd], appearance: "hidden" as const }],
       annotations: [
         { kind: "vector" as const, anchor: "vat", ...vectors.p, color: "#f8fafc", label: "P", width: 3 },
         { kind: "vector" as const, anchor: "vat", ...vectors.p1, color: "#fbbf24", label: "P1", width: 3 },
@@ -112,6 +114,7 @@ export const phanTichLuc: Preset = {
       ],
       view: { minX: -4.1, maxX: 4.1, minY: 0, maxY: 4.4 },
       groundPadding: 96,
+      disableDragging: true,
     };
   },
   annotations: (p) => {
@@ -131,8 +134,8 @@ export const phanTichLuc: Preset = {
       },
       {
         kind: "label",
-        x: geometry.rightBase.x - 0.48,
-        y: 0.22,
+        x: geometry.rightBase.x - 1.25,
+        y: 0.08,
         text: `α = ${(p.alpha ?? 25).toFixed(0)}°`,
         color: "#cbd5e1",
         fontSize: 13,

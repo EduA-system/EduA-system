@@ -33,6 +33,23 @@ function makeTrack(height: number, angleDeg: number): TrackPoint[] {
   return points;
 }
 
+function offsetTrackForBall(points: TrackPoint[], radius: number): TrackPoint[] {
+  return points.map((point, index) => {
+    const before = points[Math.max(0, index - 1)]!;
+    const after = points[Math.min(points.length - 1, index + 1)]!;
+    const dx = after.x - before.x;
+    const dy = after.y - before.y;
+    const length = Math.hypot(dx, dy) || 1;
+    let nx = -dy / length;
+    let ny = dx / length;
+    if (ny < 0) {
+      nx *= -1;
+      ny *= -1;
+    }
+    return { x: point.x + nx * radius, y: point.y + ny * radius };
+  });
+}
+
 function idealBottomSpeed(height: number, g: number): number {
   return Math.sqrt(Math.max(0, 2 * g * height));
 }
@@ -56,15 +73,30 @@ export const mangCongGalilei: Preset = {
     const angle = p.angle ?? 25;
     const loss = p.loss ?? 0;
     const g = p.g ?? 9.8;
-    const points = makeTrack(h, angle);
+    const visualTrack = makeTrack(h, angle);
+    const ballRadius = 0.18;
+    const points = offsetTrackForBall(visualTrack, ballRadius);
     const start = points[0]!;
     return {
-      bodies: [{ id: "ball", x: start.x, y: start.y, vx: 0, vy: 0, mass: 1, radius: 0.12 }],
+      bodies: [
+        {
+          id: "ball",
+          x: start.x,
+          y: start.y,
+          vx: 0,
+          vy: 0,
+          mass: 1,
+          radius: ballRadius,
+          visual: { shape: "metalBall", color: "#fbbf24", label: "bi", metalTone: "brass" },
+        },
+      ],
       forces: [
         { kind: "gravity", g },
         ...(loss > 0 ? [{ kind: "drag" as const, body: "ball", c: loss }] : []),
       ],
-      constraints: [{ kind: "curveTrack", body: "ball", points, friction: 0 }],
+      constraints: [{ kind: "curveTrack", body: "ball", points, friction: 0, appearance: "galileiRamp", visualOffset: ballRadius }],
+      view: { minX: -3.9, maxX: Math.max(3.8, rightReach(h, angle) + 0.7), minY: -0.35, maxY: h + 0.75 },
+      groundPadding: 72,
     };
   },
   analysis: {
