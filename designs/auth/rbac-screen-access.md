@@ -11,7 +11,8 @@
 | Teacher Management | ✗ | ✓ (teachers) | ✓ (mods) | ✗ | ✗ |
 | IT Staff Account Management | ✗ | ✗ | ✓ | ✗ | ✗ |
 | System Prompt Management | ✗ | ✗ | ✗ | ✓ | ✗ |
-| Principal Dashboard / Activity Log | ✗ | ✗ | ✓ | ✗ | ✗ |
+| Principal Dashboard | ✗ | ✗ | ✓ | ✗ | ✗ |
+| Activity Log | ✗ | ✗ | ✗ | ✓ | ✗ |
 
 > **Ghi chú:** Lesson & Slide (AI) được mở public để thuận tiện test. Các màn chưa có trong code (Principal Dashboard, Virtual Lab, Physics Hub, v.v.) sẽ bổ sung sau.
 

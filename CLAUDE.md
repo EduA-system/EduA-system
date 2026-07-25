@@ -192,7 +192,7 @@ A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4o
 - Use Vietnamese copy for user-facing text where the surrounding UI uses Vietnamese.
 - Keep secrets out of the repository.
 - After Iter3 code changes, update `ITER3_CODE_CHECKLIST.md` and any affected `designs/` docs in the same pass.
-- In repo-facing docs, use `Principal` for school-level account management and `IT Staff` for prompt/system-prompt management.
+- In repo-facing docs, use `Principal` for school-level account management and `IT Staff` for prompt/system-prompt management and activity/audit log review.
 
 ## Commit Style
 
