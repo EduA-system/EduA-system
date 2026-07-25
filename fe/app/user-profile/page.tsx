@@ -16,6 +16,7 @@ function roleLabel(role: string | null): string {
   if (role === "PRINCIPAL") return "Hiệu trưởng";
   if (role === "MODERATOR") return "Người kiểm duyệt";
   if (role === "IT_STAFF") return "Nhân viên IT";
+  if (role === "STUDENT") return "Học sinh";
   return "Giáo viên";
 }
 

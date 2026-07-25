@@ -59,6 +59,8 @@ export function Sidebar({
       ? "Người kiểm duyệt"
       : user?.role === "IT_STAFF"
         ? "Nhân viên IT"
+        : user?.role === "STUDENT"
+          ? "Học sinh"
       : "Giáo viên";
 
   useEffect(() => {
