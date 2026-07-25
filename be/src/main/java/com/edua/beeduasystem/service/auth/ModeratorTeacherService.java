@@ -86,7 +86,8 @@ public class ModeratorTeacherService {
                     "Bạn chỉ có thể thêm giáo viên môn " + moderatorSubject.name() + ".");
         }
 
-        String normalizedEmail = email.trim().toLowerCase();
+        String normalizedEmail = AppUserFieldValidator.normalizeEmail(email);
+        String normalizedFullName = AppUserFieldValidator.normalizeOptionalFullName(fullName);
         UUID currentUserId = currentUserProvider.requireUserId();
         Instant now = Instant.now();
 
@@ -98,7 +99,7 @@ public class ModeratorTeacherService {
             }
             AppUser reactivated = userRepository.save(new AppUser(
                     u.id(), u.email(), u.googleSub(),
-                    fullName != null ? fullName.trim() : u.fullName(),
+                    normalizedFullName != null ? normalizedFullName : u.fullName(),
                     u.avatarUrl(), u.contactInfo(),
                     moderatorSubject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
             assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
@@ -107,7 +108,7 @@ public class ModeratorTeacherService {
 
         AppUser saved = userRepository.save(new AppUser(
                 UUID.randomUUID(), normalizedEmail, null,
-                fullName != null ? fullName.trim() : null,
+                normalizedFullName,
                 null, null,
                 moderatorSubject, UserStatus.INVITED, now, null));
         assignRole(saved.id(), Role.TEACHER, currentUserId, now);

@@ -49,7 +49,7 @@ Legend:
 
 ## Code Pointers
 
-- Blog API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/BlogController.java`
+- Blog API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/BlogController.java`; service validation: `be/src/main/java/com/edua/beeduasystem/service/blog/BlogPostService.java`
 - Blog UI: `fe/components/blog/BlogCommunityPage.tsx`, `fe/app/blog/moderation/page.tsx`
 - Library/private content API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/LibraryContentController.java`
 - Library/private content UI: `fe/app/library/page.tsx`, `fe/lib/library.ts`
