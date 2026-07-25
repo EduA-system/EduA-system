@@ -28,6 +28,7 @@ export const navGroups: NavGroup[] = [
     label: "CONTENT",
     items: [
       { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "Lịch tuần", icon: "book", href: "/weekly-schedule", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-edit", active: true },
       { label: "Slide", icon: "slides", href: "/slide-create" },
       { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/lesson-create" },
@@ -55,6 +56,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog/moderation", requiredRole: ["MODERATOR"] },
       { label: "Hub Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/hub-moderation", requiredRole: ["MODERATOR"] },
+      { label: "Duy\u1ec7t gi\u00e1o \u00e1n tu\u1ea7n", icon: "check", href: "/lesson-plan-approval", requiredRole: ["MODERATOR"] },
       { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "PRINCIPAL"] },
       { label: "Qu\u1ea3n l\u00fd IT Staff", icon: "settings", href: "/it-staff-users", requiredRole: ["PRINCIPAL"] },
       { label: "C\u1ea5u h\u00ecnh AI", icon: "settings", href: "/it-staff", requiredRole: ["IT_STAFF"] },

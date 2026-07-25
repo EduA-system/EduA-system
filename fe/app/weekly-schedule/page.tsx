@@ -1,0 +1,399 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { RouteGuard } from "@/lib/auth/RouteGuard";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { hasAnyRole } from "@/lib/auth/permissions";
+import { subjectLabel, uploadFile } from "@/lib/blog";
+import { listLibrary, type LibraryContent } from "@/lib/library";
+import {
+  createWeeklyTask,
+  getWeeklySchedule,
+  submitWeeklyTask,
+  unsubmitWeeklyTask,
+  updateWeeklyTask,
+  type WeeklyTaskReviewStatus,
+  type WeeklyTaskSchedule,
+  type WeeklyTaskSummary,
+} from "@/lib/weekly-task";
+
+type TeacherOption = { id: string; fullName: string | null; email: string; status: string };
+
+const statusLabels: Record<WeeklyTaskReviewStatus, string> = {
+  NOT_SUBMITTED: "Chưa nộp",
+  SUBMITTED: "Đã nộp · chờ duyệt",
+  APPROVED: "Đã duyệt",
+  REJECTED: "Bị từ chối",
+};
+
+const statusClasses: Record<WeeklyTaskReviewStatus, string> = {
+  NOT_SUBMITTED: "bg-[#f0f0ee] text-[#4a4b5e]",
+  SUBMITTED: "bg-amber-100 text-amber-800",
+  APPROVED: "bg-emerald-100 text-emerald-800",
+  REJECTED: "bg-red-100 text-red-800",
+};
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("vi");
+}
+
+function formatWeek(dateOnly: string): string {
+  return new Date(`${dateOnly}T00:00:00`).toLocaleDateString("vi");
+}
+
+function toDatetimeLocalValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function isPastDeadline(iso: string): boolean {
+  return new Date(iso).getTime() <= Date.now();
+}
+
+function WeeklyScheduleScreen() {
+  const { user, accessToken, authFetch } = useAuth();
+  const isModerator = hasAnyRole(user, ["MODERATOR"]);
+
+  const [schedule, setSchedule] = useState<WeeklyTaskSchedule>({ weeks: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formTeacherId, setFormTeacherId] = useState("");
+  const [formWeekStart, setFormWeekStart] = useState("");
+  const [formScope, setFormScope] = useState("");
+  const [formDeadline, setFormDeadline] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [submitMode, setSubmitMode] = useState<"library" | "upload">("library");
+  const [ownedLessonPlans, setOwnedLessonPlans] = useState<LibraryContent[]>([]);
+  const [selectedLessonPlanId, setSelectedLessonPlanId] = useState("");
+  const [uploadFileObj, setUploadFileObj] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getWeeklySchedule(authFetch);
+      setSchedule(data);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không thể tải lịch tuần.");
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    if (!isModerator) return;
+    authFetch("/api/moderator/teachers?size=100")
+      .then((res) => res.json())
+      .then((data: { content?: TeacherOption[] }) => setTeachers(data.content ?? []))
+      .catch(() => setTeachers([]));
+  }, [authFetch, isModerator]);
+
+  function openCreateForm() {
+    setEditingId(null);
+    setFormTeacherId("");
+    setFormWeekStart("");
+    setFormScope("");
+    setFormDeadline("");
+    setFormOpen(true);
+  }
+
+  function openEditForm(t: WeeklyTaskSummary) {
+    setEditingId(t.id);
+    setFormTeacherId(t.teacherId);
+    setFormWeekStart(t.weekStartDate);
+    setFormScope(t.scopeDescription);
+    setFormDeadline(toDatetimeLocalValue(t.deadline));
+    setFormOpen(true);
+  }
+
+  async function handleSaveTask() {
+    if (!formTeacherId || !formWeekStart || !formScope.trim() || !formDeadline) return;
+    setSaving(true);
+    try {
+      const body = {
+        teacherId: formTeacherId,
+        weekStartDate: formWeekStart,
+        scopeDescription: formScope.trim(),
+        deadline: new Date(formDeadline).toISOString(),
+      };
+      if (editingId) {
+        await updateWeeklyTask(authFetch, editingId, body);
+        setMsg("Đã cập nhật nhiệm vụ.");
+      } else {
+        await createWeeklyTask(authFetch, body);
+        setMsg("Đã giao nhiệm vụ.");
+      }
+      setFormOpen(false);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không thể lưu nhiệm vụ.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openSubmitPanel(t: WeeklyTaskSummary) {
+    setSubmittingId(t.id);
+    setSubmitMode("library");
+    setSelectedLessonPlanId("");
+    setUploadFileObj(null);
+    listLibrary(authFetch, new URLSearchParams({ type: "LESSON_PLAN", size: "100" }))
+      .then((data) => setOwnedLessonPlans(data.items))
+      .catch(() => setOwnedLessonPlans([]));
+  }
+
+  async function handleSubmitTask(taskId: string) {
+    setSubmitting(true);
+    try {
+      if (submitMode === "library") {
+        if (!selectedLessonPlanId) return;
+        await submitWeeklyTask(authFetch, taskId, { libraryContentId: selectedLessonPlanId });
+      } else {
+        if (!uploadFileObj || !accessToken) return;
+        const url = await uploadFile(accessToken, uploadFileObj);
+        await submitWeeklyTask(authFetch, taskId, { documentUrl: url, documentName: uploadFileObj.name });
+      }
+      setMsg("Đã nộp giáo án.");
+      setSubmittingId(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không thể nộp giáo án.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleUnsubmit(taskId: string, title: string) {
+    if (!confirm(`Rút giáo án đã nộp cho "${title}"?`)) return;
+    try {
+      await unsubmitWeeklyTask(authFetch, taskId);
+      setMsg("Đã rút giáo án.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không thể rút giáo án.");
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f5f1ec] text-[#2b2926]">
+      <div className="flex min-h-screen">
+        <Sidebar activeHref="/weekly-schedule" />
+        <section className="min-w-0 flex-1 p-5 sm:p-8">
+          <header className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-[#e8724a]">Content</p>
+              <h1 className="mt-1 text-3xl font-semibold">Lịch tuần</h1>
+              <p className="mt-2 text-sm text-[#6b6b6b]">
+                {isModerator ? "Nhiệm vụ giáo án tuần giao cho giáo viên cùng môn." : "Nhiệm vụ giáo án tuần được giao cho bạn."}
+              </p>
+            </div>
+            {isModerator ? (
+              <button
+                onClick={openCreateForm}
+                className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white"
+              >
+                Tạo nhiệm vụ
+              </button>
+            ) : null}
+          </header>
+
+          {formOpen ? (
+            <div className="mt-5 rounded-2xl border bg-white p-5">
+              <h2 className="font-semibold">{editingId ? "Sửa nhiệm vụ tuần" : "Giao nhiệm vụ tuần mới"}</h2>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <select
+                  value={formTeacherId}
+                  onChange={(e) => setFormTeacherId(e.target.value)}
+                  className="rounded-xl border p-2 text-sm"
+                >
+                  <option value="">Chọn giáo viên...</option>
+                  {teachers
+                    .filter((t) => t.status === "ACTIVE" || t.id === formTeacherId)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.fullName ?? t.email}
+                      </option>
+                    ))}
+                </select>
+                <input
+                  type="date"
+                  value={formWeekStart}
+                  onChange={(e) => setFormWeekStart(e.target.value)}
+                  className="rounded-xl border p-2 text-sm"
+                />
+                <input
+                  type="datetime-local"
+                  value={formDeadline}
+                  onChange={(e) => setFormDeadline(e.target.value)}
+                  className="rounded-xl border p-2 text-sm sm:col-span-2"
+                />
+                <textarea
+                  value={formScope}
+                  onChange={(e) => setFormScope(e.target.value)}
+                  placeholder="Yêu cầu giáo án (vd: Chương 3 - Định luật Newton, Vật lý 10)"
+                  rows={3}
+                  className="rounded-xl border p-2 text-sm sm:col-span-2"
+                />
+              </div>
+              <div className="mt-3 flex justify-end gap-2">
+                <button onClick={() => setFormOpen(false)} className="rounded-xl px-4 py-2 text-sm">
+                  Hủy
+                </button>
+                <button
+                  onClick={() => void handleSaveTask()}
+                  disabled={saving || !formTeacherId || !formWeekStart || !formScope.trim() || !formDeadline}
+                  className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
+                >
+                  {saving ? "Đang lưu..." : "Lưu"}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {msg ? <p className="mt-4 text-sm text-emerald-700">{msg}</p> : null}
+          {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+
+          {loading ? (
+            <div className="mt-6 space-y-3">
+              {[1, 2, 3].map((x) => (
+                <div key={x} className="h-24 animate-pulse rounded-2xl bg-[#e8e2db]" />
+              ))}
+            </div>
+          ) : schedule.weeks.length === 0 ? (
+            <div className="mt-8 rounded-2xl border border-dashed bg-white p-12 text-center text-sm text-[#6b6b6b]">
+              Chưa có nhiệm vụ tuần nào.
+            </div>
+          ) : (
+            <div className="mt-6 space-y-6">
+              {schedule.weeks.map((week) => (
+                <div key={week.weekStartDate}>
+                  <h2 className="mb-3 text-sm font-semibold text-[#6b6b6b]">Tuần bắt đầu {formatWeek(week.weekStartDate)}</h2>
+                  <div className="space-y-3">
+                    {week.tasks.map((t) => {
+                      const expired = isPastDeadline(t.deadline);
+                      return (
+                        <article key={t.id} className="rounded-2xl border bg-white p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses[t.reviewStatus]}`}>
+                                  {statusLabels[t.reviewStatus]}
+                                </span>
+                                <span className="text-xs text-[#6b6b6b]">{subjectLabel(t.subject)}</span>
+                              </div>
+                              <p className="mt-2 text-sm">{t.scopeDescription}</p>
+                              <p className="mt-2 text-xs text-[#6b6b6b]">
+                                {isModerator ? `${t.teacherName ?? "Giáo viên"} · ` : ""}
+                                Hạn nộp: {formatDateTime(t.deadline)}
+                                {expired ? " (đã quá hạn)" : ""}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 gap-2 text-sm">
+                              {isModerator && !expired ? (
+                                <button onClick={() => openEditForm(t)} className="text-[#b85c3b] underline">
+                                  Sửa
+                                </button>
+                              ) : null}
+                              {!isModerator && !expired && (t.reviewStatus === "NOT_SUBMITTED" || t.reviewStatus === "REJECTED") ? (
+                                <button onClick={() => openSubmitPanel(t)} className="text-[#b85c3b] underline">
+                                  Nộp giáo án
+                                </button>
+                              ) : null}
+                              {!isModerator && !expired && t.reviewStatus === "SUBMITTED" ? (
+                                <button onClick={() => void handleUnsubmit(t.id, t.scopeDescription)} className="text-red-600 underline">
+                                  Hủy nộp
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {submittingId === t.id ? (
+                            <div className="mt-4 rounded-xl border bg-[#f9f7f4] p-3">
+                              <div className="flex gap-4 text-sm">
+                                <label className="flex items-center gap-1.5">
+                                  <input
+                                    type="radio"
+                                    checked={submitMode === "library"}
+                                    onChange={() => setSubmitMode("library")}
+                                  />
+                                  Chọn từ thư viện
+                                </label>
+                                <label className="flex items-center gap-1.5">
+                                  <input
+                                    type="radio"
+                                    checked={submitMode === "upload"}
+                                    onChange={() => setSubmitMode("upload")}
+                                  />
+                                  Tải tệp lên
+                                </label>
+                              </div>
+                              {submitMode === "library" ? (
+                                <select
+                                  value={selectedLessonPlanId}
+                                  onChange={(e) => setSelectedLessonPlanId(e.target.value)}
+                                  className="mt-3 w-full rounded-xl border p-2 text-sm"
+                                >
+                                  <option value="">Chọn giáo án...</option>
+                                  {ownedLessonPlans.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.title}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="file"
+                                  onChange={(e) => setUploadFileObj(e.target.files?.[0] ?? null)}
+                                  className="mt-3 w-full text-sm"
+                                />
+                              )}
+                              <div className="mt-3 flex justify-end gap-2">
+                                <button onClick={() => setSubmittingId(null)} className="rounded-xl px-4 py-2 text-sm">
+                                  Hủy
+                                </button>
+                                <button
+                                  onClick={() => void handleSubmitTask(t.id)}
+                                  disabled={submitting || (submitMode === "library" ? !selectedLessonPlanId : !uploadFileObj)}
+                                  className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
+                                >
+                                  {submitting ? "Đang nộp..." : "Nộp"}
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+export default function Page() {
+  return (
+    <RouteGuard pathname="/weekly-schedule">
+      <WeeklyScheduleScreen />
+    </RouteGuard>
+  );
+}

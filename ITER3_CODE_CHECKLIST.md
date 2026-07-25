@@ -11,9 +11,9 @@ Legend:
 
 | Code reality | Count |
 | --- | ---: |
-| Coded | 16 |
+| Coded | 18 |
 | Partial | 0 |
-| Not found | 11 |
+| Not found | 9 |
 
 ## Checklist
 
@@ -42,8 +42,8 @@ Legend:
 | [ ] | Student View Teaching Resources | Classroom | Planned | Not found | Chưa thấy student classroom/resource access module. |
 | [ ] | Student Assignment Submission | Classroom | Planned | Not found | Chưa thấy submission/upload-text assignment module. |
 | [ ] | Teacher Review Student Submissions | Classroom | Planned | Not found | Chưa thấy teacher review submissions module. |
-| [ ] | Submit Lesson Plan for Approval | Lesson | Planned | Not found | Lesson plan generation/edit exists, but no approval status/workflow found. |
-| [ ] | Moderator Approve / Reject Lesson Plans | Lesson | Planned | Not found | Chưa thấy lesson approval review API/UI. |
+| [x] | Submit Lesson Plan for Approval | Lesson | Planned | Coded | Weekly Task epic (SRS UC-80..89). Backend `WeeklyTaskEntity`/`weekly_tasks` (`V21__create_weekly_tasks.sql`); `WeeklyTaskController` `POST /api/weekly-tasks` (Create, moderator), `POST/DELETE /api/weekly-tasks/{id}/submission` (Submit/Unsubmit, teacher); `WeeklyTaskService` enforces deadline lock (BR-47), subject/ownership checks, and a `reviewStatus` state machine independent from Hub Publish Status. Frontend `/weekly-schedule` (`fe/app/weekly-schedule/page.tsx`, `fe/lib/weekly-task.ts`). |
+| [x] | Moderator Approve / Reject Lesson Plans | Lesson | Planned | Coded | Weekly Task Review (SRS 2.13, UC-86..89). Backend `GET /api/weekly-tasks/moderation-queue`, `POST /{id}/approval`, `POST /{id}/rejection` (`WeeklyTaskService.listModerationQueue/approve/reject`), subject-scoped like Hub moderation; notifies teacher via existing `NotificationRepository`/`NotificationStreamPort`. Frontend `/lesson-plan-approval` (`fe/app/lesson-plan-approval/page.tsx`). Unit tests: `be/src/test/java/.../service/weeklytask/WeeklyTaskServiceTest.java` (22 tests, incl. the unsubmit-reverts-to-REJECTED behavior from SRS UC-85). |
 | [ ] | AI Content Statistics Dashboard | Principal | Planned | Not found | Chưa thấy dashboard thống kê số giáo án/slide AI theo giáo viên. |
 | [ ] | Principal Management Dashboard | Principal | Planned | Not found | WBS row thiếu feature/effort/notes; chưa thấy route/dashboard riêng cho Principal. |
 
@@ -63,6 +63,8 @@ Legend:
 - IT Staff prompt management API/UI: `be/src/main/java/com/edua/beeduasystem/presentation/controller/ItStaffController.java`, `be/src/main/java/com/edua/beeduasystem/service/ai/AiSystemPromptService.java`, `fe/app/it-staff/page.tsx`
 - Notifications API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/NotificationController.java`, `be/src/main/java/com/edua/beeduasystem/service/notification/NotificationService.java`
 - Notifications UI: `fe/app/notifications/page.tsx`, `fe/lib/notifications.ts`, `fe/lib/ws/notifications-client.ts`, badge trong `fe/components/layout/Sidebar.tsx`
+- Weekly Task API (giao/nộp/rút/duyệt giáo án tuần, SRS UC-80..89): `be/src/main/java/com/edua/beeduasystem/presentation/controller/WeeklyTaskController.java`, `be/src/main/java/com/edua/beeduasystem/service/weeklytask/WeeklyTaskService.java`, migration `V21__create_weekly_tasks.sql`
+- Weekly Task UI: `fe/app/weekly-schedule/page.tsx` (Teacher + Moderator), `fe/app/lesson-plan-approval/page.tsx` (Moderator), `fe/lib/weekly-task.ts`
 
 ## Follow-Up Notes
 
@@ -72,3 +74,4 @@ Legend:
 - Decision (this session): Activity Log ownership moved from Mod/Principal to `IT Staff` (IT Manager). WBS source (`(đã làm) Report2_Project Tracking.xlsx`, sheet `WBS`, row 36 col E) updated to match; `designs/auth/rbac-screen-access.md` now lists "Activity Log" as its own row scoped to IT Staff, separate from "Principal Dashboard".
 - Resolved: the shared Supabase dev DB's `flyway_schema_history` drift at V18 (schema had `library_contents.submitted_at` without V18 recorded as applied) has been reconciled — history rows for V18/V19 inserted and the missing `idx_library_contents_status_subject` index created. `./mvnw spring-boot:run` / `scripts/start.ps1` against the cloud DB now succeeds.
 - Runtime-verified via curl against the running backend (JWTs minted locally with the configured HS256 secret for existing TEACHER/MODERATOR seed accounts, no code changes made to auth): Library content create/submit/moderation-queue/approve/reject (incl. 400 on missing rejection reason, 403 on wrong role/subject), and Hub public list/detail (guest, no token), comment create/update/delete (403 cross-user), report, and customize-to-library. All endpoints behaved per the checklist entries above.
+- Added (this session): Weekly Task epic (SRS `Report3_Software Requirement Specification v1.2.docx` §2.12–2.13, UC-80..89). "Submit Lesson Plan for Approval"/"Moderator Approve / Reject Lesson Plans" in the WBS turned out to require the full Weekly Task workflow (moderator assigns a lesson-plan task + deadline to a teacher in their subject; teacher submits/unsubmits; moderator reviews a subject-scoped queue) — not a standalone submit action. `weekly_tasks.review_status` is intentionally independent of `library_contents.status` (Hub Publish Status). Verified via `WeeklyTaskServiceTest` (22 tests) and full `./mvnw test` (all green) plus `npm run lint && npm run typecheck && npm run build` in `fe/`. Google Drive WBS tracker rows 53/54 updated to match.
