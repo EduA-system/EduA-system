@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Archive,
   BookOpen,
@@ -10,6 +11,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -552,6 +554,13 @@ export function ClassManagementPage() {
                           {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                           Lưu thông tin
                         </button>
+                        <Link
+                          href={`/add-student?classId=${selected.id}`}
+                          className="flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545]"
+                        >
+                          <UserPlus className="size-4" />
+                          Quản lý học sinh
+                        </Link>
                         <button
                           type="button"
                           onClick={() => void toggleStatus(selected)}

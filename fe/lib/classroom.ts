@@ -15,6 +15,23 @@ export const STATUS_LABELS: Record<ClassStatus, string> = {
   INACTIVE: "Đã lưu trữ",
 };
 
+export type StudentStatus = "INVITED" | "ACTIVE" | "DISABLED";
+
+export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
+  INVITED: "Chưa đăng nhập",
+  ACTIVE: "Đã kích hoạt",
+  DISABLED: "Đã khóa",
+};
+
+export const IMPORT_SKIP_REASON_LABELS: Record<string, string> = {
+  INVALID_FORMAT: "Email sai định dạng",
+  DUPLICATE_IN_FILE: "Trùng trong file",
+  ALREADY_ENROLLED: "Đã có trong lớp",
+  ROLE_CONFLICT: "Email đã thuộc vai trò khác",
+  ACCOUNT_DISABLED: "Tài khoản đã bị khóa",
+  CLASS_FULL: "Lớp đã đủ sĩ số",
+};
+
 export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export type ClassSummary = {
@@ -62,6 +79,34 @@ export type CreateClassPayload = {
 
 export type UpdateClassPayload = Partial<CreateClassPayload>;
 
+export type ClassMember = {
+  id: string;
+  studentId: string;
+  studentEmail: string | null;
+  studentName: string | null;
+  studentStatus: StudentStatus | null;
+  joinedAt: string;
+};
+
+export type ClassMemberPage = {
+  items: ClassMember[];
+  page: number;
+  size: number;
+  total: number;
+};
+
+export type ImportSkippedRow = {
+  row: number;
+  email: string | null;
+  reason: string;
+};
+
+export type ImportStudentsResult = {
+  addedCount: number;
+  skippedCount: number;
+  skipped: ImportSkippedRow[];
+};
+
 async function request<T>(authFetch: AuthFetch, path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData)) {
@@ -90,6 +135,15 @@ export function statusLabel(status: string): string {
 
 export function isClassSubject(value: string | null | undefined): value is ClassSubject {
   return CLASS_SUBJECTS.includes(value as ClassSubject);
+}
+
+export function studentStatusLabel(status: string | null): string {
+  if (!status) return "—";
+  return STUDENT_STATUS_LABELS[status as StudentStatus] ?? status;
+}
+
+export function importSkipReasonLabel(reason: string): string {
+  return IMPORT_SKIP_REASON_LABELS[reason] ?? reason;
 }
 
 export async function listClasses(authFetch: AuthFetch, filters: ClassFilters = {}): Promise<ClassPage> {
@@ -125,5 +179,35 @@ export function updateClassStatus(authFetch: AuthFetch, id: string, status: Clas
   return request<ClassDetail>(authFetch, `/${id}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
+  });
+}
+
+export function listClassMembers(
+  authFetch: AuthFetch,
+  classId: string,
+  page = 0,
+  size = 20,
+): Promise<ClassMemberPage> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return request<ClassMemberPage>(authFetch, `/${classId}/members?${params.toString()}`);
+}
+
+export function addClassStudent(authFetch: AuthFetch, classId: string, email: string): Promise<ClassMember> {
+  return request<ClassMember>(authFetch, `/${classId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function importClassStudents(
+  authFetch: AuthFetch,
+  classId: string,
+  file: File,
+): Promise<ImportStudentsResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return request<ImportStudentsResult>(authFetch, `/${classId}/members/import`, {
+    method: "POST",
+    body: formData,
   });
 }

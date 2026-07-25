@@ -15,6 +15,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/lesson-create":   { requireAuth: true },
   "/lesson-edit":     { requireAuth: true },
   "/create-class":    { requireAuth: true, allowedRoles: ["TEACHER"] },
+  "/add-student":     { requireAuth: true, allowedRoles: ["TEACHER"] },
   "/slide-create":    { requireAuth: true },
   "/slide-maker":     { requireAuth: true },
   "/molecules":       { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
