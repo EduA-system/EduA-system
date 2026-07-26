@@ -7,19 +7,25 @@ import com.edua.beeduasystem.presentation.dto.classroom.ClassDetailDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassMemberDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassMemberPageDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassPageDto;
+import com.edua.beeduasystem.presentation.dto.classroom.ClassResourceAttachmentRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassResourcePageDto;
+import com.edua.beeduasystem.presentation.dto.classroom.ClassResourceSummaryDto;
 import com.edua.beeduasystem.presentation.dto.classroom.CreateClassRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.ImportStudentsResponse;
+import com.edua.beeduasystem.presentation.dto.classroom.PostClassResourceRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassRequest;
+import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassResourceRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassStatusRequest;
 import com.edua.beeduasystem.service.classroom.ClassEnrollmentService;
 import com.edua.beeduasystem.service.classroom.ClassManagementService;
 import com.edua.beeduasystem.service.classroom.ClassResourceService;
+import com.edua.beeduasystem.service.classroom.ClassResourceViews;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -137,5 +143,54 @@ public class ClassController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ClassResourcePageDto.from(classResourceService.listResources(id, page, size));
+    }
+
+    @PostMapping("/{id}/resources")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(summary = "Đăng resource/assignment mới vào lớp (UC-38)")
+    public ClassResourceSummaryDto postResource(@PathVariable UUID id, @Valid @RequestBody PostClassResourceRequest request) {
+        return ClassResourceSummaryDto.from(classResourceService.postResource(
+                id,
+                request.title(),
+                request.description(),
+                request.sourceType(),
+                request.sourceLibraryContentId(),
+                toAttachmentInput(request.attachment()),
+                request.submissionEnabled(),
+                request.deadline()));
+    }
+
+    @PatchMapping("/{id}/resources/{resourceId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(summary = "Sửa resource đã đăng (UC-39)")
+    public ClassResourceSummaryDto updateResource(
+            @PathVariable UUID id,
+            @PathVariable UUID resourceId,
+            @Valid @RequestBody UpdateClassResourceRequest request) {
+        return ClassResourceSummaryDto.from(classResourceService.updateResource(
+                id,
+                resourceId,
+                request.title(),
+                request.description(),
+                toAttachmentInput(request.attachment()),
+                request.submissionEnabled(),
+                request.deadline()));
+    }
+
+    @DeleteMapping("/{id}/resources/{resourceId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(summary = "Xóa resource khỏi lớp (UC-40)")
+    public void deleteResource(@PathVariable UUID id, @PathVariable UUID resourceId) {
+        classResourceService.deleteResource(id, resourceId);
+    }
+
+    private static ClassResourceViews.AttachmentInput toAttachmentInput(ClassResourceAttachmentRequest attachment) {
+        if (attachment == null) {
+            return null;
+        }
+        return new ClassResourceViews.AttachmentInput(
+                attachment.url(), attachment.fileName(), attachment.contentType(), attachment.sizeBytes());
     }
 }

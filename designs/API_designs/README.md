@@ -11,6 +11,7 @@ Thiết kế endpoint, tách theo ranh giới **chung (hạ tầng dùng lại)*
 | [`class-management.md`](./class-management.md) | Teacher tạo/xem/sửa/deactivate lớp học theo Class Hub (UC-29 đến UC-33, BR-34/37/39) | Team class |
 | [`add-student.md`](./add-student.md) | Teacher thêm học sinh vào lớp bằng Gmail, thủ công hoặc import file (UC-36, BR-34/37/38/46) | Team class |
 | [`view-class-resources.md`](./view-class-resources.md) | Student xem danh sách resource của lớp đã enrolled (UC-41, BR-34/35/37/39) | Team class |
+| [`manage-class-resources.md`](./manage-class-resources.md) | Teacher đăng/sửa/xóa resource-assignment trong lớp mình sở hữu (UC-38/39/40, BR-34/35/37/46) | Team class |
 
 > Nguồn gốc: `sprints/lesson-plan-api-design.md`. Các file ở đây là bản tách chi tiết, dùng làm spec chính thức.
 

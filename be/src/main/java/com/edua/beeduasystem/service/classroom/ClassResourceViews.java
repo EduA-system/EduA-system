@@ -20,6 +20,15 @@ public final class ClassResourceViews {
     ) {
     }
 
+    /** Input tu controller khi Post/Update resource (UC-38/39) — tach khoi DTO tang presentation. */
+    public record AttachmentInput(
+            String url,
+            String fileName,
+            String contentType,
+            Long sizeBytes
+    ) {
+    }
+
     public record ResourceSummary(
             UUID id,
             String title,
