@@ -5,10 +5,10 @@ export const bienThienDongDienBangBienTroKhoaK: Preset = {
   kind: "variable-current-induction",
   title: "Biến thiên dòng điện bằng biến trở/khoá K",
   domain: "Điện & Từ",
-  grade: 11,
+  grade: 12,
   desc: "Đóng, ngắt khoá K hoặc dịch chuyển con chạy biến trở để làm biến thiên dòng điện qua nam châm điện và quan sát kim điện kế.",
   objective: "Nhận biết dòng điện cảm ứng xuất hiện trong cuộn dây kín khi dòng điện qua nam châm điện biến thiên.",
-  sgkRef: "Vật lí 11 - Thí nghiệm cảm ứng điện từ",
+  sgkRef: "Vật lí 12 - Thí nghiệm cảm ứng điện từ",
   params: [
     { key: "supplyVoltage", label: "Điện áp nguồn", unit: "V", min: 3, max: 12, step: 1, default: 6 },
     { key: "primaryTurns", label: "Số vòng nam châm điện", unit: "vòng", min: 100, max: 500, step: 20, default: 260 },

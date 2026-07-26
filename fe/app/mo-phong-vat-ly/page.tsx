@@ -617,21 +617,28 @@ function Thumb({ id }: { id: string }) {
     case "bien-thien-dong-dien-bang-bien-tro-khoa-k":
       return frame(
         <>
-          <path d="M31 79V99H94V80M45 79V59" fill="none" stroke="#60a5fa" strokeWidth="2.3" />
-          <path d="M94 80V101H166V84M114 84V59" fill="none" stroke="#f87171" strokeWidth="2.3" />
-          <rect x="22" y="28" width="38" height="31" rx="5" fill="#e2e8f0" stroke="#64748b" strokeWidth="1.5" />
-          <path d="M29 48 A12 12 0 0 1 53 48" fill="none" stroke="#64748b" strokeWidth="1.5" />
-          <line x1="41" y1="48" x2="49" y2="38" stroke="#ef4444" strokeWidth="2" />
-          <rect x="72" y="54" width="48" height="29" rx="4" fill="#8b5e3c" stroke="#5f3c27" strokeWidth="1.5" />
-          {[79, 85, 91, 101, 107, 113].map((x) => <ellipse key={x} cx={x} cy="68" rx="5" ry="11" fill="none" stroke="#f59e0b" strokeWidth="1.4" />)}
-          <rect x="133" y="27" width="42" height="30" rx="5" fill="#cbd5e1" stroke="#64748b" strokeWidth="1.5" />
-          <circle cx="144" cy="45" r="4" fill="#2563eb" />
-          <circle cx="164" cy="45" r="4" fill="#dc2626" />
-          <rect x="128" y="76" width="45" height="17" rx="4" fill="#d7a06b" stroke="#7c4a28" strokeWidth="1.5" />
-          <line x1="135" y1="84" x2="166" y2="84" stroke="#b45309" strokeWidth="4" />
-          <line x1="149" y1="76" x2="149" y2="91" stroke="#334155" strokeWidth="2" />
+          <path d="M18 30H62M18 30V95H72M138 30H181V95H132" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
+          <path d="M62 30H78M122 30H138M72 95H86M116 95H132" fill="none" stroke="#38bdf8" strokeWidth="2.4" strokeLinecap="round" />
+          <rect x="23" y="43" width="34" height="30" rx="5" fill="#111827" stroke="#94a3b8" strokeWidth="1.5" />
+          <path d="M29 62A11 11 0 0 1 51 62" fill="none" stroke="#94a3b8" strokeWidth="1.5" />
+          <line x1="40" y1="62" x2="47" y2="52" stroke="#fb7185" strokeWidth="2" strokeLinecap="round" />
+          <text x="32" y="70" fontSize="7" fontWeight="700" fill="#e2e8f0">G</text>
+          <rect x="78" y="20" width="44" height="36" rx="5" fill="#78350f" stroke="#f59e0b" strokeWidth="1.5" />
+          {[84, 90, 96, 104, 110, 116].map((x) => <ellipse key={x} cx={x} cy="38" rx="5" ry="13" fill="none" stroke="#fbbf24" strokeWidth="1.4" />)}
+          <rect x="85" y="84" width="32" height="22" rx="4" fill="#1e293b" stroke="#94a3b8" strokeWidth="1.5" />
+          <rect x="89" y="89" width="24" height="8" rx="2" fill="#14532d" />
+          <text x="91" y="96" fontSize="6" fontFamily="monospace" fill="#86efac">6.0 V</text>
+          <path d="M84 70C90 58 110 58 116 70M81 76C90 62 110 62 119 76" fill="none" stroke="#38bdf8" strokeWidth="1.2" opacity=".75" />
+          <path d="M116 70l4 1l-3 3" fill="none" stroke="#38bdf8" strokeWidth="1.2" />
+          <circle cx="151" cy="30" r="3.5" fill="#94a3b8" />
+          <circle cx="174" cy="30" r="3.5" fill="#94a3b8" />
+          <line x1="151" y1="30" x2="171" y2="21" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+          <text x="157" y="18" fontSize="8" fontWeight="700" fill="#fbbf24">K</text>
+          <rect x="139" y="76" width="39" height="19" rx="4" fill="#451a03" stroke="#f59e0b" strokeWidth="1.5" />
+          <path d="M145 86h27" stroke="#fb923c" strokeWidth="4" strokeLinecap="round" />
+          <path d="M159 72v19" stroke="#e2e8f0" strokeWidth="2" strokeLinecap="round" />
+          <path d="M155 76l4-5l4 5" fill="none" stroke="#e2e8f0" strokeWidth="1.5" />
         </>,
-        "#eef3f7",
       );
     case "cam-ung-dien-tu":
       return frame(
