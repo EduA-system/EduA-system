@@ -107,6 +107,64 @@ export type ImportStudentsResult = {
   skipped: ImportSkippedRow[];
 };
 
+export const RESOURCE_SOURCE_TYPES = ["LIBRARY_SNAPSHOT", "FILE_UPLOAD"] as const;
+export type ResourceSourceType = (typeof RESOURCE_SOURCE_TYPES)[number];
+
+export const RESOURCE_SOURCE_TYPE_LABELS: Record<ResourceSourceType, string> = {
+  LIBRARY_SNAPSHOT: "Từ thư viện cá nhân",
+  FILE_UPLOAD: "Tệp tải lên",
+};
+
+export type SubmissionStatus = "NOT_APPLICABLE" | "NOT_SUBMITTED";
+
+export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
+  NOT_APPLICABLE: "Không yêu cầu nộp bài",
+  NOT_SUBMITTED: "Chưa nộp bài",
+};
+
+export type ClassResourceAttachment = {
+  fileName: string | null;
+  url: string | null;
+  contentType: string | null;
+  sizeBytes: number | null;
+};
+
+export type ClassResourceSummary = {
+  id: string;
+  title: string;
+  description: string | null;
+  sourceType: ResourceSourceType;
+  thumbnailUrl: string | null;
+  attachment: ClassResourceAttachment | null;
+  submissionEnabled: boolean;
+  deadline: string | null;
+  postedByName: string | null;
+  postedAt: string;
+  submissionStatus: SubmissionStatus;
+};
+
+export type ClassResourcePage = {
+  items: ClassResourceSummary[];
+  page: number;
+  size: number;
+  total: number;
+};
+
+export function sourceTypeLabel(sourceType: string): string {
+  return RESOURCE_SOURCE_TYPE_LABELS[sourceType as ResourceSourceType] ?? sourceType;
+}
+
+export function submissionStatusLabel(status: string): string {
+  return SUBMISSION_STATUS_LABELS[status as SubmissionStatus] ?? status;
+}
+
+export function formatFileSize(bytes: number | null): string {
+  if (bytes === null || Number.isNaN(bytes)) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 async function request<T>(authFetch: AuthFetch, path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData)) {
@@ -210,4 +268,14 @@ export function importClassStudents(
     method: "POST",
     body: formData,
   });
+}
+
+export function listClassResources(
+  authFetch: AuthFetch,
+  classId: string,
+  page = 0,
+  size = 20,
+): Promise<ClassResourcePage> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return request<ClassResourcePage>(authFetch, `/${classId}/resources?${params.toString()}`);
 }

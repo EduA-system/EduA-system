@@ -6,6 +6,7 @@ import {
   Archive,
   BookOpen,
   CheckCircle2,
+  FileText,
   Loader2,
   Plus,
   RefreshCw,
@@ -560,6 +561,13 @@ export function ClassManagementPage() {
                         >
                           <UserPlus className="size-4" />
                           Quản lý học sinh
+                        </Link>
+                        <Link
+                          href={`/view-class-resources?classId=${selected.id}`}
+                          className="flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[#d8d1c9] px-4 text-[13px] font-medium text-[#1f1f1f] transition hover:bg-[#f5f1ec]"
+                        >
+                          <FileText className="size-4" />
+                          Xem tài nguyên lớp
                         </Link>
                         <button
                           type="button"
