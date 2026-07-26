@@ -195,12 +195,16 @@ export function AddStudentPage() {
       const result = await importClassStudents(authFetch, selectedClass.id, importFile);
       setImportResult(result);
       setMessage(`Đã thêm ${result.addedCount} học sinh, bỏ qua ${result.skippedCount} dòng.`);
-      setImportFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
       await refreshSelectedClass(selectedClass.id);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không thể import file.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Không thể import file. Vui lòng chọn lại tệp và thử lại.",
+      );
     } finally {
+      setImportFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       setImportBusy(false);
     }
   }

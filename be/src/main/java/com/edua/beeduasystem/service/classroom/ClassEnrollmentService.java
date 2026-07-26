@@ -56,8 +56,6 @@ public class ClassEnrollmentService {
     private static final int MAX_CLASS_SIZE = 60;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("csv", "xlsx");
     private static final String REQUIRED_COLUMN = "gmail";
-    private static final String INVALID_FILE_MESSAGE =
-            "File khong hop le. Vui long tai len tep .csv hoac .xlsx theo dung mau duoc cung cap.";
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
     private final ClassRepository classRepository;
@@ -295,24 +293,27 @@ public class ClassEnrollmentService {
 
     private List<ParsedRow> parseFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(INVALID_FILE_MESSAGE);
+            throw new IllegalArgumentException("File trong. Vui long chon file .csv hoac .xlsx co du lieu.");
         }
         String extension = extractExtension(file.getOriginalFilename());
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException(INVALID_FILE_MESSAGE);
+            throw new IllegalArgumentException(
+                    "Dinh dang file khong duoc ho tro (\"." + extension + "\"). Chi chap nhan .csv hoac .xlsx.");
         }
         List<List<String>> table;
         try (InputStream input = file.getInputStream()) {
             table = "csv".equals(extension) ? parseCsv(input) : parseXlsx(input);
         } catch (IOException | RuntimeException ex) {
-            throw new IllegalArgumentException(INVALID_FILE_MESSAGE);
+            throw new IllegalArgumentException(
+                    "Khong doc duoc noi dung file. File co the bi hong hoac khong dung dinh dang ." + extension + ".");
         }
         if (table.isEmpty()) {
-            throw new IllegalArgumentException(INVALID_FILE_MESSAGE);
+            throw new IllegalArgumentException("File khong co du lieu. Vui long them dong tieu de va it nhat 1 dong hoc sinh.");
         }
         int emailColumnIndex = findColumnIndex(table.get(0), REQUIRED_COLUMN);
         if (emailColumnIndex < 0) {
-            throw new IllegalArgumentException(INVALID_FILE_MESSAGE);
+            throw new IllegalArgumentException(
+                    "Khong tim thay cot \"gmail\" trong dong tieu de. Vui long dat ten cot dung la \"gmail\".");
         }
         List<ParsedRow> rows = new ArrayList<>();
         for (int i = 1; i < table.size(); i++) {
@@ -321,7 +322,7 @@ public class ClassEnrollmentService {
             rows.add(new ParsedRow(i + 1, rawEmail));
         }
         if (rows.isEmpty()) {
-            throw new IllegalArgumentException(INVALID_FILE_MESSAGE);
+            throw new IllegalArgumentException("File chi co dong tieu de, khong co hoc sinh nao de import.");
         }
         return rows;
     }
