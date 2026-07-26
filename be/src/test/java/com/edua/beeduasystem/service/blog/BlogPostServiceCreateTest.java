@@ -223,6 +223,82 @@ class BlogPostServiceCreateTest {
         verify(postRepository, never()).save(any(BlogPost.class));
     }
 
+    /** UTC-CBP-06 - Tiêu đề ngắn nhất gồm một ký tự vẫn hợp lệ. */
+    @Test
+    void utcCbp06_acceptsSingleCharacterTitle() {
+        stubSuccessfulSaveAndDetail();
+
+        BlogViews.PostDetail result = service.create(
+                "A", "<p>Nội dung hợp lệ sau sanitize.</p>", "MATH");
+
+        assertEquals("A", result.title());
+        assertEquals(Subject.MATH, result.subject());
+        verify(postRepository).save(any(BlogPost.class));
+    }
+
+    /** UTC-CBP-07 - Tiêu đề đúng giới hạn 255 ký tự vẫn được lưu. */
+    @Test
+    void utcCbp07_acceptsTitleAt255Characters() {
+        stubSuccessfulSaveAndDetail();
+        String title = "T".repeat(255);
+
+        BlogViews.PostDetail result = service.create(
+                title, "<p>Nội dung hợp lệ sau sanitize.</p>", "PHYSICS");
+
+        assertEquals(title, result.title());
+        assertEquals(255, result.title().length());
+        assertEquals(Subject.PHYSICS, result.subject());
+    }
+
+    /** UTC-CBP-08 - Tiêu đề 256 ký tự vượt giới hạn database. */
+    @Test
+    void utcCbp08_rejectsTitleOver255Characters() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.create(
+                        "T".repeat(256), "<p>Nội dung hợp lệ.</p>", "MATH"));
+
+        assertEquals("Title must not exceed 255 characters.", exception.getMessage());
+        verify(postRepository, never()).save(any(BlogPost.class));
+    }
+
+    /** UTC-CBP-09 - Content null được xem là không có nội dung. */
+    @Test
+    void utcCbp09_rejectsNullContent() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.create(TITLE, null, "MATH"));
+
+        assertEquals("Content is required.", exception.getMessage());
+        verify(postRepository, never()).save(any(BlogPost.class));
+    }
+
+    /** UTC-CBP-10 - Subject chỉ chứa khoảng trắng là dữ liệu bắt buộc bị thiếu. */
+    @Test
+    void utcCbp10_rejectsBlankSubject() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.create(TITLE, SAFE_CONTENT, "   "));
+
+        assertEquals(
+                "Subject is required. Allowed: MATH, CHEMISTRY, PHYSICS.",
+                exception.getMessage());
+        verify(postRepository, never()).save(any(BlogPost.class));
+    }
+
+    /** UTC-CBP-11 - Subject null là dữ liệu bắt buộc bị thiếu. */
+    @Test
+    void utcCbp11_rejectsNullSubject() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.create(TITLE, SAFE_CONTENT, null));
+
+        assertEquals(
+                "Subject is required. Allowed: MATH, CHEMISTRY, PHYSICS.",
+                exception.getMessage());
+        verify(postRepository, never()).save(any(BlogPost.class));
+    }
+
     /**
      * Cấu hình các mock cần cho hai test thành công.
      * Case validation không gọi helper vì luồng đúng phải dừng trước save().

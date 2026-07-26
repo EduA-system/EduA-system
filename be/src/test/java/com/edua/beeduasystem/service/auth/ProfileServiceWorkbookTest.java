@@ -98,6 +98,86 @@ class ProfileServiceWorkbookTest {
         verifyNoInteractions(userRepository, userRoleRepository);
     }
 
+    @Test
+    void utcUpd08_fullNameAt255CharactersIsAccepted() {
+        UUID userId = UUID.randomUUID();
+        stubExistingUser(userId);
+        String fullName = "n".repeat(255);
+
+        ProfileService.ProfileResult result =
+                service.updateCurrentUserProfile(fullName, null, null);
+
+        assertThat(result.user().fullName()).isEqualTo(fullName);
+        assertThat(result.user().fullName()).hasSize(255);
+    }
+
+    @Test
+    void utcUpd09_fullNameOver255CharactersIsRejected() {
+        UUID userId = UUID.randomUUID();
+        stubExistingUser(userId);
+
+        assertThatThrownBy(() -> service.updateCurrentUserProfile("n".repeat(256), null, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Full name must not exceed 255 characters.");
+    }
+
+    @Test
+    void utcUpd10_avatarUrlAt1024CharactersIsAccepted() {
+        UUID userId = UUID.randomUUID();
+        stubExistingUser(userId);
+        String prefix = "https://cdn.edua.vn/";
+        String avatarUrl = prefix + "a".repeat(1024 - prefix.length());
+
+        ProfileService.ProfileResult result =
+                service.updateCurrentUserProfile(null, avatarUrl, null);
+
+        assertThat(result.user().avatarUrl()).isEqualTo(avatarUrl);
+        assertThat(result.user().avatarUrl()).hasSize(1024);
+    }
+
+    @Test
+    void utcUpd11_avatarUrlOver1024CharactersIsRejected() {
+        UUID userId = UUID.randomUUID();
+        stubExistingUser(userId);
+        String prefix = "https://cdn.edua.vn/";
+        String avatarUrl = prefix + "a".repeat(1025 - prefix.length());
+
+        assertThatThrownBy(() -> service.updateCurrentUserProfile(null, avatarUrl, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Avatar URL must not exceed 1024 characters.");
+    }
+
+    @Test
+    void utcUpd12_contactInfoAt500CharactersIsAccepted() {
+        UUID userId = UUID.randomUUID();
+        stubExistingUser(userId);
+        String contactInfo = "c".repeat(500);
+
+        ProfileService.ProfileResult result =
+                service.updateCurrentUserProfile(null, null, contactInfo);
+
+        assertThat(result.user().contactInfo()).isEqualTo(contactInfo);
+        assertThat(result.user().contactInfo()).hasSize(500);
+    }
+
+    @Test
+    void utcUpd13_contactInfoOver500CharactersIsRejected() {
+        UUID userId = UUID.randomUUID();
+        stubExistingUser(userId);
+
+        assertThatThrownBy(() -> service.updateCurrentUserProfile(null, null, "c".repeat(501)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Contact info must not exceed 500 characters.");
+    }
+
+    private void stubExistingUser(UUID userId) {
+        when(currentUserProvider.requireUserId()).thenReturn(userId);
+        when(userRepository.findById(userId))
+                .thenReturn(Optional.of(user(userId, "Teacher", null, "contact")));
+        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRoleRepository.findRolesByUserId(userId)).thenReturn(Set.of(Role.TEACHER));
+    }
+
     private AppUser user(UUID id, String fullName, String avatarUrl, String contactInfo) {
         return new AppUser(id, "teacher@edua.vn", "sub-1", fullName, avatarUrl, contactInfo,
                 Subject.MATH, UserStatus.ACTIVE, Instant.now(), null);

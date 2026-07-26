@@ -98,6 +98,77 @@ class AuthServiceWorkbookTest {
     }
 
     @Test
+    void utcLog08_blankGoogleTokenIsRejectedByVerifier() {
+        when(verifier.verify("   ")).thenThrow(new InvalidTokenException("Invalid Google ID token."));
+
+        assertThatThrownBy(() -> service.loginWithGoogle("   "))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verifyNoInteractions(userRepository, tokenService, refreshTokenRepository, userRoleRepository);
+    }
+
+
+    @Test
+    void utcLog09_googleSubjectAt255CharactersIsAccepted() {
+        UUID userId = UUID.randomUUID();
+        String googleSubject = "s".repeat(255);
+        AppUser user = user(userId, "teacher@edua.vn", null, "Teacher", UserStatus.ACTIVE);
+        stubSuccessfulGoogleLogin(user, new GoogleIdentity(
+                googleSubject, "teacher@edua.vn", "Google Teacher", true));
+
+        AuthService.LoginResult result = service.loginWithGoogle("valid-google-id-token");
+
+        assertThat(result.user().googleSub()).isEqualTo(googleSubject);
+        assertThat(result.user().googleSub()).hasSize(255);
+    }
+
+    @Test
+    void utcLog10_googleSubjectOver255CharactersIsRejected() {
+        UUID userId = UUID.randomUUID();
+        AppUser user = user(userId, "teacher@edua.vn", null, "Teacher", UserStatus.ACTIVE);
+        when(verifier.verify("valid-google-id-token")).thenReturn(new GoogleIdentity(
+                "s".repeat(256), "teacher@edua.vn", "Google Teacher", true));
+        when(userRepository.findByEmail("teacher@edua.vn")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.loginWithGoogle("valid-google-id-token"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Google subject must not exceed 255 characters.");
+
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(tokenService, refreshTokenRepository, userRoleRepository);
+    }
+
+    @Test
+    void utcLog11_googleFullNameAt255CharactersIsAccepted() {
+        UUID userId = UUID.randomUUID();
+        String fullName = "n".repeat(255);
+        AppUser user = user(userId, "teacher@edua.vn", "existing-subject", " ", UserStatus.ACTIVE);
+        stubSuccessfulGoogleLogin(user, new GoogleIdentity(
+                "new-subject", "teacher@edua.vn", fullName, true));
+
+        AuthService.LoginResult result = service.loginWithGoogle("valid-google-id-token");
+
+        assertThat(result.user().fullName()).isEqualTo(fullName);
+        assertThat(result.user().fullName()).hasSize(255);
+    }
+
+    @Test
+    void utcLog12_googleFullNameOver255CharactersIsRejected() {
+        UUID userId = UUID.randomUUID();
+        AppUser user = user(userId, "teacher@edua.vn", "existing-subject", " ", UserStatus.ACTIVE);
+        when(verifier.verify("valid-google-id-token")).thenReturn(new GoogleIdentity(
+                "new-subject", "teacher@edua.vn", "n".repeat(256), true));
+        when(userRepository.findByEmail("teacher@edua.vn")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.loginWithGoogle("valid-google-id-token"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Full name must not exceed 255 characters.");
+
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(tokenService, refreshTokenRepository, userRoleRepository);
+    }
+
+    @Test
     void utcRef03_tokenHashNotFoundRejectsRequest() {
         when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
 
@@ -116,6 +187,7 @@ class AuthServiceWorkbookTest {
         when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(expired));
 
         assertThatThrownBy(() -> service.refresh("refresh-token"))
+
                 .isInstanceOf(InvalidTokenException.class)
                 .hasMessageContaining("expired");
 
@@ -175,6 +247,14 @@ class AuthServiceWorkbookTest {
     private RefreshToken usableToken(UUID userId) {
         return new RefreshToken(UUID.randomUUID(), userId, "hash",
                 Instant.now().plus(Duration.ofHours(1)), false, Instant.now());
+    }
+
+    private void stubSuccessfulGoogleLogin(AppUser user, GoogleIdentity identity) {
+        when(verifier.verify("valid-google-id-token")).thenReturn(identity);
+        when(userRepository.findByEmail(user.email())).thenReturn(Optional.of(user));
+        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRoleRepository.findRolesByUserId(user.id())).thenReturn(Set.of(Role.TEACHER));
+        when(tokenService.issueAccessToken(any(), any())).thenReturn("access-token");
     }
 
     private AppUser user(UUID id, String email, String googleSub, String fullName, UserStatus status) {

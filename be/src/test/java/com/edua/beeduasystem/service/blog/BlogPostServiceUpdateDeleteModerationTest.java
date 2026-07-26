@@ -134,6 +134,36 @@ class BlogPostServiceUpdateDeleteModerationTest {
     }
 
     @Test
+    void utcUbp07_acceptsUpdatedTitleAt255Characters() {
+        BlogPost original = post(AUTHOR_ID, "Original title", "<p>Old content</p>", Subject.MATH);
+        String title = "T".repeat(255);
+        when(currentUser.requireUserId()).thenReturn(AUTHOR_ID);
+        when(postRepository.findPublishedById(POST_ID)).thenReturn(Optional.of(original));
+        when(postRepository.save(any(BlogPost.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BlogViews.PostDetail result = service.update(
+                POST_ID, title, "<p>Nội dung hợp lệ.</p>", "MATH");
+
+        assertThat(result.title()).isEqualTo(title);
+        assertThat(result.title()).hasSize(255);
+        assertThat(result.subject()).isEqualTo(Subject.MATH);
+    }
+
+    @Test
+    void utcUbp08_rejectsUpdatedTitleOver255Characters() {
+        BlogPost original = post(AUTHOR_ID, "Original title", "<p>Old content</p>", Subject.MATH);
+        when(currentUser.requireUserId()).thenReturn(AUTHOR_ID);
+        when(postRepository.findPublishedById(POST_ID)).thenReturn(Optional.of(original));
+
+        assertThatThrownBy(() -> service.update(
+                POST_ID, "T".repeat(256), "<p>Nội dung hợp lệ.</p>", "MATH"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Title must not exceed 255 characters.");
+
+        verify(postRepository, never()).save(any());
+    }
+
+    @Test
     void utcDbp01_ownerSoftDeletesBlogPost() {
         BlogPost original = post(AUTHOR_ID, "Title", "<p>Content</p>", Subject.MATH);
         when(currentUser.requireUserId()).thenReturn(AUTHOR_ID);
@@ -160,6 +190,18 @@ class BlogPostServiceUpdateDeleteModerationTest {
     }
 
     @Test
+    void utcDbp03_alreadyDeletedOrRemovedPostIsNotPublished() {
+        // findPublishedById filters both DELETED_BY_AUTHOR and REMOVED_BY_MODERATOR.
+        when(postRepository.findPublishedById(POST_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.delete(POST_ID))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Blog post not found");
+
+        verify(postRepository, never()).save(any());
+    }
+
+    @Test
     void utcDbp04_nonOwnerDeleteRejected() {
         when(currentUser.requireUserId()).thenReturn(AUTHOR_ID);
         when(postRepository.findPublishedById(POST_ID))
@@ -179,26 +221,19 @@ class BlogPostServiceUpdateDeleteModerationTest {
         when(currentUser.requireUserId()).thenReturn(MODERATOR_ID);
         when(postRepository.findPublishedById(POST_ID)).thenReturn(Optional.of(original));
 
-        service.removeByModerator(POST_ID, "  Violation reason  ");
+        service.removeByModerator(POST_ID, "Violation reason");
 
         ArgumentCaptor<BlogPost> saved = ArgumentCaptor.forClass(BlogPost.class);
         verify(postRepository).save(saved.capture());
         assertThat(saved.getValue().status()).isEqualTo(BlogPostStatus.REMOVED_BY_MODERATOR);
         assertThat(saved.getValue().removedReason()).isEqualTo("Violation reason");
         assertThat(saved.getValue().removedBy()).isEqualTo(MODERATOR_ID);
+        assertThat(saved.getValue().title()).isEqualTo(original.title());
+        assertThat(saved.getValue().content()).isEqualTo(original.content());
     }
 
     @Test
-    void utcRmb02_blankRemovalReasonRejected() {
-        assertThatThrownBy(() -> service.removeByModerator(POST_ID, " "))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Removal reason is required");
-
-        verify(postRepository, never()).findPublishedById(any());
-    }
-
-    @Test
-    void utcRmb03_missingBlogPostRejectedForModeratorRemoval() {
+    void utcRmb02_missingBlogPostRejectedForModeratorRemoval() {
         when(postRepository.findPublishedById(POST_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.removeByModerator(POST_ID, "Violation"))
@@ -206,7 +241,7 @@ class BlogPostServiceUpdateDeleteModerationTest {
     }
 
     @Test
-    void utcRmb04_differentSubjectModeratorRejected() {
+    void utcRmb03_differentSubjectModeratorRejected() {
         BlogPost original = post(OTHER_AUTHOR_ID, "Title", "<p>Content</p>", Subject.PHYSICS);
         when(currentUser.require()).thenReturn(
                 new AccessTokenClaims(MODERATOR_ID, "moderator@edua.vn", Set.of(Role.MODERATOR), Subject.MATH));
@@ -217,6 +252,32 @@ class BlogPostServiceUpdateDeleteModerationTest {
                 .hasMessageContaining("assigned subject");
 
         verify(postRepository, never()).save(any());
+    }
+
+    @Test
+    void utcRmb04_blankRemovalReasonRejected() {
+        assertThatThrownBy(() -> service.removeByModerator(POST_ID, " "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Removal reason is required");
+
+        verify(postRepository, never()).findPublishedById(any());
+    }
+
+    @Test
+    void utcRmb05_trimsReasonWhenModeratorRemovesPost() {
+        BlogPost original = post(OTHER_AUTHOR_ID, "Title", "<p>Content</p>", Subject.MATH);
+        when(currentUser.require()).thenReturn(
+                new AccessTokenClaims(MODERATOR_ID, "moderator@edua.vn", Set.of(Role.MODERATOR), Subject.MATH));
+        when(currentUser.requireUserId()).thenReturn(MODERATOR_ID);
+        when(postRepository.findPublishedById(POST_ID)).thenReturn(Optional.of(original));
+
+        service.removeByModerator(POST_ID, "  Violation reason  ");
+
+        ArgumentCaptor<BlogPost> saved = ArgumentCaptor.forClass(BlogPost.class);
+        verify(postRepository).save(saved.capture());
+        assertThat(saved.getValue().status()).isEqualTo(BlogPostStatus.REMOVED_BY_MODERATOR);
+        assertThat(saved.getValue().removedReason()).isEqualTo("Violation reason");
+        assertThat(saved.getValue().removedBy()).isEqualTo(MODERATOR_ID);
     }
 
     private BlogPost post(UUID authorId, String title, String content, Subject subject) {

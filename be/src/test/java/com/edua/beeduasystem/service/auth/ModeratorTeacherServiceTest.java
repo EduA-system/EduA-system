@@ -50,13 +50,13 @@ class ModeratorTeacherServiceTest {
 
     @Test
     void utcAt01_createsNewTeacherInviteForModeratorSubject() {
-        when(userRepository.findByEmail("teacher@edua.vn")).thenReturn(Optional.empty());
-        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        stubNewTeacher("vutuanhiep.teacher@edua.vn");
 
-        AppUser result = service.addTeacher(" Teacher@EduA.VN ", " math ", " Teacher Name ");
+        AppUser result = service.addTeacher(
+                "vutuanhiep.teacher@edua.vn", "MATH", "Vũ Tuấn Hiệp");
 
-        assertThat(result.email()).isEqualTo("teacher@edua.vn");
-        assertThat(result.fullName()).isEqualTo("Teacher Name");
+        assertThat(result.email()).isEqualTo("vutuanhiep.teacher@edua.vn");
+        assertThat(result.fullName()).isEqualTo("Vũ Tuấn Hiệp");
         assertThat(result.subject()).isEqualTo(Subject.MATH);
         assertThat(result.status()).isEqualTo(UserStatus.INVITED);
         verify(userRoleRepository).replaceRole(eq(result.id()), eq(Role.TEACHER), eq(MODERATOR_ID), any());
@@ -91,6 +91,73 @@ class ModeratorTeacherServiceTest {
         assertThatThrownBy(() -> service.addTeacher("teacher@edua.vn", "PHYSICS", "Teacher"))
                 .isInstanceOf(ForbiddenOperationException.class)
                 .hasMessageContaining("MATH");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void utcAt05_normalizesNewTeacherFields() {
+        when(userRepository.findByEmail("teacher@edua.vn")).thenReturn(Optional.empty());
+        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppUser result = service.addTeacher(" Teacher@EduA.VN ", " math ", " Teacher Name ");
+
+        assertThat(result.email()).isEqualTo("teacher@edua.vn");
+        assertThat(result.fullName()).isEqualTo("Teacher Name");
+        assertThat(result.subject()).isEqualTo(Subject.MATH);
+        assertThat(result.status()).isEqualTo(UserStatus.INVITED);
+        verify(userRoleRepository).replaceRole(eq(result.id()), eq(Role.TEACHER), eq(MODERATOR_ID), any());
+    }
+
+    @Test
+    void utcAt06_blankSubjectIsRejected() {
+        assertThatThrownBy(() -> service.addTeacher(
+                "vutuanhiep.teacher@edua.vn", "   ", "Vũ Tuấn Hiệp"))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void utcAt07_emailAt320CharactersIsAccepted() {
+        String email = "e".repeat(308) + "@example.com";
+        stubNewTeacher(email);
+
+        AppUser result = service.addTeacher(email, "MATH", "Vũ Tuấn Hiệp");
+
+        assertThat(result.email()).isEqualTo(email);
+        assertThat(result.email()).hasSize(320);
+    }
+
+    @Test
+    void utcAt08_emailOver320CharactersIsRejected() {
+        String email = "e".repeat(309) + "@example.com";
+
+        assertThatThrownBy(() -> service.addTeacher(email, "MATH", "Vũ Tuấn Hiệp"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Email must not exceed 320 characters.");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void utcAt09_fullNameAt255CharactersIsAccepted() {
+        String fullName = "n".repeat(255);
+        stubNewTeacher("vutuanhiep.teacher@edua.vn");
+
+        AppUser result = service.addTeacher(
+                "vutuanhiep.teacher@edua.vn", "MATH", fullName);
+
+        assertThat(result.fullName()).isEqualTo(fullName);
+        assertThat(result.fullName()).hasSize(255);
+    }
+
+    @Test
+    void utcAt10_fullNameOver255CharactersIsRejected() {
+        assertThatThrownBy(() -> service.addTeacher(
+                "vutuanhiep.teacher@edua.vn", "MATH", "n".repeat(256)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Full name must not exceed 255 characters.");
 
         verify(userRepository, never()).save(any());
     }
@@ -140,7 +207,17 @@ class ModeratorTeacherServiceTest {
     }
 
     @Test
-    void utcDt05_differentSubjectTeacherRejected() {
+    void utcDt05_moderatorWithoutSubjectCannotDeleteTeachers() {
+        when(currentUserProvider.require()).thenReturn(
+                new AccessTokenClaims(MODERATOR_ID, "moderator@edua.vn", Set.of(Role.MODERATOR), null));
+
+        assertThatThrownBy(() -> service.deleteTeacher(UUID.randomUUID()))
+                .isInstanceOf(ForbiddenOperationException.class)
+                .hasMessageContaining("subject");
+    }
+
+    @Test
+    void utcDt06_differentSubjectTeacherRejected() {
         AppUser teacher = user("teacher@edua.vn", "Teacher", Subject.PHYSICS, UserStatus.ACTIVE);
         when(userRepository.findById(teacher.id())).thenReturn(Optional.of(teacher));
         when(userRoleRepository.findRolesByUserId(teacher.id())).thenReturn(Set.of(Role.TEACHER));
@@ -150,14 +227,9 @@ class ModeratorTeacherServiceTest {
                 .hasMessageContaining("MATH");
     }
 
-    @Test
-    void utcDt06_moderatorWithoutSubjectCannotDeleteTeachers() {
-        when(currentUserProvider.require()).thenReturn(
-                new AccessTokenClaims(MODERATOR_ID, "moderator@edua.vn", Set.of(Role.MODERATOR), null));
-
-        assertThatThrownBy(() -> service.deleteTeacher(UUID.randomUUID()))
-                .isInstanceOf(ForbiddenOperationException.class)
-                .hasMessageContaining("subject");
+    private void stubNewTeacher(String email) {
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     private AppUser user(String email, String fullName, Subject subject, UserStatus status) {
