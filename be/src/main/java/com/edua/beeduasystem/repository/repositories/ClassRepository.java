@@ -16,6 +16,9 @@ public interface ClassRepository {
 
     SearchResult searchOwned(UUID ownerId, Subject subject, Integer grade, ClassStatus status, String q, int page, int size);
 
+    /** Danh sach lop 1 student dang enrolled (UC-35), khong phan biet ai la owner. */
+    SearchResult searchEnrolled(UUID studentId, Subject subject, Integer grade, ClassStatus status, String q, int page, int size);
+
     record SearchResult(List<Classroom> items, long total) {
     }
 }

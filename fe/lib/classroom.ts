@@ -215,6 +215,17 @@ export async function listClasses(authFetch: AuthFetch, filters: ClassFilters = 
   return request<ClassPage>(authFetch, `?${params.toString()}`);
 }
 
+export function listEnrolledClasses(authFetch: AuthFetch, filters: ClassFilters = {}): Promise<ClassPage> {
+  const params = new URLSearchParams();
+  if (filters.q?.trim()) params.set("q", filters.q.trim());
+  if (filters.subject) params.set("subject", filters.subject);
+  if (filters.grade) params.set("grade", String(filters.grade));
+  if (filters.status) params.set("status", filters.status);
+  params.set("page", String(filters.page ?? 0));
+  params.set("size", String(filters.size ?? 20));
+  return request<ClassPage>(authFetch, `/enrolled?${params.toString()}`);
+}
+
 export function createClass(authFetch: AuthFetch, payload: CreateClassPayload): Promise<ClassDetail> {
   return request<ClassDetail>(authFetch, "", {
     method: "POST",

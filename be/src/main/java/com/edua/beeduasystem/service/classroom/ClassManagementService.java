@@ -46,6 +46,16 @@ public class ClassManagementService {
         return new ClassViews.Page<>(items, page, size, result.total());
     }
 
+    @Transactional(readOnly = true)
+    public ClassViews.Page<ClassViews.ClassSummary> listEnrolledClasses(Subject subject, Integer grade, ClassStatus status, String q, int page, int size) {
+        UUID studentId = currentUserProvider.requireUserId();
+        ClassRepository.SearchResult result = classRepository.searchEnrolled(studentId, subject, grade, status, q, page, size);
+        List<ClassViews.ClassSummary> items = result.items().stream()
+                .map(this::toSummary)
+                .toList();
+        return new ClassViews.Page<>(items, page, size, result.total());
+    }
+
     @Transactional
     public ClassViews.ClassDetail createClass(String name, Subject subject, Integer grade, String description) {
         UUID ownerId = currentUserProvider.requireUserId();

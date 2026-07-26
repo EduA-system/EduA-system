@@ -29,6 +29,7 @@ import {
   getClassDetail,
   listClassResources,
   listClasses,
+  listEnrolledClasses,
   sourceTypeLabel,
   statusLabel,
   submissionStatusLabel,
@@ -146,10 +147,12 @@ export function ViewClassResourcesPage() {
   const [error, setError] = useState("");
 
   const loadClasses = useCallback(async () => {
-    if (status !== "authenticated" || !isTeacher) return;
+    if (status !== "authenticated") return;
     setClassesLoading(true);
     try {
-      const result = await listClasses(authFetch, { size: 100 });
+      const result = isTeacher
+        ? await listClasses(authFetch, { size: 100 })
+        : await listEnrolledClasses(authFetch, { size: 100 });
       setClasses(result.items);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tải danh sách lớp.");
@@ -290,35 +293,38 @@ export function ViewClassResourcesPage() {
               )}
             </div>
 
-            {isTeacher && (
-              <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <label className="block text-[12px] font-medium text-[#6b6b6b] sm:min-w-[340px]">
-                    Chọn lớp
-                    <select
-                      value={classId}
-                      onChange={handleSelectClass}
-                      className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]"
-                    >
-                      <option value="">{classesLoading ? "Đang tải danh sách lớp..." : "-- Chọn lớp của bạn --"}</option>
-                      {classes.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name} · Khối {item.grade} · {subjectLabel(item.subject)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {selectedClass && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClasses(selectedClass.status)}`}>
-                        {statusLabel(selectedClass.status)}
-                      </span>
-                      <span className="text-[12px] text-[#6b6b6b]">{selectedClass.name}</span>
-                    </div>
-                  )}
-                </div>
+            <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <label className="block text-[12px] font-medium text-[#6b6b6b] sm:min-w-[340px]">
+                  Chọn lớp
+                  <select
+                    value={classId}
+                    onChange={handleSelectClass}
+                    className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]"
+                  >
+                    <option value="">{classesLoading ? "Đang tải danh sách lớp..." : "-- Chọn lớp của bạn --"}</option>
+                    {classes.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} · Khối {item.grade} · {subjectLabel(item.subject)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {selectedClass && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClasses(selectedClass.status)}`}>
+                      {statusLabel(selectedClass.status)}
+                    </span>
+                    <span className="text-[12px] text-[#6b6b6b]">{selectedClass.name}</span>
+                  </div>
+                )}
               </div>
-            )}
+              {classes.length === 0 && !classesLoading && (
+                <p className="mt-3 text-[12px] text-[#6b6b6b]">
+                  {isTeacher ? "Bạn chưa sở hữu lớp nào." : "Bạn chưa được thêm vào lớp nào."}
+                </p>
+              )}
+            </div>
 
             {error && (
               <div className="mt-6 flex items-start gap-2 rounded-[12px] border border-[#e8b4a4] bg-[#fdf3ef] px-4 py-3 text-[13px] text-[#c0492b]">
@@ -383,13 +389,9 @@ export function ViewClassResourcesPage() {
             ) : (
               <div className="mt-8 rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
                 <FileText className="mx-auto size-8 text-[#a8a097]" />
-                <p className="mt-3 text-[13px] font-medium">
-                  {isTeacher ? "Chọn một lớp ở trên để xem tài nguyên" : "Chưa chọn lớp"}
-                </p>
+                <p className="mt-3 text-[13px] font-medium">Chọn một lớp ở trên để xem tài nguyên</p>
                 <p className="mt-1 text-[12px] text-[#6b6b6b]">
-                  {isTeacher
-                    ? "Danh sách lớp bạn sở hữu hiển thị ở ô chọn phía trên."
-                    : "Mở liên kết tài nguyên từ lớp học của bạn để xem chi tiết tại đây."}
+                  {isTeacher ? "Danh sách lớp bạn sở hữu hiển thị ở ô chọn phía trên." : "Danh sách lớp bạn đã tham gia hiển thị ở ô chọn phía trên."}
                 </p>
               </div>
             )}

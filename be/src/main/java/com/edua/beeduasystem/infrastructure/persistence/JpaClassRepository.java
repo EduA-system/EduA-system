@@ -4,9 +4,11 @@ import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.classroom.ClassStatus;
 import com.edua.beeduasystem.domain.model.classroom.Classroom;
 import com.edua.beeduasystem.infrastructure.persistence.entity.ClassEntity;
+import com.edua.beeduasystem.infrastructure.persistence.entity.ClassMemberEntity;
 import com.edua.beeduasystem.infrastructure.persistence.repository.ClassJpaRepository;
 import com.edua.beeduasystem.repository.repositories.ClassRepository;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -56,6 +58,38 @@ public class JpaClassRepository implements ClassRepository {
         Specification<ClassEntity> spec = (root, cq, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("ownerId"), ownerId));
+            if (subject != null) {
+                predicates.add(cb.equal(root.get("subject"), subject));
+            }
+            if (grade != null) {
+                predicates.add(cb.equal(root.get("grade"), grade));
+            }
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (q != null && !q.isBlank()) {
+                String term = "%" + q.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), term),
+                        cb.like(cb.lower(root.get("description")), term)));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
+        var result = jpa.findAll(spec, pageable);
+        List<Classroom> items = result.getContent().stream().map(JpaClassRepository::toDomain).toList();
+        return new SearchResult(items, result.getTotalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SearchResult searchEnrolled(UUID studentId, Subject subject, Integer grade, ClassStatus status, String q, int page, int size) {
+        Specification<ClassEntity> spec = (root, cq, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            Subquery<UUID> enrolledClassIds = cq.subquery(UUID.class);
+            var memberRoot = enrolledClassIds.from(ClassMemberEntity.class);
+            enrolledClassIds.select(memberRoot.get("classId")).where(cb.equal(memberRoot.get("studentId"), studentId));
+            predicates.add(root.get("id").in(enrolledClassIds));
             if (subject != null) {
                 predicates.add(cb.equal(root.get("subject"), subject));
             }
