@@ -150,6 +150,39 @@ export type ClassResourcePage = {
   total: number;
 };
 
+export type ClassResourceAttachmentInput = {
+  url: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
+export type PostClassResourcePayload = {
+  title?: string | null;
+  description?: string | null;
+  sourceType: ResourceSourceType;
+  sourceLibraryContentId?: string | null;
+  attachment?: ClassResourceAttachmentInput | null;
+  submissionEnabled: boolean;
+  deadline?: string | null;
+};
+
+export type UpdateClassResourcePayload = {
+  title?: string;
+  description?: string | null;
+  attachment?: ClassResourceAttachmentInput | null;
+  submissionEnabled?: boolean;
+  deadline?: string | null;
+};
+
+export type UploadedFile = {
+  fileId: string;
+  url: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
 export function sourceTypeLabel(sourceType: string): string {
   return RESOURCE_SOURCE_TYPE_LABELS[sourceType as ResourceSourceType] ?? sourceType;
 }
@@ -289,4 +322,42 @@ export function listClassResources(
 ): Promise<ClassResourcePage> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   return request<ClassResourcePage>(authFetch, `/${classId}/resources?${params.toString()}`);
+}
+
+export function postClassResource(
+  authFetch: AuthFetch,
+  classId: string,
+  payload: PostClassResourcePayload,
+): Promise<ClassResourceSummary> {
+  return request<ClassResourceSummary>(authFetch, `/${classId}/resources`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateClassResource(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+  payload: UpdateClassResourcePayload,
+): Promise<ClassResourceSummary> {
+  return request<ClassResourceSummary>(authFetch, `/${classId}/resources/${resourceId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteClassResource(authFetch: AuthFetch, classId: string, resourceId: string): Promise<void> {
+  return request<void>(authFetch, `/${classId}/resources/${resourceId}`, { method: "DELETE" });
+}
+
+export async function uploadClassResourceFile(authFetch: AuthFetch, file: File): Promise<UploadedFile> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await authFetch("/api/uploads", { method: "POST", body: formData });
+  const data = (await response.json().catch(() => null)) as (UploadedFile & { message?: string }) | null;
+  if (!response.ok) {
+    throw new Error(data && "message" in data ? String(data.message) : "Không thể tải tệp lên.");
+  }
+  return data as UploadedFile;
 }
