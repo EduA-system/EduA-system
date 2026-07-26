@@ -19,6 +19,7 @@ import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
 import com.edua.beeduasystem.repository.repositories.NotificationRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.repository.repositories.WeeklyTaskRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.time.Instant;
@@ -47,6 +48,7 @@ class WeeklyTaskServiceTest {
     private CurrentUserProvider currentUserProvider;
     private NotificationRepository notificationRepository;
     private NotificationStreamPort streamPort;
+    private ActivityLogService activityLogService;
     private WeeklyTaskService service;
 
     private final UUID moderatorId = UUID.randomUUID();
@@ -63,8 +65,9 @@ class WeeklyTaskServiceTest {
         currentUserProvider = mock(CurrentUserProvider.class);
         notificationRepository = mock(NotificationRepository.class);
         streamPort = mock(NotificationStreamPort.class);
+        activityLogService = mock(ActivityLogService.class);
         service = new WeeklyTaskService(repository, libraryContentRepository, userRepository, userRoleRepository,
-                currentUserProvider, notificationRepository, streamPort);
+                currentUserProvider, notificationRepository, streamPort, activityLogService);
 
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(notificationRepository.createWithRecipients(any(), any()))

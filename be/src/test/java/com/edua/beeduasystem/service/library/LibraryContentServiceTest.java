@@ -8,6 +8,7 @@ import com.edua.beeduasystem.domain.model.library.LibraryContent;
 import com.edua.beeduasystem.domain.model.library.LibraryContentStatus;
 import com.edua.beeduasystem.domain.model.library.LibraryContentType;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +39,7 @@ class LibraryContentServiceTest {
     void setup() {
         repository = mock(LibraryContentRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
-        service = new LibraryContentService(repository, currentUserProvider);
+        service = new LibraryContentService(repository, currentUserProvider, mock(ActivityLogService.class));
         when(currentUserProvider.requireUserId()).thenReturn(ownerId);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }

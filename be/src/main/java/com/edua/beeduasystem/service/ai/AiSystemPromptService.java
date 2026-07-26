@@ -1,8 +1,11 @@
 package com.edua.beeduasystem.service.ai;
 
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
 import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.edua.beeduasystem.domain.model.ai.AiSystemPrompt;
 import com.edua.beeduasystem.repository.repositories.AiSystemPromptRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,20 +13,24 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AiSystemPromptService {
     private final AiSystemPromptRepository repository;
     private final CurrentUserProvider currentUserProvider;
     private final AiPromptTemplateCatalog templateCatalog;
+    private final ActivityLogService activityLogService;
 
     public AiSystemPromptService(
             AiSystemPromptRepository repository,
             CurrentUserProvider currentUserProvider,
-            AiPromptTemplateCatalog templateCatalog) {
+            AiPromptTemplateCatalog templateCatalog,
+            ActivityLogService activityLogService) {
         this.repository = repository;
         this.currentUserProvider = currentUserProvider;
         this.templateCatalog = templateCatalog;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional(readOnly = true)
@@ -38,7 +45,11 @@ public class AiSystemPromptService {
     @Transactional
     public AiSystemPrompt update(AiPromptKey key, String instruction) {
         String normalized = instruction == null ? "" : instruction.strip();
-        return repository.save(new AiSystemPrompt(key, normalized, currentUserProvider.requireUserId(), Instant.now()));
+        UUID actorId = currentUserProvider.requireUserId();
+        AiSystemPrompt saved = repository.save(new AiSystemPrompt(key, normalized, actorId, Instant.now()));
+        activityLogService.record(actorId, "IT_STAFF", ActivityLogCategory.CONFIG,
+                ActivityLogAction.UPDATE_SYSTEM_PROMPT, "AI_SYSTEM_PROMPT", null, "key=" + key);
+        return saved;
     }
 
     /**

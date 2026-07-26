@@ -3,12 +3,15 @@ package com.edua.beeduasystem.service.auth;
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,13 +32,16 @@ public class ModeratorTeacherService {
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ActivityLogService activityLogService;
 
     public ModeratorTeacherService(AppUserRepository userRepository,
                                    UserRoleRepository userRoleRepository,
-                                   CurrentUserProvider currentUserProvider) {
+                                   CurrentUserProvider currentUserProvider,
+                                   ActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.currentUserProvider = currentUserProvider;
+        this.activityLogService = activityLogService;
     }
 
     public record TeacherListResult(
@@ -103,6 +109,8 @@ public class ModeratorTeacherService {
                     u.avatarUrl(), u.contactInfo(),
                     moderatorSubject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
             assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
+            activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
+                    ActivityLogAction.GRANT_TEACHER, "APP_USER", reactivated.id(), null);
             return reactivated;
         }
 
@@ -112,6 +120,8 @@ public class ModeratorTeacherService {
                 null, null,
                 moderatorSubject, UserStatus.INVITED, now, null));
         assignRole(saved.id(), Role.TEACHER, currentUserId, now);
+        activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.GRANT_TEACHER, "APP_USER", saved.id(), null);
         return saved;
     }
 
@@ -138,6 +148,8 @@ public class ModeratorTeacherService {
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
                 user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
+        activityLogService.record(currentUserProvider.requireUserId(), "MODERATOR", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.REVOKE_TEACHER, "APP_USER", user.id(), null);
     }
 
     @Transactional
@@ -166,6 +178,8 @@ public class ModeratorTeacherService {
                 user.avatarUrl(), user.contactInfo(),
                 user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
         assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
+        activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.REACTIVATE_TEACHER, "APP_USER", reactivated.id(), null);
         return reactivated;
     }
 

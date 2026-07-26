@@ -2,11 +2,14 @@ package com.edua.beeduasystem.service.blog;
 
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.blog.BlogPost;
 import com.edua.beeduasystem.domain.model.blog.BlogPostStatus;
 import com.edua.beeduasystem.repository.repositories.BlogCommentRepository;
 import com.edua.beeduasystem.repository.repositories.BlogPostRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 
@@ -29,17 +32,20 @@ public class BlogPostService {
     private final BlogContentSanitizer sanitizer;
     private final BlogAuthorResolver authorResolver;
     private final CurrentUserProvider currentUser;
+    private final ActivityLogService activityLogService;
 
     public BlogPostService(BlogPostRepository postRepository,
                            BlogCommentRepository commentRepository,
                            BlogContentSanitizer sanitizer,
                            BlogAuthorResolver authorResolver,
-                           CurrentUserProvider currentUser) {
+                           CurrentUserProvider currentUser,
+                           ActivityLogService activityLogService) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
         this.sanitizer = sanitizer;
         this.authorResolver = authorResolver;
         this.currentUser = currentUser;
+        this.activityLogService = activityLogService;
     }
 
     /** Tạo bài mới, publish ngay (BR-20). */
@@ -91,10 +97,13 @@ public class BlogPostService {
         if (moderatorSubject == null || post.subject() != moderatorSubject) {
             throw new ForbiddenOperationException("You can only remove posts in your assigned subject.");
         }
+        UUID moderatorId = currentUser.requireUserId();
         postRepository.save(new BlogPost(
                 post.id(), post.authorId(), post.title(), post.content(), post.subject(),
-                BlogPostStatus.REMOVED_BY_MODERATOR, reason.trim(), currentUser.requireUserId(),
+                BlogPostStatus.REMOVED_BY_MODERATOR, reason.trim(), moderatorId,
                 post.createdAt(), Instant.now()));
+        activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
+                ActivityLogAction.REMOVE_BLOG_POST, "BLOG_POST", post.id(), reason.trim());
     }
 
     /** Chi tiết bài PUBLISHED kèm bình luận. */

@@ -2,6 +2,8 @@ package com.edua.beeduasystem.service.weeklytask;
 
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
 import com.edua.beeduasystem.domain.model.auth.AccessTokenClaims;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
@@ -19,6 +21,7 @@ import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
 import com.edua.beeduasystem.repository.repositories.NotificationRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.repository.repositories.WeeklyTaskRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -53,11 +56,12 @@ public class WeeklyTaskService {
     private final CurrentUserProvider currentUser;
     private final NotificationRepository notificationRepository;
     private final NotificationStreamPort streamPort;
+    private final ActivityLogService activityLogService;
 
     public WeeklyTaskService(WeeklyTaskRepository repository, LibraryContentRepository libraryContentRepository,
                               AppUserRepository userRepository, UserRoleRepository userRoleRepository,
                               CurrentUserProvider currentUser, NotificationRepository notificationRepository,
-                              NotificationStreamPort streamPort) {
+                              NotificationStreamPort streamPort, ActivityLogService activityLogService) {
         this.repository = repository;
         this.libraryContentRepository = libraryContentRepository;
         this.userRepository = userRepository;
@@ -65,6 +69,7 @@ public class WeeklyTaskService {
         this.currentUser = currentUser;
         this.notificationRepository = notificationRepository;
         this.streamPort = streamPort;
+        this.activityLogService = activityLogService;
     }
 
     /** UC-80: lịch tuần theo scope của current user (Teacher: của mình; Moderator: cả subject). */
@@ -186,11 +191,14 @@ public class WeeklyTaskService {
     @Transactional
     public WeeklyTaskViews.Detail approve(UUID id) {
         WeeklyTask t = requireSubmittedInModeratorSubject(id);
+        UUID moderatorId = currentUser.requireUserId();
         WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
                 t.weekStartDate(), t.scopeDescription(), t.deadline(), WeeklyTaskReviewStatus.APPROVED,
                 t.sourceLibraryContentId(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
-                currentUser.requireUserId(), Instant.now(), null, t.createdAt(), Instant.now()));
+                moderatorId, Instant.now(), null, t.createdAt(), Instant.now()));
         notify(t.teacherId(), "Giáo án đã được duyệt", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã được duyệt.");
+        activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
+                ActivityLogAction.APPROVE_WEEKLY_TASK, "WEEKLY_TASK", t.id(), null);
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
 
@@ -202,11 +210,14 @@ public class WeeklyTaskService {
         }
         WeeklyTask t = requireSubmittedInModeratorSubject(id);
         String reason = rawReason.trim();
+        UUID moderatorId = currentUser.requireUserId();
         WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
                 t.weekStartDate(), t.scopeDescription(), t.deadline(), WeeklyTaskReviewStatus.REJECTED,
                 t.sourceLibraryContentId(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
-                currentUser.requireUserId(), Instant.now(), reason, t.createdAt(), Instant.now()));
+                moderatorId, Instant.now(), reason, t.createdAt(), Instant.now()));
         notify(t.teacherId(), "Giáo án bị từ chối", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã bị từ chối. Lý do: " + reason);
+        activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
+                ActivityLogAction.REJECT_WEEKLY_TASK, "WEEKLY_TASK", t.id(), reason);
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
 

@@ -28,6 +28,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/lesson-plan-approval": { requireAuth: true, allowedRoles: ["MODERATOR"] },
   "/user-management": { requireAuth: true, allowedRoles: ["MODERATOR", "PRINCIPAL"] },
   "/it-staff": { requireAuth: true, allowedRoles: ["IT_STAFF"] },
+  "/it-staff/activity-log": { requireAuth: true, allowedRoles: ["IT_STAFF"] },
   "/it-staff-users": { requireAuth: true, allowedRoles: ["PRINCIPAL"] },
 };
 

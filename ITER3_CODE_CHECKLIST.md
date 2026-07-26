@@ -11,9 +11,9 @@ Legend:
 
 | Code reality | Count |
 | --- | ---: |
-| Coded | 18 |
+| Coded | 19 |
 | Partial | 0 |
-| Not found | 9 |
+| Not found | 8 |
 
 ## Checklist
 
@@ -31,7 +31,7 @@ Legend:
 | [x] | Teacher Account Management | User & Content Management | Pending | Coded | Backend `/api/moderator/teachers`; frontend `/user-management`. |
 | [x] | Create Notifications (send to subject teachers) | User & Content Management | Pending | Coded | Backend `POST /api/notifications` (`NotificationController.java`, `NotificationService.create`) — Moderator broadcast tới Teacher cùng subject, fan-out `notifications`/`notification_recipients` (`V17__create_notifications.sql`) + push STOMP `/user/queue/notifications`. Frontend: form "Soạn thông báo" ở `/notifications` (chỉ hiện cho MODERATOR). Spec: `designs/API_designs/notifications.md`. |
 | [x] | View & Manage My Notifications | User & Content Management | Pending | Coded | Backend `GET /api/notifications`, `/unread-count`, `PATCH /{id}/read`, `POST /read-all`. Frontend `fe/app/notifications/page.tsx` (list, filter unread, mark read/read-all) + badge chưa đọc realtime trên `Sidebar`. |
-| [ ] | View & Filter Activity Log | User & Content Management | Pending | Not found | Có metadata `granted_by/granted_at` cho role assignment, nhưng chưa có audit/activity log module hoặc screen. Owner đã đổi: `IT Staff` (IT Manager) xem/duyệt log, không phải Mod/Principal như mô tả WBS ban đầu — xem Follow-Up Notes. |
+| [x] | View & Filter Activity Log | User & Content Management | Pending | Coded | SRS UC-11. Backend `activity_logs` table (`V22__create_activity_logs.sql`); `ActivityLogService.record/search`; `GET /api/it-staff/activity-log` (`ActivityLogController`, role IT_STAFF), filter theo actorId/category/from/to. Ghi log trực tiếp (không AOP) tại 15 điểm: login/logout (`AuthService`), grant/revoke/reactivate Moderator/IT Staff/Teacher (`PrincipalModeratorService`, `PrincipalItStaffService`, `ModeratorTeacherService`), approve/reject Library content (`LibraryContentService`), remove Blog post (`BlogPostService`), approve/reject Weekly Task (`WeeklyTaskService`), update AI system prompt (`AiSystemPromptService`). v1 scope: 4 categories (AUTH/ACCOUNT/MODERATION/CONFIG) — xem Follow-Up Notes. Frontend `/it-staff/activity-log`. |
 | [x] | Moderate Hub Content (review, approve, reject) | User & Content Management | Pending | Coded | Backend `GET /api/library/contents/moderation-queue`, `POST .../approval`, `POST .../rejection` (`LibraryContentService.approve/reject/listModerationQueue`) — subject-scoped như Blog moderation. Frontend `/hub-moderation`. |
 | [ ] | Manage Hub (categorize, tag, organize, pin) | User & Content Management | Pending | Not found | Chưa thấy category/tag/pin/organize model hoặc API cho Hub. |
 | [x] | View / Update AI System Prompts | User & Content Management | Pending | Coded | Backend `/api/it-staff/system-prompts` (`ItStaffController.java`); frontend `/it-staff`; prompt được apply vào lesson/slide/molecule AI flows. Role contract hiện là `IT_STAFF`. |
@@ -65,6 +65,8 @@ Legend:
 - Notifications UI: `fe/app/notifications/page.tsx`, `fe/lib/notifications.ts`, `fe/lib/ws/notifications-client.ts`, badge trong `fe/components/layout/Sidebar.tsx`
 - Weekly Task API (giao/nộp/rút/duyệt giáo án tuần, SRS UC-80..89): `be/src/main/java/com/edua/beeduasystem/presentation/controller/WeeklyTaskController.java`, `be/src/main/java/com/edua/beeduasystem/service/weeklytask/WeeklyTaskService.java`, migration `V21__create_weekly_tasks.sql`
 - Weekly Task UI: `fe/app/weekly-schedule/page.tsx` (Teacher + Moderator), `fe/app/lesson-plan-approval/page.tsx` (Moderator), `fe/lib/weekly-task.ts`
+- Activity Log API (SRS UC-11): `be/src/main/java/com/edua/beeduasystem/presentation/controller/ActivityLogController.java`, `be/src/main/java/com/edua/beeduasystem/service/activitylog/ActivityLogService.java`, migration `V22__create_activity_logs.sql`
+- Activity Log UI: `fe/app/it-staff/activity-log/page.tsx`, `fe/lib/activity-log.ts`
 
 ## Follow-Up Notes
 
@@ -75,3 +77,4 @@ Legend:
 - Resolved: the shared Supabase dev DB's `flyway_schema_history` drift at V18 (schema had `library_contents.submitted_at` without V18 recorded as applied) has been reconciled — history rows for V18/V19 inserted and the missing `idx_library_contents_status_subject` index created. `./mvnw spring-boot:run` / `scripts/start.ps1` against the cloud DB now succeeds.
 - Runtime-verified via curl against the running backend (JWTs minted locally with the configured HS256 secret for existing TEACHER/MODERATOR seed accounts, no code changes made to auth): Library content create/submit/moderation-queue/approve/reject (incl. 400 on missing rejection reason, 403 on wrong role/subject), and Hub public list/detail (guest, no token), comment create/update/delete (403 cross-user), report, and customize-to-library. All endpoints behaved per the checklist entries above.
 - Added (this session): Weekly Task epic (SRS `Report3_Software Requirement Specification v1.2.docx` §2.12–2.13, UC-80..89). "Submit Lesson Plan for Approval"/"Moderator Approve / Reject Lesson Plans" in the WBS turned out to require the full Weekly Task workflow (moderator assigns a lesson-plan task + deadline to a teacher in their subject; teacher submits/unsubmits; moderator reviews a subject-scoped queue) — not a standalone submit action. `weekly_tasks.review_status` is intentionally independent of `library_contents.status` (Hub Publish Status). Verified via `WeeklyTaskServiceTest` (22 tests) and full `./mvnw test` (all green) plus `npm run lint && npm run typecheck && npm run build` in `fe/`. Google Drive WBS tracker rows 53/54 updated to match.
+- Added (this session): Activity Log (SRS `Report3_Software Requirement Specification.docx` UC-11). No audit/logging mechanism existed anywhere in the backend before this; writes are done via direct injection + explicit call in each mutating service (no AOP/events), matching the codebase's existing style. **v1 scope decision**: only 4 categories are logged — `AUTH` (login, logout; refresh-token events intentionally excluded as high-volume/low-audit-value), `ACCOUNT` (grant/revoke/reactivate Moderator, IT Staff, Teacher), `MODERATION` (approve/reject Library-Hub content, remove Blog post, approve/reject Weekly Task), `CONFIG` (AI system prompt updates). Self-service **content changes** (create/update/delete of a user's own private Library content, Blog post, Weekly Task submit/unsubmit) are explicitly deferred — lower audit value, would roughly double the call sites touched. Verified via `ActivityLogServiceTest` (5 tests) and full `./mvnw test` (102 tests, all green) plus `npm run lint && npm run typecheck && npm run build` in `fe/`.

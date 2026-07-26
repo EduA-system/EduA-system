@@ -3,12 +3,15 @@ package com.edua.beeduasystem.service.auth;
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,13 +31,16 @@ public class PrincipalModeratorService {
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ActivityLogService activityLogService;
 
     public PrincipalModeratorService(AppUserRepository userRepository,
                                  UserRoleRepository userRoleRepository,
-                                 CurrentUserProvider currentUserProvider) {
+                                 CurrentUserProvider currentUserProvider,
+                                 ActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.currentUserProvider = currentUserProvider;
+        this.activityLogService = activityLogService;
     }
 
     public record ModeratorListResult(
@@ -93,6 +99,8 @@ public class PrincipalModeratorService {
                     u.avatarUrl(), u.contactInfo(),
                     subject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
             assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
+            activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
+                    ActivityLogAction.GRANT_MODERATOR, "APP_USER", reactivated.id(), null);
             return reactivated;
         }
 
@@ -102,6 +110,8 @@ public class PrincipalModeratorService {
                 null, null,
                 subject, UserStatus.INVITED, now, null));
         assignRole(saved.id(), Role.MODERATOR, currentUserId, now);
+        activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.GRANT_MODERATOR, "APP_USER", saved.id(), null);
         return saved;
     }
 
@@ -149,6 +159,9 @@ public class PrincipalModeratorService {
 
         AppUser savedReplacement = userRepository.save(replacement);
         assignRole(savedReplacement.id(), Role.MODERATOR, currentUserId, now);
+        activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.REPLACE_MODERATOR, "APP_USER", savedReplacement.id(),
+                "oldUserId=" + demotedModerator.id());
         return savedReplacement;
     }
 
@@ -173,6 +186,8 @@ public class PrincipalModeratorService {
                 user.avatarUrl(), user.contactInfo(),
                 user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
         assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
+        activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.REACTIVATE_MODERATOR, "APP_USER", reactivated.id(), null);
         return reactivated;
     }
 

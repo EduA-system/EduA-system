@@ -7,6 +7,7 @@ import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,6 +31,7 @@ class PrincipalModeratorServiceTest {
     private AppUserRepository userRepository;
     private UserRoleRepository userRoleRepository;
     private CurrentUserProvider currentUserProvider;
+    private ActivityLogService activityLogService;
     private PrincipalModeratorService service;
 
     @BeforeEach
@@ -37,7 +39,9 @@ class PrincipalModeratorServiceTest {
         userRepository = mock(AppUserRepository.class);
         userRoleRepository = mock(UserRoleRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
-        service = new PrincipalModeratorService(userRepository, userRoleRepository, currentUserProvider);
+        activityLogService = mock(ActivityLogService.class);
+        service = new PrincipalModeratorService(userRepository, userRoleRepository, currentUserProvider,
+                activityLogService);
     }
 
     @Test
