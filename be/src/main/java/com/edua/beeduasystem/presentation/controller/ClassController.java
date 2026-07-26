@@ -7,12 +7,14 @@ import com.edua.beeduasystem.presentation.dto.classroom.ClassDetailDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassMemberDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassMemberPageDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassPageDto;
+import com.edua.beeduasystem.presentation.dto.classroom.ClassResourcePageDto;
 import com.edua.beeduasystem.presentation.dto.classroom.CreateClassRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.ImportStudentsResponse;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassStatusRequest;
 import com.edua.beeduasystem.service.classroom.ClassEnrollmentService;
 import com.edua.beeduasystem.service.classroom.ClassManagementService;
+import com.edua.beeduasystem.service.classroom.ClassResourceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,16 +36,19 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/classes")
-@Tag(name = "Class Management", description = "Teacher quan ly lop hoc theo Class Hub (UC-29/30/31/32/33) va them hoc sinh (UC-36)")
+@Tag(name = "Class Management", description = "Teacher quan ly lop hoc theo Class Hub (UC-29/30/31/32/33), them hoc sinh (UC-36) va xem class resources (UC-41)")
 public class ClassController {
 
     private final ClassManagementService classManagementService;
     private final ClassEnrollmentService classEnrollmentService;
+    private final ClassResourceService classResourceService;
 
     public ClassController(ClassManagementService classManagementService,
-                           ClassEnrollmentService classEnrollmentService) {
+                           ClassEnrollmentService classEnrollmentService,
+                           ClassResourceService classResourceService) {
         this.classManagementService = classManagementService;
         this.classEnrollmentService = classEnrollmentService;
+        this.classResourceService = classResourceService;
     }
 
     @GetMapping
@@ -111,5 +116,14 @@ public class ClassController {
     @Operation(summary = "Import học sinh từ file .csv/.xlsx, cột bắt buộc \"gmail\" (UC-36 Alt Flow)")
     public ImportStudentsResponse importMembers(@PathVariable UUID id, @RequestPart("file") MultipartFile file) {
         return ImportStudentsResponse.from(classEnrollmentService.importStudents(id, file));
+    }
+
+    @GetMapping("/{id}/resources")
+    @Operation(summary = "Xem danh sách resource của lớp đã enrolled (UC-41)")
+    public ClassResourcePageDto resources(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ClassResourcePageDto.from(classResourceService.listResources(id, page, size));
     }
 }
