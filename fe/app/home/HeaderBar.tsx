@@ -1,4 +1,5 @@
-import { box, ChevronDown, COLOR, FRAME_WIDTH, HEADER_HEIGHT, serif } from "./_shared";
+import Link from "next/link";
+import { box, COLOR, FRAME_WIDTH, HEADER_HEIGHT, serif } from "./_shared";
 
 // Thanh headbar tách riêng: logo EDUA, nav Meet/Platform, nút Start/Contact.
 // Toạ độ tuyệt đối theo frame Figma; header kết thúc tại đường divider y = HEADER_HEIGHT.
@@ -43,49 +44,31 @@ export function HeaderBar() {
           EDUA
         </div>
 
-        <div
+        <Link
+          href="/community-hub"
           style={{
-            ...box(735, 28, 33, 17),
+            ...box(735, 28, 90, 17),
             fontSize: 14,
             lineHeight: "14px",
             color: COLOR.inkHeader,
+            textDecoration: "none",
           }}
         >
-          Meet
-        </div>
-        <div
-          style={{
-            ...box(772, 31, 12, 12),
-            color: COLOR.inkHeader,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <ChevronDown />
-        </div>
+          Cộng đồng
+        </Link>
 
-        <div
+        <Link
+          href="/periodic-table"
           style={{
-            ...box(810, 28, 57, 17),
+            ...box(835, 28, 110, 17),
             fontSize: 14,
             lineHeight: "14px",
             color: COLOR.inkHeader,
+            textDecoration: "none",
           }}
         >
-          Platform
-        </div>
-        <div
-          style={{
-            ...box(871, 31, 12, 12),
-            color: COLOR.inkHeader,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <ChevronDown />
-        </div>
+          Bảng tuần hoàn
+        </Link>
 
         <a
           href="#features"
@@ -104,8 +87,8 @@ export function HeaderBar() {
           Start
         </a>
 
-        <a
-          href="#contact"
+        <Link
+          href="/login"
           style={{
             ...box(1144, 24, 100, 26),
             backgroundColor: COLOR.ink,
@@ -118,8 +101,8 @@ export function HeaderBar() {
             textDecoration: "none",
           }}
         >
-          Contact
-        </a>
+          Đăng nhập
+        </Link>
       </div>
     </div>
   );
