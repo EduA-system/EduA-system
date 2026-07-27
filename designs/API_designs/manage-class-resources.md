@@ -244,8 +244,12 @@ body: UpdateClassResourceRequest (partial)
 
 - `UC-42 View Class Resource Detail`, `UC-43 Download Assigned Material` — kế thừa cùng
   `ClassResourceRepository`, thiết kế sau khi tài liệu này chốt.
-- `UC-44→48` (Submission) — cần domain `Submission` mới; khi đó `DELETE` ở đây cần thêm bước xóa
-  submission liên quan thật sự (BR-45), đề xuất qua FK `ON DELETE CASCADE` thay vì sửa lại endpoint.
+- `UC-47/48` (Submit/Unsubmit Assignment, phía Student) đã thiết kế ở
+  [`submit-assignment.md`](./submit-assignment.md) — `DELETE` ở đây giờ có FK
+  `submissions.class_resource_id ON DELETE CASCADE` xóa submission liên quan thật sự (BR-45), không
+  cần sửa lại endpoint.
+- `UC-44/45/46` (View Submissions List/Detail, Download Submission File, phía Teacher) vẫn chưa thiết
+  kế — kế thừa cùng `SubmissionRepository` vừa định nghĩa ở `submit-assignment.md`.
 - UI Teacher-side (Post/Update/Delete resource) ở FE (`fe/components/classroom/`) chưa tồn tại, sẽ
   thiết kế sau khi API được chốt.
 - Giới hạn kích thước/định dạng file khi `FILE_UPLOAD` dùng chung rule của `POST /api/uploads`

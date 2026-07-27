@@ -152,8 +152,11 @@ query: ?page=0&size=20
   [`../manage-class-resources/flow.md`](../manage-class-resources/flow.md).
 - `UC-42 View Class Resource Detail` và `UC-43 Download Assigned Material` là bước tiếp theo tự nhiên
   sau danh sách này, kế thừa cùng `ClassResourceRepository`.
-- `UC-44`→`UC-48` (View Submissions List/Detail, Download Submission File, Submit/Unsubmit Assignment)
-  cần domain `Submission` mới — khi đó `submissionStatus` trong `ClassResourceSummaryDto` sẽ được cập
-  nhật để phản ánh dữ liệu thật (`ON_TIME`/`LATE`) thay vì placeholder `NOT_SUBMITTED`.
+- `UC-47/48` (Submit/Unsubmit Assignment, phía Student) đã thiết kế ở
+  [`submit-assignment.md`](./submit-assignment.md) — sau khi `ClassResourceService.listResources`
+  được cập nhật theo tài liệu đó, `submissionStatus` ở đây sẽ phản ánh dữ liệu thật (`ON_TIME`/`LATE`)
+  thay vì placeholder `NOT_SUBMITTED`.
+- `UC-44/45/46` (View Submissions List/Detail, Download Submission File, phía Teacher) vẫn chưa thiết
+  kế — kế thừa cùng `SubmissionRepository` đã định nghĩa ở `submit-assignment.md`.
 - UI Class Resources ở FE (`fe/components/classroom/`) chưa tồn tại, sẽ thiết kế sau khi API được
   chốt.
