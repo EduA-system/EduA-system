@@ -110,10 +110,19 @@ function ResourceFormPanel({
   );
   const [uploading, setUploading] = useState(false);
   const [submissionEnabled, setSubmissionEnabled] = useState(initial?.submissionEnabled ?? false);
-  const [deadline, setDeadline] = useState(toDatetimeLocalValue(initial?.deadline ?? null));
+  const initialDeadlineValue = toDatetimeLocalValue(initial?.deadline ?? null);
+  const [deadline, setDeadline] = useState(initialDeadlineValue);
+  const [minDeadline, setMinDeadline] = useState(() => toDatetimeLocalValue(new Date().toISOString()));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setMinDeadline(toDatetimeLocalValue(new Date().toISOString()));
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (isEdit || sourceType !== "LIBRARY_SNAPSHOT") return;
@@ -188,6 +197,10 @@ function ResourceFormPanel({
     }
     if (submissionEnabled && !deadline) {
       setError("Vui lòng nhập hạn nộp bài.");
+      return;
+    }
+    if (submissionEnabled && deadline && deadline !== initialDeadlineValue && new Date(deadline).getTime() <= Date.now()) {
+      setError("Hạn nộp bài phải ở trong tương lai.");
       return;
     }
 
@@ -375,6 +388,7 @@ function ResourceFormPanel({
             <input
               type="datetime-local"
               value={deadline}
+              min={minDeadline}
               onChange={(event) => setDeadline(event.target.value)}
               className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none transition focus:border-[#d97757]"
             />

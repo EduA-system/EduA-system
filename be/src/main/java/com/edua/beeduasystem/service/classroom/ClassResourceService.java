@@ -139,6 +139,10 @@ public class ClassResourceService {
         if (newSubmissionEnabled && newDeadline == null) {
             throw new IllegalArgumentException("Deadline is required when submissions are enabled.");
         }
+        boolean deadlineChanged = deadline != null && !deadline.equals(existing.deadline());
+        if (newSubmissionEnabled && deadlineChanged && !newDeadline.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("Deadline must be in the future.");
+        }
 
         String newAttachmentUrl = existing.attachmentUrl();
         String newAttachmentFileName = existing.attachmentFileName();
@@ -285,6 +289,9 @@ public class ClassResourceService {
     private static Instant requireDeadline(Instant deadline) {
         if (deadline == null) {
             throw new IllegalArgumentException("Deadline is required when submissions are enabled.");
+        }
+        if (!deadline.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("Deadline must be in the future.");
         }
         return deadline;
     }
