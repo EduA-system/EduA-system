@@ -140,6 +140,18 @@ function ResourceFormPanel({
     };
   }, [authFetch, isEdit, libraryQuery, sourceType]);
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onCancel]);
+
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -210,20 +222,30 @@ function ResourceFormPanel({
   }
 
   return (
-    <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[14px] font-semibold">{isEdit ? "Sửa tài nguyên" : "Đăng tài liệu / bài tập mới"}</h3>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex size-8 items-center justify-center rounded-[10px] text-[#8a837b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-10"
+      role="dialog"
+      aria-modal="true"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-[640px] rounded-[18px] bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[#ede8e1] px-6 py-4">
+          <h3 className="text-[15px] font-semibold text-[#1f1f1f]">{isEdit ? "Sửa tài nguyên" : "Đăng tài liệu / bài tập mới"}</h3>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex size-8 items-center justify-center rounded-[10px] text-[#8a837b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-        {!isEdit && (
+        <form onSubmit={handleSubmit}>
+          <div className="max-h-[65vh] space-y-4 overflow-y-auto px-6 py-5">
+            {!isEdit && (
           <div>
             <span className="block text-[12px] font-medium text-[#6b6b6b]">Nguồn tài liệu</span>
             <div className="mt-2 grid grid-cols-2 gap-3">
@@ -359,31 +381,33 @@ function ResourceFormPanel({
           </label>
         )}
 
-        {error && (
-          <div className="flex items-start gap-2 rounded-[10px] border border-[#e8b4a4] bg-[#fdf3ef] px-3 py-2.5 text-[12.5px] text-[#c0492b]">
-            <AlertCircle className="mt-0.5 size-4 shrink-0" />
-            <span>{error}</span>
+            {error && (
+              <div className="flex items-start gap-2 rounded-[10px] border border-[#e8b4a4] bg-[#fdf3ef] px-3 py-2.5 text-[12.5px] text-[#c0492b]">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
           </div>
-        )}
 
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={saving || uploading}
-            className="flex h-11 items-center justify-center gap-2 rounded-[11px] bg-[#d97757] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]"
-          >
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-            {saving ? "Đang lưu..." : isEdit ? "Lưu thay đổi" : "Đăng tài liệu"}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex h-11 items-center justify-center rounded-[11px] border border-[#d8d1c9] px-5 text-[13px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec]"
-          >
-            Hủy
-          </button>
-        </div>
-      </form>
+          <div className="flex items-center gap-3 border-t border-[#ede8e1] px-6 py-4">
+            <button
+              type="submit"
+              disabled={saving || uploading}
+              className="flex h-11 items-center justify-center gap-2 rounded-[11px] bg-[#d97757] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]"
+            >
+              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              {saving ? "Đang lưu..." : isEdit ? "Lưu thay đổi" : "Đăng tài liệu"}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex h-11 items-center justify-center rounded-[11px] border border-[#d8d1c9] px-5 text-[13px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec]"
+            >
+              Hủy
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
