@@ -108,7 +108,7 @@ export function ResourceCard({
   const SourceIcon = resource.sourceType === "LIBRARY_SNAPSHOT" ? Library : UploadCloud;
 
   return (
-    <article className="relative overflow-hidden rounded-[14px] border border-[#d8d1c9] bg-white transition hover:border-[#c9a998] hover:shadow-[0_10px_24px_rgba(31,31,31,0.06)]">
+    <article className="relative flex gap-4 rounded-[14px] border border-[#d8d1c9] bg-white p-4 transition hover:border-[#c9a998] hover:shadow-[0_10px_24px_rgba(31,31,31,0.06)]">
       {canManage && (
         <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
           <button
@@ -130,18 +130,19 @@ export function ResourceCard({
           </button>
         </div>
       )}
+
       {resource.thumbnailUrl ? (
-        <div className="relative h-[140px] w-full bg-[#f5f1ec]">
+        <div className="relative hidden size-[92px] shrink-0 overflow-hidden rounded-[10px] bg-[#f5f1ec] sm:block">
           <Image src={resource.thumbnailUrl} alt="" fill className="object-cover" unoptimized />
         </div>
       ) : (
-        <div className="flex h-[96px] w-full items-center justify-center bg-[#f5f1ec]">
-          <SourceIcon className="size-8 text-[#c9a998]" />
+        <div className="hidden size-[92px] shrink-0 items-center justify-center rounded-[10px] bg-[#f5f1ec] sm:flex">
+          <SourceIcon className="size-7 text-[#c9a998]" />
         </div>
       )}
 
-      <div className="p-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2 pr-16">
           <span className="inline-flex items-center gap-1 rounded-full border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]">
             <SourceIcon className="size-3" /> {sourceTypeLabel(resource.sourceType)}
           </span>
@@ -152,12 +153,12 @@ export function ResourceCard({
           )}
         </div>
 
-        <h3 className="mt-3 text-[15px] font-semibold leading-snug text-[#1f1f1f]">{resource.title}</h3>
+        <h3 className="mt-2.5 text-[15px] font-semibold leading-snug text-[#1f1f1f]">{resource.title}</h3>
         {resource.description && (
           <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-[19px] text-[#6b6b6b]">{resource.description}</p>
         )}
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {resource.attachment?.url && (
             <a
               href={resource.attachment.url}
@@ -166,7 +167,7 @@ export function ResourceCard({
               className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1.5 text-[11.5px] font-medium text-[#1f1f1f] transition hover:bg-[#f5f1ec]"
             >
               <Paperclip className="size-3.5 text-[#8a837b]" />
-              <span className="max-w-[160px] truncate">{resource.attachment.fileName ?? "Tệp đính kèm"}</span>
+              <span className="max-w-[220px] truncate">{resource.attachment.fileName ?? "Tệp đính kèm"}</span>
               {resource.attachment.sizeBytes !== null && (
                 <span className="text-[#8a837b]">· {formatFileSize(resource.attachment.sizeBytes)}</span>
               )}
@@ -181,7 +182,7 @@ export function ResourceCard({
           )}
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-[#ede8e1] pt-3 text-[11.5px] text-[#8a837b]">
+        <div className="mt-3 flex items-center justify-between border-t border-[#ede8e1] pt-2.5 text-[11.5px] text-[#8a837b]">
           <span>{resource.postedByName ?? "Giáo viên"}</span>
           <span>{formatDateTime(resource.postedAt)}</span>
         </div>

@@ -761,9 +761,9 @@ export function ClassDetailPage() {
 
                     <div className="mt-5">
                       {resourcesLoading && resources.length === 0 ? (
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-4">
                           {[1, 2].map((item) => (
-                            <div key={item} className="h-[260px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
+                            <div key={item} className="h-[124px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
                           ))}
                         </div>
                       ) : resources.length === 0 ? (
@@ -773,7 +773,7 @@ export function ClassDetailPage() {
                           <p className="mt-1 text-[12px] text-[#6b6b6b]">Đăng tài liệu hoặc bài tập đầu tiên cho lớp này.</p>
                         </div>
                       ) : (
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-4">
                           {resources.map((resource) => (
                             <ResourceCard
                               key={resource.id}
