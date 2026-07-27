@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, BookOpen, FileText, Inbox, RefreshCw } from "lucide-react";
+import { AlertCircle, ArrowLeft, BookOpen, Inbox, RefreshCw } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
@@ -12,8 +12,9 @@ import {
   getClassDetail,
   listClassResources,
   listEnrolledClasses,
+  subjectLabel,
 } from "@/lib/classroom";
-import { ClassPickerCard, ResourceCard } from "./shared";
+import { ClassPickerCard, ResourceCard, statusClasses, subjectBannerClasses } from "./shared";
 
 export function StudentClassResourcesPage() {
   const { user, status, authFetch } = useAuth();
@@ -139,114 +140,152 @@ export function StudentClassResourcesPage() {
 
         <section className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
           <div className="mx-auto w-full max-w-[1220px]">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div>
+            {!classId ? (
+              <>
                 <div className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#cdd7ef] bg-[#f1f4ff] px-3 text-[11px] font-medium text-[#3f54a3]">
                   <BookOpen className="size-3.5" /> Lớp học
                 </div>
                 <h1 className="font-libertine mt-4 text-[44px] font-normal leading-none sm:text-[60px]">Lớp học</h1>
                 <p className="mt-4 max-w-[620px] text-[13px] leading-[23px] text-[#6b6b6b]">
-                  Tài liệu và bài tập giáo viên đã đăng trong lớp, kèm hạn nộp và trạng thái nộp bài của bạn.
+                  Chọn một lớp bạn đã tham gia để xem tài liệu và bài tập giáo viên đã đăng.
                 </p>
-              </div>
 
-              {selectedClass && (
-                <div className="grid w-full grid-cols-3 gap-3 sm:w-auto">
-                  <div className="rounded-[14px] border border-[#d8d1c9] bg-white px-4 py-3">
-                    <p className="text-[11px] text-[#6b6b6b]">Tổng tài nguyên</p>
-                    <p className="mt-1 text-xl font-semibold">{resourcesTotal}</p>
+                {error && (
+                  <div className="mt-6 flex items-start gap-2 rounded-[12px] border border-[#e8b4a4] bg-[#fdf3ef] px-4 py-3 text-[13px] text-[#c0492b]">
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                    <span>{error}</span>
                   </div>
-                  <div className="rounded-[14px] border border-[#f0d9aa] bg-[#fff7df] px-4 py-3">
-                    <p className="text-[11px] text-[#9a661c]">Cần nộp bài</p>
-                    <p className="mt-1 text-xl font-semibold text-[#9a661c]">{submissionCount}</p>
-                  </div>
-                  <div className="rounded-[14px] border border-[#c9d5ff] bg-[#f1f4ff] px-4 py-3">
-                    <p className="text-[11px] text-[#3f54a3]">Từ thư viện</p>
-                    <p className="mt-1 text-xl font-semibold text-[#3f54a3]">{libraryCount}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-5">
-              <h2 className="text-[14px] font-semibold text-[#1f1f1f]">Lớp của tôi</h2>
-              {classesLoading && classes.length === 0 ? (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {[1, 2, 3].map((item) => (
-                    <div key={item} className="h-[168px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
-                  ))}
-                </div>
-              ) : classes.length === 0 ? (
-                <p className="mt-3 text-[12px] text-[#6b6b6b]">Bạn chưa được thêm vào lớp nào.</p>
-              ) : (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {classes.map((item) => (
-                    <ClassPickerCard key={item.id} item={item} active={item.id === classId} onSelect={selectClass} />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {error && (
-              <div className="mt-6 flex items-start gap-2 rounded-[12px] border border-[#e8b4a4] bg-[#fdf3ef] px-4 py-3 text-[13px] text-[#c0492b]">
-                <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {classLoading ? (
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="h-[260px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
-                ))}
-              </div>
-            ) : selectedClass ? (
-              <section className="mt-8">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-[14px] font-semibold text-[#1f1f1f]">Tài nguyên & bài tập</h2>
-                  <button
-                    type="button"
-                    onClick={() => void loadResources(selectedClass.id)}
-                    className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
-                  >
-                    <RefreshCw className={`size-3.5 ${resourcesLoading ? "animate-spin" : ""}`} /> Làm mới
-                  </button>
-                </div>
-
-                {selectedClass.status === "INACTIVE" && (
-                  <p className="mt-4 rounded-[10px] border border-[#e6d8cb] bg-[#f8f2ec] px-3 py-2 text-[12px] leading-5 text-[#8a5a35]">
-                    Lớp đang ở chế độ lưu trữ (Inactive) — tài nguyên cũ vẫn xem và tải được bình thường.
-                  </p>
                 )}
 
-                <div className="mt-5">
-                  {resourcesLoading && resources.length === 0 ? (
+                <div className="mt-6">
+                  {classesLoading && classes.length === 0 ? (
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                       {[1, 2, 3].map((item) => (
-                        <div key={item} className="h-[260px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
+                        <div key={item} className="h-[168px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
                       ))}
                     </div>
-                  ) : resources.length === 0 ? (
+                  ) : classes.length === 0 ? (
                     <div className="rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
-                      <Inbox className="mx-auto size-8 text-[#a8a097]" />
-                      <p className="mt-3 text-[13px] font-medium">Không tìm thấy kết quả</p>
-                      <p className="mt-1 text-[12px] text-[#6b6b6b]">Lớp này chưa có tài nguyên hoặc bài tập nào được đăng.</p>
+                      <BookOpen className="mx-auto size-8 text-[#a8a097]" />
+                      <p className="mt-3 text-[13px] font-medium">Bạn chưa được thêm vào lớp nào</p>
+                      <p className="mt-1 text-[12px] text-[#6b6b6b]">Liên hệ giáo viên để được thêm vào lớp.</p>
                     </div>
                   ) : (
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                      {resources.map((resource) => (
-                        <ResourceCard key={resource.id} resource={resource} />
+                      {classes.map((item) => (
+                        <ClassPickerCard key={item.id} item={item} active={false} onSelect={selectClass} />
                       ))}
                     </div>
                   )}
                 </div>
-              </section>
+              </>
             ) : (
-              <div className="mt-8 rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
-                <FileText className="mx-auto size-8 text-[#a8a097]" />
-                <p className="mt-3 text-[13px] font-medium">Chọn một lớp ở trên để xem tài nguyên</p>
-                <p className="mt-1 text-[12px] text-[#6b6b6b]">Danh sách lớp bạn đã tham gia hiển thị ở trên.</p>
-              </div>
+              <>
+                <div className="flex items-center gap-2 text-[12px] font-medium text-[#6b6b6b]">
+                  <button
+                    type="button"
+                    onClick={() => selectClass("")}
+                    className="inline-flex items-center gap-1.5 transition hover:text-[#1f1f1f]"
+                  >
+                    <ArrowLeft className="size-3.5" /> Lớp học
+                  </button>
+                  {selectedClass && (
+                    <>
+                      <span className="text-[#c9c2b8]">/</span>
+                      <span className="text-[#1f1f1f]">{selectedClass.name}</span>
+                    </>
+                  )}
+                </div>
+
+                {error && (
+                  <div className="mt-4 flex items-start gap-2 rounded-[12px] border border-[#e8b4a4] bg-[#fdf3ef] px-4 py-3 text-[13px] text-[#c0492b]">
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {classLoading || !selectedClass ? (
+                  <div className="mt-4 space-y-4">
+                    <div className="h-[180px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
+                    <div className="h-[260px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
+                  </div>
+                ) : (
+                  <>
+                    <div className={`relative mt-4 overflow-hidden rounded-[16px] px-6 py-7 text-white ${subjectBannerClasses(selectedClass.subject)}`}>
+                      <div className="pointer-events-none absolute -right-8 -top-10 size-40 rounded-full bg-white/10" />
+                      <div className="pointer-events-none absolute -bottom-14 -right-6 size-32 rounded-full bg-white/10" />
+                      <div className="relative flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <span className="rounded-full border border-white/40 bg-white/10 px-2.5 py-1 text-[11px] font-medium">
+                            {subjectLabel(selectedClass.subject)}
+                          </span>
+                          <h1 className="font-libertine mt-3 text-[34px] font-normal leading-tight sm:text-[42px]">{selectedClass.name}</h1>
+                          <p className="mt-2 text-[12.5px] text-white/85">
+                            Khối {selectedClass.grade} · Chủ lớp: {selectedClass.ownerName ?? "Giáo viên"}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClasses(selectedClass.status)}`}>
+                          {selectedClass.status === "ACTIVE" ? "Đang hoạt động" : "Đã lưu trữ"}
+                        </span>
+                      </div>
+
+                      <div className="relative mt-6 grid grid-cols-3 gap-3 sm:max-w-[420px]">
+                        <div className="rounded-[12px] bg-white/10 px-3 py-2.5">
+                          <p className="text-[11px] text-white/75">Tổng tài nguyên</p>
+                          <p className="mt-1 text-lg font-semibold">{resourcesTotal}</p>
+                        </div>
+                        <div className="rounded-[12px] bg-white/10 px-3 py-2.5">
+                          <p className="text-[11px] text-white/75">Cần nộp bài</p>
+                          <p className="mt-1 text-lg font-semibold">{submissionCount}</p>
+                        </div>
+                        <div className="rounded-[12px] bg-white/10 px-3 py-2.5">
+                          <p className="text-[11px] text-white/75">Từ thư viện</p>
+                          <p className="mt-1 text-lg font-semibold">{libraryCount}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex items-center justify-between">
+                      <h2 className="text-[14px] font-semibold text-[#1f1f1f]">Tài nguyên & bài tập</h2>
+                      <button
+                        type="button"
+                        onClick={() => void loadResources(selectedClass.id)}
+                        className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
+                      >
+                        <RefreshCw className={`size-3.5 ${resourcesLoading ? "animate-spin" : ""}`} /> Làm mới
+                      </button>
+                    </div>
+
+                    {selectedClass.status === "INACTIVE" && (
+                      <p className="mt-4 rounded-[10px] border border-[#e6d8cb] bg-[#f8f2ec] px-3 py-2 text-[12px] leading-5 text-[#8a5a35]">
+                        Lớp đang ở chế độ lưu trữ (Inactive) — tài nguyên cũ vẫn xem và tải được bình thường.
+                      </p>
+                    )}
+
+                    <div className="mt-5">
+                      {resourcesLoading && resources.length === 0 ? (
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                          {[1, 2, 3].map((item) => (
+                            <div key={item} className="h-[260px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
+                          ))}
+                        </div>
+                      ) : resources.length === 0 ? (
+                        <div className="rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
+                          <Inbox className="mx-auto size-8 text-[#a8a097]" />
+                          <p className="mt-3 text-[13px] font-medium">Không tìm thấy kết quả</p>
+                          <p className="mt-1 text-[12px] text-[#6b6b6b]">Lớp này chưa có tài nguyên hoặc bài tập nào được đăng.</p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                          {resources.map((resource) => (
+                            <ResourceCard key={resource.id} resource={resource} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
         </section>
