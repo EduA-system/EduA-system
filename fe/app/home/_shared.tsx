@@ -40,27 +40,27 @@ export const COLOR = {
 export const FEATURES = [
   {
     title: "Soạn giáo án trong vài phút",
-    body: "Chọn sách, chương, bài học và AI sinh giáo án có cấu trúc đầy đủ: mục tiêu, hoạt động, phương pháp, củng cố và bài tập về nhà.",
+    body: "Chọn sách, chương, bài học — AI sinh giáo án theo cấu trúc Công văn 5512: mục tiêu và các hoạt động Mở đầu, Hình thành kiến thức, Luyện tập, Vận dụng.",
   },
   {
     title: "Tạo slide bài giảng tự động",
     body: "Từ giáo án có sẵn, hệ thống dựng outline rồi stream từng slide kèm hình minh hoạ để bạn duyệt và chỉnh sửa.",
   },
   {
-    title: "Thí nghiệm số tương tác",
-    body: "Sinh mô phỏng vật lý và hoá học HTML để học sinh thao tác trực tiếp trên lớp mà không cần thiết bị thật.",
+    title: "Thí nghiệm vật lý tương tác",
+    body: "Sinh mô phỏng vật lý HTML — cơ học, dao động & sóng, quang học, điện & từ, nhiệt khí, hạt nhân — để học sinh thao tác trực tiếp trên lớp mà không cần thiết bị thật.",
   },
   {
-    title: "Phòng thí nghiệm hoá học ảo",
-    body: "Kéo thả hoá chất và dụng cụ vào bình, mô phỏng phản ứng theo thời gian thực kèm cảnh báo an toàn.",
+    title: "Trực quan hoá cấu trúc phân tử",
+    body: "AI dựng mô hình phân tử 3D (dạng khung nối hoặc đặc khít) cho ankan, anken, ankin để học sinh quan sát và xoay trực tiếp trên lớp.",
   },
   {
     title: "Thư viện tài liệu dùng chung",
-    body: "Lưu mọi giáo án và slide đã tạo, hoặc upload PDF/DOCX có sẵn để tái sử dụng và chia sẻ.",
+    body: "Lưu mọi giáo án, slide và mô phỏng đã tạo; gửi lên Hub cộng đồng để chia sẻ sau khi được duyệt.",
   },
   {
-    title: "Tham chiếu phong cách giảng dạy",
-    body: "Chọn một bộ tài liệu mẫu làm style reference; AI sẽ bắt chước văn phong và bố cục trình bày của bạn.",
+    title: "Bảng tuần hoàn tương tác",
+    body: "Tra cứu, lọc và so sánh nguyên tố theo tính chất — nhiệt độ nóng chảy, độ âm điện, năng lượng ion hoá — ngay trong bài giảng.",
   },
 ];
 

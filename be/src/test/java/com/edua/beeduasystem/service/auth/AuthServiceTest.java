@@ -12,6 +12,7 @@ import com.edua.beeduasystem.repository.gateways.TokenService;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -37,6 +38,7 @@ class AuthServiceTest {
     private AppUserRepository userRepository;
     private RefreshTokenRepository refreshTokenRepository;
     private UserRoleRepository userRoleRepository;
+    private ActivityLogService activityLogService;
     private AuthService authService;
 
     @BeforeEach
@@ -46,8 +48,9 @@ class AuthServiceTest {
         userRepository = mock(AppUserRepository.class);
         refreshTokenRepository = mock(RefreshTokenRepository.class);
         userRoleRepository = mock(UserRoleRepository.class);
+        activityLogService = mock(ActivityLogService.class);
         authService = new AuthService(verifier, tokenService, userRepository, refreshTokenRepository,
-                userRoleRepository, new CurrentUserProvider(), Duration.ofHours(24));
+                userRoleRepository, new CurrentUserProvider(), activityLogService, Duration.ofHours(24));
     }
 
     private AppUser invitedUser(String email) {

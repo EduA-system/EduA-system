@@ -2,9 +2,12 @@ package com.edua.beeduasystem.service.library;
 
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.library.*;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -16,7 +19,8 @@ import java.util.UUID;
 public class LibraryContentService {
     private final LibraryContentRepository repository;
     private final CurrentUserProvider currentUser;
-    public LibraryContentService(LibraryContentRepository repository, CurrentUserProvider currentUser) { this.repository = repository; this.currentUser = currentUser; }
+    private final ActivityLogService activityLogService;
+    public LibraryContentService(LibraryContentRepository repository, CurrentUserProvider currentUser, ActivityLogService activityLogService) { this.repository = repository; this.currentUser = currentUser; this.activityLogService = activityLogService; }
     public LibraryViews.Page list(String rawType, String rawSubject, String q, int page, int size, String sort) {
         return toPage(repository.search(currentUser.requireUserId(), parseType(rawType), parseSubject(rawSubject), q, page, size, "title".equalsIgnoreCase(sort)), page, size);
     }
@@ -44,13 +48,21 @@ public class LibraryContentService {
     /** Moderator duyệt content SUBMITTED cùng subject với mình lên Hub công khai. */
     public LibraryViews.Detail approve(UUID id) {
         LibraryContent c = requireSubmittedInModeratorSubject(id);
-        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.APPROVED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,currentUser.requireUserId(),Instant.now(),null)));
+        UUID moderatorId = currentUser.requireUserId();
+        LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.APPROVED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),null)));
+        activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
+                ActivityLogAction.APPROVE_LIBRARY_CONTENT, "LIBRARY_CONTENT", c.id(), null);
+        return detail;
     }
     /** Moderator từ chối content SUBMITTED cùng subject với mình, bắt buộc lý do. */
     public LibraryViews.Detail reject(UUID id, String rawReason) {
         if (rawReason == null || rawReason.isBlank()) throw new IllegalArgumentException("Rejection reason is required.");
         LibraryContent c = requireSubmittedInModeratorSubject(id);
-        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.REJECTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,currentUser.requireUserId(),Instant.now(),rawReason.trim())));
+        UUID moderatorId = currentUser.requireUserId();
+        LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),LibraryContentStatus.REJECTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),rawReason.trim())));
+        activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
+                ActivityLogAction.REJECT_LIBRARY_CONTENT, "LIBRARY_CONTENT", c.id(), rawReason.trim());
+        return detail;
     }
     /** Hàng đợi kiểm duyệt: content SUBMITTED cùng subject với Moderator hiện tại. */
     public LibraryViews.Page listModerationQueue(int page, int size) {

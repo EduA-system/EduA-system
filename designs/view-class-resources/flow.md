@@ -96,7 +96,7 @@ flowchart TD
 ### `class_resources` (mới, UUID theo đúng convention `classes`/`class_members`)
 
 ```sql
--- V23__create_class_resources.sql
+-- V25__create_class_resources.sql
 -- Bang nay phuc vu UC-41 (doc danh sach resource). Viec GHI du lieu (UC-38 Post/UC-39 Update/
 -- UC-40 Delete) se co migration/service bo sung rieng khi thiet ke cac use case do; o day chi
 -- dinh nghia schema toi thieu de endpoint GET co nguon du lieu that.

@@ -126,7 +126,7 @@ query: ?page=0&size=20
 
 ## Phụ thuộc & thứ tự build
 
-1. Migration `V23__create_class_resources.sql` tạo bảng `class_resources` (xem
+1. Migration `V25__create_class_resources.sql` tạo bảng `class_resources` (xem
    [`flow.md`](../view-class-resources/flow.md#5-model-du-lieu-du-kien)).
 2. Domain model `ClassResource` (`domain/model/classroom/`), enum `ResourceSourceType`.
 3. Repository interface `ClassResourceRepository` (`repository/repositories/`) với

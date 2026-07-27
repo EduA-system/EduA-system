@@ -2,11 +2,14 @@ package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,12 +23,14 @@ public class PrincipalItStaffService {
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ActivityLogService activityLogService;
 
     public PrincipalItStaffService(AppUserRepository userRepository, UserRoleRepository userRoleRepository,
-                                    CurrentUserProvider currentUserProvider) {
+                                    CurrentUserProvider currentUserProvider, ActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.currentUserProvider = currentUserProvider;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional(readOnly = true)
@@ -48,6 +53,8 @@ public class PrincipalItStaffService {
                         UserStatus.INVITED, now, null));
         AppUser saved = userRepository.save(user);
         userRoleRepository.replaceRole(saved.id(), Role.IT_STAFF, grantedBy, now);
+        activityLogService.record(grantedBy, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.GRANT_IT_STAFF, "APP_USER", saved.id(), null);
         return saved;
     }
 
@@ -56,6 +63,8 @@ public class PrincipalItStaffService {
         AppUser user = requireItStaff(id);
         userRepository.save(new AppUser(user.id(), user.email(), user.googleSub(), user.fullName(), user.avatarUrl(),
                 user.contactInfo(), user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
+        activityLogService.record(currentUserProvider.requireUserId(), "PRINCIPAL", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.REVOKE_IT_STAFF, "APP_USER", user.id(), null);
     }
 
     @Transactional
@@ -65,7 +74,10 @@ public class PrincipalItStaffService {
         Instant now = Instant.now();
         AppUser saved = userRepository.save(new AppUser(user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(), null, UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
-        userRoleRepository.replaceRole(saved.id(), Role.IT_STAFF, currentUserProvider.requireUserId(), now);
+        UUID currentUserId = currentUserProvider.requireUserId();
+        userRoleRepository.replaceRole(saved.id(), Role.IT_STAFF, currentUserId, now);
+        activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.REACTIVATE_IT_STAFF, "APP_USER", saved.id(), null);
         return saved;
     }
 
