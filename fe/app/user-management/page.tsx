@@ -1,6 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  ArrowLeftRight,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  RotateCcw,
+  ShieldCheck,
+  UserMinus,
+  Users,
+} from "lucide-react";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { DashboardIcon } from "@/components/ui/DashboardIcon";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { hasAnyRole } from "@/lib/auth/permissions";
@@ -13,38 +25,47 @@ const SUBJECT_LABELS: Record<string, string> = {
   PHYSICS: "Lý",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  INVITED: "Đã mời",
+  ACTIVE: "Đang hoạt động",
+  DISABLED: "Đã thu hồi",
+};
+
+const PAGE_SIZE = 20;
+
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-type UserItem = {
+type AccountItem = {
   id: string;
   email: string;
   fullName: string | null;
-  subject: string;
   status: string;
+};
+
+type SubjectAccountItem = AccountItem & {
+  subject: string;
   grantedAt: string;
   grantedByEmail: string | null;
 };
 
-type PageResponse = {
-  content: UserItem[];
+type PageResponse<T> = {
+  content: T[];
   page: number;
   size: number;
   totalElements: number;
   totalPages: number;
 };
 
-function availableSubject(items: UserItem[], currentSubject: string): string {
+type Tab = "moderator" | "teacher" | "it-staff";
+
+function availableSubject(items: SubjectAccountItem[], currentSubject: string): string {
   const activeSubjects = new Set(items.filter((item) => item.status !== "DISABLED").map((item) => item.subject));
   return activeSubjects.has(currentSubject)
     ? SUBJECTS.find((subject) => !activeSubjects.has(subject)) ?? currentSubject
     : currentSubject;
 }
 
-async function api<T>(
-  authFetch: AuthFetch,
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function api<T>(authFetch: AuthFetch, path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
@@ -58,111 +79,170 @@ async function api<T>(
   return data as T;
 }
 
-export default function UserManagementPage() {
-  const { user, status, signOut, authFetch } = useAuth();
-  const [items, setItems] = useState<UserItem[]>([]);
-  const [msg, setMsg] = useState("");
+function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[#d8d1c9] bg-[#fbfaf8] p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#8a8178]">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-3 text-2xl font-semibold text-[#1f1f1f]">{value}</div>
+    </div>
+  );
+}
 
-  // Add form
-  const [addEmail, setAddEmail] = useState("");
-  const [addSubject, setAddSubject] = useState("CHEMISTRY");
-  const [addFullName, setAddFullName] = useState("");
-  const [replacementTarget, setReplacementTarget] = useState<UserItem | null>(null);
+function StatusBadge({ status }: { status: string }) {
+  const disabled = status === "DISABLED";
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+        disabled ? "bg-[#fdeceb] text-[#c2483c]" : "bg-[#eef6ec] text-[#5a7a4a]"
+      }`}
+    >
+      {STATUS_LABELS[status] ?? status}
+    </span>
+  );
+}
+
+function Pager({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="mt-4 flex items-center justify-between text-sm text-[#6b6b6b]">
+      <button
+        type="button"
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 0}
+        className="inline-flex items-center gap-1 rounded-lg border border-[#d8d1c9] bg-white px-3 py-1.5 font-medium transition hover:bg-[#f5f1ec] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <ChevronLeft className="size-4" aria-hidden /> Trước
+      </button>
+      <span>
+        Trang {page + 1}/{totalPages}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(page + 1)}
+        disabled={page >= totalPages - 1}
+        className="inline-flex items-center gap-1 rounded-lg border border-[#d8d1c9] bg-white px-3 py-1.5 font-medium transition hover:bg-[#f5f1ec] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Sau <ChevronRight className="size-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+function UserManagementContent() {
+  const { user, authFetch } = useAuth();
+  const isPrincipal = hasAnyRole(user, ["PRINCIPAL"]);
+  const isModerator = hasAnyRole(user, ["MODERATOR"]);
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>(isPrincipal ? "moderator" : "teacher");
+
+  // ── Moderator accounts (Principal only) ──────────────────────────────
+  const [moderatorData, setModeratorData] = useState<PageResponse<SubjectAccountItem> | null>(null);
+  const [moderatorEmail, setModeratorEmail] = useState("");
+  const [moderatorFullName, setModeratorFullName] = useState("");
+  const [moderatorSubject, setModeratorSubject] = useState<string>("CHEMISTRY");
+  const [replacementTarget, setReplacementTarget] = useState<SubjectAccountItem | null>(null);
   const [replacementEmail, setReplacementEmail] = useState("");
   const [disablePrevious, setDisablePrevious] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
 
-  const isPrincipal = hasAnyRole(user, ["PRINCIPAL"]);
-  const isModerator = hasAnyRole(user, ["MODERATOR"]);
+  const loadModerators = useCallback(
+    async (page: number) => {
+      const data = await api<PageResponse<SubjectAccountItem>>(
+        authFetch,
+        `/principal/moderators?page=${page}&size=${PAGE_SIZE}`,
+      );
+      setModeratorData(data);
+      setModeratorSubject((current) => availableSubject(data.content, current));
+    },
+    [authFetch],
+  );
 
-  const loadItems = useCallback(async () => {
-    if (status !== "authenticated" || !user) return;
-    try {
-      if (isPrincipal) {
-        const data = await api<PageResponse>(authFetch, "/principal/moderators");
-        setItems(data.content);
-        setAddSubject((current) => availableSubject(data.content, current));
-      } else if (isModerator) {
-        const data = await api<PageResponse>(authFetch, "/moderator/teachers");
-        setItems(data.content);
-      }
-    } catch (e) {
-      setMsg(String(e));
-    }
-  }, [authFetch, status, user, isPrincipal, isModerator]);
+  // ── Teacher accounts (Moderator only) ────────────────────────────────
+  const [teacherData, setTeacherData] = useState<PageResponse<SubjectAccountItem> | null>(null);
+  const [teacherEmail, setTeacherEmail] = useState("");
+  const [teacherFullName, setTeacherFullName] = useState("");
+
+  const loadTeachers = useCallback(
+    async (page: number) => {
+      const data = await api<PageResponse<SubjectAccountItem>>(
+        authFetch,
+        `/moderator/teachers?page=${page}&size=${PAGE_SIZE}`,
+      );
+      setTeacherData(data);
+    },
+    [authFetch],
+  );
+
+  // ── IT Staff accounts (Principal only) ───────────────────────────────
+  const [itStaffData, setItStaffData] = useState<PageResponse<AccountItem> | null>(null);
+  const [itStaffEmail, setItStaffEmail] = useState("");
+  const [itStaffFullName, setItStaffFullName] = useState("");
+
+  const loadItStaff = useCallback(
+    async (page: number) => {
+      const data = await api<PageResponse<AccountItem>>(authFetch, `/principal/it-staff?page=${page}&size=${PAGE_SIZE}`);
+      setItStaffData(data);
+    },
+    [authFetch],
+  );
 
   useEffect(() => {
-    if (status !== "authenticated" || !user) return;
-    let cancelled = false;
-    const fetchData = async () => {
-      try {
-        if (isPrincipal) {
-          const data = await api<PageResponse>(authFetch, "/principal/moderators");
-          if (!cancelled) {
-            setItems(data.content);
-            setAddSubject((current) => availableSubject(data.content, current));
-          }
-        } else if (isModerator) {
-          const data = await api<PageResponse>(authFetch, "/moderator/teachers");
-          if (!cancelled) setItems(data.content);
-        }
-      } catch (e) {
-        if (!cancelled) setMsg(String(e));
-      }
-    };
-    fetchData();
-    return () => { cancelled = true; };
-  }, [authFetch, status, user, isPrincipal, isModerator]);
+    if (isPrincipal) {
+      void loadModerators(0).catch((e) => setMsg(String(e)));
+      void loadItStaff(0).catch((e) => setMsg(String(e)));
+    } else if (isModerator) {
+      void loadTeachers(0).catch((e) => setMsg(String(e)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPrincipal, isModerator]);
 
-  async function addUser() {
-    if (!addEmail.trim()) return;
+  async function addModerator() {
+    if (!moderatorEmail.trim()) return;
     try {
-      if (isPrincipal) {
-        await api<UserItem>(authFetch, "/principal/moderators", {
-          method: "POST",
-          body: JSON.stringify({ email: addEmail, subject: addSubject, fullName: addFullName || null }),
-        });
-      } else if (isModerator) {
-        await api<UserItem>(authFetch, "/moderator/teachers", {
-          method: "POST",
-          body: JSON.stringify({ email: addEmail, subject: addSubject, fullName: addFullName || null }),
-        });
-      }
-      setAddEmail("");
-      setAddFullName("");
-      setMsg("Đã thêm.");
-      await loadItems();
+      await api(authFetch, "/principal/moderators", {
+        method: "POST",
+        body: JSON.stringify({ email: moderatorEmail, subject: moderatorSubject, fullName: moderatorFullName || null }),
+      });
+      setModeratorEmail("");
+      setModeratorFullName("");
+      setMsg("Đã thêm Moderator.");
+      await loadModerators(moderatorData?.page ?? 0);
     } catch (e) {
       setMsg(String(e));
     }
   }
 
-  async function toggleUser(id: string, currentStatus: string) {
-    const isDisabled = currentStatus === "DISABLED";
+  async function toggleModerator(item: SubjectAccountItem) {
+    const isDisabled = item.status === "DISABLED";
     if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
     try {
       if (isDisabled) {
-        if (isPrincipal) {
-          await api(authFetch, `/principal/moderators/${id}/reactivate`, { method: "PATCH" });
-        } else if (isModerator) {
-          await api(authFetch, `/moderator/teachers/${id}/reactivate`, { method: "PATCH" });
-        }
+        await api(authFetch, `/principal/moderators/${item.id}/reactivate`, { method: "PATCH" });
         setMsg("Đã kích hoạt lại.");
       } else {
-        if (isPrincipal) {
-          await api(authFetch, `/principal/moderators/${id}`, { method: "DELETE" });
-        } else if (isModerator) {
-          await api(authFetch, `/moderator/teachers/${id}`, { method: "DELETE" });
-        }
+        await api(authFetch, `/principal/moderators/${item.id}`, { method: "DELETE" });
         setMsg("Đã thu hồi.");
       }
-      await loadItems();
+      await loadModerators(moderatorData?.page ?? 0);
     } catch (e) {
       setMsg(String(e));
     }
   }
 
-  function openReplacement(item: UserItem) {
+  function openReplacement(item: SubjectAccountItem) {
     setReplacementTarget(item);
     setReplacementEmail("");
     setDisablePrevious(false);
@@ -177,13 +257,13 @@ export default function UserManagementPage() {
     if (!replacementTarget || !replacementEmail.trim()) return;
     setIsReplacing(true);
     try {
-      await api<UserItem>(authFetch, `/principal/moderators/${replacementTarget.id}/replacement`, {
+      await api(authFetch, `/principal/moderators/${replacementTarget.id}/replacement`, {
         method: "POST",
         body: JSON.stringify({ replacementEmail, disablePrevious }),
       });
       setReplacementTarget(null);
-      setMsg("Đã thay moderator.");
-      await loadItems();
+      setMsg("Đã thay Moderator.");
+      await loadModerators(moderatorData?.page ?? 0);
     } catch (e) {
       setMsg(String(e));
     } finally {
@@ -191,141 +271,453 @@ export default function UserManagementPage() {
     }
   }
 
-  async function handleLogout() {
-    await signOut();
-    setItems([]);
+  async function addTeacher() {
+    if (!teacherEmail.trim() || !user?.subject) return;
+    try {
+      await api(authFetch, "/moderator/teachers", {
+        method: "POST",
+        body: JSON.stringify({ email: teacherEmail, subject: user.subject, fullName: teacherFullName || null }),
+      });
+      setTeacherEmail("");
+      setTeacherFullName("");
+      setMsg("Đã thêm Teacher.");
+      await loadTeachers(teacherData?.page ?? 0);
+    } catch (e) {
+      setMsg(String(e));
+    }
   }
 
-  const title = isPrincipal ? "Quản lý Moderator" : "Quản lý Teacher";
-  const addLabel = isPrincipal ? "Thêm Moderator" : "Thêm Teacher";
-  const emptyMsg = isPrincipal ? "Chưa có Moderator." : "Chưa có Teacher.";
+  async function toggleTeacher(item: SubjectAccountItem) {
+    const isDisabled = item.status === "DISABLED";
+    if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
+    try {
+      if (isDisabled) {
+        await api(authFetch, `/moderator/teachers/${item.id}/reactivate`, { method: "PATCH" });
+        setMsg("Đã kích hoạt lại.");
+      } else {
+        await api(authFetch, `/moderator/teachers/${item.id}`, { method: "DELETE" });
+        setMsg("Đã thu hồi.");
+      }
+      await loadTeachers(teacherData?.page ?? 0);
+    } catch (e) {
+      setMsg(String(e));
+    }
+  }
 
-  const takenSubjects = isPrincipal
-    ? new Set(items.filter((i) => i.status !== "DISABLED").map((i) => i.subject))
-    : new Set<string>();
+  async function addItStaff() {
+    if (!itStaffEmail.trim()) return;
+    try {
+      await api(authFetch, "/principal/it-staff", {
+        method: "POST",
+        body: JSON.stringify({ email: itStaffEmail, fullName: itStaffFullName || null }),
+      });
+      setItStaffEmail("");
+      setItStaffFullName("");
+      setMsg("Đã cấp quyền IT Staff.");
+      await loadItStaff(itStaffData?.page ?? 0);
+    } catch (e) {
+      setMsg(String(e));
+    }
+  }
+
+  async function toggleItStaff(item: AccountItem) {
+    const isDisabled = item.status === "DISABLED";
+    if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
+    try {
+      if (isDisabled) {
+        await api(authFetch, `/principal/it-staff/${item.id}/reactivate`, { method: "PATCH" });
+        setMsg("Đã kích hoạt lại.");
+      } else {
+        await api(authFetch, `/principal/it-staff/${item.id}`, { method: "DELETE" });
+        setMsg("Đã thu hồi.");
+      }
+      await loadItStaff(itStaffData?.page ?? 0);
+    } catch (e) {
+      setMsg(String(e));
+    }
+  }
+
+  const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
+    ...(isPrincipal ? [{ key: "moderator" as Tab, label: "Moderator", icon: <Users className="size-4" aria-hidden /> }] : []),
+    ...(isModerator ? [{ key: "teacher" as Tab, label: "Teacher", icon: <Users className="size-4" aria-hidden /> }] : []),
+    ...(isPrincipal ? [{ key: "it-staff" as Tab, label: "IT Staff", icon: <ShieldCheck className="size-4" aria-hidden /> }] : []),
+  ];
+
+  const takenSubjects = new Set(
+    (moderatorData?.content ?? []).filter((i) => i.status !== "DISABLED").map((i) => i.subject),
+  );
 
   return (
-    <RouteGuard pathname="/user-management">
-    {user && (
-    <div className="mx-auto max-w-3xl p-6">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{title}</h1>
-        <span className="text-sm text-gray-600">
-          {user.fullName ?? user.email} · {user.role}
-          {user.subject ? ` · ${user.subject}` : ""}{" "}
-          <button onClick={handleLogout} className="ml-2 underline">
-            Đăng xuất
-          </button>
-        </span>
+    <main className="min-h-screen bg-[#f5f1ec] text-[#1f1f1f]">
+      <header className="sticky top-0 z-30 flex h-14 items-center border-b border-[#d8d1c9] bg-[#f7f5f2] px-4 md:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(true)}
+          className="inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
+          aria-label="Mở menu chức năng"
+        >
+          <Menu className="size-4" aria-hidden />
+        </button>
+        <div className="ml-3 flex items-center gap-2 text-sm font-semibold">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[#1f1f1f] text-white">
+            <DashboardIcon name="spark" className="size-3.5" />
+          </span>
+          EDUA
+        </div>
       </header>
 
-      {msg && <p className="mb-4 rounded bg-gray-100 px-3 py-2 text-sm">{msg}</p>}
+      {mobileMenuOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-black/25 md:hidden"
+          aria-label="Đóng menu chức năng"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
 
-      <section className="mb-8 rounded border p-4">
-        <h2 className="mb-3 font-medium">{addLabel}</h2>
-        <div className="flex flex-wrap gap-2">
-          <input
-            value={addEmail}
-            onChange={(e) => setAddEmail(e.target.value)}
-            placeholder="Email"
-            className="flex-1 rounded border px-3 py-2 text-sm min-w-48"
-          />
-          <input
-            value={addFullName}
-            onChange={(e) => setAddFullName(e.target.value)}
-            placeholder="Họ tên (không bắt buộc)"
-            className="flex-1 rounded border px-3 py-2 text-sm min-w-40"
-          />
-          <select
-            value={addSubject}
-            onChange={(e) => setAddSubject(e.target.value)}
-            className="rounded border px-3 py-2 text-sm"
-            disabled={isPrincipal && takenSubjects.size >= SUBJECTS.length}
-          >
-            {SUBJECTS.map((s) => (
-              <option key={s} value={s} disabled={isPrincipal && takenSubjects.has(s)}>
-                {SUBJECT_LABELS[s] ?? s}{isPrincipal && takenSubjects.has(s) ? " (đã có)" : ""}
-              </option>
-            ))}
-          </select>
-          <button onClick={addUser} className="rounded bg-black px-4 py-2 text-sm text-white">
-            Thêm
-          </button>
-        </div>
-      </section>
+      <div className="flex min-h-[calc(100vh-3.5rem)] md:min-h-screen">
+        <Sidebar responsive mobileOpen={mobileMenuOpen} activeHref="/user-management" />
+        <section className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-12 lg:py-10">
+          <div className="mx-auto max-w-5xl">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#d97757]">
+                {isPrincipal ? "Hiệu trưởng" : "Người kiểm duyệt"}
+              </p>
+              <h1 className="font-libertine mt-3 text-4xl leading-none sm:text-5xl">Quản lý tài khoản</h1>
+              <p className="mt-4 text-sm leading-6 text-[#6b6b6b]">
+                {isPrincipal
+                  ? "Cấp và thu hồi quyền truy cập cho Moderator từng môn và cho nhân viên IT Staff."
+                  : "Cấp và thu hồi quyền truy cập cho Teacher trong môn bạn phụ trách."}
+              </p>
+            </div>
 
-      <section>
-        <h2 className="mb-3 font-medium">Danh sách ({items.length})</h2>
-        {items.length === 0 ? (
-          <p className="text-sm text-gray-500">{emptyMsg}</p>
-        ) : (
-          <div className="space-y-2">
-            {items.map((item) => (
-              <div key={item.id} className="flex items-center justify-between rounded border p-3">
-                <div>
-                  <div className="font-medium">{item.fullName ?? item.email}</div>
-                  <div className="text-xs text-gray-500">
-                    {item.email} · {item.subject} · {item.status}
-                    {item.grantedByEmail ? ` · cấp bởi ${item.grantedByEmail}` : ""}
+            {msg && (
+              <div className="mt-6 rounded-lg border border-[#d8d1c9] bg-white px-4 py-3 text-sm text-[#4f4943] shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+                {msg}
+              </div>
+            )}
+
+            {tabs.length > 1 && (
+              <div className="mt-8 inline-flex rounded-lg border border-[#d8d1c9] bg-[#fbfaf8] p-1">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                      activeTab === tab.key ? "bg-[#1f1f1f] text-white" : "text-[#5f5a54] hover:bg-[#edeae5]"
+                    }`}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── Moderator tab ── */}
+            {isPrincipal && activeTab === "moderator" && (
+              <div className="mt-6">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Metric icon={<Users className="size-4" aria-hidden />} label="Tổng số" value={String(moderatorData?.totalElements ?? 0)} />
+                  <Metric
+                    icon={<ShieldCheck className="size-4" aria-hidden />}
+                    label="Đang hoạt động"
+                    value={String((moderatorData?.content ?? []).filter((i) => i.status !== "DISABLED").length)}
+                  />
+                  <Metric
+                    icon={<UserMinus className="size-4" aria-hidden />}
+                    label="Đã thu hồi"
+                    value={String((moderatorData?.content ?? []).filter((i) => i.status === "DISABLED").length)}
+                  />
+                </div>
+
+                <div className="mt-6 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+                  <h2 className="font-medium">Thêm Moderator</h2>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <input
+                      value={moderatorEmail}
+                      onChange={(e) => setModeratorEmail(e.target.value)}
+                      placeholder="Email"
+                      className="min-w-48 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                    />
+                    <input
+                      value={moderatorFullName}
+                      onChange={(e) => setModeratorFullName(e.target.value)}
+                      placeholder="Họ tên (không bắt buộc)"
+                      className="min-w-40 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                    />
+                    <select
+                      value={moderatorSubject}
+                      onChange={(e) => setModeratorSubject(e.target.value)}
+                      className="rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm"
+                      disabled={takenSubjects.size >= SUBJECTS.length}
+                    >
+                      {SUBJECTS.map((s) => (
+                        <option key={s} value={s} disabled={takenSubjects.has(s)}>
+                          {SUBJECT_LABELS[s] ?? s}
+                          {takenSubjects.has(s) ? " (đã có)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button onClick={addModerator} className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e]">
+                      Thêm
+                    </button>
                   </div>
                 </div>
-                {isPrincipal && item.status !== "DISABLED" ? (
-                  <button
-                    type="button"
-                    onClick={() => openReplacement(item)}
-                    className="text-sm underline text-red-600"
-                  >
-                    Thay moderator
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => toggleUser(item.id, item.status)}
-                    className={`text-sm underline ${item.status === "DISABLED" ? "text-green-600" : "text-red-600"}`}
-                  >
-                    {item.status === "DISABLED" ? "Kích hoạt lại" : "Thu hồi"}
-                  </button>
-                )}
+
+                <div className="mt-6">
+                  <h2 className="mb-3 font-medium">Danh sách ({moderatorData?.totalElements ?? 0})</h2>
+                  {(moderatorData?.content.length ?? 0) === 0 ? (
+                    <p className="rounded-lg border border-[#d8d1c9] bg-white p-6 text-sm text-[#6b6b6b]">Chưa có Moderator.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {moderatorData!.content.map((item) => (
+                        <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+                          <div>
+                            <div className="flex items-center gap-2 font-medium text-[#1f1f1f]">
+                              {item.fullName ?? item.email}
+                              <StatusBadge status={item.status} />
+                            </div>
+                            <div className="mt-1 text-xs text-[#8a8178]">
+                              {item.email} · Môn {SUBJECT_LABELS[item.subject] ?? item.subject}
+                              {item.grantedByEmail ? ` · cấp bởi ${item.grantedByEmail}` : ""}
+                            </div>
+                          </div>
+                          {item.status !== "DISABLED" ? (
+                            <button
+                              type="button"
+                              onClick={() => openReplacement(item)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#c2483c] transition hover:bg-[#fdeceb]"
+                            >
+                              <ArrowLeftRight className="size-4" aria-hidden /> Thay Moderator
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => toggleModerator(item)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#5a7a4a] transition hover:bg-[#eef6ec]"
+                            >
+                              <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {moderatorData && (
+                    <Pager page={moderatorData.page} totalPages={moderatorData.totalPages} onChange={(p) => void loadModerators(p).catch((e) => setMsg(String(e)))} />
+                  )}
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* ── Teacher tab ── */}
+            {isModerator && activeTab === "teacher" && (
+              <div className="mt-6">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Metric icon={<Users className="size-4" aria-hidden />} label="Tổng số" value={String(teacherData?.totalElements ?? 0)} />
+                  <Metric
+                    icon={<ShieldCheck className="size-4" aria-hidden />}
+                    label="Đang hoạt động"
+                    value={String((teacherData?.content ?? []).filter((i) => i.status !== "DISABLED").length)}
+                  />
+                  <Metric
+                    icon={<UserMinus className="size-4" aria-hidden />}
+                    label="Đã thu hồi"
+                    value={String((teacherData?.content ?? []).filter((i) => i.status === "DISABLED").length)}
+                  />
+                </div>
+
+                <div className="mt-6 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+                  <h2 className="font-medium">Thêm Teacher</h2>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <input
+                      value={teacherEmail}
+                      onChange={(e) => setTeacherEmail(e.target.value)}
+                      placeholder="Email"
+                      className="min-w-48 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                    />
+                    <input
+                      value={teacherFullName}
+                      onChange={(e) => setTeacherFullName(e.target.value)}
+                      placeholder="Họ tên (không bắt buộc)"
+                      className="min-w-40 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                    />
+                    <span className="rounded-lg bg-[#f5f1ec] px-3 py-2 text-sm text-[#6b6b6b]">
+                      Môn: {SUBJECT_LABELS[user?.subject ?? ""] ?? user?.subject ?? "—"}
+                    </span>
+                    <button onClick={addTeacher} className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e]">
+                      Thêm
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <h2 className="mb-3 font-medium">Danh sách ({teacherData?.totalElements ?? 0})</h2>
+                  {(teacherData?.content.length ?? 0) === 0 ? (
+                    <p className="rounded-lg border border-[#d8d1c9] bg-white p-6 text-sm text-[#6b6b6b]">Chưa có Teacher.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {teacherData!.content.map((item) => (
+                        <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+                          <div>
+                            <div className="flex items-center gap-2 font-medium text-[#1f1f1f]">
+                              {item.fullName ?? item.email}
+                              <StatusBadge status={item.status} />
+                            </div>
+                            <div className="mt-1 text-xs text-[#8a8178]">
+                              {item.email} · Môn {SUBJECT_LABELS[item.subject] ?? item.subject}
+                              {item.grantedByEmail ? ` · cấp bởi ${item.grantedByEmail}` : ""}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleTeacher(item)}
+                            className={`inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium transition ${
+                              item.status === "DISABLED" ? "text-[#5a7a4a] hover:bg-[#eef6ec]" : "text-[#c2483c] hover:bg-[#fdeceb]"
+                            }`}
+                          >
+                            {item.status === "DISABLED" ? (
+                              <>
+                                <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
+                              </>
+                            ) : (
+                              <>
+                                <UserMinus className="size-4" aria-hidden /> Thu hồi
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {teacherData && (
+                    <Pager page={teacherData.page} totalPages={teacherData.totalPages} onChange={(p) => void loadTeachers(p).catch((e) => setMsg(String(e)))} />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── IT Staff tab ── */}
+            {isPrincipal && activeTab === "it-staff" && (
+              <div className="mt-6">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Metric icon={<Users className="size-4" aria-hidden />} label="Tổng số" value={String(itStaffData?.totalElements ?? 0)} />
+                  <Metric
+                    icon={<ShieldCheck className="size-4" aria-hidden />}
+                    label="Đang hoạt động"
+                    value={String((itStaffData?.content ?? []).filter((i) => i.status !== "DISABLED").length)}
+                  />
+                  <Metric
+                    icon={<UserMinus className="size-4" aria-hidden />}
+                    label="Đã thu hồi"
+                    value={String((itStaffData?.content ?? []).filter((i) => i.status === "DISABLED").length)}
+                  />
+                </div>
+
+                <div className="mt-6 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+                  <h2 className="font-medium">Cấp quyền IT Staff</h2>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <input
+                      value={itStaffEmail}
+                      onChange={(e) => setItStaffEmail(e.target.value)}
+                      placeholder="Email"
+                      type="email"
+                      className="min-w-48 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                    />
+                    <input
+                      value={itStaffFullName}
+                      onChange={(e) => setItStaffFullName(e.target.value)}
+                      placeholder="Họ tên (không bắt buộc)"
+                      className="min-w-40 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                    />
+                    <button onClick={addItStaff} className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e]">
+                      Cấp quyền
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <h2 className="mb-3 font-medium">Danh sách ({itStaffData?.totalElements ?? 0})</h2>
+                  {(itStaffData?.content.length ?? 0) === 0 ? (
+                    <p className="rounded-lg border border-[#d8d1c9] bg-white p-6 text-sm text-[#6b6b6b]">Chưa có IT Staff.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {itStaffData!.content.map((item) => (
+                        <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+                          <div>
+                            <div className="flex items-center gap-2 font-medium text-[#1f1f1f]">
+                              {item.fullName ?? item.email}
+                              <StatusBadge status={item.status} />
+                            </div>
+                            <div className="mt-1 text-xs text-[#8a8178]">{item.email}</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleItStaff(item)}
+                            className={`inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium transition ${
+                              item.status === "DISABLED" ? "text-[#5a7a4a] hover:bg-[#eef6ec]" : "text-[#c2483c] hover:bg-[#fdeceb]"
+                            }`}
+                          >
+                            {item.status === "DISABLED" ? (
+                              <>
+                                <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
+                              </>
+                            ) : (
+                              <>
+                                <UserMinus className="size-4" aria-hidden /> Thu hồi
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {itStaffData && (
+                    <Pager page={itStaffData.page} totalPages={itStaffData.totalPages} onChange={(p) => void loadItStaff(p).catch((e) => setMsg(String(e)))} />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </section>
+        </section>
+      </div>
 
       {replacementTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
           <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="replace-moderator-title">
-            <h2 id="replace-moderator-title" className="text-lg font-semibold">Thay moderator</h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <h2 id="replace-moderator-title" className="text-lg font-semibold">
+              Thay Moderator
+            </h2>
+            <p className="mt-2 text-sm text-[#6b6b6b]">
               {replacementTarget.fullName ?? replacementTarget.email} sẽ được chuyển thành Teacher.
             </p>
-            <label className="mt-4 block text-sm font-medium" htmlFor="replacement-email">Email moderator thay thế</label>
+            <label className="mt-4 block text-sm font-medium" htmlFor="replacement-email">
+              Email Moderator thay thế
+            </label>
             <input
               id="replacement-email"
               type="email"
               value={replacementEmail}
               onChange={(e) => setReplacementEmail(e.target.value)}
               placeholder="Email"
-              className="mt-1 w-full rounded border px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
               autoFocus
             />
             <label className="mt-4 flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={disablePrevious}
-                onChange={(e) => setDisablePrevious(e.target.checked)}
-              />
-              Vô hiệu hoá tài khoản moderator cũ sau khi chuyển thành Teacher
+              <input type="checkbox" checked={disablePrevious} onChange={(e) => setDisablePrevious(e.target.checked)} />
+              Vô hiệu hoá tài khoản Moderator cũ sau khi chuyển thành Teacher
             </label>
             <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={closeReplacement} disabled={isReplacing} className="rounded border px-3 py-2 text-sm">
+              <button type="button" onClick={closeReplacement} disabled={isReplacing} className="rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm">
                 Huỷ
               </button>
               <button
                 type="button"
                 onClick={replaceModerator}
                 disabled={isReplacing || !replacementEmail.trim()}
-                className="rounded bg-black px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-[#1f1f1f] px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isReplacing ? "Đang thay..." : "Xác nhận thay"}
               </button>
@@ -333,8 +725,14 @@ export default function UserManagementPage() {
           </div>
         </div>
       )}
-    </div>
-    )}
+    </main>
+  );
+}
+
+export default function UserManagementPage() {
+  return (
+    <RouteGuard pathname="/user-management">
+      <UserManagementContent />
     </RouteGuard>
   );
 }

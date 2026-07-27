@@ -8,8 +8,7 @@
 | Lesson/Slide/Test (AI) | ✓ | ✓ | ✓ | ✗ | **✓** |
 | Blog — Xem | ✓ | ✓ | ✓ | ✗ | ✗ |
 | Blog — Duyệt / Quản lý | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Teacher Management | ✗ | ✓ (teachers) | ✓ (mods) | ✗ | ✗ |
-| IT Staff Account Management | ✗ | ✗ | ✓ | ✗ | ✗ |
+| Account Management (`/user-management`) | ✗ | ✓ (teachers) | ✓ (mods + IT Staff) | ✗ | ✗ |
 | System Prompt Management | ✗ | ✗ | ✗ | ✓ | ✗ |
 | Principal Dashboard | ✗ | ✗ | ✓ | ✗ | ✗ |
 | Activity Log | ✗ | ✗ | ✗ | ✓ | ✗ |
@@ -56,7 +55,6 @@ export const routePermissions: Record<string, RoutePermission> = {
   '/blog':            { requireAuth: true },
   '/blog/moderation': { requireAuth: true, allowedRoles: ['MODERATOR'] },
   '/user-management': { requireAuth: true, allowedRoles: ['MODERATOR', 'PRINCIPAL'] },
-  '/it-staff-users':  { requireAuth: true, allowedRoles: ['PRINCIPAL'] },
   '/it-staff':        { requireAuth: true, allowedRoles: ['IT_STAFF'] },
 };
 

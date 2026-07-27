@@ -59,7 +59,7 @@ Legend:
 - Hub comments/reports: `service/library/HubCommentService.java`, `HubContentReportService.java`; migrations `V19__add_library_content_review_fields.sql`, `V20__create_hub_comments_and_reports.sql`
 - Hub UI: `fe/app/community-hub/page.tsx`, `fe/components/hub/CommunityHubPage.tsx`, `fe/lib/hub.ts`
 - Account management API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/PrincipalController.java`, `be/src/main/java/com/edua/beeduasystem/presentation/controller/ModeratorController.java`
-- Account management UI: `fe/app/user-management/page.tsx`, `fe/app/it-staff-users/page.tsx`
+- Account management UI: `fe/app/user-management/page.tsx` (Moderator/Teacher/IT Staff tabs, Principal + Moderator scoped)
 - IT Staff prompt management API/UI: `be/src/main/java/com/edua/beeduasystem/presentation/controller/ItStaffController.java`, `be/src/main/java/com/edua/beeduasystem/service/ai/AiSystemPromptService.java`, `fe/app/it-staff/page.tsx`
 - Notifications API: `be/src/main/java/com/edua/beeduasystem/presentation/controller/NotificationController.java`, `be/src/main/java/com/edua/beeduasystem/service/notification/NotificationService.java`
 - Notifications UI: `fe/app/notifications/page.tsx`, `fe/lib/notifications.ts`, `fe/lib/ws/notifications-client.ts`, badge trong `fe/components/layout/Sidebar.tsx`

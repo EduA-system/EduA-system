@@ -29,7 +29,6 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/user-management": { requireAuth: true, allowedRoles: ["MODERATOR", "PRINCIPAL"] },
   "/it-staff": { requireAuth: true, allowedRoles: ["IT_STAFF"] },
   "/it-staff/activity-log": { requireAuth: true, allowedRoles: ["IT_STAFF"] },
-  "/it-staff-users": { requireAuth: true, allowedRoles: ["PRINCIPAL"] },
 };
 
 export function hasAnyRole(
