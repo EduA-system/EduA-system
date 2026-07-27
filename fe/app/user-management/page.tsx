@@ -201,6 +201,7 @@ function UserManagementContent() {
 
   useEffect(() => {
     if (isPrincipal) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void loadModerators(0).catch((e) => setMsg(String(e)));
       void loadItStaff(0).catch((e) => setMsg(String(e)));
     } else if (isModerator) {
