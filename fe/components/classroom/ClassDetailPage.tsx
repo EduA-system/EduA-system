@@ -1,124 +1,65 @@
 "use client";
 
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
+  Archive,
   ArrowLeft,
-  BookOpen,
-  CalendarClock,
   CheckCircle2,
-  ClipboardList,
-  Download,
-  FileText,
   Inbox,
-  Library,
   Loader2,
-  Paperclip,
-  Pencil,
   Plus,
   RefreshCw,
   Save,
-  Trash2,
   UploadCloud,
+  UserPlus,
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
+  CLASS_SUBJECTS,
   RESOURCE_SOURCE_TYPES,
   type AuthFetch,
   type ClassDetail,
   type ClassResourceAttachmentInput,
   type ClassResourceSummary,
   type ClassStatus,
-  type ClassSummary,
+  type ClassSubject,
   type ResourceSourceType,
   deleteClassResource,
   formatFileSize,
   getClassDetail,
   listClassResources,
-  listClasses,
-  listEnrolledClasses,
   postClassResource,
   sourceTypeLabel,
-  statusLabel,
-  submissionStatusLabel,
   subjectLabel,
+  updateClass,
   updateClassResource,
+  updateClassStatus,
   uploadClassResourceFile,
 } from "@/lib/classroom";
 import { listLibrary, type LibraryContent } from "@/lib/library";
+import { ResourceCard, statusClasses, subjectBannerClasses } from "./shared";
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
+const GRADES = [10, 11, 12] as const;
 
-function statusClasses(status: ClassStatus): string {
-  return status === "ACTIVE"
-    ? "border-[#b7e0c4] bg-[#f0faf3] text-[#287447]"
-    : "border-[#e6d8cb] bg-[#f8f2ec] text-[#8a5a35]";
-}
+type FormState = {
+  name: string;
+  subject: ClassSubject;
+  grade: number;
+  description: string;
+};
 
-function subjectBannerClasses(subject: ClassSummary["subject"]): string {
-  if (subject === "MATH") return "bg-gradient-to-br from-[#2f8f57] to-[#1f6b40]";
-  if (subject === "PHYSICS") return "bg-gradient-to-br from-[#4f63c2] to-[#33448f]";
-  return "bg-gradient-to-br from-[#d97757] to-[#b85a3d]";
-}
-
-function ClassPickerCard({
-  item,
-  active,
-  onSelect,
-}: {
-  item: ClassSummary;
-  active: boolean;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(item.id)}
-      className={`overflow-hidden rounded-[14px] border bg-white text-left transition ${
-        active
-          ? "border-[#d97757] shadow-[0_10px_24px_rgba(217,119,87,0.15)]"
-          : "border-[#d8d1c9] hover:border-[#c9a998] hover:shadow-[0_10px_24px_rgba(31,31,31,0.06)]"
-      }`}
-    >
-      <div className={`relative h-[104px] overflow-hidden px-4 pb-3 pt-4 text-white ${subjectBannerClasses(item.subject)}`}>
-        <div className="pointer-events-none absolute -right-4 -top-6 size-24 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-6 -right-10 size-20 rounded-full bg-white/10" />
-        <h3 className="relative line-clamp-2 pr-2 text-[16px] font-semibold leading-snug">{item.name}</h3>
-        <p className="relative mt-1 text-[11.5px] text-white/85">
-          {subjectLabel(item.subject)} · Khối {item.grade}
-        </p>
-      </div>
-      <div className="flex items-center justify-between px-4 py-3">
-        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClasses(item.status)}`}>
-          {statusLabel(item.status)}
-        </span>
-        <span className="text-[11.5px] text-[#8a837b]">{item.memberCount} thành viên</span>
-      </div>
-    </button>
-  );
-}
-
-function isOverdue(deadline: string | null): boolean {
-  return Boolean(deadline) && new Date(deadline as string).getTime() < Date.now();
-}
-
-function deadlineClasses(deadline: string | null): string {
-  return isOverdue(deadline)
-    ? "border-[#e8b4a4] bg-[#fdf3ef] text-[#c0492b]"
-    : "border-[#c9d5ff] bg-[#f1f4ff] text-[#3f54a3]";
+function toFormState(detail: ClassDetail): FormState {
+  return {
+    name: detail.name,
+    subject: detail.subject,
+    grade: detail.grade,
+    description: detail.description ?? "",
+  };
 }
 
 function toDatetimeLocalValue(iso: string | null): string {
@@ -132,104 +73,6 @@ function toIsoOrNull(datetimeLocal: string): string | null {
   if (!datetimeLocal) return null;
   const date = new Date(datetimeLocal);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-function ResourceCard({
-  resource,
-  canManage,
-  onEdit,
-  onDelete,
-  deleting,
-}: {
-  resource: ClassResourceSummary;
-  canManage?: boolean;
-  onEdit?: (resource: ClassResourceSummary) => void;
-  onDelete?: (resource: ClassResourceSummary) => void;
-  deleting?: boolean;
-}) {
-  const SourceIcon = resource.sourceType === "LIBRARY_SNAPSHOT" ? Library : UploadCloud;
-
-  return (
-    <article className="relative overflow-hidden rounded-[14px] border border-[#d8d1c9] bg-white transition hover:border-[#c9a998] hover:shadow-[0_10px_24px_rgba(31,31,31,0.06)]">
-      {canManage && (
-        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => onEdit?.(resource)}
-            title="Sửa tài nguyên"
-            className="flex size-8 items-center justify-center rounded-[10px] border border-[#d8d1c9] bg-white/95 text-[#6b6b6b] shadow-sm transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
-          >
-            <Pencil className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete?.(resource)}
-            disabled={deleting}
-            title="Xóa tài nguyên"
-            className="flex size-8 items-center justify-center rounded-[10px] border border-[#e8b4a4] bg-white/95 text-[#c0492b] shadow-sm transition hover:bg-[#fdf3ef] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-          </button>
-        </div>
-      )}
-      {resource.thumbnailUrl ? (
-        <div className="relative h-[140px] w-full bg-[#f5f1ec]">
-          <Image src={resource.thumbnailUrl} alt="" fill className="object-cover" unoptimized />
-        </div>
-      ) : (
-        <div className="flex h-[96px] w-full items-center justify-center bg-[#f5f1ec]">
-          <SourceIcon className="size-8 text-[#c9a998]" />
-        </div>
-      )}
-
-      <div className="p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]">
-            <SourceIcon className="size-3" /> {sourceTypeLabel(resource.sourceType)}
-          </span>
-          {resource.submissionEnabled && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#f0d9aa] bg-[#fff7df] px-2.5 py-1 text-[11px] font-medium text-[#9a661c]">
-              <ClipboardList className="size-3" /> {submissionStatusLabel(resource.submissionStatus)}
-            </span>
-          )}
-        </div>
-
-        <h3 className="mt-3 text-[15px] font-semibold leading-snug text-[#1f1f1f]">{resource.title}</h3>
-        {resource.description && (
-          <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-[19px] text-[#6b6b6b]">{resource.description}</p>
-        )}
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {resource.attachment?.url && (
-            <a
-              href={resource.attachment.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1.5 text-[11.5px] font-medium text-[#1f1f1f] transition hover:bg-[#f5f1ec]"
-            >
-              <Paperclip className="size-3.5 text-[#8a837b]" />
-              <span className="max-w-[160px] truncate">{resource.attachment.fileName ?? "Tệp đính kèm"}</span>
-              {resource.attachment.sizeBytes !== null && (
-                <span className="text-[#8a837b]">· {formatFileSize(resource.attachment.sizeBytes)}</span>
-              )}
-              <Download className="size-3.5 text-[#8a837b]" />
-            </a>
-          )}
-          {resource.deadline && (
-            <span className={`inline-flex items-center gap-1.5 rounded-[10px] border px-2.5 py-1.5 text-[11.5px] font-medium ${deadlineClasses(resource.deadline)}`}>
-              <CalendarClock className="size-3.5" />
-              {isOverdue(resource.deadline) ? "Quá hạn" : "Hạn nộp"}: {formatDateTime(resource.deadline)}
-            </span>
-          )}
-        </div>
-
-        <div className="mt-4 flex items-center justify-between border-t border-[#ede8e1] pt-3 text-[11.5px] text-[#8a837b]">
-          <span>{resource.postedByName ?? "Giáo viên"}</span>
-          <span>{formatDateTime(resource.postedAt)}</span>
-        </div>
-      </div>
-    </article>
-  );
 }
 
 function ResourceFormPanel({
@@ -545,18 +388,17 @@ function ResourceFormPanel({
   );
 }
 
-export function ViewClassResourcesPage() {
-  const { user, status, authFetch } = useAuth();
-  const router = useRouter();
+export function ClassDetailPage() {
+  const { user, authFetch } = useAuth();
   const searchParams = useSearchParams();
   const classId = searchParams.get("classId") ?? "";
-  const isTeacher = user?.role === "TEACHER";
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [classes, setClasses] = useState<ClassSummary[]>([]);
-  const [classesLoading, setClassesLoading] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassDetail | null>(null);
   const [classLoading, setClassLoading] = useState(false);
+  const [editForm, setEditForm] = useState<FormState | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [busyStatus, setBusyStatus] = useState(false);
 
   const [resources, setResources] = useState<ClassResourceSummary[]>([]);
   const [resourcesTotal, setResourcesTotal] = useState(0);
@@ -566,21 +408,6 @@ export function ViewClassResourcesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
-  const loadClasses = useCallback(async () => {
-    if (status !== "authenticated") return;
-    setClassesLoading(true);
-    try {
-      const result = isTeacher
-        ? await listClasses(authFetch, { size: 100 })
-        : await listEnrolledClasses(authFetch, { size: 100 });
-      setClasses(result.items);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không thể tải danh sách lớp.");
-    } finally {
-      setClassesLoading(false);
-    }
-  }, [authFetch, isTeacher, status]);
 
   const loadResources = useCallback(
     async (id: string) => {
@@ -605,6 +432,7 @@ export function ViewClassResourcesPage() {
       try {
         const detail = await getClassDetail(authFetch, id);
         setSelectedClass(detail);
+        setEditForm(toFormState(detail));
         await loadResources(id);
       } catch (reason) {
         setSelectedClass(null);
@@ -617,27 +445,52 @@ export function ViewClassResourcesPage() {
   );
 
   useEffect(() => {
+    if (!classId) return;
     const timer = window.setTimeout(() => {
-      void loadClasses();
+      void loadClassDetail(classId);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [loadClasses]);
-
-  useEffect(() => {
-    if (!classId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedClass(null);
-      setResources([]);
-      setResourcesTotal(0);
-      return;
-    }
-    void loadClassDetail(classId);
   }, [classId, loadClassDetail]);
 
-  function selectClass(id: string) {
+  async function handleSaveDetail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedClass || !editForm || saving || selectedClass.status === "INACTIVE") return;
+    setSaving(true);
     setError("");
-    setFormTarget(null);
-    router.replace(id ? `/view-class-resources?classId=${id}` : "/view-class-resources");
+    setMessage("");
+    try {
+      const updated = await updateClass(authFetch, selectedClass.id, {
+        name: editForm.name.trim(),
+        subject: editForm.subject,
+        grade: editForm.grade,
+        description: editForm.description.trim() || null,
+      });
+      setSelectedClass(updated);
+      setEditForm(toFormState(updated));
+      setMessage("Đã lưu thay đổi lớp.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể lưu lớp.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleStatus() {
+    if (!selectedClass || busyStatus) return;
+    const nextStatus: ClassStatus = selectedClass.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    setBusyStatus(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await updateClassStatus(authFetch, selectedClass.id, nextStatus);
+      setSelectedClass(updated);
+      setEditForm(toFormState(updated));
+      setMessage(nextStatus === "INACTIVE" ? "Lớp đã chuyển sang chế độ chỉ đọc." : "Lớp đã được kích hoạt lại.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể đổi trạng thái lớp.");
+    } finally {
+      setBusyStatus(false);
+    }
   }
 
   function handleResourceSaved(resource: ClassResourceSummary) {
@@ -669,10 +522,7 @@ export function ViewClassResourcesPage() {
 
   if (!user) return null;
 
-  const canManage = isTeacher && selectedClass?.status === "ACTIVE";
-
-  const submissionCount = resources.filter((item) => item.submissionEnabled).length;
-  const libraryCount = resources.filter((item) => item.sourceType === "LIBRARY_SNAPSHOT").length;
+  const canManage = selectedClass?.status === "ACTIVE";
 
   return (
     <main className="min-h-screen bg-[#f5f1ec] text-[#1f1f1f]">
@@ -706,67 +556,16 @@ export function ViewClassResourcesPage() {
 
         <section className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
           <div className="mx-auto w-full max-w-[1220px]">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                {isTeacher && (
-                  <Link
-                    href="/create-class"
-                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#6b6b6b] transition hover:text-[#1f1f1f]"
-                  >
-                    <ArrowLeft className="size-3.5" /> Quay lại quản lý lớp
-                  </Link>
-                )}
-                <div className="mt-3 inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#cdd7ef] bg-[#f1f4ff] px-3 text-[11px] font-medium text-[#3f54a3]">
-                  <BookOpen className="size-3.5" /> Class Hub
-                </div>
-                <h1 className="font-libertine mt-4 text-[44px] font-normal leading-none sm:text-[60px]">Tài nguyên lớp học</h1>
-                <p className="mt-4 max-w-[620px] text-[13px] leading-[23px] text-[#6b6b6b]">
-                  Tài liệu và bài tập giáo viên đã đăng trong lớp, kèm hạn nộp và trạng thái nộp bài của bạn.
-                </p>
-              </div>
-
-              {selectedClass && (
-                <div className="grid w-full grid-cols-3 gap-3 sm:w-auto">
-                  <div className="rounded-[14px] border border-[#d8d1c9] bg-white px-4 py-3">
-                    <p className="text-[11px] text-[#6b6b6b]">Tổng tài nguyên</p>
-                    <p className="mt-1 text-xl font-semibold">{resourcesTotal}</p>
-                  </div>
-                  <div className="rounded-[14px] border border-[#f0d9aa] bg-[#fff7df] px-4 py-3">
-                    <p className="text-[11px] text-[#9a661c]">Cần nộp bài</p>
-                    <p className="mt-1 text-xl font-semibold text-[#9a661c]">{submissionCount}</p>
-                  </div>
-                  <div className="rounded-[14px] border border-[#c9d5ff] bg-[#f1f4ff] px-4 py-3">
-                    <p className="text-[11px] text-[#3f54a3]">Từ thư viện</p>
-                    <p className="mt-1 text-xl font-semibold text-[#3f54a3]">{libraryCount}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-5">
-              <h2 className="text-[14px] font-semibold text-[#1f1f1f]">Chọn lớp</h2>
-              {classesLoading && classes.length === 0 ? (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {[1, 2, 3].map((item) => (
-                    <div key={item} className="h-[168px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
-                  ))}
-                </div>
-              ) : classes.length === 0 ? (
-                <p className="mt-3 text-[12px] text-[#6b6b6b]">
-                  {isTeacher ? "Bạn chưa sở hữu lớp nào." : "Bạn chưa được thêm vào lớp nào."}
-                </p>
-              ) : (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {classes.map((item) => (
-                    <ClassPickerCard key={item.id} item={item} active={item.id === classId} onSelect={selectClass} />
-                  ))}
-                </div>
-              )}
-            </div>
+            <Link
+              href="/create-class"
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#6b6b6b] transition hover:text-[#1f1f1f]"
+            >
+              <ArrowLeft className="size-3.5" /> Quay lại danh sách lớp
+            </Link>
 
             {(error || message) && (
               <div
-                className={`mt-6 flex items-start gap-2 rounded-[12px] border px-4 py-3 text-[13px] ${
+                className={`mt-4 flex items-start gap-2 rounded-[12px] border px-4 py-3 text-[13px] ${
                   error ? "border-[#e8b4a4] bg-[#fdf3ef] text-[#c0492b]" : "border-[#bfdcc8] bg-[#f1faf3] text-[#287447]"
                 }`}
               >
@@ -775,103 +574,226 @@ export function ViewClassResourcesPage() {
               </div>
             )}
 
-            {classLoading ? (
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="h-[260px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
-                ))}
-              </div>
-            ) : selectedClass ? (
-              <section className="mt-8">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-[16px] font-semibold">{selectedClass.name}</h2>
-                    <p className="mt-1 text-[12px] text-[#6b6b6b]">
-                      {subjectLabel(selectedClass.subject)} · Khối {selectedClass.grade} · Chủ lớp:{" "}
-                      {selectedClass.ownerName ?? "Giáo viên"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {canManage && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setError("");
-                          setMessage("");
-                          setFormTarget("create");
-                        }}
-                        className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#d97757] px-3 text-[12px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545]"
-                      >
-                        <Plus className="size-3.5" /> Đăng tài liệu
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void loadResources(selectedClass.id)}
-                      className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
-                    >
-                      <RefreshCw className={`size-3.5 ${resourcesLoading ? "animate-spin" : ""}`} /> Làm mới
-                    </button>
-                  </div>
-                </div>
-
-                {formTarget && (
-                  <ResourceFormPanel
-                    classId={selectedClass.id}
-                    authFetch={authFetch}
-                    initial={formTarget === "create" ? null : formTarget}
-                    onSaved={handleResourceSaved}
-                    onCancel={() => setFormTarget(null)}
-                  />
-                )}
-
-                {selectedClass.status === "INACTIVE" && (
-                  <p className="mt-4 rounded-[10px] border border-[#e6d8cb] bg-[#f8f2ec] px-3 py-2 text-[12px] leading-5 text-[#8a5a35]">
-                    Lớp đang ở chế độ lưu trữ (Inactive) — tài nguyên cũ vẫn xem và tải được bình thường.
-                  </p>
-                )}
-
-                <div className="mt-5">
-                  {resourcesLoading && resources.length === 0 ? (
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                      {[1, 2, 3].map((item) => (
-                        <div key={item} className="h-[260px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
-                      ))}
-                    </div>
-                  ) : resources.length === 0 ? (
-                    <div className="rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
-                      <Inbox className="mx-auto size-8 text-[#a8a097]" />
-                      <p className="mt-3 text-[13px] font-medium">Không tìm thấy kết quả</p>
-                      <p className="mt-1 text-[12px] text-[#6b6b6b]">Lớp này chưa có tài nguyên hoặc bài tập nào được đăng.</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                      {resources.map((resource) => (
-                        <ResourceCard
-                          key={resource.id}
-                          resource={resource}
-                          canManage={canManage}
-                          onEdit={(target) => {
-                            setError("");
-                            setMessage("");
-                            setFormTarget(target);
-                          }}
-                          onDelete={(target) => void handleDeleteResource(target)}
-                          deleting={deletingId === resource.id}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
-            ) : (
+            {!classId ? (
               <div className="mt-8 rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
-                <FileText className="mx-auto size-8 text-[#a8a097]" />
-                <p className="mt-3 text-[13px] font-medium">Chọn một lớp ở trên để xem tài nguyên</p>
+                <p className="text-[13px] font-medium">Thiếu thông tin lớp</p>
                 <p className="mt-1 text-[12px] text-[#6b6b6b]">
-                  {isTeacher ? "Danh sách lớp bạn sở hữu hiển thị ở ô chọn phía trên." : "Danh sách lớp bạn đã tham gia hiển thị ở ô chọn phía trên."}
+                  Vào từ <Link href="/create-class" className="font-medium text-[#d97757] underline">danh sách lớp</Link> để mở đúng lớp cần quản lý.
                 </p>
               </div>
+            ) : classLoading || !selectedClass || !editForm ? (
+              <div className="mt-6 space-y-4">
+                <div className="h-[180px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
+                <div className="h-[320px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
+              </div>
+            ) : (
+              <>
+                <div className={`relative mt-6 overflow-hidden rounded-[16px] px-6 py-7 text-white ${subjectBannerClasses(selectedClass.subject)}`}>
+                  <div className="pointer-events-none absolute -right-8 -top-10 size-40 rounded-full bg-white/10" />
+                  <div className="pointer-events-none absolute -bottom-14 -right-6 size-32 rounded-full bg-white/10" />
+                  <div className="relative flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <span className="rounded-full border border-white/40 bg-white/10 px-2.5 py-1 text-[11px] font-medium">
+                        {subjectLabel(selectedClass.subject)}
+                      </span>
+                      <h1 className="font-libertine mt-3 text-[34px] font-normal leading-tight sm:text-[42px]">{selectedClass.name}</h1>
+                      <p className="mt-2 text-[12.5px] text-white/85">
+                        Khối {selectedClass.grade} · Chủ lớp: {selectedClass.ownerName ?? "Bạn"}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClasses(selectedClass.status)}`}>
+                      {selectedClass.status === "ACTIVE" ? "Đang hoạt động" : "Đã lưu trữ"}
+                    </span>
+                  </div>
+
+                  <div className="relative mt-6 grid grid-cols-3 gap-3 sm:max-w-[420px]">
+                    <div className="rounded-[12px] bg-white/10 px-3 py-2.5">
+                      <p className="text-[11px] text-white/75">Thành viên</p>
+                      <p className="mt-1 text-lg font-semibold">{selectedClass.memberCount}</p>
+                    </div>
+                    <div className="rounded-[12px] bg-white/10 px-3 py-2.5">
+                      <p className="text-[11px] text-white/75">Tài nguyên</p>
+                      <p className="mt-1 text-lg font-semibold">{resourcesTotal}</p>
+                    </div>
+                    <div className="rounded-[12px] bg-white/10 px-3 py-2.5">
+                      <p className="text-[11px] text-white/75">Bài nộp</p>
+                      <p className="mt-1 text-lg font-semibold">0</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+                  <aside className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
+                    <form onSubmit={handleSaveDetail}>
+                      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">Chi tiết lớp</p>
+
+                      <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">
+                        Tên lớp
+                        <input
+                          value={editForm.name}
+                          disabled={selectedClass.status === "INACTIVE"}
+                          onChange={(event) => setEditForm((current) => (current ? { ...current, name: event.target.value } : current))}
+                          className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none transition disabled:text-[#8a837b] focus:border-[#d97757]"
+                        />
+                      </label>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <label className="block text-[12px] font-medium text-[#6b6b6b]">
+                          Môn
+                          <select
+                            value={editForm.subject}
+                            disabled={selectedClass.status === "INACTIVE"}
+                            onChange={(event) =>
+                              setEditForm((current) => (current ? { ...current, subject: event.target.value as ClassSubject } : current))
+                            }
+                            className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none disabled:text-[#8a837b] focus:border-[#d97757]"
+                          >
+                            {CLASS_SUBJECTS.map((subject) => (
+                              <option key={subject} value={subject}>
+                                {subjectLabel(subject)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block text-[12px] font-medium text-[#6b6b6b]">
+                          Khối
+                          <select
+                            value={editForm.grade}
+                            disabled={selectedClass.status === "INACTIVE"}
+                            onChange={(event) =>
+                              setEditForm((current) => (current ? { ...current, grade: Number(event.target.value) } : current))
+                            }
+                            className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none disabled:text-[#8a837b] focus:border-[#d97757]"
+                          >
+                            {GRADES.map((grade) => (
+                              <option key={grade} value={grade}>
+                                Khối {grade}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">
+                        Mô tả
+                        <textarea
+                          value={editForm.description}
+                          disabled={selectedClass.status === "INACTIVE"}
+                          rows={5}
+                          onChange={(event) =>
+                            setEditForm((current) => (current ? { ...current, description: event.target.value } : current))
+                          }
+                          className="mt-2 w-full resize-none rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 outline-none disabled:text-[#8a837b] focus:border-[#d97757]"
+                        />
+                      </label>
+
+                      {selectedClass.status === "INACTIVE" && (
+                        <p className="mt-4 rounded-[10px] border border-[#e6d8cb] bg-[#f8f2ec] px-3 py-2 text-[12px] leading-5 text-[#8a5a35]">
+                          Lớp đang ở chế độ chỉ đọc. Kích hoạt lại lớp để chỉnh sửa thông tin.
+                        </p>
+                      )}
+
+                      <div className="mt-5 flex flex-col gap-3">
+                        <button
+                          type="submit"
+                          disabled={saving || selectedClass.status === "INACTIVE" || !editForm.name.trim()}
+                          className="flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#1f1f1f] px-4 text-[13px] font-medium text-white transition hover:bg-[#34312d] disabled:cursor-not-allowed disabled:bg-[#b8b0a8]"
+                        >
+                          {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                          Lưu thông tin
+                        </button>
+                        <Link
+                          href={`/add-student?classId=${selectedClass.id}`}
+                          className="flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545]"
+                        >
+                          <UserPlus className="size-4" />
+                          Quản lý học sinh
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => void toggleStatus()}
+                          disabled={busyStatus}
+                          className="flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[#d8d1c9] px-4 text-[13px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {busyStatus ? <Loader2 className="size-4 animate-spin" /> : selectedClass.status === "ACTIVE" ? <Archive className="size-4" /> : <RefreshCw className="size-4" />}
+                          {selectedClass.status === "ACTIVE" ? "Lưu trữ lớp" : "Kích hoạt lại lớp"}
+                        </button>
+                      </div>
+                    </form>
+                  </aside>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-[14px] font-semibold text-[#1f1f1f]">Tài nguyên & bài tập</h2>
+                      <div className="flex items-center gap-2">
+                        {canManage && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError("");
+                              setMessage("");
+                              setFormTarget("create");
+                            }}
+                            className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#d97757] px-3 text-[12px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545]"
+                          >
+                            <Plus className="size-3.5" /> Đăng tài liệu
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void loadResources(selectedClass.id)}
+                          className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
+                        >
+                          <RefreshCw className={`size-3.5 ${resourcesLoading ? "animate-spin" : ""}`} /> Làm mới
+                        </button>
+                      </div>
+                    </div>
+
+                    {formTarget && (
+                      <ResourceFormPanel
+                        classId={selectedClass.id}
+                        authFetch={authFetch}
+                        initial={formTarget === "create" ? null : formTarget}
+                        onSaved={handleResourceSaved}
+                        onCancel={() => setFormTarget(null)}
+                      />
+                    )}
+
+                    <div className="mt-5">
+                      {resourcesLoading && resources.length === 0 ? (
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {[1, 2].map((item) => (
+                            <div key={item} className="h-[260px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
+                          ))}
+                        </div>
+                      ) : resources.length === 0 ? (
+                        <div className="rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
+                          <Inbox className="mx-auto size-8 text-[#a8a097]" />
+                          <p className="mt-3 text-[13px] font-medium">Chưa có tài nguyên nào</p>
+                          <p className="mt-1 text-[12px] text-[#6b6b6b]">Đăng tài liệu hoặc bài tập đầu tiên cho lớp này.</p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {resources.map((resource) => (
+                            <ResourceCard
+                              key={resource.id}
+                              resource={resource}
+                              canManage={canManage}
+                              onEdit={(target) => {
+                                setError("");
+                                setMessage("");
+                                setFormTarget(target);
+                              }}
+                              onDelete={(target) => void handleDeleteResource(target)}
+                              deleting={deletingId === resource.id}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </section>

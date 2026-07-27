@@ -1,35 +1,29 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Archive,
   BookOpen,
   CheckCircle2,
-  FileText,
   Loader2,
   Plus,
   RefreshCw,
-  Save,
   Search,
-  UserPlus,
   Users,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
   CLASS_SUBJECTS,
-  type ClassDetail,
   type ClassStatus,
   type ClassSubject,
   type ClassSummary,
   createClass,
-  getClassDetail,
   isClassSubject,
   listClasses,
   statusLabel,
   subjectLabel,
-  updateClass,
   updateClassStatus,
 } from "@/lib/classroom";
 
@@ -73,24 +67,13 @@ function subjectClasses(subject: ClassSubject): string {
   return "border-[#f0d9aa] bg-[#fff7df] text-[#9a661c]";
 }
 
-function updateFormFromDetail(detail: ClassDetail): FormState {
-  return {
-    name: detail.name,
-    subject: detail.subject,
-    grade: detail.grade,
-    description: detail.description ?? "",
-  };
-}
-
 function ClassCard({
   item,
-  active,
   onOpen,
   onToggleStatus,
   statusBusy,
 }: {
   item: ClassSummary;
-  active: boolean;
   onOpen: (id: string) => void;
   onToggleStatus: (item: ClassSummary) => void;
   statusBusy: boolean;
@@ -98,11 +81,7 @@ function ClassCard({
   const nextStatus = item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
 
   return (
-    <article
-      className={`rounded-[14px] border bg-white p-4 transition ${
-        active ? "border-[#d97757] shadow-[0_10px_24px_rgba(217,119,87,0.12)]" : "border-[#d8d1c9] hover:border-[#c9a998]"
-      }`}
-    >
+    <article className="rounded-[14px] border border-[#d8d1c9] bg-white p-4 transition hover:border-[#c9a998]">
       <div className="flex items-start justify-between gap-4">
         <button type="button" onClick={() => onOpen(item.id)} className="min-w-0 flex-1 text-left">
           <div className="flex flex-wrap items-center gap-2">
@@ -136,19 +115,17 @@ function ClassCard({
 
 export function ClassManagementPage() {
   const { user, status, authFetch } = useAuth();
+  const router = useRouter();
   const defaultSubject = isClassSubject(user?.subject) ? user.subject : "CHEMISTRY";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [items, setItems] = useState<ClassSummary[]>([]);
-  const [selected, setSelected] = useState<ClassDetail | null>(null);
   const [createForm, setCreateForm] = useState<FormState>(() => emptyForm(defaultSubject));
-  const [editForm, setEditForm] = useState<FormState>(() => emptyForm(defaultSubject));
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [subjectFilter, setSubjectFilter] = useState<ClassSubject | "">("");
   const [gradeFilter, setGradeFilter] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [busyStatusId, setBusyStatusId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -170,15 +147,12 @@ export function ClassManagementPage() {
         size: 50,
       });
       setItems(result.items);
-      if (selected && !result.items.some((item) => item.id === selected.id)) {
-        setSelected(null);
-      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tải danh sách lớp.");
     } finally {
       setLoading(false);
     }
-  }, [authFetch, gradeFilter, q, selected, status, statusFilter, subjectFilter]);
+  }, [authFetch, gradeFilter, q, status, statusFilter, subjectFilter]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -200,11 +174,8 @@ export function ClassManagementPage() {
         grade: createForm.grade,
         description: createForm.description.trim() || null,
       });
-      setCreateForm(emptyForm(createForm.subject));
-      setSelected(created);
-      setEditForm(updateFormFromDetail(created));
       setMessage(`Đã tạo lớp ${created.name}.`);
-      await loadClasses();
+      router.push(`/class-detail?classId=${created.id}`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tạo lớp.");
     } finally {
@@ -212,40 +183,8 @@ export function ClassManagementPage() {
     }
   }
 
-  async function openDetail(id: string) {
-    setError("");
-    setMessage("");
-    try {
-      const detail = await getClassDetail(authFetch, id);
-      setSelected(detail);
-      setEditForm(updateFormFromDetail(detail));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không thể mở lớp.");
-    }
-  }
-
-  async function handleSaveDetail(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selected || saving || selected.status === "INACTIVE") return;
-    setSaving(true);
-    setError("");
-    setMessage("");
-    try {
-      const updated = await updateClass(authFetch, selected.id, {
-        name: editForm.name.trim(),
-        subject: editForm.subject,
-        grade: editForm.grade,
-        description: editForm.description.trim() || null,
-      });
-      setSelected(updated);
-      setEditForm(updateFormFromDetail(updated));
-      setMessage("Đã lưu thay đổi lớp.");
-      await loadClasses();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không thể lưu lớp.");
-    } finally {
-      setSaving(false);
-    }
+  function openDetail(id: string) {
+    router.push(`/class-detail?classId=${id}`);
   }
 
   async function toggleStatus(item: Pick<ClassSummary, "id" | "status">) {
@@ -254,9 +193,7 @@ export function ClassManagementPage() {
     setError("");
     setMessage("");
     try {
-      const updated = await updateClassStatus(authFetch, item.id, nextStatus);
-      setSelected((current) => (current?.id === updated.id ? updated : current));
-      if (selected?.id === updated.id) setEditForm(updateFormFromDetail(updated));
+      await updateClassStatus(authFetch, item.id, nextStatus);
       setMessage(nextStatus === "INACTIVE" ? "Lớp đã chuyển sang chế độ chỉ đọc." : "Lớp đã được kích hoạt lại.");
       await loadClasses();
     } catch (reason) {
@@ -453,8 +390,7 @@ export function ClassManagementPage() {
                         <ClassCard
                           key={item.id}
                           item={item}
-                          active={selected?.id === item.id}
-                          onOpen={(id) => void openDetail(id)}
+                          onOpen={openDetail}
                           onToggleStatus={(classItem) => void toggleStatus(classItem)}
                           statusBusy={busyStatusId === item.id}
                         />
@@ -465,123 +401,6 @@ export function ClassManagementPage() {
                     <p className="mt-3 text-[12px] text-[#8a837b]">Đang cập nhật danh sách...</p>
                   )}
                 </section>
-
-                {selected && (
-                  <aside className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
-                    <form onSubmit={handleSaveDetail}>
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">Chi tiết lớp</p>
-                          <p className="mt-1 text-[12px] text-[#8a837b]">Chủ lớp: {selected.ownerName ?? "Giáo viên"}</p>
-                        </div>
-                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClasses(selected.status)}`}>
-                          {statusLabel(selected.status)}
-                        </span>
-                      </div>
-
-                      <label className="mt-5 block text-[12px] font-medium text-[#6b6b6b]">
-                        Tên lớp
-                        <input
-                          value={editForm.name}
-                          disabled={selected.status === "INACTIVE"}
-                          onChange={(event) => setEditForm((current) => ({ ...current, name: event.target.value }))}
-                          className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none transition disabled:text-[#8a837b] focus:border-[#d97757]"
-                        />
-                      </label>
-
-                      <div className="mt-4 grid grid-cols-2 gap-3">
-                        <label className="block text-[12px] font-medium text-[#6b6b6b]">
-                          Môn
-                          <select
-                            value={editForm.subject}
-                            disabled={selected.status === "INACTIVE"}
-                            onChange={(event) => setEditForm((current) => ({ ...current, subject: event.target.value as ClassSubject }))}
-                            className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none disabled:text-[#8a837b] focus:border-[#d97757]"
-                          >
-                            {CLASS_SUBJECTS.map((subject) => <option key={subject} value={subject}>{subjectLabel(subject)}</option>)}
-                          </select>
-                        </label>
-                        <label className="block text-[12px] font-medium text-[#6b6b6b]">
-                          Khối
-                          <select
-                            value={editForm.grade}
-                            disabled={selected.status === "INACTIVE"}
-                            onChange={(event) => setEditForm((current) => ({ ...current, grade: Number(event.target.value) }))}
-                            className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none disabled:text-[#8a837b] focus:border-[#d97757]"
-                          >
-                            {GRADES.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}
-                          </select>
-                        </label>
-                      </div>
-
-                      <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">
-                        Mô tả
-                        <textarea
-                          value={editForm.description}
-                          disabled={selected.status === "INACTIVE"}
-                          rows={5}
-                          onChange={(event) => setEditForm((current) => ({ ...current, description: event.target.value }))}
-                          className="mt-2 w-full resize-none rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 outline-none disabled:text-[#8a837b] focus:border-[#d97757]"
-                        />
-                      </label>
-
-                      <div className="mt-5 grid grid-cols-3 gap-3">
-                        <div className="rounded-[12px] bg-[#f7f5f2] p-3">
-                          <p className="text-[11px] text-[#6b6b6b]">Thành viên</p>
-                          <p className="mt-1 text-lg font-semibold">{selected.memberCount}</p>
-                        </div>
-                        <div className="rounded-[12px] bg-[#f7f5f2] p-3">
-                          <p className="text-[11px] text-[#6b6b6b]">Tài nguyên</p>
-                          <p className="mt-1 text-lg font-semibold">{selected.resourceCount}</p>
-                        </div>
-                        <div className="rounded-[12px] bg-[#f7f5f2] p-3">
-                          <p className="text-[11px] text-[#6b6b6b]">Bài nộp</p>
-                          <p className="mt-1 text-lg font-semibold">{selected.submissionCount}</p>
-                        </div>
-                      </div>
-
-                      {selected.status === "INACTIVE" && (
-                        <p className="mt-4 rounded-[10px] border border-[#e6d8cb] bg-[#f8f2ec] px-3 py-2 text-[12px] leading-5 text-[#8a5a35]">
-                          Lớp đang ở chế độ chỉ đọc. Kích hoạt lại lớp để chỉnh sửa thông tin.
-                        </p>
-                      )}
-
-                      <div className="mt-5 flex flex-col gap-3">
-                        <button
-                          type="submit"
-                          disabled={saving || selected.status === "INACTIVE" || !editForm.name.trim()}
-                          className="flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#1f1f1f] px-4 text-[13px] font-medium text-white transition hover:bg-[#34312d] disabled:cursor-not-allowed disabled:bg-[#b8b0a8]"
-                        >
-                          {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                          Lưu thông tin
-                        </button>
-                        <Link
-                          href={`/add-student?classId=${selected.id}`}
-                          className="flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545]"
-                        >
-                          <UserPlus className="size-4" />
-                          Quản lý học sinh
-                        </Link>
-                        <Link
-                          href={`/view-class-resources?classId=${selected.id}`}
-                          className="flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[#d8d1c9] px-4 text-[13px] font-medium text-[#1f1f1f] transition hover:bg-[#f5f1ec]"
-                        >
-                          <FileText className="size-4" />
-                          Xem tài nguyên lớp
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => void toggleStatus(selected)}
-                          disabled={busyStatusId === selected.id}
-                          className="flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[#d8d1c9] px-4 text-[13px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {busyStatusId === selected.id ? <Loader2 className="size-4 animate-spin" /> : selected.status === "ACTIVE" ? <Archive className="size-4" /> : <RefreshCw className="size-4" />}
-                          {selected.status === "ACTIVE" ? "Lưu trữ lớp" : "Kích hoạt lại lớp"}
-                        </button>
-                      </div>
-                    </form>
-                  </aside>
-                )}
               </div>
             </div>
           </div>

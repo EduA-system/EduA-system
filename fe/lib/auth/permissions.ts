@@ -1,4 +1,4 @@
-export type Role = "TEACHER" | "MODERATOR" | "PRINCIPAL" | "IT_STAFF";
+export type Role = "TEACHER" | "MODERATOR" | "PRINCIPAL" | "IT_STAFF" | "STUDENT";
 
 export interface RoutePermission {
   requireAuth: boolean;
@@ -16,7 +16,8 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/lesson-edit":     { requireAuth: true },
   "/create-class":    { requireAuth: true, allowedRoles: ["TEACHER"] },
   "/add-student":     { requireAuth: true, allowedRoles: ["TEACHER"] },
-  "/view-class-resources": { requireAuth: true },
+  "/class-detail":    { requireAuth: true, allowedRoles: ["TEACHER"] },
+  "/list-class":      { requireAuth: true },
   "/slide-create":    { requireAuth: true },
   "/slide-maker":     { requireAuth: true },
   "/molecules":       { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
