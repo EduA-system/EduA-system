@@ -14,4 +14,6 @@ public interface SubmissionJpaRepository extends JpaRepository<SubmissionEntity,
     List<SubmissionEntity> findByClassResourceIdInAndStudentId(List<UUID> classResourceIds, UUID studentId);
 
     void deleteByClassResourceIdAndStudentId(UUID classResourceId, UUID studentId);
+
+    List<SubmissionEntity> findByClassResourceId(UUID classResourceId);
 }

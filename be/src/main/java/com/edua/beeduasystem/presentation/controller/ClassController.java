@@ -15,7 +15,9 @@ import com.edua.beeduasystem.presentation.dto.classroom.ImportStudentsResponse;
 import com.edua.beeduasystem.presentation.dto.classroom.PostClassResourceRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.SubmissionDetailDto;
 import com.edua.beeduasystem.presentation.dto.classroom.SubmissionFileRequest;
+import com.edua.beeduasystem.presentation.dto.classroom.SubmissionRosterDto;
 import com.edua.beeduasystem.presentation.dto.classroom.SubmitAssignmentRequest;
+import com.edua.beeduasystem.presentation.dto.classroom.TeacherSubmissionDetailDto;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassResourceRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassStatusRequest;
@@ -48,7 +50,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/classes")
-@Tag(name = "Class Management", description = "Teacher quan ly lop hoc theo Class Hub (UC-29/30/31/32/33), them hoc sinh (UC-36), Student xem lop da enrolled (UC-35), xem class resources (UC-41) va nop/thu hoi bai (UC-47/48)")
+@Tag(name = "Class Management", description = "Teacher quan ly lop hoc theo Class Hub (UC-29/30/31/32/33), them hoc sinh (UC-36), Student xem lop da enrolled (UC-35), xem class resources (UC-41) va nop/thu hoi bai (UC-47/48), Teacher xem danh sach/chi tiet bai nop cua hoc sinh (UC-44/45)")
 public class ClassController {
 
     private final ClassManagementService classManagementService;
@@ -216,6 +218,19 @@ public class ClassController {
     @Operation(summary = "Xem lại bài đã nộp của chính mình (hỗ trợ FE, ngoài SRS)")
     public SubmissionDetailDto mySubmission(@PathVariable UUID id, @PathVariable UUID resourceId) {
         return SubmissionDetailDto.from(submissionService.getOwnSubmission(id, resourceId));
+    }
+
+    @GetMapping("/{id}/resources/{resourceId}/submissions")
+    @Operation(summary = "Xem danh sách bài nộp của học sinh trong lớp (UC-44)")
+    public SubmissionRosterDto submissions(@PathVariable UUID id, @PathVariable UUID resourceId) {
+        return SubmissionRosterDto.from(submissionService.listSubmissions(id, resourceId));
+    }
+
+    @GetMapping("/{id}/resources/{resourceId}/submissions/{studentId}")
+    @Operation(summary = "Xem chi tiết bài nộp của 1 học sinh (UC-45)")
+    public TeacherSubmissionDetailDto submissionDetail(
+            @PathVariable UUID id, @PathVariable UUID resourceId, @PathVariable UUID studentId) {
+        return TeacherSubmissionDetailDto.from(submissionService.getSubmissionDetail(id, resourceId, studentId));
     }
 
     private static ClassResourceViews.AttachmentInput toAttachmentInput(ClassResourceAttachmentRequest attachment) {

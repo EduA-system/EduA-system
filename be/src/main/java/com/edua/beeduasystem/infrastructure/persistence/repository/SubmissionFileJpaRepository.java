@@ -10,5 +10,7 @@ public interface SubmissionFileJpaRepository extends JpaRepository<SubmissionFil
 
     List<SubmissionFileEntity> findBySubmissionId(UUID submissionId);
 
+    List<SubmissionFileEntity> findBySubmissionIdIn(List<UUID> submissionIds);
+
     void deleteBySubmissionId(UUID submissionId);
 }

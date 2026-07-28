@@ -91,6 +91,26 @@ public class JpaSubmissionRepository implements SubmissionRepository {
                 .collect(Collectors.toMap(SubmissionEntity::getClassResourceId, SubmissionEntity::getStatus));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubmissionWithFiles> findAllByResource(UUID classResourceId) {
+        List<SubmissionEntity> entities = submissionJpa.findByClassResourceId(classResourceId);
+        if (entities.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, List<SubmissionFileEntity>> filesBySubmissionId = fileJpa
+                .findBySubmissionIdIn(entities.stream().map(SubmissionEntity::getId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(SubmissionFileEntity::getSubmissionId));
+        return entities.stream()
+                .map(entity -> new SubmissionWithFiles(
+                        toDomain(entity),
+                        filesBySubmissionId.getOrDefault(entity.getId(), List.of()).stream()
+                                .map(JpaSubmissionRepository::toFileDomain)
+                                .toList()))
+                .toList();
+    }
+
     private List<SubmissionFile> toFiles(UUID submissionId) {
         return fileJpa.findBySubmissionId(submissionId).stream().map(JpaSubmissionRepository::toFileDomain).toList();
     }

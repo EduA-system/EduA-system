@@ -21,6 +21,9 @@ public interface SubmissionRepository {
     /** Trang thai nop bai (ON_TIME/LATE) cua 1 hoc sinh cho nhieu resource, dung cho GET /resources (UC-41). */
     Map<UUID, SubmissionStatus> findStatusesByResourceIds(List<UUID> classResourceIds, UUID studentId);
 
+    /** Toan bo submission (kem file) cua 1 resource, dung cho Teacher xem danh sach bai nop (UC-44). */
+    List<SubmissionWithFiles> findAllByResource(UUID classResourceId);
+
     record SubmissionWithFiles(Submission submission, List<SubmissionFile> files) {
     }
 }
