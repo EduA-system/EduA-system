@@ -454,14 +454,14 @@ function WeeklyScheduleScreen() {
                                   onClick={() => openBulkPanel(week.weekStartDate)}
                                   className="flex h-20 items-center justify-center rounded-2xl border border-dashed p-2 text-center text-xs text-[#8a8178] hover:bg-[#f5f1ec]"
                                 >
-                                  Ấn để thêm bài 1 cho tuần này
+                                  Ấn để thêm bài thứ nhất
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => openBulkPanel(week.weekStartDate)}
                                   className="flex h-20 items-center justify-center rounded-2xl border border-dashed p-2 text-center text-xs text-[#8a8178] hover:bg-[#f5f1ec]"
                                 >
-                                  Ấn để thêm bài 2 cho tuần này
+                                  Ấn để thêm bài thứ hai 
                                 </button>
                               </>
                             ) : (
