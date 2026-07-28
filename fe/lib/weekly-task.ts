@@ -41,6 +41,8 @@ export type WeeklyTaskWeek = { weekStartDate: string; tasks: WeeklyTaskSummary[]
 export type WeeklyTaskSchedule = { weeks: WeeklyTaskWeek[] };
 export type WeeklyTaskPage = { items: WeeklyTaskSummary[]; page: number; size: number; total: number };
 
+export type WeeklyTaskBulkResult = { created: WeeklyTaskSummary[]; teacherCount: number; lessonCount: number };
+
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 async function unpack<T>(res: Response): Promise<T> {
@@ -72,6 +74,17 @@ export function createWeeklyTask(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   }).then(unpack<WeeklyTaskDetail>);
+}
+
+export function bulkCreateWeeklyTasks(
+  authFetch: AuthFetch,
+  body: { weekStartDate: string; lessons: { scopeDescription: string; deadline: string }[] },
+) {
+  return authFetch("/api/weekly-tasks/bulk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then(unpack<WeeklyTaskBulkResult>);
 }
 
 export function updateWeeklyTask(

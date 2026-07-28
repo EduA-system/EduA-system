@@ -24,18 +24,22 @@ import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -303,6 +307,67 @@ class WeeklyTaskServiceTest {
         assertThat(result.reviewStatus()).isEqualTo(WeeklyTaskReviewStatus.NOT_SUBMITTED);
         assertThat(result.teacherId()).isEqualTo(teacherId);
         verify(streamPort).publishNew(org.mockito.ArgumentMatchers.eq(teacherId), any());
+    }
+
+    // ---- bulkCreate (bulk UC-81) ----
+
+    @Test
+    void bulkCreate_createsOneTaskPerActiveTeacherPerLesson() {
+        asModerator();
+        LocalDate week = LocalDate.now();
+        UUID teacher1 = UUID.randomUUID();
+        UUID teacher2 = UUID.randomUUID();
+        UUID disabledTeacher = UUID.randomUUID();
+        when(repository.findBySubject(Subject.MATH, week, week)).thenReturn(List.of());
+        when(userRepository.findAllByRoleAndSubject(eq(Role.TEACHER), eq(Subject.MATH), any()))
+                .thenReturn(new PageImpl<>(List.of(
+                        appUser(teacher1, Subject.MATH, UserStatus.ACTIVE),
+                        appUser(teacher2, Subject.MATH, UserStatus.ACTIVE),
+                        appUser(disabledTeacher, Subject.MATH, UserStatus.DISABLED))));
+
+        WeeklyTaskViews.BulkResult result = service.bulkCreate(week, List.of(
+                new WeeklyTaskService.LessonRequest("Bai 1", futureDeadline),
+                new WeeklyTaskService.LessonRequest("Bai 2", futureDeadline)));
+
+        assertThat(result.teacherCount()).isEqualTo(2);
+        assertThat(result.lessonCount()).isEqualTo(2);
+        assertThat(result.created()).hasSize(4);
+        verify(repository, times(4)).save(any());
+    }
+
+    @Test
+    void bulkCreate_rejectsWhenWeekAlreadyHasTasks() {
+        asModerator();
+        LocalDate week = LocalDate.now();
+        when(repository.findBySubject(Subject.MATH, week, week))
+                .thenReturn(List.of(task(UUID.randomUUID(), WeeklyTaskReviewStatus.NOT_SUBMITTED, futureDeadline, null)));
+
+        assertThatThrownBy(() -> service.bulkCreate(week, List.of(new WeeklyTaskService.LessonRequest("Bai 1", futureDeadline))))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void bulkCreate_rejectsWhenNoActiveTeachers() {
+        asModerator();
+        LocalDate week = LocalDate.now();
+        when(repository.findBySubject(Subject.MATH, week, week)).thenReturn(List.of());
+        when(userRepository.findAllByRoleAndSubject(eq(Role.TEACHER), eq(Subject.MATH), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        assertThatThrownBy(() -> service.bulkCreate(week, List.of(new WeeklyTaskService.LessonRequest("Bai 1", futureDeadline))))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void bulkCreate_rejectsPastDeadlineLesson() {
+        asModerator();
+        LocalDate week = LocalDate.now();
+
+        assertThatThrownBy(() -> service.bulkCreate(week, List.of(new WeeklyTaskService.LessonRequest("Bai 1", pastDeadline))))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(repository, never()).save(any());
     }
 
     @Test

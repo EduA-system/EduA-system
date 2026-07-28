@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -102,6 +104,55 @@ public class WeeklyTaskService {
                 null, null, null, null, null, null, null, now, now));
         notify(teacherId, "Nhiệm vụ tuần mới", "Bạn được giao soạn: " + scope + ". Hạn nộp: " + DEADLINE_FMT.format(deadline) + ".");
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
+    }
+
+    /** 1 bài học trong lịch tuần chung của môn — dùng cho {@link #bulkCreate}. */
+    public record LessonRequest(String scopeDescription, Instant deadline) {
+    }
+
+    /**
+     * Bulk UC-81: Moderator giao cùng lúc N bài (vd. Bài 1, Bài 2) cho MỌI Teacher active cùng subject
+     * trong 1 tuần — vì cùng môn thì mọi lớp theo cùng phân phối chương trình. Chỉ dùng để khởi tạo lần
+     * đầu cho 1 tuần; sửa từng giáo viên sau đó dùng {@link #update}.
+     */
+    @Transactional
+    public WeeklyTaskViews.BulkResult bulkCreate(LocalDate weekStartDate, List<LessonRequest> lessons) {
+        Subject moderatorSubject = requireSubject();
+        if (lessons.isEmpty()) {
+            throw new IllegalArgumentException("Phải có ít nhất 1 bài học.");
+        }
+        List<LessonRequest> validated = lessons.stream()
+                .map(l -> new LessonRequest(requireScope(l.scopeDescription()), l.deadline()))
+                .toList();
+        validated.forEach(l -> requireFutureDeadline(l.deadline()));
+
+        if (!repository.findBySubject(moderatorSubject, weekStartDate, weekStartDate).isEmpty()) {
+            throw new IllegalArgumentException("Tuần này đã có lịch — sửa từng nhiệm vụ thay vì tạo lại.");
+        }
+
+        List<AppUser> teachers = userRepository.findAllByRoleAndSubject(Role.TEACHER, moderatorSubject, Pageable.unpaged())
+                .getContent().stream()
+                .filter(t -> t.status() == UserStatus.ACTIVE)
+                .toList();
+        if (teachers.isEmpty()) {
+            throw new IllegalArgumentException("Chưa có giáo viên active nào trong môn của bạn.");
+        }
+
+        UUID moderatorId = currentUser.requireUserId();
+        Instant now = Instant.now();
+        List<WeeklyTask> created = new ArrayList<>();
+        for (AppUser teacher : teachers) {
+            for (LessonRequest lesson : validated) {
+                created.add(repository.save(new WeeklyTask(UUID.randomUUID(), moderatorId, moderatorSubject,
+                        teacher.id(), weekStartDate, lesson.scopeDescription(), lesson.deadline(),
+                        WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, now, now)));
+            }
+        }
+        for (AppUser teacher : teachers) {
+            notify(teacher.id(), "Lịch tuần mới",
+                    "Bạn được giao " + validated.size() + " bài cho tuần " + weekStartDate + ".");
+        }
+        return WeeklyTaskViews.toBulkResult(created, resolveNames(created), teachers.size(), validated.size());
     }
 
     /** UC-82: Moderator sửa task còn hạn (BR-47); đổi Teacher sẽ reset reviewStatus vì người mới chưa nộp gì. */
