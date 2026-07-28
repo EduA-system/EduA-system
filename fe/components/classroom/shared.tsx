@@ -171,7 +171,11 @@ export function ResourceCard({
           </span>
           {resource.submissionEnabled && (
             <span className="inline-flex items-center gap-1 rounded-full border border-[#f0d9aa] bg-[#fff7df] px-2.5 py-1 text-[11px] font-medium text-[#9a661c]">
-              <ClipboardList className="size-3" /> {submissionStatusLabel(resource.submissionStatus)}
+              <ClipboardList className="size-3" />{" "}
+              {/* NOT_APPLICABLE ở đây luôn là do người xem là chủ lớp (giáo viên không tự nộp
+                  bài của mình), không phải "tài nguyên không cần nộp bài" — badge chỉ hiện khi
+                  submissionEnabled=true nên không nhầm với trường hợp còn lại của NOT_APPLICABLE. */}
+              {resource.submissionStatus === "NOT_APPLICABLE" ? "Yêu cầu nộp bài" : submissionStatusLabel(resource.submissionStatus)}
             </span>
           )}
         </div>
