@@ -13,6 +13,9 @@ import com.edua.beeduasystem.presentation.dto.classroom.ClassResourceSummaryDto;
 import com.edua.beeduasystem.presentation.dto.classroom.CreateClassRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.ImportStudentsResponse;
 import com.edua.beeduasystem.presentation.dto.classroom.PostClassResourceRequest;
+import com.edua.beeduasystem.presentation.dto.classroom.SubmissionDetailDto;
+import com.edua.beeduasystem.presentation.dto.classroom.SubmissionFileRequest;
+import com.edua.beeduasystem.presentation.dto.classroom.SubmitAssignmentRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassResourceRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.UpdateClassStatusRequest;
@@ -20,6 +23,8 @@ import com.edua.beeduasystem.service.classroom.ClassEnrollmentService;
 import com.edua.beeduasystem.service.classroom.ClassManagementService;
 import com.edua.beeduasystem.service.classroom.ClassResourceService;
 import com.edua.beeduasystem.service.classroom.ClassResourceViews;
+import com.edua.beeduasystem.service.classroom.SubmissionService;
+import com.edua.beeduasystem.service.classroom.SubmissionViews;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -38,23 +43,27 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/classes")
-@Tag(name = "Class Management", description = "Teacher quan ly lop hoc theo Class Hub (UC-29/30/31/32/33), them hoc sinh (UC-36), Student xem lop da enrolled (UC-35) va xem class resources (UC-41)")
+@Tag(name = "Class Management", description = "Teacher quan ly lop hoc theo Class Hub (UC-29/30/31/32/33), them hoc sinh (UC-36), Student xem lop da enrolled (UC-35), xem class resources (UC-41) va nop/thu hoi bai (UC-47/48)")
 public class ClassController {
 
     private final ClassManagementService classManagementService;
     private final ClassEnrollmentService classEnrollmentService;
     private final ClassResourceService classResourceService;
+    private final SubmissionService submissionService;
 
     public ClassController(ClassManagementService classManagementService,
                            ClassEnrollmentService classEnrollmentService,
-                           ClassResourceService classResourceService) {
+                           ClassResourceService classResourceService,
+                           SubmissionService submissionService) {
         this.classManagementService = classManagementService;
         this.classEnrollmentService = classEnrollmentService;
         this.classResourceService = classResourceService;
+        this.submissionService = submissionService;
     }
 
     @GetMapping
@@ -186,11 +195,43 @@ public class ClassController {
         classResourceService.deleteResource(id, resourceId);
     }
 
+    @PostMapping("/{id}/resources/{resourceId}/submission")
+    @Operation(summary = "Nộp bài tập, text và/hoặc file (UC-47)")
+    public SubmissionDetailDto submit(
+            @PathVariable UUID id,
+            @PathVariable UUID resourceId,
+            @Valid @RequestBody SubmitAssignmentRequest request) {
+        return SubmissionDetailDto.from(submissionService.submit(
+                id, resourceId, request.textContent(), toFileInputs(request.files())));
+    }
+
+    @DeleteMapping("/{id}/resources/{resourceId}/submission")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Thu hồi bài nộp (UC-48)")
+    public void unsubmit(@PathVariable UUID id, @PathVariable UUID resourceId) {
+        submissionService.unsubmit(id, resourceId);
+    }
+
+    @GetMapping("/{id}/resources/{resourceId}/submission")
+    @Operation(summary = "Xem lại bài đã nộp của chính mình (hỗ trợ FE, ngoài SRS)")
+    public SubmissionDetailDto mySubmission(@PathVariable UUID id, @PathVariable UUID resourceId) {
+        return SubmissionDetailDto.from(submissionService.getOwnSubmission(id, resourceId));
+    }
+
     private static ClassResourceViews.AttachmentInput toAttachmentInput(ClassResourceAttachmentRequest attachment) {
         if (attachment == null) {
             return null;
         }
         return new ClassResourceViews.AttachmentInput(
                 attachment.url(), attachment.fileName(), attachment.contentType(), attachment.sizeBytes());
+    }
+
+    private static List<SubmissionViews.FileInput> toFileInputs(List<SubmissionFileRequest> files) {
+        if (files == null) {
+            return List.of();
+        }
+        return files.stream()
+                .map(f -> new SubmissionViews.FileInput(f.url(), f.fileName(), f.contentType(), f.sizeBytes()))
+                .toList();
     }
 }

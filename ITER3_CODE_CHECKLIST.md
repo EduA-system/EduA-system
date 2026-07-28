@@ -40,7 +40,7 @@ Legend:
 | [~] | Manage Classroom Resources & Assignments | Classroom | Planned | Partial | Có backend `/api/classes` CRUD + FE `/create-class` cho Teacher tạo/xem/sửa/deactivate lớp; chưa có enrollment, resource, assignment, submission review APIs/UI. |
 | [ ] | Assign Homework with Deadline | Classroom | Planned | Not found | Chưa thấy assignment/deadline API hoặc UI. |
 | [ ] | Student View Teaching Resources | Classroom | Planned | Not found | Chưa thấy student classroom/resource access module. |
-| [ ] | Student Assignment Submission | Classroom | Planned | Not found | Chưa thấy submission/upload-text assignment module. |
+| [~] | Student Assignment Submission | Classroom | Planned | Partial | Backend xong: `POST/DELETE/GET /api/classes/{id}/resources/{resourceId}/submission` (UC-47/48, `ClassController`/`SubmissionService`), nộp text (rich text, sanitize qua `BlogContentSanitizer`) và/hoặc file, bảng `submissions`/`submission_files` (`V25`). FE: `/detail-resource` (nộp/thu hồi bài, TipTap rich text + đính kèm file, tái dùng `RichEditor`/`RichView`). |
 | [ ] | Teacher Review Student Submissions | Classroom | Planned | Not found | Chưa thấy teacher review submissions module. |
 | [ ] | Submit Lesson Plan for Approval | Lesson | Planned | Not found | Lesson plan generation/edit exists, but no approval status/workflow found. |
 | [ ] | Moderator Approve / Reject Lesson Plans | Lesson | Planned | Not found | Chưa thấy lesson approval review API/UI. |

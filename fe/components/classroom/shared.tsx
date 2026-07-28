@@ -97,23 +97,43 @@ export function ResourceCard({
   canManage,
   onEdit,
   onDelete,
+  onOpen,
   deleting,
 }: {
   resource: ClassResourceSummary;
   canManage?: boolean;
   onEdit?: (resource: ClassResourceSummary) => void;
   onDelete?: (resource: ClassResourceSummary) => void;
+  onOpen?: (resource: ClassResourceSummary) => void;
   deleting?: boolean;
 }) {
   const SourceIcon = resource.sourceType === "LIBRARY_SNAPSHOT" ? Library : UploadCloud;
 
   return (
-    <article className="relative flex gap-4 rounded-[14px] border border-[#d8d1c9] bg-white p-4 transition hover:border-[#c9a998] hover:shadow-[0_10px_24px_rgba(31,31,31,0.06)]">
+    <article
+      onClick={onOpen ? () => onOpen(resource) : undefined}
+      onKeyDown={
+        onOpen
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onOpen(resource);
+              }
+            }
+          : undefined
+      }
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      className={`relative flex gap-4 rounded-[14px] border border-[#d8d1c9] bg-white p-4 transition hover:border-[#c9a998] hover:shadow-[0_10px_24px_rgba(31,31,31,0.06)] ${onOpen ? "cursor-pointer" : ""}`}
+    >
       {canManage && (
         <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => onEdit?.(resource)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit?.(resource);
+            }}
             title="Sửa tài nguyên"
             className="flex size-8 items-center justify-center rounded-[10px] border border-[#d8d1c9] bg-white/95 text-[#6b6b6b] shadow-sm transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
           >
@@ -121,7 +141,10 @@ export function ResourceCard({
           </button>
           <button
             type="button"
-            onClick={() => onDelete?.(resource)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete?.(resource);
+            }}
             disabled={deleting}
             title="Xóa tài nguyên"
             className="flex size-8 items-center justify-center rounded-[10px] border border-[#e8b4a4] bg-white/95 text-[#c0492b] shadow-sm transition hover:bg-[#fdf3ef] disabled:cursor-not-allowed disabled:opacity-50"
@@ -164,6 +187,7 @@ export function ResourceCard({
               href={resource.attachment.url}
               target="_blank"
               rel="noreferrer"
+              onClick={(event) => event.stopPropagation()}
               className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1.5 text-[11.5px] font-medium text-[#1f1f1f] transition hover:bg-[#f5f1ec]"
             >
               <Paperclip className="size-3.5 text-[#8a837b]" />

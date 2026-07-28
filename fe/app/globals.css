@@ -431,6 +431,24 @@ body::-webkit-scrollbar {
   white-space: pre-wrap;
 }
 
+/* RichEditor (blog + submit-assignment): ProseMirror la div con duoc EditorContent
+   append vao sau, khong nhan duoc class Tailwind cua wrapper .tiptap -> can reset
+   outline/margin rieng o day, khong phu thuoc .blog-detail-prose (chi ap dung cho
+   RichView doc-only). Thieu rule nay, trinh duyet tu ve outline mac dinh quanh dong
+   text vua go, nhin nhu 1 o input nho co vien. */
+.tiptap .ProseMirror {
+  outline: none;
+  min-height: inherit;
+}
+
+.tiptap .ProseMirror p {
+  margin: 0 0 8px;
+}
+
+.tiptap .ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
 .blog-detail-prose .tiptap {
   color: #4a4b5e;
   font-size: 15px;

@@ -174,7 +174,7 @@ flowchart TD
 ## 5. Model dữ liệu
 
 ```sql
--- V24__create_submissions.sql
+-- V25__create_submissions.sql
 -- Bang nay phuc vu UC-47 (Submit)/UC-48 (Unsubmit). Ho tro ca text (rich text HTML, sanitize
 -- bang BlogContentSanitizer) lan file (1-nhieu, bang con submission_files) - mo rong ngoai SRS
 -- goc (chi mo ta file). Xem thiet ke: designs/API_designs/submit-assignment.md.

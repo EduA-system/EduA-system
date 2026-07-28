@@ -278,7 +278,13 @@ export function StudentClassResourcesPage() {
                       ) : (
                         <div className="space-y-4">
                           {resources.map((resource) => (
-                            <ResourceCard key={resource.id} resource={resource} />
+                            <ResourceCard
+                              key={resource.id}
+                              resource={resource}
+                              onOpen={(target) =>
+                                router.push(`/detail-resource?classId=${classId}&resourceId=${target.id}`)
+                              }
+                            />
                           ))}
                         </div>
                       )}

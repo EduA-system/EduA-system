@@ -17,6 +17,7 @@ import com.edua.beeduasystem.repository.repositories.ClassRepository;
 import com.edua.beeduasystem.repository.repositories.ClassResourceRepository;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
 import com.edua.beeduasystem.repository.repositories.NotificationRepository;
+import com.edua.beeduasystem.repository.repositories.SubmissionRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,7 @@ public class ClassResourceService {
     private final CurrentUserProvider currentUserProvider;
     private final NotificationRepository notificationRepository;
     private final NotificationStreamPort notificationStreamPort;
+    private final SubmissionRepository submissionRepository;
 
     public ClassResourceService(ClassRepository classRepository,
                                 ClassMemberRepository classMemberRepository,
@@ -53,7 +55,8 @@ public class ClassResourceService {
                                 AppUserRepository userRepository,
                                 CurrentUserProvider currentUserProvider,
                                 NotificationRepository notificationRepository,
-                                NotificationStreamPort notificationStreamPort) {
+                                NotificationStreamPort notificationStreamPort,
+                                SubmissionRepository submissionRepository) {
         this.classRepository = classRepository;
         this.classMemberRepository = classMemberRepository;
         this.classResourceRepository = classResourceRepository;
@@ -62,14 +65,18 @@ public class ClassResourceService {
         this.currentUserProvider = currentUserProvider;
         this.notificationRepository = notificationRepository;
         this.notificationStreamPort = notificationStreamPort;
+        this.submissionRepository = submissionRepository;
     }
 
     @Transactional(readOnly = true)
     public ClassResourceViews.Page listResources(UUID classId, int page, int size) {
         // BR-39: doc duoc ca khi lop INACTIVE, khong check status nhu cac thao tac ghi.
-        requireAccessibleClass(classId);
+        Classroom classroom = requireAccessibleClass(classId);
+        UUID currentUserId = currentUserProvider.requireUserId();
+        boolean viewerIsOwner = classroom.isOwnedBy(currentUserId);
         ClassResourceRepository.PageResult result = classResourceRepository.findByClassId(classId, page, size);
-        return new ClassResourceViews.Page(toSummaries(result.items()), page, size, result.total());
+        return new ClassResourceViews.Page(
+                toSummaries(result.items(), currentUserId, viewerIsOwner), page, size, result.total());
     }
 
     @Transactional
@@ -116,7 +123,7 @@ public class ClassResourceService {
 
         notifyResourceChange(classroom, saved, classMemberRepository.findAllStudentIds(classId));
 
-        return toSummary(saved, resolvePoster(currentUserId));
+        return toSummary(saved, resolvePoster(currentUserId), SubmissionStatus.NOT_APPLICABLE);
     }
 
     @Transactional
@@ -168,7 +175,7 @@ public class ClassResourceService {
             notifyResourceChange(classroom, saved, classMemberRepository.findAllStudentIds(classId));
         }
 
-        return toSummary(saved, resolvePoster(saved.postedBy()));
+        return toSummary(saved, resolvePoster(saved.postedBy()), SubmissionStatus.NOT_APPLICABLE);
     }
 
     @Transactional
@@ -178,17 +185,33 @@ public class ClassResourceService {
         classResourceRepository.deleteById(existing.id());
     }
 
-    private List<ClassResourceViews.ResourceSummary> toSummaries(List<ClassResource> resources) {
+    private List<ClassResourceViews.ResourceSummary> toSummaries(List<ClassResource> resources, UUID viewerId, boolean viewerIsOwner) {
         if (resources.isEmpty()) {
             return List.of();
         }
         Map<UUID, AppUser> postersById = userRepository.findAllById(
                         resources.stream().map(ClassResource::postedBy).distinct().toList())
                 .stream().collect(Collectors.toMap(AppUser::id, u -> u));
-        return resources.stream().map(r -> toSummary(r, postersById.get(r.postedBy()))).toList();
+        // Owner khong phai nguoi nop bai -> khong can tra submissions (tranh query thua).
+        Map<UUID, SubmissionStatus> ownStatuses = viewerIsOwner
+                ? Map.of()
+                : submissionRepository.findStatusesByResourceIds(
+                        resources.stream().map(ClassResource::id).toList(), viewerId);
+        return resources.stream()
+                .map(r -> toSummary(r, postersById.get(r.postedBy()), resolveOwnStatus(r, viewerIsOwner, ownStatuses)))
+                .toList();
     }
 
-    private static ClassResourceViews.ResourceSummary toSummary(ClassResource resource, AppUser poster) {
+    private static SubmissionStatus resolveOwnStatus(
+            ClassResource resource, boolean viewerIsOwner, Map<UUID, SubmissionStatus> ownStatuses) {
+        if (viewerIsOwner || !resource.submissionEnabled()) {
+            return SubmissionStatus.NOT_APPLICABLE;
+        }
+        return ownStatuses.getOrDefault(resource.id(), SubmissionStatus.NOT_SUBMITTED);
+    }
+
+    private static ClassResourceViews.ResourceSummary toSummary(
+            ClassResource resource, AppUser poster, SubmissionStatus submissionStatus) {
         return new ClassResourceViews.ResourceSummary(
                 resource.id(),
                 resource.title(),
@@ -200,7 +223,7 @@ public class ClassResourceService {
                 resource.deadline(),
                 poster != null ? (StringUtils.hasText(poster.fullName()) ? poster.fullName() : poster.email()) : null,
                 resource.createdAt(),
-                resource.submissionEnabled() ? SubmissionStatus.NOT_SUBMITTED : SubmissionStatus.NOT_APPLICABLE);
+                submissionStatus);
     }
 
     private static ClassResourceViews.Attachment toAttachment(ClassResource resource) {

@@ -115,11 +115,13 @@ export const RESOURCE_SOURCE_TYPE_LABELS: Record<ResourceSourceType, string> = {
   FILE_UPLOAD: "Tệp tải lên",
 };
 
-export type SubmissionStatus = "NOT_APPLICABLE" | "NOT_SUBMITTED";
+export type SubmissionStatus = "NOT_APPLICABLE" | "NOT_SUBMITTED" | "ON_TIME" | "LATE";
 
 export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
   NOT_APPLICABLE: "Không yêu cầu nộp bài",
   NOT_SUBMITTED: "Chưa nộp bài",
+  ON_TIME: "Đã nộp - Đúng hạn",
+  LATE: "Đã nộp - Trễ hạn",
 };
 
 export type ClassResourceAttachment = {
@@ -360,4 +362,57 @@ export async function uploadClassResourceFile(authFetch: AuthFetch, file: File):
     throw new Error(data && "message" in data ? String(data.message) : "Không thể tải tệp lên.");
   }
   return data as UploadedFile;
+}
+
+// ---- Submit Assignment (UC-47/48) — nộp bài text và/hoặc file, thu hồi bài nộp ----
+
+export type SubmissionFileItem = {
+  fileName: string;
+  url: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
+export type SubmissionDetail = {
+  id: string;
+  textContent: string | null;
+  files: SubmissionFileItem[];
+  status: "ON_TIME" | "LATE";
+  submittedAt: string;
+};
+
+export type SubmitAssignmentPayload = {
+  textContent?: string | null;
+  files?: SubmissionFileItem[];
+};
+
+export function submitAssignment(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+  payload: SubmitAssignmentPayload,
+): Promise<SubmissionDetail> {
+  return request<SubmissionDetail>(authFetch, `/${classId}/resources/${resourceId}/submission`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function unsubmitAssignment(authFetch: AuthFetch, classId: string, resourceId: string): Promise<void> {
+  return request<void>(authFetch, `/${classId}/resources/${resourceId}/submission`, { method: "DELETE" });
+}
+
+/** Tra ve {@code null} khi hoc sinh chua nop bai (404), khong coi la loi. */
+export async function getMySubmission(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+): Promise<SubmissionDetail | null> {
+  const response = await authFetch(`/api/classes/${classId}/resources/${resourceId}/submission`);
+  if (response.status === 404) return null;
+  const data = (await response.json().catch(() => null)) as (SubmissionDetail & { message?: string }) | null;
+  if (!response.ok) {
+    throw new Error(data && "message" in data ? String(data.message) : "Không thể tải bài đã nộp.");
+  }
+  return data as SubmissionDetail;
 }

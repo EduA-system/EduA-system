@@ -181,7 +181,7 @@ body: SubmitAssignmentRequest
 
 ## Phụ thuộc & thứ tự build
 
-1. Migration mới `V24__create_submissions.sql`: bảng `submissions` (unique
+1. Migration mới `V25__create_submissions.sql`: bảng `submissions` (unique
    `(class_resource_id, student_id)`, FK `class_resource_id → class_resources(id) ON DELETE CASCADE`
    để đáp ứng BR-45 khi xóa resource) + bảng con `submission_files`
    (FK `submission_id → submissions(id) ON DELETE CASCADE`). Chi tiết cột: xem
