@@ -43,6 +43,7 @@ import {
 } from "@/lib/classroom";
 import { listLibrary, type LibraryContent } from "@/lib/library";
 import { ResourceCard, statusClasses, subjectBannerClasses } from "./shared";
+import { SubmissionDetailPanel } from "./SubmissionDetailPanel";
 import { SubmissionsRosterPanel } from "./SubmissionsRosterPanel";
 
 const GRADES = [10, 11, 12] as const;
@@ -433,6 +434,7 @@ export function ClassDetailPage() {
   const searchParams = useSearchParams();
   const classId = searchParams.get("classId") ?? "";
   const resourceId = searchParams.get("resourceId") ?? "";
+  const studentId = searchParams.get("studentId") ?? "";
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassDetail | null>(null);
@@ -671,7 +673,16 @@ export function ClassDetailPage() {
                 {resourceId ? (
                   activeResource ? (
                     <div className="mt-6">
-                      <SubmissionsRosterPanel authFetch={authFetch} classId={selectedClass.id} resource={activeResource} />
+                      {studentId ? (
+                        <SubmissionDetailPanel
+                          authFetch={authFetch}
+                          classId={selectedClass.id}
+                          resource={activeResource}
+                          studentId={studentId}
+                        />
+                      ) : (
+                        <SubmissionsRosterPanel authFetch={authFetch} classId={selectedClass.id} resource={activeResource} />
+                      )}
                     </div>
                   ) : resourcesLoading ? (
                     <div className="mt-6 h-[320px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
