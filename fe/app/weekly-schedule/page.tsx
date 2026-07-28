@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { Modal } from "@/components/ui/Modal";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { MonthPicker } from "@/components/ui/MonthPicker";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { hasAnyRole } from "@/lib/auth/permissions";
@@ -144,15 +147,6 @@ function WeeklyScheduleScreen() {
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
 
-  const monthInputValue = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
-
-  function handleMonthInputChange(value: string) {
-    const [y, m] = value.split("-").map(Number);
-    if (!y || !m) return;
-    setViewYear(y);
-    setViewMonth(m - 1);
-  }
-
   // ── Sửa 1 giáo viên trong 1 tuần (Moderator) ──────────────────────────
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -165,10 +159,7 @@ function WeeklyScheduleScreen() {
   // ── Tạo lịch tuần chung cho cả môn (Moderator, bulk-assign) ───────────
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkWeekStart, setBulkWeekStart] = useState("");
-  const [bulkLessons, setBulkLessons] = useState<{ scope: string; deadline: string }[]>([
-    { scope: "", deadline: "" },
-    { scope: "", deadline: "" },
-  ]);
+  const [bulkLessons, setBulkLessons] = useState<{ scope: string; deadline: string }[]>([{ scope: "", deadline: "" }]);
   const [bulkSaving, setBulkSaving] = useState(false);
 
   const [submittingId, setSubmittingId] = useState<string | null>(null);
@@ -236,12 +227,9 @@ function WeeklyScheduleScreen() {
     }
   }
 
-  function openBulkPanel(weekStartDate?: string) {
-    setBulkWeekStart(weekStartDate ?? "");
-    setBulkLessons([
-      { scope: "", deadline: "" },
-      { scope: "", deadline: "" },
-    ]);
+  function openBulkPanel(weekStartDate: string) {
+    setBulkWeekStart(weekStartDate);
+    setBulkLessons([{ scope: "", deadline: "" }]);
     setBulkOpen(true);
   }
 
@@ -329,132 +317,108 @@ function WeeklyScheduleScreen() {
                   : "Nhiệm vụ giáo án tuần được giao cho bạn."}
               </p>
             </div>
-            {isModerator ? (
-              <button
-                onClick={() => openBulkPanel()}
-                className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white"
-              >
-                Tạo lịch tuần
-              </button>
-            ) : null}
           </header>
 
           {isModerator ? (
             <div className="mt-4 flex items-center gap-3">
-              <input
-                type="month"
-                value={monthInputValue}
-                onChange={(e) => handleMonthInputChange(e.target.value)}
-                aria-label="Chọn tháng"
-                className="rounded-lg border bg-white px-3 py-1.5 text-sm font-semibold hover:bg-[#f5f1ec]"
+              <MonthPicker
+                year={viewYear}
+                month={viewMonth}
+                onChange={(y, m) => {
+                  setViewYear(y);
+                  setViewMonth(m);
+                }}
               />
             </div>
           ) : null}
 
-          {bulkOpen ? (
-            <div className="mt-5 rounded-2xl border bg-white p-5">
-              <h2 className="font-semibold">Tạo lịch tuần</h2>
-              <p className="mt-1 text-xs text-[#6b6b6b]">
-                Áp dụng tự động cho mọi giáo viên đang hoạt động cùng môn với bạn.
-              </p>
-              <input
-                type="date"
-                value={bulkWeekStart}
-                onChange={(e) => setBulkWeekStart(e.target.value)}
-                className="mt-3 w-full rounded-xl border p-2 text-sm sm:w-auto"
-              />
-              <div className="mt-3 space-y-3">
-                {bulkLessons.map((lesson, i) => (
-                  <div key={i} className="grid gap-3 rounded-xl border border-dashed p-3 sm:grid-cols-2">
-                    <p className="text-xs font-medium text-[#6b6b6b] sm:col-span-2">Bài {i + 1}</p>
-                    <textarea
-                      value={lesson.scope}
-                      onChange={(e) => updateBulkLesson(i, "scope", e.target.value)}
-                      placeholder="Yêu cầu giáo án (vd: Chương 3 - Định luật Newton, Vật lý 10)"
-                      rows={2}
-                      className="rounded-xl border p-2 text-sm sm:col-span-2"
-                    />
-                    <input
-                      type="datetime-local"
-                      value={lesson.deadline}
-                      onChange={(e) => updateBulkLesson(i, "deadline", e.target.value)}
-                      className="rounded-xl border p-2 text-sm sm:col-span-2"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <button type="button" onClick={addBulkLesson} className="text-sm text-[#b85c3b] underline">
-                  + Thêm bài
-                </button>
-                <div className="flex justify-end gap-2">
-                  <button onClick={() => setBulkOpen(false)} className="rounded-xl px-4 py-2 text-sm">
-                    Hủy
-                  </button>
-                  <button
-                    onClick={() => void handleBulkCreate()}
-                    disabled={bulkSaving || !bulkWeekStart || bulkLessons.every((l) => !l.scope.trim() || !l.deadline)}
-                    className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
-                  >
-                    {bulkSaving ? "Đang tạo..." : "Tạo lịch"}
-                  </button>
+          <Modal
+            open={bulkOpen}
+            onClose={() => setBulkOpen(false)}
+            title="Tạo lịch tuần"
+            description="Áp dụng tự động cho mọi giáo viên đang hoạt động cùng môn với bạn."
+            maxWidthClassName="max-w-2xl"
+          >
+            <p className="w-full rounded-xl border bg-[#f5f1ec] p-2 text-sm sm:w-64">Tuần bắt đầu {formatWeek(bulkWeekStart)}</p>
+            <div className="mt-3 space-y-3">
+              {bulkLessons.map((lesson, i) => (
+                <div key={i} className="grid gap-3 rounded-xl border border-dashed p-3 sm:grid-cols-2">
+                  <p className="text-xs font-medium text-[#6b6b6b] sm:col-span-2">Bài {i + 1}</p>
+                  <textarea
+                    value={lesson.scope}
+                    onChange={(e) => updateBulkLesson(i, "scope", e.target.value)}
+                    placeholder="Yêu cầu giáo án (vd: Chương 3 - Định luật Newton, Vật lý 10)"
+                    rows={2}
+                    className="rounded-xl border p-2 text-sm sm:col-span-2"
+                  />
+                  <DatePicker
+                    withTime
+                    value={lesson.deadline}
+                    onChange={(v) => updateBulkLesson(i, "deadline", v)}
+                    placeholder="Chọn hạn nộp"
+                    className="sm:col-span-2"
+                  />
                 </div>
-              </div>
+              ))}
             </div>
-          ) : null}
-
-          {formOpen ? (
-            <div className="mt-5 rounded-2xl border bg-white p-5">
-              <h2 className="font-semibold">Sửa nhiệm vụ tuần</h2>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <select
-                  value={formTeacherId}
-                  onChange={(e) => setFormTeacherId(e.target.value)}
-                  className="rounded-xl border p-2 text-sm"
-                >
-                  <option value="">Chọn giáo viên...</option>
-                  {teachers
-                    .filter((t) => t.status === "ACTIVE" || t.id === formTeacherId)
-                    .map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.fullName ?? t.email}
-                      </option>
-                    ))}
-                </select>
-                <input
-                  type="date"
-                  value={formWeekStart}
-                  onChange={(e) => setFormWeekStart(e.target.value)}
-                  className="rounded-xl border p-2 text-sm"
-                />
-                <input
-                  type="datetime-local"
-                  value={formDeadline}
-                  onChange={(e) => setFormDeadline(e.target.value)}
-                  className="rounded-xl border p-2 text-sm sm:col-span-2"
-                />
-                <textarea
-                  value={formScope}
-                  onChange={(e) => setFormScope(e.target.value)}
-                  placeholder="Yêu cầu giáo án (vd: Chương 3 - Định luật Newton, Vật lý 10)"
-                  rows={3}
-                  className="rounded-xl border p-2 text-sm sm:col-span-2"
-                />
-              </div>
-              <div className="mt-3 flex justify-end gap-2">
-                <button onClick={() => setFormOpen(false)} className="rounded-xl px-4 py-2 text-sm">
+            <div className="mt-3 flex items-center justify-between">
+              <button type="button" onClick={addBulkLesson} className="text-sm text-[#b85c3b] underline">
+                + Thêm bài
+              </button>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setBulkOpen(false)} className="rounded-xl px-4 py-2 text-sm">
                   Hủy
                 </button>
                 <button
-                  onClick={() => void handleSaveTask()}
-                  disabled={saving || !formTeacherId || !formWeekStart || !formScope.trim() || !formDeadline}
+                  onClick={() => void handleBulkCreate()}
+                  disabled={bulkSaving || !bulkWeekStart || bulkLessons.every((l) => !l.scope.trim() || !l.deadline)}
                   className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
                 >
-                  {saving ? "Đang lưu..." : "Lưu"}
+                  {bulkSaving ? "Đang tạo..." : "Tạo lịch"}
                 </button>
               </div>
             </div>
-          ) : null}
+          </Modal>
+
+          <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Sửa nhiệm vụ tuần">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <select
+                value={formTeacherId}
+                onChange={(e) => setFormTeacherId(e.target.value)}
+                className="rounded-xl border p-2 text-sm"
+              >
+                <option value="">Chọn giáo viên...</option>
+                {teachers
+                  .filter((t) => t.status === "ACTIVE" || t.id === formTeacherId)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.fullName ?? t.email}
+                    </option>
+                  ))}
+              </select>
+              <DatePicker value={formWeekStart} onChange={setFormWeekStart} placeholder="Chọn tuần" />
+              <DatePicker withTime value={formDeadline} onChange={setFormDeadline} placeholder="Chọn hạn nộp" className="sm:col-span-2" />
+              <textarea
+                value={formScope}
+                onChange={(e) => setFormScope(e.target.value)}
+                placeholder="Yêu cầu giáo án (vd: Chương 3 - Định luật Newton, Vật lý 10)"
+                rows={3}
+                className="rounded-xl border p-2 text-sm sm:col-span-2"
+              />
+            </div>
+            <div className="mt-3 flex justify-end gap-2">
+              <button onClick={() => setFormOpen(false)} className="rounded-xl px-4 py-2 text-sm">
+                Hủy
+              </button>
+              <button
+                onClick={() => void handleSaveTask()}
+                disabled={saving || !formTeacherId || !formWeekStart || !formScope.trim() || !formDeadline}
+                className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
+              >
+                {saving ? "Đang lưu..." : "Lưu"}
+              </button>
+            </div>
+          </Modal>
 
           {msg ? <p className="mt-4 text-sm text-emerald-700">{msg}</p> : null}
           {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
@@ -488,16 +452,16 @@ function WeeklyScheduleScreen() {
                                 <button
                                   type="button"
                                   onClick={() => openBulkPanel(week.weekStartDate)}
-                                  className="flex h-20 items-center justify-center rounded-2xl border border-dashed text-sm text-[#8a8178] hover:bg-[#f5f1ec]"
+                                  className="flex h-20 items-center justify-center rounded-2xl border border-dashed p-2 text-center text-xs text-[#8a8178] hover:bg-[#f5f1ec]"
                                 >
-                                  + Bài 1
+                                  Ấn để thêm bài 1 cho tuần này
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => openBulkPanel(week.weekStartDate)}
-                                  className="flex h-20 items-center justify-center rounded-2xl border border-dashed text-sm text-[#8a8178] hover:bg-[#f5f1ec]"
+                                  className="flex h-20 items-center justify-center rounded-2xl border border-dashed p-2 text-center text-xs text-[#8a8178] hover:bg-[#f5f1ec]"
                                 >
-                                  + Bài 2
+                                  Ấn để thêm bài 2 cho tuần này
                                 </button>
                               </>
                             ) : (
