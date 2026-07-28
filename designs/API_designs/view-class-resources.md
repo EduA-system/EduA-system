@@ -156,7 +156,8 @@ query: ?page=0&size=20
   [`submit-assignment.md`](./submit-assignment.md) — sau khi `ClassResourceService.listResources`
   được cập nhật theo tài liệu đó, `submissionStatus` ở đây sẽ phản ánh dữ liệu thật (`ON_TIME`/`LATE`)
   thay vì placeholder `NOT_SUBMITTED`.
-- `UC-44/45/46` (View Submissions List/Detail, Download Submission File, phía Teacher) vẫn chưa thiết
-  kế — kế thừa cùng `SubmissionRepository` đã định nghĩa ở `submit-assignment.md`.
+- `UC-44/45/46` (View Submissions List/Detail, Download Submission File, phía Teacher) — kế thừa cùng
+  `SubmissionRepository` đã định nghĩa ở `submit-assignment.md` — đã thiết kế ở
+  [`review-submissions.md`](./review-submissions.md).
 - UI Class Resources ở FE (`fe/components/classroom/`) chưa tồn tại, sẽ thiết kế sau khi API được
   chốt.

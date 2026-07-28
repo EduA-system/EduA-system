@@ -248,8 +248,9 @@ body: UpdateClassResourceRequest (partial)
   [`submit-assignment.md`](./submit-assignment.md) — `DELETE` ở đây giờ có FK
   `submissions.class_resource_id ON DELETE CASCADE` xóa submission liên quan thật sự (BR-45), không
   cần sửa lại endpoint.
-- `UC-44/45/46` (View Submissions List/Detail, Download Submission File, phía Teacher) vẫn chưa thiết
-  kế — kế thừa cùng `SubmissionRepository` vừa định nghĩa ở `submit-assignment.md`.
+- `UC-44/45/46` (View Submissions List/Detail, Download Submission File, phía Teacher) — kế thừa cùng
+  `SubmissionRepository` định nghĩa ở `submit-assignment.md` — đã thiết kế ở
+  [`review-submissions.md`](./review-submissions.md).
 - UI Teacher-side (Post/Update/Delete resource) ở FE (`fe/components/classroom/`) chưa tồn tại, sẽ
   thiết kế sau khi API được chốt.
 - Giới hạn kích thước/định dạng file khi `FILE_UPLOAD` dùng chung rule của `POST /api/uploads`

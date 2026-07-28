@@ -438,7 +438,8 @@ body::-webkit-scrollbar {
    text vua go, nhin nhu 1 o input nho co vien. */
 .tiptap .ProseMirror {
   outline: none;
-  min-height: inherit;
+  border: none;
+  min-height: 100%;
 }
 
 .tiptap .ProseMirror p {

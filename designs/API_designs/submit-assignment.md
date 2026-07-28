@@ -7,7 +7,8 @@
 > **Khác SRS**: SRS gốc (mục 2.7.19 UC-47) chỉ mô tả nộp bằng **file**. Tài liệu này mở rộng cho phép
 > nộp **text (rich text)**, **file**, hoặc **cả hai cùng lúc** trong 1 lần nộp — quyết định sản phẩm,
 > xem "Quyết định riêng".
-> Phía Teacher đọc danh sách/chi tiết bài nộp (`UC-44/45/46`) chưa thiết kế ở đây — xem "Điểm mở".
+> Phía Teacher đọc danh sách/chi tiết bài nộp (`UC-44/45/46`) đã thiết kế ở
+> [`review-submissions.md`](./review-submissions.md).
 > Luồng & thiết kế triển khai BE: [`../submit-assignment/flow.md`](../submit-assignment/flow.md).
 > Hạ tầng dùng chung auth/RBAC/rate-limit/upload theo [`api-chung.md`](./api-chung.md).
 
@@ -210,7 +211,8 @@ body: SubmitAssignmentRequest
 
 - `UC-44 View Submissions List`, `UC-45 View Submission Detail`, `UC-46 Download Submission File` —
   phía Teacher đọc danh sách/chi tiết bài nộp của học sinh trong lớp mình, kế thừa cùng
-  `SubmissionRepository`/`SubmissionFile`, thiết kế sau khi tài liệu này chốt.
+  `SubmissionRepository`/`SubmissionFile` — đã thiết kế ở
+  [`review-submissions.md`](./review-submissions.md).
 - `UC-42 View Class Resource Detail`, `UC-43 Download Assigned Material` vẫn chưa thiết kế (xem
   `manage-class-resources.md`).
 - Giới hạn số lượng file/kích thước tổng của 1 submission — hiện dùng đúng rule từng file của

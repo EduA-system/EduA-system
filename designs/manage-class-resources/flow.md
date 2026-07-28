@@ -266,8 +266,11 @@ presentation/controller/          ClassController (them 3 method: POST/PATCH/DEL
 
 - `UC-42 View Class Resource Detail`, `UC-43 Download Assigned Material` — kế thừa cùng
   `ClassResourceRepository`, thiết kế sau khi tài liệu này chốt.
-- `UC-44→48` (Submission) — cần domain `Submission` mới; khi đó `DELETE` (UC-40) cần FK cascade thật
-  để đáp ứng đúng BR-45, và `submissionStatus` trong `ClassResourceSummaryDto` sẽ phản ánh dữ liệu
-  thật thay vì placeholder.
+- `UC-47/48` (Submit/Unsubmit Assignment, phía Student) đã thiết kế và build ở
+  [`../submit-assignment/flow.md`](../submit-assignment/flow.md) — `DELETE` (UC-40) đã có FK cascade
+  thật từ `submissions.class_resource_id` (đáp ứng BR-45), và `submissionStatus` trong
+  `ClassResourceSummaryDto` đã phản ánh dữ liệu thật thay vì placeholder.
+- `UC-44/45/46` (View Submissions List/Detail, Download Submission File, phía Teacher) — đã thiết kế ở
+  [`../review-submissions/flow.md`](../review-submissions/flow.md).
 - UI Teacher-side (Post/Update/Delete resource) ở FE (`fe/components/classroom/`) chưa tồn tại, sẽ
   thiết kế sau khi API được chốt.

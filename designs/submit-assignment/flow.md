@@ -283,7 +283,8 @@ presentation/controller/          ClassController (them 3 method: POST/DELETE/GE
 
 - `UC-44 View Submissions List`, `UC-45 View Submission Detail`, `UC-46 Download Submission File` —
   phía Teacher đọc danh sách/chi tiết bài nộp học sinh trong lớp mình sở hữu, dùng chung
-  `SubmissionRepository`/`SubmissionFile` vừa định nghĩa ở đây, thiết kế sau khi tài liệu này chốt.
+  `SubmissionRepository`/`SubmissionFile` vừa định nghĩa ở đây — đã thiết kế ở
+  [`../review-submissions/flow.md`](../review-submissions/flow.md).
 - Cập nhật `ClassResourceService.listResources`/`toSummary` để `submissionStatus` trong
   `ClassResourceSummaryDto` phản ánh đúng trạng thái nộp bài thật của học sinh đang xem — nằm ngoài
   phạm vi migration/service mới ở đây nhưng là bước nối tiếp bắt buộc (xem "Phụ thuộc & thứ tự build"
