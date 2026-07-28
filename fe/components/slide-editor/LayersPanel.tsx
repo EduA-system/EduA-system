@@ -42,6 +42,13 @@ const TYPE_ICONS: Record<string, ReactElement> = {
       <path d="M3 21c3-1 5-3 8-8M14 5l5 5M12 7l5 5-9 4z" />
     </svg>
   ),
+  simulation: (
+    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="2" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)" />
+    </svg>
+  ),
 };
 
 function EyeIcon({ hidden }: { hidden?: boolean }) {
@@ -107,6 +114,7 @@ function elemLabel(el: SlideElement): string {
   if (el.type === "shape") return el.shape === "ellipse" ? "Ellipse" : "Rectangle";
   if (el.type === "line") return "Line";
   if (el.type === "arrow") return "Arrow";
+  if (el.type === "simulation") return el.molecule.name;
   return el.type;
 }
 

@@ -1,10 +1,68 @@
-import type { CSSProperties, MouseEventHandler, ReactElement } from "react";
-import type { SlideElement, LineMarker, DashStyle } from "./types";
+import { useState, type CSSProperties, type MouseEventHandler, type ReactElement } from "react";
+import dynamic from "next/dynamic";
+import type { SlideElement, SimulationElement, LineMarker, DashStyle } from "./types";
 import { isGradientCss } from "./lib/gradient";
+
+const MoleculeViewer = dynamic(
+  () => import("@/components/molecules/MoleculeViewer").then((m) => m.MoleculeViewer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center text-xs text-white/70">
+        Đang tải mô phỏng...
+      </div>
+    ),
+  }
+);
+
+function SimulationBlock({
+  el,
+  interactive,
+  style,
+  onMouseDown,
+  onDoubleClick,
+  onContextMenu,
+}: {
+  el: SimulationElement;
+  interactive?: boolean;
+  style: CSSProperties;
+  onMouseDown?: MouseEventHandler;
+  onDoubleClick?: MouseEventHandler;
+  onContextMenu?: MouseEventHandler;
+}) {
+  const [activated, setActivated] = useState(false);
+
+  if (interactive && activated) {
+    return (
+      <div style={{ ...style, cursor: "auto" }} className="overflow-hidden rounded-2xl">
+        <MoleculeViewer molecule={el.molecule} mode={el.mode} rotating={el.rotating} />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
+      onClick={interactive ? () => setActivated(true) : undefined}
+      role={interactive ? "button" : undefined}
+      style={{ ...style, cursor: interactive ? "pointer" : style.cursor }}
+      className="flex select-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-700 text-white"
+    >
+      <span className="text-3xl" aria-hidden>🧪</span>
+      <span className="px-2 text-center text-sm font-semibold">{el.molecule.name}</span>
+      <span className="text-xs text-white/70">{el.molecule.formula}</span>
+      {interactive && <span className="mt-1 text-[11px] text-white/80">▶ Nhấn để mô phỏng</span>}
+    </div>
+  );
+}
 
 interface ElementViewProps {
   el: SlideElement;
   hideText?: boolean;
+  /** True only in live presentation — enables click-to-activate simulations. */
+  interactive?: boolean;
   onMouseDown?: MouseEventHandler;
   onDoubleClick?: MouseEventHandler;
   onContextMenu?: MouseEventHandler;
@@ -74,6 +132,7 @@ function markerDef(
 export function ElementView({
   el,
   hideText,
+  interactive,
   onMouseDown,
   onDoubleClick,
   onContextMenu,
@@ -380,6 +439,19 @@ export function ElementView({
           // gộp flip vào sau rotation hiện có (nếu cả hai cùng có).
           transform: [base.transform, flip].filter(Boolean).join(" ") || undefined,
         }}
+      />
+    );
+  }
+
+  if (el.type === "simulation") {
+    return (
+      <SimulationBlock
+        el={el}
+        interactive={interactive}
+        style={base}
+        onMouseDown={onMouseDown}
+        onDoubleClick={onDoubleClick}
+        onContextMenu={onContextMenu}
       />
     );
   }

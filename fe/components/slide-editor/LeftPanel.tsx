@@ -8,8 +8,10 @@ import { SHAPE_LIBRARY, type ShapeSpec } from "./lib/shapes";
 import { ColorPicker } from "./ColorPicker";
 import { isLikelySvgSource, parseSvgToLine, parseSvgToPoly, svgTextFromDataUri, type ParsedSvgLine, type ParsedSvgShape } from "./lib/svg-to-poly";
 import type { ActiveTool } from "./Canvas";
+import { MOLECULE_CATALOG } from "@/components/molecules/catalog";
+import type { Molecule } from "@/components/molecules/types";
 
-type Tab = null | "shapes" | "text" | "upload" | "tools" | "bg";
+type Tab = null | "shapes" | "text" | "upload" | "tools" | "bg" | "simulation";
 
 type ShapePaletteItem =
   | {
@@ -88,6 +90,17 @@ function UploadIcon() {
   );
 }
 
+function SimulationIcon() {
+  return (
+    <svg className="h-[17px] w-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="2.4" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(120 12 12)" />
+    </svg>
+  );
+}
+
 function ToolsIcon() {
   return (
     <svg className="h-[17px] w-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -136,6 +149,7 @@ const ICON_TABS: { id: Exclude<Tab, null>; label: string; icon: ReactNode }[] = 
   { id: "shapes", label: "Elements", icon: <ShapesIcon /> },
   { id: "text", label: "Text", icon: <TextIcon /> },
   { id: "upload", label: "Upload", icon: <UploadIcon /> },
+  { id: "simulation", label: "Mô phỏng", icon: <SimulationIcon /> },
   { id: "tools", label: "Tools", icon: <ToolsIcon /> },
   { id: "bg", label: "Background", icon: <BackgroundIcon /> },
 ];
@@ -660,6 +674,11 @@ export function LeftPanel({
     addImageSized(src);
     setUrlInput("");
   }
+
+  function addSimulation(molecule: Molecule) {
+    if (currentSlideLocked) return;
+    addElement(makeByType("simulation", { molecule }));
+  }
   return (
     <div className="flex shrink-0 border-r border-[#e8e2d9] bg-white">
       <input ref={fileRef} type="file" accept="image/*,.svg" onChange={onFile} className="hidden" />
@@ -820,6 +839,27 @@ export function LeftPanel({
                     +
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {visibleTab === "simulation" && (
+            <div className="p-3">
+              <div className="mb-1 text-[10px] font-bold uppercase tracking-[1px] text-[#2b2926]">Mô phỏng phân tử</div>
+              <p className="mb-3 text-[10px] text-[#8a8178]">Chèn mô hình 3D — có thể nhấn để tương tác khi trình chiếu.</p>
+              <div className="grid grid-cols-2 gap-2">
+                {MOLECULE_CATALOG.map((molecule) => (
+                  <button
+                    key={molecule.name}
+                    onClick={() => addSimulation(molecule)}
+                    title={`${molecule.name} (${molecule.formula})`}
+                    className="flex flex-col items-center gap-1 rounded-[10px] border border-[#e8e2d9] bg-white px-2 py-3 text-center transition-colors hover:border-[#d97757] hover:bg-[#fbfaf8]"
+                  >
+                    <span className="text-xl" aria-hidden>🧪</span>
+                    <span className="truncate text-[11px] font-medium text-[#2b2926]">{molecule.name}</span>
+                    <span className="text-[10px] text-[#8a8178]">{molecule.formula}</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
