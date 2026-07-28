@@ -17,11 +17,13 @@ public record SubmissionRosterDto(
             String studentName,
             String studentEmail,
             SubmissionStatus status,
+            Instant firstSubmittedAt,
             Instant submittedAt
     ) {
         static EntryDto from(SubmissionViews.RosterEntry entry) {
             return new EntryDto(
-                    entry.studentId(), entry.studentName(), entry.studentEmail(), entry.status(), entry.submittedAt());
+                    entry.studentId(), entry.studentName(), entry.studentEmail(), entry.status(),
+                    entry.firstSubmittedAt(), entry.submittedAt());
         }
     }
 

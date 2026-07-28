@@ -2,7 +2,7 @@
 
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   Archive,
@@ -43,6 +43,7 @@ import {
 } from "@/lib/classroom";
 import { listLibrary, type LibraryContent } from "@/lib/library";
 import { ResourceCard, statusClasses, subjectBannerClasses } from "./shared";
+import { SubmissionsRosterPanel } from "./SubmissionsRosterPanel";
 
 const GRADES = [10, 11, 12] as const;
 
@@ -428,8 +429,10 @@ function ResourceFormPanel({
 
 export function ClassDetailPage() {
   const { user, authFetch } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const classId = searchParams.get("classId") ?? "";
+  const resourceId = searchParams.get("resourceId") ?? "";
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassDetail | null>(null);
@@ -558,9 +561,14 @@ export function ClassDetailPage() {
     }
   }
 
+  function openSubmissions(resource: ClassResourceSummary) {
+    router.push(`/class-detail?classId=${classId}&resourceId=${resource.id}`);
+  }
+
   if (!user) return null;
 
   const canManage = selectedClass?.status === "ACTIVE";
+  const activeResource = resourceId ? resources.find((item) => item.id === resourceId) ?? null : null;
 
   return (
     <main className="min-h-screen bg-[#f5f1ec] text-[#1f1f1f]">
@@ -660,6 +668,26 @@ export function ClassDetailPage() {
                   </div>
                 </div>
 
+                {resourceId ? (
+                  activeResource ? (
+                    <div className="mt-6">
+                      <SubmissionsRosterPanel authFetch={authFetch} classId={selectedClass.id} resource={activeResource} />
+                    </div>
+                  ) : resourcesLoading ? (
+                    <div className="mt-6 h-[320px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
+                  ) : (
+                    <div className="mt-6 rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
+                      <p className="text-[13px] font-medium">Không tìm thấy tài nguyên này</p>
+                      <p className="mt-1 text-[12px] text-[#6b6b6b]">
+                        Tài nguyên có thể đã bị xóa.{" "}
+                        <Link href={`/class-detail?classId=${selectedClass.id}`} className="font-medium text-[#d97757] underline">
+                          Quay lại lớp học
+                        </Link>
+                        .
+                      </p>
+                    </div>
+                  )
+                ) : (
                 <div className="mt-6 grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
                   <aside className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
                     <form onSubmit={handleSaveDetail}>
@@ -823,6 +851,7 @@ export function ClassDetailPage() {
                                 setFormTarget(target);
                               }}
                               onDelete={(target) => void handleDeleteResource(target)}
+                              onOpen={resource.submissionEnabled ? openSubmissions : undefined}
                               deleting={deletingId === resource.id}
                             />
                           ))}
@@ -831,6 +860,7 @@ export function ClassDetailPage() {
                     </div>
                   </div>
                 </div>
+                )}
               </>
             )}
           </div>

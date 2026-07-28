@@ -37,12 +37,17 @@ public final class SubmissionViews {
     ) {
     }
 
-    /** 1 hang trong danh sach bai nop cua Teacher (UC-44) - moi hoc sinh enrolled deu co 1 hang. */
+    /**
+     * 1 hang trong danh sach bai nop cua Teacher (UC-44) - moi hoc sinh enrolled deu co 1 hang.
+     * {@code firstSubmittedAt} != {@code submittedAt} nghia la hoc sinh da nop lai it nhat 1 lan
+     * (upsert ghi de theo BR-36, khong dem duoc chinh xac so lan sua, chi biet co sua hay khong).
+     */
     public record RosterEntry(
             UUID studentId,
             String studentName,
             String studentEmail,
             SubmissionStatus status,
+            Instant firstSubmittedAt,
             Instant submittedAt
     ) {
     }
@@ -61,6 +66,7 @@ public final class SubmissionViews {
             String textContent,
             List<FileDetail> files,
             SubmissionStatus status,
+            Instant firstSubmittedAt,
             Instant submittedAt
     ) {
     }

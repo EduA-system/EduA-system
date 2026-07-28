@@ -13,6 +13,7 @@ public record TeacherSubmissionDetailDto(
         String textContent,
         List<FileDto> files,
         SubmissionStatus status,
+        Instant firstSubmittedAt,
         Instant submittedAt
 ) {
     public record FileDto(
@@ -33,6 +34,7 @@ public record TeacherSubmissionDetailDto(
                 view.textContent(),
                 view.files().stream().map(FileDto::from).toList(),
                 view.status(),
+                view.firstSubmittedAt(),
                 view.submittedAt());
     }
 }

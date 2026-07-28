@@ -144,6 +144,7 @@ public class SubmissionService {
                 found.submission().textContent(),
                 files,
                 found.submission().status(),
+                found.submission().createdAt(),
                 found.submission().submittedAt());
     }
 
@@ -152,10 +153,11 @@ public class SubmissionService {
         String name = resolveDisplayName(student);
         String email = student != null ? student.email() : null;
         if (submission == null) {
-            return new SubmissionViews.RosterEntry(studentId, name, email, SubmissionStatus.NOT_SUBMITTED, null);
+            return new SubmissionViews.RosterEntry(studentId, name, email, SubmissionStatus.NOT_SUBMITTED, null, null);
         }
         return new SubmissionViews.RosterEntry(
-                studentId, name, email, submission.submission().status(), submission.submission().submittedAt());
+                studentId, name, email, submission.submission().status(),
+                submission.submission().createdAt(), submission.submission().submittedAt());
     }
 
     private static String resolveDisplayName(AppUser user) {

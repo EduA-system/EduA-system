@@ -49,6 +49,11 @@
   Submission Detail của Teacher cần định danh học sinh đang xem (không suy ra được từ JWT như phía
   Student), nên không tái dùng thẳng `SubmissionDetailDto` — thêm DTO riêng
   `TeacherSubmissionDetailDto` cùng field còn lại (`textContent`, `files`, `status`, `submittedAt`).
+- **Lộ thêm `firstSubmittedAt` (= `Submission.createdAt`) cạnh `submittedAt`, cả ở roster lẫn detail**:
+  BR-36 không giữ version history nên không đếm được chính xác số lần sửa, nhưng bảng `submissions`
+  đã có sẵn `created_at` (giữ nguyên qua mỗi lần upsert) và `submitted_at`/`updated_at` (ghi đè mỗi lần
+  nộp lại) — không cần schema mới. FE so sánh 2 mốc này để hiện badge "Đã chỉnh sửa" + "Nộp lần đầu lúc
+  X · Sửa lần cuối lúc Y" khi khác nhau. Không phải audit log đầy đủ từng lần sửa, chỉ là 2 mốc đầu/cuối.
 - **Không thêm exception loại mới**: cả 2 endpoint chỉ cần `ForbiddenOperationException` (403),
   `ResourceNotFoundException` (404) — đã map sẵn trong `GlobalExceptionHandler`, giống
   `view-class-resources.md`/`submit-assignment.md`.
@@ -77,13 +82,15 @@ Tất cả request cần `Authorization: Bearer <access>` theo JWT filter của 
   "studentName": "Nguyen Van A",
   "studentEmail": "student@gmail.com",
   "status": "ON_TIME",
+  "firstSubmittedAt": "2026-07-29T21:40:00Z",
   "submittedAt": "2026-07-30T10:15:00Z"
 }
 ```
 
 - `status`: `NOT_SUBMITTED | ON_TIME | LATE` — không bao giờ là `NOT_APPLICABLE` (xem "Quyết định
   riêng").
-- `submittedAt`: `null` khi `status = NOT_SUBMITTED`.
+- `firstSubmittedAt`/`submittedAt`: `null` khi `status = NOT_SUBMITTED`. Khác nhau ⇒ học sinh đã nộp
+  lại ít nhất 1 lần (xem "Quyết định riêng").
 
 ### `SubmissionRosterDto` (response UC-44)
 
@@ -110,6 +117,7 @@ Tất cả request cần `Authorization: Bearer <access>` theo JWT filter của 
     { "fileName": "baitap1.pdf", "url": "https://.../baitap1.pdf", "contentType": "application/pdf", "sizeBytes": 204800 }
   ],
   "status": "ON_TIME",
+  "firstSubmittedAt": "2026-07-29T21:40:00Z",
   "submittedAt": "2026-07-30T10:15:00Z"
 }
 ```
