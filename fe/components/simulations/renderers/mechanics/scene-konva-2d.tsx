@@ -118,7 +118,25 @@ function offsetTrackPoints(points: Vec2[], offset: number): Vec2[] {
   });
 }
 // Đầu mũi tên hình chevron tại (x,y), hướng theo `angle` (rad) — dùng chung
-// cho "arrow" (giữa đường thẳng) và "curve" (tiếp tuyến tại điểm arrowAt).
+
+function rightAnglePulleyRopePoints(
+  cartAttachment: Vec2,
+  hanger: Vec2,
+  corner: Vec2,
+  radius: number,
+  hangerTopY: number,
+): number[] {
+  const topY = corner.y - radius;
+  const rightX = corner.x + radius;
+  const points: number[] = [cartAttachment.x, cartAttachment.y, corner.x, topY];
+  const arcSteps = 8;
+  for (let i = 1; i <= arcSteps; i++) {
+    const angle = -Math.PI / 2 + (i / arcSteps) * (Math.PI / 2);
+    points.push(corner.x + Math.cos(angle) * radius, corner.y + Math.sin(angle) * radius);
+  }
+  points.push(rightX, hangerTopY, hanger.x, hangerTopY);
+  return points;
+}
 function addArrowhead(layer: Konva.Layer, x: number, y: number, angle: number, color: string, size = 8) {
   const a1 = angle + Math.PI - Math.PI / 7;
   const a2 = angle + Math.PI + Math.PI / 7;
@@ -151,6 +169,7 @@ export function SceneKonva2D({
   bodyTrails,
   bodySigns,
   minimalOverlay,
+  hideCoordinateLabels,
   hideFixedSupportDecoration,
   speed = 1,
 }: {
@@ -192,6 +211,7 @@ export function SceneKonva2D({
   // chú thích (annotations) tự vẽ mọi thứ. KHÔNG ẩn lưới nền (vẫn vẽ, chỉ là
   // kết cấu mờ cho cảm giác chiều sâu, không phải công cụ định lượng).
   minimalOverlay?: boolean;
+  hideCoordinateLabels?: boolean;
   hideFixedSupportDecoration?: boolean;
   // Hệ số tốc độ mô phỏng (0.5 = chậm nửa, 1 = thật, 2 = nhanh gấp đôi…) — chỉ
   // nhân vào dt mỗi khung hình, không đụng engine/độ chính xác tích phân.
@@ -236,6 +256,9 @@ export function SceneKonva2D({
       annotations: scene.annotations,
       view: scene.view,
       groundPadding: scene.groundPadding,
+      groundPaddingRatio: scene.groundPaddingRatio,
+      viewShiftYRatio: scene.viewShiftYRatio,
+      preferredScale: scene.preferredScale,
       displayScaleX: scene.displayScaleX,
       displayScaleXRange: scene.displayScaleXRange,
       disableDragging: scene.disableDragging,
@@ -257,7 +280,11 @@ export function SceneKonva2D({
 
     // world→screen: mặt đất (y=0) ghim gần đáy, vật scale vừa khung.
     const box = fitBox(work);
-    const sidePad = 70, topPad = 50, groundPad = work.groundPadding ?? 46;
+    const sidePad = Math.min(70, W * 0.07);
+    const topPad = Math.min(50, H * 0.07);
+    const groundPad = work.groundPaddingRatio != null
+      ? H * Math.min(0.75, Math.max(0.1, work.groundPaddingRatio))
+      : work.groundPadding ?? 46;
     const displayScaleX = Math.max(work.displayScaleX ?? 1, 0.01);
     const displayRange = work.displayScaleXRange;
     const outsideScaleX = Math.max(displayRange?.outsideScale ?? 1, 0.01);
@@ -281,9 +308,11 @@ export function SceneKonva2D({
     const displayMaxX = warpX(box.maxX);
     const bboxW = Math.max(displayMaxX - displayMinX, 1);
     const worldH = Math.max(box.maxY, 1) + Math.max(-box.minY, 0);
-    const scale = Math.min((W - 2 * sidePad) / bboxW, (H - topPad - groundPad) / worldH);
+    const fitScale = Math.min((W - 2 * sidePad) / bboxW, (H - topPad - groundPad) / worldH);
+    const scale = Math.min(work.preferredScale ?? fitScale, fitScale);
     const cxDisplay = (displayMinX + displayMaxX) / 2;
-    const groundY = H - groundPad;
+    const viewShiftY = H * Math.min(0.25, Math.max(-0.25, work.viewShiftYRatio ?? 0));
+    const groundY = H - groundPad - viewShiftY;
     const toScreen = (wx: number, wy: number): Vec2 => ({ x: W / 2 + (warpX(wx) - cxDisplay) * scale, y: groundY - wy * scale });
     const toWorld = (sx: number, sy: number): Vec2 => ({ x: unwarpX(cxDisplay + (sx - W / 2) / scale), y: (groundY - sy) / scale });
 
@@ -313,13 +342,33 @@ export function SceneKonva2D({
     const cxWorld = (wl + wr) / 2, cyWorld = (wb + wt) / 2;
     const gx0 = cxWorld - (GRID_EXTENT_FACTOR * (wr - wl)) / 2, gx1 = cxWorld + (GRID_EXTENT_FACTOR * (wr - wl)) / 2;
     const gy0 = cyWorld - (GRID_EXTENT_FACTOR * (wt - wb)) / 2, gy1 = cyWorld + (GRID_EXTENT_FACTOR * (wt - wb)) / 2;
-    for (let gx = Math.ceil(gx0 / step) * step; gx <= gx1; gx += step) {
-      const x = toScreen(gx, 0).x;
-      layer.add(new Konva.Line({ points: [x, toScreen(0, gy1).y, x, toScreen(0, gy0).y], stroke: gridColor, strokeWidth: 1 }));
-    }
-    for (let gy = Math.ceil(gy0 / step) * step; gy <= gy1; gy += step) {
-      const y = toScreen(0, gy).y;
-      layer.add(new Konva.Line({ points: [toScreen(gx0, 0).x, y, toScreen(gx1, 0).x, y], stroke: gridColor, strokeWidth: 1 }));
+    const usesHorizontalWarp = Boolean(displayRange) || Math.abs(displayScaleX - 1) > 1e-9;
+    if (usesHorizontalWarp && minimalOverlay) {
+      // Với scene minh hoạ có kéo/nén trục X (vd Định luật II Newton), lưới
+      // chỉ là texture nền. Nếu vẽ bằng toScreen(), lưới cũng bị warp theo
+      // apparatus và tạo các ô nền méo/không đều.
+      const screenStep = Math.max(36, Math.min(90, step * scale));
+      const gridW = W * GRID_EXTENT_FACTOR;
+      const gridH = H * GRID_EXTENT_FACTOR;
+      const x0 = (W - gridW) / 2;
+      const x1 = (W + gridW) / 2;
+      const y0 = (H - gridH) / 2;
+      const y1 = (H + gridH) / 2;
+      for (let x = Math.floor(x0 / screenStep) * screenStep; x <= x1; x += screenStep) {
+        layer.add(new Konva.Line({ points: [x, y0, x, y1], stroke: gridColor, strokeWidth: 1 }));
+      }
+      for (let y = Math.floor(y0 / screenStep) * screenStep; y <= y1; y += screenStep) {
+        layer.add(new Konva.Line({ points: [x0, y, x1, y], stroke: gridColor, strokeWidth: 1 }));
+      }
+    } else {
+      for (let gx = Math.ceil(gx0 / step) * step; gx <= gx1; gx += step) {
+        const x = toScreen(gx, 0).x;
+        layer.add(new Konva.Line({ points: [x, toScreen(0, gy1).y, x, toScreen(0, gy0).y], stroke: gridColor, strokeWidth: 1 }));
+      }
+      for (let gy = Math.ceil(gy0 / step) * step; gy <= gy1; gy += step) {
+        const y = toScreen(0, gy).y;
+        layer.add(new Konva.Line({ points: [toScreen(gx0, 0).x, y, toScreen(gx1, 0).x, y], stroke: gridColor, strokeWidth: 1 }));
+      }
     }
 
     // Mặt đất/trục Ox, trục Oy, nhãn số, gốc O — ẩn khi minimalOverlay (sơ đồ
@@ -669,18 +718,18 @@ export function SceneKonva2D({
         }
       } else {
         const p = toScreen(ann.x, ann.y);
-        layer.add(
-          new Konva.Text({
-            x: p.x - 5,
-            y: p.y - 8,
-            text: ann.text,
-            fontSize: ann.fontSize ?? 16,
-            fontStyle: ann.fontStyle ?? "bold",
-            fill: ann.color ?? "#e2e8f0",
-            fontFamily: ann.fontFamily ?? "monospace",
-            listening: false,
-          }),
-        );
+        const text = new Konva.Text({
+          x: ann.centered ? p.x : p.x - 5,
+          y: p.y - 8,
+          text: ann.text,
+          fontSize: ann.fontSize ?? 16,
+          fontStyle: ann.fontStyle ?? "bold",
+          fill: ann.color ?? "#e2e8f0",
+          fontFamily: ann.fontFamily ?? "monospace",
+          listening: false,
+        });
+        if (ann.centered) text.offsetX(text.width() / 2);
+        layer.add(text);
       }
     }
 
@@ -757,7 +806,36 @@ export function SceneKonva2D({
         if (node) return { x: node.x(), y: node.y() };
       }
       const wpt = posOf(id);
-      return toScreen(wpt.x, wpt.y);
+      const screen = toScreen(wpt.x, wpt.y);
+      const verticalRope = work.constraints.find(
+        (constraint) => constraint.kind === "rightAngleRope" && constraint.vertical === id,
+      );
+      if (verticalRope?.kind === "rightAngleRope") {
+        const pulleyBody = work.bodies.find(
+          (body) =>
+            body.visual?.shape === "pulley" &&
+            Math.abs(body.x - verticalRope.corner.x) < 1e-6 &&
+            Math.abs(body.y - verticalRope.corner.y) < 1e-6,
+        );
+        const ropeRadius = pulleyBody
+          ? Math.min(28, Math.max(13, radiusFor(pulleyBody))) + 2
+          : 24;
+        return {
+          x: toScreen(verticalRope.corner.x, verticalRope.corner.y).x + ropeRadius,
+          y: screen.y,
+        };
+      }
+      const body = work.bodies.find((candidate) => candidate.id === id);
+      const horizontalSurface = work.constraints.find(
+        (constraint) => constraint.kind === "surface" && Math.abs(constraint.angle) < 1e-6,
+      );
+      if (body?.visual?.wheels && horizontalSurface?.kind === "surface") {
+        return {
+          x: screen.x,
+          y: toScreen(horizontalSurface.x, horizontalSurface.y).y - cartVisualBottom(radiusFor(body)),
+        };
+      }
+      return screen;
     };
     // Toạ độ world để hiển thị (vật đang kéo → quy từ vị trí node về world).
     const worldOf = (id: string): Vec2 => {
@@ -790,6 +868,14 @@ export function SceneKonva2D({
       const worldR = b.radius ?? Math.min(0.25 + b.mass * 0.04, 0.5);
       const visualScale = Math.max(b.displayScale ?? 1, 0.1);
       return Math.max(6, worldR * scale * visualScale);
+    };
+    const cartVisualRadius = (bodyRadius: number): number => Math.min(42, Math.max(12, bodyRadius));
+    const cartVisualBottom = (bodyRadius: number): number => {
+      const cartRadius = cartVisualRadius(bodyRadius);
+      const height = cartRadius * 1.5;
+      const wheelRadius = cartRadius * 0.28;
+      const wheelY = height / 2 - wheelRadius * 0.55;
+      return wheelY + wheelRadius;
     };
     const featherAsset = new window.Image();
     featherAsset.decoding = "async";
@@ -970,7 +1056,7 @@ export function SceneKonva2D({
       if (shape === "metalBall") return makeMetalBallNode(p, radius, draggable, b.visual?.metalTone);
       if (shape === "feather") return makeFeatherNode(p, radius, angle, draggable);
       if (shape === "pulley") {
-        const pulleyRadius = Math.min(22, Math.max(13, radius));
+        const pulleyRadius = Math.min(28, Math.max(13, radius));
         const group = new Konva.Group({ x: p.x, y: p.y, draggable });
         group.add(
           new Konva.Circle({
@@ -1306,11 +1392,19 @@ export function SceneKonva2D({
         return group;
       }
       if (shape === "box") {
-        const width = Math.max(22, radius * 2.4);
-        const height = Math.max(18, radius * 1.5);
         if (b.visual?.wheels) {
-          const wheelRadius = Math.min(12, Math.max(6, radius * 0.28));
-          const wheelY = height / 2 + wheelRadius * 0.35;
+          // Clamp the complete cart once, then derive every part from the same
+          // base size. Separate min/max values made wheels disproportionately
+          // large on small canvases and too small again at 100% display scale.
+          const cartRadius = cartVisualRadius(radius);
+          const width = cartRadius * 2.4;
+          const height = cartRadius * 1.5;
+          const wheelRadius = cartRadius * 0.28;
+          const wheelStroke = cartRadius * 0.08;
+          const hubStroke = cartRadius * 0.04;
+          // Tâm bánh nằm hơi phía trên mép dưới của thân xe; phần bánh nhô ra
+          // vừa đủ để đáy bánh tiếp xúc mặt đường thay vì xuyên xuống dưới.
+          const wheelY = height / 2 - wheelRadius * 0.55;
           const group = new Konva.Group({ x: p.x, y: p.y, rotation: angle, draggable });
           group.add(
             new Konva.Rect({
@@ -1356,20 +1450,22 @@ export function SceneKonva2D({
                 radius: wheelRadius,
                 fill: "#111827",
                 stroke: "#94a3b8",
-                strokeWidth: 2,
+                strokeWidth: wheelStroke,
               }),
               new Konva.Circle({
                 x: wheelX,
                 y: wheelY,
-                radius: Math.max(2.5, wheelRadius * 0.34),
+                radius: wheelRadius * 0.34,
                 fill: "#cbd5e1",
                 stroke: "#475569",
-                strokeWidth: 1,
+                strokeWidth: hubStroke,
               }),
             );
           }
           return group;
         }
+        const width = Math.max(22, radius * 2.4);
+        const height = Math.max(18, radius * 1.5);
         return new Konva.Rect({
           x: p.x,
           y: p.y,
@@ -1449,7 +1545,7 @@ export function SceneKonva2D({
     const dynamicAnnotationResetters: (() => void)[] = [];
 
     for (const b of work.bodies) {
-      const p = b.fixed ? toScreen(b.x, b.y) : toScreen(readPosition(state, b.id).x, readPosition(state, b.id).y);
+      const p = b.fixed ? toScreen(b.x, b.y) : screenOf(b.id);
       const radius = radiusFor(b);
       const fill = b.visual?.color ?? bodyColors?.[b.id] ?? (b.fixed ? "#1e293b" : "#f472b6");
       const node = makeBodyNode(b, p, radius, fill, !b.fixed && !work.disableDragging);
@@ -1492,7 +1588,7 @@ export function SceneKonva2D({
 
     // Tracking coordinates and live values.
     const coordLabels: Record<string, Konva.Text> = {};
-    if (!minimalOverlay) {
+    if (!minimalOverlay && !hideCoordinateLabels) {
       for (const b of work.bodies) {
         if (b.fixed) continue;
         const t = new Konva.Text({ text: "", fontSize: 11, fill: "#cbd5e1", fontFamily: "monospace" });
@@ -1560,6 +1656,58 @@ export function SceneKonva2D({
           listening: false,
         });
         layer.add(timer);
+        const rawResultPosition = ann.resultAt ? toScreen(ann.resultAt.x, ann.resultAt.y) : null;
+        const resultHeight = 68;
+        const resultPosition = rawResultPosition
+          ? ann.resultBottom != null
+            ? { x: W / 2, y: H - ann.resultBottom - resultHeight }
+            : rawResultPosition
+          : null;
+        const resultWidth = Math.min(700, W - 80);
+        const resultPanel = resultPosition
+          ? new Konva.Rect({
+              x: resultPosition.x - resultWidth / 2,
+              y: resultPosition.y,
+              width: resultWidth,
+              height: resultHeight,
+              fill: "#111827",
+              stroke: "#94a3b8",
+              strokeWidth: 1.5,
+              cornerRadius: 4,
+              listening: false,
+            })
+          : null;
+        const resultTitle = resultPosition
+          ? new Konva.Text({
+              x: resultPosition.x - resultWidth / 2 + 16,
+              y: resultPosition.y + 12,
+              width: resultWidth - 32,
+              align: "center",
+              text: "Chờ đồng hồ hoàn tất phép đo tại cổng 2...",
+              fontSize: 13,
+              fontStyle: "bold",
+              fill: "#86efac",
+              fontFamily: "monospace",
+              listening: false,
+            })
+          : null;
+        const resultFormula = resultPosition
+          ? new Konva.Text({
+              x: resultPosition.x - resultWidth / 2 + 16,
+              y: resultPosition.y + 36,
+              width: resultWidth - 32,
+              align: "center",
+              text: "",
+              fontSize: 14,
+              fontStyle: "bold",
+              fill: "#f8fafc",
+              fontFamily: "monospace",
+              listening: false,
+            })
+          : null;
+        if (resultPanel && resultTitle && resultFormula) {
+          layer.add(resultPanel, resultTitle, resultFormula);
+        }
         let startTime: number | null = null;
         let measuredTime = 0;
         let finished = false;
@@ -1572,6 +1720,8 @@ export function SceneKonva2D({
           previousX = null;
           previousTime = 0;
           timer.text("0.000 s");
+          resultTitle?.text("Chờ đồng hồ hoàn tất phép đo tại cổng 2...");
+          resultFormula?.text("");
         });
         dynamicAnnotationUpdaters.push(() => {
           const x = worldOf(ann.body).x + (ann.bodyOffsetX ?? 0);
@@ -1597,6 +1747,13 @@ export function SceneKonva2D({
           previousX = x;
           previousTime = simulationSeconds;
           timer.text(`${measuredTime.toFixed(3)} s`);
+          if (finished && measuredTime > 0 && ann.distance != null) {
+            const measuredAcceleration = (2 * ann.distance) / measuredTime ** 2;
+            resultTitle?.text("Gia tốc thực nghiệm tính từ số liệu đồng hồ");
+            resultFormula?.text(
+              `a = 2s/t² = (2 × ${ann.distance.toFixed(2)}) / ${measuredTime.toFixed(3)}² = ${measuredAcceleration.toFixed(2)} m/s²`,
+            );
+          }
         });
       } else if (ann.kind === "circularMotionVectors") {
         const tangentColor = ann.tangentColor ?? "#38bdf8";
@@ -1713,8 +1870,13 @@ export function SceneKonva2D({
         if (label) layer.add(label);
         dynamicAnnotationUpdaters.push(() => {
           const base = ann.anchor ? worldOf(ann.anchor) : ann.at ?? { x: 0, y: 0 };
-          const p1 = toScreen(base.x, base.y);
-          const p2 = toScreen(base.x + ann.dx, base.y + ann.dy);
+          const unshiftedBase = toScreen(base.x, base.y);
+          const unshiftedTip = toScreen(base.x + ann.dx, base.y + ann.dy);
+          const p1 = ann.anchor ? screenOf(ann.anchor) : unshiftedBase;
+          const p2 = {
+            x: p1.x + (unshiftedTip.x - unshiftedBase.x),
+            y: p1.y + (unshiftedTip.y - unshiftedBase.y),
+          };
           setArrow(arrow, p1, p2);
           if (label) {
             if (ann.labelPosition === "outside") {
@@ -1933,12 +2095,32 @@ export function SceneKonva2D({
       }
       for (const rope of rightAngleLinks) {
         const cart = screenOf(rope.horizontal);
-        const hanger = screenOf(rope.vertical);
+        const hangerCenter = screenOf(rope.vertical);
         const corner = toScreen(rope.corner.x, rope.corner.y);
-        rope.line.points([cart.x, cart.y, corner.x, corner.y, hanger.x, hanger.y]);
+        const pulleyBody = work.bodies.find((body) => body.visual?.shape === "pulley" && Math.abs(body.x - rope.corner.x) < 1e-6 && Math.abs(body.y - rope.corner.y) < 1e-6);
+        const cartBody = work.bodies.find((body) => body.id === rope.horizontal);
+        const hangerBody = work.bodies.find((body) => body.id === rope.vertical);
+        const ropeRadius = pulleyBody ? Math.min(28, Math.max(13, radiusFor(pulleyBody))) + 2 : 24;
+        const cartRadius = cartBody ? cartVisualRadius(radiusFor(cartBody)) : 12;
+        const cartWidth = cartRadius * 2.4;
+        const cartAttachment = {
+          x: cart.x + cartWidth / 2,
+          y: corner.y - ropeRadius,
+        };
+        const hangerTopOffset = hangerBody?.visual?.shape === "box" ? Math.max(11, Math.max(22, radiusFor(hangerBody) * 1.45) / 2) : 0;
+        const hangerAttachment = { x: corner.x + ropeRadius, y: hangerCenter.y };
+        rope.line.points(
+          rightAnglePulleyRopePoints(
+            cartAttachment,
+            hangerAttachment,
+            corner,
+            ropeRadius,
+            hangerCenter.y - hangerTopOffset,
+          ),
+        );
       }
-      for (const updateAnnotation of dynamicAnnotationUpdaters) updateAnnotation();
       // nhãn toạ độ bám theo vật + thu dữ liệu tracking
+      for (const updateAnnotation of dynamicAnnotationUpdaters) updateAnnotation();
       const bodies: SceneReadout["bodies"] = [];
       for (const b of work.bodies) {
         if (b.fixed) continue;
@@ -2007,6 +2189,7 @@ export function SceneKonva2D({
     bodyTrails,
     bodySigns,
     minimalOverlay,
+    hideCoordinateLabels,
     hideFixedSupportDecoration,
     onRunningChange,
     containerRef,

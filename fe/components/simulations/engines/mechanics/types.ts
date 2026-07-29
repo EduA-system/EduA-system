@@ -231,6 +231,9 @@ export type PhotogateTimerAnnotation = {
   endX: number;
   at: { x: number; y: number };
   color?: string;
+  distance?: number;
+  resultAt?: { x: number; y: number };
+  resultBottom?: number;
 };
 
 /**
@@ -286,4 +289,9 @@ export type Scene = {
   disableDragging?: boolean;
   // Khoảng cách từ mặt đất tới đáy canvas (px), dùng khi cần tránh lớp điều khiển nổi.
   groundPadding?: number;
+  // Khoảng đệm theo tỉ lệ chiều cao canvas; ưu tiên hơn groundPadding khi có.
+  groundPaddingRatio?: number;
+  // Dịch toàn bộ scene lên theo tỉ lệ chiều cao mà không làm thay đổi scale.
+  viewShiftYRatio?: number;
+  preferredScale?: number;
 };

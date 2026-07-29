@@ -6,7 +6,7 @@ export type SceneReadout = {
 
 export type SceneAnnotation =
   | { kind: "arrow"; x1: number; y1: number; x2: number; y2: number; color?: string; arrowAt?: number; animated?: boolean }
-  | { kind: "label"; x: number; y: number; text: string; color?: string; fontSize?: number; fontStyle?: string; fontFamily?: string }
+  | { kind: "label"; x: number; y: number; text: string; color?: string; fontSize?: number; fontStyle?: string; fontFamily?: string; centered?: boolean }
   | { kind: "rect"; x: number; y: number; width: number; height: number; fill?: string; stroke?: string; strokeWidth?: number }
   | { kind: "polygon"; points: { x: number; y: number }[]; fill?: string; stroke?: string; strokeWidth?: number; opacity?: number }
   | {

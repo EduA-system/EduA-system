@@ -1059,6 +1059,10 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
     const bl = preset.bodyLabels;
     return typeof bl === "function" ? bl(params) : bl;
   }, [preset, params]);
+  const trackingLabels = useMemo(() => {
+    if (preset.kind !== undefined && preset.kind !== "mechanics") return undefined;
+    return preset.trackingLabels ?? bodyLabels;
+  }, [preset, bodyLabels]);
   const bodySigns = useMemo(() => {
     if (preset.kind !== undefined && preset.kind !== "mechanics") return undefined;
     const bs = preset.bodySigns;
@@ -1232,12 +1236,17 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                     markLabel={activeMark?.label}
                     ghostSeconds={prevMark?.seconds ?? null}
                     ghostLabel={prevMark?.label}
-                    bodyLabels={bodyLabels}
+                    bodyLabels={
+                      (preset.kind === undefined || preset.kind === "mechanics") && preset.hideBodyLabelsOnCanvas
+                        ? undefined
+                        : bodyLabels
+                    }
                     bodySigns={bodySigns}
                     annotations={annotations}
                     bodyColors={preset.kind === undefined || preset.kind === "mechanics" ? preset.bodyColors : undefined}
                     bodyTrails={preset.kind === undefined || preset.kind === "mechanics" ? preset.bodyTrails : undefined}
                     minimalOverlay={preset.kind === undefined || preset.kind === "mechanics" ? preset.minimalOverlay : undefined}
+                    hideCoordinateLabels={preset.kind === undefined || preset.kind === "mechanics" ? preset.hideCoordinateLabels : undefined}
                     hideFixedSupportDecoration={preset.kind === undefined || preset.kind === "mechanics" ? preset.hideFixedSupportDecoration : undefined}
                     speed={speed}
                   />
@@ -1317,7 +1326,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                   <tbody>
                     {readout.bodies.map((b) => (
                       <tr key={b.id} className="border-t border-[#f0ece5]">
-                        <td className="py-1 text-left text-[#4f4943]">{b.id}</td>
+                        <td className="py-1 text-left text-[#4f4943]">{trackingLabels?.[b.id] ?? b.id}</td>
                         <td className="py-1 text-right tabular-nums text-[#2b2926]">{b.x.toFixed(2)}</td>
                         <td className="py-1 text-right tabular-nums text-[#2b2926]">{b.y.toFixed(2)}</td>
                         <td className="py-1 text-right tabular-nums text-[#2b2926]">{b.speed.toFixed(2)}</td>
@@ -1363,7 +1372,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
               {tab === "params" && (
                 <div className="space-y-4">
                   <p className="rounded-[10px] bg-[#faf9f7] p-3 text-xs leading-relaxed text-[#6b6b6b]">
-                    Rủi ro <b>bằng 0</b>: chỉ kéo slider, sim do dev build phản hồi tức thì. Dành cho mọi giáo viên.
+                    {preset.paramGuide ?? "Sửa tham số để quan sát mô phỏng thay đổi theo từng đại lượng đầu vào."}
                   </p>
                   {preset.kind === "wave" && <WaveLegend />}
                   {preset.kind === "string-wave" && <StringWaveLegend mode={(scene as StringWaveScene).mode} />}

@@ -26,16 +26,17 @@ export const quyTacMomentDiaTron: Preset = {
   title: "Quy tắc moment đĩa tròn",
   domain: "Cơ học",
   grade: 10,
-  desc: "Treo hai vật vào đĩa tròn và điều chỉnh trọng lượng, cánh tay đòn để quan sát đĩa quay hoặc cân bằng.",
+  desc: "Treo hai vật lên đĩa tròn để quan sát moment lực làm đĩa quay hay cân bằng.",
   objective:
-    "Hiểu quy tắc moment lực: đĩa cân bằng khi M₁ = M₂, tức P₁·d₁ = P₂·d₂. Khi hai moment không bằng nhau, đĩa quay theo chiều của moment lớn hơn.",
+    "Hiểu moment lực M = F.d và điều kiện cân bằng M₁ = M₂. Vật nặng hơn hoặc treo xa trục hơn sẽ tạo moment lớn hơn, nên đĩa nghiêng về phía đó.",
   sgkRef: "Vật lí 10, Bài 21",
-  startPaused: true,
+  paramGuide:
+    "Đổi khối lượng và khoảng cách tới trục để quan sát: khối lượng làm thay đổi trọng lượng P = mg, còn khoảng cách quyết định cánh tay đòn d. Hai moment bằng nhau thì đĩa cân bằng.",
   params: [
-    { key: "mLeft", label: "Khối lượng vật trái", unit: "kg", min: 0.1, max: 5, step: 0.1, default: 2 },
-    { key: "dLeft", label: "Khoảng cách trái d₁", unit: "m", min: 0.2, max: 1.5, step: 0.1, default: 1.2 },
-    { key: "mRight", label: "Khối lượng vật phải", unit: "kg", min: 0.1, max: 5, step: 0.1, default: 3 },
-    { key: "dRight", label: "Khoảng cách phải d₂", unit: "m", min: 0.2, max: 1.5, step: 0.1, default: 0.8 },
+    { key: "mLeft", label: "Khối lượng bên trái", unit: "kg", min: 0.1, max: 5, step: 0.1, default: 2, description: "Khối lượng bên trái càng lớn thì trọng lượng P = mg càng lớn, nên moment bên trái tăng." },
+    { key: "dLeft", label: "Khoảng cách bên trái", unit: "m", min: 0.2, max: 1.5, step: 0.1, default: 1.2, description: "Treo càng xa trục thì moment càng lớn, dù khối lượng không đổi." },
+    { key: "mRight", label: "Khối lượng bên phải", unit: "kg", min: 0.1, max: 5, step: 0.1, default: 3, description: "Khối lượng bên phải càng lớn thì trọng lượng P = mg càng lớn, nên moment bên phải tăng." },
+    { key: "dRight", label: "Khoảng cách bên phải", unit: "m", min: 0.2, max: 1.5, step: 0.1, default: 0.8, description: "Treo càng xa trục thì moment càng lớn, dù khối lượng không đổi." },
   ],
   quickPresets: [
     { label: "Cân bằng", params: { mLeft: 2, dLeft: 1.2, mRight: 3, dRight: 0.8 } },

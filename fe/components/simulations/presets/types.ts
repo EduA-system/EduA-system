@@ -57,6 +57,9 @@ type PresetBase = {
   objective: string; // mục tiêu học tập (hiển thị dưới sân khấu)
   sgkRef?: string; // tham chiếu SGK, vd "Vật lí 10 — Bài 7"
   params: PresetParam[];
+  // Lời dẫn ngắn luôn hiện trong tab Tham số, giúp người học biết cần thay đổi
+  // đại lượng nào và quan sát kết quả gì.
+  paramGuide?: string;
   // Bắt đầu ở trạng thái dừng để người học chủ động nhả cơ cấu ban đầu.
   startPaused?: boolean;
   // Điểm giá trị quan trọng (tuỳ chọn) — panel "Phân tích" còn hiện mốc thời
@@ -77,6 +80,8 @@ export type MechanicsPreset = PresetBase & {
   // (chỉ hiện khi xem 1 mốc thời gian). Object tĩnh (đa số preset) hoặc hàm của
   // params khi nhãn cần phản ánh giá trị hiện tại (vd dấu điện tích q).
   bodyLabels?: Record<string, string> | ((p: Record<string, number>) => Record<string, string>);
+  // Tên dễ hiểu chỉ dùng trong bảng theo dõi; vắng thì dùng bodyLabels/id.
+  trackingLabels?: Record<string, string>;
   // Chú thích trực quan tuỳ chọn (mũi tên trường đều, nhãn +/− bản tụ…) — THUẦN
   // HIỂN THỊ, không ảnh hưởng vật lý. Toạ độ world tĩnh, không bám vật động.
   annotations?: (p: Record<string, number>) => SceneAnnotation[];
@@ -91,6 +96,10 @@ export type MechanicsPreset = PresetBase & {
   // Ẩn trục toạ độ/nhãn toạ độ debug (KHÔNG ẩn lưới nền) — dùng cho sơ đồ giáo
   // khoa tối giản tự vẽ mọi thứ qua annotations. Xem SceneKonva2D.
   minimalOverlay?: boolean;
+  // Giữ bodyLabels cho bảng theo dõi nhưng không vẽ chúng trên canvas.
+  hideBodyLabelsOnCanvas?: boolean;
+  // Ẩn nhãn tọa độ động bám theo vật trên canvas, bảng theo dõi vẫn giữ nguyên.
+  hideCoordinateLabels?: boolean;
   // Tắt thanh treo tự sinh của renderer cho các scene có giá đỡ riêng, như bập bênh.
   hideFixedSupportDecoration?: boolean;
 };
