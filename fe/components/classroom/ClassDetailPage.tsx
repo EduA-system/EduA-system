@@ -41,7 +41,7 @@ import {
   updateClassStatus,
   uploadClassResourceFile,
 } from "@/lib/classroom";
-import { listLibrary, type LibraryContent } from "@/lib/library";
+import { LIBRARY_TYPE_LABELS, listLibrary, type LibraryContent, type LibraryType } from "@/lib/library";
 import { ResourceCard, statusClasses, subjectBannerClasses } from "./shared";
 import { SubmissionDetailPanel } from "./SubmissionDetailPanel";
 import { SubmissionsRosterPanel } from "./SubmissionsRosterPanel";
@@ -98,6 +98,7 @@ function ResourceFormPanel({
   const [sourceType, setSourceType] = useState<ResourceSourceType>(initial?.sourceType ?? "LIBRARY_SNAPSHOT");
   const [sourceLibraryContentId, setSourceLibraryContentId] = useState<string | null>(null);
   const [libraryQuery, setLibraryQuery] = useState("");
+  const [libraryType, setLibraryType] = useState<LibraryType | "">("");
   const [libraryItems, setLibraryItems] = useState<LibraryContent[]>([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
   const [attachment, setAttachment] = useState<ClassResourceAttachmentInput | null>(
@@ -134,6 +135,7 @@ function ResourceFormPanel({
       setLibraryLoading(true);
       const params = new URLSearchParams({ page: "0", size: "30" });
       if (libraryQuery.trim()) params.set("q", libraryQuery.trim());
+      if (libraryType) params.set("type", libraryType);
       listLibrary(authFetch, params)
         .then((result) => {
           if (!cancelled) setLibraryItems(result.items);
@@ -149,7 +151,7 @@ function ResourceFormPanel({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [authFetch, isEdit, libraryQuery, sourceType]);
+  }, [authFetch, isEdit, libraryQuery, libraryType, sourceType]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -287,15 +289,27 @@ function ResourceFormPanel({
 
         {!isEdit && sourceType === "LIBRARY_SNAPSHOT" && (
           <div>
-            <label className="block text-[12px] font-medium text-[#6b6b6b]">
-              Tìm trong thư viện cá nhân
+            <span className="block text-[12px] font-medium text-[#6b6b6b]">Tìm trong thư viện cá nhân</span>
+            <div className="mt-2 flex gap-2">
               <input
                 value={libraryQuery}
                 onChange={(event) => setLibraryQuery(event.target.value)}
                 placeholder="Tìm theo tiêu đề..."
-                className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
+                className="h-10 w-full flex-1 rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
               />
-            </label>
+              <select
+                value={libraryType}
+                onChange={(event) => setLibraryType(event.target.value as LibraryType | "")}
+                className="h-10 w-[152px] shrink-0 rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-2 text-[13px] outline-none transition focus:border-[#d97757]"
+              >
+                <option value="">Tất cả thể loại</option>
+                {(Object.entries(LIBRARY_TYPE_LABELS) as [LibraryType, string][]).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="mt-2 max-h-[220px] space-y-1.5 overflow-y-auto rounded-lg border border-[#ede8e1] p-2">
               {libraryLoading ? (
                 <p className="px-2 py-3 text-[12px] text-[#8a837b]">Đang tải...</p>
@@ -312,7 +326,7 @@ function ResourceFormPanel({
                     }`}
                   >
                     <span className="truncate">{item.title}</span>
-                    <span className="ml-2 shrink-0 text-[11px] text-[#8a837b]">{item.type}</span>
+                    <span className="ml-2 shrink-0 text-[11px] text-[#8a837b]">{LIBRARY_TYPE_LABELS[item.type]}</span>
                   </button>
                 ))
               )}
