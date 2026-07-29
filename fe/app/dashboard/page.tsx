@@ -14,6 +14,7 @@ const descriptions: Record<string, string> = {
   "/blog": "Chia sẻ kiến thức, trao đổi ý tưởng cùng cộng đồng giáo dục.",
   "/library": "Lưu trữ, quản lý và sử dụng lại tài liệu giảng dạy của bạn.",
   "/create-class": "Tạo và quản lý Class Hub cho các lớp bạn phụ trách.",
+  "/list-class": "Xem tài liệu và bài tập đã được đăng trong các lớp bạn tham gia.",
   "/lesson-edit": "Soạn thảo và hoàn thiện bài giảng với sự hỗ trợ của AI.",
   "/slide-create": "Tạo slide trình bày rõ ràng, sinh động chỉ trong vài phút.",
   "/lesson-create": "Thiết kế bài kiểm tra phù hợp với mục tiêu bài học.",

@@ -8,8 +8,8 @@
 ## 1. Nguyên tắc
 
 - **Nguồn chính là SRS**: chức năng này bao phủ đúng `UC-41 View Class Resources`, không làm
-  `UC-38/39/40` (Teacher ghi resource), `UC-42` (view detail), `UC-43` (download) hay `UC-44→48`
-  (submission) — xem "Điểm mở".
+  `UC-38/39/40` (Teacher ghi resource — xem [`../manage-class-resources/flow.md`](../manage-class-resources/flow.md)),
+  `UC-42` (view detail), `UC-43` (download) hay `UC-44→48` (submission) — xem "Điểm mở".
 - **Owner hoặc enrolled student, không phân biệt trạng thái lớp**: khác với Add Student/Class
   Management (chặn ghi khi `INACTIVE`), đọc resource **luôn được phép** kể cả lớp `INACTIVE`, theo
   `BR-39`.
@@ -175,11 +175,16 @@ presentation/controller/          ClassController (them 1 method: GET /{id}/reso
 
 ## 9. Điểm mở
 
-- `UC-38 Post Class Resource`, `UC-39 Update Class Resource`, `UC-40 Delete Class Resource` — thiết
-  kế API + flow riêng cho phía Teacher, đây là nguồn ghi dữ liệu vào `class_resources`.
+- `UC-38 Post Class Resource`, `UC-39 Update Class Resource`, `UC-40 Delete Class Resource` — phía
+  Teacher ghi dữ liệu vào `class_resources`. Đã thiết kế ở
+  [`../manage-class-resources/flow.md`](../manage-class-resources/flow.md) /
+  [`../API_designs/manage-class-resources.md`](../API_designs/manage-class-resources.md).
 - `UC-42 View Class Resource Detail`, `UC-43 Download Assigned Material` — kế thừa cùng
   `ClassResourceRepository`, thiết kế sau khi UC-41 chốt.
-- `UC-44→48` (Submission) — cần domain `Submission` mới; khi đó `submissionStatus` sẽ phản ánh dữ
+- `UC-47/48` (Submit/Unsubmit Assignment, phía Student) đã thiết kế và build ở
+  [`../submit-assignment/flow.md`](../submit-assignment/flow.md) — `submissionStatus` giờ phản ánh dữ
   liệu thật (`ON_TIME`/`LATE`) thay vì placeholder.
+- `UC-44/45/46` (View Submissions List/Detail, Download Submission File, phía Teacher) — đã thiết kế ở
+  [`../review-submissions/flow.md`](../review-submissions/flow.md).
 - UI Class Resources ở FE (`fe/components/classroom/`) chưa tồn tại, sẽ thiết kế sau khi API được
   chốt.

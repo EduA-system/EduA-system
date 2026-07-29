@@ -11,8 +11,9 @@
 
 - **Bám sát SRS, chỉ 1 use case**: mapping trực tiếp `UC-41 View Class Resources`. Không làm
   `UC-38 Post Class Resource`, `UC-39 Update Class Resource`, `UC-40 Delete Class Resource` (phía
-  Teacher ghi dữ liệu), `UC-42 View Class Resource Detail`, `UC-43 Download Assigned Material` hay
-  nhóm `UC-44→48` (Submission) trong tài liệu này — tất cả liệt kê ở "Điểm mở".
+  Teacher ghi dữ liệu — xem [`manage-class-resources.md`](./manage-class-resources.md)),
+  `UC-42 View Class Resource Detail`, `UC-43 Download Assigned Material` hay nhóm `UC-44→48`
+  (Submission) trong tài liệu này — tất cả liệt kê ở "Điểm mở".
 - **Chưa có bảng `class_resources` trong DB**: đã grep `ClassResource` trong `be/src` — không có kết
   quả nào, khác với `classes`/`class_members` đã build xong cho Class Management/Add Student. Tài
   liệu này đề xuất schema tối thiểu đủ để endpoint đọc hoạt động (xem
@@ -145,13 +146,18 @@ query: ?page=0&size=20
 
 ## Điểm mở
 
-- `UC-38 Post Class Resource`, `UC-39 Update Class Resource`, `UC-40 Delete Class Resource` cần tài
-  liệu API design riêng cho phía Teacher — đây là nguồn ghi dữ liệu vào `class_resources` mà tài liệu
-  này giả định đã tồn tại.
+- `UC-38 Post Class Resource`, `UC-39 Update Class Resource`, `UC-40 Delete Class Resource` — phía
+  Teacher ghi dữ liệu vào `class_resources` mà tài liệu này giả định đã tồn tại. Đã thiết kế ở
+  [`manage-class-resources.md`](./manage-class-resources.md) /
+  [`../manage-class-resources/flow.md`](../manage-class-resources/flow.md).
 - `UC-42 View Class Resource Detail` và `UC-43 Download Assigned Material` là bước tiếp theo tự nhiên
   sau danh sách này, kế thừa cùng `ClassResourceRepository`.
-- `UC-44`→`UC-48` (View Submissions List/Detail, Download Submission File, Submit/Unsubmit Assignment)
-  cần domain `Submission` mới — khi đó `submissionStatus` trong `ClassResourceSummaryDto` sẽ được cập
-  nhật để phản ánh dữ liệu thật (`ON_TIME`/`LATE`) thay vì placeholder `NOT_SUBMITTED`.
+- `UC-47/48` (Submit/Unsubmit Assignment, phía Student) đã thiết kế ở
+  [`submit-assignment.md`](./submit-assignment.md) — sau khi `ClassResourceService.listResources`
+  được cập nhật theo tài liệu đó, `submissionStatus` ở đây sẽ phản ánh dữ liệu thật (`ON_TIME`/`LATE`)
+  thay vì placeholder `NOT_SUBMITTED`.
+- `UC-44/45/46` (View Submissions List/Detail, Download Submission File, phía Teacher) — kế thừa cùng
+  `SubmissionRepository` đã định nghĩa ở `submit-assignment.md` — đã thiết kế ở
+  [`review-submissions.md`](./review-submissions.md).
 - UI Class Resources ở FE (`fe/components/classroom/`) chưa tồn tại, sẽ thiết kế sau khi API được
   chốt.

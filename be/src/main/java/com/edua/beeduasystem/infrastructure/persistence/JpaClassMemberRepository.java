@@ -53,6 +53,12 @@ public class JpaClassMemberRepository implements ClassMemberRepository {
         return new PageResult(items, result.getTotalElements());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> findAllStudentIds(UUID classId) {
+        return jpa.findStudentIdsByClassId(classId);
+    }
+
     private static ClassMember toDomain(ClassMemberEntity entity) {
         return new ClassMember(entity.getId(), entity.getClassId(), entity.getStudentId(), entity.getJoinedAt());
     }

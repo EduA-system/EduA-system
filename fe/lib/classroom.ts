@@ -115,11 +115,13 @@ export const RESOURCE_SOURCE_TYPE_LABELS: Record<ResourceSourceType, string> = {
   FILE_UPLOAD: "Tệp tải lên",
 };
 
-export type SubmissionStatus = "NOT_APPLICABLE" | "NOT_SUBMITTED";
+export type SubmissionStatus = "NOT_APPLICABLE" | "NOT_SUBMITTED" | "ON_TIME" | "LATE";
 
 export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
   NOT_APPLICABLE: "Không yêu cầu nộp bài",
   NOT_SUBMITTED: "Chưa nộp bài",
+  ON_TIME: "Đã nộp - Đúng hạn",
+  LATE: "Đã nộp - Trễ hạn",
 };
 
 export type ClassResourceAttachment = {
@@ -148,6 +150,39 @@ export type ClassResourcePage = {
   page: number;
   size: number;
   total: number;
+};
+
+export type ClassResourceAttachmentInput = {
+  url: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
+export type PostClassResourcePayload = {
+  title?: string | null;
+  description?: string | null;
+  sourceType: ResourceSourceType;
+  sourceLibraryContentId?: string | null;
+  attachment?: ClassResourceAttachmentInput | null;
+  submissionEnabled: boolean;
+  deadline?: string | null;
+};
+
+export type UpdateClassResourcePayload = {
+  title?: string;
+  description?: string | null;
+  attachment?: ClassResourceAttachmentInput | null;
+  submissionEnabled?: boolean;
+  deadline?: string | null;
+};
+
+export type UploadedFile = {
+  fileId: string;
+  url: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
 };
 
 export function sourceTypeLabel(sourceType: string): string {
@@ -289,4 +324,143 @@ export function listClassResources(
 ): Promise<ClassResourcePage> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   return request<ClassResourcePage>(authFetch, `/${classId}/resources?${params.toString()}`);
+}
+
+export function postClassResource(
+  authFetch: AuthFetch,
+  classId: string,
+  payload: PostClassResourcePayload,
+): Promise<ClassResourceSummary> {
+  return request<ClassResourceSummary>(authFetch, `/${classId}/resources`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateClassResource(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+  payload: UpdateClassResourcePayload,
+): Promise<ClassResourceSummary> {
+  return request<ClassResourceSummary>(authFetch, `/${classId}/resources/${resourceId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteClassResource(authFetch: AuthFetch, classId: string, resourceId: string): Promise<void> {
+  return request<void>(authFetch, `/${classId}/resources/${resourceId}`, { method: "DELETE" });
+}
+
+export async function uploadClassResourceFile(authFetch: AuthFetch, file: File): Promise<UploadedFile> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await authFetch("/api/uploads", { method: "POST", body: formData });
+  const data = (await response.json().catch(() => null)) as (UploadedFile & { message?: string }) | null;
+  if (!response.ok) {
+    throw new Error(data && "message" in data ? String(data.message) : "Không thể tải tệp lên.");
+  }
+  return data as UploadedFile;
+}
+
+// ---- Submit Assignment (UC-47/48) — nộp bài text và/hoặc file, thu hồi bài nộp ----
+
+export type SubmissionFileItem = {
+  fileName: string;
+  url: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
+export type SubmissionDetail = {
+  id: string;
+  textContent: string | null;
+  files: SubmissionFileItem[];
+  status: "ON_TIME" | "LATE";
+  submittedAt: string;
+};
+
+export type SubmitAssignmentPayload = {
+  textContent?: string | null;
+  files?: SubmissionFileItem[];
+};
+
+export function submitAssignment(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+  payload: SubmitAssignmentPayload,
+): Promise<SubmissionDetail> {
+  return request<SubmissionDetail>(authFetch, `/${classId}/resources/${resourceId}/submission`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function unsubmitAssignment(authFetch: AuthFetch, classId: string, resourceId: string): Promise<void> {
+  return request<void>(authFetch, `/${classId}/resources/${resourceId}/submission`, { method: "DELETE" });
+}
+
+/** Tra ve {@code null} khi hoc sinh chua nop bai (404), khong coi la loi. */
+export async function getMySubmission(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+): Promise<SubmissionDetail | null> {
+  const response = await authFetch(`/api/classes/${classId}/resources/${resourceId}/submission`);
+  if (response.status === 404) return null;
+  const data = (await response.json().catch(() => null)) as (SubmissionDetail & { message?: string }) | null;
+  if (!response.ok) {
+    throw new Error(data && "message" in data ? String(data.message) : "Không thể tải bài đã nộp.");
+  }
+  return data as SubmissionDetail;
+}
+
+// ---- Review Submissions (UC-44/45/46) — Teacher xem danh sách/chi tiết bài nộp, tải file ----
+
+export type SubmissionRosterEntry = {
+  studentId: string;
+  studentName: string | null;
+  studentEmail: string | null;
+  status: SubmissionStatus;
+  /** Lan nop dau tien (Submission.createdAt) — null khi status = NOT_SUBMITTED. */
+  firstSubmittedAt: string | null;
+  /** Lan nop gan nhat — null khi status = NOT_SUBMITTED. Khac firstSubmittedAt nghia la da nop lai. */
+  submittedAt: string | null;
+};
+
+export type SubmissionRoster = {
+  resourceId: string;
+  deadline: string | null;
+  items: SubmissionRosterEntry[];
+};
+
+export type TeacherSubmissionDetail = {
+  studentId: string;
+  studentName: string | null;
+  textContent: string | null;
+  files: SubmissionFileItem[];
+  status: "ON_TIME" | "LATE";
+  firstSubmittedAt: string;
+  submittedAt: string;
+};
+
+/** UC-44 — danh sach toan bo hoc sinh enrolled + trang thai nop bai cho 1 resource (Teacher owner). */
+export function listResourceSubmissions(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+): Promise<SubmissionRoster> {
+  return request<SubmissionRoster>(authFetch, `/${classId}/resources/${resourceId}/submissions`);
+}
+
+/** UC-45 — chi tiet bai nop cua 1 hoc sinh (Teacher owner); files[].url dung truc tiep cho UC-46 (tai xuong). */
+export function getTeacherSubmissionDetail(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+  studentId: string,
+): Promise<TeacherSubmissionDetail> {
+  return request<TeacherSubmissionDetail>(authFetch, `/${classId}/resources/${resourceId}/submissions/${studentId}`);
 }

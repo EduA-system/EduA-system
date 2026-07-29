@@ -16,6 +16,9 @@ public interface ClassMemberRepository {
     /** Danh sach thanh vien cua 1 lop, moi tham gia truoc. */
     PageResult findByClassId(UUID classId, int page, int size);
 
+    /** Toan bo student id dang enrolled trong 1 lop, khong phan trang (dung de notify all, BR-46). */
+    List<UUID> findAllStudentIds(UUID classId);
+
     record PageResult(List<ClassMember> items, long total) {
     }
 }

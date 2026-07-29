@@ -1,4 +1,4 @@
-export type Role = "TEACHER" | "MODERATOR" | "PRINCIPAL" | "IT_STAFF";
+export type Role = "TEACHER" | "MODERATOR" | "PRINCIPAL" | "IT_STAFF" | "STUDENT";
 
 export type NavItem = {
   label: string;
@@ -28,7 +28,8 @@ export const navGroups: NavGroup[] = [
     label: "CONTENT",
     items: [
       { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "Lớp học", icon: "book", href: "/create-class", requiredRole: ["TEACHER"] },
+      { label: "Lớp học", icon: "book", href: "/create-class", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["STUDENT"] },
       { label: "Lịch tuần", icon: "book", href: "/weekly-schedule", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-create", active: true },
       { label: "Slide", icon: "slides", href: "/slide-create" },

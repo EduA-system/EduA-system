@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { ViewClassResourcesPage } from "@/components/classroom/ViewClassResourcesPage";
+import { ClassDetailPage } from "@/components/classroom/ClassDetailPage";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 
-export default function ViewClassResourcesRoutePage() {
+export default function ClassDetailRoutePage() {
   return (
-    <RouteGuard pathname="/view-class-resources">
+    <RouteGuard pathname="/class-detail">
       <Suspense
         fallback={
           <main className="flex min-h-screen items-center justify-center bg-[#f5f1ec] text-sm text-[#6b6b6b]">
@@ -12,7 +12,7 @@ export default function ViewClassResourcesRoutePage() {
           </main>
         }
       >
-        <ViewClassResourcesPage />
+        <ClassDetailPage />
       </Suspense>
     </RouteGuard>
   );
