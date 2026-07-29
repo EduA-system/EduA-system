@@ -13,10 +13,10 @@ Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 
 | Code Reality | Count |
 | --- | ---: |
-| Coded | 31 |
+| Coded | 33 |
 | Tested | 1 |
 | Partially Coded | 8 |
-| Pending | 4 |
+| Pending | 2 |
 | Planned | 3 |
 | Not Found | 8 |
 
@@ -44,8 +44,8 @@ Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 | [~] | View Periodic Table | Simulation | Periodic Table | Iteration 2 | Partially Coded | UC-57 - Partially coded: 118-element table, filters, detail cards and 3D atom; embedding into lessons/slides is not implemented |
 | [~] | Physics Hub (view, detail, customize via AI) | Simulation | Physics Simulation | Iteration 2 | Partially Coded | UC-53, UC-54, UC-55 - Coded frontend: /mo-phong-vat-ly provides reviewed presets and interactive physics simulations. Missing: backend AI customization and persistence of customized simulations in Personal Library. |
 | [~] | Simulation & Asset Library Management | Simulation | Simulation Library | Iteration 2 | Partially Coded | No UC — shared asset/sim infrastructure |
-| [ ] | Create Test | Test | Exam Creation | Iteration 1 | Pending | UC-27 |
-| [ ] | Edit Test | Test | Exam Editing | Iteration 1 | Pending | UC-31 |
+| [x] | Create Test | Test | Exam Creation | Iteration 1 | Coded | UC-27 - AI practice-exam creation at `/exam-create-new`, including textbook scope, question/score configuration, feasibility validation, and generated-question validation. |
+| [x] | Edit Test | Test | Exam Editing | Iteration 1 | Coded | UC-31 - Tiptap editor at `/exam-edit-new`; test drafts are saved to and reopened from Personal Library as `TEST` content. |
 | [ ] | Export Test / Exam (Word / PDF) | Test | Exam Export | Iteration 2 | Pending | UC-35 |
 | [x] | View Personal Library (view, open, search own content) | Personal Library | Library Management | Iteration 2 | Coded | UC-21, UC-22, UC-36, UC-37 - Coded: authenticated per-user library supports list, search, open, rename/update, and delete; lesson plans and molecule simulations are saved from their editors |
 | [x] | Submit / Unsubmit Hub Content for Review | Community Hub | Content Publishing | Iteration 3 | Coded | UC-23 - Coded: backend POST/DELETE /api/library/contents/{id}/submission (LibraryContentStatus PRIVATE/SUBMITTED/APPROVED/REJECTED, submit() also accepts REJECTED to resubmit); frontend Gui duyet/Thu hoi/Gui lai buttons on /library. Public hub feed, comments/reports, customize, and moderation review are now built (see rows below / Hub Moderation). |

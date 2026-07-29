@@ -1,6 +1,7 @@
 package com.edua.beeduasystem.repository.repositories;
 
 import com.edua.beeduasystem.domain.model.textbook.TextbookCatalog;
+import com.edua.beeduasystem.domain.model.exam.ExamLessonSource;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,4 +26,7 @@ public interface TextbookCatalogRepository {
 
     /** Nội dung SGK số hóa của một bài (cho {@code /generate}); rỗng nếu thiếu. */
     Optional<String> findLessonKnowledge(String bookCode, String chapterCode, String lessonCode);
+
+    /** Ordered lesson context for a subject/grade. Knowledge stays inside the backend. */
+    List<ExamLessonSource> findExamLessonSources(String subjectCode, int grade);
 }
