@@ -2,7 +2,7 @@
 
 Source: `(đã làm) Report2_Project Tracking.xlsx`, sheet `WBS` (Iteration 1–3, all 55 rows).
 
-`Code Reality` verified against the actual codebase (`be/`, `fe/`) via a full audit pass on 2026-07-28 — see the Discrepancies section for every row where the WBS tracker's own Status column was wrong.
+`Code Reality` verified against the actual codebase (`be/`, `fe/`) via a full audit pass on 2026-07-29 — see the Discrepancies section for every row where the WBS tracker's own Status column was wrong.
 
 Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 - `[x]` — verified Coded or Tested
@@ -13,14 +13,14 @@ Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 
 | Code Reality | Count |
 | --- | ---: |
-| Coded | 33 |
+| Coded | 34 |
 | Tested | 1 |
-| Partially Coded | 8 |
+| Partially Coded | 16 |
 | Pending | 2 |
-| Planned | 3 |
-| Not Found | 8 |
+| Planned | 2 |
+| Not Found | 0 |
 
-**13 of 55 rows (~24%) had a WBS Status that did not match the code.** See [Discrepancies](#discrepancies) below.
+**11 of 55 rows (20%) had a WBS Status that did not match the code.** See [Discrepancies](#discrepancies) below.
 
 ## Checklist
 
@@ -30,17 +30,17 @@ Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 | [x] | Update Profile Information | Common | Profile Management | Iteration 2 | Coded | UC-04 - Coded: view/update full name, avatar and contact information |
 | [~] | Role-based Access Control (Teacher / Mod / Principal) | Common | Access Control | Iteration 2 | Partially Coded | Partially coded: backend roles and protected Principal/Moderator APIs; frontend route coverage remains incomplete |
 | [x] | View Landing Page | Common | Landing Page | Iteration 1 | Coded | UC-01 |
-| [~] | Create Lesson Plan (AI: from SGK database or uploaded file) | Lesson | Lesson Plan Creation | Iteration 1 | **Partially Coded** ⚠️ | UC-24 (merged: AI-from-database + upload-file variants) |
+| [~] | Create Lesson Plan (AI: from SGK database or uploaded file) | Lesson | Lesson Plan Creation | Iteration 1 | Partially Coded | UC-24 - SGK-database generation is implemented; uploaded-file generation is missing. |
 | [x] | Edit Lesson Plan | Lesson | Lesson Plan Editing | Iteration 1 | Coded | UC-28 |
-| [~] | Export Lesson Plan (PDF / Word) | Lesson | Lesson Plan Export | Iteration 2 | **Partially Coded** ⚠️ | UC-33 |
+| [~] | Export Lesson Plan (PDF / Word) | Lesson | Lesson Plan Export | Iteration 2 | Partially Coded | UC-33 - PDF export is implemented; Word/.docx export is missing. |
 | [x] | Create Slide Outline (AI - no 3d) | Slide | Slide Outline | Iteration 1 | Tested | UC-25 |
 | [x] | Edit Slide Outline | Slide | Slide Outline | Iteration 1 | Coded | UC-29 |
 | [x] | Create Slide Deck (AI from Outline) | Slide | Slide Generation | Iteration 1 | Coded | UC-26 |
 | [x] | Edit Slide Deck | Slide | Slide Editing | Iteration 1 | Coded | UC-30 |
 | [x] | Present Slide Deck (online) | Slide | Presentation | Iteration 2 | Coded | UC-32 - Coded: /slide-present supports previous/next controls, keyboard navigation, slide picker, fullscreen, and exit. |
-| [ ] | Click-to-simulate during Presentation | Slide | Presentation | Iteration 2 | **Not Found** ⚠️ | No UC — part of presentation UX |
+| [x] | Click-to-simulate during Presentation | Slide | Presentation | Iteration 2 | Coded | Slide simulation `molecule` renders a preview in the editor and activates its live `MoleculeViewer` only after the presenter clicks “Nhấn để mô phỏng” (`Canvas`, `ElementView`, `SlidePresentationClient`). |
 | [x] | Export Slide (HTML for offline use) | Slide | Slide Export | Iteration 2 | Coded | UC-34 - Coded: exports a self-contained offline HTML slide deck with presenter controls, inline CSS, and embedded assets where available. |
-| [~] | View 3D Atomic / Molecule Models | Simulation | Molecular Models | Iteration 2 | Partially Coded | UC-58, UC-59 - Partially coded: interactive 3D ball-and-stick and space-filling molecule viewer with AI structure generation; 2D rendering and lesson/slide embedding are not implemented |
+| [~] | View 3D Atomic / Molecule Models | Simulation | Molecular Models | Iteration 2 | Partially Coded | UC-58, UC-59 - interactive 3D ball-and-stick/space-filling viewer, AI structure generation, save-to-library, and molecule embedding in the slide editor/presentation are coded. 2D rendering and lesson embedding remain missing. |
 | [~] | View Periodic Table | Simulation | Periodic Table | Iteration 2 | Partially Coded | UC-57 - Partially coded: 118-element table, filters, detail cards and 3D atom; embedding into lessons/slides is not implemented |
 | [~] | Physics Hub (view, detail, customize via AI) | Simulation | Physics Simulation | Iteration 2 | Partially Coded | UC-53, UC-54, UC-55 - Coded frontend: /mo-phong-vat-ly provides reviewed presets and interactive physics simulations. Missing: backend AI customization and persistence of customized simulations in Personal Library. |
 | [~] | Simulation & Asset Library Management | Simulation | Simulation Library | Iteration 2 | Partially Coded | No UC — shared asset/sim infrastructure |
@@ -60,23 +60,23 @@ Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 | [x] | Teacher Account Management | User & Content Management | Account Management | Iteration 3 | Coded | UC-13, UC-14, UC-15 - Coded: backend /api/moderator/teachers; frontend /user-management. |
 | [x] | Create Notifications (send to subject teachers) | User & Content Management | Notifications | Iteration 3 | Coded | UC-20 - Coded: backend POST /api/notifications, Moderator broadcast to Teachers of the same subject, realtime push over STOMP /user/queue/notifications; frontend compose form on /notifications (Moderator only). |
 | [x] | View & Manage My Notifications | User & Content Management | Notifications | Iteration 3 | Coded | UC-05, UC-19 - Coded: backend GET /api/notifications, /unread-count, PATCH /{id}/read, POST /read-all; frontend /notifications list with unread filter, mark read/read-all, and realtime unread badge on Sidebar. |
-| [x] | View & Filter Activity Log | User & Content Management | Audit Log | Iteration 3 | **Coded** ⚠️ | UC-10 |
+| [x] | View & Filter Activity Log | User & Content Management | Audit Log | Iteration 3 | Coded | UC-10 - filtered IT Staff activity-log API and screen are implemented. |
 | [x] | Moderate Hub Content (review, approve, reject) | User & Content Management | Hub Moderation | Iteration 3 | Coded | UC-06, UC-07, UC-08, UC-09 - Coded: backend GET /api/library/contents/moderation-queue, POST .../approval, POST .../rejection (subject-scoped nhu Blog moderation); frontend /hub-moderation. |
 | [ ] | Manage Hub (categorize, tag, organize, pin) | User & Content Management | Hub Management | Iteration 3 | Pending | No UC — Hub structure management |
 | [x] | View / Update AI System Prompts | User & Content Management | System Configuration | Iteration 3 | Coded | UC-11, UC-12 - Coded: backend /api/it-staff/system-prompts; frontend /it-staff; prompts apply to lesson/slide/molecule AI flows. |
 | [x] | View Blog List (reader + moderation) | Blog | Blog Reading | Iteration 3 | Coded | UC-51, UC-16 - Coded: backend /api/blog-posts; frontend /blog and /blog/moderation. |
 | [~] | View Blog Post Detail (reader + moderation) | Blog | Blog Reading | Iteration 2 | Partially Coded | UC-52, UC-17 - Partially coded: authenticated reader and moderator detail views; guest preview is not implemented |
-| [x] | Edit Own Blog Post | Blog | Blog Authoring | Iteration 2 | **Coded** ⚠️ | UC-39 - Partially coded: backend PATCH API exists; frontend edit-post UI is not implemented |
+| [x] | Edit Own Blog Post | Blog | Blog Authoring | Iteration 2 | Coded | UC-39 - owner-only PATCH API and the pre-filled edit modal in `BlogCommunityPage` are implemented. |
 | [x] | Remove / Delete Blog Post | Blog | Blog Moderation | Iteration 3 | Coded | UC-18, UC-40 - Coded: Teacher can delete own post; Moderator can remove post with reason. |
-| [ ] | Create Class (CRUD) | Classroom | Class Management | Iteration 2 | **Not Found** ⚠️ | CR-01 |
-| [ ] | Add Students to Class by Gmail | Classroom | Class Membership | Iteration 2 | **Not Found** ⚠️ | CR-02 |
-| [ ] | Student View Class Resources | Classroom | Class Resource Access | Iteration 2 | **Not Found** ⚠️ | CR-03 |
-| [x] | IT Staff Role & AI Prompt Administration | Common | Access Control | Iteration 2 | **Coded** ⚠️ | CR-12 |
-| [ ] | Manage Classroom Resources & Assignments | Classroom | Class Hub Management | Iteration 3 | **Not Found** ⚠️ | CR-04, CR-05 (merged to avoid overlap) |
-| [ ] | Assign Homework with Deadline | Classroom | Assignment Delivery | Iteration 3 | **Not Found** ⚠️ | CR-06 |
-| [ ] | Student View Teaching Resources | Classroom | Class Resource Access | Iteration 3 | **Not Found** ⚠️ | CR-07 |
-| [ ] | Student Assignment Submission | Classroom | Assignment Submission | Iteration 3 | **Not Found** ⚠️ | CR-08 |
-| [ ] | Teacher Review Student Submissions | Classroom | Submission Review | Iteration 3 | Planned | CR-09 |
+| [~] | Create Class (CRUD) | Classroom | Class Management | Iteration 2 | Partially Coded | CR-01 - API/UI/service/repository and migrations for create, list, detail, update, activate/deactivate are present (`/api/classes`, `/create-class`, `ClassManagementService`). Fresh DB deployment is blocked by the duplicate `V25` Flyway migration described below. |
+| [~] | Add Students to Class by Gmail | Classroom | Class Membership | Iteration 2 | Partially Coded | CR-02 - add by Gmail plus CSV/XLSX import, membership list, and student-role assignment are implemented (`ClassEnrollmentService`, `/add-student`). The complete classroom flow is not deployable until the duplicate migration is fixed. |
+| [~] | Student View Class Resources | Classroom | Class Resource Access | Iteration 2 | Partially Coded | CR-03 - `/list-class`, `/class-detail`, `/detail-resource` and `GET /api/classes/{id}/resources` exist, but the `class_resources` schema cannot be applied on a fresh DB while two `V25` migrations coexist. |
+| [x] | IT Staff Role & AI Prompt Administration | Common | Access Control | Iteration 2 | Coded | CR-12 - Principal can manage IT Staff; IT Staff can manage AI system prompts. |
+| [~] | Manage Classroom Resources & Assignments | Classroom | Class Hub Management | Iteration 3 | Partially Coded | CR-04, CR-05 - teacher UI/API can post, edit and delete library/file resources; assignments are resources with `submissionEnabled` and `deadline`. The duplicate `V25` migration and missing resource/submission automated tests prevent a Coded verdict. |
+| [~] | Assign Homework with Deadline | Classroom | Assignment Delivery | Iteration 3 | Partially Coded | CR-06 - deadline validation, overdue state, notifications and assignment UI are implemented in `ClassResourceService` and `ClassDetailPage`; blocked on the same DB migration collision. |
+| [~] | Student View Teaching Resources | Classroom | Class Resource Access | Iteration 3 | Partially Coded | CR-07 - enrolled-class and resource-detail screens are implemented for `STUDENT`, including file/library resource metadata; blocked on the same DB migration collision. |
+| [~] | Student Assignment Submission | Classroom | Assignment Submission | Iteration 3 | Partially Coded | CR-08 - submit/unsubmit text and file attachments, on-time/late status, API and UI are implemented in `SubmissionService` and `ResourceDetailPage`; blocked on the same DB migration collision. |
+| [~] | Teacher Review Student Submissions | Classroom | Submission Review | Iteration 3 | Partially Coded | CR-09 - submission roster and student-detail API/UI are implemented (`SubmissionsRosterPanel`, `SubmissionDetailPanel`), but are not deployable until migrations `V25__create_class_resources.sql` and `V25__create_submissions.sql` are assigned unique versions. |
 | [x] | Submit Lesson Plan for Approval | Lesson | Lesson Plan Approval | Iteration 3 | Coded | CR-10, UC-80/81/83/84/85 - Coded: Full Weekly Task epic implemented per Report3 SRS v1.2. Backend: weekly_tasks table (V21 migration), WeeklyTaskService/Controller (create/edit/submit/unsubmit with BR-47 deadline lock, review_status state machine independent of Hub Publish Status). Frontend: /weekly-schedule (Teacher+Moderator). 22 unit tests green, full mvn test suite green, fe lint/typecheck/build green. |
 | [x] | Moderator Approve / Reject Lesson Plans | Lesson | Lesson Plan Approval | Iteration 3 | Coded | CR-11, UC-86/87/88/89 - Coded: Weekly Task Review implemented. Backend: GET /api/weekly-tasks/moderation-queue, POST /{id}/approval, POST /{id}/rejection (subject-scoped like Hub moderation), notifies teacher via existing Notification mechanism. Frontend: /lesson-plan-approval (Moderator). |
 | [ ] | AI Content Statistics Dashboard | Principal | Analytics Dashboard | Iteration 3 | Planned | CR-13 |
@@ -84,21 +84,18 @@ Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 
 ## Discrepancies
 
-Rows where the WBS tracker's Status column does not match the actual code, found via a full-codebase audit (2026-07-28):
+Rows where the WBS tracker's Status column does not match the actual code, found via a full-codebase audit (2026-07-29):
 
-- **Create Lesson Plan (AI: from SGK database or uploaded file)** — WBS says `Coded`, code reality is `Partially Coded`. only the SGK-database variant is implemented (LessonPlanController/GenerateLessonPlanRequest use bookId/chapterId/lessonId). No uploaded-file variant; /api/uploads is never wired into lesson-plan generation.
-- **Export Lesson Plan (PDF / Word)** — WBS says `Pending`, code reality is `Partially Coded`. PDF export works today (fe/lib/lesson-plan-pdf-export.ts, "Xuất PDF" button in LessonEditDashboard). Word/.docx export is genuinely missing (no POI/docx library).
-- **Click-to-simulate during Presentation** — WBS says `Coded`, code reality is `Not Found`. no distinct click-to-simulate behavior found in SlidePresentationClient.tsx or elsewhere; appears to double-count ordinary slide navigation (item above).
-- **View & Filter Activity Log** — WBS says `Pending`, code reality is `Coded`. fully built: ActivityLogController (GET /api/it-staff/activity-log, filters by actorId/category/from/to), migration V22__create_activity_logs.sql, frontend fe/app/it-staff/activity-log/page.tsx.
-- **Edit Own Blog Post** — WBS says `Partially Coded`, code reality is `Coded`. frontend edit UI exists: "Sửa bài" button in BlogCommunityPage.tsx opens CreatePostModal pre-filled, which PATCHes /blog-posts/{id}. Backend + frontend both coded.
-- **Create Class (CRUD)** — WBS says `Coded`, code reality is `Not Found`. no Classroom entity/controller/migration anywhere in be/ or fe/.
-- **Add Students to Class by Gmail** — WBS says `Coded`, code reality is `Not Found`. no class-membership/enrollment code; only unrelated "add moderator/it-staff by email" exists.
-- **Student View Class Resources** — WBS says `Coded`, code reality is `Not Found`. no classroom-scoped resource page exists under fe/app.
-- **IT Staff Role & AI Prompt Administration** — WBS says `Planned`, code reality is `Coded`. full CRUD in PrincipalController (/api/principal/it-staff) + working "IT Staff" tab in fe/app/user-management/page.tsx. Duplicate WBS row of "View / Update AI System Prompts" (already Coded).
-- **Manage Classroom Resources & Assignments** — WBS says `Coded`, code reality is `Not Found`. no classroom_resources/assignment code; plans/iteration-2-implementation-checklist.md still lists this as unchecked future work.
-- **Assign Homework with Deadline** — WBS says `Coded`, code reality is `Not Found`. no homework/deadline model anywhere.
-- **Student View Teaching Resources** — WBS says `Coded`, code reality is `Not Found`. no student-role classroom resource page exists.
-- **Student Assignment Submission** — WBS says `Coded`, code reality is `Not Found`. no submission entity/controller/page anywhere.
+- **Create Lesson Plan (AI: from SGK database or uploaded file)** — WBS says `Coded`, code reality is `Partially Coded`: only the SGK-database variant is implemented (`bookId`/`chapterId`/`lessonId`). Uploaded files are not wired into lesson-plan generation.
+- **Export Lesson Plan (PDF / Word)** — WBS says `Pending`, code reality is `Partially Coded`: PDF export works; Word/.docx export is absent.
+- **View & Filter Activity Log** — WBS says `Pending`, code reality is `Coded`: `ActivityLogController`, migration `V22`, and `/it-staff/activity-log` are implemented.
+- **Edit Own Blog Post** — WBS says `Partially Coded`, code reality is `Coded`: `BlogCommunityPage` opens a pre-filled `CreatePostModal`, which PATCHes the post.
+- **Student View Class Resources** — WBS says `Coded`, code reality is `Partially Coded`: UI/API/service exist, but database migration cannot complete on a fresh database.
+- **IT Staff Role & AI Prompt Administration** — WBS says `Planned`, code reality is `Coded`: Principal can manage IT Staff and IT Staff can manage AI system prompts. This overlaps with the separate system-prompt row.
+- **Manage Classroom Resources & Assignments**, **Assign Homework with Deadline**, **Student View Teaching Resources**, and **Student Assignment Submission** — WBS says `Coded`, code reality is `Partially Coded`: implementation exists end-to-end in source, but cannot be deployed safely because Flyway finds two migrations with version `V25`.
+- **Teacher Review Student Submissions** — WBS says `Planned`, code reality is `Partially Coded`: roster/detail API and UI are implemented but share the same migration blocker.
 
-The most significant discrepancy: **all 7 "Coded" Classroom items are false positives** — no classroom/class/assignment/submission module exists anywhere in `be/` or `fe/` (confirmed by grep across controllers, services, entities, migrations, and `fe/app` page folders). Only the 3 Classroom rows already marked `Planned` (Teacher Review Student Submissions, AI Content Statistics Dashboard, Principal Management Dashboard) match reality.
+### Classroom integration blocker
+
+The classroom source code is present: `ClassController`, the class/enrollment/resource/submission services, routes and UI all exist. However, `be/src/main/resources/db/migration/` contains both `V25__create_class_resources.sql` and `V25__create_submissions.sql`. Flyway migration versions must be unique, so a fresh database cannot apply the classroom-resource/submission schema until one migration is renumbered and verified. Existing classroom unit coverage only includes `ClassManagementServiceTest`; resource and submission flows have no dedicated backend tests.
 
