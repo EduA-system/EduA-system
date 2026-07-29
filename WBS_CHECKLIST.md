@@ -13,14 +13,14 @@ Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 
 | Code Reality | Count |
 | --- | ---: |
-| Coded | 34 |
+| Coded | 42 |
 | Tested | 1 |
-| Partially Coded | 16 |
+| Partially Coded | 8 |
 | Pending | 2 |
 | Planned | 2 |
 | Not Found | 0 |
 
-**11 of 55 rows (20%) had a WBS Status that did not match the code.** See [Discrepancies](#discrepancies) below.
+**6 of 55 rows (~11%) had a WBS Status that did not match the code.** See [Discrepancies](#discrepancies) below.
 
 ## Checklist
 
@@ -68,15 +68,15 @@ Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 | [~] | View Blog Post Detail (reader + moderation) | Blog | Blog Reading | Iteration 2 | Partially Coded | UC-52, UC-17 - Partially coded: authenticated reader and moderator detail views; guest preview is not implemented |
 | [x] | Edit Own Blog Post | Blog | Blog Authoring | Iteration 2 | Coded | UC-39 - owner-only PATCH API and the pre-filled edit modal in `BlogCommunityPage` are implemented. |
 | [x] | Remove / Delete Blog Post | Blog | Blog Moderation | Iteration 3 | Coded | UC-18, UC-40 - Coded: Teacher can delete own post; Moderator can remove post with reason. |
-| [~] | Create Class (CRUD) | Classroom | Class Management | Iteration 2 | Partially Coded | CR-01 - API/UI/service/repository and migrations for create, list, detail, update, activate/deactivate are present (`/api/classes`, `/create-class`, `ClassManagementService`). Fresh DB deployment is blocked by the duplicate `V25` Flyway migration described below. |
-| [~] | Add Students to Class by Gmail | Classroom | Class Membership | Iteration 2 | Partially Coded | CR-02 - add by Gmail plus CSV/XLSX import, membership list, and student-role assignment are implemented (`ClassEnrollmentService`, `/add-student`). The complete classroom flow is not deployable until the duplicate migration is fixed. |
-| [~] | Student View Class Resources | Classroom | Class Resource Access | Iteration 2 | Partially Coded | CR-03 - `/list-class`, `/class-detail`, `/detail-resource` and `GET /api/classes/{id}/resources` exist, but the `class_resources` schema cannot be applied on a fresh DB while two `V25` migrations coexist. |
+| [x] | Create Class (CRUD) | Classroom | Class Management | Iteration 2 | Coded | CR-01 - create, list, detail, update and activate/deactivate are implemented through `/api/classes`, `/create-class` and `ClassManagementService`. |
+| [x] | Add Students to Class by Gmail | Classroom | Class Membership | Iteration 2 | Coded | CR-02 - add by Gmail plus CSV/XLSX import, membership list and student-role assignment are implemented (`ClassEnrollmentService`, `/add-student`). |
+| [x] | Student View Class Resources | Classroom | Class Resource Access | Iteration 2 | Coded | CR-03 - enrolled-class/resource pages and `GET /api/classes/{id}/resources` are implemented; migration versions are now unique. |
 | [x] | IT Staff Role & AI Prompt Administration | Common | Access Control | Iteration 2 | Coded | CR-12 - Principal can manage IT Staff; IT Staff can manage AI system prompts. |
-| [~] | Manage Classroom Resources & Assignments | Classroom | Class Hub Management | Iteration 3 | Partially Coded | CR-04, CR-05 - teacher UI/API can post, edit and delete library/file resources; assignments are resources with `submissionEnabled` and `deadline`. The duplicate `V25` migration and missing resource/submission automated tests prevent a Coded verdict. |
-| [~] | Assign Homework with Deadline | Classroom | Assignment Delivery | Iteration 3 | Partially Coded | CR-06 - deadline validation, overdue state, notifications and assignment UI are implemented in `ClassResourceService` and `ClassDetailPage`; blocked on the same DB migration collision. |
-| [~] | Student View Teaching Resources | Classroom | Class Resource Access | Iteration 3 | Partially Coded | CR-07 - enrolled-class and resource-detail screens are implemented for `STUDENT`, including file/library resource metadata; blocked on the same DB migration collision. |
-| [~] | Student Assignment Submission | Classroom | Assignment Submission | Iteration 3 | Partially Coded | CR-08 - submit/unsubmit text and file attachments, on-time/late status, API and UI are implemented in `SubmissionService` and `ResourceDetailPage`; blocked on the same DB migration collision. |
-| [~] | Teacher Review Student Submissions | Classroom | Submission Review | Iteration 3 | Partially Coded | CR-09 - submission roster and student-detail API/UI are implemented (`SubmissionsRosterPanel`, `SubmissionDetailPanel`), but are not deployable until migrations `V25__create_class_resources.sql` and `V25__create_submissions.sql` are assigned unique versions. |
+| [x] | Manage Classroom Resources & Assignments | Classroom | Class Hub Management | Iteration 3 | Coded | CR-04, CR-05 - teacher can post, edit and delete library/file resources; assignments use `submissionEnabled` and `deadline`. |
+| [x] | Assign Homework with Deadline | Classroom | Assignment Delivery | Iteration 3 | Coded | CR-06 - `ClassResourceService` validates deadlines, exposes overdue state and sends notifications. |
+| [x] | Student View Teaching Resources | Classroom | Class Resource Access | Iteration 3 | Coded | CR-07 - `STUDENT` can access enrolled-class and resource-detail screens, including file/library resource metadata. |
+| [x] | Student Assignment Submission | Classroom | Assignment Submission | Iteration 3 | Coded | CR-08 - submit/unsubmit text and file attachments with on-time/late status are implemented in `SubmissionService` and `ResourceDetailPage`. |
+| [x] | Teacher Review Student Submissions | Classroom | Submission Review | Iteration 3 | Coded | CR-09 - submission roster and per-student detail API/UI are implemented (`SubmissionsRosterPanel`, `SubmissionDetailPanel`). |
 | [x] | Submit Lesson Plan for Approval | Lesson | Lesson Plan Approval | Iteration 3 | Coded | CR-10, UC-80/81/83/84/85 - Coded: Full Weekly Task epic implemented per Report3 SRS v1.2. Backend: weekly_tasks table (V21 migration), WeeklyTaskService/Controller (create/edit/submit/unsubmit with BR-47 deadline lock, review_status state machine independent of Hub Publish Status). Frontend: /weekly-schedule (Teacher+Moderator). 22 unit tests green, full mvn test suite green, fe lint/typecheck/build green. |
 | [x] | Moderator Approve / Reject Lesson Plans | Lesson | Lesson Plan Approval | Iteration 3 | Coded | CR-11, UC-86/87/88/89 - Coded: Weekly Task Review implemented. Backend: GET /api/weekly-tasks/moderation-queue, POST /{id}/approval, POST /{id}/rejection (subject-scoped like Hub moderation), notifies teacher via existing Notification mechanism. Frontend: /lesson-plan-approval (Moderator). |
 | [ ] | AI Content Statistics Dashboard | Principal | Analytics Dashboard | Iteration 3 | Planned | CR-13 |
@@ -90,12 +90,10 @@ Rows where the WBS tracker's Status column does not match the actual code, found
 - **Export Lesson Plan (PDF / Word)** — WBS says `Pending`, code reality is `Partially Coded`: PDF export works; Word/.docx export is absent.
 - **View & Filter Activity Log** — WBS says `Pending`, code reality is `Coded`: `ActivityLogController`, migration `V22`, and `/it-staff/activity-log` are implemented.
 - **Edit Own Blog Post** — WBS says `Partially Coded`, code reality is `Coded`: `BlogCommunityPage` opens a pre-filled `CreatePostModal`, which PATCHes the post.
-- **Student View Class Resources** — WBS says `Coded`, code reality is `Partially Coded`: UI/API/service exist, but database migration cannot complete on a fresh database.
 - **IT Staff Role & AI Prompt Administration** — WBS says `Planned`, code reality is `Coded`: Principal can manage IT Staff and IT Staff can manage AI system prompts. This overlaps with the separate system-prompt row.
-- **Manage Classroom Resources & Assignments**, **Assign Homework with Deadline**, **Student View Teaching Resources**, and **Student Assignment Submission** — WBS says `Coded`, code reality is `Partially Coded`: implementation exists end-to-end in source, but cannot be deployed safely because Flyway finds two migrations with version `V25`.
-- **Teacher Review Student Submissions** — WBS says `Planned`, code reality is `Partially Coded`: roster/detail API and UI are implemented but share the same migration blocker.
+- **Teacher Review Student Submissions** — WBS says `Planned`, code reality is `Coded`: roster/detail API and UI are implemented.
 
-### Classroom integration blocker
+### Classroom Flyway integrity
 
-The classroom source code is present: `ClassController`, the class/enrollment/resource/submission services, routes and UI all exist. However, `be/src/main/resources/db/migration/` contains both `V25__create_class_resources.sql` and `V25__create_submissions.sql`. Flyway migration versions must be unique, so a fresh database cannot apply the classroom-resource/submission schema until one migration is renumbered and verified. Existing classroom unit coverage only includes `ClassManagementServiceTest`; resource and submission flows have no dedicated backend tests.
+The duplicate migration was resolved by retaining `V25__create_class_resources.sql` and moving the submission schema to `V27__create_submissions.sql` (after `V26`). `FlywayMigrationFilesTests` now rejects duplicate numeric migration versions; the full backend suite passes with 118 tests.
 
