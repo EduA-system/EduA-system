@@ -6,6 +6,7 @@ import com.edua.beeduasystem.domain.model.blog.BlogPostStatus;
 import com.edua.beeduasystem.repository.repositories.BlogCommentRepository;
 import com.edua.beeduasystem.repository.repositories.BlogPostRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -64,6 +65,7 @@ class BlogPostServiceCreateTest {
 
     // Mock user đăng nhập; không cần SecurityContext hoặc JWT thật.
     private CurrentUserProvider currentUser;
+    private ActivityLogService activityLogService;
 
     // Đối tượng thật đang được kiểm thử.
     private BlogPostService service;
@@ -79,6 +81,7 @@ class BlogPostServiceCreateTest {
         commentRepository = mock(BlogCommentRepository.class);
         authorResolver = mock(BlogAuthorResolver.class);
         currentUser = mock(CurrentUserProvider.class);
+        activityLogService = mock(ActivityLogService.class);
 
         /*
          * Tạo service thật và truyền dependency giả vào constructor.
@@ -89,7 +92,8 @@ class BlogPostServiceCreateTest {
                 commentRepository,
                 new BlogContentSanitizer(),
                 authorResolver,
-                currentUser);
+                currentUser,
+                activityLogService);
 
         // Khi service hỏi ID user hiện tại, mock trả AUTHOR_ID cố định.
         when(currentUser.requireUserId()).thenReturn(AUTHOR_ID);

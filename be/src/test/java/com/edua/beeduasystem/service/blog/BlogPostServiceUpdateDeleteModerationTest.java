@@ -10,6 +10,7 @@ import com.edua.beeduasystem.domain.model.blog.BlogPostStatus;
 import com.edua.beeduasystem.repository.repositories.BlogCommentRepository;
 import com.edua.beeduasystem.repository.repositories.BlogPostRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -39,6 +40,7 @@ class BlogPostServiceUpdateDeleteModerationTest {
     private BlogCommentRepository commentRepository;
     private BlogAuthorResolver authorResolver;
     private CurrentUserProvider currentUser;
+    private ActivityLogService activityLogService;
     private BlogPostService service;
 
     @BeforeEach
@@ -47,7 +49,8 @@ class BlogPostServiceUpdateDeleteModerationTest {
         commentRepository = mock(BlogCommentRepository.class);
         authorResolver = mock(BlogAuthorResolver.class);
         currentUser = mock(CurrentUserProvider.class);
-        service = new BlogPostService(postRepository, commentRepository, new BlogContentSanitizer(), authorResolver, currentUser);
+        activityLogService = mock(ActivityLogService.class);
+        service = new BlogPostService(postRepository, commentRepository, new BlogContentSanitizer(), authorResolver, currentUser, activityLogService);
 
         when(commentRepository.findByPostId(any(UUID.class))).thenReturn(List.of());
         when(authorResolver.name(AUTHOR_ID)).thenReturn("Vu Nhat Minh");

@@ -10,6 +10,7 @@ import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -35,6 +36,7 @@ class ModeratorTeacherServiceTest {
     private AppUserRepository userRepository;
     private UserRoleRepository userRoleRepository;
     private CurrentUserProvider currentUserProvider;
+    private ActivityLogService activityLogService;
     private ModeratorTeacherService service;
 
     @BeforeEach
@@ -42,7 +44,8 @@ class ModeratorTeacherServiceTest {
         userRepository = mock(AppUserRepository.class);
         userRoleRepository = mock(UserRoleRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
-        service = new ModeratorTeacherService(userRepository, userRoleRepository, currentUserProvider);
+        activityLogService = mock(ActivityLogService.class);
+        service = new ModeratorTeacherService(userRepository, userRoleRepository, currentUserProvider, activityLogService);
         when(currentUserProvider.require()).thenReturn(
                 new AccessTokenClaims(MODERATOR_ID, "moderator@edua.vn", Set.of(Role.MODERATOR), Subject.MATH));
         when(currentUserProvider.requireUserId()).thenReturn(MODERATOR_ID);
