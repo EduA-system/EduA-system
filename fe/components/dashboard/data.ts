@@ -30,9 +30,9 @@ export const navGroups: NavGroup[] = [
       { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "Lớp học", icon: "book", href: "/create-class", requiredRole: ["TEACHER"] },
       { label: "Lịch tuần", icon: "book", href: "/weekly-schedule", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-edit", active: true },
+      { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-create", active: true },
       { label: "Slide", icon: "slides", href: "/slide-create" },
-      { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/lesson-create" },
+      { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/exam-create-new", requiredRole: ["TEACHER", "MODERATOR"] },
     ],
   },
   {

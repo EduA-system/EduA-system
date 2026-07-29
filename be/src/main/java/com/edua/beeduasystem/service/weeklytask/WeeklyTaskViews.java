@@ -28,6 +28,8 @@ public final class WeeklyTaskViews {
 
     public record Page(List<Summary> items, int page, int size, long total) { }
 
+    public record BulkResult(List<Summary> created, int teacherCount, int lessonCount) { }
+
     static Summary toSummary(WeeklyTask t, Map<UUID, String> userNames) {
         return new Summary(t.id(), t.teacherId(), userNames.get(t.teacherId()), t.subject(), t.weekStartDate(),
                 t.scopeDescription(), t.deadline(), t.reviewStatus(), t.submittedAt());
@@ -50,5 +52,9 @@ public final class WeeklyTaskViews {
                 .map(e -> new Week(e.getKey(), e.getValue()))
                 .toList();
         return new Schedule(weeks);
+    }
+
+    static BulkResult toBulkResult(List<WeeklyTask> tasks, Map<UUID, String> userNames, int teacherCount, int lessonCount) {
+        return new BulkResult(tasks.stream().map(t -> toSummary(t, userNames)).toList(), teacherCount, lessonCount);
     }
 }

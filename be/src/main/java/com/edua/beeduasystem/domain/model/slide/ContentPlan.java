@@ -49,7 +49,7 @@ public record ContentPlan(
         }
     }
 
-    public sealed interface Block permits TextBlock, VisualBlock, ComparisonBlock, TableBlock, SequenceBlock, FormulaBlock, QuizBlock {
+    public sealed interface Block permits TextBlock, VisualBlock, MoleculeBlock, ComparisonBlock, TableBlock, SequenceBlock, FormulaBlock, QuizBlock {
         String id();
         String kind();
         String role();
@@ -65,6 +65,10 @@ public record ContentPlan(
     public record VisualBlock(String id, String kind, String role, String semanticType, String priority,
                               boolean required, String groupId, String description, String requirement,
                               String preferredAspectRatio, String illustratesBlockId) implements Block {}
+
+    // Hoá học only (enforced by the outline prompt): a 3D molecule model to build via MoleculeService.
+    public record MoleculeBlock(String id, String kind, String role, String semanticType, String priority,
+                                boolean required, String groupId, String chemicalRequest) implements Block {}
 
     public record ComparisonBlock(String id, String kind, String role, String semanticType, String priority,
                                   boolean required, String groupId, List<Label> items, List<Label> criteria,

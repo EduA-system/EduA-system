@@ -22,6 +22,17 @@ const fontByToken: Record<string, number> = {
   "text-cell": 11,
 };
 
+/** `visual` (image) and `molecule` (3D model) both occupy an aside-sized media slot. */
+function isVisualLikeKind(kind: ContentBlock["kind"]): boolean {
+  return kind === "visual" || kind === "molecule";
+}
+
+function slotKindFor(kind: ContentBlock["kind"]): LayoutSlot["kind"] {
+  if (kind === "visual") return "image";
+  if (kind === "molecule") return "molecule";
+  return "text";
+}
+
 /** Keep illustration crops useful: neither a banner nor a thin portrait strip. */
 function balancedImageRect(rect: Rect): Rect {
   const ratio = rect.w / rect.h;
@@ -44,7 +55,7 @@ function makeSlot(
   sourcePartId?: string,
   token = zone === "hero" ? "text-hero" : zone === "formula" ? "text-formula" : zone === "caption" ? "text-caption" : "text-body",
 ): LayoutSlot {
-  const fittedRect = block.kind === "visual" ? balancedImageRect(rect) : rect;
+  const fittedRect = isVisualLikeKind(block.kind) ? balancedImageRect(rect) : rect;
   const limits = capacity(fittedRect, fontByToken[token] ?? 18);
   return {
     id: `slot:${block.id}${sourcePartId ? `:${sourcePartId}` : ""}`,
@@ -52,7 +63,7 @@ function makeSlot(
     sourcePartId,
     sourceText,
     zone,
-    kind: block.kind === "visual" ? "image" : "text",
+    kind: slotKindFor(block.kind),
     rect: fittedRect,
     ...limits,
     contentHint: `${block.semanticType}; ${block.priority}; ${block.required ? "required" : "optional"}`,
@@ -78,7 +89,7 @@ function genericSlots(blocks: ContentBlock[], rect: Rect, vertical: boolean): { 
   if (!blocks.length) return { slots: [], structures: [] };
   const cells = vertical ? grid(rect, blocks.length, 1, 14) : grid(rect, 1, blocks.length, 14);
   return {
-    slots: blocks.map((block, index) => makeSlot(block, inset(cells[index], 12), block.kind === "visual" ? "aside" : block.kind === "formula" ? "formula" : "body")),
+    slots: blocks.map((block, index) => makeSlot(block, inset(cells[index], 12), isVisualLikeKind(block.kind) ? "aside" : block.kind === "formula" ? "formula" : "body")),
     structures: cells.map((cell, index) => structure(`card:${blocks[index].id}`, "card", cell)),
   };
 }
@@ -151,7 +162,7 @@ function compositeSlots(block: ContentBlock, rect: Rect, orientation: "horizonta
     if (block.explanation) slots.push(makeSlot(block, explanation, "body", block.explanation, "explanation"));
     return { slots, structures: [structure(`formula:${block.id}`, "card", rect, "surface-formula")] };
   }
-  return { slots: [makeSlot(block, rect, block.kind === "visual" ? "aside" : "body")], structures: [] };
+  return { slots: [makeSlot(block, rect, isVisualLikeKind(block.kind) ? "aside" : "body")], structures: [] };
 }
 
 function buildCandidate(input: SlideLayoutInput, seed: number, index: number): Candidate {
@@ -169,10 +180,10 @@ function buildCandidate(input: SlideLayoutInput, seed: number, index: number): C
     const contentRect = { x: slots[0].rect.x, y: slots[0].rect.y + 150, w: slots[0].rect.w, h: Math.max(80, bounds.y + bounds.h - slots[0].rect.y - 150) };
     const generic = genericSlots(rest, contentRect, true);
     slots.push(...generic.slots); structures.push(...generic.structures);
-  } else if (input.slideType === "text-image" || input.slideType === "experiment" || rest.some((block) => block.kind === "visual")) {
+  } else if (input.slideType === "text-image" || input.slideType === "experiment" || rest.some((block) => isVisualLikeKind(block.kind))) {
     topology = horizontal ? "split-left" : "split-right";
     const [left, right] = splitHorizontal(body, ratio, 20);
-    const visual = rest.find((block) => block.kind === "visual");
+    const visual = rest.find((block) => isVisualLikeKind(block.kind));
     const text = rest.filter((block) => block !== visual);
     const visualRect = horizontal ? right : left;
     const textRect = horizontal ? left : right;
@@ -227,13 +238,13 @@ function buildCandidate(input: SlideLayoutInput, seed: number, index: number): C
   const requiredIds = new Set(input.blocks.filter((block) => block.required).map((block) => block.id));
   const represented = new Set(slots.map((slot) => slot.sourceBlockId));
   const valid = [...requiredIds].every((id) => represented.has(id))
-    && slots.every((slot) => inside(slot.rect, bounds) && slot.rect.w >= (slot.kind === "image" ? 120 : 42) && slot.rect.h >= 24)
+    && slots.every((slot) => inside(slot.rect, bounds) && slot.rect.w >= (slot.kind === "image" || slot.kind === "molecule" ? 120 : 42) && slot.rect.h >= 24)
     && structures.every((item) => inside(item.rect, bounds));
   const area = slots.reduce((sum, slot) => sum + slot.rect.w * slot.rect.h, 0);
   const coverage = Math.min(100, (area / (bounds.w * bounds.h)) * 100);
   const near = slots.filter(slotNearCapacity).length;
   const semantic = input.slideType === "experiment"
-    ? slots.some((slot) => slot.kind === "image" && slot.rect.w >= body.w * 0.3) ? 100 : 35
+    ? slots.some((slot) => (slot.kind === "image" || slot.kind === "molecule") && slot.rect.w >= body.w * 0.3) ? 100 : 35
     : 92;
   const score = {
     readability: Math.max(0, 100 - near * 12),
@@ -265,7 +276,7 @@ export function generateSlideLayout(input: SlideLayoutInput): SlideLayoutResult 
     const rows = Math.max(1, Math.ceil(rest.length / columns));
     const cells = grid(body, rows, columns, 10);
     const structures = rest.map((block, index) => structure(`fallback:${block.id}`, "card", cells[index], "surface-card"));
-    const slots = [makeSlot(title, titleRect, "hero"), ...rest.map((block, index) => makeSlot(block, inset(cells[index], 8), block.kind === "visual" ? "aside" : block.kind === "formula" ? "formula" : "body"))];
+    const slots = [makeSlot(title, titleRect, "hero"), ...rest.map((block, index) => makeSlot(block, inset(cells[index], 8), isVisualLikeKind(block.kind) ? "aside" : block.kind === "formula" ? "formula" : "body"))];
     best = {
       topology: "dynamic-grid-fallback",
       structures,

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Iter3 Doc Sync"
-  short_description: "Keep Iter3 docs aligned with code"
-  default_prompt: "Use $iter3-doc-sync to reconcile Iter3 code changes with the repo documentation and checklist."

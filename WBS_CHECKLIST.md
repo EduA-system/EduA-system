@@ -1,0 +1,104 @@
+# WBS Checklist
+
+Source: `(đã làm) Report2_Project Tracking.xlsx`, sheet `WBS` (Iteration 1–3, all 55 rows).
+
+`Code Reality` verified against the actual codebase (`be/`, `fe/`) via a full audit pass on 2026-07-28 — see the Discrepancies section for every row where the WBS tracker's own Status column was wrong.
+
+Legend (Done column, based on **Code Reality**, not the raw WBS Status):
+- `[x]` — verified Coded or Tested
+- `[~]` — verified Partially Coded
+- `[ ]` — verified Pending / Planned / Not Found
+
+## Summary (verified code reality)
+
+| Code Reality | Count |
+| --- | ---: |
+| Coded | 33 |
+| Tested | 1 |
+| Partially Coded | 8 |
+| Pending | 2 |
+| Planned | 3 |
+| Not Found | 8 |
+
+**13 of 55 rows (~24%) had a WBS Status that did not match the code.** See [Discrepancies](#discrepancies) below.
+
+## Checklist
+
+| Done | Function/Screen | Feature | Sub Feature | Iteration | Code Reality | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| [x] | Login / Logout (Google SSO) | Common | Login & Logout (SSO) | Iteration 2 | Coded | UC-02, UC-03 - Coded: Google ID token/JWT authentication and refresh-cookie logout |
+| [x] | Update Profile Information | Common | Profile Management | Iteration 2 | Coded | UC-04 - Coded: view/update full name, avatar and contact information |
+| [~] | Role-based Access Control (Teacher / Mod / Principal) | Common | Access Control | Iteration 2 | Partially Coded | Partially coded: backend roles and protected Principal/Moderator APIs; frontend route coverage remains incomplete |
+| [x] | View Landing Page | Common | Landing Page | Iteration 1 | Coded | UC-01 |
+| [~] | Create Lesson Plan (AI: from SGK database or uploaded file) | Lesson | Lesson Plan Creation | Iteration 1 | **Partially Coded** ⚠️ | UC-24 (merged: AI-from-database + upload-file variants) |
+| [x] | Edit Lesson Plan | Lesson | Lesson Plan Editing | Iteration 1 | Coded | UC-28 |
+| [~] | Export Lesson Plan (PDF / Word) | Lesson | Lesson Plan Export | Iteration 2 | **Partially Coded** ⚠️ | UC-33 |
+| [x] | Create Slide Outline (AI - no 3d) | Slide | Slide Outline | Iteration 1 | Tested | UC-25 |
+| [x] | Edit Slide Outline | Slide | Slide Outline | Iteration 1 | Coded | UC-29 |
+| [x] | Create Slide Deck (AI from Outline) | Slide | Slide Generation | Iteration 1 | Coded | UC-26 |
+| [x] | Edit Slide Deck | Slide | Slide Editing | Iteration 1 | Coded | UC-30 |
+| [x] | Present Slide Deck (online) | Slide | Presentation | Iteration 2 | Coded | UC-32 - Coded: /slide-present supports previous/next controls, keyboard navigation, slide picker, fullscreen, and exit. |
+| [ ] | Click-to-simulate during Presentation | Slide | Presentation | Iteration 2 | **Not Found** ⚠️ | No UC — part of presentation UX |
+| [x] | Export Slide (HTML for offline use) | Slide | Slide Export | Iteration 2 | Coded | UC-34 - Coded: exports a self-contained offline HTML slide deck with presenter controls, inline CSS, and embedded assets where available. |
+| [~] | View 3D Atomic / Molecule Models | Simulation | Molecular Models | Iteration 2 | Partially Coded | UC-58, UC-59 - Partially coded: interactive 3D ball-and-stick and space-filling molecule viewer with AI structure generation; 2D rendering and lesson/slide embedding are not implemented |
+| [~] | View Periodic Table | Simulation | Periodic Table | Iteration 2 | Partially Coded | UC-57 - Partially coded: 118-element table, filters, detail cards and 3D atom; embedding into lessons/slides is not implemented |
+| [~] | Physics Hub (view, detail, customize via AI) | Simulation | Physics Simulation | Iteration 2 | Partially Coded | UC-53, UC-54, UC-55 - Coded frontend: /mo-phong-vat-ly provides reviewed presets and interactive physics simulations. Missing: backend AI customization and persistence of customized simulations in Personal Library. |
+| [~] | Simulation & Asset Library Management | Simulation | Simulation Library | Iteration 2 | Partially Coded | No UC — shared asset/sim infrastructure |
+| [x] | Create Test | Test | Exam Creation | Iteration 1 | Coded | UC-27 - AI practice-exam creation at `/exam-create-new`, including textbook scope, question/score configuration, feasibility validation, and generated-question validation. |
+| [x] | Edit Test | Test | Exam Editing | Iteration 1 | Coded | UC-31 - Tiptap editor at `/exam-edit-new`; test drafts are saved to and reopened from Personal Library as `TEST` content. |
+| [ ] | Export Test / Exam (Word / PDF) | Test | Exam Export | Iteration 2 | Pending | UC-35 |
+| [x] | View Personal Library (view, open, search own content) | Personal Library | Library Management | Iteration 2 | Coded | UC-21, UC-22, UC-36, UC-37 - Coded: authenticated per-user library supports list, search, open, rename/update, and delete; lesson plans and molecule simulations are saved from their editors |
+| [x] | Submit / Unsubmit Hub Content for Review | Community Hub | Content Publishing | Iteration 3 | Coded | UC-23 - Coded: backend POST/DELETE /api/library/contents/{id}/submission (LibraryContentStatus PRIVATE/SUBMITTED/APPROVED/REJECTED, submit() also accepts REJECTED to resubmit); frontend Gui duyet/Thu hoi/Gui lai buttons on /library. Public hub feed, comments/reports, customize, and moderation review are now built (see rows below / Hub Moderation). |
+| [x] | View Community Hub | Community Hub | Content Discovery | Iteration 3 | Coded | UC-44 - Coded: backend GET /api/hub/contents (chi APPROVED, khong owner filter); frontend /community-hub. |
+| [x] | View Public Hub Content Detail (Guest preview) | Community Hub | Content Discovery | Iteration 3 | Coded | UC-45 - Coded: backend GET /api/hub/contents/{id} khong yeu cau auth (SecurityConfig permitAll cho GET /api/hub/contents/**); frontend detail modal xem duoc khi chua dang nhap. |
+| [x] | Customize Hub Content | Community Hub | Content Discovery | Iteration 3 | Coded | UC-46 - Coded: backend POST /api/hub/contents/{id}/customize copy content APPROVED thanh ban PRIVATE thuoc so huu nguoi dung hien tai; frontend nut Tuy bien. |
+| [x] | View & Create Content Comments | Community Hub | Community Feedback | Iteration 3 | Coded | UC-47, UC-41 - Coded: bang hub_content_comments; backend POST /api/hub/contents/{id}/comments (chi tren content APPROVED); frontend hien thi + form binh luan. |
+| [x] | Update / Delete Own Comment | Community Hub | Community Feedback | Iteration 3 | Coded | UC-48, UC-49, UC-42, UC-43 - Coded: backend PATCH/DELETE /api/hub/comments/{commentId}, owner-only cho update; delete cho phep tac gia comment hoac chu so huu content. |
+| [x] | Delete Comment on Own Content | Community Hub | Community Feedback | Iteration 3 | Coded | UC-50 - Coded: HubCommentService.delete cho phep xoa neu la chu so huu content (chung 1 rule voi Update/Delete Own Comment). |
+| [x] | Report Violating Content | Community Hub | Content Moderation | Iteration 3 | Coded | No UC - Coded: bang hub_content_reports; backend POST /api/hub/contents/{id}/reports chi ghi nhan bao cao, chua co man hinh duyet report (WBS khong dinh nghia UC cho luong nay). |
+| [x] | Moderator Account Management | User & Content Management | Account Management | Iteration 3 | Coded | UC-60, UC-61, UC-62 - Coded: backend /api/principal/moderators (PrincipalController); frontend /user-management. |
+| [x] | Teacher Account Management | User & Content Management | Account Management | Iteration 3 | Coded | UC-13, UC-14, UC-15 - Coded: backend /api/moderator/teachers; frontend /user-management. |
+| [x] | Create Notifications (send to subject teachers) | User & Content Management | Notifications | Iteration 3 | Coded | UC-20 - Coded: backend POST /api/notifications, Moderator broadcast to Teachers of the same subject, realtime push over STOMP /user/queue/notifications; frontend compose form on /notifications (Moderator only). |
+| [x] | View & Manage My Notifications | User & Content Management | Notifications | Iteration 3 | Coded | UC-05, UC-19 - Coded: backend GET /api/notifications, /unread-count, PATCH /{id}/read, POST /read-all; frontend /notifications list with unread filter, mark read/read-all, and realtime unread badge on Sidebar. |
+| [x] | View & Filter Activity Log | User & Content Management | Audit Log | Iteration 3 | **Coded** ⚠️ | UC-10 |
+| [x] | Moderate Hub Content (review, approve, reject) | User & Content Management | Hub Moderation | Iteration 3 | Coded | UC-06, UC-07, UC-08, UC-09 - Coded: backend GET /api/library/contents/moderation-queue, POST .../approval, POST .../rejection (subject-scoped nhu Blog moderation); frontend /hub-moderation. |
+| [ ] | Manage Hub (categorize, tag, organize, pin) | User & Content Management | Hub Management | Iteration 3 | Pending | No UC — Hub structure management |
+| [x] | View / Update AI System Prompts | User & Content Management | System Configuration | Iteration 3 | Coded | UC-11, UC-12 - Coded: backend /api/it-staff/system-prompts; frontend /it-staff; prompts apply to lesson/slide/molecule AI flows. |
+| [x] | View Blog List (reader + moderation) | Blog | Blog Reading | Iteration 3 | Coded | UC-51, UC-16 - Coded: backend /api/blog-posts; frontend /blog and /blog/moderation. |
+| [~] | View Blog Post Detail (reader + moderation) | Blog | Blog Reading | Iteration 2 | Partially Coded | UC-52, UC-17 - Partially coded: authenticated reader and moderator detail views; guest preview is not implemented |
+| [x] | Edit Own Blog Post | Blog | Blog Authoring | Iteration 2 | **Coded** ⚠️ | UC-39 - Partially coded: backend PATCH API exists; frontend edit-post UI is not implemented |
+| [x] | Remove / Delete Blog Post | Blog | Blog Moderation | Iteration 3 | Coded | UC-18, UC-40 - Coded: Teacher can delete own post; Moderator can remove post with reason. |
+| [ ] | Create Class (CRUD) | Classroom | Class Management | Iteration 2 | **Not Found** ⚠️ | CR-01 |
+| [ ] | Add Students to Class by Gmail | Classroom | Class Membership | Iteration 2 | **Not Found** ⚠️ | CR-02 |
+| [ ] | Student View Class Resources | Classroom | Class Resource Access | Iteration 2 | **Not Found** ⚠️ | CR-03 |
+| [x] | IT Staff Role & AI Prompt Administration | Common | Access Control | Iteration 2 | **Coded** ⚠️ | CR-12 |
+| [ ] | Manage Classroom Resources & Assignments | Classroom | Class Hub Management | Iteration 3 | **Not Found** ⚠️ | CR-04, CR-05 (merged to avoid overlap) |
+| [ ] | Assign Homework with Deadline | Classroom | Assignment Delivery | Iteration 3 | **Not Found** ⚠️ | CR-06 |
+| [ ] | Student View Teaching Resources | Classroom | Class Resource Access | Iteration 3 | **Not Found** ⚠️ | CR-07 |
+| [ ] | Student Assignment Submission | Classroom | Assignment Submission | Iteration 3 | **Not Found** ⚠️ | CR-08 |
+| [ ] | Teacher Review Student Submissions | Classroom | Submission Review | Iteration 3 | Planned | CR-09 |
+| [x] | Submit Lesson Plan for Approval | Lesson | Lesson Plan Approval | Iteration 3 | Coded | CR-10, UC-80/81/83/84/85 - Coded: Full Weekly Task epic implemented per Report3 SRS v1.2. Backend: weekly_tasks table (V21 migration), WeeklyTaskService/Controller (create/edit/submit/unsubmit with BR-47 deadline lock, review_status state machine independent of Hub Publish Status). Frontend: /weekly-schedule (Teacher+Moderator). 22 unit tests green, full mvn test suite green, fe lint/typecheck/build green. |
+| [x] | Moderator Approve / Reject Lesson Plans | Lesson | Lesson Plan Approval | Iteration 3 | Coded | CR-11, UC-86/87/88/89 - Coded: Weekly Task Review implemented. Backend: GET /api/weekly-tasks/moderation-queue, POST /{id}/approval, POST /{id}/rejection (subject-scoped like Hub moderation), notifies teacher via existing Notification mechanism. Frontend: /lesson-plan-approval (Moderator). |
+| [ ] | AI Content Statistics Dashboard | Principal | Analytics Dashboard | Iteration 3 | Planned | CR-13 |
+| [ ] | Principal Management Dashboard |  |  | Iteration 3 | Planned |  |
+
+## Discrepancies
+
+Rows where the WBS tracker's Status column does not match the actual code, found via a full-codebase audit (2026-07-28):
+
+- **Create Lesson Plan (AI: from SGK database or uploaded file)** — WBS says `Coded`, code reality is `Partially Coded`. only the SGK-database variant is implemented (LessonPlanController/GenerateLessonPlanRequest use bookId/chapterId/lessonId). No uploaded-file variant; /api/uploads is never wired into lesson-plan generation.
+- **Export Lesson Plan (PDF / Word)** — WBS says `Pending`, code reality is `Partially Coded`. PDF export works today (fe/lib/lesson-plan-pdf-export.ts, "Xuất PDF" button in LessonEditDashboard). Word/.docx export is genuinely missing (no POI/docx library).
+- **Click-to-simulate during Presentation** — WBS says `Coded`, code reality is `Not Found`. no distinct click-to-simulate behavior found in SlidePresentationClient.tsx or elsewhere; appears to double-count ordinary slide navigation (item above).
+- **View & Filter Activity Log** — WBS says `Pending`, code reality is `Coded`. fully built: ActivityLogController (GET /api/it-staff/activity-log, filters by actorId/category/from/to), migration V22__create_activity_logs.sql, frontend fe/app/it-staff/activity-log/page.tsx.
+- **Edit Own Blog Post** — WBS says `Partially Coded`, code reality is `Coded`. frontend edit UI exists: "Sửa bài" button in BlogCommunityPage.tsx opens CreatePostModal pre-filled, which PATCHes /blog-posts/{id}. Backend + frontend both coded.
+- **Create Class (CRUD)** — WBS says `Coded`, code reality is `Not Found`. no Classroom entity/controller/migration anywhere in be/ or fe/.
+- **Add Students to Class by Gmail** — WBS says `Coded`, code reality is `Not Found`. no class-membership/enrollment code; only unrelated "add moderator/it-staff by email" exists.
+- **Student View Class Resources** — WBS says `Coded`, code reality is `Not Found`. no classroom-scoped resource page exists under fe/app.
+- **IT Staff Role & AI Prompt Administration** — WBS says `Planned`, code reality is `Coded`. full CRUD in PrincipalController (/api/principal/it-staff) + working "IT Staff" tab in fe/app/user-management/page.tsx. Duplicate WBS row of "View / Update AI System Prompts" (already Coded).
+- **Manage Classroom Resources & Assignments** — WBS says `Coded`, code reality is `Not Found`. no classroom_resources/assignment code; plans/iteration-2-implementation-checklist.md still lists this as unchecked future work.
+- **Assign Homework with Deadline** — WBS says `Coded`, code reality is `Not Found`. no homework/deadline model anywhere.
+- **Student View Teaching Resources** — WBS says `Coded`, code reality is `Not Found`. no student-role classroom resource page exists.
+- **Student Assignment Submission** — WBS says `Coded`, code reality is `Not Found`. no submission entity/controller/page anywhere.
+
+The most significant discrepancy: **all 7 "Coded" Classroom items are false positives** — no classroom/class/assignment/submission module exists anywhere in `be/` or `fe/` (confirmed by grep across controllers, services, entities, migrations, and `fe/app` page folders). Only the 3 Classroom rows already marked `Planned` (Teacher Review Student Submissions, AI Content Statistics Dashboard, Principal Management Dashboard) match reality.
+

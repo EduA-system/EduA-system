@@ -55,7 +55,9 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
       ? Boolean(fill?.text?.trim() || element.text.trim())
       : element.type === "image"
         ? Boolean(fill?.imagePrompt?.trim() || element.imagePrompt?.trim())
-        : false;
+        : element.type === "simulation"
+          ? Boolean(fill?.molecule)
+          : false;
   })) throw new Error("AI không điền nội dung cho slide.");
 
   return elements.map((element) => {
@@ -88,6 +90,10 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
 
     if (element.type === "image") {
       return { ...element, ...(fill.imagePrompt != null ? { imagePrompt: fill.imagePrompt } : {}) };
+    }
+
+    if (element.type === "simulation") {
+      return fill.molecule ? { ...element, molecule: fill.molecule } : element;
     }
 
     return element;

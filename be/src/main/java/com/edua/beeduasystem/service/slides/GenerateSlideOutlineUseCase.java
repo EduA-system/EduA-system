@@ -1011,6 +1011,8 @@ public class GenerateSlideOutlineUseCase {
             case "text" -> new ContentPlan.TextBlock(id, kind, role, semanticType, priority, required, groupId, requiredText(node, "text"));
             case "visual" -> new ContentPlan.VisualBlock(id, kind, role, semanticType, priority, required, groupId,
                     requiredText(node, "description"), requiredText(node, "requirement"), textOrNull(node, "preferredAspectRatio"), textOrNull(node, "illustratesBlockId"));
+            case "molecule" -> new ContentPlan.MoleculeBlock(id, kind, role, semanticType, priority, required, groupId,
+                    requiredText(node, "chemicalRequest"));
             case "comparison" -> {
                 List<ContentPlan.Label> items = labels(node.path("items"));
                 List<ContentPlan.Label> criteria = labels(node.path("criteria"));

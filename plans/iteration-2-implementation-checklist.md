@@ -113,11 +113,13 @@ Relevant existing code:
 - `fe/app/slide-present/page.tsx`
 - `fe/components/slide-presentation/SlidePresentationClient.tsx`
 
-## 8. Test/exam export — defer unless prerequisites are complete
+## 8. Test/exam export
 
-`Create Test` and `Edit Test` remain incomplete, so do not start export first.
+`Create Test` and `Edit Test` are available through `/exam-create-new` and
+`/exam-edit-new`. The current AI flow validates the proposed configuration,
+generates questions from the selected SGK scope, and saves drafts in Personal
+Library.
 
-- [ ] Complete Create Test and Edit Test before export work.
 - [ ] If capacity remains, implement Word/PDF exam export with questions, answer
   key, score, duration, and print layout.
 

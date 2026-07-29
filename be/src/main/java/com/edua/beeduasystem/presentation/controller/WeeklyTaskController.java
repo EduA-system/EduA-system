@@ -1,5 +1,6 @@
 package com.edua.beeduasystem.presentation.controller;
 
+import com.edua.beeduasystem.presentation.dto.weeklytask.BulkCreateWeeklyTaskRequest;
 import com.edua.beeduasystem.presentation.dto.weeklytask.CreateWeeklyTaskRequest;
 import com.edua.beeduasystem.presentation.dto.weeklytask.RejectWeeklyTaskRequest;
 import com.edua.beeduasystem.presentation.dto.weeklytask.SubmitWeeklyTaskRequest;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -53,6 +55,18 @@ public class WeeklyTaskController {
     @Operation(summary = "Create Weekly Task (UC-81)")
     public WeeklyTaskViews.Detail create(@Valid @RequestBody CreateWeeklyTaskRequest r) {
         return service.create(r.teacherId(), r.weekStartDate(), r.scopeDescription(), r.deadline());
+    }
+
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('MODERATOR')")
+    @Operation(summary = "Bulk Create Weekly Tasks (UC-81)",
+            description = "Giao cùng lúc N bài cho mọi Teacher active cùng subject trong 1 tuần.")
+    public WeeklyTaskViews.BulkResult bulkCreate(@Valid @RequestBody BulkCreateWeeklyTaskRequest r) {
+        List<WeeklyTaskService.LessonRequest> lessons = r.lessons().stream()
+                .map(l -> new WeeklyTaskService.LessonRequest(l.scopeDescription(), l.deadline()))
+                .toList();
+        return service.bulkCreate(r.weekStartDate(), lessons);
     }
 
     @PatchMapping("/{id}")
