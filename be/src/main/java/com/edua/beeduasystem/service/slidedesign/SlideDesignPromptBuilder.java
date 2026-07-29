@@ -930,7 +930,7 @@ public class SlideDesignPromptBuilder {
         prompt.append("\nRules:\n")
                 .append("- Use only facts supplied in the outline; do not invent examples, questions, or activities.\n")
                 .append("- Allocate distinct content across repeated zones in listed order; do not repeat text.\n")
-                .append("- Text must be Vietnamese. maxChars/maxLines are writing guidance only: never truncate a fact or answer.\n")
+                .append("- Text must be Vietnamese and MUST fit within maxChars/maxLines for its slot — these are hard limits, not suggestions. Never exceed maxChars. Rewrite concisely (drop secondary detail, keep the single most essential fact) rather than going over the limit or ending mid-sentence.\n")
                 .append("- When a text slot contains 2 or more distinct facts, steps, causes, features, examples, or answers, return 2–4 short lines beginning with `• `; do not write one long paragraph. Keep a single-sentence definition, conclusion, or transition as prose.\n")
                 .append("- For image slots, text must be null and imagePrompt must be a specific English image prompt; do not provide an image URL.\n")
                 .append("- Text style is optional. fontSize must suit the zone, color must be one of ALLOWED COLORS, align is left/center/right.\n")

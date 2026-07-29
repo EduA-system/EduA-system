@@ -33,6 +33,87 @@ function sameItems(left: string[], right: string[]) {
   return left.length === right.length && left.every((item, index) => item === right[index]);
 }
 
+/** Fake but reassuring progress: eases toward `target` and never quite reaches it, since we don't know real completion time. */
+function useFakeProgress(target = 92, intervalMs = 220) {
+  const [progress, setProgress] = useState(6);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setProgress((prev) => (prev >= target ? prev : Math.min(target, prev + Math.max(0.4, (target - prev) * 0.06))));
+    }, intervalMs);
+    return () => clearInterval(id);
+  }, [target, intervalMs]);
+  return progress;
+}
+
+/** Mirrors OutlineEditor's card shape so the layout doesn't jump once real parts/slides stream in. */
+function OutlineSkeleton() {
+  const progress = useFakeProgress();
+  const parts = [
+    { slides: 3 },
+    { slides: 2 },
+    { slides: 4 },
+  ];
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-6" aria-busy="true" aria-label="Đang tạo khung đề cương slide">
+      <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-[#efeef7]">
+        <div
+          className="h-full rounded-full bg-[#8200db] transition-[width] duration-300 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-[rgba(26,26,46,0.09)] bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-[rgba(26,26,46,0.07)] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 animate-pulse rounded-lg bg-[#f9f8f3]" />
+            <div className="h-3.5 w-36 animate-pulse rounded bg-[#f9f8f3]" />
+          </div>
+          <div className="h-6 w-20 animate-pulse rounded-lg bg-[#f9f8f3]" />
+        </div>
+
+        <div className="divide-y divide-[rgba(26,26,46,0.06)]">
+          {parts.map((part, partIndex) => (
+            <div key={partIndex} className="px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[#e4e1ee]">⋮⋮</span>
+                <div
+                  className="h-3.5 animate-pulse rounded bg-[#f9f8f3]"
+                  style={{ width: `${40 - partIndex * 6}%`, animationDelay: `${partIndex * 100}ms` }}
+                />
+              </div>
+              <ul className="mt-2.5 space-y-2.5 pl-6">
+                {Array.from({ length: part.slides }).map((_, slideIndex) => (
+                  <li key={slideIndex} className="flex items-start gap-2">
+                    <span className="mt-1 text-[#e4e1ee]">└</span>
+                    <div
+                      className="mt-0.5 h-3.5 w-12 shrink-0 animate-pulse rounded bg-[#f9f8f3]"
+                      style={{ animationDelay: `${(partIndex * 4 + slideIndex) * 80}ms` }}
+                    />
+                    <div className="min-w-0 flex-1 space-y-1.5 py-0.5">
+                      <div
+                        className="h-3 animate-pulse rounded bg-[#f9f8f3]"
+                        style={{ width: `${70 - (slideIndex % 3) * 12}%`, animationDelay: `${(partIndex * 4 + slideIndex) * 80 + 40}ms` }}
+                      />
+                      <div
+                        className="h-2.5 animate-pulse rounded bg-[#f9f8f3]/70"
+                        style={{ width: `${50 - (slideIndex % 2) * 10}%`, animationDelay: `${(partIndex * 4 + slideIndex) * 80 + 80}ms` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+      <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-[#9998be]">
+        <span className="size-2.5 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
+        AI đang tạo khung đề cương slide… {Math.round(progress)}%
+      </p>
+    </div>
+  );
+}
+
 function loadOutlineBoot(): OutlineBoot {
   const stored = readSlideCreateSession();
   if (!stored) {
@@ -332,12 +413,7 @@ export default function SlideOutlinePage() {
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {status === "outlining" ? (
-            <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
-              <div className="size-8 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
-              <p className="text-sm text-[#5c5b6e]">AI đang tạo khung đề cương slide…</p>
-            </div>
-          ) : null}
+          {status === "outlining" ? <OutlineSkeleton /> : null}
 
           {status === "error" ? (
             <div className="mx-auto max-w-md px-6 py-24 text-center">

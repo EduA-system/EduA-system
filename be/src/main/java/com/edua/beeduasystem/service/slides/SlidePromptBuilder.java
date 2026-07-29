@@ -260,6 +260,8 @@ public class SlidePromptBuilder {
                 Các kind:
                 - text: thêm `text`.
                 - visual: thêm `description`, `requirement` (required|optional), có thể có `preferredAspectRatio`.
+                - molecule: CHỈ dùng khi môn học nêu trên là Hoá học và nội dung slide cần mô hình phân tử 3D trực quan;
+                  thêm `chemicalRequest` (tên hoặc công thức hoá học, vd "etanol" hoặc "C2H5OH"). Tuyệt đối không dùng cho môn khác.
                 - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]` đúng kích thước,
                   `preferredPresentation` (auto|table|panels).
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
@@ -321,6 +323,8 @@ public class SlidePromptBuilder {
                 Các kind:
                 - text: thêm `text`.
                 - visual: thêm `description`, `requirement` (required|optional), có thể có `preferredAspectRatio`.
+                - molecule: CHỈ dùng khi môn học nêu trên là Hoá học và nội dung slide cần mô hình phân tử 3D trực quan;
+                  thêm `chemicalRequest` (tên hoặc công thức hoá học, vd "etanol" hoặc "C2H5OH"). Tuyệt đối không dùng cho môn khác.
                 - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]` đúng kích thước,
                   `preferredPresentation` (auto|table|panels).
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
@@ -365,7 +369,7 @@ public class SlidePromptBuilder {
                 - Mỗi mục con có title riêng, pedagogicalRole và contentPlan hoàn chỉnh. pedagogicalRole là hook|explain|derive|demonstrate|practice|recap|other; dùng other khi không khớp sáu vai trò đầu.
                 - Nếu có nhiều câu hỏi trắc nghiệm, mỗi mục con chỉ giữ một câu hỏi.
                 - Nếu là bảng, chia theo nhóm hàng và lặp header ở cả hai mục nếu cần.
-                - Visual thuộc về ý nào thì đi cùng ý đó; visual dùng chung chỉ xuất hiện ở mục đầu.
+                - Visual hoặc molecule (mô hình phân tử 3D) thuộc về ý nào thì đi cùng ý đó; nếu dùng chung thì chỉ xuất hiện ở mục đầu.
                 - Không tạo id: hệ thống sẽ tự cấp id. Không thêm phần giải thích ngoài JSON.
                 - contentPlan.slideType chỉ được là intro|section|concept|text-image|experiment|comparison|table|process|formula|exercise|quiz|summary;
                   headerMode là hidden cho intro/section, fixed cho các loại còn lại.

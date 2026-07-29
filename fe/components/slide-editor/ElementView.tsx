@@ -18,6 +18,7 @@ const MoleculeViewer = dynamic(
 function SimulationBlock({
   el,
   interactive,
+  previewLive,
   style,
   onMouseDown,
   onDoubleClick,
@@ -25,17 +26,27 @@ function SimulationBlock({
 }: {
   el: SimulationElement;
   interactive?: boolean;
+  previewLive?: boolean;
   style: CSSProperties;
   onMouseDown?: MouseEventHandler;
   onDoubleClick?: MouseEventHandler;
   onContextMenu?: MouseEventHandler;
 }) {
   const [activated, setActivated] = useState(false);
+  const showLiveViewer = Boolean(previewLive || (interactive && activated));
 
-  if (interactive && activated) {
+  if (showLiveViewer) {
     return (
-      <div style={{ ...style, cursor: "auto" }} className="overflow-hidden rounded-2xl">
-        <MoleculeViewer molecule={el.molecule} mode={el.mode} rotating={el.rotating} />
+      <div
+        onMouseDown={previewLive ? onMouseDown : undefined}
+        onDoubleClick={previewLive ? onDoubleClick : undefined}
+        onContextMenu={previewLive ? onContextMenu : undefined}
+        style={{ ...style, cursor: previewLive ? style.cursor : "auto" }}
+        className="overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700"
+      >
+        <div className={previewLive ? "pointer-events-none h-full w-full" : "h-full w-full"}>
+          <MoleculeViewer molecule={el.molecule} mode={el.mode} rotating={el.rotating} />
+        </div>
       </div>
     );
   }
@@ -63,6 +74,8 @@ interface ElementViewProps {
   hideText?: boolean;
   /** True only in live presentation — enables click-to-activate simulations. */
   interactive?: boolean;
+  /** Render live simulations in the main editor canvas while keeping thumbnails lightweight. */
+  simulationPreview?: boolean;
   onMouseDown?: MouseEventHandler;
   onDoubleClick?: MouseEventHandler;
   onContextMenu?: MouseEventHandler;
@@ -133,6 +146,7 @@ export function ElementView({
   el,
   hideText,
   interactive,
+  simulationPreview,
   onMouseDown,
   onDoubleClick,
   onContextMenu,
@@ -448,6 +462,7 @@ export function ElementView({
       <SimulationBlock
         el={el}
         interactive={interactive}
+        previewLive={simulationPreview}
         style={base}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}

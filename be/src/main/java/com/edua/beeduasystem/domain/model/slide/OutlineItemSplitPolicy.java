@@ -8,12 +8,11 @@ import java.util.Set;
 /** Decides whether a completed outline item must be divided before slide design begins. */
 public final class OutlineItemSplitPolicy {
 
-    private static final int TEXT_WITH_VISUAL_MAX_CHARS = 220;
-    private static final int STANDARD_MAX_CHARS = 320;
-    private static final int COMPARISON_MAX_CHARS = 420;
-    private static final int TEXT_ONLY_MAX_CHARS = 450;
-    private static final int TABLE_MAX_CHARS = 500;
-    private static final int TABLE_CELL_MAX_CHARS = 90;
+    private static final int MAX_CHARS_WITH_VISUAL = 60;
+    private static final int MAX_CHARS = 100;
+    private static final int COMPARISON_MAX_CHARS = 130;
+    private static final int TABLE_MAX_CHARS = 150;
+    private static final int TABLE_CELL_MAX_CHARS = 40;
     private static final int MAX_BULLETS = 6;
 
     private OutlineItemSplitPolicy() {
@@ -26,24 +25,21 @@ public final class OutlineItemSplitPolicy {
 
         Metrics metrics = Metrics.from(plan);
         Set<String> reasons = new LinkedHashSet<>();
+        Set<String> structuredTypes = Set.of("comparison", "table");
         if (metrics.quizCount >= 2) reasons.add("Có từ hai câu hỏi trắc nghiệm trở lên");
         if (metrics.bulletCount > MAX_BULLETS) reasons.add("Có quá sáu gạch đầu dòng");
-        if (metrics.hasVisual && metrics.characters > TEXT_WITH_VISUAL_MAX_CHARS) {
-            reasons.add("Slide có hình minh hoạ nhưng phần chữ vượt 220 ký tự");
-        }
-        if (Set.of("concept", "text-image", "experiment").contains(plan.slideType())
-                && metrics.characters > STANDARD_MAX_CHARS) {
-            reasons.add("Slide nội dung vượt 320 ký tự");
+        if (metrics.hasVisual && metrics.characters > MAX_CHARS_WITH_VISUAL) {
+            reasons.add("Slide có hình minh hoạ nên phần chữ phải dưới 60 ký tự");
         }
         if ("comparison".equals(plan.slideType()) && metrics.characters > COMPARISON_MAX_CHARS) {
-            reasons.add("Slide so sánh vượt 420 ký tự");
+            reasons.add("Slide so sánh vượt 130 ký tự");
         }
         if ("table".equals(plan.slideType())
                 && (metrics.characters > TABLE_MAX_CHARS || metrics.longestTableCell > TABLE_CELL_MAX_CHARS)) {
-            reasons.add("Bảng quá dày: tổng vượt 500 ký tự hoặc có ô vượt 90 ký tự");
+            reasons.add("Bảng quá dày: tổng vượt 150 ký tự hoặc có ô vượt 40 ký tự");
         }
-        if (!metrics.hasVisual && metrics.characters > TEXT_ONLY_MAX_CHARS) {
-            reasons.add("Slide chỉ có chữ vượt 450 ký tự");
+        if (!metrics.hasVisual && !structuredTypes.contains(plan.slideType()) && metrics.characters > MAX_CHARS) {
+            reasons.add("Slide vượt 100 ký tự");
         }
         return new Decision(!reasons.isEmpty(), List.copyOf(reasons));
     }
@@ -70,6 +66,8 @@ public final class OutlineItemSplitPolicy {
                     text.add(item.text());
                     bullets += countBullets(item.text());
                 } else if (block instanceof ContentPlan.VisualBlock) {
+                    visual = true;
+                } else if (block instanceof ContentPlan.MoleculeBlock) {
                     visual = true;
                 } else if (block instanceof ContentPlan.ComparisonBlock item) {
                     item.items().forEach(label -> text.add(label.label()));

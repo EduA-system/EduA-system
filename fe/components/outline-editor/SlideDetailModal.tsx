@@ -13,7 +13,7 @@ import {
 
 const inputClass = "w-full rounded-lg border border-[rgba(26,26,46,0.12)] px-3 py-2 text-sm text-[#1a1a2e] outline-none focus:border-[#8200db]";
 const slideTypes: SlideType[] = ["intro", "section", "concept", "text-image", "experiment", "comparison", "table", "process", "formula", "exercise", "quiz", "summary"];
-const blockKinds: ContentBlock["kind"][] = ["text", "visual", "comparison", "table", "sequence", "formula", "quiz"];
+const blockKinds: ContentBlock["kind"][] = ["text", "visual", "molecule", "comparison", "table", "sequence", "formula", "quiz"];
 
 function ids(prefix: string, labels: string[]) {
   return labels.map((label, index) => ({ id: `${prefix}-${index + 1}`, label: label.trim() })).filter((item) => item.label);
@@ -24,6 +24,7 @@ function makeBlock(kind: ContentBlock["kind"], id = `block-${Date.now()}`): Cont
   switch (kind) {
     case "text": return { ...base, kind, role: "body", semanticType: "explanation", text: "" };
     case "visual": return { ...base, kind, role: "visual", semanticType: "image", description: "", requirement: "required" };
+    case "molecule": return { ...base, kind, role: "visual", semanticType: "molecule-3d", chemicalRequest: "" };
     case "comparison": return { ...base, kind, role: "body", semanticType: "comparison", items: ids(`${id}-item`, ["A", "B"]), criteria: ids(`${id}-criterion`, ["Tiêu chí"]), values: [["", ""]], preferredPresentation: "auto" };
     case "table": return { ...base, kind, role: "body", semanticType: "data-table", columns: ids(`${id}-column`, ["Cột 1", "Cột 2"]), rows: [{ id: `${id}-row-1`, cells: ["", ""] }] };
     case "sequence": return { ...base, kind, role: "body", semanticType: "process", steps: [{ id: `${id}-step-1`, text: "" }] };
@@ -79,6 +80,7 @@ function BlockFields({ block, onChange }: { block: ContentBlock; onChange: (bloc
   </div>;
   if (block.kind === "sequence") return <div className="grid gap-2">{block.steps.map((step, index) => <div key={step.id} className="flex gap-2"><input className={`${inputClass} w-28`} value={step.label ?? ""} onChange={(event) => { const steps = [...block.steps]; steps[index] = { ...step, label: event.target.value }; onChange({ ...block, steps }); }} placeholder={`Bước ${index + 1}`} /><input className={inputClass} value={step.text} onChange={(event) => { const steps = [...block.steps]; steps[index] = { ...step, text: event.target.value }; onChange({ ...block, steps }); }} placeholder="Nội dung bước" /><button type="button" onClick={() => onChange({ ...block, steps: block.steps.filter((_, stepIndex) => stepIndex !== index) })}>×</button></div>)}<button type="button" className="text-left text-xs text-[#8200db]" onClick={() => onChange({ ...block, steps: [...block.steps, { id: `${block.id}-step-${Date.now()}`, text: "" }] })}>+ Thêm bước</button></div>;
   if (block.kind === "formula") return <div className="grid gap-2"><input className={inputClass} value={block.expression} onChange={(event) => onChange({ ...block, expression: event.target.value })} placeholder="Biểu thức / LaTeX" /><textarea className={inputClass} rows={2} value={block.explanation ?? ""} onChange={(event) => onChange({ ...block, explanation: event.target.value || undefined })} placeholder="Giải thích" /></div>;
+  if (block.kind === "molecule") return <input className={inputClass} value={block.chemicalRequest} onChange={(event) => onChange({ ...block, chemicalRequest: event.target.value })} placeholder="Tên hoặc công thức hoá học, vd &quot;etanol&quot; hoặc &quot;C2H5OH&quot;" />;
   return <div className="grid gap-2"><textarea className={inputClass} rows={2} value={block.question} onChange={(event) => onChange({ ...block, question: event.target.value })} placeholder="Câu hỏi" /><textarea className={inputClass} rows={3} value={block.choices?.join("\n") ?? ""} onChange={(event) => onChange({ ...block, choices: event.target.value.split("\n").map((value) => value.trim()).filter(Boolean) })} placeholder="Mỗi dòng một lựa chọn" /><input className={inputClass} value={block.answer ?? ""} onChange={(event) => onChange({ ...block, answer: event.target.value || undefined })} placeholder="Đáp án" /><textarea className={inputClass} rows={2} value={block.explanation ?? ""} onChange={(event) => onChange({ ...block, explanation: event.target.value || undefined })} placeholder="Giải thích" /></div>;
 }
 

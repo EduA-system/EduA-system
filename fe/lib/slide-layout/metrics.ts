@@ -4,6 +4,7 @@ export function blockText(block: ContentBlock): string {
   switch (block.kind) {
     case "text": return block.text;
     case "visual": return block.description;
+    case "molecule": return block.chemicalRequest;
     case "comparison": return [
       ...block.items.map((item) => item.label),
       ...block.criteria.map((item) => item.label),
