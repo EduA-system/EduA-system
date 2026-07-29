@@ -9,7 +9,6 @@ import { quyTacMoment } from "./quy-tac-moment";
 import { quyTacMomentDiaTron } from "./quy-tac-moment-dia-tron";
 import { phanTichLuc } from "./phan-tich-luc";
 import { tongHopHaiLucCungPhuong } from "./tong-hop-hai-luc-cung-phuong";
-import { roiTuDo } from "./roi-tu-do";
 import { nemXien } from "./nem-xien";
 import { nemNgang } from "./nem-ngang";
 import { mangCongGalilei } from "./mang-cong-galilei";
@@ -39,7 +38,7 @@ import { camUngDienTu } from "./cam-ung-dien-tu";
 import { bienThienDongDienBangBienTroKhoaK } from "./bien-thien-dong-dien-bang-bien-tro-khoa-k";
 import { khungDayQuayTrongTuTruong } from "./khung-day-quay-trong-tu-truong";
 
-export type { Preset, PresetParam, Domain } from "./types";
+export type { Preset, PresetParam, ParamCalculation, Domain } from "./types";
 
 export const PRESETS: Preset[] = [
   dinhLuat2Newton,
@@ -49,7 +48,7 @@ export const PRESETS: Preset[] = [
   quyTacMomentDiaTron,
   phanTichLuc,
   tongHopHaiLucCungPhuong,
-  roiTuDo,
+
   nemXien,
   nemNgang,
   mangCongGalilei,

@@ -3,8 +3,8 @@ import type { Scene, TrackPoint } from "../engines/mechanics/types";
 import type { Preset } from "./types";
 
 // Bề rộng nhánh dốc (m) và đoạn chạy ngang sau đáy (m).
-const DROP_SPAN = 3.4;
-const RUNOUT = 3.4;
+const DROP_SPAN = 4.4;
+const RUNOUT = 5.6;
 
 /**
  * Ray kiểu tàu lượn CHẠY MỘT LẦN: thả từ đỉnh trái cao `h`, cong xuống đáy
@@ -26,9 +26,9 @@ function makeTrack(h: number): TrackPoint[] {
   return points;
 }
 
-function initialTrackAngle(points: TrackPoint[]): number {
-  const from = points[0]!;
-  const to = points[1]!;
+function trackAngleAt(points: TrackPoint[], index: number): number {
+  const from = points[Math.max(0, Math.min(points.length - 2, index))]!;
+  const to = points[Math.max(1, Math.min(points.length - 1, index + 1))]!;
   return (Math.atan2(-(to.y - from.y), to.x - from.x) * 180) / Math.PI;
 }
 
@@ -46,7 +46,8 @@ function values(p: Record<string, number>) {
 function buildScene(p: Record<string, number>): Scene {
   const { h, m, friction, g } = values(p);
   const points = makeTrack(h);
-  const start = points[0]!;
+  const startIndex = 6;
+  const start = points[startIndex]!;
   return {
     bodies: [
       {
@@ -61,7 +62,7 @@ function buildScene(p: Record<string, number>): Scene {
           shape: "coaster",
           color: "#2dd4bf",
           label: "Tàu lượn",
-          angle: initialTrackAngle(points),
+          angle: trackAngleAt(points, startIndex),
         },
       },
     ],
@@ -82,13 +83,52 @@ export const dongNangTheNang: Preset = {
     "Hiểu Wđ = ½mv² và Wt = mgh chuyển hoá qua lại khi vật chuyển động: tại đỉnh Wt lớn nhất còn Wđ = 0, tại đáy Wđ lớn nhất còn Wt = 0. Khi bỏ qua ma sát, cơ năng W = Wđ + Wt được bảo toàn; có ma sát thì cơ năng giảm dần do hao phí.",
   sgkRef: "Vật lí 10, Bài 25",
   startPaused: true,
+  paramGuide:
+    "Thả tàu lượn từ đỉnh dốc để quan sát thế năng Wt = mgh chuyển thành động năng Wđ = ½mv². Ở đỉnh, thế năng lớn nhất và tàu đứng yên; tại đáy, động năng và tốc độ lớn nhất. Khi ma sát bằng 0, tổng cơ năng được bảo toàn; khi có ma sát, cơ năng giảm dần.",
   params: [
-    { key: "h", label: "Độ cao thả", unit: "m", min: 0.8, max: 4, step: 0.1, default: 2.5 },
-    { key: "m", label: "Khối lượng tàu", unit: "kg", min: 0.2, max: 5, step: 0.1, default: 1 },
-    { key: "friction", label: "Ma sát ray", unit: "", min: 0, max: 0.3, step: 0.01, default: 0 },
-    { key: "g", label: "Gia tốc trọng trường", unit: "m/s²", min: 1.6, max: 20, step: 0.1, default: 9.8 },
+    {
+      key: "h",
+      label: "Độ cao thả",
+      unit: "m",
+      min: 0.8,
+      max: 4,
+      step: 0.1,
+      default: 2.5,
+      description: "Thả càng cao thì thế năng ban đầu càng lớn, nên tàu đạt tốc độ lớn hơn khi xuống đáy.",
+    },
+    {
+      key: "m",
+      label: "Khối lượng tàu",
+      unit: "kg",
+      min: 0.2,
+      max: 5,
+      step: 0.1,
+      default: 1,
+      description: "Khối lượng càng lớn thì thế năng và động năng càng lớn; nếu bỏ qua ma sát, tốc độ ở đáy không phụ thuộc khối lượng.",
+    },
+    {
+      key: "friction",
+      label: "Ma sát ray",
+      unit: "",
+      min: 0,
+      max: 0.3,
+      step: 0.01,
+      default: 0,
+      description: "Ma sát càng lớn thì cơ năng hao phí càng nhiều, tàu chạy chậm hơn và dừng sớm hơn trên đoạn ngang.",
+    },
+    {
+      key: "g",
+      label: "Gia tốc trọng trường",
+      unit: "m/s²",
+      min: 1.6,
+      max: 20,
+      step: 0.1,
+      default: 9.8,
+      description: "g càng lớn thì thế năng mgh và tốc độ tàu đạt được ở đáy càng lớn.",
+    },
   ],
   applyParams: buildScene,
+  trackingLabels: { bi: "Tàu lượn trên đường ray" },
   analysis: {
     landmarks: [
       {

@@ -27,6 +27,14 @@ export type Domain = "Cơ học" | "Dao động & Sóng" | "Quang học" | "Đi�
 /** ParamDef của panel + giá trị mặc định cho preset. */
 export type PresetParam = ParamDef & { default: number };
 
+export type ParamCalculation = {
+  label: string;
+  formula: string;
+  substitution: string;
+  value: string;
+  unit?: string;
+};
+
 export type LandmarkValue = { label: string; value: string; unit?: string };
 
 /**
@@ -60,6 +68,8 @@ type PresetBase = {
   // Lời dẫn ngắn luôn hiện trong tab Tham số, giúp người học biết cần thay đổi
   // đại lượng nào và quan sát kết quả gì.
   paramGuide?: string;
+  // Các phép tính cập nhật theo tham số, hiển thị ngay trong tab Tham số.
+  paramCalculations?: (p: Record<string, number>) => ParamCalculation[];
   // Bắt đầu ở trạng thái dừng để người học chủ động nhả cơ cấu ban đầu.
   startPaused?: boolean;
   // Điểm giá trị quan trọng (tuỳ chọn) — panel "Phân tích" còn hiện mốc thời

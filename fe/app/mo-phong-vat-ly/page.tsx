@@ -321,15 +321,6 @@ function Thumb({ id }: { id: string }) {
           <circle cx="52" cy="96" r="6" fill="#60a5fa" />
         </>,
       );
-    case "roi-tu-do":
-      return frame(
-        <>
-          <line x1="100" y1="20" x2="100" y2="92" stroke="#a78bfa" strokeWidth="2" strokeDasharray="4 4" />
-          <circle cx="100" cy="30" r="6" fill="#f472b6" />
-          <path d="M94 70 L100 84 L106 70" fill="none" stroke="#34d399" strokeWidth="2" />
-          <line x1="40" y1="100" x2="160" y2="100" stroke="#475569" strokeWidth="2" />
-        </>,
-      );
     case "ong-newton":
       return frame(
         <>
@@ -1408,6 +1399,23 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                         markEdited();
                       }}
                     />
+                  )}
+                  {preset.paramCalculations && (
+                    <div className="rounded-[12px] border border-[#e8e2d9] bg-[#faf9f7] p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6b6b6b]">Kết quả tính toán</p>
+                      <div className="space-y-3">
+                        {preset.paramCalculations(params).map((calculation) => (
+                          <div key={calculation.label} className="rounded-[10px] bg-white p-3 shadow-sm">
+                            <p className="text-xs font-semibold text-[#2b2926]">{calculation.label}</p>
+                            <p className="mt-1 font-mono text-xs text-[#6b6b6b]">{calculation.formula}</p>
+                            <p className="mt-1 font-mono text-[11px] leading-relaxed text-[#8a8178]">{calculation.substitution}</p>
+                            <p className="mt-1.5 text-sm font-semibold text-[#c96545]">
+                              = {calculation.value} {calculation.unit}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

@@ -271,6 +271,9 @@ export type Scene = {
   // Hệ số đàn hồi e ∈ [0,1] dùng CHUNG cho mọi va chạm trong cảnh. Mặc định 1
   // (va chạm đàn hồi hoàn toàn — bảo toàn động năng). e = 0: va chạm mềm (dính).
   restitution?: number;
+  // Bật cho scene bảo toàn cơ năng lý tưởng. Kernel sẽ hiệu chỉnh sai số số học
+  // sau bước chiếu ràng buộc để W = Wđ + Wt không trôi theo thời gian.
+  conserveMechanicalEnergy?: boolean;
   // Lớp chú thích hình học (vector lực/vận tốc…). CHỈ để vẽ — kernel bỏ qua
   // hoàn toàn. Vắng (đa số preset) → không vẽ gì, hành vi y hệt trước.
   annotations?: Annotation[];

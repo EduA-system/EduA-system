@@ -117,6 +117,31 @@ function offsetTrackPoints(points: Vec2[], offset: number): Vec2[] {
     return { x: point.x + nx * offset, y: point.y + ny * offset };
   });
 }
+
+type ScreenTrackPoint = Vec2 & { nx: number; ny: number };
+
+function extendScreenTrack(points: ScreenTrackPoint[], startPx: number, endPx: number): ScreenTrackPoint[] {
+  if (points.length < 2) return points;
+  const first = points[0]!;
+  const second = points[1]!;
+  const beforeLast = points[points.length - 2]!;
+  const last = points[points.length - 1]!;
+
+  const startLength = Math.hypot(second.x - first.x, second.y - first.y) || 1;
+  const endLength = Math.hypot(last.x - beforeLast.x, last.y - beforeLast.y) || 1;
+  const extendedStart = {
+    ...first,
+    x: first.x - ((second.x - first.x) / startLength) * startPx,
+    y: first.y - ((second.y - first.y) / startLength) * startPx,
+  };
+  const extendedEnd = {
+    ...last,
+    x: last.x + ((last.x - beforeLast.x) / endLength) * endPx,
+    y: last.y + ((last.y - beforeLast.y) / endLength) * endPx,
+  };
+
+  return [extendedStart, ...points.slice(1, -1), extendedEnd];
+}
 // Đầu mũi tên hình chevron tại (x,y), hướng theo `angle` (rad) — dùng chung
 
 function rightAnglePulleyRopePoints(
@@ -483,10 +508,11 @@ export function SceneKonva2D({
           return { x: point.x, y: point.y, nx, ny };
         });
         const baseY = groundY;
+        const visualRail = extendScreenTrack(rail, 50, 50);
 
         layer.add(
           new Konva.Line({
-            points: [rail[0]!.x - 18, baseY, rail[rail.length - 1]!.x + 18, baseY],
+            points: [visualRail[0]!.x - 18, baseY, visualRail[visualRail.length - 1]!.x + 18, baseY],
             stroke: "#334155",
             strokeWidth: 6,
             lineCap: "round",
@@ -541,7 +567,7 @@ export function SceneKonva2D({
           );
         }
 
-        const railPoints = rail.flatMap((point) => [point.x, point.y]);
+        const railPoints = visualRail.flatMap((point) => [point.x, point.y]);
         layer.add(
           new Konva.Line({
             points: railPoints,
@@ -555,7 +581,7 @@ export function SceneKonva2D({
         for (const offset of [-3.5, 3.5]) {
           layer.add(
             new Konva.Line({
-              points: rail.flatMap((point) => [
+              points: visualRail.flatMap((point) => [
                 point.x + point.nx * offset,
                 point.y + point.ny * offset,
               ]),

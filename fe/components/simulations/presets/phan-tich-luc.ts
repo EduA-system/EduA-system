@@ -69,10 +69,39 @@ export const phanTichLuc: Preset = {
   objective: "Quan sát trọng lực được phân tích thành hai lực thành phần",
   sgkRef: "Vật lí 10 - phân tích lực",
   startPaused: true,
+  paramGuide:
+    "Mô phỏng cho thấy trọng lực P được phân tích theo hai phương của mặt phẳng nghiêng: P₁ vuông góc với mặt phẳng và ép vật vào mặt phẳng; P₂ song song với mặt phẳng và kéo vật trượt xuống dốc. Hãy thay đổi các tham số bên dưới để quan sát độ lớn ba vector lực.",
   params: [
-    { key: "alpha", label: "Góc nghiêng", unit: "°", min: 5, max: 50, step: 1, default: 25 },
-    { key: "m", label: "Khối lượng vật", unit: "kg", min: 0.5, max: 8, step: 0.1, default: 2 },
-    { key: "g", label: "Gia tốc trọng trường", unit: "m/s²", min: 1.6, max: 20, step: 0.1, default: 9.8 },
+    {
+      key: "alpha",
+      label: "Góc nghiêng",
+      unit: "°",
+      min: 5,
+      max: 50,
+      step: 1,
+      default: 25,
+      description: "Góc nghiêng càng lớn thì P₂ kéo vật xuống dốc càng tăng, còn P₁ ép vật vào mặt phẳng càng giảm.",
+    },
+    {
+      key: "m",
+      label: "Khối lượng vật",
+      unit: "kg",
+      min: 0.5,
+      max: 8,
+      step: 0.1,
+      default: 2,
+      description: "Khối lượng càng lớn thì trọng lực P = mg và cả hai thành phần P₁, P₂ đều tăng.",
+    },
+    {
+      key: "g",
+      label: "Gia tốc trọng trường",
+      unit: "m/s²",
+      min: 1.6,
+      max: 20,
+      step: 0.1,
+      default: 9.8,
+      description: "g càng lớn thì trọng lực P = mg càng lớn; trên Trái Đất, g xấp xỉ 9,8 m/s².",
+    },
   ],
   applyParams: (p) => {
     const { alpha, m, g } = values(p);
@@ -142,6 +171,7 @@ export const phanTichLuc: Preset = {
       },
     ];
   },
+  trackingLabels: { vat: "Vật trên mặt phẳng nghiêng (màu xanh)" },
   minimalOverlay: true,
   analysis: {
     landmarks: [
