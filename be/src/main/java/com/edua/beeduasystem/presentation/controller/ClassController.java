@@ -69,7 +69,7 @@ public class ClassController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     @Operation(summary = "Danh sách lớp của teacher (UC-29)")
     public ClassPageDto list(
             @RequestParam(required = false) Subject subject,
@@ -95,7 +95,7 @@ public class ClassController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     @Operation(summary = "Tạo lớp mới (UC-30)")
     public ClassDetailDto create(@Valid @RequestBody CreateClassRequest request) {
         return ClassDetailDto.from(classManagementService.createClass(
@@ -109,7 +109,7 @@ public class ClassController {
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     @Operation(summary = "Cập nhật thông tin lớp (UC-31)")
     public ClassDetailDto update(@PathVariable UUID id, @Valid @RequestBody UpdateClassRequest request) {
         return ClassDetailDto.from(classManagementService.updateClass(
@@ -117,7 +117,7 @@ public class ClassController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     @Operation(summary = "Chuyển trạng thái lớp Active / Inactive (UC-32)")
     public ClassDetailDto updateStatus(@PathVariable UUID id, @Valid @RequestBody UpdateClassStatusRequest request) {
         return ClassDetailDto.from(classManagementService.updateStatus(id, request.status()));
@@ -134,14 +134,14 @@ public class ClassController {
 
     @PostMapping("/{id}/members")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     @Operation(summary = "Thêm 1 học sinh bằng Gmail (UC-36 Normal Flow)")
     public ClassMemberDto addStudent(@PathVariable UUID id, @Valid @RequestBody AddStudentRequest request) {
         return ClassMemberDto.from(classEnrollmentService.addStudent(id, request.email()));
     }
 
     @PostMapping("/{id}/members/import")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     @Operation(summary = "Import học sinh từ file .csv/.xlsx, cột bắt buộc \"gmail\" (UC-36 Alt Flow)")
     public ImportStudentsResponse importMembers(@PathVariable UUID id, @RequestPart("file") MultipartFile file) {
         return ImportStudentsResponse.from(classEnrollmentService.importStudents(id, file));
@@ -158,7 +158,7 @@ public class ClassController {
 
     @PostMapping("/{id}/resources")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     @Operation(summary = "Đăng resource/assignment mới vào lớp (UC-38)")
     public ClassResourceSummaryDto postResource(@PathVariable UUID id, @Valid @RequestBody PostClassResourceRequest request) {
         return ClassResourceSummaryDto.from(classResourceService.postResource(
@@ -173,7 +173,7 @@ public class ClassController {
     }
 
     @PatchMapping("/{id}/resources/{resourceId}")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     @Operation(summary = "Sửa resource đã đăng (UC-39)")
     public ClassResourceSummaryDto updateResource(
             @PathVariable UUID id,
@@ -191,7 +191,7 @@ public class ClassController {
 
     @DeleteMapping("/{id}/resources/{resourceId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     @Operation(summary = "Xóa resource khỏi lớp (UC-40)")
     public void deleteResource(@PathVariable UUID id, @PathVariable UUID resourceId) {
         classResourceService.deleteResource(id, resourceId);

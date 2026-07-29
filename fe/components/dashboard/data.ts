@@ -28,7 +28,7 @@ export const navGroups: NavGroup[] = [
     label: "CONTENT",
     items: [
       { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "Lớp học", icon: "book", href: "/create-class", requiredRole: ["TEACHER"] },
+      { label: "Lớp học", icon: "book", href: "/create-class", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["STUDENT"] },
       { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-edit", active: true },
       { label: "Slide", icon: "slides", href: "/slide-create" },
