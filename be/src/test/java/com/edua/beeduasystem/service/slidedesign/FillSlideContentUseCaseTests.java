@@ -11,9 +11,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class FillSlideContentUseCaseTests {
@@ -47,9 +49,15 @@ class FillSlideContentUseCaseTests {
     }
 
     @Test
-    void rejectsMalformedAiJson() {
-        when(aiClient.generate(anyString())).thenReturn("not-json");
-        assertThrows(IllegalStateException.class, () -> useCase.execute(request()));
+    void retriesOnceWhenAiReturnsMalformedJson() {
+        when(aiClient.generate(anyString()))
+                .thenReturn("{\"slots\":[")
+                .thenReturn("{\"slots\":[{\"slotId\":\"hero-1\",\"text\":\"N\u1ed9i dung\"}]}");
+
+        var result = useCase.execute(request());
+
+        assertEquals("N\u1ed9i dung", result.slots().getFirst().text());
+        verify(aiClient, times(2)).generate(anyString());
     }
 
     @Test
@@ -64,13 +72,13 @@ class FillSlideContentUseCaseTests {
     }
 
     @Test
-    void keepsTextLongerThanTheSuggestedBudget() {
+    void limitsTextToRequestedCharacterBudget() {
         String fullText = "Đây là dữ kiện bắt buộc phải được giữ nguyên dù dài hơn ngân sách gợi ý.";
         when(aiClient.generate(anyString())).thenReturn("{\"slots\":[{\"slotId\":\"hero-1\",\"text\":\"" + fullText + "\"}]}" );
 
         var result = useCase.execute(request());
 
-        assertEquals(fullText, result.slots().getFirst().text());
+        assertTrue(result.slots().getFirst().text().length() <= 90);
     }
 
     private static SlideContentFillRequest request() {

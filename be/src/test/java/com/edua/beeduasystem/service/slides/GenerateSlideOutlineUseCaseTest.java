@@ -126,6 +126,45 @@ class GenerateSlideOutlineUseCaseTest {
     }
 
     @Test
+    void normalizesComparisonTitlesToComparisonSlides() {
+        assertEquals("comparison", GenerateSlideOutlineUseCase.normalizeSkeletonSlideType(
+                "concept", "explain", "Phân biệt polymer nhiệt dẻo và nhiệt rắn"));
+    }
+
+    @Test
+    void rejectsFlatTextForAComparisonSlide() {
+        SlideItemDto skeleton = new SlideItemDto("p1s1", "So sánh", "explain", null, null,
+                new ContentPlan("comparison", "fixed", List.of(), List.of()));
+
+        assertThrows(IllegalArgumentException.class, () -> GenerateSlideOutlineUseCase.parseExpandedSlide(skeleton, """
+                {"slide":{"id":"p1s1","contentPlan":{"blocks":[
+                  {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"A B tiêu chí giá trị"}
+                ],"relationships":[]}}}
+                """));
+    }
+
+    @Test
+    void capsAutoSplitOfOneOriginalSlideAtThreeResults() {
+        when(aiClient.generate(anyString())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(0);
+            if (prompt.contains("\"id\":\"p2s3-a\"")) {
+                return splitResponse("Nhanh mot A", "Noi dung gon A", "Nhanh mot B", "Noi dung gon B");
+            }
+            return splitResponse("Nhanh mot van dai", "x".repeat(451), "Nhanh hai van dai", "x".repeat(451));
+        });
+        SlideItemDto dense = new SlideItemDto("p2s3", "Noi dung dai", "explain", null, null,
+                new ContentPlan("concept", "fixed", List.of(
+                        new ContentPlan.TextBlock("b1", "text", "body", "explanation", "primary", true, null,
+                                "x".repeat(451))), List.of()));
+
+        List<SlideItemDto> result = useCase().autoSplitDenseOutlineItems(
+                lesson(), request(), new PartDto("p2", "Kham pha", List.of(dense), List.of("c1")), List.of(dense));
+
+        assertEquals(List.of("p2s3-a-a", "p2s3-a-b", "p2s3-b"), result.stream().map(SlideItemDto::id).toList());
+        verify(aiClient, times(2)).generate(anyString());
+    }
+
+    @Test
     void keepsOriginalOutlineItemWhenAutomaticSplitCannotBeValidated() {
         when(aiClient.generate(anyString())).thenReturn("{\"slides\":[]}");
         SlideItemDto dense = new SlideItemDto("p2s3", "Nội dung dài", "explain", null, null,

@@ -266,9 +266,16 @@ public class SlidePromptBuilder {
                   `preferredPresentation` (auto|table|panels).
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
                 - sequence: thêm `steps:[{id,label,text}]` theo đúng thứ tự bắt buộc.
-                - formula: thêm `expression`, có thể có `explanation`.
+                - formula: thêm `expression`, có thể có `explanation`. `expression` chỉ chứa biểu thức/ký hiệu cần hiển thị,
+                  không kèm tiền tố dài, diễn giải hoặc nhiều ví dụ; đặt diễn giải vào `explanation` hoặc text block riêng.
                 - quiz: thêm `question`, có thể có `choices`, `answer`, `explanation`.
                 Quan hệ chỉ dùng một trong:
+                RULE BẮT BUỘC THEO slideType:
+                - comparison: phải có đúng một block `comparison` với ít nhất hai items và một hoặc nhiều criteria;
+                  không được dồn tên cột, tiêu chí và giá trị thành text thường.
+                - table: phải có đúng một block `table` với columns và rows; không được dồn ô bảng thành text thường.
+                - concept: tối đa hai text block chính; mỗi block chỉ nêu một ý ngắn, không ghép nhiều tiêu đề/ý song song
+                  vào một đoạn văn dài.
                 {"type":"illustrates","visualBlockId":"...","targetBlockId":"..."},
                 {"type":"supports","supportingBlockId":"...","targetBlockId":"..."},
                 {"type":"follows","beforeBlockId":"...","afterBlockId":"..."}.
@@ -329,7 +336,8 @@ public class SlidePromptBuilder {
                   `preferredPresentation` (auto|table|panels).
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
                 - sequence: thêm `steps:[{id,label,text}]` theo đúng thứ tự bắt buộc.
-                - formula: thêm `expression`, có thể có `explanation`.
+                - formula: thêm `expression`, có thể có `explanation`. `expression` chỉ chứa biểu thức/ký hiệu cần hiển thị,
+                  không kèm tiền tố dài, diễn giải hoặc nhiều ví dụ; đặt diễn giải vào `explanation` hoặc text block riêng.
                 - quiz: thêm `question`, có thể có `choices`, `answer`, `explanation`.
                 Quan hệ chỉ dùng một trong:
                 {"type":"illustrates","visualBlockId":"...","targetBlockId":"..."},
@@ -340,6 +348,13 @@ public class SlidePromptBuilder {
                 Không trả tọa độ, kích thước, font, màu, tỷ lệ cột hoặc quyết định trình bày.
 
                 Trả JSON thuần, không markdown:
+                RULE BẮT BUỘC THEO slideType:
+                - comparison: phải có đúng một block `comparison` với ít nhất hai items và một hoặc nhiều criteria;
+                  không được dồn tên cột, tiêu chí và giá trị thành text thường.
+                - table: phải có đúng một block `table` với columns và rows; không được dồn ô bảng thành text thường.
+                - concept: tối đa hai text block chính; mỗi block chỉ nêu một ý ngắn, không ghép nhiều tiêu đề/ý song song
+                  vào một đoạn văn dài.
+
                 {"slide":{"id":"%s","durationMinutes":3,"aiNote":"","contentPlan":{"blocks":[
                   {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung"}
                 ],"relationships":[]}}}

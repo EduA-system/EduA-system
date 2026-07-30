@@ -3,7 +3,10 @@
 -- submission_files) - mo rong ngoai SRS goc (chi mo ta nop bang file). Xem thiet ke:
 -- designs/API_designs/submit-assignment.md, designs/submit-assignment/flow.md.
 
-CREATE TABLE submissions (
+-- `submissions` was released previously under V25 on a parallel branch.  Keep
+-- this migration safe for those databases after the migration-number conflict
+-- was resolved by assigning it V27.
+CREATE TABLE IF NOT EXISTS submissions (
     id                  UUID         PRIMARY KEY,
     class_resource_id   UUID         NOT NULL REFERENCES class_resources (id) ON DELETE CASCADE,
     student_id          UUID         NOT NULL REFERENCES app_users (id),
@@ -15,9 +18,9 @@ CREATE TABLE submissions (
     CONSTRAINT uq_submissions_resource_student UNIQUE (class_resource_id, student_id)
 );
 
-CREATE INDEX idx_submissions_resource_id ON submissions (class_resource_id);
+CREATE INDEX IF NOT EXISTS idx_submissions_resource_id ON submissions (class_resource_id);
 
-CREATE TABLE submission_files (
+CREATE TABLE IF NOT EXISTS submission_files (
     id              UUID          PRIMARY KEY,
     submission_id   UUID          NOT NULL REFERENCES submissions (id) ON DELETE CASCADE,
     url             TEXT          NOT NULL,
@@ -26,4 +29,4 @@ CREATE TABLE submission_files (
     size_bytes      BIGINT        NOT NULL
 );
 
-CREATE INDEX idx_submission_files_submission_id ON submission_files (submission_id);
+CREATE INDEX IF NOT EXISTS idx_submission_files_submission_id ON submission_files (submission_id);

@@ -42,7 +42,8 @@ public class GenerateSlideOutlineUseCase {
     /** Số phần expand chạy song song tối đa (khớp SLIDE_CONCURRENCY=4 ở FE). */
     private static final int EXPAND_CONCURRENCY = 4;
     private static final int CONTENT_MAP_CONCURRENCY = 3;
-    private static final int MAX_AUTO_SPLIT_DEPTH = 3;
+    /** A single dense outline item may become no more than three slides. */
+    private static final int MAX_AUTO_SPLIT_SLIDES = 3;
     private static final java.util.Set<String> PEDAGOGICAL_ROLES = java.util.Set.of(
             "hook", "explain", "derive", "demonstrate", "practice", "recap", "other");
 
@@ -677,7 +678,8 @@ public class GenerateSlideOutlineUseCase {
         List<SlideItemDto> result = new ArrayList<>();
 
         for (SlideItemDto item : items) {
-            result.addAll(autoSplitDenseOutlineItem(lesson, req, part, item, usedIds, 0));
+            result.addAll(autoSplitDenseOutlineItem(
+                    lesson, req, part, item, usedIds, new SplitBudget(MAX_AUTO_SPLIT_SLIDES - 1)));
         }
         return result;
     }
@@ -688,29 +690,47 @@ public class GenerateSlideOutlineUseCase {
             PartDto part,
             SlideItemDto item,
             java.util.Set<String> usedIds,
-            int depth) {
+            SplitBudget splitBudget) {
         OutlineItemSplitPolicy.Decision decision = OutlineItemSplitPolicy.evaluate(item.contentPlan());
         if (!decision.shouldSplit()) return List.of(item);
-        if (depth >= MAX_AUTO_SPLIT_DEPTH) {
-            log.warn("Keeping dense outline item={} because automatic split reached max depth={} reasons={}",
-                    item.id(), MAX_AUTO_SPLIT_DEPTH, decision.reasons());
+        if (!splitBudget.hasRemaining()) {
+            log.warn("Keeping dense outline item={} because automatic split reached max slides={} reasons={}",
+                    item.id(), MAX_AUTO_SPLIT_SLIDES, decision.reasons());
             return List.of(item);
         }
 
         try {
             usedIds.remove(item.id());
             List<SlideItemDto> splitItems = splitOutlineItemWithRetry(lesson, req, part, item, decision.reasons(), usedIds);
+            splitBudget.consume();
             log.info("Auto-split dense outline item={} into={} reasons={}", item.id(),
                     splitItems.stream().map(SlideItemDto::id).toList(), decision.reasons());
             List<SlideItemDto> result = new ArrayList<>();
             for (SlideItemDto splitItem : splitItems) {
-                result.addAll(autoSplitDenseOutlineItem(lesson, req, part, splitItem, usedIds, depth + 1));
+                result.addAll(autoSplitDenseOutlineItem(lesson, req, part, splitItem, usedIds, splitBudget));
             }
             return result;
         } catch (Exception e) {
             usedIds.add(item.id());
             log.warn("Keeping dense outline item={} because automatic split failed: {}", item.id(), e.getMessage());
             return List.of(item);
+        }
+    }
+
+    /** Splitting one slide into two consumes one slot from the three-slide cap. */
+    private static final class SplitBudget {
+        private int remainingSplits;
+
+        private SplitBudget(int remainingSplits) {
+            this.remainingSplits = remainingSplits;
+        }
+
+        private boolean hasRemaining() {
+            return remainingSplits > 0;
+        }
+
+        private void consume() {
+            remainingSplits--;
         }
     }
 
@@ -806,6 +826,7 @@ public class GenerateSlideOutlineUseCase {
                     skeleton.contentPlan().headerMode(),
                     semantic.path("blocks"),
                     semantic.path("relationships"));
+            validateContentPlanMatchesSlideType(contentPlan);
             return new SlideItemDto(
                     skeleton.id(),
                     skeleton.title(),
@@ -847,6 +868,7 @@ public class GenerateSlideOutlineUseCase {
             String headerMode = requiredText(semantic, "headerMode");
             ContentPlan contentPlan = parseContentPlan(slideType, headerMode,
                     semantic.path("blocks"), semantic.path("relationships"));
+            validateContentPlanMatchesSlideType(contentPlan);
             String id = nextSplitId(original.id(), index == 0 ? "a" : "b", allocatedIds);
             result.add(new SlideItemDto(id, title, role, intOrNull(node, "durationMinutes"),
                     textOrNull(node, "aiNote"), contentPlan));
@@ -876,18 +898,35 @@ public class GenerateSlideOutlineUseCase {
 
     /** Repairs the common case where the model puts a pedagogical role in the layout taxonomy. */
     static String normalizeSkeletonSlideType(String slideType, String pedagogicalRole, String title) {
-        if (!"practice".equals(slideType)) return slideType;
-
         String normalizedTitle = java.text.Normalizer.normalize(
                         title == null ? "" : title, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(java.util.Locale.ROOT);
+        if ("concept".equals(slideType)
+                && (normalizedTitle.contains("phan biet") || normalizedTitle.contains("so sanh")
+                || normalizedTitle.contains("khac nhau") || normalizedTitle.contains("doi chieu"))) {
+            log.warn("Normalized concept slideType to comparison for title={}", title);
+            return "comparison";
+        }
+        if (!"practice".equals(slideType)) return slideType;
+
         String repaired = normalizedTitle.contains("trac nghiem") || normalizedTitle.contains("quiz")
                 ? "quiz"
                 : "exercise";
         log.warn("Normalized invalid skeleton slideType=practice to {} for pedagogicalRole={} title={}",
                 repaired, pedagogicalRole, title);
         return repaired;
+    }
+
+    private static void validateContentPlanMatchesSlideType(ContentPlan contentPlan) {
+        if ("comparison".equals(contentPlan.slideType())
+                && contentPlan.blocks().stream().noneMatch(ContentPlan.ComparisonBlock.class::isInstance)) {
+            throw new IllegalArgumentException("Comparison slide must contain a comparison block");
+        }
+        if ("table".equals(contentPlan.slideType())
+                && contentPlan.blocks().stream().noneMatch(ContentPlan.TableBlock.class::isInstance)) {
+            throw new IllegalArgumentException("Table slide must contain a table block");
+        }
     }
 
     private static void validateSource(GenerateOutlineRequest req) {
