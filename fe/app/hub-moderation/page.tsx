@@ -6,6 +6,7 @@ import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { hasAnyRole } from "@/lib/auth/permissions";
 import { approveContent, listModerationQueue, rejectContent } from "@/lib/hub";
 import type { LibraryContent, LibraryType } from "@/lib/library";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 const typeLabels: Record<LibraryType, string> = { LESSON_PLAN: "Bài giảng", SLIDE_DECK: "Slide", TEST: "Bài kiểm tra", SIMULATION: "Mô phỏng" };
 
@@ -65,8 +66,10 @@ export default function HubModerationPage() {
 
   return (
     <RouteGuard pathname="/hub-moderation" denyHref="/community-hub" denyLabel="Về Community Hub">
-      {user && (
-        <div className="mx-auto max-w-3xl p-6">
+      <div className="flex min-h-screen">
+        <Sidebar activeHref="/hub-moderation" />
+        {user && (
+        <div className="min-w-0 flex-1 p-6"><div className="mx-auto max-w-3xl">
           <header className="mb-6">
             <h1 className="text-xl font-semibold">Kiểm duyệt Community Hub · môn {user.subject}</h1>
           </header>
@@ -91,8 +94,9 @@ export default function HubModerationPage() {
               {items.length === 0 && <li className="text-sm text-gray-500">Không có nội dung chờ duyệt.</li>}
             </ul>
           </section>
-        </div>
-      )}
+        </div></div>
+        )}
+      </div>
     </RouteGuard>
   );
 }
