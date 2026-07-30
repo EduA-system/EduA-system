@@ -1,6 +1,7 @@
 package com.edua.beeduasystem.domain.model.weeklytask;
 
 import com.edua.beeduasystem.domain.model.auth.Subject;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -19,6 +20,8 @@ public record WeeklyTask(
         Instant deadline,
         WeeklyTaskReviewStatus reviewStatus,
         UUID sourceLibraryContentId,
+        String sourceLibraryContentTitle,
+        JsonNode sourceLibraryContentPayload,
         String sourceDocumentUrl,
         String sourceDocumentName,
         Instant submittedAt,
@@ -26,6 +29,7 @@ public record WeeklyTask(
         Instant reviewedAt,
         String rejectionReason,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Long version
 ) {
 }

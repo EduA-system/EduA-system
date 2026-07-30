@@ -162,7 +162,15 @@ function LessonPlanApprovalScreen() {
                               </a>
                             </p>
                           ) : detail.sourceLibraryContentId ? (
-                            <p className="mt-1 text-[#6b6b6b]">Nguồn: Giáo án trong thư viện của giáo viên.</p>
+                            <div className="mt-3">
+                              <p className="text-[#6b6b6b]">Nguồn: {detail.sourceLibraryContentTitle ?? "Giáo án trong thư viện của giáo viên"}.</p>
+                              {detail.sourceLibraryContentPayload ? (
+                                <details className="mt-2 rounded-lg border bg-white p-2">
+                                  <summary className="cursor-pointer font-medium text-[#b85c3b]">Xem bản giáo án đã nộp</summary>
+                                  <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap text-xs text-[#3f3b36]">{JSON.stringify(detail.sourceLibraryContentPayload, null, 2)}</pre>
+                                </details>
+                              ) : null}
+                            </div>
                           ) : null}
                         </>
                       )}

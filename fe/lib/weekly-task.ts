@@ -26,6 +26,8 @@ export type WeeklyTaskDetail = {
   deadline: string;
   reviewStatus: WeeklyTaskReviewStatus;
   sourceLibraryContentId: string | null;
+  sourceLibraryContentTitle: string | null;
+  sourceLibraryContentPayload: unknown | null;
   sourceDocumentUrl: string | null;
   sourceDocumentName: string | null;
   submittedAt: string | null;

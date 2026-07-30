@@ -25,6 +25,7 @@ public class JpaWeeklyTaskRepository implements WeeklyTaskRepository {
         e.setId(t.id()); e.setModeratorId(t.moderatorId()); e.setSubject(t.subject()); e.setTeacherId(t.teacherId());
         e.setWeekStartDate(t.weekStartDate()); e.setScopeDescription(t.scopeDescription()); e.setDeadline(t.deadline());
         e.setReviewStatus(t.reviewStatus()); e.setSourceLibraryContentId(t.sourceLibraryContentId());
+        e.setSourceLibraryContentTitle(t.sourceLibraryContentTitle()); e.setSourceLibraryContentPayload(t.sourceLibraryContentPayload());
         e.setSourceDocumentUrl(t.sourceDocumentUrl()); e.setSourceDocumentName(t.sourceDocumentName());
         e.setSubmittedAt(t.submittedAt()); e.setReviewedBy(t.reviewedBy()); e.setReviewedAt(t.reviewedAt());
         e.setRejectionReason(t.rejectionReason()); e.setCreatedAt(t.createdAt()); e.setUpdatedAt(t.updatedAt());
@@ -50,7 +51,7 @@ public class JpaWeeklyTaskRepository implements WeeklyTaskRepository {
     private static WeeklyTask toDomain(WeeklyTaskEntity e) {
         return new WeeklyTask(e.getId(), e.getModeratorId(), e.getSubject(), e.getTeacherId(), e.getWeekStartDate(),
                 e.getScopeDescription(), e.getDeadline(), e.getReviewStatus(), e.getSourceLibraryContentId(),
-                e.getSourceDocumentUrl(), e.getSourceDocumentName(), e.getSubmittedAt(), e.getReviewedBy(),
-                e.getReviewedAt(), e.getRejectionReason(), e.getCreatedAt(), e.getUpdatedAt());
+                e.getSourceLibraryContentTitle(), e.getSourceLibraryContentPayload(), e.getSourceDocumentUrl(), e.getSourceDocumentName(), e.getSubmittedAt(), e.getReviewedBy(),
+                e.getReviewedAt(), e.getRejectionReason(), e.getCreatedAt(), e.getUpdatedAt(), e.getVersion());
     }
 }

@@ -6,6 +6,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -21,6 +24,8 @@ public class WeeklyTaskEntity {
     @Column(nullable = false) private Instant deadline;
     @Enumerated(EnumType.STRING) @Column(name = "review_status", nullable = false, length = 20) private WeeklyTaskReviewStatus reviewStatus;
     @Column(name = "source_library_content_id") private UUID sourceLibraryContentId;
+    @Column(name = "source_library_content_title") private String sourceLibraryContentTitle;
+    @JdbcTypeCode(SqlTypes.JSON) @Column(name = "source_library_content_payload", columnDefinition = "jsonb") private JsonNode sourceLibraryContentPayload;
     @Column(name = "source_document_url", columnDefinition = "TEXT") private String sourceDocumentUrl;
     @Column(name = "source_document_name", columnDefinition = "TEXT") private String sourceDocumentName;
     @Column(name = "submitted_at") private Instant submittedAt;
@@ -29,4 +34,5 @@ public class WeeklyTaskEntity {
     @Column(name = "rejection_reason", columnDefinition = "TEXT") private String rejectionReason;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+    @Version private Long version;
 }

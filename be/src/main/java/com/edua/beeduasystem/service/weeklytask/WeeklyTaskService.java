@@ -101,7 +101,7 @@ public class WeeklyTaskService {
         Instant now = Instant.now();
         WeeklyTask saved = repository.save(new WeeklyTask(UUID.randomUUID(), currentUser.requireUserId(), moderatorSubject,
                 teacherId, weekStartDate, scope, deadline, WeeklyTaskReviewStatus.NOT_SUBMITTED,
-                null, null, null, null, null, null, null, now, now));
+                null, null, null, null, null, null, null, null, null, now, now, null));
         notify(teacherId, "Nhiệm vụ tuần mới", "Bạn được giao soạn: " + scope + ". Hạn nộp: " + DEADLINE_FMT.format(deadline) + ".");
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
@@ -145,7 +145,7 @@ public class WeeklyTaskService {
             for (LessonRequest lesson : validated) {
                 created.add(repository.save(new WeeklyTask(UUID.randomUUID(), moderatorId, moderatorSubject,
                         teacher.id(), weekStartDate, lesson.scopeDescription(), lesson.deadline(),
-                        WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, now, now)));
+                        WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null, now, now, null)));
             }
         }
         for (AppUser teacher : teachers) {
@@ -168,10 +168,10 @@ public class WeeklyTaskService {
         }
         WeeklyTask updated = reassigned
                 ? new WeeklyTask(t.id(), t.moderatorId(), t.subject(), teacherId, weekStartDate, scope, deadline,
-                        WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, t.createdAt(), Instant.now())
+                        WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null, t.createdAt(), Instant.now(), t.version())
                 : new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(), weekStartDate, scope, deadline,
-                        t.reviewStatus(), t.sourceLibraryContentId(), t.sourceDocumentUrl(), t.sourceDocumentName(),
-                        t.submittedAt(), t.reviewedBy(), t.reviewedAt(), t.rejectionReason(), t.createdAt(), Instant.now());
+                        t.reviewStatus(), t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(),
+                        t.submittedAt(), t.reviewedBy(), t.reviewedAt(), t.rejectionReason(), t.createdAt(), Instant.now(), t.version());
         WeeklyTask saved = repository.save(updated);
         if (reassigned) {
             notify(t.teacherId(), "Nhiệm vụ tuần đã được chuyển", "Nhiệm vụ \"" + scope + "\" đã được chuyển cho giáo viên khác.");
@@ -195,6 +195,7 @@ public class WeeklyTaskService {
         if (hasLibraryContent == hasDocument) {
             throw new IllegalArgumentException("Phải chọn đúng 1 nguồn: giáo án trong thư viện hoặc tệp tải lên.");
         }
+        LibraryContent source = null;
         if (hasLibraryContent) {
             LibraryContent c = libraryContentRepository.findActiveById(libraryContentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giáo án."));
@@ -204,12 +205,14 @@ public class WeeklyTaskService {
             if (c.type() != LibraryContentType.LESSON_PLAN) {
                 throw new IllegalArgumentException("Chỉ có thể nộp nội dung loại giáo án (LESSON_PLAN).");
             }
+            source = c;
         }
         WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
                 t.weekStartDate(), t.scopeDescription(), t.deadline(), WeeklyTaskReviewStatus.SUBMITTED,
-                hasLibraryContent ? libraryContentId : null, hasDocument ? documentUrl.trim() : null,
+                hasLibraryContent ? libraryContentId : null, source != null ? source.title() : null, source != null ? source.payload().deepCopy() : null, hasDocument ? documentUrl.trim() : null,
                 hasDocument ? (documentName == null ? null : documentName.trim()) : null, Instant.now(),
-                t.reviewedBy(), t.reviewedAt(), t.rejectionReason(), t.createdAt(), Instant.now()));
+                null, null, null, t.createdAt(), Instant.now(), t.version()));
+        notify(t.moderatorId(), "Giáo án chờ duyệt", "Giáo viên đã nộp giáo án cho nhiệm vụ \"" + t.scopeDescription() + "\".");
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
 
@@ -223,8 +226,8 @@ public class WeeklyTaskService {
         }
         WeeklyTaskReviewStatus reverted = t.rejectionReason() != null ? WeeklyTaskReviewStatus.REJECTED : WeeklyTaskReviewStatus.NOT_SUBMITTED;
         WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
-                t.weekStartDate(), t.scopeDescription(), t.deadline(), reverted, null, null, null, null,
-                t.reviewedBy(), t.reviewedAt(), t.rejectionReason(), t.createdAt(), Instant.now()));
+                t.weekStartDate(), t.scopeDescription(), t.deadline(), reverted, null, null, null, null, null, null,
+                t.reviewedBy(), t.reviewedAt(), t.rejectionReason(), t.createdAt(), Instant.now(), t.version()));
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
 
@@ -245,8 +248,8 @@ public class WeeklyTaskService {
         UUID moderatorId = currentUser.requireUserId();
         WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
                 t.weekStartDate(), t.scopeDescription(), t.deadline(), WeeklyTaskReviewStatus.APPROVED,
-                t.sourceLibraryContentId(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
-                moderatorId, Instant.now(), null, t.createdAt(), Instant.now()));
+                t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
+                moderatorId, Instant.now(), null, t.createdAt(), Instant.now(), t.version()));
         notify(t.teacherId(), "Giáo án đã được duyệt", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã được duyệt.");
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
                 ActivityLogAction.APPROVE_WEEKLY_TASK, "WEEKLY_TASK", t.id(), null);
@@ -264,8 +267,8 @@ public class WeeklyTaskService {
         UUID moderatorId = currentUser.requireUserId();
         WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
                 t.weekStartDate(), t.scopeDescription(), t.deadline(), WeeklyTaskReviewStatus.REJECTED,
-                t.sourceLibraryContentId(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
-                moderatorId, Instant.now(), reason, t.createdAt(), Instant.now()));
+                t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
+                moderatorId, Instant.now(), reason, t.createdAt(), Instant.now(), t.version()));
         notify(t.teacherId(), "Giáo án bị từ chối", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã bị từ chối. Lý do: " + reason);
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
                 ActivityLogAction.REJECT_WEEKLY_TASK, "WEEKLY_TASK", t.id(), reason);

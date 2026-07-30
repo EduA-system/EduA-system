@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import com.fasterxml.jackson.databind.JsonNode;
 
 public final class WeeklyTaskViews {
     private WeeklyTaskViews() { }
@@ -18,7 +19,7 @@ public final class WeeklyTaskViews {
 
     public record Detail(UUID id, UUID moderatorId, String moderatorName, Subject subject, UUID teacherId,
                           String teacherName, LocalDate weekStartDate, String scopeDescription, Instant deadline,
-                          WeeklyTaskReviewStatus reviewStatus, UUID sourceLibraryContentId, String sourceDocumentUrl,
+                          WeeklyTaskReviewStatus reviewStatus, UUID sourceLibraryContentId, String sourceLibraryContentTitle, JsonNode sourceLibraryContentPayload, String sourceDocumentUrl,
                           String sourceDocumentName, Instant submittedAt, UUID reviewedBy, String reviewedByName,
                           Instant reviewedAt, String rejectionReason, Instant createdAt, Instant updatedAt) { }
 
@@ -38,7 +39,7 @@ public final class WeeklyTaskViews {
     static Detail toDetail(WeeklyTask t, Map<UUID, String> userNames) {
         return new Detail(t.id(), t.moderatorId(), userNames.get(t.moderatorId()), t.subject(), t.teacherId(),
                 userNames.get(t.teacherId()), t.weekStartDate(), t.scopeDescription(), t.deadline(), t.reviewStatus(),
-                t.sourceLibraryContentId(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
+                t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
                 t.reviewedBy(), t.reviewedBy() != null ? userNames.get(t.reviewedBy()) : null, t.reviewedAt(),
                 t.rejectionReason(), t.createdAt(), t.updatedAt());
     }

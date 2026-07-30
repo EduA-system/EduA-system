@@ -81,8 +81,8 @@ class WeeklyTaskServiceTest {
     private WeeklyTask task(UUID id, WeeklyTaskReviewStatus status, Instant deadline, String rejectionReason) {
         Instant now = Instant.now();
         return new WeeklyTask(id, moderatorId, Subject.MATH, teacherId, LocalDate.now(), "Chuong 3", deadline, status,
-                null, null, null, status == WeeklyTaskReviewStatus.SUBMITTED ? now : null, null, null,
-                rejectionReason, now, now);
+                null, null, null, null, null, status == WeeklyTaskReviewStatus.SUBMITTED ? now : null, null, null,
+                rejectionReason, now, now, 0L);
     }
 
     private void asModerator() {
@@ -109,11 +109,13 @@ class WeeklyTaskServiceTest {
 
         assertThat(result.reviewStatus()).isEqualTo(WeeklyTaskReviewStatus.SUBMITTED);
         assertThat(result.sourceLibraryContentId()).isEqualTo(lessonPlanId);
+        assertThat(result.sourceLibraryContentPayload()).isNotNull();
         assertThat(result.submittedAt()).isNotNull();
+        verify(streamPort).publishNew(org.mockito.ArgumentMatchers.eq(moderatorId), any());
     }
 
     @Test
-    void submit_fromRejected_keepsRejectionReasonUntilNextDecision() {
+    void submit_fromRejected_clearsPreviousDecisionForNewSubmission() {
         asTeacher();
         UUID taskId = UUID.randomUUID();
         UUID lessonPlanId = UUID.randomUUID();
@@ -123,7 +125,7 @@ class WeeklyTaskServiceTest {
         WeeklyTaskViews.Detail result = service.submit(taskId, lessonPlanId, null, null);
 
         assertThat(result.reviewStatus()).isEqualTo(WeeklyTaskReviewStatus.SUBMITTED);
-        assertThat(result.rejectionReason()).isEqualTo("Thieu muc tieu");
+        assertThat(result.rejectionReason()).isNull();
     }
 
     @Test
