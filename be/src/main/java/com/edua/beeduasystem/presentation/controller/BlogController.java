@@ -27,8 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * Blog cộng đồng giáo viên (giai đoạn này: role Teacher). Đọc = mọi user đã đăng nhập;
- * tạo/sửa/xóa bài & bình luận = TEACHER + owner-only (kiểm trong service). Spec: designs/API_designs/blog.md.
+ * Blog cộng đồng giáo viên: chỉ Teacher và Moderator truy cập; các thao tác sở hữu
+ * bài viết/bình luận vẫn được kiểm trong service. Spec: designs/API_designs/blog.md.
  */
 @RestController
 @RequestMapping("/api")
@@ -48,6 +48,7 @@ public class BlogController {
     }
 
     @GetMapping("/blog-posts")
+    @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Danh sách bài blog (PUBLISHED)",
             description = "Lọc tùy chọn: subject, authorId (dùng 'me' để lấy bài của mình), q (từ khóa tiêu đề). "
                     + "Phân trang page/size. Trả bản tóm tắt (không kèm nội dung).")
@@ -61,6 +62,7 @@ public class BlogController {
     }
 
     @GetMapping("/blog-posts/{id}")
+    @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Chi tiết bài blog + bình luận")
     public BlogViews.PostDetail detail(@PathVariable UUID id) {
         return postService.getDetail(id);
@@ -68,14 +70,14 @@ public class BlogController {
 
     @PostMapping("/blog-posts")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Tạo bài blog (publish trực tiếp — BR-20)")
     public BlogViews.PostDetail create(@RequestBody CreateBlogPostRequest request) {
         return postService.create(request.title(), request.content(), request.subject());
     }
 
     @PatchMapping("/blog-posts/{id}")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Sửa bài của mình (owner-only — BR-16)")
     public BlogViews.PostDetail update(@PathVariable UUID id, @RequestBody UpdateBlogPostRequest request) {
         return postService.update(id, request.title(), request.content(), request.subject());
@@ -83,7 +85,7 @@ public class BlogController {
 
     @DeleteMapping("/blog-posts/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Xóa bài của mình (soft-delete — BR-16)")
     public void delete(@PathVariable UUID id) {
         postService.delete(id);
@@ -99,7 +101,7 @@ public class BlogController {
 
     @PostMapping("/blog-posts/{id}/comments")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Bình luận trên một bài (BR-22)")
     public BlogViews.CommentView createComment(@PathVariable UUID id,
                                                @RequestBody CreateBlogCommentRequest request) {
@@ -107,7 +109,7 @@ public class BlogController {
     }
 
     @PatchMapping("/blog-comments/{commentId}")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Sửa bình luận của mình (owner-only — BR-16)")
     public BlogViews.CommentView updateComment(@PathVariable UUID commentId,
                                                @RequestBody UpdateBlogCommentRequest request) {
@@ -116,7 +118,7 @@ public class BlogController {
 
     @DeleteMapping("/blog-comments/{commentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Xóa bình luận của mình (owner-only — BR-16)")
     public void deleteComment(@PathVariable UUID commentId) {
         commentService.delete(commentId);

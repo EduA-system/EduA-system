@@ -20,15 +20,15 @@
 
 | # | Method | Path | UC / Role | Auth |
 |---|--------|------|-----------|------|
-| 1 | GET | `/api/blog-posts` | View Blog (Teacher) / View Blog List (Moderator) | authenticated |
-| 2 | GET | `/api/blog-posts/{id}` | View Blog Post Detail | authenticated |
-| 3 | POST | `/api/blog-posts` | Create Blog Post (Teacher) | TEACHER |
-| 4 | PATCH | `/api/blog-posts/{id}` | Edit Own Blog Post (Teacher, owner) | TEACHER |
-| 5 | DELETE | `/api/blog-posts/{id}` | Delete Own Blog Post (Teacher, owner) | TEACHER |
+| 1 | GET | `/api/blog-posts` | View Blog (Teacher) / View Blog List (Moderator) | TEACHER, MODERATOR |
+| 2 | GET | `/api/blog-posts/{id}` | View Blog Post Detail | TEACHER, MODERATOR |
+| 3 | POST | `/api/blog-posts` | Create Blog Post (owner) | TEACHER, MODERATOR |
+| 4 | PATCH | `/api/blog-posts/{id}` | Edit Own Blog Post (owner) | TEACHER, MODERATOR |
+| 5 | DELETE | `/api/blog-posts/{id}` | Delete Own Blog Post (owner) | TEACHER, MODERATOR |
 | 6 | POST | `/api/blog-posts/{id}/removal` | Remove Blog Post (Moderator) | MODERATOR |
-| 7 | POST | `/api/blog-posts/{id}/comments` | Create Blog Comment (Teacher) | TEACHER |
-| 8 | PATCH | `/api/blog-comments/{commentId}` | Edit Own Blog Comment (owner) | TEACHER |
-| 9 | DELETE | `/api/blog-comments/{commentId}` | Delete Own Blog Comment (owner) | TEACHER |
+| 7 | POST | `/api/blog-posts/{id}/comments` | Create Blog Comment | TEACHER, MODERATOR |
+| 8 | PATCH | `/api/blog-comments/{commentId}` | Edit Own Blog Comment (owner) | TEACHER, MODERATOR |
+| 9 | DELETE | `/api/blog-comments/{commentId}` | Delete Own Blog Comment (owner) | TEACHER, MODERATOR |
 
 Tất cả **đồng bộ**. Mọi request cần `Authorization: Bearer <access>` (JWT filter ở `api-chung.md`).
 

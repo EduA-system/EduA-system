@@ -6,7 +6,7 @@
 |--------|:-------:|:---:|:---------:|:--------:|:------:|
 | Landing / Login / Help | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Lesson/Slide/Test (AI) | ✓ | ✓ | ✓ | ✗ | **✓** |
-| Blog — Xem | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Blog — Xem | ✓ | ✓ | ✗ | ✗ | ✗ |
 | Blog — Duyệt / Quản lý | ✗ | ✓ | ✗ | ✗ | ✗ |
 | Class Management / Class Hub | ✓ | ✗ | ✗ | ✗ | ✗ |
 | Account Management (`/user-management`) | ✗ | ✓ (teachers) | ✓ (mods + IT Staff) | ✗ | ✗ |
@@ -54,7 +54,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   '/slide-create':    { requireAuth: false },
   '/slide-maker':     { requireAuth: false },
   '/create-class':    { requireAuth: true, allowedRoles: ['TEACHER'] },
-  '/blog':            { requireAuth: true },
+  '/blog':            { requireAuth: true, allowedRoles: ['TEACHER', 'MODERATOR'] },
   '/blog/moderation': { requireAuth: true, allowedRoles: ['MODERATOR'] },
   '/user-management': { requireAuth: true, allowedRoles: ['MODERATOR', 'PRINCIPAL'] },
   '/it-staff':        { requireAuth: true, allowedRoles: ['IT_STAFF'] },
@@ -81,4 +81,4 @@ export function canAccessRoute(pathname: string, user?: { role: string } | null)
 ## Step 5 — Backend: Giữ @PreAuthorize hiện tại
 
 - PrincipalController, ModeratorController, ItStaffController, BlogController (write/delete) → đã có, không đổi
-- Các endpoint blog read → yêu cầu auth (không đổi)
+- Toàn bộ endpoint Blog → chỉ `TEACHER` hoặc `MODERATOR`
