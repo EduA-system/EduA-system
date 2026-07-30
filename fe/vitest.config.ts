@@ -12,6 +12,7 @@ export default defineConfig({
       "components/slide-editor/lib/**/*.test.ts",
       "lib/slide-create/**/*.test.ts",
       "lib/api/**/*.test.ts",
+      "lib/practice-exam-math.test.ts",
       "lib/slide-deck-library.test.ts",
       "lib/slide-html-export.test.ts",
       "lib/slide-layout/**/*.test.ts",
