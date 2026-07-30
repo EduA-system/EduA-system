@@ -17,7 +17,7 @@ export type NavGroup = {
 
 export const navGroups: NavGroup[] = [
   {
-    label: "COMMUNITY",
+    label: "Kh\u00f4ng gian chung",
     items: [
       { label: "Community Hub", icon: "community", href: "/community-hub" },
       { label: "Blog", icon: "community", href: "/blog", requiredRole: ["TEACHER", "MODERATOR"] },
@@ -25,7 +25,7 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "CONTENT",
+    label: "N\u1ed9i dung gi\u1ea3ng d\u1ea1y",
     items: [
       { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["TEACHER", "MODERATOR"] },
@@ -37,7 +37,7 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "SIMULATIONS",
+    label: "M\u00f4 ph\u1ecfng & kh\u00e1m ph\u00e1",
     items: [
       { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/homepage", expanded: true },
       { label: "V\u1eadt l\u00fd", icon: "physics", href: "/mo-phong-vat-ly", child: true },
@@ -47,14 +47,14 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "SYSTEM",
+    label: "H\u1ec7 th\u1ed1ng & h\u1ed7 tr\u1ee3",
     items: [
       { label: "C\u00e0i \u0111\u1eb7t", icon: "settings", href: "/homepage" },
       { label: "Tr\u1ee3 gi\u00fap", icon: "help", href: "/help" },
     ],
   },
   {
-    label: "MANAGEMENT",
+    label: "Qu\u1ea3n tr\u1ecb",
     items: [
       { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog/moderation", requiredRole: ["MODERATOR"] },
       { label: "Hub Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/hub-moderation", requiredRole: ["MODERATOR"] },
