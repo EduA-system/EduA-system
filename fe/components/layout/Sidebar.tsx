@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { navGroups } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
@@ -14,6 +15,7 @@ interface SidebarProps {
   onToggleCollapsed?: () => void;
   activeHref?: string;
   fixed?: boolean;
+  /** @deprecated Sidebar is responsive by default; retained for existing callers. */
   responsive?: boolean;
   mobileOpen?: boolean;
 }
@@ -35,21 +37,24 @@ export function Sidebar({
   mobileOpen = false,
 }: SidebarProps) {
   const { user, accessToken, authFetch } = useAuth();
+  const pathname = usePathname();
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const [internalMobileOpen, setInternalMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const isCollapsed = collapsed ?? internalCollapsed;
   const toggleCollapsed = onToggleCollapsed ?? (() => setInternalCollapsed((current) => !current));
+  const usesExternalMobileState = responsive;
+  const isMobileOpen = usesExternalMobileState ? mobileOpen : internalMobileOpen;
+  const closeMobileSidebar = () => {
+    if (!usesExternalMobileState) setInternalMobileOpen(false);
+  };
   const position = fixed
     ? "fixed top-12 left-0 z-40 flex flex-col"
-    : responsive
-      ? "fixed inset-y-0 left-0 z-40 flex h-screen flex-col transition-transform duration-300 md:relative md:inset-auto md:z-auto md:h-full md:translate-x-0"
-      : "flex flex-col";
+    : "fixed inset-y-0 left-0 z-40 flex h-screen flex-col transition-transform duration-300 md:relative md:inset-auto md:z-auto md:h-full md:translate-x-0";
   const visibility = isCollapsed
-    ? "w-[72px] min-w-[72px] border-r border-black/10 px-2 opacity-100"
-    : responsive
-      ? `w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100 ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`
-      : "w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100";
+    ? `w-[72px] min-w-[72px] border-r border-black/10 px-2 opacity-100 ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`
+    : `w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100 ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`;
 
   const displayName = user?.fullName ?? user?.email ?? "Nguyen Thi Hoa";
   const initials = user ? getInitials(displayName) : "NH";
@@ -85,6 +90,8 @@ export function Sidebar({
     };
   }, [authFetch, accessToken, user]);
 
+  if (!user) return null;
+
   const filteredGroups = navGroups
     .map((group) => ({
       ...group,
@@ -95,7 +102,26 @@ export function Sidebar({
     .filter((group) => group.items.length > 0);
 
   return (
-    <aside
+    <>
+      {!usesExternalMobileState && isMobileOpen ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-black/25 md:hidden"
+          aria-label="Đóng menu chức năng"
+          onClick={closeMobileSidebar}
+        />
+      ) : null}
+      {!usesExternalMobileState ? (
+        <button
+          type="button"
+          className="fixed left-4 top-4 z-30 inline-flex size-9 items-center justify-center rounded-lg border border-[#d8d1c9] bg-[#f7f5f2] text-[#1f1f1f] shadow-sm transition hover:bg-[#edeae5] md:hidden"
+          aria-label="Mở menu chức năng"
+          onClick={() => setInternalMobileOpen(true)}
+        >
+          <MenuIcon />
+        </button>
+      ) : null}
+      <aside
       className={`shrink-0 overflow-hidden bg-[#f7f5f2] transition-[width,min-width,opacity,padding,border,transform] duration-300 ${position} ${visibility}`}
       aria-hidden={false}
       style={fixed ? { height: "calc(100% - 48px)" } : undefined}
@@ -128,13 +154,15 @@ export function Sidebar({
               <div className={isCollapsed ? "sr-only" : "px-2 text-[9px] font-semibold uppercase leading-[14px] tracking-[0.11em] text-[#6b6b6b]"}>{group.label}</div>
               <div className="mt-1 space-y-px">
                 {group.items.map((item) => {
-                  const active = activeHref ? item.href === activeHref : item.active;
+                  const currentHref = activeHref ?? pathname;
+                  const active = item.href === currentHref || (item.href !== "/" && currentHref.startsWith(`${item.href}/`));
                   return (
                     <Link
                       key={item.label}
                       title={isCollapsed ? item.label : undefined}
                       className={`relative flex h-9 items-center rounded-[9px] text-[13px] font-medium tracking-[-0.01em] transition hover:bg-[#edeae5] hover:text-[#1f1f1f] ${isCollapsed ? "justify-center px-0" : "gap-2.5 px-3"} ${active ? "bg-[#edeae5] text-[#1f1f1f]" : "text-[#6b6b6b]"} ${!isCollapsed && item.child ? "ml-6 w-[calc(100%-24px)]" : ""}`}
                       href={item.href}
+                      onClick={closeMobileSidebar}
                     >
                       <DashboardIcon name={item.icon} />
                       <span className={isCollapsed ? "sr-only" : "flex-1"}>{item.label}</span>
@@ -168,7 +196,16 @@ export function Sidebar({
           </Link>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
   );
 }
 

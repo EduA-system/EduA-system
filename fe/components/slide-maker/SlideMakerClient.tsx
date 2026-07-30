@@ -25,6 +25,7 @@ import {
   type LibrarySubject,
 } from "@/lib/library";
 import { parseSlideDeck, serializeSlideDeck } from "@/lib/slide-deck-library";
+import { createSlideThumbnail } from "@/lib/library-thumbnail";
 import { saveSlides } from "@/components/slide-editor/lib/storage";
 
 type StepStates = {
@@ -167,9 +168,10 @@ export function SlideMakerClient() {
     setSaving(true);
     setMessage(null);
     const slides = serializeSlideDeck(useEditorStore.getState().slides);
+    const thumbnailUrl = createSlideThumbnail(slides.slides);
     try {
       if (savedLibraryId) {
-        await updateLibraryContent(authFetch, savedLibraryId, { payload: slides });
+        await updateLibraryContent(authFetch, savedLibraryId, { payload: slides, thumbnailUrl: thumbnailUrl ?? undefined });
         setMessage("Đã cập nhật bộ slide trong thư viện cá nhân.");
       } else if (metadata) {
         const created = await createLibraryContent(authFetch, {
@@ -177,6 +179,7 @@ export function SlideMakerClient() {
           title: metadata.title,
           subject: metadata.subject,
           payload: slides,
+          thumbnailUrl: thumbnailUrl ?? undefined,
         });
         loadedLibraryIdRef.current = created.id;
         setLibraryId(created.id);
@@ -271,7 +274,7 @@ export function SlideMakerClient() {
   const runningStep = ([1, 2, 3] as const).find((step) => steps[`step${step}`] === "running");
 
   return (
-    <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] font-sans text-[#2b2926]">
+    <main className="h-screen w-full overflow-hidden bg-white font-sans text-[#2b2926]">
       <div className="flex h-full w-full">
         <Sidebar activeHref="/slide-create" />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -288,7 +291,7 @@ export function SlideMakerClient() {
           ) : null}
           <section className="relative min-h-0 flex-1 overflow-hidden">
             {libraryLoading ? (
-              <div className="grid h-full place-items-center bg-[#f5f1ec] text-sm text-[#6b625a]">Đang mở bộ slide...</div>
+              <div className="grid h-full place-items-center bg-white text-sm text-[#6b625a]">Đang mở bộ slide...</div>
             ) : (
               <SlideEditor
                 skipInitialLoad={generating || Boolean(requestedLibraryId)}

@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { api, SUBJECTS, subjectLabel, uploadFile, type Detail, type SubjectValue } from "@/lib/blog";
+import { api, SUBJECTS, subjectLabel, uploadFile, type AuthFetch, type Detail, type SubjectValue } from "@/lib/blog";
 import { RichEditor } from "./RichEditor";
 
 export function CreatePostModal({
   open,
   onClose,
-  token,
+  authFetch,
   onCreated,
   post,
 }: {
   open: boolean;
   onClose: () => void;
-  token: string;
+  authFetch: AuthFetch;
   onCreated: () => void;
   post?: Detail | null;
 }) {
@@ -61,7 +61,7 @@ export function CreatePostModal({
     if (!file) return;
     setUploadingCover(true);
     try {
-      setCoverImageUrl(await uploadFile(token, file));
+      setCoverImageUrl(await uploadFile(authFetch, file));
     } catch (err) {
       setError(String(err));
     } finally {
@@ -80,7 +80,7 @@ export function CreatePostModal({
       const finalContent = coverImageUrl
         ? `<p><img src="${coverImageUrl}" alt="" /></p>${content}`
         : content;
-      await api<Detail>(post ? `/blog-posts/${post.id}` : "/blog-posts", token, {
+      await api<Detail>(authFetch, post ? `/blog-posts/${post.id}` : "/blog-posts", {
         method: post ? "PATCH" : "POST",
         body: JSON.stringify({ title, content: finalContent, subject }),
       });
@@ -188,7 +188,7 @@ export function CreatePostModal({
           <div className="mt-4">
             <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Nội dung</span>
             <div className="mt-1.5">
-              <RichEditor token={token} initialContent={post?.content ?? ""} onChange={setContent} />
+              <RichEditor authFetch={authFetch} initialContent={post?.content ?? ""} onChange={setContent} />
             </div>
           </div>
 

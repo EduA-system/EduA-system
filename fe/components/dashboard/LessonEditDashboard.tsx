@@ -18,13 +18,14 @@ import {
 import { useAuth } from "@/lib/auth/AuthContext";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
-import { EditorTools } from "../LessonEditor";
+import { ImageEnabledEditorTools } from "../LessonEditor";
 import { LessonEditor, generatingLessonPlanSkeletonHtml, lessonPlan5512ToHtml } from "../LessonEditor";
 import { createEditorExtensions, type MathClickInfo } from "../LessonEditor/editorConfig";
 import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
 import { openLessonPlanPrintDialog } from "@/lib/lesson-plan-pdf-export";
+import { createLessonThumbnail } from "@/lib/library-thumbnail";
 
 export function LessonEditDashboard() {
   const { authFetch } = useAuth();
@@ -145,16 +146,18 @@ export function LessonEditDashboard() {
             }
           : undefined,
       };
+      const thumbnailUrl = createLessonThumbnail(title, subject, payload.document);
 
       try {
         if (libraryContentIdRef.current) {
-          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, payload });
+          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, payload, thumbnailUrl });
         } else {
           const created = await createLibraryContent(authFetch, {
             type: "LESSON_PLAN",
             title,
             subject,
             payload,
+            thumbnailUrl,
           });
           libraryContentIdRef.current = created.id;
           librarySubjectRef.current = created.subject ?? undefined;
@@ -218,7 +221,7 @@ export function LessonEditDashboard() {
             <div className="overflow-x-auto border-t border-[#efe8df] px-3 py-1.5">
               <div className="flex w-full justify-center">
                 <div className="inline-flex max-w-full rounded-lg border border-[#e8e2d9] bg-white px-2 py-1 shadow-sm">
-                  <EditorTools editor={editor} />
+                  <ImageEnabledEditorTools editor={editor} authFetch={authFetch} />
                 </div>
               </div>
             </div>

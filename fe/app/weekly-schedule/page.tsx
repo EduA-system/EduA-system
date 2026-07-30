@@ -134,7 +134,7 @@ function LessonGroupCard({
 }
 
 function WeeklyScheduleScreen() {
-  const { user, accessToken, authFetch } = useAuth();
+  const { user, authFetch } = useAuth();
   const isModerator = hasAnyRole(user, ["MODERATOR"]);
 
   const [schedule, setSchedule] = useState<WeeklyTaskSchedule>({ weeks: [] });
@@ -277,8 +277,8 @@ function WeeklyScheduleScreen() {
         if (!selectedLessonPlanId) return;
         await submitWeeklyTask(authFetch, taskId, { libraryContentId: selectedLessonPlanId });
       } else {
-        if (!uploadFileObj || !accessToken) return;
-        const url = await uploadFile(accessToken, uploadFileObj);
+        if (!uploadFileObj) return;
+        const url = await uploadFile(authFetch, uploadFileObj);
         await submitWeeklyTask(authFetch, taskId, { documentUrl: url, documentName: uploadFileObj.name });
       }
       setMsg("Đã nộp giáo án.");
@@ -303,7 +303,7 @@ function WeeklyScheduleScreen() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f1ec] text-[#2b2926]">
+    <main className="min-h-screen bg-white text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/weekly-schedule" />
         <section className="min-w-0 flex-1 p-5 sm:p-8">

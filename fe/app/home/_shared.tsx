@@ -1,26 +1,7 @@
-import { Anton, Poltawski_Nowy, Roboto, Rubik } from "next/font/google";
 import type { CSSProperties } from "react";
 
-export const rubik = Rubik({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-});
-
-export const serif = Poltawski_Nowy({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
-});
-
-export const anton = Anton({
-  subsets: ["latin"],
-  weight: "400",
-});
-
-export const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-});
+export const rubik = { className: "font-sans" };
+export const serif = { className: "font-sans" };
 
 export const FRAME_WIDTH = 1280;
 export const HEADER_HEIGHT = 68; // y of the header divider in the Figma hero frame

@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 
 const WORDS = [
-  { subject: "Science",   color: "#E07840" },
-  { subject: "Math",      color: "#52A878" },
-  { subject: "Chemistry", color: "#4A8EC2" },
+  { subject: "Khoa học tự nhiên", color: "#E07840" },
+  { subject: "Toán học", color: "#52A878" },
+  { subject: "Hóa học", color: "#4A8EC2" },
 ] as const;
 
 const FS  = 56; // font-size / line-height of the text
@@ -31,10 +31,10 @@ export function TitleTicker({
     const el = measureRef.current;
     if (!el) return;
     const measured = WORDS.map(({ subject }) => {
-      el.textContent = `${subject} Teachers`;
+      el.textContent = subject;
       return Math.ceil(el.getBoundingClientRect().width) + 2;
     });
-    el.textContent = `${WORDS[0].subject} Teachers`;
+    el.textContent = WORDS[0].subject;
     setWidths(measured);
     setSlotW(measured[0]);
   }, []);
@@ -72,7 +72,7 @@ export function TitleTicker({
         className={serifClass}
         style={{ fontSize: FS, lineHeight: `${FS}px`, whiteSpace: "nowrap", color: inkColor }}
       >
-        for High School&nbsp;
+        Giáo viên&nbsp;
       </span>
 
       {/* Hidden measuring span */}
@@ -126,12 +126,6 @@ export function TitleTicker({
                 style={{ fontSize: FS, lineHeight: `${FS}px`, color: WORDS[wi].color }}
               >
                 {WORDS[wi].subject}
-              </span>
-              <span
-                className={serifClass}
-                style={{ fontSize: FS, lineHeight: `${FS}px`, color: inkColor }}
-              >
-                &nbsp;Teachers
               </span>
             </span>
           ))}

@@ -20,7 +20,7 @@ export const navGroups: NavGroup[] = [
     label: "COMMUNITY",
     items: [
       { label: "Community Hub", icon: "community", href: "/community-hub" },
-      { label: "Blog", icon: "community", href: "/blog" },
+      { label: "Blog", icon: "community", href: "/blog", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "Thông báo", icon: "notification", href: "/notifications" },
     ],
   },

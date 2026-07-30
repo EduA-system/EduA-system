@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createLibraryContent, getLibraryContent, updateLibraryContent, type LibrarySubject } from "@/lib/library";
 import {
-  EditorTools,
+  ImageEnabledEditorTools,
   MathEditPopup,
   Ruler,
   createEditorExtensions,
@@ -303,7 +303,7 @@ export function PracticeExamEditDashboard() {
   }
 
   return (
-    <main className="relative h-screen overflow-hidden bg-[#f7f5f2] text-[#2b2926]">
+    <main className="relative h-screen overflow-hidden bg-white text-[#2b2926]">
       <div className="flex h-full">
         <Sidebar collapsed={sidebarCollapsed} activeHref="/exam-create-new" />
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -332,7 +332,7 @@ export function PracticeExamEditDashboard() {
                 {saving ? "Đang lưu..." : "Lưu"}
               </button>
               <div className="flex min-w-0 flex-1 justify-center overflow-x-auto">
-                <EditorTools editor={editor} />
+                <ImageEnabledEditorTools editor={editor} authFetch={authFetch} />
               </div>
               <button
                 type="button"

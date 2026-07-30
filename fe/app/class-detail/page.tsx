@@ -7,7 +7,7 @@ export default function ClassDetailRoutePage() {
     <RouteGuard pathname="/class-detail">
       <Suspense
         fallback={
-          <main className="flex min-h-screen items-center justify-center bg-[#f5f1ec] text-sm text-[#6b6b6b]">
+          <main className="flex min-h-screen items-center justify-center bg-white text-sm text-[#6b6b6b]">
             Đang tải...
           </main>
         }

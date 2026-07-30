@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { hasAnyRole } from "@/lib/auth/permissions";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type Summary = {
@@ -117,8 +118,10 @@ export default function BlogModerationPage() {
 
   return (
     <RouteGuard pathname="/blog/moderation" denyHref="/blog" denyLabel="Về trang Blog">
-    {user && (
-    <div className="mx-auto max-w-3xl p-6">
+      <div className="flex min-h-screen">
+        <Sidebar activeHref="/blog/moderation" />
+        {user && (
+    <div className="min-w-0 flex-1 p-6"><div className="mx-auto max-w-3xl">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Kiểm duyệt Blog - môn {user.subject}</h1>
         <span className="text-sm text-gray-600">
@@ -178,8 +181,9 @@ export default function BlogModerationPage() {
           </ul>
         </section>
       )}
-    </div>
-    )}
+    </div></div>
+        )}
+      </div>
     </RouteGuard>
   );
 }

@@ -78,7 +78,7 @@ export default function PeriodicTablePage() {
   const activeFilters = hasFilters(filters);
 
   return (
-    <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec] text-[#1f1f1f]">
+    <main className="flex h-screen w-full overflow-hidden bg-white text-[#1f1f1f]">
       <Sidebar activeHref="/periodic-table" responsive mobileOpen={mobileSidebarOpen} />
 
       {mobileSidebarOpen && (
@@ -90,7 +90,7 @@ export default function PeriodicTablePage() {
         />
       )}
 
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#f5f1ec]">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
         <div className="pt-fade-up flex min-h-0 flex-1 overflow-hidden px-3 py-4 sm:px-5" style={{ animationDelay: '60ms' }}>
           <PeriodicTable
             visibleSet={visibleSet}
