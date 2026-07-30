@@ -4,21 +4,28 @@ import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { Loader2 } from "lucide-react";
 import { EditorTools, createEditorExtensions } from "@/components/LessonEditor";
-import { uploadFile } from "@/lib/blog";
+import { uploadFile, type AuthFetch } from "@/lib/blog";
 
 // ---- editor dùng đúng cấu hình VÀ toolbar của LessonEditor (TipTap) ----
 export function RichEditor({
   onChange,
-  token,
+  authFetch,
   initialContent = "",
   heightClassName = "min-h-[185px]",
+  editorClassName = "",
+  onUploadError,
+  stickyToolbar = false,
 }: {
   onChange: (html: string) => void;
-  token: string;
+  authFetch: AuthFetch;
   initialContent?: string;
   /** Tailwind height utility cho khung soạn thảo. Mặc định tự cao dần theo nội dung
    * (blog); truyền `"h-[280px] overflow-y-auto"` để có khung cao cố định + cuộn. */
   heightClassName?: string;
+  /** Class bổ sung cho vùng nội dung, dùng khi cần bố cục dạng tài liệu dài. */
+  editorClassName?: string;
+  onUploadError?: (message: string) => void;
+  stickyToolbar?: boolean;
 }) {
   const editor = useEditor({
     extensions: createEditorExtensions(),
@@ -33,6 +40,20 @@ export function RichEditor({
     editorProps: {
       attributes: {
         class: "lesson-document-editor outline-none",
+      },
+      handlePaste: (_view, event) => {
+        const imageFile = Array.from(event.clipboardData?.files ?? []).find((file) => file.type.startsWith("image/"));
+        if (!imageFile) return false;
+
+        void (async () => {
+          try {
+            const url = await uploadFile(authFetch, imageFile);
+            editor?.chain().focus().setImage({ src: url }).run();
+          } catch (err) {
+            onUploadError?.(String(err));
+          }
+        })();
+        return true;
       },
     },
   });
@@ -51,10 +72,10 @@ export function RichEditor({
     if (!file) return;
     setUploading(true);
     try {
-      const url = await uploadFile(token, file);
+      const url = await uploadFile(authFetch, file);
       editor?.chain().focus().setImage({ src: url }).run();
     } catch (err) {
-      alert(String(err));
+      onUploadError?.(String(err));
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -63,14 +84,19 @@ export function RichEditor({
 
   return (
     <div>
-      <div className="mb-1.5 flex flex-wrap items-center gap-2 overflow-x-auto">
-        <div className="inline-flex max-w-full rounded-lg border border-[#e8e2d9] bg-white px-2 py-1 shadow-sm">
-          <EditorTools editor={editor} />
+      <div className={`${stickyToolbar ? "sticky top-3 z-30 rounded-xl bg-[#f3efe9] p-2 shadow-[0_8px_24px_rgba(43,41,38,0.12)]" : "relative z-20"} mb-1.5 flex flex-wrap items-center gap-2 overflow-visible`}>
+        <div className="flex w-full rounded-lg border border-[#e8e2d9] bg-white px-2 py-1 shadow-sm">
+          <EditorTools
+            editor={editor}
+            showImageUrlTool={false}
+            onImageUpload={() => fileRef.current?.click()}
+            imageUploadDisabled={uploading}
+          />
         </div>
         <button
           onClick={() => fileRef.current?.click()}
           title="Tải ảnh từ máy lên và chèn vào bài"
-          className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-[#e8e2d9] bg-white px-2.5 text-[12px] font-medium text-[#4f4943] transition hover:bg-[#f3efe9] disabled:cursor-not-allowed disabled:opacity-50"
+          className="hidden"
           type="button"
           disabled={uploading}
         >
@@ -86,7 +112,7 @@ export function RichEditor({
       </div>
       <EditorContent
         editor={editor}
-        className={`tiptap ${heightClassName} rounded-[14px] border-[0.8px] border-[#eae2ce] bg-[#f7f7f5] p-[16.8px] text-[14px]`}
+        className={`tiptap ${heightClassName} rounded-[14px] border-[0.8px] border-[#eae2ce] bg-[#f7f7f5] p-[16.8px] text-[14px] ${editorClassName}`}
       />
     </div>
   );
