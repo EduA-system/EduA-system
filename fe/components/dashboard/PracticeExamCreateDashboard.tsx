@@ -38,6 +38,12 @@ const TIMES: Record<TypeKey, number[]> = {
   SHORT_ANSWER: [1.5, 2.5, 4],
   ESSAY: [4, 6, 9],
 };
+const BATCH_SIZES: Record<TypeKey, number> = {
+  MULTIPLE_CHOICE: 5,
+  TRUE_FALSE: 2,
+  SHORT_ANSWER: 3,
+  ESSAY: 1,
+};
 
 export function PracticeExamCreateDashboard() {
   const router = useRouter();
@@ -71,6 +77,15 @@ export function PracticeExamCreateDashboard() {
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [generationMessage, setGenerationMessage] = useState("");
+  const durationMinutes = Number(duration);
+  const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+  const totalQuestions = Object.values(counts).reduce((a, b) => a + b, 0);
+  const estimatedBatchCount = TYPES.reduce(
+    (sum, type) => sum + Math.ceil(counts[type] / BATCH_SIZES[type]),
+    0,
+  );
   useEffect(() => {
     void fetchTextbookNames(subject)
       .then(setBooks)
@@ -93,9 +108,27 @@ export function PracticeExamCreateDashboard() {
       .then((items) => setLessonsByChapter(Object.fromEntries(items)))
       .catch(() => setError("Không tải được bài học."));
   }, [bookCode, selectedChapters]);
-  const durationMinutes = Number(duration);
-  const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
-  const totalQuestions = Object.values(counts).reduce((a, b) => a + b, 0);
+  useEffect(() => {
+    if (!loading) return;
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const elapsed = Date.now() - started;
+      if (elapsed < 8_000) {
+        setGenerationProgress(22);
+        setGenerationMessage("Đang gửi cấu hình đề tới AI...");
+      } else if (elapsed < 45_000) {
+        setGenerationProgress(Math.min(68, 30 + Math.floor(elapsed / 2_000)));
+        setGenerationMessage(`AI đang tạo khoảng ${estimatedBatchCount} nhóm câu của đề...`);
+      } else if (elapsed < 90_000) {
+        setGenerationProgress(Math.min(86, 62 + Math.floor(elapsed / 4_000)));
+        setGenerationMessage("Đang chờ các nhóm câu dài hoàn thành...");
+      } else {
+        setGenerationProgress(92);
+        setGenerationMessage("Đang kiểm tra đáp án và thang điểm...");
+      }
+    }, 1_200);
+    return () => window.clearInterval(timer);
+  }, [loading, estimatedBatchCount]);
   const index = difficulty === "EASY" ? 0 : difficulty === "HARD" ? 2 : 1;
   const estimated = TYPES.reduce(
     (sum, type) => sum + counts[type] * TIMES[type][index],
@@ -153,6 +186,8 @@ export function PracticeExamCreateDashboard() {
   }
   async function generate() {
     if (!canGenerate || !bookCode) return;
+    setGenerationProgress(8);
+    setGenerationMessage("Đang chuẩn bị dữ liệu SGK...");
     setLoading(true);
     setError(null);
     try {
@@ -180,7 +215,11 @@ export function PracticeExamCreateDashboard() {
         },
       };
       sessionStorage.setItem("edua-practice-exam-draft", JSON.stringify({ subject, grade: String(grade), duration: durationMinutes, difficulty }));
+      setGenerationProgress(12);
+      setGenerationMessage(`AI đang tạo khoảng ${estimatedBatchCount} nhóm câu...`);
       storePracticeExam(await generatePracticeExam(request, authFetch));
+      setGenerationProgress(100);
+      setGenerationMessage("Đang mở trình chỉnh sửa đề...");
       router.push("/exam-edit-new");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tạo đề.");
@@ -199,7 +238,7 @@ export function PracticeExamCreateDashboard() {
             </p>
             <h1 className="font-libertine mt-3 text-5xl">Tạo đề kiểm tra</h1>
             <p className="mt-3 text-sm text-[#70675f]">
-              Đề tạo tạm thời, không lưu database và không yêu cầu đăng nhập.
+              Đề tạo tạm thời, không lưu database. Tài khoản Teacher hoặc Moderator có thể tạo đề.
             </p>
             {error && (
               <p
@@ -215,6 +254,7 @@ export function PracticeExamCreateDashboard() {
                   <div className="grid gap-3 sm:grid-cols-3">
                     <Select
                       value={subject}
+                      disabled={loading}
                       onChange={(value) => {
                         setSubject(value as PracticeExamRequest["subject"]);
                         selectBook("");
@@ -227,6 +267,7 @@ export function PracticeExamCreateDashboard() {
                     />
                     <Select
                       value={String(grade)}
+                      disabled={loading}
                       onChange={(value) => {
                         setGrade(Number(value));
                         selectBook("");
@@ -244,6 +285,7 @@ export function PracticeExamCreateDashboard() {
                         min="1"
                         max="90"
                         value={duration}
+                        disabled={loading}
                         onChange={(event) => setDuration(event.target.value)}
                         className="mt-2 h-10 w-full rounded-lg border border-[#ddd5cc] px-3"
                       />
@@ -253,8 +295,9 @@ export function PracticeExamCreateDashboard() {
                     {(["EASY", "MEDIUM", "HARD"] as const).map((item) => (
                       <button
                         key={item}
+                        disabled={loading}
                         onClick={() => setDifficulty(item)}
-                        className={`rounded-lg border px-3 py-2 text-xs font-semibold ${difficulty === item ? "border-[#d97757] bg-[#fff0e9]" : "border-[#ddd5cc] bg-white"}`}
+                        className={`rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${difficulty === item ? "border-[#d97757] bg-[#fff0e9]" : "border-[#ddd5cc] bg-white"}`}
                       >
                         {item === "EASY"
                           ? "Dễ"
@@ -270,6 +313,7 @@ export function PracticeExamCreateDashboard() {
                     <Select
                       value={bookCode}
                       placeholder="Chọn sách"
+                      disabled={loading}
                       onChange={selectBook}
                       options={books
                         .filter((book) => book.grade === grade)
@@ -280,7 +324,7 @@ export function PracticeExamCreateDashboard() {
                       <div className="mt-2 max-h-36 overflow-y-auto rounded-lg border border-[#ddd5cc] bg-white p-2 text-sm">
                         {chapters.length ? chapters.map((chapter) => (
                           <label key={chapter.id} className="flex cursor-pointer items-center gap-2 border-b border-[#eee7df] py-2 last:border-0">
-                            <input type="checkbox" checked={selectedChapters.includes(chapter.id)} onChange={() => toggleChapter(chapter.id)} />
+                            <input type="checkbox" disabled={loading} checked={selectedChapters.includes(chapter.id)} onChange={() => toggleChapter(chapter.id)} />
                             {chapter.name}
                           </label>
                         )) : <p className="p-2 text-xs text-[#81776e]">Chọn sách để xem các chương.</p>}
@@ -316,6 +360,7 @@ export function PracticeExamCreateDashboard() {
                                   checked={selectedLessons.includes(
                                     `${chapterCode}:${lesson.id}`,
                                   )}
+                                  disabled={loading}
                                   onChange={() =>
                                     toggleLesson(chapterCode, lesson.id)
                                   }
@@ -340,6 +385,7 @@ export function PracticeExamCreateDashboard() {
                               type="number"
                               min="0"
                               value={counts[type]}
+                              disabled={loading}
                               onChange={(event) =>
                                 setCounts((current) => ({
                                   ...current,
@@ -359,6 +405,7 @@ export function PracticeExamCreateDashboard() {
                               max="10"
                               step="0.25"
                               value={scores[type] / 100}
+                              disabled={loading}
                               onChange={(event) =>
                                 setScores((current) => ({
                                   ...current,
@@ -420,6 +467,7 @@ export function PracticeExamCreateDashboard() {
                     <input
                       type="checkbox"
                       checked={confirmed}
+                      disabled={loading}
                       onChange={(event) => setConfirmed(event.target.checked)}
                     />
                     Tôi xác nhận tiếp tục.
@@ -440,6 +488,22 @@ export function PracticeExamCreateDashboard() {
                     {currentBook ? `✓ ${currentBook.name}` : "! Chưa chọn sách"}
                   </li>
                 </ul>
+                {loading && (
+                  <div className="mt-5 rounded-lg border border-[#ead8b2] bg-[#fffaf0] p-3">
+                    <div className="h-2 overflow-hidden rounded-full bg-[#f0e0cf]">
+                      <div
+                        className="h-full rounded-full bg-[#d97757] transition-[width] duration-700"
+                        style={{ width: `${generationProgress}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs font-medium text-[#805f20]">
+                      {generationMessage || "AI đang tạo đề..."}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-4 text-[#8b8178]">
+                      Biểu mẫu đã được khóa cho đến khi đề tạo xong.
+                    </p>
+                  </div>
+                )}
                 <button
                   disabled={!canGenerate || loading}
                   onClick={() => void generate()}
@@ -474,17 +538,20 @@ function Select({
   options,
   onChange,
   placeholder,
+  disabled,
 }: {
   value: string;
   options: string[][];
   onChange: (value: string) => void;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   return (
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-10 w-full rounded-lg border border-[#ddd5cc] bg-white px-3 text-sm"
+      disabled={disabled}
+      className="h-10 w-full rounded-lg border border-[#ddd5cc] bg-white px-3 text-sm disabled:cursor-not-allowed disabled:bg-[#eee9e3] disabled:text-[#9b9288]"
     >
       <option value="">{placeholder ?? "Chọn"}</option>
       {options.map(([value, label]) => (
