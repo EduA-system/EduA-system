@@ -112,7 +112,7 @@ BUILD SUCCESS
 | No | Sheet/Tab | Sheet Code | Code Test Class | Excel Status | Code Status | Round 1 |
 | ---: | --- | --- | --- | --- | --- | --- |
 | 1 | Authentication & Profile | AP | `AuthenticationProfileIntegrationTests` | Pending | Pending | Pending |
-| 2 | Role-Based Access Control | RBAC | `RoleBasedAccessControlIntegrationTests` | Pending | Pending | Pending |
+| 2 | Role-Based Access Control | RBAC | `RoleBasedAccessControlIntegrationTests` | Done | Done | Passed 10/10 |
 | 3 | User Management CRUD | UM | `UserManagementIntegrationTests` | Done | Done | Passed 18/18 |
 | 4 | Personal Library CRUD | PL | `PersonalLibraryIntegrationTests` | Pending | Pending | Pending |
 | 5 | Community Hub Content | HC | `CommunityHubContentIntegrationTests` | Pending | Pending | Pending |
@@ -152,6 +152,34 @@ Test cases:
 Suggested sheet name: `Role-Based Access Control`
 
 Suggested test class: `RoleBasedAccessControlIntegrationTests`
+
+Status: Done.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\RoleBasedAccessControlIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 10 test cases.
+- `Passed`.
+- Test date: `2026-07-30`.
+- Tester: `HiệpVT`.
+
+Test cases implemented:
+
+| ID | Function | Role | API |
+| --- | --- | --- | --- |
+| IT-RBAC-001 | Teacher accesses Library APIs | Teacher | `GET /api/library/contents` |
+| IT-RBAC-002 | Teacher accesses Classroom APIs | Teacher | `GET /api/classes` |
+| IT-RBAC-003 | Teacher accesses Weekly Schedule APIs | Teacher | `GET /api/weekly-tasks` |
+| IT-RBAC-004 | Moderator accesses Hub Moderation APIs | Moderator | `GET /api/library/contents/moderation-queue` |
+| IT-RBAC-005 | Moderator accesses Lesson Approval APIs | Moderator | `GET /api/weekly-tasks/moderation-queue` |
+| IT-RBAC-006 | Moderator accesses Teacher Management APIs | Moderator | `GET /api/moderator/teachers` |
+| IT-RBAC-007 | Principal accesses Principal APIs | Principal | `GET /api/principal/moderators`, `GET /api/principal/it-staff` |
+| IT-RBAC-008 | IT Staff accesses Activity Log APIs | IT Staff | `GET /api/it-staff/activity-log` |
+| IT-RBAC-009 | Wrong-role users are denied | Teacher/Student/Moderator/Principal/IT Staff | protected APIs |
+| IT-RBAC-010 | Guest users are denied protected APIs but can read public Hub | Guest | protected APIs, `GET /api/hub/contents` |
 
 Test cases:
 
