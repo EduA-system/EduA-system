@@ -42,6 +42,7 @@ export function Sidebar({
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const [internalMobileOpen, setInternalMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [expandedGroupLabel, setExpandedGroupLabel] = useState<string | null | undefined>(undefined);
   const isCollapsed = collapsed ?? internalCollapsed;
   const toggleCollapsed = onToggleCollapsed ?? (() => setInternalCollapsed((current) => !current));
   const usesExternalMobileState = responsive;
@@ -51,7 +52,7 @@ export function Sidebar({
   };
   const position = fixed
     ? "fixed top-12 left-0 z-40 flex flex-col"
-    : "fixed inset-y-0 left-0 z-40 flex h-screen flex-col transition-transform duration-300 md:relative md:inset-auto md:z-auto md:h-full md:translate-x-0";
+    : "fixed inset-y-0 left-0 z-40 flex h-screen flex-col transition-transform duration-300 md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0";
   const visibility = isCollapsed
     ? `w-[72px] min-w-[72px] border-r border-black/10 px-2 opacity-100 ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`
     : `w-[280px] min-w-[280px] border-r border-black/10 px-3 opacity-100 ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`;
@@ -100,6 +101,11 @@ export function Sidebar({
       ),
     }))
     .filter((group) => group.items.length > 0);
+  const currentHref = activeHref ?? pathname;
+  const activeGroupLabel = filteredGroups.find((group) =>
+    group.items.some((item) => item.href === currentHref || (item.href !== "/" && currentHref.startsWith(`${item.href}/`))),
+  )?.label;
+
 
   return (
     <>
@@ -148,13 +154,25 @@ export function Sidebar({
           </button>
         </div>
 
-        <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
-          {filteredGroups.map((group) => (
+        <nav className="scrollbar-none min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
+          {filteredGroups.map((group) => {
+            const selectedGroupLabel = expandedGroupLabel === undefined ? activeGroupLabel : expandedGroupLabel;
+            const isGroupExpanded = isCollapsed || selectedGroupLabel === group.label;
+            return (
             <div key={group.label} className="pb-2">
-              <div className={isCollapsed ? "sr-only" : "px-2 text-[9px] font-semibold uppercase leading-[14px] tracking-[0.11em] text-[#6b6b6b]"}>{group.label}</div>
-              <div className="mt-1 space-y-px">
+              {!isCollapsed ? (
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[9px] font-semibold uppercase leading-[14px] tracking-[0.11em] text-[#6b6b6b] transition hover:bg-[#edeae5] hover:text-[#1f1f1f]"
+                  aria-expanded={isGroupExpanded}
+                  onClick={() => setExpandedGroupLabel(isGroupExpanded ? null : group.label)}
+                >
+                  <span>{group.label}</span>
+                  <DashboardIcon name={isGroupExpanded ? "chevronUp" : "chevronDown"} className="size-3" />
+                </button>
+              ) : null}
+              {isGroupExpanded ? <div className="mt-1 space-y-px">
                 {group.items.map((item) => {
-                  const currentHref = activeHref ?? pathname;
                   const active = item.href === currentHref || (item.href !== "/" && currentHref.startsWith(`${item.href}/`));
                   return (
                     <Link
@@ -162,7 +180,10 @@ export function Sidebar({
                       title={isCollapsed ? item.label : undefined}
                       className={`relative flex h-9 items-center rounded-[9px] text-[13px] font-medium tracking-[-0.01em] transition hover:bg-[#edeae5] hover:text-[#1f1f1f] ${isCollapsed ? "justify-center px-0" : "gap-2.5 px-3"} ${active ? "bg-[#edeae5] text-[#1f1f1f]" : "text-[#6b6b6b]"} ${!isCollapsed && item.child ? "ml-6 w-[calc(100%-24px)]" : ""}`}
                       href={item.href}
-                      onClick={closeMobileSidebar}
+                      onClick={() => {
+                        setExpandedGroupLabel(group.label);
+                        closeMobileSidebar();
+                      }}
                     >
                       <DashboardIcon name={item.icon} />
                       <span className={isCollapsed ? "sr-only" : "flex-1"}>{item.label}</span>
@@ -175,9 +196,9 @@ export function Sidebar({
                     </Link>
                   );
                 })}
-              </div>
+              </div> : null}
             </div>
-          ))}
+          )})}
         </nav>
 
         <div className="mt-auto shrink-0 border-t border-[#d8d1c9] py-3">

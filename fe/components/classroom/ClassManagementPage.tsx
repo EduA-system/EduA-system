@@ -1,9 +1,10 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Archive,
+  ArrowUpRight,
   BookOpen,
   CheckCircle2,
   Loader2,
@@ -45,26 +46,10 @@ const emptyForm = (subject: ClassSubject): FormState => ({
   description: "",
 });
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 function statusClasses(status: ClassStatus): string {
   return status === "ACTIVE"
     ? "border-[#b7e0c4] bg-[#f0faf3] text-[#287447]"
     : "border-[#e6d8cb] bg-[#f8f2ec] text-[#8a5a35]";
-}
-
-function subjectClasses(subject: ClassSubject): string {
-  if (subject === "MATH") return "border-[#b7e0c4] bg-[#f0faf3] text-[#287447]";
-  if (subject === "PHYSICS") return "border-[#c9d5ff] bg-[#f1f4ff] text-[#3f54a3]";
-  return "border-[#f0d9aa] bg-[#fff7df] text-[#9a661c]";
 }
 
 function ClassCard({
@@ -79,44 +64,66 @@ function ClassCard({
   statusBusy: boolean;
 }) {
   const nextStatus = item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+  const bannerClasses = item.subject === "MATH"
+    ? "from-[#315b4a] via-[#4b8065] to-[#93bd8a]"
+    : item.subject === "PHYSICS"
+      ? "from-[#293d77] via-[#536bac] to-[#9eb6e8]"
+      : "from-[#87552d] via-[#c78743] to-[#efd28d]";
 
   return (
-    <article className="rounded-[14px] border border-[#d8d1c9] bg-white p-4 transition hover:border-[#c9a998]">
-      <div className="flex items-start justify-between gap-4">
-        <button type="button" onClick={() => onOpen(item.id)} className="min-w-0 flex-1 text-left">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${subjectClasses(item.subject)}`}>
-              {subjectLabel(item.subject)}
+    <article className="group min-h-[250px] overflow-hidden rounded-2xl border border-[#ded8d0] bg-white shadow-[0_2px_5px_rgba(56,40,28,0.05)] transition duration-200 hover:-translate-y-1 hover:border-[#c9a998] hover:shadow-[0_14px_30px_rgba(80,58,43,0.14)]">
+      <div className={`flex h-[112px] flex-col justify-between bg-gradient-to-br p-4 text-white ${bannerClasses}`}>
+        <div className="flex items-start justify-between gap-3">
+          <span className="rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
+            {subjectLabel(item.subject)}
+          </span>
+          <button
+            type="button"
+            title={nextStatus === "INACTIVE" ? "Lưu trữ lớp" : "Kích hoạt lại lớp"}
+            disabled={statusBusy}
+            onClick={() => onToggleStatus(item)}
+            className="group/tooltip relative flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-black/10 text-white transition hover:bg-black/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {statusBusy ? <Loader2 className="size-4 animate-spin" /> : nextStatus === "INACTIVE" ? <Archive className="size-4" /> : <RefreshCw className="size-4" />}
+            <span role="tooltip" className="pointer-events-none absolute right-0 top-10 z-20 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">
+              {nextStatus === "INACTIVE" ? "Lưu trữ lớp" : "Kích hoạt lại lớp"}
             </span>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClasses(item.status)}`}>
-              {statusLabel(item.status)}
-            </span>
-          </div>
-          <h3 className="mt-3 truncate text-[15px] font-semibold text-[#1f1f1f]">{item.name}</h3>
-          <p className="mt-1 text-[12px] text-[#6b6b6b]">Khối {item.grade} · cập nhật {formatDateTime(item.updatedAt)}</p>
-        </button>
-        <button
-          type="button"
-          title={nextStatus === "INACTIVE" ? "Lưu trữ lớp" : "Kích hoạt lại lớp"}
-          disabled={statusBusy}
-          onClick={() => onToggleStatus(item)}
-          className="flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-[#d8d1c9] text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {statusBusy ? <Loader2 className="size-4 animate-spin" /> : nextStatus === "INACTIVE" ? <Archive className="size-4" /> : <RefreshCw className="size-4" />}
+          </button>
+        </div>
+        <button type="button" onClick={() => onOpen(item.id)} className="min-w-0 text-left">
+          <h3 className="truncate text-[18px] font-semibold tracking-[-0.01em]">{item.name}</h3>
         </button>
       </div>
-      <div className="mt-4 flex items-center gap-3 border-t border-[#ede8e1] pt-3 text-[12px] text-[#6b6b6b]">
-        <Users className="size-3.5" />
-        <span>{item.memberCount} thành viên</span>
+      <div className="flex min-h-[138px] flex-col p-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClasses(item.status)}`}>
+            {statusLabel(item.status)}
+          </span>
+          <span className="text-[12px] text-[#7a736b]">Khối {item.grade}</span>
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#ede8e1] pt-3">
+          <div className="flex items-center gap-1.5 text-[12px] text-[#6b6b6b]">
+            <Users className="size-3.5" />
+            <span>{item.memberCount} thành viên</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpen(item.id)}
+            className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#9a5a3b] transition group-hover:text-[#6e3c26]"
+          >
+            Mở lớp <ArrowUpRight className="size-3.5" />
+          </button>
+        </div>
       </div>
     </article>
   );
 }
 
-export function ClassManagementPage() {
+export function ClassManagementPage({ view = "create" }: { view?: "create" | "list" }) {
   const { user, status, authFetch } = useAuth();
   const router = useRouter();
   const defaultSubject = isClassSubject(user?.subject) ? user.subject : "CHEMISTRY";
+  const createFormRef = useRef<HTMLFormElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [items, setItems] = useState<ClassSummary[]>([]);
   const [createForm, setCreateForm] = useState<FormState>(() => emptyForm(defaultSubject));
@@ -155,11 +162,12 @@ export function ClassManagementPage() {
   }, [authFetch, gradeFilter, q, status, statusFilter, subjectFilter]);
 
   useEffect(() => {
+    if (view !== "list") return;
     const timer = window.setTimeout(() => {
       void loadClasses();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [loadClasses]);
+  }, [loadClasses, view]);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -187,6 +195,15 @@ export function ClassManagementPage() {
     router.push(`/class-detail?classId=${id}`);
   }
 
+  function openCreateForm() {
+    if (view === "list") {
+      router.push("/create-class");
+      return;
+    }
+    createFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    createFormRef.current?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+  }
+
   async function toggleStatus(item: Pick<ClassSummary, "id" | "status">) {
     const nextStatus: ClassStatus = item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     setBusyStatusId(item.id);
@@ -211,14 +228,16 @@ export function ClassManagementPage() {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
-          className="inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
+          className="group/tooltip relative inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
           aria-label="Mở menu chức năng"
+          title="Mở menu chức năng"
         >
           <span className="flex w-4 flex-col gap-1" aria-hidden>
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
           </span>
+          <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">Mở menu chức năng</span>
         </button>
         <div className="ml-3 flex items-center gap-2 text-sm font-semibold">EDUA</div>
       </header>
@@ -233,35 +252,41 @@ export function ClassManagementPage() {
       )}
 
       <div className="flex min-h-[calc(100vh-3.5rem)] md:min-h-screen">
-        <Sidebar activeHref="/create-class" responsive mobileOpen={mobileMenuOpen} />
+        <Sidebar activeHref={view === "list" ? "/list-class" : "/create-class"} responsive mobileOpen={mobileMenuOpen} />
 
         <section className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
           <div className="mx-auto w-full max-w-[1220px]">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#cdd7ef] bg-[#f1f4ff] px-3 text-[11px] font-medium text-[#3f54a3]">
-                  <BookOpen className="size-3.5" /> Class Hub
+                  <BookOpen className="size-3.5" /> Quản lý lớp học
                 </div>
-                <h1 className="font-libertine mt-4 text-[44px] font-normal leading-none sm:text-[60px]">Tạo lớp học</h1>
+                <h1 className="font-libertine mt-4 text-[44px] font-normal leading-none sm:text-[60px]">
+                  {view === "list" ? "Lớp học" : "Tạo lớp học"}
+                </h1>
                 <p className="mt-4 max-w-[620px] text-[13px] leading-[23px] text-[#6b6b6b]">
-                  Tạo không gian lớp để quản lý thông tin, thành viên và tài nguyên học tập theo cấu trúc Class Hub.
+                  {view === "list"
+                    ? "Quản lý các lớp bạn phụ trách."
+                    : "Tạo không gian lớp để quản lý thông tin, thành viên và tài nguyên học tập."}
                 </p>
               </div>
 
-              <div className="grid w-full grid-cols-3 gap-3 sm:w-auto">
-                <div className="rounded-[14px] border border-[#d8d1c9] bg-white px-4 py-3">
-                  <p className="text-[11px] text-[#6b6b6b]">Tổng lớp</p>
-                  <p className="mt-1 text-xl font-semibold">{items.length}</p>
+              {view === "list" && (
+                <div className="grid w-full grid-cols-3 gap-3 sm:w-auto">
+                  <div className="rounded-[14px] border border-[#d8d1c9] bg-white px-4 py-3">
+                    <p className="text-[11px] text-[#6b6b6b]">Tổng lớp</p>
+                    <p className="mt-1 text-xl font-semibold">{items.length}</p>
+                  </div>
+                  <div className="rounded-[14px] border border-[#b7e0c4] bg-[#f0faf3] px-4 py-3">
+                    <p className="text-[11px] text-[#287447]">Đang hoạt động</p>
+                    <p className="mt-1 text-xl font-semibold text-[#287447]">{activeCount}</p>
+                  </div>
+                  <div className="rounded-[14px] border border-[#e6d8cb] bg-[#f8f2ec] px-4 py-3">
+                    <p className="text-[11px] text-[#8a5a35]">Đã lưu trữ</p>
+                    <p className="mt-1 text-xl font-semibold text-[#8a5a35]">{inactiveCount}</p>
+                  </div>
                 </div>
-                <div className="rounded-[14px] border border-[#b7e0c4] bg-[#f0faf3] px-4 py-3">
-                  <p className="text-[11px] text-[#287447]">Active</p>
-                  <p className="mt-1 text-xl font-semibold text-[#287447]">{activeCount}</p>
-                </div>
-                <div className="rounded-[14px] border border-[#e6d8cb] bg-[#f8f2ec] px-4 py-3">
-                  <p className="text-[11px] text-[#8a5a35]">Inactive</p>
-                  <p className="mt-1 text-xl font-semibold text-[#8a5a35]">{inactiveCount}</p>
-                </div>
-              </div>
+              )}
             </div>
 
             {(error || message) && (
@@ -273,8 +298,8 @@ export function ClassManagementPage() {
               </div>
             )}
 
-            <div className="mt-8 grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-              <form onSubmit={handleCreate} className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
+            <div className={`mt-8 grid gap-6 ${view === "create" ? "max-w-[560px]" : ""}`}>
+              <form ref={createFormRef} onSubmit={handleCreate} className={view === "create" ? "rounded-[14px] border border-[#d8d1c9] bg-white p-5" : "hidden"}>
                 <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
                   <Plus className="size-4 text-[#d97757]" /> Lớp mới
                 </div>
@@ -335,7 +360,7 @@ export function ClassManagementPage() {
                 </button>
               </form>
 
-              <div className="min-w-0 space-y-6">
+              <div className={view === "list" ? "min-w-0 space-y-6" : "hidden"}>
                 <section className="min-w-0 rounded-[14px] border border-[#d8d1c9] bg-[#faf9f7] p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -376,9 +401,20 @@ export function ClassManagementPage() {
                     </select>
                   </div>
 
-                  <div className="mt-5 grid gap-3">
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {!isInitialLoading && (
+                      <button
+                        type="button"
+                        onClick={openCreateForm}
+                        className="flex min-h-[250px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#c9a998] bg-[#fffdfb] px-5 py-10 text-center text-[#8a5a35] transition hover:-translate-y-1 hover:border-[#d97757] hover:bg-[#fff8f5] hover:shadow-[0_14px_30px_rgba(80,58,43,0.10)]"
+                      >
+                        <Plus className="size-8" />
+                        <p className="mt-3 text-[13px] font-semibold">Tạo lớp mới</p>
+                        <p className="mt-1 text-[12px] text-[#6b6b6b]">Thêm một lớp mới để quản lý.</p>
+                      </button>
+                    )}
                     {isInitialLoading ? (
-                      [1, 2, 3].map((item) => <div key={item} className="h-[138px] animate-pulse rounded-[14px] bg-[#e8e2db]" />)
+                      [1, 2, 3].map((item) => <div key={item} className="h-[250px] animate-pulse rounded-2xl bg-[#e8e2db]" />)
                     ) : items.length === 0 ? (
                       <div className="rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-10 text-center">
                         <BookOpen className="mx-auto size-8 text-[#a8a097]" />

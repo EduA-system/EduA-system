@@ -254,9 +254,12 @@ function ResourceFormPanel({
           <button
             type="button"
             onClick={onCancel}
-            className="flex size-8 items-center justify-center rounded-[10px] text-[#8a837b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
+            aria-label="Đóng biểu mẫu"
+            title="Đóng biểu mẫu"
+            className="group/tooltip relative flex size-8 items-center justify-center rounded-[10px] text-[#8a837b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
           >
             <X className="size-4" />
+            <span role="tooltip" className="pointer-events-none absolute right-0 top-10 z-[70] whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">Đóng biểu mẫu</span>
           </button>
         </div>
 
@@ -390,11 +393,14 @@ function ResourceFormPanel({
           <button
             type="button"
             onClick={() => setSubmissionEnabled((current) => !current)}
-            className={`relative h-6 w-11 shrink-0 rounded-full transition ${submissionEnabled ? "bg-[#d97757]" : "bg-[#d8d1c9]"}`}
+            aria-label={submissionEnabled ? "Tắt yêu cầu nộp bài" : "Bật yêu cầu nộp bài"}
+            title={submissionEnabled ? "Tắt yêu cầu nộp bài" : "Bật yêu cầu nộp bài"}
+            className={`group/tooltip relative h-6 w-11 shrink-0 rounded-full transition ${submissionEnabled ? "bg-[#d97757]" : "bg-[#d8d1c9]"}`}
           >
             <span
               className={`absolute top-0.5 size-5 rounded-full bg-white transition ${submissionEnabled ? "left-[22px]" : "left-0.5"}`}
             />
+            <span role="tooltip" className="pointer-events-none absolute right-0 top-8 z-[70] whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">{submissionEnabled ? "Tắt yêu cầu nộp bài" : "Bật yêu cầu nộp bài"}</span>
           </button>
         </div>
 
@@ -592,14 +598,16 @@ export function ClassDetailPage() {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
-          className="inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
+          className="group/tooltip relative inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
           aria-label="Mở menu chức năng"
+          title="Mở menu chức năng"
         >
           <span className="flex w-4 flex-col gap-1" aria-hidden>
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
           </span>
+          <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">Mở menu chức năng</span>
         </button>
         <div className="ml-3 flex items-center gap-2 text-sm font-semibold">EDUA</div>
       </header>
@@ -614,12 +622,12 @@ export function ClassDetailPage() {
       )}
 
       <div className="flex min-h-[calc(100vh-3.5rem)] md:min-h-screen">
-        <Sidebar activeHref="/create-class" responsive mobileOpen={mobileMenuOpen} />
+        <Sidebar activeHref="/list-class" responsive mobileOpen={mobileMenuOpen} />
 
         <section className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
           <div className="mx-auto w-full max-w-[1220px]">
             <Link
-              href="/create-class"
+              href="/list-class"
               className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#6b6b6b] transition hover:text-[#1f1f1f]"
             >
               <ArrowLeft className="size-3.5" /> Quay lại danh sách lớp
@@ -640,7 +648,7 @@ export function ClassDetailPage() {
               <div className="mt-8 rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
                 <p className="text-[13px] font-medium">Thiếu thông tin lớp</p>
                 <p className="mt-1 text-[12px] text-[#6b6b6b]">
-                  Vào từ <Link href="/create-class" className="font-medium text-[#d97757] underline">danh sách lớp</Link> để mở đúng lớp cần quản lý.
+                  Vào từ <Link href="/list-class" className="font-medium text-[#d97757] underline">danh sách lớp</Link> để mở đúng lớp cần quản lý.
                 </p>
               </div>
             ) : classLoading || !selectedClass || !editForm ? (
