@@ -27,7 +27,7 @@ const helpSections = [
 
 export default function HelpPage() {
   return (
-    <main className="min-h-screen bg-[#f7f5f2] px-6 py-8 text-[#2b2926]">
+    <main className="min-h-screen bg-white px-6 py-8 text-[#2b2926]">
       <section className="mx-auto max-w-5xl">
         <div className="mb-7">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#d97757]">Trợ giúp</p>

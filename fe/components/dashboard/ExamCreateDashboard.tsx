@@ -157,7 +157,7 @@ export function ExamCreateDashboard() {
 
   const canSubmit = configValid && Boolean(scope && scopeConfirmed) && !scopeLoading && !submitting;
   return (
-    <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] text-[#171717]">
+    <main className="h-screen w-full overflow-hidden bg-white text-[#171717]">
       <div className="flex h-full"><Sidebar /><section className="min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8 lg:py-12">
         <div className="mx-auto max-w-[980px]">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 py-1 text-[11px] font-medium text-[#d97757]"><DashboardIcon name="aiBadge" />Tạo đề kiểm tra bằng AI</span>

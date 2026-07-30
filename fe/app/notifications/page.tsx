@@ -101,7 +101,7 @@ function NotificationsScreen() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f1ec] text-[#2b2926]">
+    <main className="min-h-screen bg-white text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/notifications" />
         <section className="min-w-0 flex-1 p-5 sm:p-8">

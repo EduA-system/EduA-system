@@ -169,7 +169,7 @@ function ItStaffContent() {
     .filter((group) => group.prompts.length > 0);
 
   return (
-    <main className="min-h-screen bg-[#f5f1ec] text-[#1f1f1f]">
+    <main className="min-h-screen bg-white text-[#1f1f1f]">
       <header className="sticky top-0 z-30 flex h-14 items-center border-b border-[#d8d1c9] bg-[#f7f5f2] px-4 md:hidden">
         <button
           type="button"

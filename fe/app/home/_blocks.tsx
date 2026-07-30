@@ -1,4 +1,5 @@
 import { LoopVideo } from "./_loop-video";
+import Link from "next/link";
 import { COLOR, serif } from "./_shared";
 
 export function FeatureBlock({
@@ -22,7 +23,7 @@ export function FeatureBlock({
       {videoSrc ? (
         <LoopVideo
           src={videoSrc}
-          style={{ width: "calc(100% + 50px)", maxWidth: "none", height: 300, marginLeft: -9, marginBottom: 24, marginTop: -50 }}
+          style={{ width: "calc(100% + 50px)", maxWidth: "none", height: 260, marginLeft: -9, marginBottom: 0, marginTop: 0 }}
         />
       ) : (
         <div style={{ width: 442, height: 220, backgroundColor: "#D9D9D9", borderRadius: 5 }} />
@@ -31,7 +32,7 @@ export function FeatureBlock({
         className={serif.className}
         style={{
           margin: 0,
-          marginTop: -40,
+          marginTop: 16,
           fontSize: 20,
           lineHeight: "24px",
           fontWeight: 700,
@@ -76,7 +77,7 @@ export function StickyCard({ side }: { side: "left" | "right" }) {
           color: COLOR.inkBlack,
         }}
       >
-        Create instructional materials without starting from scratch.
+        Tạo học liệu sẵn sàng sử dụng trong vài phút.
       </h3>
       <p
         style={{
@@ -87,9 +88,15 @@ export function StickyCard({ side }: { side: "left" | "right" }) {
           color: COLOR.inkMuted,
         }}
       >
-        Generate classroom-ready materials with guided workflows instead of
-        writing long prompts.
+        EDUA hướng dẫn từng bước để bạn tạo giáo án, slide và mô phỏng mà
+        không cần viết các câu lệnh dài.
       </p>
+      <Link
+        href="/lesson-create"
+        style={{ display: "inline-flex", marginTop: 20, color: COLOR.ink, fontSize: 14, fontWeight: 700 }}
+      >
+        Bắt đầu tạo giáo án →
+      </Link>
     </div>
   );
 }

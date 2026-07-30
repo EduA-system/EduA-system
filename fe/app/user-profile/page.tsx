@@ -146,7 +146,7 @@ function UserProfileContent() {
   const avatarSource = avatarPreview ?? user.avatarUrl;
 
   return (
-    <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] text-[#1f1f1f]">
+    <main className="h-screen w-full overflow-hidden bg-white text-[#1f1f1f]">
       <div className="flex h-full w-full">
         <Sidebar activeHref="/user-profile" />
         <section className="min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8 lg:px-10 lg:py-12">

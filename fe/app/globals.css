@@ -3,20 +3,14 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --font-libertine: var(--font-inter);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  --font-serif: var(--font-libertine);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-serif: var(--font-inter);
 }
 
 body {
@@ -27,12 +21,21 @@ body {
   -ms-overflow-style: none;
 }
 
+/* Shared page shells use these legacy utility classes. Keep application pages
+   white while the home route sets its own background directly. */
+main.bg-\[\#f5f1ec\],
+main.bg-\[\#f7f5f2\],
+main.bg-\[\#f7f7f5\],
+main.bg-slate-50 {
+  background-color: #ffffff;
+}
+
 body::-webkit-scrollbar {
   display: none;
 }
 
 .font-libertine {
-  font-family: var(--font-libertine), Georgia, serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
 
 /* Decoration animations — translate/rotate only, no scale */

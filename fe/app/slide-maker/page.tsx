@@ -6,7 +6,7 @@ export default function SlideMakerPage() {
   return (
     <RouteGuard pathname="/slide-maker"><Suspense
       fallback={
-        <main className="flex h-screen items-center justify-center bg-[#f5f1ec] font-sans text-sm text-[#4f4943]">Dang tai trinh soan slide...</main>
+        <main className="flex h-screen items-center justify-center bg-white font-sans text-sm text-[#4f4943]">Dang tai trinh soan slide...</main>
       }
     >
       <SlideMakerClient />

@@ -1,8 +1,8 @@
-import { Rubik } from "next/font/google";
+import { Be_Vietnam_Pro } from "next/font/google";
 import { AuthFlow } from "./AuthFlow";
 
-const rubik = Rubik({
-  subsets: ["latin"],
+const rubik = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600"],
 });
 

@@ -4,7 +4,7 @@ import { GALLERY_FAMILIES, galleryFixture } from "@/lib/slide-layout/gallery-fix
 const densities = ["sparse", "normal", "dense"] as const;
 
 export default function SlideLayoutGalleryPage() {
-  return <main className="min-h-screen bg-[#f5f1ec] p-8 text-[#2b2926]">
+  return <main className="min-h-screen bg-white p-8 text-[#2b2926]">
     <h1 className="text-2xl font-bold">Dynamic slide layout fixtures</h1>
     <p className="mt-1 text-sm text-[#6b625a]">Mỗi family ở ba mức mật độ, seed cố định để visual QA.</p>
     <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">

@@ -84,7 +84,7 @@ export function HeaderBar() {
             textDecoration: "none",
           }}
         >
-          Start
+          Khám phá
         </a>
 
         <Link

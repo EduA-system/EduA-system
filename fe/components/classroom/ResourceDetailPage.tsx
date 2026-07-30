@@ -118,7 +118,7 @@ function SubmissionSummary({ submission }: { submission: SubmissionDetail }) {
 }
 
 export function ResourceDetailPage() {
-  const { user, authFetch, accessToken } = useAuth();
+  const { user, authFetch } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const classId = searchParams.get("classId") ?? "";
@@ -314,7 +314,7 @@ export function ResourceDetailPage() {
   const SourceIcon = resource?.sourceType === "LIBRARY_SNAPSHOT" ? Library : UploadCloud;
 
   return (
-    <main className="min-h-screen bg-[#f5f1ec] text-[#1f1f1f]">
+    <main className="min-h-screen bg-white text-[#1f1f1f]">
       <header className="sticky top-0 z-30 flex h-14 items-center border-b border-[#d8d1c9] bg-[#f7f5f2] px-4 md:hidden">
         <button
           type="button"
@@ -480,7 +480,7 @@ export function ResourceDetailPage() {
                       <>
                         <div className="mt-4">
                           <RichEditor
-                            token={accessToken ?? ""}
+                            authFetch={authFetch}
                             initialContent={initialText}
                             onChange={handleTextChange}
                             heightClassName="h-[280px] overflow-y-auto"
