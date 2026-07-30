@@ -63,6 +63,17 @@ describe("applyContentSlots", () => {
     expect(result[1]).toMatchObject({ type: "text", fontSize: 15 });
   });
 
+  it("shrinks below the former minimum font-size thresholds when necessary", () => {
+    const title = text("slot:s1:title");
+    const body = text("slot:body", { text: "", w: 80, h: 30, fontSize: 16 });
+    const result = applyContentSlots([title, body], {
+      slots: [{ slotId: "slot:body", text: "This deliberately long content must shrink dramatically to fit.", imagePrompt: null }],
+      latencyMs: 0,
+      modelUsed: "test",
+    });
+    expect((result[1] as Extract<SlideElement, { type: "text" }>).fontSize).toBeLessThan(11);
+  });
+
   it("rejects a standard slide with no generated content", () => {
     const title = text("slot:s1:title");
     const body = text("slot:body", { text: "" });
@@ -108,6 +119,33 @@ describe("applyContentSlots", () => {
       slots: [{ slotId: "slot:cell", text: "Không đổi", imagePrompt: null }], latencyMs: 0, modelUsed: "test",
     });
     expect(result[1]).toMatchObject({ type: "text", fontSize: 18 });
+  });
+
+  it("shrinks a long formula to one line and never enlarges it", () => {
+    const title = text("slot:s1:title");
+    const formula = text("slot:formula:expression", { text: "", w: 880, h: 120, fontSize: 24, fontFamily: "Newsreader, serif", align: "center" });
+    const expression = "Monomer: CH3–CH=CH2 → Polymer: [-CH2–CH(CH3)-]n, tên: polypropylene (PP)";
+    const result = applyContentSlots([title, formula], {
+      slots: [{ slotId: "slot:formula:expression", text: expression, imagePrompt: null }], latencyMs: 0, modelUsed: "test",
+    });
+    expect(result[1]).toMatchObject({ type: "text", text: expression });
+    expect((result[1] as Extract<SlideElement, { type: "text" }>).fontSize).toBeLessThan(24);
+  });
+
+  it("uses the smallest fitted body font size for every body text slot", () => {
+    const title = text("slot:s1:title", { fontSize: 30 });
+    const shortBody = text("slot:short", { text: "", w: 360, h: 120, fontSize: 16 });
+    const denseBody = text("slot:dense", { text: "", w: 160, h: 105, fontSize: 16 });
+    const result = applyContentSlots([title, shortBody, denseBody], {
+      slots: [
+        { slotId: "slot:short", text: "Ý ngắn", imagePrompt: null },
+        { slotId: "slot:dense", text: "Nội dung dài cần thu nhỏ cỡ chữ để vừa khung hẹp và vẫn giữ được khả năng đọc rõ ràng cho người học.", imagePrompt: null },
+      ], latencyMs: 0, modelUsed: "test",
+    });
+    const [nextTitle, nextShort, nextDense] = result as Extract<SlideElement, { type: "text" }>[];
+    expect(nextTitle.fontSize).toBe(30);
+    expect(nextShort.fontSize).toBe(nextDense.fontSize);
+    expect(nextDense.fontSize).toBeLessThan(16);
   });
 
   it("replaces an unreadable AI color with a contrasting text color", () => {

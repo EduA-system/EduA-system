@@ -70,6 +70,7 @@ function surfaceColorFromSkin(skinHtml: string, palette: string[]): string {
 }
 
 const SLIDE_CONCURRENCY = 4;
+const CONTENT_SLOT_BATCH_SIZE = 6;
 
 async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
   let next = 0;
@@ -78,6 +79,23 @@ async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promis
       while (next < items.length) await worker(items[next++]);
     }),
   );
+}
+
+/** Keeps one AI response small enough to reliably finish its JSON object. */
+async function fillContentInBatches(request: Parameters<typeof fillSlideContent>[0]): Promise<SlideContentFillResponse> {
+  const responses: SlideContentFillResponse[] = [];
+  for (let index = 0; index < request.slots.length; index += CONTENT_SLOT_BATCH_SIZE) {
+    responses.push(await fillSlideContent({
+      ...request,
+      slots: request.slots.slice(index, index + CONTENT_SLOT_BATCH_SIZE),
+    }));
+  }
+  return {
+    slots: responses.flatMap((response) => response.slots),
+    latencyMs: responses.reduce((total, response) => total + response.latencyMs, 0),
+    modelUsed: [...new Set(responses.map((response) => response.modelUsed))].join(", "),
+    warning: responses.map((response) => response.warning).find((warning) => warning != null) ?? null,
+  };
 }
 
 /** Step 1: create the shared deck skin and retain its context for the next steps. */
@@ -194,7 +212,7 @@ export async function runContentFillStep(
 
       const [response, moleculeFills] = await Promise.all([
         fillableSlots.length
-          ? fillSlideContent({
+          ? fillContentInBatches({
               topic: ctx.topic,
               outline: slideOutlineText(slide),
               subject: ctx.subject,

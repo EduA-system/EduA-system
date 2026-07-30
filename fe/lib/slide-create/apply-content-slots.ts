@@ -41,6 +41,30 @@ function maximumFontSize(fontSize: number): number {
   return 48;
 }
 
+/** A formula must remain one expression, rather than wrapping between symbols. */
+function formulaFitsOnOneLine(element: Extract<SlideElement, { type: "text" }>, fontSize: number): boolean {
+  const candidate = { ...element, fontSize };
+  const oneLineHeight = textBoxMinHeight({ ...candidate, text: candidate.text.replace(/\n/g, " ") }, 10_000);
+  return textBoxMinHeight(candidate) <= oneLineHeight + 1;
+}
+
+function isBodyTextElement(element: SlideElement): element is Extract<SlideElement, { type: "text" }> {
+  if (element.type !== "text") return false;
+  const contentSlot = element.contentSlot;
+  return contentSlot != null && contentSlot !== "header-1" && !contentSlot.endsWith(":title");
+}
+
+/**
+ * Individual slots first choose the largest safe font.  A single small slot
+ * then sets the shared body type scale so the slide reads as one composition.
+ */
+function normalizeBodyFontSize(elements: SlideElement[]): SlideElement[] {
+  const bodyText = elements.filter(isBodyTextElement);
+  if (bodyText.length < 2) return elements;
+  const sharedFontSize = Math.min(...bodyText.map((element) => element.fontSize));
+  return elements.map((element) => isBodyTextElement(element) ? { ...element, fontSize: sharedFontSize } : element);
+}
+
 /** Applies validated AI content to the step-2 placeholder elements only. */
 export function applyContentSlots(elements: SlideElement[], response: SlideContentFillResponse, slideBackground?: string): SlideElement[] {
   const fills = new Map(response.slots.map((slot) => [slot.slotId, slot]));
@@ -60,12 +84,13 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
           : false;
   })) throw new Error("AI không điền nội dung cho slide.");
 
-  return elements.map((element) => {
+  const filledElements = elements.map((element) => {
     const fill = element.contentSlot ? fills.get(element.contentSlot) : undefined;
     if (!fill) return element;
 
     if (element.type === "text") {
       if (element.contentSlot === "header-1") return element;
+      const isFormulaExpression = element.contentSlot?.endsWith(":expression") ?? false;
       const supplied = fill.text != null ? bulletListText(formatMultipleChoiceLines(fill.text)) : undefined;
       const next = {
         ...element,
@@ -77,12 +102,16 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
         ...(fill.style?.align ? { align: fill.style.align } : {}),
       };
       const color = contrastingTextColor(backgroundForText(elements, next, slideBackground), next.color);
-      const minimumFontSize = next.fontSize >= 28 ? 24 : next.fontSize >= 20 ? 18 : next.fontSize >= 14 ? 14 : 11;
+      // Keep shrinking until the content fits; templates do not impose a
+      // readability threshold that could force content to be rejected.
+      const smallestFontSize = 1;
       let fontSize = next.fontSize;
-      while (fontSize > minimumFontSize && textBoxMinHeight({ ...next, fontSize }) > next.h) fontSize -= 1;
+      while (fontSize > smallestFontSize && (textBoxMinHeight({ ...next, fontSize }) > next.h || (isFormulaExpression && !formulaFitsOnOneLine(next, fontSize)))) fontSize -= 1;
       if (textBoxMinHeight({ ...next, fontSize }) > next.h) {
         throw new Error("Nội dung vượt khung ngay cả ở cỡ chữ tối thiểu.");
       }
+      if (isFormulaExpression && !formulaFitsOnOneLine(next, fontSize)) throw new Error("Formula expression is too long for its slot.");
+      if (isFormulaExpression) return { ...next, color, fontSize };
       const maximum = maximumFontSize(next.fontSize);
       while (fontSize < maximum && textBoxMinHeight({ ...next, fontSize: fontSize + 1 }) <= next.h) fontSize += 1;
       return { ...next, color, fontSize };
@@ -98,4 +127,5 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
 
     return element;
   });
+  return normalizeBodyFontSize(filledElements);
 }

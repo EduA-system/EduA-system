@@ -10,6 +10,7 @@ import type {
   SlideLayoutInput,
   SlideLayoutResult,
   TableContentBlock,
+  VisualContentBlock,
 } from "./types";
 
 type Candidate = Pick<SlideLayoutResult, "topology" | "structures" | "slots" | "warnings" | "score">;
@@ -21,6 +22,10 @@ const fontByToken: Record<string, number> = {
   "text-formula": 24,
   "text-cell": 11,
 };
+
+/** Illustrations must remain a legible visual anchor, never a thumbnail-sized card. */
+const MIN_VISUAL_WIDTH_RATIO = 0.35;
+const MIN_VISUAL_HEIGHT_RATIO = 0.45;
 
 /** `visual` (image) and `molecule` (3D model) both occupy an aside-sized media slot. */
 function isVisualLikeKind(kind: ContentBlock["kind"]): boolean {
@@ -85,12 +90,44 @@ function titleAndBody(input: SlideLayoutInput): { title: ContentBlock; rest: Con
   return { title, rest: input.blocks.slice(1), titleRect, body, bounds };
 }
 
-function genericSlots(blocks: ContentBlock[], rect: Rect, vertical: boolean): { slots: LayoutSlot[]; structures: LayoutStructure[] } {
+function genericSlots(
+  blocks: ContentBlock[],
+  rect: Rect,
+  vertical: boolean,
+  forcedColumns?: number,
+): { slots: LayoutSlot[]; structures: LayoutStructure[] } {
   if (!blocks.length) return { slots: [], structures: [] };
-  const cells = vertical ? grid(rect, blocks.length, 1, 14) : grid(rect, 1, blocks.length, 14);
+  const columns = forcedColumns ?? (vertical ? 1 : blocks.length);
+  const rows = Math.ceil(blocks.length / columns);
+  const cells = grid(rect, rows, columns, 14);
   return {
     slots: blocks.map((block, index) => makeSlot(block, inset(cells[index], 12), isVisualLikeKind(block.kind) ? "aside" : block.kind === "formula" ? "formula" : "body")),
-    structures: cells.map((cell, index) => structure(`card:${blocks[index].id}`, "card", cell)),
+    structures: blocks.map((block, index) => structure(`card:${block.id}`, "card", cells[index])),
+  };
+}
+
+/**
+ * Sparse explanatory slides need a visual anchor. The generated block is
+ * intentionally optional, so it never replaces source content or affects the
+ * outline contract.
+ */
+function supportingVisualFor(input: SlideLayoutInput, title: ContentBlock, rest: ContentBlock[]): VisualContentBlock | null {
+  const ineligibleFamilies = new Set(["intro", "section", "comparison", "table", "process", "formula", "exercise", "quiz"]);
+  const textOnly = rest.every((block) => block.kind === "text");
+  const bodyText = rest.map(blockText).join(" ").trim();
+  if (ineligibleFamilies.has(input.slideType) || !rest.length || rest.length > 2 || !textOnly || bodyText.length > 220) return null;
+
+  return {
+    id: `${title.id}:supporting-visual`,
+    kind: "visual",
+    role: "visual",
+    semanticType: "image",
+    priority: "supporting",
+    required: false,
+    description: `Educational illustration for "${blockText(title)}". Context: ${bodyText}`,
+    requirement: "optional",
+    preferredAspectRatio: "square",
+    illustratesBlockId: rest[0].id,
   };
 }
 
@@ -168,6 +205,8 @@ function compositeSlots(block: ContentBlock, rect: Rect, orientation: "horizonta
 function buildCandidate(input: SlideLayoutInput, seed: number, index: number): Candidate {
   const random = mulberry32((seed + Math.imul(index + 1, 0x9e3779b1)) >>> 0);
   const { title, rest, titleRect, body, bounds } = titleAndBody(input);
+  const autoVisual = supportingVisualFor(input, title, rest);
+  const contentBlocks = autoVisual ? [...rest, autoVisual] : rest;
   const structures: LayoutStructure[] = [];
   const slots: LayoutSlot[] = [makeSlot(title, titleRect, "hero", blockText(title))];
   const horizontal = random() >= 0.5;
@@ -178,13 +217,13 @@ function buildCandidate(input: SlideLayoutInput, seed: number, index: number): C
     topology = horizontal ? "hero-left" : "hero-centered";
     slots[0].rect = horizontal ? { x: bounds.x + 24, y: bounds.y + 70, w: Math.round(bounds.w * 0.66), h: 130 } : { x: bounds.x + 90, y: bounds.y + 100, w: bounds.w - 180, h: 130 };
     const contentRect = { x: slots[0].rect.x, y: slots[0].rect.y + 150, w: slots[0].rect.w, h: Math.max(80, bounds.y + bounds.h - slots[0].rect.y - 150) };
-    const generic = genericSlots(rest, contentRect, true);
+    const generic = genericSlots(contentBlocks, contentRect, true);
     slots.push(...generic.slots); structures.push(...generic.structures);
-  } else if (input.slideType === "text-image" || input.slideType === "experiment" || rest.some((block) => isVisualLikeKind(block.kind))) {
+  } else if (input.slideType === "text-image" || input.slideType === "experiment" || contentBlocks.some((block) => isVisualLikeKind(block.kind))) {
     topology = horizontal ? "split-left" : "split-right";
     const [left, right] = splitHorizontal(body, ratio, 20);
-    const visual = rest.find((block) => isVisualLikeKind(block.kind));
-    const text = rest.filter((block) => block !== visual);
+    const visual = contentBlocks.find((block) => isVisualLikeKind(block.kind));
+    const text = contentBlocks.filter((block) => block !== visual);
     const visualRect = horizontal ? right : left;
     const textRect = horizontal ? left : right;
     if (visual) slots.push(makeSlot(visual, visualRect, "aside"));
@@ -192,53 +231,68 @@ function buildCandidate(input: SlideLayoutInput, seed: number, index: number): C
     slots.push(...generic.slots); structures.push(...generic.structures);
     if (visual) structures.push(structure(`visual:${visual.id}`, "panel", visualRect, "surface-visual"));
   } else if (input.slideType === "comparison" || input.slideType === "table") {
-    const block = rest.find((item) => item.kind === "comparison" || item.kind === "table");
+    const block = contentBlocks.find((item) => item.kind === "comparison" || item.kind === "table");
     topology = block?.kind === "comparison" && block.preferredPresentation === "panels" ? "comparison-panels" : "comparison-auto";
+    const remaining = contentBlocks.filter((item) => item !== block);
+    // Keep any supporting note below the table instead of overlaying its last row.
+    const [tableRect, footerRect] = remaining.length
+      ? splitVertical(body, (body.h - 64 - 12) / (body.h - 12), 12)
+      : [body, null];
     if (block) {
-      const composite = compositeSlots(block, body, horizontal ? "horizontal" : "vertical");
+      const composite = compositeSlots(block, tableRect, horizontal ? "horizontal" : "vertical");
       slots.push(...composite.slots); structures.push(...composite.structures);
     }
-    const remaining = rest.filter((item) => item !== block);
-    if (remaining.length) {
-      const extra = genericSlots(remaining, { x: body.x, y: body.y + body.h - 64, w: body.w, h: 64 }, false);
+    if (remaining.length && footerRect) {
+      const extra = genericSlots(remaining, footerRect, false);
       slots.push(...extra.slots); structures.push(...extra.structures);
     }
   } else if (input.slideType === "process") {
     topology = horizontal ? "process-horizontal" : "process-vertical";
-    const sequence = rest.find((block) => block.kind === "sequence");
+    const sequence = contentBlocks.find((block) => block.kind === "sequence");
     if (sequence) {
       const composite = compositeSlots(sequence, body, horizontal ? "horizontal" : "vertical");
       slots.push(...composite.slots); structures.push(...composite.structures);
     }
   } else if (input.slideType === "formula") {
-    topology = horizontal ? "formula-split" : "formula-spotlight";
-    const formula = rest.find((block) => block.kind === "formula");
+    topology = "formula-spotlight";
+    const formula = contentBlocks.find((block) => block.kind === "formula");
     if (formula) {
-      const target = horizontal ? splitHorizontal(body, 0.62, 18)[0] : inset(body, 34);
+      // Mathematical and chemical expressions need horizontal room. Supporting
+      // notes are placed below, never in a narrow side column.
+      const target = contentBlocks.length > 1 ? splitVertical(body, 0.54, 16)[0] : inset(body, 34);
       const composite = compositeSlots(formula, target, "vertical");
       slots.push(...composite.slots); structures.push(...composite.structures);
     }
-    const other = rest.filter((block) => block !== formula);
+    const other = contentBlocks.filter((block) => block !== formula);
     if (other.length) {
-      const target = horizontal ? splitHorizontal(body, 0.62, 18)[1] : { x: body.x + 80, y: body.y + body.h - 82, w: body.w - 160, h: 82 };
+      const [, target] = splitVertical(body, 0.54, 16);
       const generic = genericSlots(other, target, true); slots.push(...generic.slots); structures.push(...generic.structures);
     }
   } else if (input.slideType === "exercise" || input.slideType === "quiz") {
     topology = horizontal ? "question-card" : "question-stack";
-    const quiz = rest.find((block) => block.kind === "quiz");
+    const quiz = contentBlocks.find((block) => block.kind === "quiz");
     if (quiz) {
       const composite = compositeSlots(quiz, inset(body, 12), "vertical"); slots.push(...composite.slots); structures.push(...composite.structures);
     }
   } else {
     topology = input.slideType === "summary" ? (horizontal ? "summary-cards" : "summary-stack") : (horizontal ? "concept-columns" : "concept-stack");
-    const generic = genericSlots(rest, body, !horizontal);
+    const textBlockCount = contentBlocks.filter((block) => block.kind === "text").length;
+    // Three narrative blocks must never share one row. The AI fills slots after
+    // layout generation, so short source text can still become explanatory
+    // prose; limiting only currently long source blocks is not sufficient.
+    const useTwoColumnGrid = textBlockCount >= 3;
+    const generic = genericSlots(contentBlocks, body, !horizontal, useTwoColumnGrid ? 2 : undefined);
     slots.push(...generic.slots); structures.push(...generic.structures);
   }
 
   const requiredIds = new Set(input.blocks.filter((block) => block.required).map((block) => block.id));
   const represented = new Set(slots.map((slot) => slot.sourceBlockId));
+  const visualsAreProminent = slots
+    .filter((slot) => slot.kind === "image" || slot.kind === "molecule")
+    .every((slot) => slot.rect.w >= body.w * MIN_VISUAL_WIDTH_RATIO && slot.rect.h >= body.h * MIN_VISUAL_HEIGHT_RATIO);
   const valid = [...requiredIds].every((id) => represented.has(id))
     && slots.every((slot) => inside(slot.rect, bounds) && slot.rect.w >= (slot.kind === "image" || slot.kind === "molecule" ? 120 : 42) && slot.rect.h >= 24)
+    && visualsAreProminent
     && structures.every((item) => inside(item.rect, bounds));
   const area = slots.reduce((sum, slot) => sum + slot.rect.w * slot.rect.h, 0);
   const coverage = Math.min(100, (area / (bounds.w * bounds.h)) * 100);

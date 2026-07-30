@@ -15,6 +15,7 @@ const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  allowedDevOrigins: ["172.22.64.1"],
   turbopack: {
     root: feRoot,
   },
