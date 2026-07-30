@@ -200,7 +200,7 @@ export function AddStudentPage() {
       setError(
         reason instanceof Error
           ? reason.message
-          : "Không thể import file. Vui lòng chọn lại tệp và thử lại.",
+          : "Không thể nhập danh sách từ tệp. Vui lòng chọn lại tệp và thử lại.",
       );
     } finally {
       setImportFile(null);
@@ -222,14 +222,16 @@ export function AddStudentPage() {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
-          className="inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
+          className="group/tooltip relative inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
           aria-label="Mở menu chức năng"
+          title="Mở menu chức năng"
         >
           <span className="flex w-4 flex-col gap-1" aria-hidden>
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
           </span>
+          <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">Mở menu chức năng</span>
         </button>
         <div className="ml-3 flex items-center gap-2 text-sm font-semibold">EDUA</div>
       </header>
@@ -244,24 +246,24 @@ export function AddStudentPage() {
       )}
 
       <div className="flex min-h-[calc(100vh-3.5rem)] md:min-h-screen">
-        <Sidebar activeHref="/create-class" responsive mobileOpen={mobileMenuOpen} />
+        <Sidebar activeHref="/list-class" responsive mobileOpen={mobileMenuOpen} />
 
         <section className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
           <div className="mx-auto w-full max-w-[1220px]">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <Link
-                  href="/create-class"
+                  href="/list-class"
                   className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#6b6b6b] transition hover:text-[#1f1f1f]"
                 >
                   <ArrowLeft className="size-3.5" /> Quay lại quản lý lớp
                 </Link>
                 <div className="mt-3 inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#cdd7ef] bg-[#f1f4ff] px-3 text-[11px] font-medium text-[#3f54a3]">
-                  <Users className="size-3.5" /> Class Hub
+                  <Users className="size-3.5" /> Quản lý lớp học
                 </div>
                 <h1 className="font-libertine mt-4 text-[44px] font-normal leading-none sm:text-[60px]">Thêm học sinh</h1>
                 <p className="mt-4 max-w-[620px] text-[13px] leading-[23px] text-[#6b6b6b]">
-                  Thêm học sinh vào lớp bằng Gmail — nhập từng người hoặc import cả danh sách từ file .csv/.xlsx.
+                  Thêm học sinh vào lớp bằng địa chỉ Gmail — nhập từng người hoặc nhập cả danh sách từ tệp .csv/.xlsx.
                 </p>
               </div>
 
@@ -316,7 +318,7 @@ export function AddStudentPage() {
               {classes.length === 0 && !classesLoading && (
                 <p className="mt-3 text-[12px] text-[#6b6b6b]">
                   Bạn chưa có lớp nào.{" "}
-                  <Link href="/create-class" className="font-medium text-[#d97757] underline">
+                  <Link href="/list-class" className="font-medium text-[#d97757] underline">
                     Tạo lớp mới
                   </Link>{" "}
                   trước khi thêm học sinh.
@@ -365,7 +367,7 @@ export function AddStudentPage() {
                     </button>
                     {isInactive && (
                       <p className="mt-3 text-[12px] leading-5 text-[#8a5a35]">
-                        Lớp đang lưu trữ (Inactive), không thể thêm học sinh.
+                        Lớp đang lưu trữ, không thể thêm học sinh.
                       </p>
                     )}
                     {!isInactive && isFull && (
@@ -375,14 +377,14 @@ export function AddStudentPage() {
 
                   <form onSubmit={handleImport} className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
                     <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
-                      <Upload className="size-4 text-[#d97757]" /> Import từ file
+                      <Upload className="size-4 text-[#d97757]" /> Nhập từ tệp
                     </div>
                     <p className="mt-3 text-[12px] leading-5 text-[#6b6b6b]">
-                      File .csv hoặc .xlsx, có cột tên <span className="font-medium text-[#1f1f1f]">gmail</span>. Dòng lỗi
+                      Tệp .csv hoặc .xlsx, có cột tên <span className="font-medium text-[#1f1f1f]">gmail</span>. Dòng lỗi
                       hoặc trùng sẽ tự động bị bỏ qua.
                     </p>
                     <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">
-                      Chọn file
+                      Chọn tệp
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -398,7 +400,7 @@ export function AddStudentPage() {
                       className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-[11px] bg-[#1f1f1f] px-5 text-[13px] font-medium text-white transition hover:bg-[#34312d] disabled:cursor-not-allowed disabled:bg-[#b8b0a8]"
                     >
                       {importBusy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-                      {importBusy ? "Đang import..." : "Import danh sách"}
+                      {importBusy ? "Đang nhập danh sách..." : "Nhập danh sách"}
                     </button>
                   </form>
 
@@ -461,7 +463,7 @@ export function AddStudentPage() {
                       <div className="rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-10 text-center">
                         <Users className="mx-auto size-8 text-[#a8a097]" />
                         <p className="mt-3 text-[13px] font-medium">Lớp chưa có học sinh nào</p>
-                        <p className="mt-1 text-[12px] text-[#6b6b6b]">Thêm học sinh bằng Gmail hoặc import file ở bên trái.</p>
+                        <p className="mt-1 text-[12px] text-[#6b6b6b]">Thêm học sinh bằng Gmail hoặc nhập tệp ở bên trái.</p>
                       </div>
                     ) : (
                       <div className="overflow-hidden rounded-[12px] border border-[#ede8e1] bg-white">

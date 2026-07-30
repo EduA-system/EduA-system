@@ -4,7 +4,7 @@ import { RouteGuard } from "@/lib/auth/RouteGuard";
 export default function CreateClassPage() {
   return (
     <RouteGuard pathname="/create-class">
-      <ClassManagementPage />
+      <ClassManagementPage view="create" />
     </RouteGuard>
   );
 }

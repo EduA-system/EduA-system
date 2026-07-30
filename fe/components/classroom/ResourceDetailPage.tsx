@@ -84,7 +84,7 @@ function formatSavedTime(iso: string): string {
   return new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 }
 
-/** Xem lại bài đã nộp (chỉ đọc) — dùng cho cả màn lớp Inactive lẫn màn mặc định trước khi bấm "Chỉnh sửa bài". */
+/** Xem lại bài đã nộp (chỉ đọc) — dùng cho cả màn lớp đã lưu trữ lẫn màn mặc định trước khi bấm "Chỉnh sửa bài". */
 function SubmissionSummary({ submission }: { submission: SubmissionDetail }) {
   return (
     <div className="mt-4 space-y-3">
@@ -319,14 +319,16 @@ export function ResourceDetailPage() {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
-          className="inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
+          className="group/tooltip relative inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
           aria-label="Mở menu chức năng"
+          title="Mở menu chức năng"
         >
           <span className="flex w-4 flex-col gap-1" aria-hidden>
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
           </span>
+          <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">Mở menu chức năng</span>
         </button>
         <div className="ml-3 flex items-center gap-2 text-sm font-semibold">EDUA</div>
       </header>
@@ -428,7 +430,7 @@ export function ResourceDetailPage() {
 
                     {classInactive && (
                       <p className="mt-3 rounded-[10px] border border-[#e6d8cb] bg-[#f8f2ec] px-3 py-2 text-[12px] leading-5 text-[#8a5a35]">
-                        Lớp đang ở chế độ lưu trữ (Inactive) — bạn chỉ có thể xem lại bài đã nộp, không thể nộp mới hoặc thu hồi.
+                        Lớp đang ở chế độ lưu trữ — bạn chỉ có thể xem lại bài đã nộp, không thể nộp mới hoặc thu hồi.
                       </p>
                     )}
 
@@ -509,9 +511,11 @@ export function ResourceDetailPage() {
                                 type="button"
                                 onClick={() => removeFile(index)}
                                 aria-label="Xóa tệp"
-                                className="text-[#8a837b] transition hover:text-[#c0492b]"
+                                title="Xóa tệp"
+                                className="group/tooltip relative text-[#8a837b] transition hover:text-[#c0492b]"
                               >
                                 <X className="size-3.5" />
+                                <span role="tooltip" className="pointer-events-none absolute bottom-6 right-0 z-30 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">Xóa tệp</span>
                               </button>
                             </span>
                           ))}

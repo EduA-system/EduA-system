@@ -135,9 +135,10 @@ export function ResourceCard({
               onEdit?.(resource);
             }}
             title="Sửa tài nguyên"
-            className="flex size-8 items-center justify-center rounded-[10px] border border-[#d8d1c9] bg-white/95 text-[#6b6b6b] shadow-sm transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
+            className="group/tooltip relative flex size-8 items-center justify-center rounded-[10px] border border-[#d8d1c9] bg-white/95 text-[#6b6b6b] shadow-sm transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
           >
             <Pencil className="size-3.5" />
+            <span role="tooltip" className="pointer-events-none absolute right-0 top-10 z-30 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">Sửa tài nguyên</span>
           </button>
           <button
             type="button"
@@ -147,9 +148,10 @@ export function ResourceCard({
             }}
             disabled={deleting}
             title="Xóa tài nguyên"
-            className="flex size-8 items-center justify-center rounded-[10px] border border-[#e8b4a4] bg-white/95 text-[#c0492b] shadow-sm transition hover:bg-[#fdf3ef] disabled:cursor-not-allowed disabled:opacity-50"
+            className="group/tooltip relative flex size-8 items-center justify-center rounded-[10px] border border-[#e8b4a4] bg-white/95 text-[#c0492b] shadow-sm transition hover:bg-[#fdf3ef] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+            <span role="tooltip" className="pointer-events-none absolute right-0 top-10 z-30 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">Xóa tài nguyên</span>
           </button>
         </div>
       )}

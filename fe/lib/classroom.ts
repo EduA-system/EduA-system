@@ -25,7 +25,7 @@ export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
 
 export const IMPORT_SKIP_REASON_LABELS: Record<string, string> = {
   INVALID_FORMAT: "Email sai định dạng",
-  DUPLICATE_IN_FILE: "Trùng trong file",
+  DUPLICATE_IN_FILE: "Trùng trong tệp",
   ALREADY_ENROLLED: "Đã có trong lớp",
   ROLE_CONFLICT: "Email đã thuộc vai trò khác",
   ACCOUNT_DISABLED: "Tài khoản đã bị khóa",

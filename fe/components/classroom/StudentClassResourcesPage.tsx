@@ -114,14 +114,16 @@ export function StudentClassResourcesPage() {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
-          className="inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
+          className="group/tooltip relative inline-flex size-9 items-center justify-center rounded-lg text-[#1f1f1f] transition hover:bg-[#edeae5]"
           aria-label="Mở menu chức năng"
+          title="Mở menu chức năng"
         >
           <span className="flex w-4 flex-col gap-1" aria-hidden>
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
             <span className="h-0.5 w-full rounded bg-current" />
           </span>
+          <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">Mở menu chức năng</span>
         </button>
         <div className="ml-3 flex items-center gap-2 text-sm font-semibold">EDUA</div>
       </header>
@@ -258,7 +260,7 @@ export function StudentClassResourcesPage() {
 
                     {selectedClass.status === "INACTIVE" && (
                       <p className="mt-4 rounded-[10px] border border-[#e6d8cb] bg-[#f8f2ec] px-3 py-2 text-[12px] leading-5 text-[#8a5a35]">
-                        Lớp đang ở chế độ lưu trữ (Inactive) — tài nguyên cũ vẫn xem và tải được bình thường.
+                        Lớp đang ở chế độ lưu trữ — tài nguyên cũ vẫn xem và tải được bình thường.
                       </p>
                     )}
 
