@@ -12,6 +12,14 @@
 - **Giu du lieu cu**: Inactive class van cho owner va enrolled students view/download resource/submission cu theo `BR-39`.
 - **Khong gom enrollment/resource API**: Add Student, Remove Student, Post Resource la cac use case rieng; flow nay chi hien thi summary trong Class Hub.
 
+### Frontend Class Hub navigation
+
+- `/class-detail?classId={id}` la trang **Tong quan**, hien class info va cac counter tu `ClassDetailDto`.
+- Class Hub tach thanh cac man hinh `/class-detail/members`, `/resources`, `/assignments`, va `/settings`; tat ca giu `classId` tren query string.
+- Submission roster va submission detail co route rieng duoi `/class-detail/assignments/` va truyen `resourceId`/`studentId` tren query string de deep-link.
+- `/add-student?classId={id}` la URL tuong thich cu va redirect sang `/class-detail/members?classId={id}`.
+- Hien tai cac man hinh Class Hub management chi cap cho `TEACHER` va `MODERATOR`; khong thay doi API hay quyen Student trong pham vi tach UI nay.
+
 ## 2. Mapping SRS
 
 | SRS | Ten | Mo ta trong flow |

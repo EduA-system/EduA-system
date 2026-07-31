@@ -51,7 +51,7 @@ export function SubmissionDetailPanel({
   }, [load]);
 
   const edited = detail ? detail.firstSubmittedAt !== detail.submittedAt : false;
-  const backHref = `/class-detail?classId=${classId}&resourceId=${resource.id}`;
+  const backHref = `/class-detail/assignments/submissions?classId=${classId}&resourceId=${resource.id}`;
 
   return (
     <div className="mx-auto min-w-0 max-w-[860px]">

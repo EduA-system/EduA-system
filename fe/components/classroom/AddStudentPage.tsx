@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { ClassHubNavigation } from "./ClassHubFrame";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
   type ClassDetail,
@@ -153,7 +154,7 @@ export function AddStudentPage() {
     setMessage("");
     setError("");
     setImportResult(null);
-    router.replace(id ? `/add-student?classId=${id}` : "/add-student");
+    router.replace(id ? `/class-detail/members?classId=${id}` : "/class-detail/members");
   }
 
   async function refreshSelectedClass(id: string) {
@@ -250,6 +251,7 @@ export function AddStudentPage() {
 
         <section className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
           <div className="mx-auto w-full max-w-[1220px]">
+            <ClassHubNavigation classId={classId} active="members" />
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <Link

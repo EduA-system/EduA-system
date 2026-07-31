@@ -77,7 +77,7 @@ function toIsoOrNull(datetimeLocal: string): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function ResourceFormPanel({
+export function ResourceFormPanel({
   classId,
   authFetch,
   initial,
