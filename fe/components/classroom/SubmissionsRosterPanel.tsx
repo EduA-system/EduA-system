@@ -61,7 +61,7 @@ export function SubmissionsRosterPanel({
 
   function openDetail(entry: SubmissionRosterEntry) {
     if (entry.status === "NOT_SUBMITTED") return;
-    router.push(`/class-detail?classId=${classId}&resourceId=${resource.id}&studentId=${entry.studentId}`);
+    router.push(`/class-detail/assignments/submission?classId=${classId}&resourceId=${resource.id}&studentId=${entry.studentId}`);
   }
 
   const deadline = roster?.deadline ?? resource.deadline;
@@ -69,7 +69,7 @@ export function SubmissionsRosterPanel({
   return (
     <div className="min-w-0">
       <Link
-        href={`/class-detail?classId=${classId}`}
+        href={`/class-detail/assignments?classId=${classId}`}
         className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#6b6b6b] transition hover:text-[#1f1f1f]"
       >
         <ArrowLeft className="size-3.5" /> Quay lại lớp học

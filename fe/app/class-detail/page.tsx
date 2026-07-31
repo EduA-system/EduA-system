@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { ClassDetailPage } from "@/components/classroom/ClassDetailPage";
+import { ClassOverviewPage } from "@/components/classroom/ClassOverviewPage";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 
 export default function ClassDetailRoutePage() {
@@ -12,7 +12,7 @@ export default function ClassDetailRoutePage() {
           </main>
         }
       >
-        <ClassDetailPage />
+        <ClassOverviewPage />
       </Suspense>
     </RouteGuard>
   );

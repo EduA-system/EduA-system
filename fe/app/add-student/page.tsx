@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { AddStudentPage } from "@/components/classroom/AddStudentPage";
+import { LegacyAddStudentRedirect } from "@/components/classroom/LegacyAddStudentRedirect";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 
 export default function AddStudentRoutePage() {
@@ -12,7 +12,7 @@ export default function AddStudentRoutePage() {
           </main>
         }
       >
-        <AddStudentPage />
+        <LegacyAddStudentRedirect />
       </Suspense>
     </RouteGuard>
   );
