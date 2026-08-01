@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Archive,
   ArrowUpRight,
@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Search,
   Users,
+  X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -122,9 +123,11 @@ function ClassCard({
 export function ClassManagementPage({ view = "create" }: { view?: "create" | "list" }) {
   const { user, status, authFetch } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const defaultSubject = isClassSubject(user?.subject) ? user.subject : "CHEMISTRY";
   const createFormRef = useRef<HTMLFormElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(view === "create" || searchParams.get("create") === "1");
   const [items, setItems] = useState<ClassSummary[]>([]);
   const [createForm, setCreateForm] = useState<FormState>(() => emptyForm(defaultSubject));
   const [q, setQ] = useState("");
@@ -172,6 +175,10 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (creating) return;
+    if (!isClassSubject(user?.subject) || createForm.subject !== user.subject) {
+      setError("Bạn chỉ được tạo lớp thuộc chuyên ngành của mình.");
+      return;
+    }
     setCreating(true);
     setError("");
     setMessage("");
@@ -197,12 +204,28 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
 
   function openCreateForm() {
     if (view === "list") {
-      router.push("/create-class");
+      setCreateOpen(true);
       return;
     }
     createFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     createFormRef.current?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
   }
+
+  const closeCreateForm = useCallback(() => {
+    setCreateOpen(false);
+    if (view === "list" && searchParams.get("create") === "1") {
+      router.replace("/list-class", { scroll: false });
+    }
+  }, [router, searchParams, view]);
+
+  useEffect(() => {
+    if (view !== "list" || !createOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeCreateForm();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closeCreateForm, createOpen, view]);
 
   async function toggleStatus(item: Pick<ClassSummary, "id" | "status">) {
     const nextStatus: ClassStatus = item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
@@ -221,6 +244,82 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
   }
 
   if (!user) return null;
+
+  const allowedSubjects = isClassSubject(user.subject) ? [user.subject] : [];
+
+  const createFormElement = (
+    <form ref={createFormRef} onSubmit={handleCreate} className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
+      <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
+        <Plus className="size-4 text-[#d97757]" /> Lớp mới
+      </div>
+
+      <label className="mt-5 block text-[12px] font-medium text-[#6b6b6b]">
+        Tên lớp
+        <input
+          value={createForm.name}
+          onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
+          maxLength={255}
+          placeholder="Ví dụ: 10A1 - Hóa học"
+          className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
+        />
+      </label>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <label className="block text-[12px] font-medium text-[#6b6b6b]">
+          Môn học
+          <div className="mt-2 flex h-11 items-center rounded-lg border border-[#d8d1c9] bg-[#f3f0ec] px-3 text-[13px] text-[#4f4943]">
+            {allowedSubjects[0] ? subjectLabel(allowedSubjects[0]) : "Chưa thiết lập"}
+          </div>
+        </label>
+        <label className="block text-[12px] font-medium text-[#6b6b6b]">
+          Khối
+          <select
+            value={createForm.grade}
+            onChange={(event) => setCreateForm((current) => ({ ...current, grade: Number(event.target.value) }))}
+            className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]"
+          >
+            {GRADES.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">
+        Mô tả
+        <textarea
+          value={createForm.description}
+          onChange={(event) => setCreateForm((current) => ({ ...current, description: event.target.value }))}
+          maxLength={2000}
+          rows={5}
+          placeholder="Mục tiêu, ghi chú hoặc quy ước lớp..."
+          className="mt-2 w-full resize-none rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
+        />
+      </label>
+
+      <div className="mt-5 flex gap-2">
+        {view === "list" && (
+          <button
+            type="button"
+            onClick={closeCreateForm}
+            disabled={creating}
+            className="h-11 flex-1 rounded-[11px] border border-[#d8d1c9] px-5 text-[13px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Hủy
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={creating || !createForm.name.trim() || allowedSubjects.length === 0}
+          className="h-11 flex-1 items-center justify-center gap-2 rounded-[11px] bg-[#d97757] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]"
+        >
+          <span className="flex items-center justify-center gap-2">
+            {creating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+            {creating ? "Đang tạo..." : "Tạo lớp"}
+          </span>
+        </button>
+      </div>
+      {allowedSubjects.length === 0 && <p className="mt-3 text-[12px] text-[#c0492b]">Tài khoản chưa có chuyên ngành nên chưa thể tạo lớp.</p>}
+    </form>
+  );
 
   return (
     <main className="min-h-screen bg-white text-[#1f1f1f]">
@@ -299,66 +398,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
             )}
 
             <div className={`mt-8 grid gap-6 ${view === "create" ? "max-w-[560px]" : ""}`}>
-              <form ref={createFormRef} onSubmit={handleCreate} className={view === "create" ? "rounded-[14px] border border-[#d8d1c9] bg-white p-5" : "hidden"}>
-                <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
-                  <Plus className="size-4 text-[#d97757]" /> Lớp mới
-                </div>
-
-                <label className="mt-5 block text-[12px] font-medium text-[#6b6b6b]">
-                  Tên lớp
-                  <input
-                    value={createForm.name}
-                    onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
-                    maxLength={255}
-                    placeholder="Ví dụ: 10A1 - Hóa học"
-                    className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
-                  />
-                </label>
-
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <label className="block text-[12px] font-medium text-[#6b6b6b]">
-                    Môn học
-                    <select
-                      value={createForm.subject}
-                      onChange={(event) => setCreateForm((current) => ({ ...current, subject: event.target.value as ClassSubject }))}
-                      className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]"
-                    >
-                      {CLASS_SUBJECTS.map((subject) => <option key={subject} value={subject}>{subjectLabel(subject)}</option>)}
-                    </select>
-                  </label>
-                  <label className="block text-[12px] font-medium text-[#6b6b6b]">
-                    Khối
-                    <select
-                      value={createForm.grade}
-                      onChange={(event) => setCreateForm((current) => ({ ...current, grade: Number(event.target.value) }))}
-                      className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]"
-                    >
-                      {GRADES.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}
-                    </select>
-                  </label>
-                </div>
-
-                <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">
-                  Mô tả
-                  <textarea
-                    value={createForm.description}
-                    onChange={(event) => setCreateForm((current) => ({ ...current, description: event.target.value }))}
-                    maxLength={2000}
-                    rows={5}
-                    placeholder="Mục tiêu, ghi chú hoặc quy ước lớp..."
-                    className="mt-2 w-full resize-none rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
-                  />
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={creating || !createForm.name.trim()}
-                  className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-[11px] bg-[#d97757] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]"
-                >
-                  {creating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-                  {creating ? "Đang tạo..." : "Tạo lớp"}
-                </button>
-              </form>
+              {view === "create" ? createFormElement : null}
 
               <div className={view === "list" ? "min-w-0 space-y-6" : "hidden"}>
                 <section className="min-w-0 rounded-[14px] border border-[#d8d1c9] bg-[#faf9f7] p-5">
@@ -439,6 +479,39 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
                 </section>
               </div>
             </div>
+
+            {view === "list" && createOpen && (
+              <div
+                className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="create-class-title"
+                onClick={closeCreateForm}
+              >
+                <div
+                  className="max-h-[calc(100vh-2rem)] w-full max-w-[560px] overflow-y-auto rounded-[18px] bg-[#f7f5f2] p-5 shadow-2xl sm:p-6"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                      <h2 id="create-class-title" className="font-libertine text-[30px] font-normal">Tạo lớp học</h2>
+                      <p className="mt-1 text-[13px] text-[#6b6b6b]">Tạo không gian để quản lý học sinh và tài nguyên học tập.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeCreateForm}
+                      disabled={creating}
+                      aria-label="Đóng form tạo lớp"
+                      title="Đóng form tạo lớp"
+                      className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#d8d1c9] bg-white text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                  {createFormElement}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </div>

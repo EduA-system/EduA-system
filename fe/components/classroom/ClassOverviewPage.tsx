@@ -25,7 +25,7 @@ export function ClassOverviewPage() {
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
 
   return (
-    <ClassHubFrame classId={classId} active="overview">
+    <ClassHubFrame classId={classId} active="overview" header={<div><h1 className="font-libertine text-[40px] font-normal leading-[1.02] tracking-[-0.025em] sm:text-[52px]">Tổng quan lớp</h1><p className="mt-3 text-[14px] leading-6 text-[#6b6b6b]">Thông tin, hoạt động và tài nguyên của lớp học.</p></div>}>
       {!classId ? <Empty message="Chọn một lớp từ danh sách để xem tổng quan." /> : error ? <Empty message={error} /> : !detail ? (
         <div className="mt-6 flex items-center gap-2 text-sm text-[#6b6b6b]"><Loader2 className="size-4 animate-spin" /> Đang tải lớp học...</div>
       ) : (

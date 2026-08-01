@@ -2,6 +2,8 @@ package com.edua.beeduasystem.service.classroom;
 
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
+import com.edua.beeduasystem.domain.model.auth.AccessTokenClaims;
+import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.domain.model.classroom.ClassMember;
@@ -18,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +51,7 @@ class ClassManagementServiceTest {
     void createClass_setsOwnerAndActivatesClass() {
         UUID ownerId = UUID.randomUUID();
         when(currentUserProvider.requireUserId()).thenReturn(ownerId);
+        when(currentUserProvider.require()).thenReturn(claims(ownerId, Subject.CHEMISTRY));
         when(classRepository.save(any(Classroom.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(userRepository.findById(ownerId)).thenReturn(Optional.of(user(ownerId, "teacher@edua.vn", "Teacher A")));
 
@@ -62,6 +66,35 @@ class ClassManagementServiceTest {
         assertThat(classroom.description()).isEqualTo("Lop hoc");
         assertThat(result.ownerName()).isEqualTo("Teacher A");
         assertThat(result.memberCount()).isEqualTo(1L);
+    }
+
+    @Test
+    void createClass_rejectsSubjectOutsideOwnerSpecialty() {
+        UUID ownerId = UUID.randomUUID();
+        when(currentUserProvider.requireUserId()).thenReturn(ownerId);
+        when(currentUserProvider.require()).thenReturn(claims(ownerId, Subject.CHEMISTRY));
+
+        assertThatThrownBy(() -> service.createClass("10A1", Subject.PHYSICS, 10, null))
+                .isInstanceOf(ForbiddenOperationException.class)
+                .hasMessage("Bạn chỉ được tạo hoặc chỉnh sửa lớp thuộc chuyên ngành của mình.");
+
+        verify(classRepository, org.mockito.Mockito.never()).save(any(Classroom.class));
+    }
+
+    @Test
+    void updateClass_rejectsSubjectOutsideOwnerSpecialty() {
+        UUID ownerId = UUID.randomUUID();
+        UUID classId = UUID.randomUUID();
+        Classroom classroom = classroom(classId, ownerId, "10A1", null, Subject.CHEMISTRY, 10, ClassStatus.ACTIVE);
+        when(currentUserProvider.requireUserId()).thenReturn(ownerId);
+        when(currentUserProvider.require()).thenReturn(claims(ownerId, Subject.CHEMISTRY));
+        when(classRepository.findById(classId)).thenReturn(Optional.of(classroom));
+
+        assertThatThrownBy(() -> service.updateClass(classId, null, Subject.MATH, null, null))
+                .isInstanceOf(ForbiddenOperationException.class)
+                .hasMessage("Bạn chỉ được tạo hoặc chỉnh sửa lớp thuộc chuyên ngành của mình.");
+
+        verify(classRepository, org.mockito.Mockito.never()).save(any(Classroom.class));
     }
 
     @Test
@@ -153,5 +186,9 @@ class ClassManagementServiceTest {
 
     private static AppUser user(UUID id, String email, String fullName) {
         return new AppUser(id, email, null, fullName, null, null, null, UserStatus.ACTIVE, Instant.now(), null);
+    }
+
+    private static AccessTokenClaims claims(UUID userId, Subject subject) {
+        return new AccessTokenClaims(userId, "teacher@edua.vn", Set.of(Role.TEACHER), subject);
     }
 }

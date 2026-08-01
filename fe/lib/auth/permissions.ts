@@ -19,6 +19,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/class-detail":    { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/class-detail/members": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/class-detail/resources": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
+  "/class-detail/resources/detail": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/class-detail/assignments": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/class-detail/assignments/submissions": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/class-detail/assignments/submission": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
