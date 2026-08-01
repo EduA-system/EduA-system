@@ -42,7 +42,7 @@ $beDir     = Join-Path $rootDir "be"
 $feDir     = Join-Path $rootDir "fe"
 $loadedEnv = @{}
 
-$beMvw     = if ($IsWindows -or ($env:OS -eq "Windows_NT")) { "mvnw.cmd" } else { "./mvnw" }
+$beMvw     = if ($IsWindows -or ($env:OS -eq "Windows_NT")) { ".\mvnw.cmd" } else { "./mvnw" }
 
 # -- Colors ---------------------------------------------------------------
 function Write-Step($msg)   { Write-Host ""

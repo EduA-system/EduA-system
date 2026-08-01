@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Project copy and documents are primarily Vietnamese. Code identifiers should stay in English.
 
-For Iter3 work, keep the docs synchronized with the code. The canonical status file is `ITER3_CODE_CHECKLIST.md`, and the local helper skill is `.codex/skills/iter3-doc-sync/`.
+For Iter3 work, keep the docs synchronized with the code. The canonical status file is `WBS_CHECKLIST.md` (verified against actual code reality, not just the raw WBS tracker status).
 
 ## Repository Layout
 
@@ -191,7 +191,7 @@ A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4o
 - Do not move code across layers to make a quick import work; keep the backend dependency direction intact.
 - Use Vietnamese copy for user-facing text where the surrounding UI uses Vietnamese.
 - Keep secrets out of the repository.
-- After Iter3 code changes, update `ITER3_CODE_CHECKLIST.md` and any affected `designs/` docs in the same pass.
+- After Iter3 code changes, update `WBS_CHECKLIST.md` and any affected `designs/` docs in the same pass.
 - In repo-facing docs, use `Principal` for school-level account management and `IT Staff` for prompt/system-prompt management and activity/audit log review.
 
 ## Commit Style
