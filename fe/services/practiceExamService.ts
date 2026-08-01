@@ -34,7 +34,3 @@ async function request<T>(path: string, payload: unknown, fetcher: RequestFetche
 
 export function validatePracticeExam(config: PracticeExamRequest, fetcher?: RequestFetcher) { return request<PracticeExamValidation>("/api/practice-exams/validate-configuration", config, fetcher); }
 export function generatePracticeExam(config: PracticeExamRequest, fetcher?: RequestFetcher) { return request<PracticeExam>("/api/practice-exams/generate", config, fetcher); }
-
-const SESSION_KEY = "edua:practiceExamDraft";
-export function storePracticeExam(exam: PracticeExam) { sessionStorage.setItem(SESSION_KEY, JSON.stringify(exam)); }
-export function readPracticeExam(): PracticeExam | null { try { const value = sessionStorage.getItem(SESSION_KEY); return value ? JSON.parse(value) as PracticeExam : null; } catch { return null; } }

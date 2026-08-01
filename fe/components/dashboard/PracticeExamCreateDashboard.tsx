@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { createLibraryContent } from "@/lib/library";
 import {
   fetchChapterLessons,
   fetchTextbookChapters,
@@ -14,7 +15,6 @@ import {
 } from "@/services/lessonPlanService";
 import {
   generatePracticeExam,
-  storePracticeExam,
   type PracticeExamRequest,
   type PracticeQuestionType,
 } from "@/services/practiceExamService";
@@ -214,13 +214,21 @@ export function PracticeExamCreateDashboard() {
           }),
         },
       };
-      sessionStorage.setItem("edua-practice-exam-draft", JSON.stringify({ subject, grade: String(grade), duration: durationMinutes, difficulty }));
       setGenerationProgress(12);
       setGenerationMessage(`AI đang tạo khoảng ${estimatedBatchCount} nhóm câu...`);
-      storePracticeExam(await generatePracticeExam(request, authFetch));
+      const exam = await generatePracticeExam(request, authFetch);
+      setGenerationProgress(96);
+      setGenerationMessage("Đang lưu bản nháp đề vào thư viện...");
+      const saved = await createLibraryContent(authFetch, {
+        type: "TEST",
+        title: exam.title,
+        subject,
+        grade,
+        payload: { exam, grade, duration: durationMinutes, difficulty },
+      });
       setGenerationProgress(100);
       setGenerationMessage("Đang mở trình chỉnh sửa đề...");
-      router.push("/exam-edit-new");
+      router.push(`/exam-edit-new?libraryId=${encodeURIComponent(saved.id)}`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tạo đề.");
     } finally {
@@ -238,7 +246,7 @@ export function PracticeExamCreateDashboard() {
             </p>
             <h1 className="font-libertine mt-3 text-5xl">Tạo đề kiểm tra</h1>
             <p className="mt-3 text-sm text-[#70675f]">
-              Đề tạo tạm thời, không lưu database. Tài khoản Teacher hoặc Moderator có thể tạo đề.
+              Đề được lưu tự động vào Thư viện của tôi sau khi AI tạo xong. Tài khoản Teacher hoặc Moderator có thể tạo đề.
             </p>
             {error && (
               <p

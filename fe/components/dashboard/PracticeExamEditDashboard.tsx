@@ -15,7 +15,6 @@ import {
   type MathClickInfo,
 } from "@/components/LessonEditor";
 import {
-  readPracticeExam,
   type PracticeExam,
 } from "@/services/practiceExamService";
 import { normalizePracticeExamLatex, normalizePracticeExamMathText } from "@/lib/practice-exam-math";
@@ -75,27 +74,12 @@ function richTextBlocks(value: string) {
 }
 
 function draftMetadata(): Metadata {
-  const generated = typeof window === "undefined" ? null : readPracticeExam();
-  const fallback = {
+  return {
     subject: "Vật lí",
     grade: "10",
     duration: 15,
     difficulty: "MEDIUM",
   };
-  if (typeof window === "undefined") return generated ? { ...fallback, duration: generated.durationMinutes } : fallback;
-  const draft = sessionStorage.getItem("edua-practice-exam-draft");
-  if (!draft) return generated ? { ...fallback, duration: generated.durationMinutes } : fallback;
-  try {
-    const parsed = JSON.parse(draft) as Partial<Metadata>;
-    return {
-      subject: parsed.subject ?? fallback.subject,
-      grade: parsed.grade ?? fallback.grade,
-      duration: generated?.durationMinutes ?? parsed.duration ?? fallback.duration,
-      difficulty: parsed.difficulty ?? fallback.difficulty,
-    };
-  } catch {
-    return fallback;
-  }
 }
 
 function examHtml(metadata: Metadata, generated: PracticeExam | null) {
@@ -198,9 +182,7 @@ const questionLinks = [
 export function PracticeExamEditDashboard() {
   const { authFetch } = useAuth();
   const searchParams = useSearchParams();
-  const [generated] = useState<PracticeExam | null>(() =>
-    typeof window === "undefined" ? null : readPracticeExam(),
-  );
+  const [generated, setGenerated] = useState<PracticeExam | null>(null);
   const [metadata, setMetadata] = useState(draftMetadata);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
@@ -229,16 +211,25 @@ export function PracticeExamEditDashboard() {
     const contentId = searchParams.get("libraryId");
     if (!contentId || !editor) return;
     void getLibraryContent(authFetch, contentId).then((content) => {
-      const payload = content.payload as { exam?: PracticeExam; documentHtml?: string } | undefined;
-      if (!payload?.documentHtml) return;
-      editor.commands.setContent(payload.documentHtml);
-      setSavedExam(payload.exam ?? null);
+      const payload = content.payload as {
+        exam?: PracticeExam;
+        documentHtml?: string;
+        grade?: number;
+        duration?: number;
+        difficulty?: string;
+      } | undefined;
+      if (!payload?.exam) throw new Error("Bài kiểm tra đã lưu có định dạng không hợp lệ.");
+      const loadedMetadata: Metadata = {
+        subject: content.subject ?? "PHYSICS",
+        grade: content.grade ? String(content.grade) : payload.grade ? String(payload.grade) : "10",
+        duration: payload.duration ?? payload.exam.durationMinutes,
+        difficulty: payload.difficulty ?? "MEDIUM",
+      };
+      editor.commands.setContent(payload.documentHtml ?? examHtml(loadedMetadata, payload.exam));
+      setGenerated(payload.exam);
+      setSavedExam(payload.exam);
       setLibraryId(content.id);
-      setMetadata((current) => ({
-        ...current,
-        subject: content.subject ?? current.subject,
-        grade: content.grade ? String(content.grade) : current.grade,
-      }));
+      setMetadata(loadedMetadata);
       setNotice("Đang mở bài kiểm tra đã lưu từ thư viện.");
     }).catch(() => setNotice("Không thể mở bài kiểm tra đã lưu."));
   }, [authFetch, editor, searchParams]);
@@ -250,7 +241,7 @@ export function PracticeExamEditDashboard() {
     if (![10, 11, 12].includes(grade)) { setNotice("Không xác định được lớp của đề. Vui lòng tạo đề lại từ màn cấu hình."); return; }
     setSaving(true);
     try {
-      const payload = { exam, documentHtml: editor.getHTML() };
+      const payload = { exam, documentHtml: editor.getHTML(), grade, duration: metadata.duration, difficulty: metadata.difficulty };
       const subject = metadata.subject as LibrarySubject;
       const saved = libraryId
         ? await updateLibraryContent(authFetch, libraryId, { title: exam.title, subject, grade, payload })
