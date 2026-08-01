@@ -23,11 +23,11 @@ Làm từng sheet theo đúng thứ tự này:
 
 1. Đọc code FE/BE của feature.
 2. Viết/cập nhật sheet trong Excel theo layout hiện tại của workbook.
-3. Mỗi test case phải có procedure dạng manual/tester-friendly:
-   - Login bằng role tương ứng.
-   - Mở màn hình hoặc route.
-   - Click tab/button/form thật trên UI nếu có.
-   - API chỉ ghi ở cột `Note`.
+3. Mỗi test case trong Excel phải viết theo giọng manual tester, lấy tab `User Management` làm chuẩn:
+   - `Test Case Procedure`: login bằng role tương ứng, mở menu/route, click tab/button/form thật trên UI, nhập dữ liệu nếu cần, reload/mở lại màn hình khi cần kiểm tra trạng thái sau thao tác.
+   - `Expected Results`: mô tả kết quả người test nhìn thấy trên màn hình như tiêu đề, tab, danh sách, badge trạng thái, popup/toast, redirect, control bị ẩn/hiện, dữ liệu còn/không còn sau refresh.
+   - Không viết HTTP method/status, endpoint `/api/...`, token, backend, database/schema/entity/field kỹ thuật trong các cột `Test Case Procedure` và `Expected Results`.
+   - Nếu cần nhắc endpoint hoặc DB assertion, chỉ ghi trong phần code test của file md hoặc cột ghi chú kỹ thuật, không đưa vào lời test case manual.
 4. Viết code integration test ở backend:
    - Dùng `@SpringBootTest`.
    - Dùng `@AutoConfigureMockMvc`.
@@ -49,6 +49,23 @@ Làm từng sheet theo đúng thứ tự này:
 8. Cập nhật `Test Statistics`:
    - Link số liệu về sheet feature.
    - Kiểm tra số test case, passed, failed, pending.
+
+## Chuẩn Giọng Văn Cho Excel
+
+Các cột `Test Case Procedure` và `Expected Results` là tài liệu cho tester thao tác trên UI, không phải mô tả integration test code.
+
+- Viết như checklist kiểm thử thủ công: "Login with a Teacher account", "Click sidebar item", "Select the Moderator tab", "Enter a non-empty reason", "Reload the page".
+- Expected result phải là kết quả quan sát được: "Page title is displayed", "The item leaves the list", "Message is shown", "The button is not visible", "User is redirected to login".
+- Tránh cách viết của developer: `GET /api/...`, `POST /api/...`, `returns 200 OK`, `Bearer token`, `repository`, `DB row`, `entity field`, `ownerId`, `reviewedAt`.
+- Endpoint, HTTP status, repository seed data và DB assertion được ghi ở phần `Test cases implemented` hoặc `Code Coverage Target` trong file md, vì đó là phạm vi của code integration test.
+
+Ví dụ sửa câu:
+
+| Không dùng trong Excel | Dùng trong Excel |
+| --- | --- |
+| `Backend GET /api/library/contents returns 200 OK.` | `The Library list is displayed with owned content or an empty state.` |
+| `POST /api/hub/contents/{id}/reports returns 201 Created.` | `A success message is shown and the report reason is accepted.` |
+| `Teacher token cannot access /api/principal/**.` | `Teacher cannot open Principal-only screens and is redirected or shown an access-denied state.` |
 
 ## Quy Ước Code Test
 
@@ -111,22 +128,22 @@ BUILD SUCCESS
 
 | No | Sheet/Tab | Sheet Code | Code Test Class | Excel Status | Code Status | Round 1 |
 | ---: | --- | --- | --- | --- | --- | --- |
-| 1 | Authentication & Profile | AP | `AuthenticationProfileIntegrationTests` | Pending | Pending | Pending |
+| 1 | Authentication & Profile | AP | `AuthenticationProfileIntegrationTests` | Done | Done | Pending - DB timeout |
 | 2 | Role-Based Access Control | RBAC | `RoleBasedAccessControlIntegrationTests` | Done | Done | Passed 10/10 |
 | 3 | User Management CRUD | UM | `UserManagementIntegrationTests` | Done | Done | Passed 18/18 |
-| 4 | Personal Library CRUD | PL | `PersonalLibraryIntegrationTests` | Pending | Pending | Pending |
-| 5 | Community Hub Content | HC | `CommunityHubContentIntegrationTests` | Pending | Pending | Pending |
-| 6 | Community Hub Feedback | HF | `CommunityHubFeedbackIntegrationTests` | Pending | Pending | Pending |
-| 7 | Hub Moderation | HM | `HubModerationIntegrationTests` | Pending | Pending | Pending |
-| 8 | Blog CRUD & Moderation | BL | `BlogIntegrationTests` | Pending | Pending | Pending |
-| 9 | Notification Management | NM | `NotificationManagementIntegrationTests` | Pending | Pending | Pending |
-| 10 | Activity Log | AL | `ActivityLogIntegrationTests` | Pending | Pending | Pending |
-| 11 | Classroom CRUD | CC | `ClassroomCrudIntegrationTests` | Pending | Pending | Pending |
-| 12 | Classroom Membership | CM | `ClassroomMembershipIntegrationTests` | Pending | Pending | Pending |
-| 13 | Classroom Resource CRUD | CR | `ClassroomResourceIntegrationTests` | Pending | Pending | Pending |
-| 14 | Assignment Submission | AS | `AssignmentSubmissionIntegrationTests` | Pending | Pending | Pending |
-| 15 | Submission Review | SR | `SubmissionReviewIntegrationTests` | Pending | Pending | Pending |
-| 16 | Weekly Task / Lesson Plan Approval | WT | `WeeklyTaskIntegrationTests` | Pending | Pending | Pending |
+| 4 | Personal Library CRUD | PL | `PersonalLibraryIntegrationTests` | Done | Done | Passed 8/8 |
+| 5 | Community Hub Content | HC | `CommunityHubContentIntegrationTests` | Done | Done | Passed 4/4 |
+| 6 | Community Hub Feedback | HF | `CommunityHubFeedbackIntegrationTests` | Done | Done | Passed 6/6 |
+| 7 | Hub Moderation | HM | `HubModerationIntegrationTests` | Done | Done | Passed 4/4 |
+| 8 | Blog CRUD & Moderation | BL | `BlogIntegrationTests` | Done | Done | Passed 11/11 |
+| 9 | Notification Management | NM | `NotificationManagementIntegrationTests` | Done | Done | Passed 6/6 |
+| 10 | Activity Log | AL | `ActivityLogIntegrationTests` | Done | Done | Pending - DB timeout |
+| 11 | Classroom CRUD | CC | `ClassroomCrudIntegrationTests` | Done | Done | Pending - DB timeout |
+| 12 | Classroom Membership | CM | `ClassroomMembershipIntegrationTests` | Done | Done | Pending - DB timeout |
+| 13 | Classroom Resource CRUD | CR | `ClassroomResourceIntegrationTests` | Done | Done | Pending - DB timeout |
+| 14 | Assignment Submission | AS | `AssignmentSubmissionIntegrationTests` | Done | Done | Pending - DB timeout |
+| 15 | Submission Review | SR | `SubmissionReviewIntegrationTests` | Done | Done | Pending - DB timeout |
+| 16 | Weekly Task / Lesson Plan Approval | WT | `WeeklyTaskIntegrationTests` | Done | Done | Pending - DB timeout |
 
 ## Detailed Backlog
 
@@ -135,6 +152,29 @@ BUILD SUCCESS
 Suggested sheet name: `Authentication & Profile`
 
 Suggested test class: `AuthenticationProfileIntegrationTests`
+
+Status: Code written; Excel sheet filled; Round 1 pending because the PostgreSQL connection timed out during execution.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\AuthenticationProfileIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 6 test cases.
+- `Pending`.
+- Test date/tester left blank until the test can execute successfully.
+
+Test command attempted:
+
+`cd be && .\mvnw.cmd -Dtest=AuthenticationProfileIntegrationTests test`
+
+Current result:
+
+```text
+Test class compiles successfully with Maven testCompile.
+Maven test execution timed out while waiting for PostgreSQL connection; no successful surefire result was emitted.
+```
 
 Test cases:
 
@@ -239,6 +279,32 @@ Suggested sheet name: `Personal Library CRUD`
 
 Suggested test class: `PersonalLibraryIntegrationTests`
 
+Status: Done.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\PersonalLibraryIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 8 test cases.
+- `Passed`.
+- Test date: `2026-07-31`.
+- Tester: `HiệpVT`.
+
+Test cases implemented:
+
+| ID | Function | Role | API |
+| --- | --- | --- | --- |
+| IT-PL-001 | List and search own Library content | Teacher | `GET /api/library/contents` |
+| IT-PL-002 | Open own Library content detail | Teacher | `GET /api/library/contents/{id}` |
+| IT-PL-003 | Create Library content | Teacher | `POST /api/library/contents` |
+| IT-PL-004 | Update owned Library content | Moderator | `PATCH /api/library/contents/{id}` |
+| IT-PL-005 | Soft delete owned Library content | Teacher | `DELETE /api/library/contents/{id}` |
+| IT-PL-006 | Submit private/rejected content for Hub review | Teacher | `POST /api/library/contents/{id}/submission` |
+| IT-PL-007 | Unsubmit submitted content | Teacher | `DELETE /api/library/contents/{id}/submission` |
+| IT-PL-008 | Deny another user's Library content operations | Teacher | detail/update/delete/submit/unsubmit Library APIs |
+
 Test cases:
 
 | ID | Function | Role | Screen/API | Code Coverage Target |
@@ -258,6 +324,28 @@ Suggested sheet name: `Community Hub Content`
 
 Suggested test class: `CommunityHubContentIntegrationTests`
 
+Status: Done.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\CommunityHubContentIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 4 test cases.
+- `Passed`.
+- Test date: `2026-07-31`.
+- Tester: `HiệpVT`.
+
+Test cases implemented:
+
+| ID | Function | Role | API |
+| --- | --- | --- | --- |
+| IT-HC-001 | View and filter approved Hub feed only | Guest | `GET /api/hub/contents` |
+| IT-HC-002 | Open approved Hub content detail | Guest | `GET /api/hub/contents/{id}` |
+| IT-HC-003 | Customize approved Hub content into Personal Library | Teacher | `POST /api/hub/contents/{id}/customize` |
+| IT-HC-004 | Deny customize for guest and non-Teacher roles | Guest/Student/Moderator | `POST /api/hub/contents/{id}/customize` |
+
 Test cases:
 
 | ID | Function | Role | Screen/API | Code Coverage Target |
@@ -272,6 +360,30 @@ Test cases:
 Suggested sheet name: `Community Hub Feedback`
 
 Suggested test class: `CommunityHubFeedbackIntegrationTests`
+
+Status: Done.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\CommunityHubFeedbackIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 6 test cases.
+- `Passed`.
+- Test date: `2026-07-31`.
+- Tester: `HiệpVT`.
+
+Test cases implemented:
+
+| ID | Function | Role | API |
+| --- | --- | --- | --- |
+| IT-HF-001 | Create comment on approved content | Teacher | `POST /api/hub/contents/{id}/comments` |
+| IT-HF-002 | Update own comment | Moderator | `PATCH /api/hub/comments/{commentId}` |
+| IT-HF-003 | Delete own comment | Teacher | `DELETE /api/hub/comments/{commentId}` |
+| IT-HF-004 | Content owner deletes comment on own content | Teacher/content owner | `DELETE /api/hub/comments/{commentId}` |
+| IT-HF-005 | Report approved content | Moderator | `POST /api/hub/contents/{id}/reports` |
+| IT-HF-006 | Deny guest/student/other-user feedback actions | Guest/Student/Teacher mismatch | comment/report APIs |
 
 Test cases:
 
@@ -290,6 +402,28 @@ Suggested sheet name: `Hub Moderation`
 
 Suggested test class: `HubModerationIntegrationTests`
 
+Status: Done.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\HubModerationIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 4 test cases.
+- `Passed`.
+- Test date: `2026-08-01`.
+- Tester: `HiệpVT`.
+
+Test cases implemented:
+
+| ID | Function | Role | API |
+| --- | --- | --- | --- |
+| IT-HM-001 | View same-subject submitted moderation queue | Moderator | `GET /api/library/contents/moderation-queue` |
+| IT-HM-002 | Approve submitted content and write audit log | Moderator | `POST /api/library/contents/{id}/approval` |
+| IT-HM-003 | Reject submitted content with reason and write audit log | Moderator | `POST /api/library/contents/{id}/rejection` |
+| IT-HM-004 | Deny guest, wrong-role, wrong-subject and invalid-status moderation | Guest/Teacher/Principal/Moderator mismatch | moderation APIs |
+
 Test cases:
 
 | ID | Function | Role | Screen/API | Code Coverage Target |
@@ -304,6 +438,46 @@ Test cases:
 Suggested sheet name: `Blog CRUD & Moderation`
 
 Suggested test class: `BlogIntegrationTests`
+
+Status: Done.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\BlogIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 11 test cases.
+- `Passed`.
+- Test date: `2026-08-01`.
+- Tester: `HiệpVT`.
+
+Test command:
+
+`cd be && .\mvnw.cmd -Dtest=BlogIntegrationTests test`
+
+Result:
+
+```text
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+Test cases implemented:
+
+| ID | Function | Role | API |
+| --- | --- | --- | --- |
+| IT-BL-001 | View published Blog list and filters | Authenticated user | `GET /api/blog-posts` |
+| IT-BL-002 | View published Blog detail with comments | Authenticated user | `GET /api/blog-posts/{id}` |
+| IT-BL-003 | Create sanitized Blog post | Teacher | `POST /api/blog-posts` |
+| IT-BL-004 | Edit own Blog post | Teacher owner | `PATCH /api/blog-posts/{id}` |
+| IT-BL-005 | Delete own Blog post | Teacher owner | `DELETE /api/blog-posts/{id}` |
+| IT-BL-006 | Create sanitized Blog comment | Teacher | `POST /api/blog-posts/{id}/comments` |
+| IT-BL-007 | Update own Blog comment | Teacher owner | `PATCH /api/blog-comments/{commentId}` |
+| IT-BL-008 | Delete own Blog comment | Teacher owner | `DELETE /api/blog-comments/{commentId}` |
+| IT-BL-009 | View same-subject Blog moderation list | Moderator | `GET /api/blog-posts?subject=...` |
+| IT-BL-010 | Remove same-subject Blog post with audit log | Moderator | `POST /api/blog-posts/{id}/removal` |
+| IT-BL-011 | Deny guest, wrong-role, non-owner and wrong-subject actions | Guest/Student/Moderator/Teacher mismatch | blog APIs |
 
 Test cases:
 
@@ -327,6 +501,41 @@ Suggested sheet name: `Notification Management`
 
 Suggested test class: `NotificationManagementIntegrationTests`
 
+Status: Done.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\NotificationManagementIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 6 test cases.
+- `Passed`.
+- Test date: `2026-08-01`.
+- Tester: `HiệpVT`.
+
+Test command:
+
+`cd be && .\mvnw.cmd -Dtest=NotificationManagementIntegrationTests test`
+
+Result:
+
+```text
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+Test cases implemented:
+
+| ID | Function | Role | API |
+| --- | --- | --- | --- |
+| IT-NM-001 | Create notification broadcast by subject | Moderator | `POST /api/notifications` |
+| IT-NM-002 | View own notifications and unread filter | Authenticated user | `GET /api/notifications` |
+| IT-NM-003 | View unread count | Authenticated user | `GET /api/notifications/unread-count` |
+| IT-NM-004 | Mark one notification read | Authenticated user | `PATCH /api/notifications/{id}/read` |
+| IT-NM-005 | Mark all own notifications read | Authenticated user | `POST /api/notifications/read-all` |
+| IT-NM-006 | Deny notification create for guest/wrong roles | Guest/Teacher/Student/Principal/Moderator without subject | `POST /api/notifications` |
+
 Test cases:
 
 | ID | Function | Role | Screen/API | Code Coverage Target |
@@ -344,6 +553,37 @@ Suggested sheet name: `Activity Log`
 
 Suggested test class: `ActivityLogIntegrationTests`
 
+Status: Code written; Excel sheet filled; Round 1 pending because the PostgreSQL connection timed out during execution.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\ActivityLogIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 3 test cases.
+- `Pending`.
+- Test date/tester left blank until the test can execute successfully.
+
+Test command attempted:
+
+`cd be && .\mvnw.cmd -Dtest=ActivityLogIntegrationTests test`
+
+Current result:
+
+```text
+Tests run: 3, Failures: 0, Errors: 3, Skipped: 0
+Cause: CannotGetJdbcConnection / PostgreSQL cloud connection timed out.
+```
+
+Test cases implemented:
+
+| ID | Function | Role | API |
+| --- | --- | --- | --- |
+| IT-AL-001 | View activity log list | IT Staff | `GET /api/it-staff/activity-log` |
+| IT-AL-002 | Filter by actor, category and date range | IT Staff | `GET /api/it-staff/activity-log?actorId=...&category=...&from=...&to=...` |
+| IT-AL-003 | Deny activity log access | Guest/Teacher/Moderator/Principal/Student | activity log API |
+
 Test cases:
 
 | ID | Function | Role | Screen/API | Code Coverage Target |
@@ -357,6 +597,29 @@ Test cases:
 Suggested sheet name: `Classroom CRUD`
 
 Suggested test class: `ClassroomCrudIntegrationTests`
+
+Status: Code written; Excel sheet filled; Round 1 pending because the PostgreSQL connection timed out during execution.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\ClassroomCrudIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 6 test cases.
+- `Pending`.
+- Test date/tester left blank until the test can execute successfully.
+
+Test command attempted:
+
+`cd be && .\mvnw.cmd -Dtest=ClassroomCrudIntegrationTests test`
+
+Current result:
+
+```text
+Test compilation completed after replacing unsupported Subject.LITERATURE with Subject.CHEMISTRY.
+Maven test execution timed out while waiting for PostgreSQL connection; no successful surefire result was emitted.
+```
 
 Test cases:
 
@@ -375,6 +638,29 @@ Suggested sheet name: `Classroom Membership`
 
 Suggested test class: `ClassroomMembershipIntegrationTests`
 
+Status: Code written; Excel sheet filled; Round 1 pending because the PostgreSQL connection timed out during execution.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\ClassroomMembershipIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 6 test cases.
+- `Pending`.
+- Test date/tester left blank until the test can execute successfully.
+
+Test command attempted:
+
+`cd be && .\mvnw.cmd -Dtest=ClassroomMembershipIntegrationTests test`
+
+Current result:
+
+```text
+Test class compiles successfully with Maven testCompile.
+Maven test execution timed out while waiting for PostgreSQL connection; no successful surefire result was emitted.
+```
+
 Test cases:
 
 | ID | Function | Role | Screen/API | Code Coverage Target |
@@ -391,6 +677,29 @@ Test cases:
 Suggested sheet name: `Classroom Resource CRUD`
 
 Suggested test class: `ClassroomResourceIntegrationTests`
+
+Status: Code written; Excel sheet filled; Round 1 pending because the PostgreSQL connection timed out during execution.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\ClassroomResourceIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 6 test cases.
+- `Pending`.
+- Test date/tester left blank until the test can execute successfully.
+
+Test command attempted:
+
+`cd be && .\mvnw.cmd -Dtest=ClassroomResourceIntegrationTests test`
+
+Current result:
+
+```text
+Test class compiles successfully with Maven testCompile.
+Maven test execution timed out while waiting for PostgreSQL connection; no successful surefire result was emitted.
+```
 
 Test cases:
 
@@ -409,6 +718,29 @@ Suggested sheet name: `Assignment Submission`
 
 Suggested test class: `AssignmentSubmissionIntegrationTests`
 
+Status: Code written; Excel sheet filled; Round 1 pending because the PostgreSQL connection timed out during execution.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\AssignmentSubmissionIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 5 test cases.
+- `Pending`.
+- Test date/tester left blank until the test can execute successfully.
+
+Test command attempted:
+
+`cd be && .\mvnw.cmd -Dtest=AssignmentSubmissionIntegrationTests test`
+
+Current result:
+
+```text
+Test class compiles successfully with Maven testCompile.
+Maven test execution timed out while waiting for PostgreSQL connection; no successful surefire result was emitted.
+```
+
 Test cases:
 
 | ID | Function | Role | Screen/API | Code Coverage Target |
@@ -425,6 +757,29 @@ Suggested sheet name: `Submission Review`
 
 Suggested test class: `SubmissionReviewIntegrationTests`
 
+Status: Code written; Excel sheet filled; Round 1 pending because the PostgreSQL connection timed out during execution.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\SubmissionReviewIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 3 test cases.
+- `Pending`.
+- Test date/tester left blank until the test can execute successfully.
+
+Test command attempted:
+
+`cd be && .\mvnw.cmd -Dtest=SubmissionReviewIntegrationTests test`
+
+Current result:
+
+```text
+Test class compiles successfully with Maven testCompile.
+Maven test execution failed while waiting for PostgreSQL connection: CannotGetJdbcConnectionException / SocketTimeoutException.
+```
+
 Test cases:
 
 | ID | Function | Role | Screen/API | Code Coverage Target |
@@ -438,6 +793,29 @@ Test cases:
 Suggested sheet name: `Weekly Task`
 
 Suggested test class: `WeeklyTaskIntegrationTests`
+
+Status: Code written; Excel sheet filled; Round 1 pending because the PostgreSQL connection timed out during execution.
+
+Code file:
+
+`D:\doan_real\EduA-system\be\src\test\java\com\edua\beeduasystem\integration\WeeklyTaskIntegrationTests.java`
+
+Round 1 result in Excel:
+
+- 10 test cases.
+- `Pending`.
+- Test date/tester left blank until the test can execute successfully.
+
+Test command attempted:
+
+`cd be && .\mvnw.cmd -Dtest=WeeklyTaskIntegrationTests test`
+
+Current result:
+
+```text
+Test class compiles successfully with Maven testCompile.
+Maven test execution timed out while waiting for PostgreSQL connection; no successful surefire result was emitted.
+```
 
 Test cases:
 
