@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.service.auth;
+﻿package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
@@ -107,6 +107,7 @@ public class ModeratorTeacherService {
                     u.id(), u.email(), u.googleSub(),
                     normalizedFullName != null ? normalizedFullName : u.fullName(),
                     u.avatarUrl(), u.contactInfo(),
+                    u.bio(), u.phoneNumber(),
                     moderatorSubject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
             assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
             activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
@@ -147,6 +148,7 @@ public class ModeratorTeacherService {
         userRepository.save(new AppUser(
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
+                user.bio(), user.phoneNumber(),
                 user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
         activityLogService.record(currentUserProvider.requireUserId(), "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REVOKE_TEACHER, "APP_USER", user.id(), null);
@@ -176,6 +178,7 @@ public class ModeratorTeacherService {
         AppUser reactivated = userRepository.save(new AppUser(
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
+                user.bio(), user.phoneNumber(),
                 user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
         assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
         activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,

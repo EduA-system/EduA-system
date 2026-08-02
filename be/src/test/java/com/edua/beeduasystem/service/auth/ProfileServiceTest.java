@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.service.auth;
+﻿package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
@@ -53,13 +53,17 @@ class ProfileServiceTest {
         ProfileService.ProfileResult result = profileService.updateCurrentUserProfile(
                 "  New Name  ",
                 " https://cdn.example.com/avatar.png ",
-                "  0900000000  ");
+                "  0900000000  ",
+                "  Short bio  ",
+                "  0987654321  ");
 
         ArgumentCaptor<AppUser> saved = ArgumentCaptor.forClass(AppUser.class);
         verify(userRepository).save(saved.capture());
         assertThat(saved.getValue().fullName()).isEqualTo("New Name");
         assertThat(saved.getValue().avatarUrl()).isEqualTo("https://cdn.example.com/avatar.png");
         assertThat(saved.getValue().contactInfo()).isEqualTo("0900000000");
+        assertThat(saved.getValue().bio()).isEqualTo("Short bio");
+        assertThat(saved.getValue().phoneNumber()).isEqualTo("0987654321");
         assertThat(saved.getValue().email()).isEqualTo("teacher@fpt.edu.vn");
         assertThat(saved.getValue().subject()).isEqualTo(Subject.CHEMISTRY);
         assertThat(saved.getValue().status()).isEqualTo(UserStatus.ACTIVE);
@@ -78,11 +82,13 @@ class ProfileServiceTest {
         when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(userRoleRepository.findRolesByUserId(userId)).thenReturn(Set.of(Role.TEACHER));
 
-        ProfileService.ProfileResult result = profileService.updateCurrentUserProfile("New Name", null, null);
+        ProfileService.ProfileResult result = profileService.updateCurrentUserProfile("New Name", null, null, null, null);
 
         assertThat(result.user().fullName()).isEqualTo("New Name");
         assertThat(result.user().avatarUrl()).isEqualTo("https://cdn.example.com/old.png");
         assertThat(result.user().contactInfo()).isEqualTo("old-contact");
+        assertThat(result.user().bio()).isNull();
+        assertThat(result.user().phoneNumber()).isNull();
     }
 
     @Test
@@ -94,8 +100,24 @@ class ProfileServiceTest {
         when(currentUserProvider.requireUserId()).thenReturn(userId);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-        assertThatThrownBy(() -> profileService.updateCurrentUserProfile(null, "javascript:alert(1)", null))
+        assertThatThrownBy(() -> profileService.updateCurrentUserProfile(null, "javascript:alert(1)", null, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("URL ảnh đại diện");
+    }
+
+    @Test
+    void updateCurrentUserProfile_blankAvatarUrl_removesAvatar() {
+        UUID userId = UUID.randomUUID();
+        AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Old Name",
+                "https://cdn.example.com/old.png", null, Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null);
+
+        when(currentUserProvider.requireUserId()).thenReturn(userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRoleRepository.findRolesByUserId(userId)).thenReturn(Set.of(Role.TEACHER));
+
+        ProfileService.ProfileResult result = profileService.updateCurrentUserProfile(null, "", null, null, null);
+
+        assertThat(result.user().avatarUrl()).isNull();
     }
 }

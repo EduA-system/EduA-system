@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.service.auth;
+﻿package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
@@ -97,6 +97,7 @@ public class PrincipalModeratorService {
                     u.id(), u.email(), u.googleSub(),
                     normalizedFullName != null ? normalizedFullName : u.fullName(),
                     u.avatarUrl(), u.contactInfo(),
+                    u.bio(), u.phoneNumber(),
                     subject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
             assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
             activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
@@ -150,7 +151,8 @@ public class PrincipalModeratorService {
         UserStatus previousStatus = disablePrevious ? UserStatus.DISABLED : currentModerator.status();
         AppUser demotedModerator = new AppUser(
                 currentModerator.id(), currentModerator.email(), currentModerator.googleSub(), currentModerator.fullName(),
-                currentModerator.avatarUrl(), currentModerator.contactInfo(), currentModerator.subject(), previousStatus,
+                currentModerator.avatarUrl(), currentModerator.contactInfo(), currentModerator.bio(), currentModerator.phoneNumber(),
+                currentModerator.subject(), previousStatus,
                 currentModerator.createdAt(), currentModerator.lastLoginAt());
 
         // Both updates share this transaction, so a failure restores the original moderator.
@@ -184,6 +186,7 @@ public class PrincipalModeratorService {
         AppUser reactivated = userRepository.save(new AppUser(
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
+                user.bio(), user.phoneNumber(),
                 user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
         assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
         activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
@@ -206,6 +209,7 @@ public class PrincipalModeratorService {
         UserStatus status = user.status() == UserStatus.DISABLED ? UserStatus.INVITED : user.status();
         return new AppUser(
                 user.id(), user.email(), user.googleSub(), user.fullName(), user.avatarUrl(), user.contactInfo(),
+                user.bio(), user.phoneNumber(),
                 user.subject(), status, user.createdAt(), user.lastLoginAt());
     }
 }

@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.service.auth;
+﻿package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
@@ -99,6 +99,8 @@ public class AuthService {
                 fullName,
                 user.avatarUrl(),
                 user.contactInfo(),
+                user.bio(),
+                user.phoneNumber(),
                 user.subject(),
                 UserStatus.ACTIVE,
                 user.createdAt(),

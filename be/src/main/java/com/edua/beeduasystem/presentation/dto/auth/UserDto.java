@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.presentation.dto.auth;
+﻿package com.edua.beeduasystem.presentation.dto.auth;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
@@ -14,6 +14,8 @@ public record UserDto(
         String fullName,
         String avatarUrl,
         String contactInfo,
+        String bio,
+        String phoneNumber,
         String role,
         List<String> roles,
         String subject
@@ -26,6 +28,8 @@ public record UserDto(
                 user.fullName(),
                 user.avatarUrl(),
                 user.contactInfo(),
+                user.bio(),
+                user.phoneNumber(),
                 orderedRoles.isEmpty() ? null : orderedRoles.getFirst(),
                 orderedRoles,
                 user.subject() != null ? user.subject().name() : null);
