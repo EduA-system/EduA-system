@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createLibraryContent, getLibraryContent, updateLibraryContent, type LibrarySubject } from "@/lib/library";
 import {
-  EditorTools,
+  ImageEnabledEditorTools,
   MathEditPopup,
   Ruler,
   createEditorExtensions,
@@ -265,7 +265,7 @@ export function PracticeExamEditDashboard() {
       if (!payload?.exam) throw new Error("Bài kiểm tra đã lưu có định dạng không hợp lệ.");
       const loadedMetadata: Metadata = {
         subject: content.subject ?? "PHYSICS",
-        grade: content.grade ? String(content.grade) : payload.grade ? String(payload.grade) : "10",
+        grade: payload.grade ? String(payload.grade) : "10",
         duration: payload.duration ?? payload.exam.durationMinutes,
         difficulty: payload.difficulty ?? "MEDIUM",
       };
@@ -290,8 +290,8 @@ export function PracticeExamEditDashboard() {
       const payload = { exam, documentHtml: editor.getHTML(), grade, duration: metadata.duration, difficulty: metadata.difficulty };
       const subject = metadata.subject as LibrarySubject;
       const saved = libraryId
-        ? await updateLibraryContent(authFetch, libraryId, { title: exam.title, subject, grade, payload })
-        : await createLibraryContent(authFetch, { type: "TEST", title: exam.title, subject, grade, payload });
+        ? await updateLibraryContent(authFetch, libraryId, { title: exam.title, subject, payload })
+        : await createLibraryContent(authFetch, { type: "TEST", title: exam.title, subject, payload });
       setLibraryId(saved.id);
       setNotice("Đề đã được lưu vào Thư viện của tôi · Bài kiểm tra.");
     } catch (error) {
@@ -305,7 +305,7 @@ export function PracticeExamEditDashboard() {
   }
 
   return (
-    <main className="relative h-screen overflow-hidden bg-[#f7f5f2] text-[#2b2926]">
+    <main className="relative h-screen overflow-hidden bg-white text-[#2b2926]">
       <div className="flex h-full">
         <Sidebar collapsed={sidebarCollapsed} activeHref="/exam-create-new" />
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -334,7 +334,7 @@ export function PracticeExamEditDashboard() {
                 {saving ? "Đang lưu..." : "Lưu"}
               </button>
               <div className="flex min-w-0 flex-1 justify-center overflow-x-auto">
-                <EditorTools editor={editor} />
+                <ImageEnabledEditorTools editor={editor} authFetch={authFetch} />
               </div>
               <button
                 type="button"

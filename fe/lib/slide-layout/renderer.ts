@@ -1,5 +1,7 @@
 import { PLACEHOLDER_IMAGE } from "@/components/slide-editor/lib/be-mapper";
-import type { ImageElement, LineElement, ShapeElement, SlideElement, TextElement } from "@/components/slide-editor/types";
+import { makeSimulation } from "@/components/slide-editor/lib/factory";
+import type { ImageElement, LineElement, ShapeElement, SimulationElement, SlideElement, TextElement } from "@/components/slide-editor/types";
+import { MOLECULE_CATALOG } from "@/components/molecules/catalog";
 import { blendSurface, contrastingTextColor } from "./contrast";
 import type { LayoutSlot, LayoutStructure, SlideLayoutResult } from "./types";
 
@@ -76,7 +78,7 @@ function textStyle(slot: LayoutSlot): Pick<TextElement, "fontSize" | "bold" | "i
   };
 }
 
-function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string, backgroundColor?: string): TextElement | ImageElement {
+function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string, backgroundColor?: string): TextElement | ImageElement | SimulationElement {
   if (slot.kind === "image") {
     return {
       ...base(`layout:${slot.id}`, slot.rect, slot.zIndex),
@@ -87,6 +89,10 @@ function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string,
       borderRadius: 12,
       imagePrompt: slot.sourceText,
     };
+  }
+  if (slot.kind === "molecule") {
+    // Placeholder molecule; Step 3 (runContentFillStep) replaces it with the AI-built structure for `slot.sourceText`.
+    return makeSimulation(MOLECULE_CATALOG[0], { ...base(`layout:${slot.id}`, slot.rect, slot.zIndex), contentSlot: slot.id });
   }
   return {
     ...base(`layout:${slot.id}`, slot.rect, slot.zIndex),

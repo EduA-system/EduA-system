@@ -14,6 +14,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.stream.Collectors;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER = "Bearer ";
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final TokenService tokenService;
 
@@ -51,9 +54,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .collect(Collectors.toList());
             var authentication = new UsernamePasswordAuthenticationToken(claims, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            log.debug("jwt authenticated method={} uri={} userId={} roles={}",
+                    request.getMethod(), request.getRequestURI(), claims.userId(), roles);
             chain.doFilter(request, response);
         } catch (InvalidTokenException ex) {
             SecurityContextHolder.clearContext();
+            log.warn("jwt rejected method={} uri={} reason={}", request.getMethod(), request.getRequestURI(), ex.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write("{\"message\":\"" + ex.getMessage() + "\"}");

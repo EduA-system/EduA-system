@@ -15,13 +15,13 @@ const HERO_CONTENT_HEIGHT = HERO_FRAME_HEIGHT - HEADER_HEIGHT;
 // Vùng cô lập glow được tính tự động từ union của các region (xem ISOLATE_BOUNDS).
 const PADDING = 0; // padding vùng cô lập quanh nội dung thật (px); 0 = đỏ khít xanh
 
-const TITLE      = { left: 76,  top: 190, width: 700,  height: 56  }; // "Intelligent Assistant System"
+const TITLE      = { left: 76,  top: 190, width: 760,  height: 56  };
 // Ticker: prefix "for High School " (~403px) + slot động tối đa "Chemistry Teachers" (~460px)
 // = ~863px text. Đặt 870px để dư ~30px an toàn (không crop text khi xoay Chemistry).
 const TICKER     = { left: 186, top: 264, width: 870,  height: 56  }; // dòng ticker động
 const SUBTITLE   = { left: 617, top: 356, width: 337,  height: 68  }; // mô tả 2 dòng
-const CTA_PRIMARY = { left: 617, top: 430, width: 100, height: 26  }; // nút Start (filled)
-const CTA_OUTLINE = { left: 722, top: 430, width: 100, height: 26  }; // nút Start (outline)
+const CTA_PRIMARY = { left: 617, top: 430, width: 120, height: 32  };
+const CTA_OUTLINE = { left: 730, top: 430, width: 160, height: 32  };
 const VIDEO      = { left: 200, top: 340, width: 300,  height: 220 }; // HeroVideo (bên trái, ngoài vùng cô lập)
 
 // ─── Vùng cô lập: 6 vùng khớp SAT từng cụm nội dung (PADDING=0 → đỏ = xanh) ─
@@ -91,13 +91,13 @@ export function HeroSection() {
           className={serif.className}
           style={{
             ...regionStyle(TITLE),
-            fontSize: 56,
+            fontSize: 48,
             lineHeight: "56px",
             color: COLOR.ink,
             whiteSpace: "nowrap",
           }}
         >
-          Intelligent Assistant System
+          Hệ thống trợ lý thông minh
         </div>
 
         {/* Ticker — dòng chữ động, đặt riêng vì rộng qua mép phải */}
@@ -132,11 +132,11 @@ export function HeroSection() {
             textDecoration: "none",
           }}
         >
-          Start
+          Tạo giáo án
         </Link>
 
         <a
-          href="/lesson-create"
+          href="#features"
           style={{
             ...regionStyle(CTA_OUTLINE),
             border: `1px solid ${COLOR.border}`,
@@ -149,7 +149,7 @@ export function HeroSection() {
             textDecoration: "none",
           }}
         >
-          Start
+          Khám phá tính năng
         </a>
 
         {/* ── HeroVideo (cột trái) — ngoài vùng cô lập glow ── */}

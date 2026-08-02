@@ -52,7 +52,7 @@ export default function AuthDebugPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-10 text-slate-100 sm:px-8">
+    <main className="min-h-screen bg-white px-4 py-10 text-slate-900 sm:px-8">
       <div className="mx-auto max-w-3xl space-y-6">
         <header>
           <p className="text-sm font-medium text-cyan-300">Development only</p>

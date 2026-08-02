@@ -11,6 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Project copy and documents are primarily Vietnamese. Code identifiers should stay in English.
 
+For Iter3 work, keep the docs synchronized with the code. The canonical status file is `WBS_CHECKLIST.md` (verified against actual code reality, not just the raw WBS tracker status).
+
 ## Repository Layout
 
 ```text
@@ -43,8 +45,8 @@ npm run dev
 npm run lint
 npm run typecheck
 npm run build
-npm test                        # runs Vitest physics/simulation tests
-npm test -- components/simulations/engines/mechanics/collisions.test.ts
+npm test                        # runs Vitest (slide-editor/lib, lib/api, lib/slide-create, lib/slide-layout, simulations)
+npm test -- lib/slide-layout/engine.test.ts
 npm run test:watch
 
 # Backend from be/
@@ -73,14 +75,14 @@ This is Next.js 16, which has breaking changes compared with older remembered pa
 
 ### Frontend Architecture
 
-- `fe/app/` uses the App Router. `app/page.tsx` re-exports the landing page, and feature routes live in route folders such as `lesson-create`, `lesson-edit`, `slide-create`, `slide-maker`, `blog`, `library`, `molecules`, `periodic-table`, `user-profile`, and `user-management`.
+- `fe/app/` uses the App Router. `app/page.tsx` re-exports the landing page, and feature routes live in route folders such as `lesson-create`, `lesson-edit`, `slide-create`, `slide-maker`, `slide-present`, `slide-layout-gallery`, `view-slide-template`, `blog`, `community-hub`, `hub-moderation`, `library`, `molecules`, `periodic-table`, `mo-phong-vat-ly`, `dashboard`, `user-profile`, `user-management`, `it-management`, `it-management-users`, and `login`.
 - `fe/components/` is organized by product area rather than by primitive type: lesson editor, lesson-plan workspace, outline editor, slide editor, slide maker, blog, dashboard, molecules, periodic-table, simulations, layout, and shared `ui` components.
 - Most frontend API calls go through same-origin `/api/*`, which Next rewrites to the backend via `fe/next.config.ts`. This avoids CORS for standard REST calls.
 - Slide generation/design clients are a separate path: `fe/lib/api/slides.ts` and `fe/lib/api/slide-design.ts` call the backend directly via `NEXT_PUBLIC_API_URL` instead of the Next rewrite.
 - Real-time generation flows use raw STOMP over WebSocket, not SockJS. Frontend clients in `fe/lib/ws/` connect to `NEXT_PUBLIC_WS_URL` (default `ws://localhost:8080`) and pass the JWT in the STOMP `CONNECT` headers.
 - Rich lesson and blog editing is built on TipTap. The lesson editor extends TipTap with custom nodes/extensions in `fe/components/LessonEditor/` for streaming-generated pending sections and activities.
 - Slide editing and rendering logic is concentrated under `fe/components/slide-editor/`, with conversion helpers for backend HTML/design output under `fe/components/slide-editor/lib/`.
-- Physics simulations live under `fe/components/simulations/`. The current Vitest setup only includes this subtree and runs in a Node environment.
+- Physics simulations live under `fe/components/simulations/`. The Vitest setup runs in a Node environment and also covers `fe/components/slide-editor/lib/`, `fe/lib/api/`, `fe/lib/slide-create/`, `fe/lib/slide-layout/`, and slide deck/HTML export helpers in `fe/lib/`.
 - Lightweight client state uses Zustand stores such as `fe/stores/slide-editor-store.ts`.
 
 ### Frontend Conventions
@@ -171,7 +173,9 @@ Important variables:
 - Cloudflare R2: `APP_R2_ENDPOINT`, `APP_R2_ACCESS_KEY_ID`, `APP_R2_SECRET_ACCESS_KEY`, `APP_R2_BUCKET`, `APP_R2_PUBLIC_URL`.
 - Auth/rate limiting: JWT and Google auth settings are read from Spring properties/environment; see `be/src/main/java/com/edua/beeduasystem/config/SecurityConfig.java` and the auth/security infrastructure package when changing auth flows.
 
-`scripts/start.ps1` loads `.env`, checks ports 8080 and 3000, prompts to free occupied ports, resolves cloud DB versus Docker PostgreSQL fallback, starts the backend, waits for `/api/health`, and then starts the frontend.
+`scripts/start.ps1` loads `.env`, checks ports 8080 and 3000, prompts to free occupied ports, resolves cloud DB versus Docker PostgreSQL fallback, starts the backend, waits for `/api/health`, and then starts the frontend. It also forces `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false` and `SPRING_FLYWAY_VALIDATE_ON_MIGRATE=true` on every launch, overriding the more permissive defaults in `application.properties` (`baseline-on-migrate=true`, `validate-on-migrate=false`), so schema drift on `DB_URL` (a shared Supabase DB) fails the startup loudly instead of Flyway silently auto-baselining or skipping checksum validation.
+
+If a DB schema change is needed (new migration, or fixing drift on the shared DB), write and run that migration/fix as its own deliberate step first, then start the backend — never rely on backend startup to apply or repair a schema change for you, and never add auto-repair logic to `scripts/start.ps1`.
 
 A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io` (Swagger UI at `/swagger-ui/index.html`, health at `/api/health`) for trying live API responses without running the stack locally.
 
@@ -180,7 +184,7 @@ A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4o
 - CI runs frontend checks on Node 20, 22, and 24: `npm ci`, `npm run lint`, `npm run typecheck`, `npm run build`.
 - Husky pre-commit runs the same frontend lint/typecheck/build sequence from `fe/`.
 - Run backend tests with `./mvnw test` or `mvnw.cmd test` when backend code changes.
-- Run `npm test` in `fe/` when changing simulation engine code; that Vitest suite is currently separate from CI.
+- Run `npm test` in `fe/` when changing slide-editor conversion logic, slide-create helpers, slide-layout engine, or physics simulation code; that Vitest suite is currently separate from CI.
 
 ## Working Rules
 
@@ -189,6 +193,9 @@ A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4o
 - Do not move code across layers to make a quick import work; keep the backend dependency direction intact.
 - Use Vietnamese copy for user-facing text where the surrounding UI uses Vietnamese.
 - Keep secrets out of the repository.
+- After Iter3 code changes, update `WBS_CHECKLIST.md` and any affected `designs/` docs in the same pass.
+- In repo-facing docs, use `Principal` for school-level account management and `IT Staff` for prompt/system-prompt management and activity/audit log review.
+- Never let the backend auto-repair the database on startup (no Flyway auto-baseline, no ad-hoc repair SQL run on your own initiative). If the DB needs a schema change or drift fix, run that command explicitly and deliberately *before* starting the backend, and only after confirming the exact fix with the user for anything touching the shared Supabase DB.
 
 ## Commit Style
 

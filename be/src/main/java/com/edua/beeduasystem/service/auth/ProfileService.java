@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.service.auth;
+﻿package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
@@ -32,7 +32,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public ProfileResult updateCurrentUserProfile(String fullName, String avatarUrl, String contactInfo) {
+    public ProfileResult updateCurrentUserProfile(String fullName, String avatarUrl, String contactInfo,
+                                                  String bio, String phoneNumber) {
         UUID userId = currentUserProvider.requireUserId();
         AppUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new InvalidTokenException("User not found."));
@@ -41,9 +42,15 @@ public class ProfileService {
                 user.id(),
                 user.email(),
                 user.googleSub(),
-                normalizePatchValue(fullName, user.fullName()),
+                normalizePatchValue(fullName, user.fullName(),
+                        AppUserFieldValidator.MAX_FULL_NAME_LENGTH, "Full name"),
                 normalizeAvatarUrl(avatarUrl, user.avatarUrl()),
-                normalizePatchValue(contactInfo, user.contactInfo()),
+                normalizePatchValue(contactInfo, user.contactInfo(),
+                        AppUserFieldValidator.MAX_CONTACT_INFO_LENGTH, "Contact info"),
+                normalizePatchValue(bio, user.bio(),
+                        AppUserFieldValidator.MAX_BIO_LENGTH, "Bio"),
+                normalizePatchValue(phoneNumber, user.phoneNumber(),
+                        AppUserFieldValidator.MAX_PHONE_NUMBER_LENGTH, "Phone number"),
                 user.subject(),
                 user.status(),
                 user.createdAt(),
@@ -52,15 +59,17 @@ public class ProfileService {
         return new ProfileResult(updated, roles);
     }
 
-    private static String normalizePatchValue(String value, String currentValue) {
+    private static String normalizePatchValue(String value, String currentValue, int maxLength, String fieldName) {
         if (value == null) {
             return currentValue;
         }
-        return StringUtils.hasText(value) ? value.trim() : null;
+        String normalized = StringUtils.hasText(value) ? value.trim() : null;
+        return AppUserFieldValidator.requireMaxLength(normalized, maxLength, fieldName);
     }
 
     private static String normalizeAvatarUrl(String value, String currentValue) {
-        String normalized = normalizePatchValue(value, currentValue);
+        String normalized = normalizePatchValue(value, currentValue,
+                AppUserFieldValidator.MAX_AVATAR_URL_LENGTH, "Avatar URL");
         if (normalized == null) {
             return null;
         }

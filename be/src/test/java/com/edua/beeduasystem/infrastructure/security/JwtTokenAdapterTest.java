@@ -44,11 +44,11 @@ class JwtTokenAdapterTest {
     void issueThenParse_multipleRoles_usesDeterministicPrimaryRole() {
         JwtTokenAdapter adapter = new JwtTokenAdapter(SECRET, Duration.ofMinutes(60));
 
-        String token = adapter.issueAccessToken(user(), Set.of(Role.TEACHER, Role.ADMINISTRATOR, Role.MODERATOR));
+        String token = adapter.issueAccessToken(user(), Set.of(Role.TEACHER, Role.PRINCIPAL, Role.MODERATOR));
         AccessTokenClaims claims = adapter.parse(token);
 
-        assertThat(claims.roles()).containsExactlyInAnyOrder(Role.TEACHER, Role.MODERATOR, Role.ADMINISTRATOR);
-        assertThat(claims.primaryRole()).isEqualTo(Role.ADMINISTRATOR);
+        assertThat(claims.roles()).containsExactlyInAnyOrder(Role.TEACHER, Role.MODERATOR, Role.PRINCIPAL);
+        assertThat(claims.primaryRole()).isEqualTo(Role.PRINCIPAL);
     }
 
     @Test
@@ -63,5 +63,15 @@ class JwtTokenAdapterTest {
         String token = new JwtTokenAdapter(SECRET, Duration.ofMinutes(60)).issueAccessToken(user(), Set.of(Role.TEACHER));
         JwtTokenAdapter other = new JwtTokenAdapter("ffffffffffffffffffffffffffffffffffffffffffffffff", Duration.ofMinutes(60));
         assertThatThrownBy(() -> other.parse(token)).isInstanceOf(InvalidTokenException.class);
+    }
+
+    @Test
+    void constructor_missingOrWeakSecret_throws() {
+        assertThatThrownBy(() -> new JwtTokenAdapter("", Duration.ofMinutes(60)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("app.auth.jwt.secret");
+        assertThatThrownBy(() -> new JwtTokenAdapter("too-short", Duration.ofMinutes(60)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("at least 32 UTF-8 bytes");
     }
 }

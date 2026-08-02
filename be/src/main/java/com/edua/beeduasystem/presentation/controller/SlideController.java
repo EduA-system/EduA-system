@@ -4,6 +4,7 @@ import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineRequest;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineResponse;
 import com.edua.beeduasystem.presentation.dto.slides.RetryOutlinePartRequest;
 import com.edua.beeduasystem.presentation.dto.slides.RetryOutlineSessionPartRequest;
+import com.edua.beeduasystem.presentation.dto.slides.RetryOutlineSessionSlideRequest;
 import com.edua.beeduasystem.service.slides.GenerateSlideOutlineUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,6 +38,12 @@ public class SlideController {
     @Operation(summary = "Thử lại một part bằng snapshot của phiên tạo outline")
     public void retryOutlineSessionPart(@RequestBody RetryOutlineSessionPartRequest request) {
         generateSlideOutlineUseCase.retrySessionPart(request.sessionId(), request.partId());
+    }
+
+    @PostMapping("/retry-outline-session-slide")
+    @Operation(summary = "Thử lại một slide bằng snapshot của phiên tạo outline")
+    public void retryOutlineSessionSlide(@RequestBody RetryOutlineSessionSlideRequest request) {
+        generateSlideOutlineUseCase.retrySessionSlide(request.sessionId(), request.partId(), request.slideId());
     }
 
     @PostMapping("/retry-outline-part")

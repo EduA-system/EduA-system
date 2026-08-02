@@ -41,6 +41,13 @@ export type VisualContentBlock = BaseContentBlock & {
   illustratesBlockId?: string;
 };
 
+export type MoleculeContentBlock = BaseContentBlock & {
+  kind: "molecule";
+  role: "visual";
+  semanticType: "molecule-3d";
+  chemicalRequest: string;
+};
+
 export type ComparisonContentBlock = BaseContentBlock & {
   kind: "comparison";
   role: "body";
@@ -87,6 +94,7 @@ export type QuizContentBlock = BaseContentBlock & {
 export type ContentBlock =
   | TextContentBlock
   | VisualContentBlock
+  | MoleculeContentBlock
   | ComparisonContentBlock
   | TableContentBlock
   | SequenceContentBlock
@@ -135,7 +143,7 @@ export type LayoutSlot = {
   sourcePartId?: string;
   sourceText: string;
   zone: LayoutZone;
-  kind: "text" | "image";
+  kind: "text" | "image" | "molecule";
   rect: Rect;
   maxChars: number;
   maxLines: number;

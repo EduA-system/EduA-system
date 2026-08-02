@@ -18,13 +18,14 @@ import {
 import { useAuth } from "@/lib/auth/AuthContext";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
-import { EditorTools } from "../LessonEditor";
+import { ImageEnabledEditorTools } from "../LessonEditor";
 import { LessonEditor, generatingLessonPlanSkeletonHtml, lessonPlan5512ToHtml } from "../LessonEditor";
 import { createEditorExtensions, type MathClickInfo } from "../LessonEditor/editorConfig";
 import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
 import { openLessonPlanPrintDialog } from "@/lib/lesson-plan-pdf-export";
+import { createLessonThumbnail } from "@/lib/library-thumbnail";
 
 export function LessonEditDashboard() {
   const { authFetch } = useAuth();
@@ -145,16 +146,18 @@ export function LessonEditDashboard() {
             }
           : undefined,
       };
+      const thumbnailUrl = createLessonThumbnail(title, subject, payload.document);
 
       try {
         if (libraryContentIdRef.current) {
-          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, payload });
+          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, payload, thumbnailUrl });
         } else {
           const created = await createLibraryContent(authFetch, {
             type: "LESSON_PLAN",
             title,
             subject,
             payload,
+            thumbnailUrl,
           });
           libraryContentIdRef.current = created.id;
           librarySubjectRef.current = created.subject ?? undefined;
@@ -193,8 +196,8 @@ export function LessonEditDashboard() {
 
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
-            <div className="@container flex h-12 items-center gap-2 px-3">
-              <div className="flex shrink-0 items-center gap-1.5">
+            <div className="@container flex min-h-12 items-center justify-between gap-3 px-3 py-1.5">
+              <div className="flex min-w-0 shrink-0 items-center gap-1.5">
                 <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
                   <SaveIcon />
                 </HeaderActionButton>
@@ -206,10 +209,6 @@ export function LessonEditDashboard() {
                 </HeaderActionButton>
               </div>
 
-              <div className="flex min-w-0 flex-1 items-center justify-center px-2">
-                <EditorTools editor={editor} />
-              </div>
-
               <button
                 type="button"
                 onClick={() => setAiCollapsed((current) => !current)}
@@ -218,6 +217,13 @@ export function LessonEditDashboard() {
               >
                 <AiToggleIcon />
               </button>
+            </div>
+            <div className="overflow-x-auto border-t border-[#efe8df] px-3 py-1.5">
+              <div className="flex w-full justify-center">
+                <div className="inline-flex max-w-full rounded-lg border border-[#e8e2d9] bg-white px-2 py-1 shadow-sm">
+                  <ImageEnabledEditorTools editor={editor} authFetch={authFetch} />
+                </div>
+              </div>
             </div>
             {saveStatus !== "idle" && (
               <p

@@ -25,10 +25,10 @@ function FullscreenIcon() {
   );
 }
 
-function SlideSurface({ slide }: { slide: Slide }) {
+function SlideSurface({ slide, interactive }: { slide: Slide; interactive?: boolean }) {
   return (
     <div className="relative overflow-hidden" style={{ width: CANVAS_W, height: CANVAS_H, background: slide.bg }}>
-      {slide.elements.map((element) => <ElementView key={element.id} el={element} />)}
+      {slide.elements.map((element) => <ElementView key={element.id} el={element} interactive={interactive} />)}
     </div>
   );
 }
@@ -142,7 +142,7 @@ export function SlidePresentationClient() {
       <section ref={stageRef} className="relative min-h-0 flex-1" aria-label="Slide hiện tại">
         {current ? (
           <div className="absolute left-1/2 top-1/2" style={{ width: CANVAS_W, height: CANVAS_H, transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: "center" }}>
-            <SlideSurface slide={current} />
+            <SlideSurface slide={current} interactive />
           </div>
         ) : <div className="grid h-full place-items-center text-sm text-white/60">Đang tải bộ slide...</div>}
       </section>

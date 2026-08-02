@@ -12,6 +12,7 @@ import com.edua.beeduasystem.repository.gateways.TokenService;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -37,6 +38,7 @@ class AuthServiceTest {
     private AppUserRepository userRepository;
     private RefreshTokenRepository refreshTokenRepository;
     private UserRoleRepository userRoleRepository;
+    private ActivityLogService activityLogService;
     private AuthService authService;
 
     @BeforeEach
@@ -46,8 +48,9 @@ class AuthServiceTest {
         userRepository = mock(AppUserRepository.class);
         refreshTokenRepository = mock(RefreshTokenRepository.class);
         userRoleRepository = mock(UserRoleRepository.class);
+        activityLogService = mock(ActivityLogService.class);
         authService = new AuthService(verifier, tokenService, userRepository, refreshTokenRepository,
-                userRoleRepository, new CurrentUserProvider(), Duration.ofHours(24));
+                userRoleRepository, new CurrentUserProvider(), activityLogService, Duration.ofHours(24));
     }
 
     private AppUser invitedUser(String email) {
@@ -57,18 +60,18 @@ class AuthServiceTest {
 
     @Test
     void loginWithGoogle_allowlisted_activatesAndIssuesTokens() {
-        String email = "admin@fpt.edu.vn";
-        when(verifier.verify("idtok")).thenReturn(new GoogleIdentity("sub-9", email, "Admin", true));
+        String email = "principal@fpt.edu.vn";
+        when(verifier.verify("idtok")).thenReturn(new GoogleIdentity("sub-9", email, "Principal", true));
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(invitedUser(email)));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(userRoleRepository.findRolesByUserId(any())).thenReturn(Set.of(Role.ADMINISTRATOR));
+        when(userRoleRepository.findRolesByUserId(any())).thenReturn(Set.of(Role.PRINCIPAL));
         when(tokenService.issueAccessToken(any(), any())).thenReturn("access-jwt");
 
         AuthService.LoginResult result = authService.loginWithGoogle("idtok");
 
         assertThat(result.tokens().accessToken()).isEqualTo("access-jwt");
         assertThat(result.tokens().refreshToken()).isNotBlank();
-        assertThat(result.roles()).contains(Role.ADMINISTRATOR);
+        assertThat(result.roles()).contains(Role.PRINCIPAL);
 
         ArgumentCaptor<AppUser> saved = ArgumentCaptor.forClass(AppUser.class);
         org.mockito.Mockito.verify(userRepository).save(saved.capture());

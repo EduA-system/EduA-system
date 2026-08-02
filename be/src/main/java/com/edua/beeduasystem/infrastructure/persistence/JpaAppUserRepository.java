@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.infrastructure.persistence;
+﻿package com.edua.beeduasystem.infrastructure.persistence;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
@@ -75,6 +75,8 @@ public class JpaAppUserRepository implements AppUserRepository {
         e.setFullName(user.fullName());
         e.setAvatarUrl(user.avatarUrl());
         e.setContactInfo(user.contactInfo());
+        e.setBio(user.bio());
+        e.setPhoneNumber(user.phoneNumber());
         e.setSubject(user.subject());
         e.setStatus(user.status());
         e.setCreatedAt(user.createdAt() != null ? user.createdAt() : Instant.now());
@@ -90,6 +92,8 @@ public class JpaAppUserRepository implements AppUserRepository {
                 e.getFullName(),
                 e.getAvatarUrl(),
                 e.getContactInfo(),
+                e.getBio(),
+                e.getPhoneNumber(),
                 e.getSubject(),
                 e.getStatus(),
                 e.getCreatedAt(),

@@ -23,7 +23,7 @@ public class JpaRefreshTokenRepository implements RefreshTokenRepository {
     @Override
     @Transactional
     public RefreshToken save(RefreshToken token) {
-        RefreshTokenEntity e = jpa.findById(token.id()).orElseGet(RefreshTokenEntity::new);
+        RefreshTokenEntity e = new RefreshTokenEntity();
         e.setId(token.id());
         e.setUserId(token.userId());
         e.setTokenHash(token.tokenHash());
@@ -42,10 +42,7 @@ public class JpaRefreshTokenRepository implements RefreshTokenRepository {
     @Override
     @Transactional
     public void revoke(UUID id) {
-        jpa.findById(id).ifPresent(e -> {
-            e.setRevoked(true);
-            jpa.save(e);
-        });
+        jpa.revokeById(id);
     }
 
     @Override

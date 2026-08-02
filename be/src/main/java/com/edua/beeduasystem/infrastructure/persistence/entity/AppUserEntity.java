@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.infrastructure.persistence.entity;
+﻿package com.edua.beeduasystem.infrastructure.persistence.entity;
 
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
@@ -39,6 +39,12 @@ public class AppUserEntity {
 
     @Column(name = "contact_info", length = 500)
     private String contactInfo;
+
+    @Column(length = 1000)
+    private String bio;
+
+    @Column(name = "phone_number", length = 30)
+    private String phoneNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)

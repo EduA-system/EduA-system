@@ -6,9 +6,12 @@ import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentFillSlotRe
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentSlotRequest;
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentStyleResponse;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.service.ai.AiSystemPromptService;
+import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -22,21 +25,31 @@ import java.util.Set;
 @Slf4j
 @Service
 public class FillSlideContentUseCase {
+    private static final int MAX_JSON_ATTEMPTS = 2;
     private final AiClient aiClient;
     private final SlideDesignPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
     private final String modelLabel;
+    private final AiSystemPromptService systemPromptService;
 
+    @Autowired
     public FillSlideContentUseCase(
             AiClient aiClient,
             SlideDesignPromptBuilder promptBuilder,
             ObjectMapper objectMapper,
+            AiSystemPromptService systemPromptService,
             @Value("${app.ai.openai.default-model:gpt-4o-mini}") String openaiModel,
             @Value("${app.ai.deepseek.default-model:deepseek-chat}") String deepseekModel) {
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
+        this.systemPromptService = systemPromptService;
         this.modelLabel = openaiModel + " → " + deepseekModel;
+    }
+
+    FillSlideContentUseCase(AiClient aiClient, SlideDesignPromptBuilder promptBuilder, ObjectMapper objectMapper,
+                            String openaiModel, String deepseekModel) {
+        this(aiClient, promptBuilder, objectMapper, null, openaiModel, deepseekModel);
     }
 
     public SlideContentFillResponse execute(SlideContentFillRequest req) {
@@ -48,7 +61,7 @@ public class FillSlideContentUseCase {
         String prompt = promptBuilder.buildStep3ContentSlotsPrompt(req);
         log.info("slide-design.slot-fill prompt length={} slots={}", prompt.length(), requested.size());
         long started = System.currentTimeMillis();
-        String raw = aiClient.generate(prompt);
+        String raw = generateCompleteJson(prompt, requested.size());
         long latencyMs = System.currentTimeMillis() - started;
 
         RawResponse rawResponse;
@@ -79,15 +92,47 @@ public class FillSlideContentUseCase {
                 continue;
             }
             result.add(new SlideContentFillSlotResponse(
-                    requestedSlot.id(), cleanText(filled == null ? null : filled.text()), null,
+                    requestedSlot.id(), cleanText(filled == null ? null : filled.text(), requestedSlot.maxChars(), requestedSlot.maxLines()), null,
                     cleanStyle(filled == null ? null : filled.style(), requestedSlot.zone(), palette)));
         }
         return new SlideContentFillResponse(result, latencyMs, modelLabel, null);
     }
 
-    private static String cleanText(String text) {
+    private String generateCompleteJson(String prompt, int requestedSlotCount) {
+        Exception lastError = null;
+        for (int attempt = 1; attempt <= MAX_JSON_ATTEMPTS; attempt++) {
+            String attemptPrompt = attempt == 1 ? prompt : prompt + "\n\nRetry: your previous response was incomplete or invalid JSON. Return a shorter, complete JSON object only. Keep every requested slot concise and close all JSON brackets.";
+            String raw = aiClient.generate(systemPromptService == null
+                    ? attemptPrompt
+                    : systemPromptService.apply(AiPromptKey.SLIDE_DESIGN_CONTENT_SLOTS, attemptPrompt));
+            try {
+                objectMapper.readValue(stripFence(raw), RawResponse.class);
+                return raw;
+            } catch (Exception error) {
+                lastError = error;
+                log.warn("slide-design.slot-fill invalid JSON attempt={}/{} slots={} responseChars={} error={}",
+                        attempt, MAX_JSON_ATTEMPTS, requestedSlotCount, raw == null ? 0 : raw.length(), error.getMessage());
+            }
+        }
+        throw new IllegalStateException("AI returned invalid slide-content JSON after " + MAX_JSON_ATTEMPTS + " attempts.", lastError);
+    }
+
+    private static String cleanText(String text, int maxChars, int maxLines) {
         if (text == null || text.isBlank()) return null;
-        return text.strip();
+        String value = text.strip().replace("\r\n", "\n").replace('\r', '\n');
+        int lineBudget = maxLines > 0 ? maxLines : 4;
+        int characterBudget = maxChars > 0 ? maxChars : 160;
+        if (lineBudget > 0) {
+            String[] lines = value.split("\\n");
+            StringBuilder limited = new StringBuilder();
+            for (int index = 0; index < lines.length && index < lineBudget; index++) {
+                if (limited.length() > 0) limited.append('\n');
+                limited.append(lines[index].strip());
+            }
+            value = limited.toString().strip();
+        }
+        if (value.length() > characterBudget) value = value.substring(0, characterBudget).strip();
+        return value.isEmpty() ? null : value;
     }
 
     private static String cleanPrompt(String prompt) {

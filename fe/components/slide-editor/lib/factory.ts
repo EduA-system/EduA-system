@@ -6,9 +6,12 @@ import type {
   ImageElement,
   PolyElement,
   DrawElement,
+  SimulationElement,
   SlideElement,
   ElementPatch,
 } from "../types";
+import type { Molecule } from "@/components/molecules/types";
+import { MOLECULE_CATALOG } from "@/components/molecules/catalog";
 
 export function makeText(overrides?: Partial<TextElement>): TextElement {
   return {
@@ -119,6 +122,31 @@ export function makePoly(overrides?: Partial<PolyElement>): PolyElement {
   };
 }
 
+// Element mô phỏng nhúng (MVP: chỉ loại "molecule"). Chèn giữa canvas, kích
+// thước vuông vừa đủ cho viewer 3D.
+export function makeSimulation(
+  molecule: Molecule,
+  overrides?: Partial<SimulationElement>
+): SimulationElement {
+  return {
+    id: "",
+    type: "simulation",
+    kind: "molecule",
+    molecule,
+    mode: "ball-and-stick",
+    rotating: true,
+    x: CANVAS_W / 2 - 140,
+    y: CANVAS_H / 2 - 140,
+    w: 280,
+    h: 280,
+    rotation: 0,
+    zIndex: 0,
+    opacity: 1,
+    locked: false,
+    ...overrides,
+  };
+}
+
 // Nét vẽ tay — luôn phủ toàn canvas; points cập nhật khi vẽ.
 export function makeDraw(overrides?: Partial<DrawElement>): DrawElement {
   return {
@@ -148,7 +176,8 @@ export type AddType =
   | "line"
   | "arrow"
   | "image"
-  | "poly";
+  | "poly"
+  | "simulation";
 
 // Tạo element theo loại + patch tùy chọn — adapter cho SidePanel.
 export function makeByType(type: AddType, extra?: ElementPatch): SlideElement {
@@ -168,5 +197,7 @@ export function makeByType(type: AddType, extra?: ElementPatch): SlideElement {
       return apply(makeImage(typeof extra?.src === "string" ? extra.src : ""));
     case "poly":
       return apply(makePoly());
+    case "simulation":
+      return apply(makeSimulation(extra?.molecule ?? MOLECULE_CATALOG[0]));
   }
 }

@@ -8,6 +8,7 @@ import com.edua.beeduasystem.service.exam.ExamGenerationService;
 import com.edua.beeduasystem.service.exam.ExamScopeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/exams")
 @Tag(name = "Exam matrix", description = "Tạo Ma trận và Bản đặc tả tạm thời, không lưu DB")
+@PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
 public class ExamMatrixController {
     private final ExamScopeService scopeService;
     private final ExamGenerationService generationService;

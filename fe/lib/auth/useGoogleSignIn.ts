@@ -19,6 +19,10 @@ type GoogleButtonOptions = {
   width?: number | string;
 };
 
+type UseGoogleSignInOptions = {
+  renderButton?: boolean;
+};
+
 type GoogleIdentityServices = {
   accounts: {
     id: {
@@ -74,7 +78,10 @@ export function getGoogleClientId() {
   return process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() || DEFAULT_CLIENT_ID;
 }
 
-export function useGoogleSignIn(onCredential: (credential: string) => void) {
+export function useGoogleSignIn(
+  onCredential: (credential: string) => void,
+  { renderButton: shouldRenderButton = true }: UseGoogleSignInOptions = {},
+) {
   const buttonRef = useRef<HTMLDivElement>(null);
   const callbackRef = useRef(onCredential);
   const [loaded, setLoaded] = useState(false);
@@ -116,19 +123,20 @@ export function useGoogleSignIn(onCredential: (credential: string) => void) {
     }
     buttonRef.current.innerHTML = "";
     window.google.accounts.id.renderButton(buttonRef.current, {
-      theme: "outline",
+      theme: "filled_black",
       size: "large",
-      text: "continue_with",
-      width: 320,
+      text: "signin_with",
+      shape: "pill",
+      width: 340,
       ...options,
     });
   }, []);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && shouldRenderButton) {
       renderButton();
     }
-  }, [loaded, renderButton]);
+  }, [loaded, renderButton, shouldRenderButton]);
 
   return {
     buttonRef,

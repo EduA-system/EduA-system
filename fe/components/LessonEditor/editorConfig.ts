@@ -45,7 +45,11 @@ export function createEditorExtensions(options: {
     Superscript,
     // Table + TableRow + TableHeader + TableCell.
     TableKit.configure({ table: { resizable: true } }),
-    Image,
+    // loading="lazy": ảnh trong bài viết/bài nộp thường tải trực tiếp từ R2 không qua CDN
+    // resize — trì hoãn tải ảnh chưa cuộn tới giúp giảm số request đồng thời khi mở trang.
+    Image.configure({
+      HTMLAttributes: { loading: "lazy" },
+    }),
     Mathematics.configure({
       katexOptions: {
         throwOnError: false,

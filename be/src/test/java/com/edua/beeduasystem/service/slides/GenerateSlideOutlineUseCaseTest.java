@@ -3,7 +3,9 @@ package com.edua.beeduasystem.service.slides;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineRequest;
 import com.edua.beeduasystem.presentation.dto.slides.InlineActivityDto;
 import com.edua.beeduasystem.presentation.dto.slides.InlineLessonPlanDto;
+import com.edua.beeduasystem.presentation.dto.slides.OutlineDto;
 import com.edua.beeduasystem.presentation.dto.slides.PartDto;
+import com.edua.beeduasystem.presentation.dto.slides.RetryOutlinePartRequest;
 import com.edua.beeduasystem.presentation.dto.slides.SlideItemDto;
 import com.edua.beeduasystem.domain.model.lesson.LessonContext;
 import com.edua.beeduasystem.domain.model.slide.ContentPlan;
@@ -20,7 +22,10 @@ import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -99,6 +104,67 @@ class GenerateSlideOutlineUseCaseTest {
     }
 
     @Test
+    void recursivelySplitsDenseOutlineItemUntilChildrenFit() {
+        when(aiClient.generate(anyString())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(0);
+            if (prompt.contains("\"id\":\"p2s3-b\"")) {
+                return splitResponse("Nhanh hai A", "Noi dung gon A", "Nhanh hai B", "Noi dung gon B");
+            }
+            return splitResponse("Nhanh mot", "Noi dung gon", "Nhanh hai van dai", "x".repeat(451));
+        });
+        SlideItemDto dense = new SlideItemDto("p2s3", "Noi dung dai", "explain", null, null,
+                new ContentPlan("concept", "fixed", List.of(
+                        new ContentPlan.TextBlock("b1", "text", "body", "explanation", "primary", true, null,
+                                "x".repeat(451))), List.of()));
+
+        List<SlideItemDto> result = useCase().autoSplitDenseOutlineItems(
+                lesson(), request(), new PartDto("p2", "Kham pha", List.of(dense), List.of("c1")), List.of(dense));
+
+        assertEquals(List.of("p2s3-a", "p2s3-b-a", "p2s3-b-b"), result.stream().map(SlideItemDto::id).toList());
+        assertEquals(List.of("Nhanh mot", "Nhanh hai A", "Nhanh hai B"), result.stream().map(SlideItemDto::title).toList());
+        verify(aiClient, times(2)).generate(anyString());
+    }
+
+    @Test
+    void normalizesComparisonTitlesToComparisonSlides() {
+        assertEquals("comparison", GenerateSlideOutlineUseCase.normalizeSkeletonSlideType(
+                "concept", "explain", "Phân biệt polymer nhiệt dẻo và nhiệt rắn"));
+    }
+
+    @Test
+    void rejectsFlatTextForAComparisonSlide() {
+        SlideItemDto skeleton = new SlideItemDto("p1s1", "So sánh", "explain", null, null,
+                new ContentPlan("comparison", "fixed", List.of(), List.of()));
+
+        assertThrows(IllegalArgumentException.class, () -> GenerateSlideOutlineUseCase.parseExpandedSlide(skeleton, """
+                {"slide":{"id":"p1s1","contentPlan":{"blocks":[
+                  {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"A B tiêu chí giá trị"}
+                ],"relationships":[]}}}
+                """));
+    }
+
+    @Test
+    void capsAutoSplitOfOneOriginalSlideAtThreeResults() {
+        when(aiClient.generate(anyString())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(0);
+            if (prompt.contains("\"id\":\"p2s3-a\"")) {
+                return splitResponse("Nhanh mot A", "Noi dung gon A", "Nhanh mot B", "Noi dung gon B");
+            }
+            return splitResponse("Nhanh mot van dai", "x".repeat(451), "Nhanh hai van dai", "x".repeat(451));
+        });
+        SlideItemDto dense = new SlideItemDto("p2s3", "Noi dung dai", "explain", null, null,
+                new ContentPlan("concept", "fixed", List.of(
+                        new ContentPlan.TextBlock("b1", "text", "body", "explanation", "primary", true, null,
+                                "x".repeat(451))), List.of()));
+
+        List<SlideItemDto> result = useCase().autoSplitDenseOutlineItems(
+                lesson(), request(), new PartDto("p2", "Kham pha", List.of(dense), List.of("c1")), List.of(dense));
+
+        assertEquals(List.of("p2s3-a-a", "p2s3-a-b", "p2s3-b"), result.stream().map(SlideItemDto::id).toList());
+        verify(aiClient, times(2)).generate(anyString());
+    }
+
+    @Test
     void keepsOriginalOutlineItemWhenAutomaticSplitCannotBeValidated() {
         when(aiClient.generate(anyString())).thenReturn("{\"slides\":[]}");
         SlideItemDto dense = new SlideItemDto("p2s3", "Nội dung dài", "explain", null, null,
@@ -111,6 +177,66 @@ class GenerateSlideOutlineUseCaseTest {
 
         assertEquals(List.of(dense), result);
         verify(aiClient, times(2)).generate(anyString());
+    }
+
+    @Test
+    void retryPartExpandsEachSlideWithSeparateAiCall() {
+        when(aiClient.generate(anyString())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(0);
+            if (prompt.contains("SLIDE CẦN SOẠN: id=\"p1s1\"")) return singleSlideResponse("p1s1", "Ná»™i dung slide 1");
+            if (prompt.contains("SLIDE CẦN SOẠN: id=\"p1s2\"")) return singleSlideResponse("p1s2", "Ná»™i dung slide 2");
+            throw new AssertionError("Unexpected prompt: " + prompt);
+        });
+        SlideItemDto first = new SlideItemDto("p1s1", "Slide 1", "explain", null, null,
+                new ContentPlan("concept", "fixed", List.of(), List.of()));
+        SlideItemDto second = new SlideItemDto("p1s2", "Slide 2", "practice", null, null,
+                new ContentPlan("exercise", "fixed", List.of(), List.of()));
+        PartDto part = new PartDto("p1", "Pháº§n 1", List.of(first, second), List.of("c1"));
+
+        useCase().retryPart(new RetryOutlinePartRequest(
+                "session-1", request(), new OutlineDto("lesson", "Giao thoa sÃ³ng", List.of(part)), "p1"));
+
+        verify(aiClient, times(2)).generate(anyString());
+        verify(outlineStream).publishSlideReady(eq("session-1"), eq("p1"), argThat(slide ->
+                slide.id().equals("p1s1") && !slide.contentPlan().blocks().isEmpty()));
+        verify(outlineStream).publishSlideReady(eq("session-1"), eq("p1"), argThat(slide ->
+                slide.id().equals("p1s2") && !slide.contentPlan().blocks().isEmpty()));
+        verify(outlineStream).publishPartReady(eq("session-1"), eq("p1"), argThat(slides ->
+                slides.size() == 2
+                        && slides.get(0).id().equals("p1s1")
+                        && slides.get(1).id().equals("p1s2")
+                        && !slides.get(0).contentPlan().blocks().isEmpty()
+                        && !slides.get(1).contentPlan().blocks().isEmpty()));
+    }
+
+    @Test
+    void retryPartPublishesSlideFailureAndContinuesWithNextSlide() {
+        when(aiClient.generate(anyString())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(0);
+            if (prompt.contains("id=\"p1s1\"")) return invalidStringArrayResponse("p1s1");
+            if (prompt.contains("id=\"p1s2\"")) return singleSlideResponse("p1s2", "Nội dung slide 2");
+            throw new AssertionError("Unexpected prompt: " + prompt);
+        });
+        SlideItemDto first = new SlideItemDto("p1s1", "Slide 1", "explain", null, null,
+                new ContentPlan("quiz", "fixed", List.of(), List.of()));
+        SlideItemDto second = new SlideItemDto("p1s2", "Slide 2", "practice", null, null,
+                new ContentPlan("exercise", "fixed", List.of(), List.of()));
+        PartDto part = new PartDto("p1", "Phần 1", List.of(first, second), List.of("c1"));
+
+        assertThrows(SlideAiResponseException.class, () -> useCase().retryPart(new RetryOutlinePartRequest(
+                "session-1", request(), new OutlineDto("lesson", "Giao thoa sóng", List.of(part)), "p1")));
+
+        verify(aiClient, times(3)).generate(anyString());
+        verify(outlineStream).publishSlideError(eq("session-1"), eq("p1"), eq("p1s1"), argThat(message ->
+                message.contains("String array contains invalid value")));
+        verify(outlineStream).publishSlideReady(eq("session-1"), eq("p1"), argThat(slide ->
+                slide.id().equals("p1s2") && !slide.contentPlan().blocks().isEmpty()));
+        verify(outlineStream).publishPartReady(eq("session-1"), eq("p1"), argThat(slides ->
+                slides.size() == 2
+                        && slides.get(0).id().equals("p1s1")
+                        && slides.get(0).contentPlan().blocks().isEmpty()
+                        && slides.get(1).id().equals("p1s2")
+                        && !slides.get(1).contentPlan().blocks().isEmpty()));
     }
 
     private GenerateSlideOutlineUseCase useCase() {
@@ -142,6 +268,38 @@ class GenerateSlideOutlineUseCaseTest {
                    ],"relationships":[]}}
                 ]}
                 """;
+    }
+
+    private static String splitResponse(String firstTitle, String firstText, String secondTitle, String secondText) {
+        return """
+                {"slides":[
+                  {"title":"%s","pedagogicalRole":"explain","durationMinutes":1,
+                   "contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[
+                     {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"%s"}
+                   ],"relationships":[]}},
+                  {"title":"%s","pedagogicalRole":"explain","durationMinutes":1,
+                   "contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[
+                     {"id":"b2","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"%s"}
+                   ],"relationships":[]}}
+                ]}
+                """.formatted(firstTitle, firstText, secondTitle, secondText);
+    }
+
+    private static String singleSlideResponse(String id, String text) {
+        return """
+                {"slide":{"id":"%s","durationMinutes":2,"aiNote":"","contentPlan":{"blocks":[
+                  {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"%s"}
+                ],"relationships":[]}}}
+                """.formatted(id, text);
+    }
+
+    private static String invalidStringArrayResponse(String id) {
+        return """
+                {"slide":{"id":"%s","durationMinutes":2,"aiNote":"","contentPlan":{"blocks":[
+                  {"id":"b1","kind":"quiz","role":"body","semanticType":"check","priority":"primary","required":true,
+                   "question":"Chọn đáp án đúng","choices":["A",123],"answer":"A"}
+                ],"relationships":[]}}}
+                """.formatted(id);
     }
 
     private static String blueprint() {

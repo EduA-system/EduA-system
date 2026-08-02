@@ -49,6 +49,10 @@ function elementHtml(element: SlideElement, imageSources: Map<string, string>): 
     const fill = element.fill.startsWith("linear-gradient") || element.fill.startsWith("radial-gradient") ? "#d97757" : element.fill;
     return `<svg style="${baseStyle(element)}overflow:visible" viewBox="${escapeHtml(element.svgViewBox || "0 0 100 100")}" preserveAspectRatio="none"><path d="${escapeHtml(element.svgPath)}" fill="${escapeHtml(fill)}" stroke="${escapeHtml(element.stroke === "transparent" ? "none" : element.stroke)}" stroke-width="${element.strokeW}" stroke-dasharray="${dash(element.dashStyle) ?? ""}" stroke-linecap="${element.strokeLinecap ?? "butt"}" stroke-linejoin="${element.strokeLinejoin ?? "miter"}"/></svg>`;
   }
+  if (element.type === "simulation") {
+    // Offline export has no React/Three.js runtime to host a live simulation — render a static poster.
+    return `<div style="${baseStyle(element)}box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:16px;background:linear-gradient(135deg,#0f172a,#334155);color:#fff;text-align:center;padding:8px;overflow:hidden"><span style="font-size:28px">🧪</span><span style="font-size:13px;font-weight:600">${escapeHtml(element.molecule.name)}</span><span style="font-size:11px;opacity:.7">${escapeHtml(element.molecule.formula)}</span></div>`;
+  }
   const markerId = `arrow-${escapeHtml(element.id)}`;
   const marker = element.type === "arrow" && element.arrowHead !== "none" ? `<marker id="${markerId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5 0 10z" fill="${escapeHtml(element.stroke)}"/></marker>` : "";
   return `<svg style="position:absolute;inset:0;width:${CANVAS_W}px;height:${CANVAS_H}px;z-index:${element.zIndex};opacity:${element.opacity};overflow:visible"><defs>${marker}</defs><line x1="${element.x1}" y1="${element.y1}" x2="${element.x2}" y2="${element.y2}" stroke="${escapeHtml(element.stroke)}" stroke-width="${element.strokeW}" stroke-dasharray="${dash(element.dashStyle) ?? ""}" stroke-linecap="round"${marker ? ` marker-end="url(#${markerId})"` : ""}/></svg>`;

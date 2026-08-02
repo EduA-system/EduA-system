@@ -223,7 +223,6 @@ export function PracticeExamCreateDashboard() {
         type: "TEST",
         title: exam.title,
         subject,
-        grade,
         payload: { exam, grade, duration: durationMinutes, difficulty },
       });
       setGenerationProgress(100);
@@ -236,7 +235,7 @@ export function PracticeExamCreateDashboard() {
     }
   }
   return (
-    <main className="min-h-screen bg-[#f5f1ec] text-[#2b2926]">
+    <main className="min-h-screen bg-white text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/exam-create-new" />
         <section className="min-w-0 flex-1 p-6 sm:p-10">

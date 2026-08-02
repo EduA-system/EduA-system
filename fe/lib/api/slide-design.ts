@@ -1,3 +1,4 @@
+import type { Molecule } from "@/components/molecules/types";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 
 const BE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -35,6 +36,8 @@ export type SlideContentFillSlot = {
   text: string | null;
   imagePrompt: string | null;
   style?: SlideContentStyle | null;
+  /** Frontend-only: set locally by runContentFillStep for molecule slots, never sent to/from the backend. */
+  molecule?: Molecule;
 };
 
 export type SlideContentFillResponse = {

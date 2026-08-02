@@ -6,10 +6,10 @@
 ## Quyết định riêng
 
 - **Luồng nhẹ nhất, 1 bên thứ 3 (Google)**: FE dùng Google Identity Services lấy `id_token` → BE verify `id_token` (Google JWKS, audience = `client_id`) → **không** redirect server-side, **không** SDK vendor.
-- **Không self-registration** (BR-01): tài khoản do Admin/Moderator cấp trước qua **allowlist email**. Login mà email chưa được cấp → 403.
+- **Không self-registration** (BR-01): tài khoản do Principal/Moderator cấp trước qua **allowlist email**. Login mà email chưa được cấp → 403.
 - **Session = JWT**: access token TTL 60 phút (body, FE giữ memory) + refresh token 24h idle, **rotation**, lưu **hash** trong DB, trả qua **HttpOnly + Secure + SameSite cookie** (SEC-03).
-- **RBAC 2 chiều**: `Role {TEACHER, MODERATOR, ADMINISTRATOR}` + `Subject {MATH, CHEMISTRY, PHYSICS}` cho Teacher (khớp ma trận Screen Authorization 1.4.2).
-- Quản lý tài khoản (cấp email, tạo/khóa Teacher) — **để sau**; giai đoạn này admin đầu tiên seed bằng Flyway.
+- **RBAC 2 chiều**: `Role {TEACHER, MODERATOR, PRINCIPAL, IT_STAFF}` + `Subject {MATH, CHEMISTRY, PHYSICS}` cho Teacher/Moderator scope theo môn; IT Staff không gắn subject.
+- Quản lý tài khoản (cấp email, tạo/khóa Teacher) — **để sau**; giai đoạn này principal đầu tiên seed bằng Flyway.
 
 ---
 
@@ -75,11 +75,11 @@ body: { idToken }                 // id_token lấy từ Google Identity Service
 
 ## Phụ thuộc & thứ tự làm
 
-1. Flyway `V2__create_auth.sql` (`app_users`, `refresh_tokens`, seed admin) + env config.
+1. Flyway `V2__create_auth.sql` (`app_users`, `refresh_tokens`, seed principal) + env config.
 2. Verify Google id_token + phát/parse JWT (infra security).
 3. `AuthService` + `AuthController` (4 endpoint) + `SecurityConfig`.
 4. Cross-cutting: WebSocket auth, CORS siết, rate-limit.
 
 ## Điểm mở cần chốt sau
 - "API gateway" (SRS) = filter trong monolith (hiện tại) hay tách service riêng.
-- Quản lý allowlist/Teacher qua API cho Moderator/Admin (Teacher Management screen).
+- Quản lý allowlist/Teacher qua API cho Moderator/Principal (Teacher Management screen).

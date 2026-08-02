@@ -8,6 +8,7 @@ import type { ExamScope, QuestionTypeKey } from "@/lib/exam-matrix/types";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { Dropdown, type DropdownOption } from "../ui/Dropdown";
 import { Sidebar } from "../layout/Sidebar";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 const SUBJECT_OPTIONS: DropdownOption[] = [
   { value: "PHYSICS", label: "Vật lí" },
@@ -44,6 +45,7 @@ const GRADE_12: Drafts = {
 
 export function ExamCreateDashboard() {
   const router = useRouter();
+  const { authFetch } = useAuth();
   const [subject, setSubject] = useState<string | null>(null);
   const [grade, setGrade] = useState<string | null>(null);
   const [examType, setExamType] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export function ExamCreateDashboard() {
     setExamType(value); setScope(null); setScopeConfirmed(false); setError(null);
     if (!subject || !grade) return;
     setScopeLoading(true);
-    try { setScope(await previewExamScope(fetch, subject, Number(grade), value)); }
+    try { setScope(await previewExamScope(authFetch, subject, Number(grade), value)); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Không tải được phạm vi SGK."); }
     finally { setScopeLoading(false); }
   }
@@ -141,7 +143,7 @@ export function ExamCreateDashboard() {
         label: value.label, questionCount: value.count, itemsPerQuestion: value.itemsPerQuestion,
         pointsPerQuestionCents: value.pointsCents, scoreCents: value.scoreCents, essayPartPointsCents: value.essayParts,
       }])) as Record<QuestionTypeKey, { label: string; questionCount: number; itemsPerQuestion: number | null; pointsPerQuestionCents: number | null; scoreCents: number; essayPartPointsCents: number[][] }>;
-      const workspace = await generateExamMatrix(fetch, {
+      const workspace = await generateExamMatrix(authFetch, {
         subject, subjectLabel: selectedSubject.label, grade: Number(grade), examType, examTypeLabel: selectedType.label,
         scopeToken: scope.token, scopeConfirmed: true,
         configuration: { mode: "cv7991", difficulty, confirmedByTeacher: true, allowEssayForGrade12, questionTypes, assessmentRatios: ratios },
@@ -155,7 +157,7 @@ export function ExamCreateDashboard() {
 
   const canSubmit = configValid && Boolean(scope && scopeConfirmed) && !scopeLoading && !submitting;
   return (
-    <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] text-[#171717]">
+    <main className="h-screen w-full overflow-hidden bg-white text-[#171717]">
       <div className="flex h-full"><Sidebar /><section className="min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8 lg:py-12">
         <div className="mx-auto max-w-[980px]">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 py-1 text-[11px] font-medium text-[#d97757]"><DashboardIcon name="aiBadge" />Tạo đề kiểm tra bằng AI</span>

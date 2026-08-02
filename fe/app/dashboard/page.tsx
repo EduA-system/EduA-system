@@ -13,6 +13,8 @@ const descriptions: Record<string, string> = {
   "/homepage": "Khám phá cộng đồng EDUA và các công cụ học tập trực quan.",
   "/blog": "Chia sẻ kiến thức, trao đổi ý tưởng cùng cộng đồng giáo dục.",
   "/library": "Lưu trữ, quản lý và sử dụng lại tài liệu giảng dạy của bạn.",
+  "/create-class": "Tạo và quản lý Class Hub cho các lớp bạn phụ trách.",
+  "/list-class": "Xem tài liệu và bài tập đã được đăng trong các lớp bạn tham gia.",
   "/lesson-edit": "Soạn thảo và hoàn thiện bài giảng với sự hỗ trợ của AI.",
   "/slide-create": "Tạo slide trình bày rõ ràng, sinh động chỉ trong vài phút.",
   "/lesson-create": "Thiết kế bài kiểm tra phù hợp với mục tiêu bài học.",
@@ -38,7 +40,7 @@ function DashboardContent() {
     .filter((group) => group.items.length > 0);
 
   return (
-    <main className="min-h-screen bg-[#f5f1ec] text-[#1f1f1f]">
+    <main className="min-h-screen bg-white text-[#1f1f1f]">
       <header className="sticky top-0 z-30 flex h-14 items-center border-b border-[#d8d1c9] bg-[#f7f5f2] px-4 md:hidden">
         <button
           type="button"

@@ -48,12 +48,71 @@ describe("dynamic slide layout engine", () => {
     expect(process.slots.filter((slot) => slot.sourcePartId?.startsWith("step:")).map((slot) => slot.sourcePartId)).toEqual(["step:one", "step:two", "step:three"]);
   });
 
-  it("gives experiment text and visual at least thirty percent of body width", () => {
-    const result = generateSlideLayout(fixture("experiment"));
+  it("reserves a separate footer area for supporting text below a table", () => {
+    const base = fixture("table");
+    const layout = generateSlideLayout({ ...base, blocks: [...base.blocks, text("note", "Ghi chú cho bảng")] });
+    const table = layout.structures.find((item) => item.kind === "table-grid");
+    const note = layout.slots.find((slot) => slot.sourceBlockId === "note");
+
+    expect(table).toBeDefined();
+    expect(note).toBeDefined();
+    expect(table!.rect.y + table!.rect.h).toBeLessThanOrEqual(note!.rect.y - 12);
+  });
+
+  it("uses at most two columns for three or more long text blocks", () => {
+    const base = fixture("concept");
+    const blocks = [base.blocks[0], ...["one", "two", "three", "four"].map((id) => text(id, "x".repeat(100)))];
+    const layout = generateSlideLayout({ ...base, blocks });
+    const contentSlots = layout.slots.filter((slot) => slot.sourceBlockId !== "title");
+
+    expect(new Set(contentSlots.map((slot) => slot.rect.x)).size).toBe(2);
+    expect(new Set(contentSlots.map((slot) => slot.rect.y)).size).toBe(2);
+    expect(contentSlots.every((slot) => slot.rect.w >= layout.contentBounds.w * 0.45)).toBe(true);
+  });
+
+  it("does not create three columns for short source text that AI may later expand", () => {
+    const base = fixture("concept");
+    const blocks = [base.blocks[0], ...["one", "two", "three"].map((id) => text(id, "Ý ngắn"))];
+    const layout = generateSlideLayout({ ...base, blocks });
+    const contentSlots = layout.slots.filter((slot) => slot.sourceBlockId !== "title");
+
+    expect(new Set(contentSlots.map((slot) => slot.rect.x)).size).toBe(2);
+    expect(contentSlots.every((slot) => slot.rect.w >= layout.contentBounds.w * 0.45)).toBe(true);
+  });
+
+  it("does not reveal quiz answers on the question slide", () => {
+    const result = generateSlideLayout(fixture("quiz"));
+
+    expect(result.slots.some((slot) => slot.sourcePartId === "answer")).toBe(false);
+    expect(result.slots.map((slot) => slot.sourcePartId).filter(Boolean)).toEqual(["question", "choices"]);
+  });
+
+  it.each(["text-image", "experiment"] as const)("gives %s a prominent illustration", (slideType) => {
+    const result = generateSlideLayout(fixture(slideType));
     const visual = result.slots.find((slot) => slot.kind === "image");
     const body = result.slots.find((slot) => slot.sourceBlockId === "body");
-    expect(visual!.rect.w / result.contentBounds.w).toBeGreaterThanOrEqual(0.3);
+    expect(visual!.rect.w / result.contentBounds.w).toBeGreaterThanOrEqual(0.35);
+    expect(visual!.rect.h / result.contentBounds.h).toBeGreaterThanOrEqual(0.45);
     expect(body!.rect.w / result.contentBounds.w).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it("adds a prominent illustration to sparse explanatory slides", () => {
+    const result = generateSlideLayout(fixture("concept"));
+    const image = result.slots.find((slot) => slot.kind === "image");
+
+    expect(result.topology).toMatch(/^split-/);
+    expect(image).toMatchObject({
+      sourceBlockId: "title:supporting-visual",
+      sourcePartId: undefined,
+      zone: "aside",
+    });
+    expect(image!.sourceText).toContain("Tiêu đề bài học");
+    expect(image!.rect.w / result.contentBounds.w).toBeGreaterThanOrEqual(0.35);
+  });
+
+  it.each(["comparison", "table", "formula", "quiz"] as const)("does not add an automatic illustration to %s slides", (slideType) => {
+    const result = generateSlideLayout(fixture(slideType));
+    expect(result.slots.some((slot) => slot.sourceBlockId === "title:supporting-visual")).toBe(false);
   });
 
   it("renders structures, table lines, placeholders and hides intro header", () => {
@@ -77,6 +136,20 @@ describe("dynamic slide layout engine", () => {
 
     const formula = renderSlideLayout(generateSlideLayout(fixture("formula")), { palette: ["#222222"] });
     expect(formula.find((element) => element.contentSlot === "slot:formula:expression")).toMatchObject({ type: "text", fontSize: 24 });
+  });
+
+  it("gives formula expressions the full width above their supporting notes", () => {
+    const base = fixture("formula");
+    const layout = generateSlideLayout({
+      ...base,
+      blocks: [...base.blocks, text("note", "Ghi chú ngắn gọn")],
+    });
+    const formula = layout.slots.find((slot) => slot.id === "slot:formula:expression");
+    const note = layout.slots.find((slot) => slot.id === "slot:note");
+    expect(formula).toBeDefined();
+    expect(note).toBeDefined();
+    expect(formula!.rect.w).toBeGreaterThan(layout.contentBounds.w * 0.9);
+    expect(formula!.rect.y + formula!.rect.h).toBeLessThanOrEqual(note!.rect.y);
   });
 
   it("keeps illustration slots within a usable, non-banner aspect ratio", () => {

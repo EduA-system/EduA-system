@@ -1,13 +1,13 @@
--- Auth: người dùng (allowlist do Admin/Moderator cấp) + refresh token.
+-- Auth: người dùng (allowlist do Principal/Moderator cấp) + refresh token.
 -- Không lưu mật khẩu (SEC-01). Một dòng app_users tồn tại = email đã được cấp quyền.
--- Admin đầu tiên được seed bằng AdminSeedRunner (đọc app.auth.admin-seed-email), không hardcode ở đây.
+-- Principal đầu tiên được seed bằng PrincipalSeedRunner (đọc app.auth.principal-seed-email), không hardcode ở đây.
 
 CREATE TABLE app_users (
     id            UUID         PRIMARY KEY,
     email         VARCHAR(320) NOT NULL UNIQUE,
     google_sub    VARCHAR(255) UNIQUE,
     full_name     VARCHAR(255),
-    role          VARCHAR(20)  NOT NULL,                 -- TEACHER | MODERATOR | ADMINISTRATOR
+    role          VARCHAR(20)  NOT NULL,                 -- TEACHER | MODERATOR | PRINCIPAL
     subject       VARCHAR(20),                           -- MATH | CHEMISTRY | PHYSICS (chỉ Teacher)
     status        VARCHAR(20)  NOT NULL DEFAULT 'INVITED',-- INVITED | ACTIVE | DISABLED
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),

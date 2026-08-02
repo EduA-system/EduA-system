@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
-import { generateOutline, retryOutlineSessionPart, startOutlineSession, type OutlinePart } from "@/lib/api/slides";
+import { generateOutline, retryOutlineSessionSlide, startOutlineSession, type OutlinePart } from "@/lib/api/slides";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { connectOutlineStream, type OutlineEvent } from "@/lib/ws/outline-client";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
@@ -24,6 +24,95 @@ type OutlineBoot = {
   parts: OutlinePart[];
   error?: string;
 };
+
+function slideKey(partId: string, slideId: string) {
+  return `${partId}:${slideId}`;
+}
+
+function sameItems(left: string[], right: string[]) {
+  return left.length === right.length && left.every((item, index) => item === right[index]);
+}
+
+/** Fake but reassuring progress: eases toward `target` and never quite reaches it, since we don't know real completion time. */
+function useFakeProgress(target = 92, intervalMs = 220) {
+  const [progress, setProgress] = useState(6);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setProgress((prev) => (prev >= target ? prev : Math.min(target, prev + Math.max(0.4, (target - prev) * 0.06))));
+    }, intervalMs);
+    return () => clearInterval(id);
+  }, [target, intervalMs]);
+  return progress;
+}
+
+/** Mirrors OutlineEditor's card shape so the layout doesn't jump once real parts/slides stream in. */
+function OutlineSkeleton() {
+  const progress = useFakeProgress();
+  const parts = [
+    { slides: 3 },
+    { slides: 2 },
+    { slides: 4 },
+  ];
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-6" aria-busy="true" aria-label="Đang tạo khung đề cương slide">
+      <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-[#efeef7]">
+        <div
+          className="h-full rounded-full bg-[#8200db] transition-[width] duration-300 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-[rgba(26,26,46,0.09)] bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-[rgba(26,26,46,0.07)] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 animate-pulse rounded-lg bg-[#f9f8f3]" />
+            <div className="h-3.5 w-36 animate-pulse rounded bg-[#f9f8f3]" />
+          </div>
+          <div className="h-6 w-20 animate-pulse rounded-lg bg-[#f9f8f3]" />
+        </div>
+
+        <div className="divide-y divide-[rgba(26,26,46,0.06)]">
+          {parts.map((part, partIndex) => (
+            <div key={partIndex} className="px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[#e4e1ee]">⋮⋮</span>
+                <div
+                  className="h-3.5 animate-pulse rounded bg-[#f9f8f3]"
+                  style={{ width: `${40 - partIndex * 6}%`, animationDelay: `${partIndex * 100}ms` }}
+                />
+              </div>
+              <ul className="mt-2.5 space-y-2.5 pl-6">
+                {Array.from({ length: part.slides }).map((_, slideIndex) => (
+                  <li key={slideIndex} className="flex items-start gap-2">
+                    <span className="mt-1 text-[#e4e1ee]">└</span>
+                    <div
+                      className="mt-0.5 h-3.5 w-12 shrink-0 animate-pulse rounded bg-[#f9f8f3]"
+                      style={{ animationDelay: `${(partIndex * 4 + slideIndex) * 80}ms` }}
+                    />
+                    <div className="min-w-0 flex-1 space-y-1.5 py-0.5">
+                      <div
+                        className="h-3 animate-pulse rounded bg-[#f9f8f3]"
+                        style={{ width: `${70 - (slideIndex % 3) * 12}%`, animationDelay: `${(partIndex * 4 + slideIndex) * 80 + 40}ms` }}
+                      />
+                      <div
+                        className="h-2.5 animate-pulse rounded bg-[#f9f8f3]/70"
+                        style={{ width: `${50 - (slideIndex % 2) * 10}%`, animationDelay: `${(partIndex * 4 + slideIndex) * 80 + 80}ms` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+      <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-[#9998be]">
+        <span className="size-2.5 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
+        AI đang tạo khung đề cương slide… {Math.round(progress)}%
+      </p>
+    </div>
+  );
+}
 
 function loadOutlineBoot(): OutlineBoot {
   const stored = readSlideCreateSession();
@@ -51,7 +140,9 @@ export default function SlideOutlinePage() {
   const [parts, setParts] = useState<OutlinePart[]>(boot.parts);
   const [error, setError] = useState<string | undefined>(boot.error);
   const [expandingPartIds, setExpandingPartIds] = useState<string[]>([]);
+  const [expandingSlideIds, setExpandingSlideIds] = useState<string[]>([]);
   const [failedPartMessages, setFailedPartMessages] = useState<Record<string, string>>({});
+  const [failedSlideMessages, setFailedSlideMessages] = useState<Record<string, string>>({});
   const [confirming, setConfirming] = useState(false);
 
   const disconnectRef = useRef<(() => void) | null>(null);
@@ -60,6 +151,12 @@ export default function SlideOutlinePage() {
   const handleOutlineEvent = useCallback((event: OutlineEvent) => {
     if (event.type === "OUTLINE_PART_SKELETON_READY") {
       setParts((prev) => prev.map((part) => (part.id === event.part.id ? event.part : part)));
+      setExpandingSlideIds((prev) => [
+        ...new Set([
+          ...prev,
+          ...(event.part.slides ?? []).map((slide) => slideKey(event.part.id, slide.id)),
+        ]),
+      ]);
     } else if (event.type === "OUTLINE_PART_READY") {
       setParts((prev) =>
         prev.map((p) =>
@@ -74,6 +171,7 @@ export default function SlideOutlinePage() {
         ),
       );
       setExpandingPartIds((prev) => prev.filter((id) => id !== event.partId));
+      setExpandingSlideIds((prev) => prev.filter((id) => !id.startsWith(`${event.partId}:`)));
       setFailedPartMessages((prev) => {
         const next = { ...prev };
         delete next[event.partId];
@@ -82,11 +180,59 @@ export default function SlideOutlinePage() {
     } else if (event.type === "OUTLINE_PART_FAILED") {
       logSlideApi(`outline part failed: ${event.partId}`);
       setExpandingPartIds((prev) => prev.filter((id) => id !== event.partId));
-      setFailedPartMessages((prev) => ({ ...prev, [event.partId]: event.message || "AI chưa thể soạn phần này." }));
+      setExpandingSlideIds((prev) => prev.filter((id) => !id.startsWith(`${event.partId}:`)));
+      const part = parts.find((candidate) => candidate.id === event.partId);
+      const message = event.message || "AI chưa thể soạn slide này.";
+      if (part?.slides?.length) {
+        setFailedSlideMessages((prev) => {
+          const next = { ...prev };
+          for (const slide of part.slides) next[slideKey(event.partId, slide.id)] = message;
+          return next;
+        });
+        setFailedPartMessages((prev) => {
+          const next = { ...prev };
+          delete next[event.partId];
+          return next;
+        });
+      } else {
+        setFailedPartMessages((prev) => ({ ...prev, [event.partId]: event.message || "AI chưa thể tạo khung slide cho phần này." }));
+      }
+    } else if (event.type === "OUTLINE_SLIDE_READY") {
+      const key = slideKey(event.partId, event.slide.id);
+      setParts((prev) =>
+        prev.map((part) => {
+          if (part.id !== event.partId) return part;
+          const slides = part.slides ?? [];
+          const exists = slides.some((slide) => slide.id === event.slide.id);
+          return {
+            ...part,
+            slides: exists
+              ? slides.map((slide) => (slide.id === event.slide.id ? event.slide : slide))
+              : [...slides, event.slide],
+          };
+        }),
+      );
+      setExpandingSlideIds((prev) => prev.filter((id) => id !== key));
+      setFailedSlideMessages((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      setFailedPartMessages((prev) => {
+        const next = { ...prev };
+        delete next[event.partId];
+        return next;
+      });
+    } else if (event.type === "OUTLINE_SLIDE_FAILED") {
+      const key = slideKey(event.partId, event.slideId);
+      logSlideApi(`outline slide failed: ${event.partId}/${event.slideId}`);
+      setExpandingSlideIds((prev) => prev.filter((id) => id !== key));
+      setFailedSlideMessages((prev) => ({ ...prev, [key]: event.message || "AI chưa thể soạn slide này." }));
     } else if (event.type === "DONE" || event.type === "ERROR") {
       setExpandingPartIds([]);
+      setExpandingSlideIds([]);
     }
-  }, []);
+  }, [parts]);
 
   // Sinh khung (pha 1) + subscribe stream (pha 2) một lần.
   useEffect(() => {
@@ -139,6 +285,9 @@ export default function SlideOutlinePage() {
         );
         setParts(res.outline.parts);
         setExpandingPartIds(res.outline.parts.map((p) => p.id));
+        setExpandingSlideIds([]);
+        setFailedPartMessages({});
+        setFailedSlideMessages({});
         setStatus("ready");
 
         const { disconnect } = connectOutlineStream({
@@ -171,21 +320,51 @@ export default function SlideOutlinePage() {
     };
   }, [accessToken, authFetch, authStatus, status, session, handleOutlineEvent]);
 
-  const handleRetryPart = useCallback(async (partId: string) => {
+  const handleRetrySlide = useCallback(async (partId: string, slideId: string) => {
     if (!session?.sessionId) return;
-    setExpandingPartIds((prev) => [...new Set([...prev, partId])]);
-    setFailedPartMessages((prev) => {
+    const key = slideKey(partId, slideId);
+    setExpandingSlideIds((prev) => [...new Set([...prev, key])]);
+    setFailedSlideMessages((prev) => {
       const next = { ...prev };
-      delete next[partId];
+      delete next[key];
       return next;
     });
     try {
-      await retryOutlineSessionPart(authFetch, session.sessionId, partId);
+      await retryOutlineSessionSlide(authFetch, session.sessionId, partId, slideId);
     } catch (err) {
-      setExpandingPartIds((prev) => prev.filter((id) => id !== partId));
-      setFailedPartMessages((prev) => ({ ...prev, [partId]: err instanceof Error ? err.message : String(err) }));
+      setExpandingSlideIds((prev) => prev.filter((id) => id !== key));
+      setFailedSlideMessages((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : String(err) }));
     }
   }, [authFetch, session]);
+
+  useEffect(() => {
+    if (status !== "ready") return;
+
+    const slideKeysByPart = new Map<string, Set<string>>();
+    for (const part of parts) {
+      slideKeysByPart.set(part.id, new Set((part.slides ?? []).map((slide) => slideKey(part.id, slide.id))));
+    }
+
+    const validExpandingSlideIds = expandingSlideIds.filter((key) => {
+      const separator = key.indexOf(":");
+      if (separator < 0) return false;
+      const partId = key.slice(0, separator);
+      return slideKeysByPart.get(partId)?.has(key) ?? false;
+    });
+
+    if (!sameItems(expandingSlideIds, validExpandingSlideIds)) {
+      setExpandingSlideIds(validExpandingSlideIds);
+    }
+
+    setExpandingPartIds((current) => {
+      const next = current.filter((partId) => {
+        const slideKeys = slideKeysByPart.get(partId);
+        if (!slideKeys || slideKeys.size === 0) return true;
+        return validExpandingSlideIds.some((key) => slideKeys.has(key));
+      });
+      return sameItems(current, next) ? current : next;
+    });
+  }, [expandingSlideIds, parts, status]);
 
   // Ngắt kết nối khi rời trang.
   useEffect(() => () => disconnectRef.current?.(), []);
@@ -234,12 +413,7 @@ export default function SlideOutlinePage() {
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {status === "outlining" ? (
-            <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
-              <div className="size-8 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
-              <p className="text-sm text-[#5c5b6e]">AI đang tạo khung đề cương slide…</p>
-            </div>
-          ) : null}
+          {status === "outlining" ? <OutlineSkeleton /> : null}
 
           {status === "error" ? (
             <div className="mx-auto max-w-md px-6 py-24 text-center">
@@ -261,8 +435,10 @@ export default function SlideOutlinePage() {
               onConfirm={handleConfirm}
               confirming={confirming}
               expandingPartIds={expandingPartIds}
+              expandingSlideIds={expandingSlideIds}
               failedPartMessages={failedPartMessages}
-              onRetryPart={handleRetryPart}
+              failedSlideMessages={failedSlideMessages}
+              onRetrySlide={handleRetrySlide}
             />
           ) : null}
         </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 export type AuthUser = {
   id: string;
@@ -6,6 +6,8 @@ export type AuthUser = {
   fullName: string | null;
   avatarUrl: string | null;
   contactInfo: string | null;
+  bio: string | null;
+  phoneNumber: string | null;
   role: string;
   roles: string[];
   subject: string | null;

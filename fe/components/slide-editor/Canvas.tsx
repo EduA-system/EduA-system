@@ -518,6 +518,7 @@ export function Canvas({
               key={el.id}
               el={el}
               hideText={editingId === el.id}
+              simulationPreview
               onMouseDown={(e) => handleElementMouseDown(e, el)}
               onDoubleClick={() => handleDoubleClick(el)}
               onContextMenu={(e) => openCtxMenu(e, el)}

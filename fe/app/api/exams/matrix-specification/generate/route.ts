@@ -12,6 +12,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
         Accept: "application/json",
         "X-Client-Request-ID": clientRequestId,
+        ...(request.headers.get("Authorization") ? { Authorization: request.headers.get("Authorization")! } : {}),
       },
       body: await request.text(),
       cache: "no-store",

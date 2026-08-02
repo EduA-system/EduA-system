@@ -1,5 +1,6 @@
 package com.edua.beeduasystem.service.slidedesign;
 
+import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideHtmlDesignRequest;
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentFillRequest;
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentSlotRequest;
@@ -17,6 +18,11 @@ public class SlideDesignPromptBuilder {
     /** Reads data-body-top="N" emitted by Step 1's header band. */
     private static final Pattern BODY_TOP_ATTR =
             Pattern.compile("data-body-top=\"(\\d+)\"");
+
+    private static final String CONTENT_SLOTS_INSTRUCTION = """
+            You are filling existing presentation placeholders. Return JSON only, never HTML.
+            Use only facts supplied in the outline, allocate distinct content across repeated zones, and keep text Vietnamese.
+            """;
 
     // ----------------------------------------------------------------
     // STEP 1 — Deck skin: Background + Decoration + Header
@@ -757,6 +763,16 @@ public class SlideDesignPromptBuilder {
             </output_format>
             """;
 
+    public static String defaultInstruction(AiPromptKey key) {
+        return switch (key) {
+            case SLIDE_DESIGN_BACKGROUND -> STEP1_BG_DECO_PROMPT;
+            case SLIDE_DESIGN_STRUCTURE -> STEP2_STRUCT_ZONES_PROMPT;
+            case SLIDE_DESIGN_CONTENT_FILL -> STEP3_CONTENT_FILL_PROMPT;
+            case SLIDE_DESIGN_CONTENT_SLOTS -> CONTENT_SLOTS_INSTRUCTION;
+            default -> throw new IllegalArgumentException("Unsupported slide-design prompt key: " + key);
+        };
+    }
+
     public String buildStep1BgDecoPrompt(SlideHtmlDesignRequest req) {
         String subject = (req.subject() == null || req.subject().isBlank())
                 ? "Vật lý"
@@ -896,7 +912,7 @@ public class SlideDesignPromptBuilder {
         String palette = req.palette() == null || req.palette().isEmpty() ? "#2b2926, #ffffff, #d97757" : String.join(", ", req.palette());
 
         StringBuilder prompt = new StringBuilder();
-        prompt.append("You are filling existing presentation placeholders. Return JSON only, never HTML.\n\n");
+        prompt.append(CONTENT_SLOTS_INSTRUCTION).append("\n");
         prompt.append("SUBJECT: ").append(subject).append("\nTOPIC: ").append(topic).append("\n");
         if (!styleHint.isEmpty()) prompt.append("STYLE HINT: ").append(styleHint).append("\n");
         prompt.append("ALLOWED COLORS: ").append(palette).append("\n\n");
@@ -914,7 +930,7 @@ public class SlideDesignPromptBuilder {
         prompt.append("\nRules:\n")
                 .append("- Use only facts supplied in the outline; do not invent examples, questions, or activities.\n")
                 .append("- Allocate distinct content across repeated zones in listed order; do not repeat text.\n")
-                .append("- Text must be Vietnamese. maxChars/maxLines are writing guidance only: never truncate a fact or answer.\n")
+                .append("- Text must be Vietnamese and MUST fit within maxChars/maxLines for its slot — these are hard limits, not suggestions. Never exceed maxChars. Rewrite concisely (drop secondary detail, keep the single most essential fact) rather than going over the limit or ending mid-sentence.\n")
                 .append("- When a text slot contains 2 or more distinct facts, steps, causes, features, examples, or answers, return 2–4 short lines beginning with `• `; do not write one long paragraph. Keep a single-sentence definition, conclusion, or transition as prose.\n")
                 .append("- For image slots, text must be null and imagePrompt must be a specific English image prompt; do not provide an image URL.\n")
                 .append("- Text style is optional. fontSize must suit the zone, color must be one of ALLOWED COLORS, align is left/center/right.\n")
