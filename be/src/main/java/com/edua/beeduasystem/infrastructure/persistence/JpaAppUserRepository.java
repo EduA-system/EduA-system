@@ -1,4 +1,4 @@
-﻿package com.edua.beeduasystem.infrastructure.persistence;
+package com.edua.beeduasystem.infrastructure.persistence;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;

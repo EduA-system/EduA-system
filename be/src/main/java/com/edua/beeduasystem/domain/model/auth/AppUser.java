@@ -1,4 +1,4 @@
-﻿package com.edua.beeduasystem.domain.model.auth;
+package com.edua.beeduasystem.domain.model.auth;
 
 import java.time.Instant;
 import java.util.UUID;

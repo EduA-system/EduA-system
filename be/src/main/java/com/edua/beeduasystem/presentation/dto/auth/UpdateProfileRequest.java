@@ -1,4 +1,4 @@
-﻿package com.edua.beeduasystem.presentation.dto.auth;
+package com.edua.beeduasystem.presentation.dto.auth;
 
 import jakarta.validation.constraints.Size;
 
