@@ -15,6 +15,7 @@ import {
   type MathClickInfo,
 } from "@/components/LessonEditor";
 import {
+  generatePracticeExamExplanations,
   type PracticeExam,
 } from "@/services/practiceExamService";
 import { normalizePracticeExamLatex, normalizePracticeExamMathText } from "@/lib/practice-exam-math";
@@ -136,7 +137,10 @@ function examHtml(metadata: Metadata, generated: PracticeExam | null) {
     };
     const answers = generated.questions.map((question) => {
       const rubric = question.rubric?.map((item) => `<li>${inlineRichText(item.criterion)}: ${formatScore(item.scoreCentiPoints)} điểm</li>`).join("") ?? "";
-      return `<section><p><b>Câu ${question.order} (${formatScore(question.scoreCentiPoints)} điểm)</b></p><p><b>Đáp án:</b> ${inlineRichText(answerText(question))}</p><p><b>Hướng dẫn:</b></p>${richTextBlocks(question.explanation)}${rubric ? `<ul>${rubric}</ul>` : ""}</section>`;
+      const guidance = question.explanation == null
+        ? '<p class="pending-explanation">⏳ Đang tạo lời giải…</p>'
+        : richTextBlocks(question.explanation);
+      return `<section><p><b>Câu ${question.order} (${formatScore(question.scoreCentiPoints)} điểm)</b></p><p><b>Đáp án:</b> ${inlineRichText(answerText(question))}</p><p><b>Hướng dẫn:</b></p>${guidance}${rubric ? `<ul>${rubric}</ul>` : ""}</section>`;
     }).join("");
     return `<h1>${generated.title}</h1><p class="document-meta">${generated.instructions} · Tổng điểm: 10 điểm</p><section><h2>I. ĐỀ KIỂM TRA</h2>${sections}</section><section><h2>II. ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM</h2>${answers}</section>`;
   }
@@ -191,6 +195,8 @@ export function PracticeExamEditDashboard() {
   const [libraryId, setLibraryId] = useState<string | null>(null);
   const [savedExam, setSavedExam] = useState<PracticeExam | null>(null);
   const [saving, setSaving] = useState(false);
+  const [explanationsLoading, setExplanationsLoading] = useState(false);
+  const [explanationsError, setExplanationsError] = useState<string | null>(null);
   const [activeQuestion, setActiveQuestion] = useState(0);
   const [extensions] = useState(() =>
     createEditorExtensions({ onMathClick: setMathClick }),
@@ -206,6 +212,44 @@ export function PracticeExamEditDashboard() {
       },
     },
   });
+
+  async function triggerExplanations(exam: PracticeExam, targetLibraryId: string, targetMetadata: Metadata) {
+    const pending = exam.questions.filter(
+      (question) => (question.type === "MULTIPLE_CHOICE" || question.type === "TRUE_FALSE") && question.explanation == null,
+    );
+    if (!pending.length || !editor) return;
+    const bookCode = pending[0]?.sourceLessonRefs[0]?.bookCode;
+    if (!bookCode) { setExplanationsError("Không xác định được sách nguồn để tạo lời giải."); return; }
+    setExplanationsLoading(true);
+    setExplanationsError(null);
+    editor.setEditable(false);
+    try {
+      const result = await generatePracticeExamExplanations(bookCode, pending, authFetch);
+      const explanationByOrder = new Map(result.explanations.map((entry) => [entry.order, entry.explanation]));
+      const merged: PracticeExam = {
+        ...exam,
+        questions: exam.questions.map((question) =>
+          explanationByOrder.has(question.order)
+            ? { ...question, explanation: explanationByOrder.get(question.order)! }
+            : question,
+        ),
+      };
+      setGenerated(merged);
+      setSavedExam(merged);
+      editor.commands.setContent(examHtml(targetMetadata, merged));
+      await updateLibraryContent(authFetch, targetLibraryId, {
+        payload: { exam: merged, documentHtml: editor.getHTML(), grade: Number(targetMetadata.grade), duration: targetMetadata.duration, difficulty: targetMetadata.difficulty },
+      });
+      setNotice("Đã tạo xong lời giải cho câu trắc nghiệm.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Không thể tạo lời giải cho câu trắc nghiệm.";
+      setExplanationsError(message);
+      setNotice(message);
+    } finally {
+      setExplanationsLoading(false);
+      editor.setEditable(true);
+    }
+  }
 
   useEffect(() => {
     const contentId = searchParams.get("libraryId");
@@ -231,7 +275,9 @@ export function PracticeExamEditDashboard() {
       setLibraryId(content.id);
       setMetadata(loadedMetadata);
       setNotice("Đang mở bài kiểm tra đã lưu từ thư viện.");
+      void triggerExplanations(payload.exam, content.id, loadedMetadata);
     }).catch(() => setNotice("Không thể mở bài kiểm tra đã lưu."));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authFetch, editor, searchParams]);
 
   async function saveDraft() {
@@ -420,6 +466,25 @@ export function PracticeExamEditDashboard() {
                     knowledge scope hoàn thiện.
                   </p>
                 </div>
+                {explanationsLoading ? (
+                  <div className="mt-4 rounded-lg border border-[#ead8b2] bg-[#fffaf0] p-3">
+                    <p className="text-xs font-medium text-[#805f20]">
+                      Đang tạo lời giải cho câu trắc nghiệm...
+                    </p>
+                    <p className="mt-1 text-[11px] leading-4 text-[#8b8178]">
+                      Trình soạn thảo tạm khóa cho đến khi hoàn tất.
+                    </p>
+                  </div>
+                ) : null}
+                {explanationsError ? (
+                  <button
+                    type="button"
+                    onClick={() => generated && libraryId && void triggerExplanations(generated, libraryId, metadata)}
+                    className="mt-4 w-full rounded-lg border border-[#ead4c9] px-3 py-2 text-xs font-semibold text-[#a8573b] hover:bg-[#fff6f1]"
+                  >
+                    ↻ Thử lại tạo lời giải
+                  </button>
+                ) : null}
                 {notice ? (
                   <p
                     role="status"

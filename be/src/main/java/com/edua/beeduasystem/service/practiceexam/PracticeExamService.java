@@ -3,9 +3,13 @@ package com.edua.beeduasystem.service.practiceexam;
 import com.edua.beeduasystem.domain.model.practiceexam.PracticeExam;
 import com.edua.beeduasystem.domain.model.practiceexam.PracticeExamValidation;
 import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
+import com.edua.beeduasystem.presentation.dto.practiceexam.GenerateExplanationsRequest;
+import com.edua.beeduasystem.presentation.dto.practiceexam.GenerateExplanationsResponse;
 import com.edua.beeduasystem.presentation.dto.practiceexam.PracticeExamRequest;
 import com.edua.beeduasystem.repository.gateways.AiClient;
 import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.io.JsonEOFException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -17,13 +21,17 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class PracticeExamService {
     private static final Set<String> TYPES = Set.of("MULTIPLE_CHOICE", "TRUE_FALSE", "SHORT_ANSWER", "ESSAY");
+    private static final Set<String> CORE_ONLY_TYPES = Set.of("MULTIPLE_CHOICE", "TRUE_FALSE");
     private static final Pattern DISPLAY_MATH = Pattern.compile("\\$\\$([\\s\\S]+?)\\$\\$");
     private static final Pattern INLINE_MATH = Pattern.compile("(?<!\\$)\\$([^$\\n]+?)\\$(?!\\$)");
+    private static final Pattern HTML_NAMED_ENTITY = Pattern.compile("&(amp|lt|gt|quot|apos);");
+    private static final Pattern HTML_NUMERIC_ENTITY = Pattern.compile("&#0*(38|60|62|34|39);");
     private final TextbookCatalogRepository catalogRepository;
     private final AiClient aiClient;
     private final ObjectMapper objectMapper;
@@ -51,7 +59,9 @@ public class PracticeExamService {
         return feasibility(request);
     }
 
-    public PracticeExam generate(PracticeExamRequest request) {
+    // ---- Phase 1: question generation (MC/TF core-only, SHORT_ANSWER/ESSAY full as before) ----
+
+    public PracticeExam generateQuestions(PracticeExamRequest request) {
         PracticeExamValidation validation = validate(request);
         log.info("PRACTICE_EXAM_GENERATION_STARTED subject={} grade={} durationMinutes={} difficulty={} questionCount={} lessonCount={} validationStatus={}",
                 request.subject(), request.grade(), request.durationMinutes(), request.difficulty(), request.totalQuestionCount(),
@@ -63,30 +73,31 @@ public class PracticeExamService {
         Map<String, String> knowledge = loadKnowledge(request);
         log.info("PRACTICE_EXAM_KNOWLEDGE_LOADED lessonCount={} characters={}", knowledge.size(),
                 knowledge.values().stream().mapToInt(String::length).sum());
-        return generateInBatches(request, knowledge);
+        UUID runId = UUID.randomUUID();
+        return generateQuestionsInBatches(runId, request, knowledge);
     }
 
-    private PracticeExam generateInBatches(PracticeExamRequest request, Map<String, String> knowledge) {
+    private PracticeExam generateQuestionsInBatches(UUID runId, PracticeExamRequest request, Map<String, String> knowledge) {
         ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
         AtomicBoolean cancelled = new AtomicBoolean(false);
         List<CompletableFuture<BatchResult>> futures = new ArrayList<>();
         try {
             List<BatchTask> tasks = buildBatchTasks(request);
             Semaphore permits = new Semaphore(Math.min(maxConcurrency, Math.max(1, tasks.size())));
-            log.info("PRACTICE_EXAM_BATCH_PLAN_READY batchCount={} maxConcurrency={} regularTimeoutSeconds={} essayTimeoutSeconds={} totalTimeoutSeconds={}",
-                    tasks.size(), maxConcurrency, regularBatchTimeoutSeconds, essayBatchTimeoutSeconds, totalTimeoutSeconds);
+            log.info("PRACTICE_EXAM_BATCH_PLAN_READY runId={} batchCount={} maxConcurrency={} regularTimeoutSeconds={} essayTimeoutSeconds={} totalTimeoutSeconds={}",
+                    runId, tasks.size(), maxConcurrency, regularBatchTimeoutSeconds, essayBatchTimeoutSeconds, totalTimeoutSeconds);
             for (BatchTask task : tasks) {
-                futures.add(CompletableFuture.supplyAsync(() -> runBatchTask(request, knowledge, task, permits, cancelled), executor));
+                futures.add(CompletableFuture.supplyAsync(() -> runBatchTask(runId, request, knowledge, task, permits, cancelled), executor));
             }
-            List<BatchResult> results = collectBatchResults(futures, cancelled);
+            List<BatchResult> results = collectResults(futures, cancelled);
             List<PracticeExam.Question> questions = results.stream()
                     .sorted(Comparator.comparingInt(BatchResult::firstOrder))
                     .flatMap(result -> result.questions().stream())
                     .toList();
             PracticeExam exam = new PracticeExam(request.title(), "Đọc kỹ từng câu hỏi và trình bày bài làm rõ ràng.",
                     request.durationMinutes(), request.totalScoreCentiPoints(), questions);
-            validateCompletedExam(exam, request);
-            log.info("PRACTICE_EXAM_GENERATION_SUCCEEDED generatedQuestionCount={}", exam.questions().size());
+            validateQuestionStructure(exam, request);
+            log.info("PRACTICE_EXAM_GENERATION_SUCCEEDED runId={} generatedQuestionCount={}", runId, exam.questions().size());
             return exam;
         } catch (IllegalArgumentException exception) {
             throw exception;
@@ -100,45 +111,10 @@ public class PracticeExamService {
         }
     }
 
-    private List<BatchResult> collectBatchResults(List<CompletableFuture<BatchResult>> futures, AtomicBoolean cancelled) {
-        BlockingQueue<CompletableFuture<BatchResult>> completed = new LinkedBlockingQueue<>();
-        futures.forEach(future -> future.whenComplete((ignored, error) -> completed.add(future)));
-        List<BatchResult> results = new ArrayList<>();
-        long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(totalTimeoutSeconds);
-        for (int remaining = futures.size(); remaining > 0; remaining--) {
-            CompletableFuture<BatchResult> future;
-            try {
-                long waitNanos = deadlineNanos - System.nanoTime();
-                if (waitNanos <= 0) {
-                    cancelRemaining(futures, cancelled);
-                    throw new PracticeExamGenerationException("AI mất quá " + totalTimeoutSeconds + " giây để tạo đề. Vui lòng giảm số bài SGK hoặc thử lại.", null);
-                }
-                future = completed.poll(waitNanos, TimeUnit.NANOSECONDS);
-            } catch (InterruptedException exception) {
-                Thread.currentThread().interrupt();
-                cancelRemaining(futures, cancelled);
-                throw new PracticeExamGenerationException("Quá trình tạo đề đã bị hủy.", exception);
-            }
-            if (future == null) {
-                cancelRemaining(futures, cancelled);
-                throw new PracticeExamGenerationException("AI mất quá " + totalTimeoutSeconds + " giây để tạo đề. Vui lòng giảm số bài SGK hoặc thử lại.", null);
-            }
-            try {
-                results.add(future.join());
-            } catch (CompletionException | CancellationException exception) {
-                cancelRemaining(futures, cancelled);
-                throw unwrapGenerationFailure(exception);
-            }
-        }
-        return results;
-    }
-
-    private void cancelRemaining(List<CompletableFuture<BatchResult>> futures, AtomicBoolean cancelled) {
-        cancelled.set(true);
-        futures.forEach(future -> {
-            if (!future.isDone()) future.cancel(true);
-        });
-    }
+    // Dạng câu chậm nhất (ESSAY) chạy trước để không phải xếp hàng chờ Semaphore lâu — số thứ tự
+    // câu trong đề (firstOrder) không phụ thuộc thứ tự này vì kết quả luôn được sắp lại theo
+    // firstOrder khi gộp (generateQuestionsInBatches), nên đổi thứ tự nộp việc là an toàn.
+    private static final List<String> SCHEDULE_PRIORITY = List.of("ESSAY", "SHORT_ANSWER", "TRUE_FALSE", "MULTIPLE_CHOICE");
 
     private List<BatchTask> buildBatchTasks(PracticeExamRequest request) {
         List<BatchTask> tasks = new ArrayList<>();
@@ -152,6 +128,7 @@ public class PracticeExamService {
                 firstOrder += batchCount;
             }
         }
+        tasks.sort(Comparator.comparingInt(task -> SCHEDULE_PRIORITY.indexOf(task.type().type())));
         return tasks;
     }
 
@@ -165,15 +142,17 @@ public class PracticeExamService {
         };
     }
 
-    private BatchResult runBatchTask(PracticeExamRequest request, Map<String, String> knowledge, BatchTask task,
+    private BatchResult runBatchTask(UUID runId, PracticeExamRequest request, Map<String, String> knowledge, BatchTask task,
                                      Semaphore permits, AtomicBoolean cancelled) {
         boolean acquired = false;
+        long queueStart = System.nanoTime();
         try {
             if (cancelled.get()) throw new CancellationException("Đã dừng tạo đề vì một nhóm câu khác bị lỗi.");
             permits.acquire();
             acquired = true;
+            long queueWaitMs = (System.nanoTime() - queueStart) / 1_000_000;
             if (cancelled.get()) throw new CancellationException("Đã dừng tạo đề vì một nhóm câu khác bị lỗi.");
-            List<PracticeExam.Question> questions = generateBatch(request, knowledge, task, cancelled);
+            List<PracticeExam.Question> questions = generateBatch(runId, request, knowledge, task, cancelled, queueWaitMs);
             return new BatchResult(task.firstOrder(), questions);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -187,19 +166,24 @@ public class PracticeExamService {
         }
     }
 
-    private List<PracticeExam.Question> generateBatch(PracticeExamRequest request, Map<String, String> knowledge,
-                                                      BatchTask task, AtomicBoolean cancelled) throws Exception {
+    private List<PracticeExam.Question> generateBatch(UUID runId, PracticeExamRequest request, Map<String, String> knowledge,
+                                                      BatchTask task, AtomicBoolean cancelled, long queueWaitMs) throws Exception {
         Exception lastFailure = null;
         for (int attempt = 0; attempt < 2; attempt++) {
+            String raw = null;
+            long aiLatencyMs = 0;
             try {
                 if (cancelled.get()) throw new CancellationException("Đã dừng tạo đề vì một nhóm câu khác bị lỗi.");
                 if (attempt > 0) backoffBeforeRetry(attempt);
-                log.info("PRACTICE_EXAM_AI_BATCH_STARTED type={} offset={} count={} score={} attempt={} compactRetry={}",
-                        task.type().type(), task.offset(), task.batchCount(), task.batchScore(), attempt + 1, attempt > 0);
-                String raw = generateWithTimeout(batchPrompt(request, knowledge, task.type(), task.batchCount(), task.batchScore(), attempt > 0),
+                log.info("PRACTICE_EXAM_AI_BATCH_STARTED runId={} type={} offset={} count={} score={} attempt={} compactRetry={} queueWaitMs={}",
+                        runId, task.type().type(), task.offset(), task.batchCount(), task.batchScore(), attempt + 1, attempt > 0, queueWaitMs);
+                long aiStart = System.nanoTime();
+                raw = generateWithTimeout(questionPrompt(request, knowledge, task.type(), task.batchCount(), task.batchScore(), attempt > 0),
                         timeoutSeconds(task.type().type()));
-                log.info("PRACTICE_EXAM_AI_RESPONSE_RECEIVED type={} offset={} attempt={} characters={} fenced={}", task.type().type(),
-                        task.offset(), attempt + 1, raw == null ? 0 : raw.length(), raw != null && raw.trim().startsWith("```"));
+                aiLatencyMs = (System.nanoTime() - aiStart) / 1_000_000;
+                log.info("PRACTICE_EXAM_AI_RESPONSE_RECEIVED runId={} type={} offset={} attempt={} characters={} fenced={} aiLatencyMs={}", runId,
+                        task.type().type(), task.offset(), attempt + 1, raw == null ? 0 : raw.length(),
+                        raw != null && raw.trim().startsWith("```"), aiLatencyMs);
                 List<PracticeExam.Question> generated = objectMapper.readValue(stripFence(raw), new TypeReference<>() {});
                 if (generated.size() != task.batchCount()) throw new IllegalArgumentException("AI trả sai số lượng câu trong một lô.");
                 List<PracticeExam.Question> normalized = new ArrayList<>();
@@ -214,6 +198,9 @@ public class PracticeExamService {
                             repairAnswer(question.answer()), repairMathText(question.explanation()), score,
                             repairRubric(question.rubric()), question.sourceLessonRefs()));
                 }
+                if (attempt > 0) {
+                    log.info("PRACTICE_EXAM_AI_RETRY_SUCCEEDED runId={} type={} offset={} attempt={}", runId, task.type().type(), task.offset(), attempt + 1);
+                }
                 return normalized;
             } catch (CancellationException failure) {
                 throw failure;
@@ -222,13 +209,228 @@ public class PracticeExamService {
                 throw failure;
             } catch (Exception failure) {
                 lastFailure = failure;
-                log.warn("PRACTICE_EXAM_AI_BATCH_FAILED type={} offset={} attempt={} failureType={} message={}", task.type().type(), task.offset(),
-                        attempt + 1, failure.getClass().getSimpleName(), failure.getMessage());
+                log.warn("PRACTICE_EXAM_AI_BATCH_FAILED runId={} type={} offset={} attempt={} failureType={} queueWaitMs={} aiLatencyMs={} rawPreview={} message={}",
+                        runId, task.type().type(), task.offset(), attempt + 1, classifyFailure(raw, failure), queueWaitMs, aiLatencyMs,
+                        preview(raw), failure.getMessage());
             }
         }
         throw lastFailure == null ? new IllegalStateException("AI không trả kết quả cho một lô câu hỏi.") : lastFailure;
     }
 
+    // ---- Phase 2: explanation generation (MULTIPLE_CHOICE/TRUE_FALSE only) ----
+
+    public GenerateExplanationsResponse generateExplanations(GenerateExplanationsRequest request) {
+        validateExplanationsRequest(request);
+        UUID runId = UUID.randomUUID();
+        Map<String, String> knowledge = loadKnowledgeForQuestions(request.bookCode(), request.questions());
+        log.info("PRACTICE_EXAM_EXPLANATION_STARTED runId={} bookCode={} questionCount={}", runId, request.bookCode(), request.questions().size());
+        List<GenerateExplanationsResponse.ExplanationEntry> entries = generateExplanationsInBatches(runId, knowledge, request.questions());
+        Set<Integer> expectedOrders = request.questions().stream().map(PracticeExam.Question::order).collect(Collectors.toSet());
+        Set<Integer> actualOrders = entries.stream().map(GenerateExplanationsResponse.ExplanationEntry::order).collect(Collectors.toSet());
+        if (!expectedOrders.equals(actualOrders)) {
+            throw new IllegalArgumentException("AI trả lời giải thiếu hoặc thừa so với danh sách câu hỏi đã gửi.");
+        }
+        log.info("PRACTICE_EXAM_EXPLANATION_SUCCEEDED runId={} explanationCount={}", runId, entries.size());
+        return new GenerateExplanationsResponse(entries);
+    }
+
+    private void validateExplanationsRequest(GenerateExplanationsRequest request) {
+        if (request == null || blank(request.bookCode()) || request.questions() == null || request.questions().isEmpty()) {
+            throw new IllegalArgumentException("Cần gửi kèm bookCode và danh sách câu hỏi cần sinh lời giải.");
+        }
+        for (PracticeExam.Question question : request.questions()) {
+            if (question == null || !CORE_ONLY_TYPES.contains(question.type())) {
+                throw new IllegalArgumentException("Chỉ hỗ trợ sinh lời giải bổ sung cho câu trắc nghiệm nhiều lựa chọn hoặc đúng-sai.");
+            }
+            if (blank(question.content()) || question.answer() == null || question.sourceLessonRefs() == null || question.sourceLessonRefs().isEmpty()) {
+                throw new IllegalArgumentException("Câu hỏi gửi lên thiếu nội dung, đáp án hoặc nguồn SGK.");
+            }
+        }
+    }
+
+    private Map<String, String> loadKnowledgeForQuestions(String bookCode, List<PracticeExam.Question> questions) {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (PracticeExam.Question question : questions) {
+            for (PracticeExam.LessonRef ref : question.sourceLessonRefs()) {
+                if (ref == null || blank(ref.chapterCode()) || blank(ref.lessonCode())) throw new IllegalArgumentException("Mã bài SGK không hợp lệ.");
+                String key = ref.chapterCode() + ":" + ref.lessonCode();
+                if (result.containsKey(key)) continue;
+                String value = catalogRepository.findLessonKnowledge(bookCode, ref.chapterCode(), ref.lessonCode())
+                        .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy knowledge_json của bài đã chọn."));
+                result.put(key, value);
+            }
+        }
+        return result;
+    }
+
+    private List<GenerateExplanationsResponse.ExplanationEntry> generateExplanationsInBatches(UUID runId, Map<String, String> knowledge,
+                                                                                               List<PracticeExam.Question> questions) {
+        ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+        AtomicBoolean cancelled = new AtomicBoolean(false);
+        List<CompletableFuture<List<GenerateExplanationsResponse.ExplanationEntry>>> futures = new ArrayList<>();
+        try {
+            List<ExplanationBatchTask> tasks = buildExplanationBatchTasks(questions);
+            Semaphore permits = new Semaphore(Math.min(maxConcurrency, Math.max(1, tasks.size())));
+            log.info("PRACTICE_EXAM_EXPLANATION_BATCH_PLAN_READY runId={} batchCount={} maxConcurrency={}", runId, tasks.size(), maxConcurrency);
+            for (ExplanationBatchTask task : tasks) {
+                futures.add(CompletableFuture.supplyAsync(() -> runExplanationBatchTask(runId, knowledge, task, permits, cancelled), executor));
+            }
+            return collectResults(futures, cancelled).stream().flatMap(List::stream).toList();
+        } catch (IllegalArgumentException exception) {
+            throw exception;
+        } catch (PracticeExamGenerationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new PracticeExamGenerationException("AI không tạo được lời giải đúng cấu trúc. Vui lòng thử lại.", exception);
+        } finally {
+            cancelled.set(true);
+            executor.shutdownNow();
+        }
+    }
+
+    private List<ExplanationBatchTask> buildExplanationBatchTasks(List<PracticeExam.Question> questions) {
+        Map<String, List<PracticeExam.Question>> byType = new LinkedHashMap<>();
+        for (PracticeExam.Question question : questions) {
+            byType.computeIfAbsent(question.type(), key -> new ArrayList<>()).add(question);
+        }
+        List<ExplanationBatchTask> tasks = new ArrayList<>();
+        byType.forEach((type, group) -> {
+            int limit = batchLimit(type);
+            for (int offset = 0; offset < group.size(); offset += limit) {
+                tasks.add(new ExplanationBatchTask(type, group.subList(offset, Math.min(offset + limit, group.size()))));
+            }
+        });
+        return tasks;
+    }
+
+    private List<GenerateExplanationsResponse.ExplanationEntry> runExplanationBatchTask(UUID runId, Map<String, String> knowledge,
+                                                                                         ExplanationBatchTask task, Semaphore permits, AtomicBoolean cancelled) {
+        boolean acquired = false;
+        long queueStart = System.nanoTime();
+        try {
+            if (cancelled.get()) throw new CancellationException("Đã dừng sinh lời giải vì một nhóm câu khác bị lỗi.");
+            permits.acquire();
+            acquired = true;
+            long queueWaitMs = (System.nanoTime() - queueStart) / 1_000_000;
+            if (cancelled.get()) throw new CancellationException("Đã dừng sinh lời giải vì một nhóm câu khác bị lỗi.");
+            return generateExplanationBatch(runId, knowledge, task, cancelled, queueWaitMs);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new PracticeExamGenerationException("Quá trình sinh lời giải đã bị hủy.", exception);
+        } catch (PracticeExamGenerationException | CancellationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new PracticeExamGenerationException("AI không tạo được lời giải đúng cấu trúc. Vui lòng thử lại.", exception);
+        } finally {
+            if (acquired) permits.release();
+        }
+    }
+
+    private List<GenerateExplanationsResponse.ExplanationEntry> generateExplanationBatch(UUID runId, Map<String, String> knowledge,
+                                                                                          ExplanationBatchTask task, AtomicBoolean cancelled,
+                                                                                          long queueWaitMs) throws Exception {
+        Exception lastFailure = null;
+        Set<Integer> expectedOrders = task.questions().stream().map(PracticeExam.Question::order).collect(Collectors.toSet());
+        for (int attempt = 0; attempt < 2; attempt++) {
+            String raw = null;
+            long aiLatencyMs = 0;
+            try {
+                if (cancelled.get()) throw new CancellationException("Đã dừng sinh lời giải vì một nhóm câu khác bị lỗi.");
+                if (attempt > 0) backoffBeforeRetry(attempt);
+                log.info("PRACTICE_EXAM_EXPLANATION_BATCH_STARTED runId={} type={} count={} attempt={} compactRetry={} queueWaitMs={}",
+                        runId, task.type(), task.questions().size(), attempt + 1, attempt > 0, queueWaitMs);
+                long aiStart = System.nanoTime();
+                raw = generateWithTimeout(explanationPrompt(knowledge, task.questions(), attempt > 0), timeoutSeconds(task.type()));
+                aiLatencyMs = (System.nanoTime() - aiStart) / 1_000_000;
+                log.info("PRACTICE_EXAM_EXPLANATION_RESPONSE_RECEIVED runId={} type={} attempt={} characters={} fenced={} aiLatencyMs={}", runId,
+                        task.type(), attempt + 1, raw == null ? 0 : raw.length(), raw != null && raw.trim().startsWith("```"), aiLatencyMs);
+                List<GenerateExplanationsResponse.ExplanationEntry> generated = objectMapper.readValue(stripFence(raw), new TypeReference<>() {});
+                Set<Integer> actualOrders = generated.stream().map(GenerateExplanationsResponse.ExplanationEntry::order).collect(Collectors.toSet());
+                if (!actualOrders.equals(expectedOrders)) throw new IllegalArgumentException("AI trả lời giải sai số câu hoặc sai order trong một lô.");
+                List<GenerateExplanationsResponse.ExplanationEntry> normalized = generated.stream()
+                        .map(entry -> new GenerateExplanationsResponse.ExplanationEntry(entry.order(), repairMathText(entry.explanation())))
+                        .toList();
+                for (GenerateExplanationsResponse.ExplanationEntry entry : normalized) {
+                    if (blank(entry.explanation())) throw new IllegalArgumentException("AI trả lời giải rỗng cho một câu.");
+                }
+                if (attempt > 0) {
+                    log.info("PRACTICE_EXAM_AI_RETRY_SUCCEEDED runId={} type={} attempt={}", runId, task.type(), attempt + 1);
+                }
+                return normalized;
+            } catch (CancellationException failure) {
+                throw failure;
+            } catch (InterruptedException failure) {
+                Thread.currentThread().interrupt();
+                throw failure;
+            } catch (Exception failure) {
+                lastFailure = failure;
+                log.warn("PRACTICE_EXAM_EXPLANATION_BATCH_FAILED runId={} type={} attempt={} failureType={} queueWaitMs={} aiLatencyMs={} rawPreview={} message={}",
+                        runId, task.type(), attempt + 1, classifyFailure(raw, failure), queueWaitMs, aiLatencyMs, preview(raw), failure.getMessage());
+            }
+        }
+        throw lastFailure == null ? new IllegalStateException("AI không trả kết quả cho một lô lời giải.") : lastFailure;
+    }
+
+    // ---- Shared concurrency plumbing ----
+
+    /**
+     * Chờ TẤT CẢ future hoàn tất (thành công hoặc thất bại hẳn sau khi đã retry) trước khi quyết định
+     * kết quả chung — một batch thất bại không được hủy các batch khác đang có khả năng thành công.
+     * Chỉ hủy toàn bộ khi hết tổng thời gian cho phép hoặc luồng chính bị interrupt (an toàn toàn cục).
+     */
+    private <T> List<T> collectResults(List<CompletableFuture<T>> futures, AtomicBoolean cancelled) {
+        BlockingQueue<CompletableFuture<T>> completed = new LinkedBlockingQueue<>();
+        futures.forEach(future -> future.whenComplete((ignored, error) -> completed.add(future)));
+        List<T> results = new ArrayList<>();
+        List<PracticeExamGenerationException> failures = new ArrayList<>();
+        long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(totalTimeoutSeconds);
+        for (int remaining = futures.size(); remaining > 0; remaining--) {
+            CompletableFuture<T> future;
+            try {
+                long waitNanos = deadlineNanos - System.nanoTime();
+                if (waitNanos <= 0) {
+                    cancelRemaining(futures, cancelled);
+                    throw timeoutFailure(results.size(), futures.size());
+                }
+                future = completed.poll(waitNanos, TimeUnit.NANOSECONDS);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                cancelRemaining(futures, cancelled);
+                throw new PracticeExamGenerationException("Quá trình đã bị hủy.", exception);
+            }
+            if (future == null) {
+                cancelRemaining(futures, cancelled);
+                throw timeoutFailure(results.size(), futures.size());
+            }
+            try {
+                results.add(future.join());
+            } catch (CompletionException | CancellationException exception) {
+                failures.add(unwrapGenerationFailure(exception));
+            }
+        }
+        if (!failures.isEmpty()) throw aggregateFailure(failures, futures.size());
+        return results;
+    }
+
+    private PracticeExamGenerationException aggregateFailure(List<PracticeExamGenerationException> failures, int totalBatches) {
+        if (failures.size() == 1) return failures.get(0);
+        return new PracticeExamGenerationException(
+                failures.size() + "/" + totalBatches + " nhóm câu AI tạo thất bại sau khi đã thử lại. Lỗi đầu tiên: " + failures.get(0).getMessage(),
+                failures.get(0));
+    }
+
+    private PracticeExamGenerationException timeoutFailure(int succeeded, int totalBatches) {
+        return new PracticeExamGenerationException(
+                succeeded + "/" + totalBatches + " nhóm câu đã tạo xong, nhưng AI mất quá " + totalTimeoutSeconds
+                        + " giây để hoàn tất phần còn lại. Vui lòng thử lại hoặc giảm số câu.", null);
+    }
+
+    private <T> void cancelRemaining(List<CompletableFuture<T>> futures, AtomicBoolean cancelled) {
+        cancelled.set(true);
+        futures.forEach(future -> {
+            if (!future.isDone()) future.cancel(true);
+        });
+    }
 
     private String generateWithTimeout(String prompt, long timeoutSeconds) throws Exception {
         ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
@@ -262,6 +464,28 @@ public class PracticeExamService {
         }
         return new PracticeExamGenerationException("AI không tạo được đề đúng cấu trúc. Vui lòng thử lại.", cause);
     }
+
+    // ---- Debug logging helpers ----
+
+    private static String preview(String raw) {
+        if (raw == null) return "<null>";
+        String singleLine = raw.replaceAll("\\s+", " ").trim();
+        return singleLine.length() <= 2000 ? singleLine : singleLine.substring(0, 2000) + "…";
+    }
+
+    private static String classifyFailure(String raw, Exception exception) {
+        if (exception instanceof TimeoutException) return "TIMEOUT";
+        if (exception instanceof CancellationException) return "CANCELLED";
+        String trimmed = raw == null ? "" : stripFence(raw).trim();
+        boolean endsClosed = trimmed.endsWith("]") || trimmed.endsWith("}");
+        boolean truncatedSignal = exception instanceof JsonEOFException
+                || (exception.getMessage() != null && exception.getMessage().contains("end-of-input"));
+        if (raw != null && (!endsClosed || truncatedSignal)) return "TRUNCATED_OUTPUT";
+        if (exception instanceof JsonProcessingException) return "JSON_SYNTAX_ERROR";
+        return "SCHEMA_ERROR";
+    }
+
+    // ---- Validation ----
 
     private void validateStructure(PracticeExamRequest request) {
         if (request == null || blank(request.subject()) || request.grade() == null || request.grade() < 1 || request.durationMinutes() == null || request.durationMinutes() <= 0 || request.durationMinutes() > 90) throw new IllegalArgumentException("Thời lượng đề phải từ 1 đến 90 phút.");
@@ -301,14 +525,47 @@ public class PracticeExamService {
         return result;
     }
 
+    // ---- Prompts ----
+
+    private String questionPrompt(PracticeExamRequest request, Map<String, String> knowledge, PracticeExamRequest.QuestionType type,
+                                  int batchCount, int batchScore, boolean compactRetry) throws Exception {
+        return CORE_ONLY_TYPES.contains(type.type())
+                ? questionOnlyPrompt(request, knowledge, type, batchCount, batchScore, compactRetry)
+                : batchPrompt(request, knowledge, type, batchCount, batchScore, compactRetry);
+    }
+
+    private String questionOnlyPrompt(PracticeExamRequest request, Map<String, String> knowledge, PracticeExamRequest.QuestionType type,
+                                      int batchCount, int batchScore, boolean compactRetry) throws Exception {
+        String answerSchema = "TRUE_FALSE".equals(type.type())
+                ? "\"answer\":{\"a\":boolean,\"b\":boolean,\"c\":boolean,\"d\":boolean}"
+                : "\"answer\":{\"correctOptionKey\":\"A\"}";
+        return """
+                You are a Vietnamese teacher. Use ONLY the provided SGK (textbook) data. Write all question content and options in Vietnamese. Return ONLY a JSON array, no markdown and no other text.
+                Every element must match this schema: {"order":number,"type":"...","content":"...","options":[{"key":"A","content":"..."}],__ANSWER_SCHEMA__,"scoreCentiPoints":number,"sourceLessonRefs":[{"bookCode":"...","chapterCode":"...","lessonCode":"..."}]}. Do NOT include an "explanation" or "rubric" field in this response — those are generated separately afterwards.
+                Generate EXACTLY __QUESTION_COUNT__ questions of type __QUESTION_TYPE__, totaling __BATCH_SCORE__ centi-points, with exactly 4 options each. For TRUE_FALSE, "answer" must judge each proposition A/B/C/D independently as true or false — do NOT use a single correct-option key, since more than one proposition can be true and more than one can be false. Every question must cite a source within the given scope. Keep content concise.
+                FORMATTING RULES: Use plain text only for descriptive wording, option labels A/B/C/D as letters, and simple units like "100 m", "10 phút". Every math, physics, or chemistry formula — fractions, roots, exponents/subscripts, reaction equations, vectors, or scientific notation — MUST be written in LaTeX. Inline formulas must sit inside a SINGLE pair of $...$, e.g. "$v_{tb} = \\frac{s}{t}$", "$\\sqrt{5^2 + 5^2}$", "$\\vec{F_1}$", "$N_2$"; never close the $ before the formula is finished. Always write vectors with the correct syntax \\vec{F_1}, \\vec{F_2}; never vecF_1, \\vecF_1, or \\vec F_1. Fractions MUST use braces, e.g. \\frac{1}{2}, \\frac{F}{m}; never \\frac12, frac12, or fracFm. Never drop the backslash, e.g. frac, cdot, approx. Never write formulas as plain text such as "v = s/t", "sqrt(5^2 + 5^2)". In the JSON output, every LaTeX backslash must be escaped, e.g. "\\\\frac", "\\\\sqrt", "\\\\mathrm", "\\\\vec".
+                EXAM CONFIGURATION: __REQUEST_CONFIG__
+                KNOWLEDGE_JSON: __KNOWLEDGE__
+                __RETRY_INSTRUCTION__"""
+                .replace("__ANSWER_SCHEMA__", answerSchema)
+                .replace("__QUESTION_COUNT__", String.valueOf(batchCount))
+                .replace("__QUESTION_TYPE__", type.type())
+                .replace("__BATCH_SCORE__", String.valueOf(batchScore))
+                .replace("__REQUEST_CONFIG__", objectMapper.writeValueAsString(request))
+                .replace("__KNOWLEDGE__", objectMapper.writeValueAsString(knowledge))
+                .replace("__RETRY_INSTRUCTION__", compactRetry
+                        ? "RETRY: You MUST close every ] and } bracket, and must not add any text outside the JSON."
+                        : "");
+    }
+
     private String batchPrompt(PracticeExamRequest request, Map<String, String> knowledge, PracticeExamRequest.QuestionType type,
                                int batchCount, int batchScore, boolean compactRetry) throws Exception {
         return """
-                Bạn là giáo viên Việt Nam. Chỉ dùng dữ liệu SGK được cung cấp. Trả về DUY NHẤT một JSON array, không markdown và không có text khác.
-                Mỗi phần tử phải đúng schema: {"order":number,"type":"...","content":"...","options":[{"key":"A","content":"..."}],"answer":{},"explanation":"...","scoreCentiPoints":number,"rubric":[{"criterion":"...","scoreCentiPoints":number}],"sourceLessonRefs":[{"bookCode":"...","chapterCode":"...","lessonCode":"..."}]}.
-                Tạo CHÍNH XÁC __QUESTION_COUNT__ câu loại __QUESTION_TYPE__, tổng __BATCH_SCORE__ centi điểm. MULTIPLE_CHOICE và TRUE_FALSE có đúng 4 options. ESSAY có rubric cộng đúng điểm. Mỗi câu phải có nguồn thuộc phạm vi. Nội dung và giải thích ngắn gọn.
-                QUY TẮC ĐỊNH DẠNG: Chỉ dùng văn bản thường cho nội dung diễn đạt, phương án A/B/C/D là chữ, và đơn vị đơn giản như "100 m", "10 phút". Mọi công thức toán, vật lí, hoá học; phân số, căn, mũ/chỉ số, phương trình phản ứng, vector hoặc ký hiệu khoa học PHẢI viết bằng LaTeX. Công thức trong câu đặt trong MỘT cặp $...$ duy nhất, ví dụ "$v_{tb} = \\frac{s}{t}$", "$\\sqrt{5^2 + 5^2}$", "$\\vec{F_1}$", "$N_2$"; không được đóng $ trước khi công thức kết thúc. Lời giải tính toán nhiều bước PHẢI nằm trọn trong MỘT khối $$...$$ duy nhất; không được tách từng lệnh \\sqrt, \\cdot, \\cos, \\theta, \\approx, \\Rightarrow thành dòng hay thành nhiều khối. Luôn viết vector đúng cú pháp \\vec{F_1}, \\vec{F_2}; không viết vecF_1, \\vecF_1 hoặc \\vec F_1. Phân số PHẢI có ngoặc nhọn, ví dụ \\frac{1}{2}, \\frac{F}{m}; không viết \\frac12, frac12, fracFm. Không viết thiếu dấu gạch chéo như frac, cdot, approx, textm/s. Không viết công thức dạng văn bản thường như "v = s/t", "sqrt(5^2 + 5^2)", "NH4+ + OH- → NH3 + H2O". Trong JSON, phải escape mọi dấu gạch chéo ngược của LaTeX, ví dụ "\\\\frac", "\\\\sqrt", "\\\\mathrm", "\\\\vec".
-                CẤU HÌNH ĐỀ: __REQUEST_CONFIG__
+                You are a Vietnamese teacher. Use ONLY the provided SGK (textbook) data. Write all question content, options, and explanations in Vietnamese. Return ONLY a JSON array, no markdown and no other text.
+                Every element must match this schema: {"order":number,"type":"...","content":"...","options":[{"key":"A","content":"..."}],"answer":{},"explanation":"...","scoreCentiPoints":number,"rubric":[{"criterion":"...","scoreCentiPoints":number}],"sourceLessonRefs":[{"bookCode":"...","chapterCode":"...","lessonCode":"..."}]}.
+                Generate EXACTLY __QUESTION_COUNT__ questions of type __QUESTION_TYPE__, totaling __BATCH_SCORE__ centi-points. MULTIPLE_CHOICE and TRUE_FALSE must have exactly 4 options. ESSAY must have a rubric whose points sum exactly to the question's score. Every question must cite a source within the given scope. Keep content and explanations concise.
+                FORMATTING RULES: Use plain text only for descriptive wording, option labels A/B/C/D as letters, and simple units like "100 m", "10 phút". Every math, physics, or chemistry formula — fractions, roots, exponents/subscripts, reaction equations, vectors, or scientific notation — MUST be written in LaTeX. Inline formulas must sit inside a SINGLE pair of $...$, e.g. "$v_{tb} = \\frac{s}{t}$", "$\\sqrt{5^2 + 5^2}$", "$\\vec{F_1}$", "$N_2$"; never close the $ before the formula is finished. Multi-step calculation solutions MUST be enclosed in a SINGLE $$...$$ block; never split individual commands like \\sqrt, \\cdot, \\cos, \\theta, \\approx, \\Rightarrow across separate lines or blocks. Always write vectors with the correct syntax \\vec{F_1}, \\vec{F_2}; never vecF_1, \\vecF_1, or \\vec F_1. Fractions MUST use braces, e.g. \\frac{1}{2}, \\frac{F}{m}; never \\frac12, frac12, or fracFm. Never drop the backslash, e.g. frac, cdot, approx, textm/s. Never write formulas as plain text such as "v = s/t", "sqrt(5^2 + 5^2)", "NH4+ + OH- → NH3 + H2O". In the JSON output, every LaTeX backslash must be escaped, e.g. "\\\\frac", "\\\\sqrt", "\\\\mathrm", "\\\\vec".
+                EXAM CONFIGURATION: __REQUEST_CONFIG__
                 KNOWLEDGE_JSON: __KNOWLEDGE__
                 __RETRY_INSTRUCTION__"""
                 .replace("__QUESTION_COUNT__", String.valueOf(batchCount))
@@ -317,9 +574,31 @@ public class PracticeExamService {
                 .replace("__REQUEST_CONFIG__", objectMapper.writeValueAsString(request))
                 .replace("__KNOWLEDGE__", objectMapper.writeValueAsString(knowledge))
                 .replace("__RETRY_INSTRUCTION__", compactRetry
-                        ? "LẦN THỬ LẠI: Bắt buộc đóng đủ mọi dấu ] } và không thêm văn bản ngoài JSON."
+                        ? "RETRY: You MUST close every ] and } bracket, and must not add any text outside the JSON."
                         : "");
     }
+
+    private String explanationPrompt(Map<String, String> knowledge, List<PracticeExam.Question> questions, boolean compactRetry) throws Exception {
+        String orders = questions.stream().map(question -> String.valueOf(question.order())).collect(Collectors.joining(","));
+        return """
+                You are a Vietnamese teacher. Use ONLY the provided SGK (textbook) data. Write every explanation in Vietnamese. Return ONLY a JSON array, no markdown and no other text.
+                Every element must match this schema: {"order":number,"explanation":"..."}.
+                Below are __QUESTION_COUNT__ already-finalized questions, each with its correct answer already decided. For every question, write ONLY an "explanation" that justifies the GIVEN answer — do NOT re-derive, re-check, or change the answer, and do NOT repeat the question content, options, or answer in your output.
+                Return EXACTLY one element for each of these order values, no more and no less: __ORDERS__.
+                FORMATTING RULES: Every math, physics, or chemistry formula — fractions, roots, exponents/subscripts, reaction equations, vectors, or scientific notation — MUST be written in LaTeX. Inline formulas must sit inside a SINGLE pair of $...$, e.g. "$v_{tb} = \\frac{s}{t}$", "$\\sqrt{5^2 + 5^2}$", "$\\vec{F_1}$". Multi-step calculation solutions MUST be enclosed in a SINGLE $$...$$ block; never split individual commands like \\sqrt, \\cdot, \\cos, \\theta, \\approx, \\Rightarrow across separate lines or blocks. Always write vectors with the correct syntax \\vec{F_1}, \\vec{F_2}; never vecF_1, \\vecF_1, or \\vec F_1. Fractions MUST use braces, e.g. \\frac{1}{2}, \\frac{F}{m}; never \\frac12, frac12, or fracFm. In the JSON output, every LaTeX backslash must be escaped, e.g. "\\\\frac", "\\\\sqrt", "\\\\mathrm", "\\\\vec".
+                QUESTIONS_WITH_ANSWERS: __QUESTIONS__
+                KNOWLEDGE_JSON: __KNOWLEDGE__
+                __RETRY_INSTRUCTION__"""
+                .replace("__QUESTION_COUNT__", String.valueOf(questions.size()))
+                .replace("__ORDERS__", orders)
+                .replace("__QUESTIONS__", objectMapper.writeValueAsString(questions))
+                .replace("__KNOWLEDGE__", objectMapper.writeValueAsString(knowledge))
+                .replace("__RETRY_INSTRUCTION__", compactRetry
+                        ? "RETRY: You MUST close every ] and } bracket, and must not add any text outside the JSON."
+                        : "");
+    }
+
+    // ---- Repair helpers ----
 
     private static int proportionalScore(int totalScore, int totalCount, int offset, int count) {
         return Math.floorDiv((offset + count) * totalScore, totalCount) - Math.floorDiv(offset * totalScore, totalCount);
@@ -327,10 +606,58 @@ public class PracticeExamService {
 
     private static String repairMathText(String value) {
         if (value == null || value.isBlank()) return value;
-        String repaired = repairDelimitedMath(repairDelimitedMath(value, DISPLAY_MATH, "$$", "$$"), INLINE_MATH, "$", "$");
-        return Arrays.stream(repaired.split("\\n", -1))
-                .map(PracticeExamService::repairUnwrappedLatexLine)
-                .collect(java.util.stream.Collectors.joining("\n"));
+        String decoded = decodeStrayHtmlEntities(value);
+        String repaired = repairDelimitedMath(repairDelimitedMath(decoded, DISPLAY_MATH, "$$", "$$"), INLINE_MATH, "$", "$");
+        String[] lines = repaired.split("\\n", -1);
+        StringBuilder result = new StringBuilder();
+        boolean insideBlockMath = false;
+        for (int index = 0; index < lines.length; index++) {
+            if (index > 0) result.append('\n');
+            String line = lines[index];
+            result.append(insideBlockMath ? line : repairUnwrappedLatexLine(line));
+            if (countOccurrences(line, "$$") % 2 == 1) insideBlockMath = !insideBlockMath;
+        }
+        return result.toString();
+    }
+
+    private static int countOccurrences(String line, String token) {
+        int count = 0;
+        int index = 0;
+        while ((index = line.indexOf(token, index)) != -1) {
+            count++;
+            index += token.length();
+        }
+        return count;
+    }
+
+    private static String decodeStrayHtmlEntities(String value) {
+        Matcher named = HTML_NAMED_ENTITY.matcher(value);
+        StringBuilder afterNamed = new StringBuilder();
+        while (named.find()) {
+            String replacement = switch (named.group(1)) {
+                case "amp" -> "&";
+                case "lt" -> "<";
+                case "gt" -> ">";
+                case "quot" -> "\"";
+                default -> "'";
+            };
+            named.appendReplacement(afterNamed, Matcher.quoteReplacement(replacement));
+        }
+        named.appendTail(afterNamed);
+        Matcher numeric = HTML_NUMERIC_ENTITY.matcher(afterNamed.toString());
+        StringBuilder result = new StringBuilder();
+        while (numeric.find()) {
+            String replacement = switch (numeric.group(1)) {
+                case "38" -> "&";
+                case "60" -> "<";
+                case "62" -> ">";
+                case "34" -> "\"";
+                default -> "'";
+            };
+            numeric.appendReplacement(result, Matcher.quoteReplacement(replacement));
+        }
+        numeric.appendTail(result);
+        return result.toString();
     }
 
     private static String repairUnwrappedLatexLine(String line) {
@@ -401,7 +728,7 @@ public class PracticeExamService {
         return value;
     }
 
-    private void validateCompletedExam(PracticeExam exam, PracticeExamRequest request) {
+    private void validateQuestionStructure(PracticeExam exam, PracticeExamRequest request) {
         if (exam == null || exam.questions() == null || exam.questions().size() != request.totalQuestionCount() || exam.totalScoreCentiPoints() != 1000) throw new IllegalArgumentException("AI trả thiếu câu hỏi hoặc sai tổng điểm.");
         Map<String, PracticeExamRequest.QuestionType> expected = new HashMap<>(); request.questionTypes().forEach(type -> expected.put(type.type(), type));
         Map<String, Integer> counts = new HashMap<>(); Map<String, Integer> scores = new HashMap<>();
@@ -429,4 +756,5 @@ public class PracticeExamService {
     private static String stripFence(String raw) { if (raw == null) return ""; String value = raw.trim(); if (!value.startsWith("```")) return value; int start = value.indexOf('\n'); value = start < 0 ? "" : value.substring(start + 1); return value.endsWith("```") ? value.substring(0, value.length() - 3).trim() : value.trim(); }
     private record BatchTask(PracticeExamRequest.QuestionType type, int offset, int batchCount, int batchScore, int firstOrder) {}
     private record BatchResult(int firstOrder, List<PracticeExam.Question> questions) {}
+    private record ExplanationBatchTask(String type, List<PracticeExam.Question> questions) {}
 }

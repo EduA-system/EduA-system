@@ -279,6 +279,24 @@ Môn + Lớp
       ]
     },
     {
+      "order": 9,
+      "type": "TRUE_FALSE",
+      "difficulty": "HARD",
+      "content": "...",
+      "options": [
+        { "key": "A", "content": "..." },
+        { "key": "B", "content": "..." },
+        { "key": "C", "content": "..." },
+        { "key": "D", "content": "..." }
+      ],
+      "answer": { "a": true, "b": false, "c": true, "d": false },
+      "explanation": "...",
+      "scoreCentiPoints": 200,
+      "sourceLessonRefs": [
+        { "bookCode": "LY10-KNTT", "chapterCode": "C2", "lessonCode": "B5" }
+      ]
+    },
+    {
       "order": 12,
       "type": "ESSAY",
       "difficulty": "HARD",
@@ -297,8 +315,14 @@ Môn + Lớp
 }
 ```
 
-Schema chi tiết của mỗi `answer` phụ thuộc `type`, nhưng đáp án, giải thích,
-điểm và `sourceLessonRefs` là bắt buộc với mọi câu.
+Schema chi tiết của mỗi `answer` phụ thuộc `type`: `MULTIPLE_CHOICE` dùng
+`{"correctOptionKey": "..."}`; `TRUE_FALSE` dùng map boolean theo từng mệnh đề
+`{"a": bool, "b": bool, "c": bool, "d": bool}` (không dùng `correctOptionKey`
+vì cả 4 mệnh đề đều có thể đúng hoặc sai độc lập). Đáp án, điểm và
+`sourceLessonRefs` là bắt buộc với mọi câu; riêng `explanation` bắt buộc
+non-null với `SHORT_ANSWER`/`ESSAY`, còn với `MULTIPLE_CHOICE`/`TRUE_FALSE` có
+thể tạm thời là `null` ngay sau khi tạo câu hỏi và được điền bổ sung sau — xem
+`sinh-de-2-pha-va-log-loi-ai.md`.
 
 ---
 
@@ -311,12 +335,20 @@ Giáo viên xác nhận cấu hình
   → INFEASIBLE: trả lỗi, dừng
   → WARNING chưa xác nhận: trả cảnh báo, dừng
   → Nạp knowledge_json của lessonRefs đã chọn
-  → AI sinh PracticeExam JSON
+  → AI sinh PracticeExam JSON — MULTIPLE_CHOICE/TRUE_FALSE chỉ sinh câu hỏi +
+    đáp án cốt lõi (chưa có explanation); SHORT_ANSWER/ESSAY sinh gộp đầy đủ
+    như cũ
   → Backend parse + validate toàn cục
   → Sai schema/cấu hình/phạm vi: yêu cầu AI sửa phần lỗi (retry giới hạn)
-  → Đúng: trả đề, đáp án và rubric để giáo viên xem trước
+  → Đúng: trả đề để giáo viên xem trước ngay (MC/TF hiện đáp án đúng, lời
+    giải đang chờ)
+  → Backend tự động sinh explanation cho MC/TF ở một lượt gọi AI riêng, dùng
+    lại content/options/answer đã cố định — không giải lại bài toán
   → Giáo viên lưu đề hoặc tạo lại riêng một câu
 ```
+
+Chi tiết bước tách pha sinh câu hỏi/lời giải cho MC/TF: xem
+`sinh-de-2-pha-va-log-loi-ai.md`.
 
 Khi tạo lại một câu, request phải giữ nguyên loại câu, điểm, mức độ, phạm vi
 SGK và vị trí câu. Backend chỉ thay thế câu đó sau khi kiểm tra tổng thể.
@@ -358,7 +390,8 @@ API nghiệp vụ dự kiến:
 GET  /api/textbooks/{bookCode}/chapters
 GET  /api/textbooks/{bookCode}/chapters/{chapterCode}/lessons
 POST /api/practice-exams/validate-configuration
-POST /api/practice-exams/generate
+POST /api/practice-exams/generate-questions
+POST /api/practice-exams/generate-explanations
 POST /api/practice-exams/{examId}/questions/{questionId}/regenerate
 POST /api/practice-exams
 GET  /api/practice-exams/{examId}
@@ -367,8 +400,10 @@ PATCH /api/practice-exams/{examId}
 
 `validate-configuration` trả các lỗi cấu trúc, gợi ý điểm và
 `FeasibilityResult` để frontend hiển thị ngay khi giáo viên đang cấu hình.
-`generate` chỉ được gọi khi cấu hình đã hợp lệ và cảnh báo (nếu có) đã được xác
-nhận.
+`generate-questions` chỉ được gọi khi cấu hình đã hợp lệ và cảnh báo (nếu có)
+đã được xác nhận; trả đề để hiển thị ngay, MC/TF chưa có `explanation`.
+`generate-explanations` được frontend tự động gọi ngay sau đó để bổ sung lời
+giải cho MC/TF — xem `sinh-de-2-pha-va-log-loi-ai.md`.
 
 Giao diện cần có:
 

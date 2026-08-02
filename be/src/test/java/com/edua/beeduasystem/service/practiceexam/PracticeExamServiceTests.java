@@ -28,7 +28,7 @@ class PracticeExamServiceTests {
         PracticeExamService service = new PracticeExamService(catalogRepository, aiClient, new ObjectMapper(),
                 3, 10, 10, 30);
 
-        PracticeExam exam = service.generate(request());
+        PracticeExam exam = service.generateQuestions(request());
 
         assertThat(exam.questions()).hasSize(22);
         assertThat(aiClient.calls.get()).isEqualTo(8);
@@ -46,7 +46,7 @@ class PracticeExamServiceTests {
         PracticeExamService service = new PracticeExamService(catalogRepository, new MalformedLatexAiClient(), new ObjectMapper(),
                 1, 10, 10, 30);
 
-        PracticeExam exam = service.generate(singleShortAnswerRequest());
+        PracticeExam exam = service.generateQuestions(singleShortAnswerRequest());
 
         PracticeExam.Question question = exam.questions().getFirst();
         assertThat(question.content()).contains("$\\frac{F}{m}$");
@@ -100,7 +100,7 @@ class PracticeExamServiceTests {
     }
 
     private static final class TrackingAiClient implements AiClient {
-        private static final Pattern COUNT = Pattern.compile("Tạo CHÍNH XÁC (\\d+) câu loại ([A-Z_]+), tổng (\\d+) centi điểm");
+        private static final Pattern COUNT = Pattern.compile("Generate EXACTLY (\\d+) questions of type ([A-Z_]+), totaling (\\d+) centi-points");
 
         private final long delayMillis;
         private final AtomicInteger active = new AtomicInteger();

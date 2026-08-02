@@ -1,12 +1,12 @@
 const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
 
-// Sinh đề gọi AI theo nhiều lô, có thể vượt quá timeout của generic rewrite.
-export const maxDuration = 180;
+// Sinh lời giải cho các câu MC/TF đã có sẵn — payload nhẹ hơn generate-questions.
+export const maxDuration = 90;
 
 export async function POST(request: Request) {
   try {
     const authorization = request.headers.get("Authorization");
-    const upstream = await fetch(`${backendUrl}/api/practice-exams/generate`, {
+    const upstream = await fetch(`${backendUrl}/api/practice-exams/generate-explanations`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -25,6 +25,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[practice-exam-route] BACKEND_PROXY_FAILED", error);
-    return Response.json({ message: "Không kết nối được backend tạo đề kiểm tra." }, { status: 502 });
+    return Response.json({ message: "Không kết nối được backend sinh lời giải." }, { status: 502 });
   }
 }

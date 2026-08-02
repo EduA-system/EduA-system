@@ -14,7 +14,7 @@ import {
   type CatalogLesson,
 } from "@/services/lessonPlanService";
 import {
-  generatePracticeExam,
+  generatePracticeExamQuestions,
   type PracticeExamRequest,
   type PracticeQuestionType,
 } from "@/services/practiceExamService";
@@ -216,7 +216,7 @@ export function PracticeExamCreateDashboard() {
       };
       setGenerationProgress(12);
       setGenerationMessage(`AI đang tạo khoảng ${estimatedBatchCount} nhóm câu...`);
-      const exam = await generatePracticeExam(request, authFetch);
+      const exam = await generatePracticeExamQuestions(request, authFetch);
       setGenerationProgress(96);
       setGenerationMessage("Đang lưu bản nháp đề vào thư viện...");
       const saved = await createLibraryContent(authFetch, {

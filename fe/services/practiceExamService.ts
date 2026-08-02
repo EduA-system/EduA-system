@@ -18,10 +18,14 @@ export type PracticeExam = {
   instructions: string;
   durationMinutes: number;
   totalScoreCentiPoints: number;
-  questions: { order: number; type: PracticeQuestionType; content: string; options?: { key: string; content: string }[]; answer: Record<string, unknown>; explanation: string; scoreCentiPoints: number; rubric?: { criterion: string; scoreCentiPoints: number }[]; sourceLessonRefs: { bookCode: string; chapterCode: string; lessonCode: string }[] }[];
+  questions: { order: number; type: PracticeQuestionType; content: string; options?: { key: string; content: string }[]; answer: Record<string, unknown>; explanation: string | null; scoreCentiPoints: number; rubric?: { criterion: string; scoreCentiPoints: number }[]; sourceLessonRefs: { bookCode: string; chapterCode: string; lessonCode: string }[] }[];
 };
 
+export type PracticeExamQuestion = PracticeExam["questions"][number];
+
 export type PracticeExamValidation = { status: "FEASIBLE" | "WARNING" | "INFEASIBLE"; estimatedMinutes: number; workingMinutes: number; overrunMinutes: number; message: string };
+
+export type GenerateExplanationsResult = { explanations: { order: number; explanation: string }[] };
 
 type RequestFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -33,4 +37,7 @@ async function request<T>(path: string, payload: unknown, fetcher: RequestFetche
 }
 
 export function validatePracticeExam(config: PracticeExamRequest, fetcher?: RequestFetcher) { return request<PracticeExamValidation>("/api/practice-exams/validate-configuration", config, fetcher); }
-export function generatePracticeExam(config: PracticeExamRequest, fetcher?: RequestFetcher) { return request<PracticeExam>("/api/practice-exams/generate", config, fetcher); }
+export function generatePracticeExamQuestions(config: PracticeExamRequest, fetcher?: RequestFetcher) { return request<PracticeExam>("/api/practice-exams/generate-questions", config, fetcher); }
+export function generatePracticeExamExplanations(bookCode: string, questions: PracticeExamQuestion[], fetcher?: RequestFetcher) {
+  return request<GenerateExplanationsResult>("/api/practice-exams/generate-explanations", { bookCode, questions }, fetcher);
+}
