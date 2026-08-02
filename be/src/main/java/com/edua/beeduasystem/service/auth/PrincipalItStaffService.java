@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.service.auth;
+﻿package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
@@ -47,7 +47,8 @@ public class PrincipalItStaffService {
         }
         AppUser user = existing.map(value -> new AppUser(value.id(), value.email(), value.googleSub(),
                         fullName == null || fullName.isBlank() ? value.fullName() : fullName.strip(), value.avatarUrl(),
-                        value.contactInfo(), null, UserStatus.INVITED, value.createdAt(), value.lastLoginAt()))
+                        value.contactInfo(), value.bio(), value.phoneNumber(), null, UserStatus.INVITED,
+                        value.createdAt(), value.lastLoginAt()))
                 .orElseGet(() -> new AppUser(UUID.randomUUID(), normalizedEmail, null,
                         fullName == null || fullName.isBlank() ? null : fullName.strip(), null, null, null,
                         UserStatus.INVITED, now, null));
@@ -62,7 +63,8 @@ public class PrincipalItStaffService {
     public void disable(UUID id) {
         AppUser user = requireItStaff(id);
         userRepository.save(new AppUser(user.id(), user.email(), user.googleSub(), user.fullName(), user.avatarUrl(),
-                user.contactInfo(), user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
+                user.contactInfo(), user.bio(), user.phoneNumber(), user.subject(), UserStatus.DISABLED,
+                user.createdAt(), user.lastLoginAt()));
         activityLogService.record(currentUserProvider.requireUserId(), "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REVOKE_IT_STAFF, "APP_USER", user.id(), null);
     }
@@ -73,7 +75,8 @@ public class PrincipalItStaffService {
         if (user.status() != UserStatus.DISABLED) throw new ResourceNotFoundException("Tài khoản IT Staff chưa bị thu hồi.");
         Instant now = Instant.now();
         AppUser saved = userRepository.save(new AppUser(user.id(), user.email(), user.googleSub(), user.fullName(),
-                user.avatarUrl(), user.contactInfo(), null, UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
+                user.avatarUrl(), user.contactInfo(), user.bio(), user.phoneNumber(), null, UserStatus.INVITED,
+                user.createdAt(), user.lastLoginAt()));
         UUID currentUserId = currentUserProvider.requireUserId();
         userRoleRepository.replaceRole(saved.id(), Role.IT_STAFF, currentUserId, now);
         activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,

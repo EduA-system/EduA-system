@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.service.auth;
+﻿package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
@@ -32,7 +32,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public ProfileResult updateCurrentUserProfile(String fullName, String avatarUrl, String contactInfo) {
+    public ProfileResult updateCurrentUserProfile(String fullName, String avatarUrl, String contactInfo,
+                                                  String bio, String phoneNumber) {
         UUID userId = currentUserProvider.requireUserId();
         AppUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new InvalidTokenException("User not found."));
@@ -46,6 +47,10 @@ public class ProfileService {
                 normalizeAvatarUrl(avatarUrl, user.avatarUrl()),
                 normalizePatchValue(contactInfo, user.contactInfo(),
                         AppUserFieldValidator.MAX_CONTACT_INFO_LENGTH, "Contact info"),
+                normalizePatchValue(bio, user.bio(),
+                        AppUserFieldValidator.MAX_BIO_LENGTH, "Bio"),
+                normalizePatchValue(phoneNumber, user.phoneNumber(),
+                        AppUserFieldValidator.MAX_PHONE_NUMBER_LENGTH, "Phone number"),
                 user.subject(),
                 user.status(),
                 user.createdAt(),

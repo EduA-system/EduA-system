@@ -1,4 +1,4 @@
-package com.edua.beeduasystem.service.auth;
+﻿package com.edua.beeduasystem.service.auth;
 
 import org.springframework.util.StringUtils;
 
@@ -9,6 +9,8 @@ final class AppUserFieldValidator {
     static final int MAX_FULL_NAME_LENGTH = 255;
     static final int MAX_AVATAR_URL_LENGTH = 1024;
     static final int MAX_CONTACT_INFO_LENGTH = 500;
+    static final int MAX_BIO_LENGTH = 1000;
+    static final int MAX_PHONE_NUMBER_LENGTH = 30;
 
     private AppUserFieldValidator() {
     }
