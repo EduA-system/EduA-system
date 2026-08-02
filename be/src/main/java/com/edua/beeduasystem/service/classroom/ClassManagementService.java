@@ -59,12 +59,14 @@ public class ClassManagementService {
     @Transactional
     public ClassViews.ClassDetail createClass(String name, Subject subject, Integer grade, String description) {
         UUID ownerId = currentUserProvider.requireUserId();
+        Subject requestedSubject = requireSubject(subject);
+        requireOwnSubject(requestedSubject);
         Classroom saved = classRepository.save(new Classroom(
                 UUID.randomUUID(),
                 ownerId,
                 requireName(name),
                 normalizeDescription(description),
-                requireSubject(subject),
+                requestedSubject,
                 requireGrade(grade),
                 ClassStatus.ACTIVE,
                 Instant.now(),
@@ -82,6 +84,9 @@ public class ClassManagementService {
         Classroom classroom = requireOwnedActiveClass(id);
         String newName = name != null ? requireName(name) : classroom.name();
         Subject newSubject = subject != null ? requireSubject(subject) : classroom.subject();
+        if (subject != null) {
+            requireOwnSubject(newSubject);
+        }
         Integer newGrade = grade != null ? requireGrade(grade) : classroom.grade();
         String newDescription = description != null ? normalizeDescription(description) : classroom.description();
         Classroom saved = classRepository.save(new Classroom(
@@ -218,6 +223,14 @@ public class ClassManagementService {
             throw new IllegalArgumentException("Subject is required.");
         }
         return subject;
+    }
+
+    private void requireOwnSubject(Subject requestedSubject) {
+        Subject ownerSubject = currentUserProvider.require().subject();
+        if (ownerSubject == null || ownerSubject != requestedSubject) {
+            throw new ForbiddenOperationException(
+                    "Bạn chỉ được tạo hoặc chỉnh sửa lớp thuộc chuyên ngành của mình.");
+        }
     }
 
     private static Integer requireGrade(Integer grade) {

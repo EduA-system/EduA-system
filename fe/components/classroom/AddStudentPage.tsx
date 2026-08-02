@@ -4,7 +4,6 @@ import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useSt
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowLeft,
   BookOpen,
   CheckCircle2,
   Loader2,
@@ -12,6 +11,7 @@ import {
   Upload,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ClassHubNavigation } from "./ClassHubFrame";
@@ -75,6 +75,7 @@ export function AddStudentPage() {
 
   const [addEmail, setAddEmail] = useState("");
   const [addBusy, setAddBusy] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importBusy, setImportBusy] = useState(false);
@@ -149,6 +150,15 @@ export function AddStudentPage() {
     void loadClassDetail(classId);
   }, [classId, loadClassDetail]);
 
+  useEffect(() => {
+    if (!addDialogOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAddDialogOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [addDialogOpen]);
+
   function handleSelectClass(event: ChangeEvent<HTMLSelectElement>) {
     const id = event.target.value;
     setMessage("");
@@ -176,6 +186,7 @@ export function AddStudentPage() {
     try {
       await addClassStudent(authFetch, selectedClass.id, addEmail.trim());
       setAddEmail("");
+      setAddDialogOpen(false);
       setMessage("Đã thêm học sinh vào lớp.");
       await refreshSelectedClass(selectedClass.id);
     } catch (reason) {
@@ -251,45 +262,41 @@ export function AddStudentPage() {
 
         <section className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
           <div className="mx-auto w-full max-w-[1220px]">
-            <ClassHubNavigation classId={classId} active="members" />
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <nav aria-label="Đường dẫn lớp học" className="flex flex-wrap items-center gap-2 text-[12px] text-[#817a72]">
+              <Link href="/list-class" className="font-medium transition hover:text-[#1f1f1f]">Lớp học</Link>
+              <span aria-hidden className="text-[#b4aaa1]">/</span>
+              {selectedClass ? (
+                <Link href={`/class-detail?classId=${selectedClass.id}`} className="max-w-[240px] truncate font-medium transition hover:text-[#1f1f1f]">{selectedClass.name}</Link>
+              ) : (
+                <span>Chọn lớp</span>
+              )}
+              <span aria-hidden className="text-[#b4aaa1]">/</span>
+              <span aria-current="page" className="font-semibold text-[#a45c3e]">Thành viên</span>
+            </nav>
+            <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <Link
-                  href="/list-class"
-                  className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#6b6b6b] transition hover:text-[#1f1f1f]"
-                >
-                  <ArrowLeft className="size-3.5" /> Quay lại quản lý lớp
-                </Link>
-                <div className="mt-3 inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#cdd7ef] bg-[#f1f4ff] px-3 text-[11px] font-medium text-[#3f54a3]">
-                  <Users className="size-3.5" /> Quản lý lớp học
-                </div>
-                <h1 className="font-libertine mt-4 text-[44px] font-normal leading-none sm:text-[60px]">Thêm học sinh</h1>
-                <p className="mt-4 max-w-[620px] text-[13px] leading-[23px] text-[#6b6b6b]">
-                  Thêm học sinh vào lớp bằng địa chỉ Gmail — nhập từng người hoặc nhập cả danh sách từ tệp .csv/.xlsx.
+                <h1 className="font-libertine mt-3 text-[40px] font-normal leading-[1.02] tracking-[-0.025em] sm:text-[52px]">Thành viên lớp</h1>
+                <p className="mt-4 max-w-[620px] text-[14px] leading-6 text-[#6b6b6b]">
+                  Xem danh sách thành viên và quản lý học sinh trong lớp — thêm từng người bằng Gmail hoặc nhập cả danh sách từ tệp .csv/.xlsx.
                 </p>
               </div>
 
               {selectedClass && (
-                <div className="grid w-full grid-cols-2 gap-3 sm:w-auto">
-                  <div className="rounded-[14px] border border-[#d8d1c9] bg-white px-4 py-3">
-                    <p className="text-[11px] text-[#6b6b6b]">Sĩ số</p>
-                    <p className="mt-1 text-xl font-semibold">
-                      {membersTotal}/{MAX_CLASS_SIZE}
-                    </p>
+                <div className="flex items-center gap-5 border-t border-[#ede8e1] pt-4 lg:border-t-0 lg:pt-0">
+                  <div>
+                    <p className="text-[11px] text-[#817a72]">Sĩ số</p>
+                    <p className="mt-1 text-xl font-semibold text-[#1f1f1f]">{membersTotal}/{MAX_CLASS_SIZE}</p>
                   </div>
-                  <div
-                    className={`rounded-[14px] border px-4 py-3 ${
-                      isFull ? "border-[#e8b4a4] bg-[#fdf3ef]" : "border-[#b7e0c4] bg-[#f0faf3]"
-                    }`}
-                  >
+                  <span aria-hidden className="h-9 w-px bg-[#e7e0d8]" />
+                  <div>
                     <p className={`text-[11px] ${isFull ? "text-[#c0492b]" : "text-[#287447]"}`}>Còn trống</p>
-                    <p className={`mt-1 text-xl font-semibold ${isFull ? "text-[#c0492b]" : "text-[#287447]"}`}>
-                      {remainingSlots}
-                    </p>
+                    <p className={`mt-1 text-xl font-semibold ${isFull ? "text-[#c0492b]" : "text-[#287447]"}`}>{remainingSlots}</p>
                   </div>
                 </div>
               )}
             </div>
+
+            <ClassHubNavigation classId={classId} active="members" />
 
             <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -342,101 +349,7 @@ export function AddStudentPage() {
             {classLoading ? (
               <div className="mt-8 h-[280px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
             ) : selectedClass ? (
-              <div className="mt-8 grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-                <div className="space-y-6">
-                  <form onSubmit={handleAddStudent} className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
-                    <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
-                      <UserPlus className="size-4 text-[#d97757]" /> Thêm 1 học sinh
-                    </div>
-                    <label className="mt-5 block text-[12px] font-medium text-[#6b6b6b]">
-                      Gmail học sinh
-                      <input
-                        type="email"
-                        value={addEmail}
-                        onChange={(event) => setAddEmail(event.target.value)}
-                        placeholder="hocsinh01@gmail.com"
-                        disabled={formsDisabled}
-                        className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757] disabled:text-[#8a837b]"
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      disabled={addBusy || formsDisabled || !addEmail.trim()}
-                      className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-[11px] bg-[#d97757] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]"
-                    >
-                      {addBusy ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
-                      {addBusy ? "Đang thêm..." : "Thêm học sinh"}
-                    </button>
-                    {isInactive && (
-                      <p className="mt-3 text-[12px] leading-5 text-[#8a5a35]">
-                        Lớp đang lưu trữ, không thể thêm học sinh.
-                      </p>
-                    )}
-                    {!isInactive && isFull && (
-                      <p className="mt-3 text-[12px] leading-5 text-[#c0492b]">Lớp đã đủ {MAX_CLASS_SIZE} thành viên.</p>
-                    )}
-                  </form>
-
-                  <form onSubmit={handleImport} className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
-                    <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
-                      <Upload className="size-4 text-[#d97757]" /> Nhập từ tệp
-                    </div>
-                    <p className="mt-3 text-[12px] leading-5 text-[#6b6b6b]">
-                      Tệp .csv hoặc .xlsx, có cột tên <span className="font-medium text-[#1f1f1f]">gmail</span>. Dòng lỗi
-                      hoặc trùng sẽ tự động bị bỏ qua.
-                    </p>
-                    <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">
-                      Chọn tệp
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".csv,.xlsx"
-                        disabled={formsDisabled}
-                        onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
-                        className="mt-2 block w-full text-[13px] text-[#6b6b6b] file:mr-3 file:rounded-lg file:border-0 file:bg-[#f5f1ec] file:px-3 file:py-2 file:text-[12px] file:font-medium file:text-[#1f1f1f] hover:file:bg-[#edeae5] disabled:opacity-50"
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      disabled={importBusy || formsDisabled || !importFile}
-                      className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-[11px] bg-[#1f1f1f] px-5 text-[13px] font-medium text-white transition hover:bg-[#34312d] disabled:cursor-not-allowed disabled:bg-[#b8b0a8]"
-                    >
-                      {importBusy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-                      {importBusy ? "Đang nhập danh sách..." : "Nhập danh sách"}
-                    </button>
-                  </form>
-
-                  {importResult && (
-                    <div className="rounded-[14px] border border-[#d8d1c9] bg-[#faf9f7] p-5">
-                      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">Kết quả import</p>
-                      <div className="mt-3 grid grid-cols-2 gap-3">
-                        <div className="rounded-[12px] border border-[#b7e0c4] bg-[#f0faf3] p-3">
-                          <p className="text-[11px] text-[#287447]">Đã thêm</p>
-                          <p className="mt-1 text-lg font-semibold text-[#287447]">{importResult.addedCount}</p>
-                        </div>
-                        <div className="rounded-[12px] border border-[#e6d8cb] bg-[#f8f2ec] p-3">
-                          <p className="text-[11px] text-[#8a5a35]">Bỏ qua</p>
-                          <p className="mt-1 text-lg font-semibold text-[#8a5a35]">{importResult.skippedCount}</p>
-                        </div>
-                      </div>
-                      {importResult.skipped.length > 0 && (
-                        <ul className="mt-4 max-h-[240px] space-y-2 overflow-y-auto">
-                          {importResult.skipped.map((row) => (
-                            <li
-                              key={`${row.row}-${row.email ?? ""}`}
-                              className="rounded-[10px] border border-[#ede8e1] bg-white px-3 py-2 text-[12px]"
-                            >
-                              <span className="font-medium text-[#1f1f1f]">Dòng {row.row}</span>
-                              <span className="text-[#6b6b6b]"> · {row.email || "(trống)"} · </span>
-                              <span className="text-[#c0492b]">{importSkipReasonLabel(row.reason)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                </div>
-
+              <div className="mt-8">
                 <section className="min-w-0 rounded-[14px] border border-[#d8d1c9] bg-[#faf9f7] p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -445,13 +358,23 @@ export function AddStudentPage() {
                         {selectedClass.name} · {membersTotal} học sinh
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => void loadMembers(selectedClass.id)}
-                      className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
-                    >
-                      <RefreshCw className={`size-3.5 ${membersLoading ? "animate-spin" : ""}`} /> Làm mới
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAddDialogOpen(true)}
+                        disabled={formsDisabled}
+                        className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#d97757] px-3 text-[12px] font-medium text-white transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]"
+                      >
+                        <UserPlus className="size-3.5" /> Thêm thành viên
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void loadMembers(selectedClass.id)}
+                        className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
+                      >
+                        <RefreshCw className={`size-3.5 ${membersLoading ? "animate-spin" : ""}`} /> Làm mới
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-5">
@@ -519,6 +442,57 @@ export function AddStudentPage() {
           </div>
         </section>
       </div>
+      {addDialogOpen && selectedClass && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1f1f]/35 px-4 py-6"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setAddDialogOpen(false);
+          }}
+        >
+          <div role="dialog" aria-modal="true" aria-labelledby="add-student-dialog-title" className="max-h-[calc(100vh-3rem)] w-full max-w-[560px] overflow-y-auto rounded-[16px] border border-[#d8d1c9] bg-white p-5 shadow-[0_20px_60px_rgba(31,31,31,0.2)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="add-student-dialog-title" className="text-[18px] font-semibold">Thêm thành viên</h2>
+                <p className="mt-1 text-[12px] text-[#6b6b6b]">Thêm học sinh vào lớp {selectedClass.name} bằng Gmail hoặc danh sách tệp.</p>
+              </div>
+              <button type="button" onClick={() => setAddDialogOpen(false)} aria-label="Đóng cửa sổ thêm thành viên" className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#d8d1c9] text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"><X className="size-4" /></button>
+            </div>
+            <form onSubmit={handleAddStudent} className="mt-5 rounded-[12px] border border-[#ede8e1] bg-[#faf9f7] p-4">
+              <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]"><UserPlus className="size-4 text-[#d97757]" /> Thêm bằng Gmail</div>
+              <label className="block text-[12px] font-medium text-[#6b6b6b]">
+                Gmail học sinh
+                <input
+                  type="email"
+                  value={addEmail}
+                  onChange={(event) => setAddEmail(event.target.value)}
+                  placeholder="hocsinh01@gmail.com"
+                  autoFocus
+                  disabled={addBusy || formsDisabled}
+                  className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757] disabled:text-[#8a837b]"
+                />
+              </label>
+              {error && <p className="mt-3 text-[12px] leading-5 text-[#c0492b]">{error}</p>}
+              {isInactive && <p className="mt-3 text-[12px] leading-5 text-[#8a5a35]">Lớp đang lưu trữ, không thể thêm học sinh.</p>}
+              {!isInactive && isFull && <p className="mt-3 text-[12px] leading-5 text-[#c0492b]">Lớp đã đủ {MAX_CLASS_SIZE} thành viên.</p>}
+              <div className="mt-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setAddDialogOpen(false)} disabled={addBusy} className="h-10 rounded-[10px] border border-[#d8d1c9] px-4 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] disabled:opacity-50">Hủy</button>
+                <button type="submit" disabled={addBusy || formsDisabled || !addEmail.trim()} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[12px] font-medium text-white transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]">
+                  {addBusy ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+                  {addBusy ? "Đang thêm..." : "Thêm học sinh"}
+                </button>
+              </div>
+            </form>
+            <form onSubmit={handleImport} className="mt-4 rounded-[12px] border border-[#ede8e1] bg-[#faf9f7] p-4">
+              <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]"><Upload className="size-4 text-[#d97757]" /> Nhập từ tệp</div>
+              <p className="mt-3 text-[12px] leading-5 text-[#6b6b6b]">Tệp .csv hoặc .xlsx, có cột tên <span className="font-medium text-[#1f1f1f]">gmail</span>. Dòng lỗi hoặc trùng sẽ tự động bị bỏ qua.</p>
+              <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">Chọn tệp<input ref={fileInputRef} type="file" accept=".csv,.xlsx" disabled={formsDisabled || importBusy} onChange={(event) => setImportFile(event.target.files?.[0] ?? null)} className="mt-2 block w-full text-[13px] text-[#6b6b6b] file:mr-3 file:rounded-lg file:border-0 file:bg-[#f5f1ec] file:px-3 file:py-2 file:text-[12px] file:font-medium file:text-[#1f1f1f] hover:file:bg-[#edeae5] disabled:opacity-50" /></label>
+              <button type="submit" disabled={importBusy || formsDisabled || !importFile} className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#1f1f1f] px-5 text-[12px] font-medium text-white transition hover:bg-[#34312d] disabled:cursor-not-allowed disabled:bg-[#b8b0a8]">{importBusy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}{importBusy ? "Đang nhập danh sách..." : "Nhập danh sách"}</button>
+            </form>
+            {importResult && <div className="mt-4 rounded-[12px] border border-[#d8d1c9] bg-[#f7f5f2] p-4"><p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">Kết quả import</p><div className="mt-3 grid grid-cols-2 gap-3"><div className="rounded-[10px] border border-[#b7e0c4] bg-[#f0faf3] p-3"><p className="text-[11px] text-[#287447]">Đã thêm</p><p className="mt-1 text-lg font-semibold text-[#287447]">{importResult.addedCount}</p></div><div className="rounded-[10px] border border-[#e6d8cb] bg-[#f8f2ec] p-3"><p className="text-[11px] text-[#8a5a35]">Bỏ qua</p><p className="mt-1 text-lg font-semibold text-[#8a5a35]">{importResult.skippedCount}</p></div></div>{importResult.skipped.length > 0 && <ul className="mt-4 max-h-[220px] space-y-2 overflow-y-auto">{importResult.skipped.map((row) => <li key={`${row.row}-${row.email ?? ""}`} className="rounded-[10px] border border-[#ede8e1] bg-white px-3 py-2 text-[12px]"><span className="font-medium text-[#1f1f1f]">Dòng {row.row}</span><span className="text-[#6b6b6b]"> · {row.email || "(trống)"} · </span><span className="text-[#c0492b]">{importSkipReasonLabel(row.reason)}</span></li>)}</ul>}</div>}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

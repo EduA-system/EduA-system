@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Be_Vietnam_Pro } from "next/font/google";
 import { AuthFlow } from "./AuthFlow";
 
@@ -7,5 +8,9 @@ const rubik = Be_Vietnam_Pro({
 });
 
 export default function LoginPage() {
-  return <AuthFlow fontClassName={rubik.className} />;
+  return (
+    <Suspense fallback={null}>
+      <AuthFlow fontClassName={rubik.className} />
+    </Suspense>
+  );
 }
