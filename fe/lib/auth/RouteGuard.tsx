@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthContext";
 import { canAccessRoute, routePermissions } from "./permissions";
 
@@ -19,8 +21,17 @@ export function RouteGuard({
   children,
 }: RouteGuardProps) {
   const { user, status } = useAuth();
+  const router = useRouter();
 
   const requiresAuth = routePermissions[pathname]?.requireAuth ?? true;
+  const loginHref = `/login?next=${encodeURIComponent(pathname)}`;
+
+  useEffect(() => {
+    if (requiresAuth && status === "anonymous") {
+      const next = `${pathname}${window.location.search}`;
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
+    }
+  }, [pathname, requiresAuth, router, status]);
 
   if (requiresAuth && status === "loading") {
     return (
@@ -40,7 +51,7 @@ export function RouteGuard({
           </p>
           <Link
             className="rounded bg-black px-4 py-2 text-sm text-white"
-            href="/login"
+            href={loginHref}
           >
             Đăng nhập
           </Link>
