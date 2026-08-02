@@ -173,7 +173,9 @@ Important variables:
 - Cloudflare R2: `APP_R2_ENDPOINT`, `APP_R2_ACCESS_KEY_ID`, `APP_R2_SECRET_ACCESS_KEY`, `APP_R2_BUCKET`, `APP_R2_PUBLIC_URL`.
 - Auth/rate limiting: JWT and Google auth settings are read from Spring properties/environment; see `be/src/main/java/com/edua/beeduasystem/config/SecurityConfig.java` and the auth/security infrastructure package when changing auth flows.
 
-`scripts/start.ps1` loads `.env`, checks ports 8080 and 3000, prompts to free occupied ports, resolves cloud DB versus Docker PostgreSQL fallback, starts the backend, waits for `/api/health`, and then starts the frontend.
+`scripts/start.ps1` loads `.env`, checks ports 8080 and 3000, prompts to free occupied ports, resolves cloud DB versus Docker PostgreSQL fallback, starts the backend, waits for `/api/health`, and then starts the frontend. It also forces `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false` and `SPRING_FLYWAY_VALIDATE_ON_MIGRATE=true` on every launch, overriding the more permissive defaults in `application.properties` (`baseline-on-migrate=true`, `validate-on-migrate=false`), so schema drift on `DB_URL` (a shared Supabase DB) fails the startup loudly instead of Flyway silently auto-baselining or skipping checksum validation.
+
+If a DB schema change is needed (new migration, or fixing drift on the shared DB), write and run that migration/fix as its own deliberate step first, then start the backend — never rely on backend startup to apply or repair a schema change for you, and never add auto-repair logic to `scripts/start.ps1`.
 
 A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io` (Swagger UI at `/swagger-ui/index.html`, health at `/api/health`) for trying live API responses without running the stack locally.
 
@@ -193,6 +195,7 @@ A deployed backend is documented in `README.md` at `http://q0k0k4c0ss00cc4004k4o
 - Keep secrets out of the repository.
 - After Iter3 code changes, update `WBS_CHECKLIST.md` and any affected `designs/` docs in the same pass.
 - In repo-facing docs, use `Principal` for school-level account management and `IT Staff` for prompt/system-prompt management and activity/audit log review.
+- Never let the backend auto-repair the database on startup (no Flyway auto-baseline, no ad-hoc repair SQL run on your own initiative). If the DB needs a schema change or drift fix, run that command explicitly and deliberately *before* starting the backend, and only after confirming the exact fix with the user for anything touching the shared Supabase DB.
 
 ## Commit Style
 
