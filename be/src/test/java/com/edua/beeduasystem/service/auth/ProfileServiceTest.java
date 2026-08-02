@@ -1,4 +1,4 @@
-﻿package com.edua.beeduasystem.service.auth;
+package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
