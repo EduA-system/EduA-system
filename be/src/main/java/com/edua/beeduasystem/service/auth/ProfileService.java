@@ -1,4 +1,4 @@
-﻿package com.edua.beeduasystem.service.auth;
+package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;

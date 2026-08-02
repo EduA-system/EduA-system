@@ -1,4 +1,4 @@
-﻿package com.edua.beeduasystem.infrastructure.persistence.entity;
+package com.edua.beeduasystem.infrastructure.persistence.entity;
 
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
