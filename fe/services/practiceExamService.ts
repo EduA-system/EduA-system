@@ -25,7 +25,7 @@ export type PracticeExamValidation = { status: "FEASIBLE" | "WARNING" | "INFEASI
 
 type RequestFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-async function request<T>(path: string, payload: PracticeExamRequest, fetcher: RequestFetcher = fetch): Promise<T> {
+async function request<T>(path: string, payload: unknown, fetcher: RequestFetcher = fetch): Promise<T> {
   const response = await fetcher(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   if (response.ok) return response.json() as Promise<T>;
   const error = await response.json().catch(() => null) as { message?: string } | null;
