@@ -3,16 +3,30 @@
 import { useEffect, useRef } from "react";
 import type { Editor } from "@tiptap/react";
 import { lessonPlan5512Mock } from "@/data/lessonPlan5512Mock";
-import type { LessonPlan5512 } from "@/data/lessonPlan5512Mock";
+import type {
+  Activity5512,
+  EquipmentAndMaterials,
+  LessonPlan5512,
+  Objectives,
+} from "@/data/lessonPlan5512Mock";
 import {
   clearLessonPlanSession,
   readLessonPlanSession,
+  retryActivityDetail,
   type LessonPlanSession,
 } from "@/services/lessonPlanService";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { connectLessonPlanStream, lessonPlanTopic } from "@/lib/ws/lesson-plan-client";
 import { activityHtml, lessonPlan5512ToHtml, lessonPlanErrorHtml } from "./LessonEditor";
-import { LP_STREAM_META } from "./pendingActivityNode";
+import { LP_STREAM_META, type PendingActivityStatus } from "./pendingActivityNode";
+import { setRetryHandler } from "./pendingActivityRetry";
+
+/** Khung `FRAME_READY` được giữ lại để nút "Thử lại" gửi ngược lên làm ngữ cảnh soạn lại. */
+type LessonPlanFrame = {
+  objectives: Objectives;
+  equipmentAndMaterials?: EquipmentAndMaterials;
+  activities: Activity5512[];
+};
 
 /** Thay block (node `pendingActivity` theo `order`) trong editor bằng HTML thật. */
 function replacePendingBlock(editor: Editor, order: number, html: string) {
@@ -42,6 +56,42 @@ function replacePendingBlock(editor: Editor, order: number, html: string) {
 }
 
 /**
+ * Đổi trạng thái block `pendingActivity` theo `order` (giữ nguyên node → CÒN mỏ neo `order`
+ * để retry patch đúng chỗ). Dùng cho ACTIVITY_FAILED và cho vòng "về spinner" khi bấm Thử lại.
+ */
+function setPendingStatus(
+  editor: Editor,
+  order: number,
+  status: PendingActivityStatus,
+  reason = "",
+) {
+  type Found = { pos: number; attrs: Record<string, unknown> };
+  let target: Found | null = null;
+  editor.state.doc.descendants((node, pos) => {
+    if (target) return false;
+    if (node.type.name === "pendingActivity" && Number(node.attrs.order) === order) {
+      target = { pos, attrs: node.attrs };
+      return false;
+    }
+    return true;
+  });
+  // Cast cần thiết: TS không theo được phép gán trong callback nên narrow `target` về `never`.
+  const found = target as Found | null;
+  if (!found) {
+    console.warn("[lesson-edit] Không tìm thấy block đang soạn để đổi trạng thái cho HĐ", order);
+    return;
+  }
+  editor
+    .chain()
+    .command(({ tr }) => {
+      tr.setMeta(LP_STREAM_META, true);
+      tr.setNodeMarkup(found.pos, undefined, { ...found.attrs, status, reason });
+      return true;
+    })
+    .run();
+}
+
+/**
  * Hook mở STOMP cho phiên sinh giáo án (đọc sessionId từ sessionStorage) và FILL DẦN
  * vào editor: FRAME_READY đổ khung (I + II + dàn ý III, các HĐ là block "đang soạn"),
  * mỗi ACTIVITY_READY/FAILED thay đúng block của HĐ đó. Không có phiên → giữ khung mock.
@@ -57,6 +107,17 @@ export function useLessonPlanStream(
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
+  // Token mới nhất cho nút "Thử lại" (retry có thể xảy ra lâu sau khi mở stream, token có thể
+  // đã refresh) — đọc qua ref để không phụ thuộc closure cũ của effect.
+  const accessTokenRef = useRef(accessToken);
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+  }, [accessToken]);
+  // Ngữ cảnh giữ lại để retry soạn lại một hoạt động mà không mất context.
+  const sessionRef = useRef<LessonPlanSession | null>(null);
+  const frameRef = useRef<LessonPlanFrame | null>(null);
+  // Chặn bấm "Thử lại" trùng cho cùng một order khi đang chạy.
+  const inFlightRef = useRef<Set<number>>(new Set());
   // Đánh dấu khung (I/II/III-skeleton) đã từng về — dùng để quyết định có nên
   // ghi đè toàn bộ tài liệu bằng thông báo lỗi hay không (khung về rồi thì giữ
   // nguyên phần đã render, không phá dữ liệu GV có thể đã bắt đầu chỉnh sửa).
@@ -82,6 +143,8 @@ export function useLessonPlanStream(
     startedRef.current = true;
     // Tiêu thụ phiên ngay để reload trang không mở lại stream (đã/đang chạy).
     clearLessonPlanSession();
+    // Giữ phiên cho nút "Thử lại" (bookId/chapterId/lessonId/userPrompt).
+    sessionRef.current = session;
 
     console.log(
       "%c[lesson-edit] Mở stream giáo án",
@@ -128,6 +191,13 @@ export function useLessonPlanStream(
               activities: skeleton,
             };
             const pendingOrders = new Set(skeleton.map((a) => a.order));
+            // Giữ khung để nút "Thử lại" gửi lại làm ngữ cảnh (dùng dàn ý ĐÃ RENDER nên order
+            // khớp các block pending trên editor).
+            frameRef.current = {
+              objectives: frame.objectives ?? lessonPlan5512Mock.objectives,
+              equipmentAndMaterials: frame.equipmentAndMaterials,
+              activities: skeleton,
+            };
             console.log("%c← FRAME_READY", "color:#1565c0;font-weight:bold", {
               title: frame.title,
               objectives: frame.objectives,
@@ -157,9 +227,9 @@ export function useLessonPlanStream(
           case "ACTIVITY_FAILED": {
             const order = Number(event.activityId);
             console.warn(`← ACTIVITY_FAILED HĐ${order}:`, event.reasons);
-            const note =
-              '<p class="lp-failed">⚠️ Chưa soạn được nội dung — mời soạn tay.</p>';
-            replacePendingBlock(editor, order, note);
+            // GIỮ node `pendingActivity` (đổi status=failed) để còn mỏ neo `order` — NodeView
+            // hiện nút "Thử lại", retry patch lại đúng chỗ này.
+            setPendingStatus(editor, order, "failed", (event.reasons ?? []).join("; "));
             break;
           }
           case "DONE": {
@@ -191,4 +261,59 @@ export function useLessonPlanStream(
       disconnect();
     };
   }, [accessToken, editor, enabled, status]);
+
+  // Đăng ký handler "Thử lại" theo VÒNG ĐỜI EDITOR (không gắn với effect stream, vì effect đó
+  // early-return khi token refresh → sẽ mất handler). Đọc ngữ cảnh qua ref nên luôn mới nhất.
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleRetry = async (order: number) => {
+      const currentSession = sessionRef.current;
+      const frame = frameRef.current;
+      const token = accessTokenRef.current;
+      if (!currentSession || !frame || !token) {
+        console.warn("[lesson-edit] Thiếu ngữ cảnh để thử lại HĐ", order);
+        return;
+      }
+      const skeleton = frame.activities.find((a) => a.order === order);
+      if (!skeleton) {
+        console.warn("[lesson-edit] Không tìm thấy dàn ý HĐ", order, "để thử lại.");
+        return;
+      }
+      if (inFlightRef.current.has(order)) return;
+      inFlightRef.current.add(order);
+      setPendingStatus(editor, order, "pending");
+      try {
+        const activity = await retryActivityDetail(
+          {
+            bookId: currentSession.bookId,
+            chapterId: currentSession.chapterId,
+            lessonId: currentSession.lessonId,
+            userPrompt: currentSession.userPrompt,
+            objectives: frame.objectives,
+            equipmentAndMaterials: frame.equipmentAndMaterials,
+            activities: [skeleton],
+          },
+          token,
+        );
+        if (editor.isDestroyed) return;
+        console.log(`%c↻ RETRY OK HĐ${order}: ${activity.name}`, "color:#2e7d32;font-weight:bold");
+        replacePendingBlock(editor, order, activityHtml(activity));
+      } catch (error) {
+        if (editor.isDestroyed) return;
+        const message = error instanceof Error ? error.message : "Soạn lại thất bại.";
+        console.warn(`↻ RETRY FAILED HĐ${order}:`, message);
+        setPendingStatus(editor, order, "failed", message);
+      } finally {
+        inFlightRef.current.delete(order);
+      }
+    };
+
+    setRetryHandler(editor, (order) => {
+      void handleRetry(order);
+    });
+    return () => {
+      setRetryHandler(editor, null);
+    };
+  }, [editor]);
 }
