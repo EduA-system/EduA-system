@@ -77,6 +77,20 @@ if (Test-Path $envFile) {
     Write-Host "    Backend will use default credentials from application.properties." -ForegroundColor Yellow
 }
 
+# This script must never let Flyway silently "repair" the database on
+# startup. application.properties ships spring.flyway.baseline-on-migrate=true
+# and validate-on-migrate=false, which let Flyway auto-baseline an
+# out-of-sync schema history and skip checksum validation instead of failing.
+# Force both off here (overrides .env / application.properties) so any DB
+# drift surfaces as a loud startup error -- do NOT relax this to paper over a
+# failed startup, and do NOT add any db-repair/db-fix logic to this script.
+# Investigate and fix drift by hand against the actual DB, deliberately.
+$loadedEnv["SPRING_FLYWAY_BASELINE_ON_MIGRATE"] = "false"
+$loadedEnv["SPRING_FLYWAY_VALIDATE_ON_MIGRATE"]  = "true"
+Set-Item "env:SPRING_FLYWAY_BASELINE_ON_MIGRATE" "false"
+Set-Item "env:SPRING_FLYWAY_VALIDATE_ON_MIGRATE" "true"
+Write-Info "Flyway auto-repair disabled for this run (baseline-on-migrate=false, validate-on-migrate=true)"
+
 # -- State -----------------------------------------------------------------
 $script:bgJobs      = @()
 $script:teardownDone  = $false
@@ -391,7 +405,11 @@ try {
         $cmdEnv = ($loadedEnv.GetEnumerator() | ForEach-Object {
             'set "' + $_.Key + '=' + $_.Value + '"'
         }) -join ' & '
-        $bePsi.Arguments             = "/c cd /d `"$beDir`" & $cmdEnv & $beMvw spring-boot:run"
+        # spring-boot:run forks the Maven lifecycle to the test-compile phase
+        # (spring-boot-maven-plugin's RunMojo is @Execute(phase=TEST_COMPILE)),
+        # so every dev startup recompiles all of src/test/java. Skip that --
+        # this script is for running the app, not testing it.
+        $bePsi.Arguments             = "/c cd /d `"$beDir`" & $cmdEnv & $beMvw spring-boot:run -Dmaven.test.skip=true"
         $bePsi.WorkingDirectory       = $beDir
         $bePsi.UseShellExecute        = $false
         $bePsi.RedirectStandardOutput = $true
