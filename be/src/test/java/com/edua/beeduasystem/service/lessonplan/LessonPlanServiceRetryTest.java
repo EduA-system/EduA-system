@@ -42,7 +42,7 @@ class LessonPlanServiceRetryTest {
     /** Service với maxAttempts=3, backoff=0 (khỏi chờ trong test). */
     private LessonPlanService service() {
         return new LessonPlanService(
-                catalogRepository, aiClient, new LessonPlan5512PromptBuilder(), new ObjectMapper(),
+                catalogRepository, aiClient, new LessonPlan5512PromptBuilder(), new LessonPlanEditPromptBuilder(), new ObjectMapper(),
                 Executors.newVirtualThreadPerTaskExecutor(), systemPromptService, 3, 0L);
     }
 

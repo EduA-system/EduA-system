@@ -1,6 +1,8 @@
 package com.edua.beeduasystem.presentation.controller;
 
 import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
+import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionRequest;
+import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionResponse;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateActivityDetailsRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanStreamRequest;
@@ -108,6 +110,25 @@ public class LessonPlanController {
     )
     public LessonPlan5512 generateActivitiesDetails(@RequestBody GenerateActivityDetailsRequest request) {
         return lessonPlanService.generateActivitiesDetails(request);
+    }
+
+    @PostMapping("/edit-section")
+    @Operation(
+            summary = "Chỉnh sửa một phần giáo án bằng AI",
+            description = "Đồng bộ: frontend gửi các phần đã trích từ editor hiện tại cùng yêu cầu của giáo viên. "
+                    + "AI tự chọn đúng một phần cần sửa và trả bản viết lại để giáo viên xem trước trước khi áp dụng.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Bản sửa đề xuất cho một phần giáo án",
+                            content = @Content(schema = @Schema(implementation = EditLessonSectionResponse.class))
+                    ),
+                    @ApiResponse(responseCode = "400", description = "Thiếu yêu cầu hoặc danh sách phần giáo án không hợp lệ"),
+                    @ApiResponse(responseCode = "502", description = "AI lỗi, trả JSON sai định dạng hoặc chọn phần không hợp lệ")
+            }
+    )
+    public EditLessonSectionResponse editSection(@RequestBody EditLessonSectionRequest request) {
+        return lessonPlanService.editSection(request);
     }
 
     @PostMapping("/generate-stream")

@@ -27,6 +27,29 @@ function createDefaultSlide(id: string): SlideItem {
   };
 }
 
+function slugifyFileName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/gi, "d")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "outline";
+}
+
+function downloadOutlineJson(lessonTitle: string, parts: OutlinePart[]) {
+  const payload = { lessonTitle, exportedAt: new Date().toISOString(), parts };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `outline-${slugifyFileName(lessonTitle)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function contentPreview(slide: SlideItem): string {
   const block = slide.contentPlan.blocks[0];
   if (!block) return "";
@@ -158,9 +181,20 @@ export function OutlineEditor({
             </div>
             <span className="font-medium text-[#1a1a2e]">{lessonTitle}</span>
           </div>
-          <span className="rounded-lg bg-[#f9f8f3] px-2.5 py-1 text-xs font-medium text-[#5c5b6e]">
-            {parts.length} phần · {totalSlides} slides
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="rounded-lg bg-[#f9f8f3] px-2.5 py-1 text-xs font-medium text-[#5c5b6e]">
+              {parts.length} phần · {totalSlides} slides
+            </span>
+            <button
+              type="button"
+              onClick={() => downloadOutlineJson(lessonTitle, parts)}
+              disabled={totalSlides === 0}
+              className="rounded-lg border border-[rgba(26,26,46,0.12)] px-2.5 py-1 text-xs font-medium text-[#5c5b6e] transition hover:border-[#8200db]/40 hover:text-[#8200db] disabled:cursor-not-allowed disabled:opacity-50"
+              title="Xuất toàn bộ outline ra file JSON"
+            >
+              Xuất JSON
+            </button>
+          </div>
         </div>
 
         <div className="divide-y divide-[rgba(26,26,46,0.06)]">

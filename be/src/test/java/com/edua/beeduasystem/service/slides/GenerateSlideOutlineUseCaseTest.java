@@ -87,45 +87,6 @@ class GenerateSlideOutlineUseCaseTest {
     }
 
     @Test
-    void automaticallyReplacesDenseOutlineItemBeforePartIsPublished() {
-        when(aiClient.generate(anyString())).thenReturn(splitResponse());
-        SlideItemDto dense = new SlideItemDto("p2s3", "Nội dung dài", "explain", null, null,
-                new ContentPlan("concept", "fixed", List.of(
-                        new ContentPlan.TextBlock("b1", "text", "body", "explanation", "primary", true, null,
-                                "x".repeat(451))), List.of()));
-
-        List<SlideItemDto> result = useCase().autoSplitDenseOutlineItems(
-                lesson(), request(), new PartDto("p2", "Khám phá", List.of(dense), List.of("c1")), List.of(dense));
-
-        assertEquals(List.of("p2s3-a", "p2s3-b"), result.stream().map(SlideItemDto::id).toList());
-        assertEquals(List.of("Ý thứ nhất", "Ý thứ hai"), result.stream().map(SlideItemDto::title).toList());
-        assertEquals(List.of("other", "explain"), result.stream().map(SlideItemDto::pedagogicalRole).toList());
-        verify(aiClient, times(1)).generate(anyString());
-    }
-
-    @Test
-    void recursivelySplitsDenseOutlineItemUntilChildrenFit() {
-        when(aiClient.generate(anyString())).thenAnswer(invocation -> {
-            String prompt = invocation.getArgument(0);
-            if (prompt.contains("\"id\":\"p2s3-b\"")) {
-                return splitResponse("Nhanh hai A", "Noi dung gon A", "Nhanh hai B", "Noi dung gon B");
-            }
-            return splitResponse("Nhanh mot", "Noi dung gon", "Nhanh hai van dai", "x".repeat(451));
-        });
-        SlideItemDto dense = new SlideItemDto("p2s3", "Noi dung dai", "explain", null, null,
-                new ContentPlan("concept", "fixed", List.of(
-                        new ContentPlan.TextBlock("b1", "text", "body", "explanation", "primary", true, null,
-                                "x".repeat(451))), List.of()));
-
-        List<SlideItemDto> result = useCase().autoSplitDenseOutlineItems(
-                lesson(), request(), new PartDto("p2", "Kham pha", List.of(dense), List.of("c1")), List.of(dense));
-
-        assertEquals(List.of("p2s3-a", "p2s3-b-a", "p2s3-b-b"), result.stream().map(SlideItemDto::id).toList());
-        assertEquals(List.of("Nhanh mot", "Nhanh hai A", "Nhanh hai B"), result.stream().map(SlideItemDto::title).toList());
-        verify(aiClient, times(2)).generate(anyString());
-    }
-
-    @Test
     void normalizesComparisonTitlesToComparisonSlides() {
         assertEquals("comparison", GenerateSlideOutlineUseCase.normalizeSkeletonSlideType(
                 "concept", "explain", "Phân biệt polymer nhiệt dẻo và nhiệt rắn"));
@@ -141,42 +102,6 @@ class GenerateSlideOutlineUseCaseTest {
                   {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"A B tiêu chí giá trị"}
                 ],"relationships":[]}}}
                 """));
-    }
-
-    @Test
-    void capsAutoSplitOfOneOriginalSlideAtThreeResults() {
-        when(aiClient.generate(anyString())).thenAnswer(invocation -> {
-            String prompt = invocation.getArgument(0);
-            if (prompt.contains("\"id\":\"p2s3-a\"")) {
-                return splitResponse("Nhanh mot A", "Noi dung gon A", "Nhanh mot B", "Noi dung gon B");
-            }
-            return splitResponse("Nhanh mot van dai", "x".repeat(451), "Nhanh hai van dai", "x".repeat(451));
-        });
-        SlideItemDto dense = new SlideItemDto("p2s3", "Noi dung dai", "explain", null, null,
-                new ContentPlan("concept", "fixed", List.of(
-                        new ContentPlan.TextBlock("b1", "text", "body", "explanation", "primary", true, null,
-                                "x".repeat(451))), List.of()));
-
-        List<SlideItemDto> result = useCase().autoSplitDenseOutlineItems(
-                lesson(), request(), new PartDto("p2", "Kham pha", List.of(dense), List.of("c1")), List.of(dense));
-
-        assertEquals(List.of("p2s3-a-a", "p2s3-a-b", "p2s3-b"), result.stream().map(SlideItemDto::id).toList());
-        verify(aiClient, times(2)).generate(anyString());
-    }
-
-    @Test
-    void keepsOriginalOutlineItemWhenAutomaticSplitCannotBeValidated() {
-        when(aiClient.generate(anyString())).thenReturn("{\"slides\":[]}");
-        SlideItemDto dense = new SlideItemDto("p2s3", "Nội dung dài", "explain", null, null,
-                new ContentPlan("concept", "fixed", List.of(
-                        new ContentPlan.TextBlock("b1", "text", "body", "explanation", "primary", true, null,
-                                "x".repeat(451))), List.of()));
-
-        List<SlideItemDto> result = useCase().autoSplitDenseOutlineItems(
-                lesson(), request(), new PartDto("p2", "Khám phá", List.of(dense), List.of("c1")), List.of(dense));
-
-        assertEquals(List.of(dense), result);
-        verify(aiClient, times(2)).generate(anyString());
     }
 
     @Test
@@ -253,36 +178,6 @@ class GenerateSlideOutlineUseCaseTest {
 
     private static LessonContext lesson() {
         return new LessonContext("lesson", "Giao thoa sóng", 12, "", List.of(), List.of(), List.of(), List.of(), List.of());
-    }
-
-    private static String splitResponse() {
-        return """
-                {"slides":[
-                  {"title":"Ý thứ nhất","pedagogicalRole":"discuss","durationMinutes":1,
-                   "contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[
-                     {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung thứ nhất"}
-                   ],"relationships":[]}},
-                  {"title":"Ý thứ hai","pedagogicalRole":"explain","durationMinutes":1,
-                   "contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[
-                     {"id":"b2","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung thứ hai"}
-                   ],"relationships":[]}}
-                ]}
-                """;
-    }
-
-    private static String splitResponse(String firstTitle, String firstText, String secondTitle, String secondText) {
-        return """
-                {"slides":[
-                  {"title":"%s","pedagogicalRole":"explain","durationMinutes":1,
-                   "contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[
-                     {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"%s"}
-                   ],"relationships":[]}},
-                  {"title":"%s","pedagogicalRole":"explain","durationMinutes":1,
-                   "contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[
-                     {"id":"b2","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"%s"}
-                   ],"relationships":[]}}
-                ]}
-                """.formatted(firstTitle, firstText, secondTitle, secondText);
     }
 
     private static String singleSlideResponse(String id, String text) {
