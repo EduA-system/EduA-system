@@ -14,6 +14,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -44,28 +45,36 @@ public class LessonPlanService {
     private final ObjectMapper objectMapper;
     private final ExecutorService executor;
     private final AiSystemPromptService systemPromptService;
+    /** Số lần thử tối đa cho mỗi call sinh giáo án (AI + parse). Tối thiểu 1. */
+    private final int maxAttempts;
+    /** Backoff tuyến tính giữa các lần thử (ms) — lần thử i chờ backoff × i. */
+    private final long retryBackoffMs;
 
     public LessonPlanService(TextbookCatalogRepository catalogRepository,
                              AiClient aiClient,
                              LessonPlan5512PromptBuilder promptBuilder,
                              ObjectMapper objectMapper,
                              @Qualifier("slideSessionExecutor") ExecutorService executor,
-                             AiSystemPromptService systemPromptService) {
+                             AiSystemPromptService systemPromptService,
+                             @Value("${app.ai.lesson-plan.max-attempts:3}") int maxAttempts,
+                             @Value("${app.ai.lesson-plan.retry-backoff-ms:700}") long retryBackoffMs) {
         this.catalogRepository = catalogRepository;
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
         this.executor = executor;
         this.systemPromptService = systemPromptService;
+        this.maxAttempts = Math.max(1, maxAttempts);
+        this.retryBackoffMs = Math.max(0, retryBackoffMs);
     }
 
     /** Sinh phần I. MỤC TIÊU cho bài đã chọn. */
     public LessonPlan5512 generateObjectives(GenerateLessonPlanRequest request) {
         String knowledge = loadKnowledge(request);
         String prompt = promptBuilder.buildObjectivesPrompt(knowledge, request.userPrompt());
-        String raw = generate(AiPromptKey.LESSON_PLAN_OBJECTIVES, prompt, "AI không sinh được mục tiêu giáo án.");
-
-        Objectives objectives = parseJson(raw, Objectives.class, "Kết quả AI không đúng định dạng mục tiêu.");
+        Objectives objectives = generateAndParse(AiPromptKey.LESSON_PLAN_OBJECTIVES, prompt,
+                Objectives.class, "AI không sinh được mục tiêu giáo án.",
+                "Kết quả AI không đúng định dạng mục tiêu.");
         return new LessonPlan5512(null, objectives, null, null);
     }
 
@@ -73,9 +82,9 @@ public class LessonPlanService {
     public LessonPlan5512 generateMaterials(GenerateLessonPlanRequest request) {
         String knowledge = loadKnowledge(request);
         String prompt = promptBuilder.buildMaterialsPrompt(knowledge, request.userPrompt());
-        String raw = generate(AiPromptKey.LESSON_PLAN_MATERIALS, prompt, "AI không sinh được thiết bị và học liệu.");
-
-        Materials materials = parseJson(raw, Materials.class, "Kết quả AI không đúng định dạng thiết bị và học liệu.");
+        Materials materials = generateAndParse(AiPromptKey.LESSON_PLAN_MATERIALS, prompt,
+                Materials.class, "AI không sinh được thiết bị và học liệu.",
+                "Kết quả AI không đúng định dạng thiết bị và học liệu.");
         return new LessonPlan5512(null, null, materials, null);
     }
 
@@ -83,9 +92,8 @@ public class LessonPlanService {
     public LessonPlan5512 generateActivitiesFrame(GenerateLessonPlanRequest request) {
         String knowledge = loadKnowledge(request);
         String prompt = promptBuilder.buildActivitiesFramePrompt(knowledge, request.userPrompt());
-        String raw = generate(AiPromptKey.LESSON_PLAN_ACTIVITIES_FRAME, prompt, "AI không sinh được khung tiến trình dạy học.");
-
-        ActivitiesFrame frame = parseJson(raw, ActivitiesFrame.class,
+        ActivitiesFrame frame = generateAndParse(AiPromptKey.LESSON_PLAN_ACTIVITIES_FRAME, prompt,
+                ActivitiesFrame.class, "AI không sinh được khung tiến trình dạy học.",
                 "Kết quả AI không đúng định dạng tiến trình dạy học.");
         return new LessonPlan5512(null, null, null, frame.activities());
     }
@@ -152,8 +160,8 @@ public class LessonPlanService {
         String targetJson = toJson(frameActivity);
         String prompt = promptBuilder.buildActivityDetailPrompt(knowledge, objectivesJson,
                 materialsJson, frameOutlineJson, targetJson, frameActivity, userPrompt);
-        String raw = generate(AiPromptKey.LESSON_PLAN_ACTIVITY_DETAIL, prompt, "AI không sinh được nội dung hoạt động.");
-        Activity5512 detail = parseJson(raw, Activity5512.class,
+        Activity5512 detail = generateAndParse(AiPromptKey.LESSON_PLAN_ACTIVITY_DETAIL, prompt,
+                Activity5512.class, "AI không sinh được nội dung hoạt động.",
                 "Kết quả AI không đúng định dạng hoạt động.");
         return mergeDetail(frameActivity, detail);
     }
@@ -209,13 +217,52 @@ public class LessonPlanService {
                         "Bài học chưa có nội dung số hóa (knowledge_json) để sinh giáo án."));
     }
 
-    /** Gọi AI, bọc lỗi runtime thành {@link LessonPlanGenerationException} (→ 502). */
-    private String generate(AiPromptKey key, String prompt, String errorMessage) {
-        try {
-            return aiClient.generate(systemPromptService.apply(key, prompt));
-        } catch (RuntimeException e) {
-            throw new LessonPlanGenerationException(errorMessage, e);
+    /**
+     * Gọi AI rồi parse JSON, TỰ THỬ LẠI tối đa {@link #maxAttempts} lần cho CẢ lỗi gọi AI (transient:
+     * mạng/429/5xx) LẪN lỗi parse (AI trả JSON sai schema) — vì đa số đều tự khỏi khi gọi lại (re-roll).
+     * Prompt giữ NGUYÊN qua các lần (không nhồi "bạn vừa lỗi" để tránh làm lệch output). Lỗi input
+     * ({@link IllegalArgumentException} từ {@code loadKnowledge}) xảy ra TRƯỚC hàm này nên không bị thử lại.
+     */
+    private <T> T generateAndParse(AiPromptKey key, String prompt, Class<T> type,
+                                   String aiErrorMessage, String parseErrorMessage) {
+        LessonPlanGenerationException last = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                String raw = aiClient.generate(systemPromptService.apply(key, prompt));
+                return parseJson(raw, type, parseErrorMessage);
+            } catch (LessonPlanGenerationException e) {
+                last = e;
+            } catch (RuntimeException e) {
+                last = new LessonPlanGenerationException(aiErrorMessage, e);
+            }
+            log.warn("Sinh {} thất bại (lần {}/{}): {}", key, attempt, maxAttempts, rootMessage(last));
+            if (attempt < maxAttempts) {
+                sleepBackoff(attempt);
+            }
         }
+        throw last;
+    }
+
+    /** Backoff tuyến tính giữa các lần thử; giữ interrupt flag và dừng thử lại nếu bị ngắt. */
+    private void sleepBackoff(int attempt) {
+        if (retryBackoffMs <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(retryBackoffMs * attempt);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new LessonPlanGenerationException("Bị ngắt khi chờ thử lại sinh giáo án.", e);
+        }
+    }
+
+    /** Lấy thông điệp gốc của chuỗi nguyên nhân để log gọn. */
+    private String rootMessage(Throwable error) {
+        Throwable root = error;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        return root.getMessage() != null ? root.getMessage() : root.toString();
     }
 
     /** Parse output AI thành DTO; lỗi định dạng map 502 với thông điệp riêng từng phần. */
