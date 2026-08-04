@@ -54,7 +54,7 @@ function OutlineSkeleton() {
     { slides: 4 },
   ];
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6" aria-busy="true" aria-label="Đang tạo khung đề cương slide">
+    <div className="mx-auto max-w-4xl px-4 py-6" aria-busy="true" aria-label="Đang tạo khung đề cương slide">
       <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-[#efeef7]">
         <div
           className="h-full rounded-full bg-[#8200db] transition-[width] duration-300 ease-out"
@@ -71,37 +71,43 @@ function OutlineSkeleton() {
           <div className="h-6 w-20 animate-pulse rounded-lg bg-[#f9f8f3]" />
         </div>
 
-        <div className="divide-y divide-[rgba(26,26,46,0.06)]">
+        <div className="space-y-4 px-4 py-4">
           {parts.map((part, partIndex) => (
-            <div key={partIndex} className="px-4 py-3">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[#e4e1ee]">⋮⋮</span>
+            <div
+              key={partIndex}
+              className="rounded-xl border border-[rgba(26,26,46,0.08)] bg-[#fdfdfb]"
+            >
+              <div className="flex items-center gap-2 border-b border-[rgba(26,26,46,0.06)] px-3 py-2.5">
+                <span className="text-[#e4e1ee]">⠿</span>
+                <div className="h-5 w-16 shrink-0 animate-pulse rounded-md bg-[#f9f8f3]" />
                 <div
                   className="h-3.5 animate-pulse rounded bg-[#f9f8f3]"
                   style={{ width: `${40 - partIndex * 6}%`, animationDelay: `${partIndex * 100}ms` }}
                 />
               </div>
-              <ul className="mt-2.5 space-y-2.5 pl-6">
+              <div className="space-y-2 px-3 py-3">
                 {Array.from({ length: part.slides }).map((_, slideIndex) => (
-                  <li key={slideIndex} className="flex items-start gap-2">
-                    <span className="mt-1 text-[#e4e1ee]">└</span>
-                    <div
-                      className="mt-0.5 h-3.5 w-12 shrink-0 animate-pulse rounded bg-[#f9f8f3]"
-                      style={{ animationDelay: `${(partIndex * 4 + slideIndex) * 80}ms` }}
-                    />
-                    <div className="min-w-0 flex-1 space-y-1.5 py-0.5">
+                  <div
+                    key={slideIndex}
+                    className="rounded-lg border border-[rgba(26,26,46,0.09)] bg-white px-3 py-2.5"
+                  >
+                    <div className="flex items-center gap-2">
                       <div
-                        className="h-3 animate-pulse rounded bg-[#f9f8f3]"
+                        className="h-4 w-14 shrink-0 animate-pulse rounded bg-[#f9f8f3]"
+                        style={{ animationDelay: `${(partIndex * 4 + slideIndex) * 80}ms` }}
+                      />
+                      <div
+                        className="h-3.5 flex-1 animate-pulse rounded bg-[#f9f8f3]"
                         style={{ width: `${70 - (slideIndex % 3) * 12}%`, animationDelay: `${(partIndex * 4 + slideIndex) * 80 + 40}ms` }}
                       />
-                      <div
-                        className="h-2.5 animate-pulse rounded bg-[#f9f8f3]/70"
-                        style={{ width: `${50 - (slideIndex % 2) * 10}%`, animationDelay: `${(partIndex * 4 + slideIndex) * 80 + 80}ms` }}
-                      />
                     </div>
-                  </li>
+                    <div
+                      className="mt-2 h-2.5 animate-pulse rounded bg-[#f9f8f3]/70"
+                      style={{ width: `${50 - (slideIndex % 2) * 10}%`, animationDelay: `${(partIndex * 4 + slideIndex) * 80 + 80}ms` }}
+                    />
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           ))}
         </div>
