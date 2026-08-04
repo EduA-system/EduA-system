@@ -32,6 +32,7 @@ import {
   deleteClassResource,
   formatFileSize,
   getClassDetail,
+  isClassAccessRevoked,
   listClassResources,
   postClassResource,
   sourceTypeLabel,
@@ -471,6 +472,9 @@ export function ClassDetailPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [accessRevoked, setAccessRevoked] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [countdown, setCountdown] = useState(3);
 
   const loadResources = useCallback(
     async (id: string) => {
@@ -492,6 +496,7 @@ export function ClassDetailPage() {
     async (id: string) => {
       setClassLoading(true);
       setError("");
+      setAccessRevoked(false);
       try {
         const detail = await getClassDetail(authFetch, id);
         setSelectedClass(detail);
@@ -499,7 +504,12 @@ export function ClassDetailPage() {
         await loadResources(id);
       } catch (reason) {
         setSelectedClass(null);
-        setError(reason instanceof Error ? reason.message : "Không thể mở lớp. Lớp có thể không tồn tại hoặc bạn chưa được cấp quyền truy cập.");
+        setEditForm(null);
+        if (isClassAccessRevoked(reason)) {
+          setAccessRevoked(true);
+        } else {
+          setError(reason instanceof Error ? reason.message : "Không thể mở lớp. Lớp có thể không tồn tại hoặc bạn chưa được cấp quyền truy cập.");
+        }
       } finally {
         setClassLoading(false);
       }
@@ -514,6 +524,25 @@ export function ClassDetailPage() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [classId, loadClassDetail]);
+
+  // Auto-redirect countdown when access is revoked
+  useEffect(() => {
+    if (!accessRevoked) return;
+    setCountdown(3);
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          router.replace("/list-class");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [accessRevoked, router]);
 
   async function handleSaveDetail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -651,12 +680,29 @@ export function ClassDetailPage() {
                   Vào từ <Link href="/list-class" className="font-medium text-[#d97757] underline">danh sách lớp</Link> để mở đúng lớp cần quản lý.
                 </p>
               </div>
-            ) : classLoading || !selectedClass || !editForm ? (
+            ) : classLoading ? (
               <div className="mt-6 space-y-4">
                 <div className="h-[180px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
                 <div className="h-[320px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
               </div>
-            ) : (
+            ) : accessRevoked ? (
+              <div className="mt-6 rounded-[14px] border border-[#e8b4a4] bg-[#fdf3ef] px-5 py-6 text-center">
+                <AlertCircle className="mx-auto size-8 text-[#c0492b]" />
+                <p className="mt-3 text-[15px] font-semibold text-[#c0492b]">Bạn không còn quyền truy cập lớp học này</p>
+                <p className="mt-2 text-[13px] text-[#6b6b6b]">
+                  Trang sẽ quay về danh sách lớp sau <span className="font-semibold text-[#c0492b]">{countdown}</span> giây.
+                </p>
+                <div className="mt-5 flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { if (countdownRef.current) clearInterval(countdownRef.current); router.replace("/list-class"); }}
+                    className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#1f1f1f] px-4 text-[13px] font-medium text-white transition hover:bg-[#333]"
+                  >
+                    Quay lại ngay
+                  </button>
+                </div>
+              </div>
+            ) : selectedClass && editForm ? (
               <>
                 <div className={`relative mt-6 overflow-hidden rounded-[16px] px-6 py-7 text-white ${subjectBannerClasses(selectedClass.subject)}`}>
                   <div className="pointer-events-none absolute -right-8 -top-10 size-40 rounded-full bg-white/10" />
@@ -895,6 +941,11 @@ export function ClassDetailPage() {
                 </div>
                 )}
               </>
+            ) : (
+              <div className="mt-6 rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
+                <p className="text-[13px] font-medium">Không tìm thấy lớp</p>
+                <p className="mt-1 text-[12px] text-[#6b6b6b]">Lớp này có thể đã bị xóa hoặc bạn chưa được cấp quyền.</p>
+              </div>
             )}
           </div>
         </section>

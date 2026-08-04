@@ -220,7 +220,7 @@ async function request<T>(authFetch: AuthFetch, path: string, init: RequestInit 
   const response = await authFetch(`/api/classes${path}`, { ...init, headers });
   if (response.status === 204) return null as T;
   const data = (await response.json().catch(() => null)) as
-    | { message?: string; reason?: string; existingAccount?: ExistingAccountInfo | null }
+    | { message?: string; code?: string; reason?: string; existingAccount?: ExistingAccountInfo | null }
     | T
     | null;
   if (!response.ok) {
@@ -228,10 +228,11 @@ async function request<T>(authFetch: AuthFetch, path: string, init: RequestInit 
       data && typeof data === "object" && "message" in data
         ? String(data.message)
         : response.statusText || "Không thể hoàn tất yêu cầu.";
+    const code = data && typeof data === "object" && "code" in data ? String(data.code) : undefined;
     const reason = data && typeof data === "object" && "reason" in data ? String(data.reason) : undefined;
     const existingAccount =
       data && typeof data === "object" && "existingAccount" in data ? data.existingAccount : undefined;
-    throw new ClassApiError(message, reason, existingAccount);
+    throw new ClassApiError(message, response.status, code, reason, existingAccount);
   }
   return data as T;
 }
@@ -334,15 +335,29 @@ export type ExistingAccountInfo = {
 
 /** Lỗi API: kèm reason (PROFILE_MISMATCH, ALREADY_ENROLLED, ...) + existingAccount khi có. */
 export class ClassApiError extends Error {
+  status: number;
+  code?: string;
   reason?: string;
   existingAccount?: ExistingAccountInfo | null;
 
-  constructor(message: string, reason?: string, existingAccount?: ExistingAccountInfo | null) {
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    reason?: string,
+    existingAccount?: ExistingAccountInfo | null,
+  ) {
     super(message);
     this.name = "ClassApiError";
+    this.status = status;
+    this.code = code;
     this.reason = reason;
     this.existingAccount = existingAccount;
   }
+}
+
+export function isClassAccessRevoked(error: unknown): boolean {
+  return error instanceof ClassApiError && error.status === 403 && error.code === "CLASS_ACCESS_REVOKED";
 }
 
 export function addClassStudent(authFetch: AuthFetch, classId: string, payload: AddClassStudentPayload): Promise<ClassMember> {

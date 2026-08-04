@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, BookOpen, Inbox, RefreshCw } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -10,11 +10,14 @@ import {
   type ClassResourceSummary,
   type ClassSummary,
   getClassDetail,
+  isClassAccessRevoked,
   listClassResources,
   listEnrolledClasses,
   subjectLabel,
 } from "@/lib/classroom";
 import { ClassPickerCard, ResourceCard, statusClasses, subjectBannerClasses } from "./shared";
+
+const REDIRECT_SECONDS = 3;
 
 export function StudentClassResourcesPage() {
   const { user, status, authFetch } = useAuth();
@@ -32,6 +35,9 @@ export function StudentClassResourcesPage() {
   const [resourcesLoading, setResourcesLoading] = useState(false);
 
   const [error, setError] = useState("");
+  const [accessRevoked, setAccessRevoked] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
 
   const loadClasses = useCallback(async () => {
     if (status !== "authenticated") return;
@@ -66,13 +72,19 @@ export function StudentClassResourcesPage() {
     async (id: string) => {
       setClassLoading(true);
       setError("");
+      setAccessRevoked(false);
       try {
         const detail = await getClassDetail(authFetch, id);
         setSelectedClass(detail);
         await loadResources(id);
       } catch (reason) {
         setSelectedClass(null);
-        setError(reason instanceof Error ? reason.message : "Không thể mở lớp. Lớp có thể không tồn tại hoặc bạn chưa được cấp quyền truy cập.");
+        if (isClassAccessRevoked(reason)) {
+          setAccessRevoked(true);
+          setError("");
+        } else {
+          setError(reason instanceof Error ? reason.message : "Không thể mở lớp. Lớp có thể không tồn tại hoặc bạn chưa được cấp quyền truy cập.");
+        }
       } finally {
         setClassLoading(false);
       }
@@ -93,14 +105,50 @@ export function StudentClassResourcesPage() {
       setSelectedClass(null);
       setResources([]);
       setResourcesTotal(0);
+      setAccessRevoked(false);
       return;
     }
     void loadClassDetail(classId);
   }, [classId, loadClassDetail]);
 
+  // Auto-redirect countdown when access is revoked
+  useEffect(() => {
+    if (!accessRevoked) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCountdown(REDIRECT_SECONDS);
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          router.replace("/list-class");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [accessRevoked, router]);
+
+  // Refetch class list when returning from revoked access (URL changes back to no classId)
+  useEffect(() => {
+    if (!classId && classes.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void loadClasses();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classId]);
+
   function selectClass(id: string) {
     setError("");
+    setAccessRevoked(false);
     router.replace(id ? `/list-class?classId=${id}` : "/list-class");
+  }
+
+  function handleGoBackNow() {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    router.replace("/list-class");
   }
 
   if (!user) return null;
@@ -199,19 +247,39 @@ export function StudentClassResourcesPage() {
                   )}
                 </div>
 
-                {error && (
-                  <div className="mt-4 flex items-start gap-2 rounded-[12px] border border-[#e8b4a4] bg-[#fdf3ef] px-4 py-3 text-[13px] text-[#c0492b]">
-                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                {classLoading || !selectedClass ? (
+                {/* Loading state */}
+                {classLoading ? (
                   <div className="mt-4 space-y-4">
                     <div className="h-[180px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
                     <div className="h-[260px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
                   </div>
-                ) : (
+                ) : accessRevoked ? (
+                  /* Access revoked: show banner + countdown */
+                  <div className="mt-6 rounded-[14px] border border-[#e8b4a4] bg-[#fdf3ef] px-5 py-6 text-center">
+                    <AlertCircle className="mx-auto size-8 text-[#c0492b]" />
+                    <p className="mt-3 text-[15px] font-semibold text-[#c0492b]">Bạn không còn quyền truy cập lớp học này</p>
+                    <p className="mt-2 text-[13px] text-[#6b6b6b]">
+                      Giáo viên đã xóa bạn khỏi lớp. Trang sẽ quay về danh sách lớp sau{" "}
+                      <span className="font-semibold text-[#c0492b]">{countdown}</span> giây.
+                    </p>
+                    <div className="mt-5 flex justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleGoBackNow}
+                        className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#1f1f1f] px-4 text-[13px] font-medium text-white transition hover:bg-[#333]"
+                      >
+                        Quay lại ngay
+                      </button>
+                    </div>
+                  </div>
+                ) : error ? (
+                  /* Generic error state */
+                  <div className="mt-4 flex items-start gap-2 rounded-[12px] border border-[#e8b4a4] bg-[#fdf3ef] px-4 py-3 text-[13px] text-[#c0492b]">
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                ) : selectedClass ? (
+                  /* Success state: render class content */
                   <>
                     <div className={`relative mt-4 overflow-hidden rounded-[16px] px-6 py-7 text-white ${subjectBannerClasses(selectedClass.subject)}`}>
                       <div className="pointer-events-none absolute -right-8 -top-10 size-40 rounded-full bg-white/10" />
@@ -292,6 +360,12 @@ export function StudentClassResourcesPage() {
                       )}
                     </div>
                   </>
+                ) : (
+                  /* Empty state: no classId matched anything */
+                  <div className="mt-6 rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
+                    <p className="text-[13px] font-medium">Không tìm thấy lớp</p>
+                    <p className="mt-1 text-[12px] text-[#6b6b6b]">Lớp này có thể đã bị xóa hoặc bạn chưa được cấp quyền.</p>
+                  </div>
                 )}
               </>
             )}

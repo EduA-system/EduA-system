@@ -1,5 +1,6 @@
 package com.edua.beeduasystem.service.classroom;
 
+import com.edua.beeduasystem.domain.exception.ClassAccessRevokedException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
@@ -349,7 +350,7 @@ public class ClassResourceService {
         if (classroom.isOwnedBy(currentUserId) || classMemberRepository.existsByClassIdAndStudentId(classId, currentUserId)) {
             return classroom;
         }
-        throw new ForbiddenOperationException("You do not have access to this class.");
+        throw new ClassAccessRevokedException();
     }
 
     private Classroom requireOwnedClass(UUID classId) {

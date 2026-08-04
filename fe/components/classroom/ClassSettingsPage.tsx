@@ -22,6 +22,7 @@ export function ClassSettingsPage() {
   const { authFetch, user } = useAuth();
   const classId = useSearchParams().get("classId") ?? "";
   const [detail, setDetail] = useState<ClassDetail | null>(null);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -31,10 +32,13 @@ export function ClassSettingsPage() {
 
   const load = useCallback(async () => {
     if (!classId) return;
+    setLoading(true);
     try {
       setDetail(await getClassDetail(authFetch, classId));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tải cài đặt lớp.");
+    } finally {
+      setLoading(false);
     }
   }, [authFetch, classId]);
 
@@ -101,7 +105,9 @@ export function ClassSettingsPage() {
       <div className="max-w-[680px]">
         {error && <p className="mt-4 text-[13px] text-[#c0492b]">{error}</p>}
         {message && <p className="mt-4 flex items-center gap-2 text-[13px] text-[#287447]"><CheckCircle2 className="size-4" />{message}</p>}
-        {!detail ? <div className="mt-6 flex items-center gap-2 text-sm text-[#6b6b6b]"><Loader2 className="size-4 animate-spin" /> Đang tải...</div> : (
+        {loading ? <div className="mt-6 flex items-center gap-2 text-sm text-[#6b6b6b]"><Loader2 className="size-4 animate-spin" /> Đang tải...</div> : !detail ? (
+          <div className="mt-6 rounded-[14px] border border-dashed border-[#d8d1c9] px-5 py-14 text-center text-[13px] text-[#6b6b6b]">Không tìm thấy lớp học.</div>
+        ) : (
           <form onSubmit={submit} className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-5">
             <label className="block text-[12px] font-medium text-[#6b6b6b]">Tên lớp <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><input name="name" defaultValue={detail.name} disabled={detail.status === "INACTIVE"} required className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] disabled:text-[#8a837b]" /></label>
             <div className="mt-4 grid grid-cols-2 gap-3">

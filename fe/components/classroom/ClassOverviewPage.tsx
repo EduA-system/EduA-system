@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BookOpen, ClipboardList, Loader2, Settings, Users } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { type ClassDetail, getClassDetail, statusLabel, subjectLabel } from "@/lib/classroom";
+import { type ClassDetail, getClassDetail, isClassAccessRevoked, statusLabel, subjectLabel } from "@/lib/classroom";
 import { ClassHubFrame, classHubHref } from "./ClassHubFrame";
 import { statusClasses, subjectBannerClasses } from "./shared";
 
@@ -13,22 +13,28 @@ export function ClassOverviewPage() {
   const { authFetch } = useAuth();
   const classId = useSearchParams().get("classId") ?? "";
   const [detail, setDetail] = useState<ClassDetail | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     if (!classId) return;
+    setLoading(true);
     setError("");
     try { setDetail(await getClassDetail(authFetch, classId)); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Không thể mở lớp học."); }
+    catch (reason) {
+      if (isClassAccessRevoked(reason)) setError("Bạn không còn quyền truy cập lớp học này.");
+      else setError(reason instanceof Error ? reason.message : "Không thể mở lớp học.");
+    }
+    finally { setLoading(false); }
   }, [authFetch, classId]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
 
   return (
     <ClassHubFrame classId={classId} active="overview" header={<div><h1 className="font-libertine text-[40px] font-normal leading-[1.02] tracking-[-0.025em] sm:text-[52px]">Tổng quan lớp</h1><p className="mt-3 text-[14px] leading-6 text-[#6b6b6b]">Thông tin, hoạt động và tài nguyên của lớp học.</p></div>}>
-      {!classId ? <Empty message="Chọn một lớp từ danh sách để xem tổng quan." /> : error ? <Empty message={error} /> : !detail ? (
+      {!classId ? <Empty message="Chọn một lớp từ danh sách để xem tổng quan." /> : loading ? (
         <div className="mt-6 flex items-center gap-2 text-sm text-[#6b6b6b]"><Loader2 className="size-4 animate-spin" /> Đang tải lớp học...</div>
-      ) : (
+      ) : error ? <Empty message={error} /> : detail ? (
         <div className="mt-6">
           <div className={`relative overflow-hidden rounded-[16px] px-6 py-7 text-white ${subjectBannerClasses(detail.subject)}`}>
             <span className="rounded-full border border-white/40 bg-white/10 px-2.5 py-1 text-[11px] font-medium">{subjectLabel(detail.subject)}</span>
@@ -49,7 +55,7 @@ export function ClassOverviewPage() {
             <Shortcut href={classHubHref("/class-detail/settings", classId)} title="Cài đặt" description="Cập nhật hoặc lưu trữ lớp" icon={Settings} />
           </div>
         </div>
-      )}
+      ) : <Empty message="Không tìm thấy lớp học." />}
     </ClassHubFrame>
   );
 }
