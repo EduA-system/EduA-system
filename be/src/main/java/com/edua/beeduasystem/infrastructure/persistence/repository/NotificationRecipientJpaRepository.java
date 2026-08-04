@@ -33,4 +33,6 @@ public interface NotificationRecipientJpaRepository extends JpaRepository<Notifi
     @Query("UPDATE NotificationRecipientEntity nr SET nr.readAt = :now "
             + "WHERE nr.recipientId = :recipientId AND nr.readAt IS NULL")
     void markAllRead(@Param("recipientId") UUID recipientId, @Param("now") Instant now);
+
+    void deleteByRecipientId(UUID recipientId);
 }

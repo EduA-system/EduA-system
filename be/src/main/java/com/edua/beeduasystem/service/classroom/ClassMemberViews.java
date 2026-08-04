@@ -3,6 +3,7 @@ package com.edua.beeduasystem.service.classroom;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,6 +42,23 @@ public final class ClassMemberViews {
             int addedCount,
             int skippedCount,
             List<SkippedRow> skipped
+    ) {
+    }
+
+    /** Thông tin tài khoản cũ trả kèm 409 PROFILE_MISMATCH để FE hỏi "gán lại account cũ vào lớp không?". */
+    public record ExistingAccountInfo(
+            String email,
+            String fullName,
+            String phoneNumber,
+            LocalDate dateOfBirth,
+            UserStatus status
+    ) {
+    }
+
+    /** Kết quả xóa học sinh khỏi lớp. {@code mode}: HARD_DELETE (INVITED, xóa sạch) | SOFT_REMOVE (giữ dữ liệu). */
+    public record RemoveResult(
+            String mode,
+            boolean notified
     ) {
     }
 }

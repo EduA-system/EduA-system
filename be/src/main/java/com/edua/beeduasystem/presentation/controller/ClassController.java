@@ -8,11 +8,14 @@ import com.edua.beeduasystem.presentation.dto.classroom.ClassMemberDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassMemberPageDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassPageDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassResourceAttachmentRequest;
+import com.edua.beeduasystem.presentation.dto.classroom.ClassResourceLibraryContentDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassResourcePageDto;
 import com.edua.beeduasystem.presentation.dto.classroom.ClassResourceSummaryDto;
 import com.edua.beeduasystem.presentation.dto.classroom.CreateClassRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.ImportStudentsResponse;
 import com.edua.beeduasystem.presentation.dto.classroom.PostClassResourceRequest;
+import com.edua.beeduasystem.presentation.dto.classroom.RemoveStudentRequest;
+import com.edua.beeduasystem.presentation.dto.classroom.RemoveStudentResponse;
 import com.edua.beeduasystem.presentation.dto.classroom.SubmissionDetailDto;
 import com.edua.beeduasystem.presentation.dto.classroom.SubmissionFileRequest;
 import com.edua.beeduasystem.presentation.dto.classroom.SubmissionRosterDto;
@@ -135,9 +138,25 @@ public class ClassController {
     @PostMapping("/{id}/members")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
-    @Operation(summary = "Thêm 1 học sinh bằng Gmail (UC-36 Normal Flow)")
+    @Operation(summary = "Thêm 1 học sinh bằng Gmail (UC-36 Normal Flow). reuseExistingAccount = true để gán lại tài khoản cũ khi hồ sơ không khớp.")
     public ClassMemberDto addStudent(@PathVariable UUID id, @Valid @RequestBody AddStudentRequest request) {
-        return ClassMemberDto.from(classEnrollmentService.addStudent(id, request.email()));
+        return ClassMemberDto.from(classEnrollmentService.addStudent(
+                id,
+                request.fullName(),
+                request.phoneNumber(),
+                request.dateOfBirth(),
+                request.email(),
+                Boolean.TRUE.equals(request.reuseExistingAccount())));
+    }
+
+    @DeleteMapping("/{id}/members/{studentId}")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
+    @Operation(summary = "Xóa học sinh khỏi lớp (UC-37). INVITED → hard-delete (xóa sạch); đã đăng nhập → soft-remove (giữ dữ liệu) + thông báo kèm lý do.")
+    public RemoveStudentResponse removeStudent(@PathVariable UUID id,
+                                               @PathVariable UUID studentId,
+                                               @RequestBody(required = false) RemoveStudentRequest request) {
+        String reason = request != null ? request.reason() : null;
+        return RemoveStudentResponse.from(classEnrollmentService.removeStudent(id, studentId, reason));
     }
 
     @PostMapping("/{id}/members/import")
@@ -154,6 +173,14 @@ public class ClassController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ClassResourcePageDto.from(classResourceService.listResources(id, page, size));
+    }
+
+    @GetMapping("/{id}/resources/{resourceId}/library-content")
+    @Operation(summary = "Mo noi dung thu vien da chia se trong lop (chi xem)")
+    public ClassResourceLibraryContentDto libraryContent(
+            @PathVariable UUID id,
+            @PathVariable UUID resourceId) {
+        return ClassResourceLibraryContentDto.from(classResourceService.getLibraryContent(id, resourceId));
     }
 
     @PostMapping("/{id}/resources")

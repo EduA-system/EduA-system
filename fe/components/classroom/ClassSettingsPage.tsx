@@ -12,6 +12,7 @@ import {
   subjectLabel,
   updateClass,
   updateClassStatus,
+  type UpdateClassPayload,
 } from "@/lib/classroom";
 import { ClassHubFrame } from "./ClassHubFrame";
 
@@ -24,6 +25,7 @@ export function ClassSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [pendingUpdate, setPendingUpdate] = useState<UpdateClassPayload | null>(null);
   const ownSubject = isClassSubject(user?.subject) ? user.subject : null;
   const legacySubject = detail && detail.subject !== ownSubject ? detail.subject : null;
 
@@ -44,19 +46,35 @@ export function ClassSettingsPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!detail || detail.status === "INACTIVE" || !ownSubject) return;
+    const data = new FormData(event.currentTarget);
+    const name = String(data.get("name") ?? "").trim();
+    const grade = Number(data.get("grade"));
+    if (!name) {
+      setError("Tên lớp là trường bắt buộc.");
+      return;
+    }
+    if (!grades.includes(grade)) {
+      setError("Khối là trường bắt buộc.");
+      return;
+    }
+    setError("");
+    setPendingUpdate({
+      name,
+      grade,
+      description: String(data.get("description") ?? "").trim() || null,
+      ...(ownSubject === detail.subject ? { subject: ownSubject } : {}),
+    });
+  }
 
+  async function confirmSave() {
+    if (!detail || !pendingUpdate) return;
     setSaving(true);
     setError("");
     try {
-      const data = new FormData(event.currentTarget);
-      const updated = await updateClass(authFetch, detail.id, {
-        name: String(data.get("name") ?? "").trim(),
-        grade: Number(data.get("grade")),
-        description: String(data.get("description") ?? "").trim() || null,
-        ...(ownSubject === detail.subject ? { subject: ownSubject } : {}),
-      });
+      const updated = await updateClass(authFetch, detail.id, pendingUpdate);
       setDetail(updated);
       setMessage("Đã lưu thay đổi lớp.");
+      setPendingUpdate(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể lưu lớp.");
     } finally {
@@ -85,10 +103,10 @@ export function ClassSettingsPage() {
         {message && <p className="mt-4 flex items-center gap-2 text-[13px] text-[#287447]"><CheckCircle2 className="size-4" />{message}</p>}
         {!detail ? <div className="mt-6 flex items-center gap-2 text-sm text-[#6b6b6b]"><Loader2 className="size-4 animate-spin" /> Đang tải...</div> : (
           <form onSubmit={submit} className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-5">
-            <label className="block text-[12px] font-medium text-[#6b6b6b]">Tên lớp<input name="name" defaultValue={detail.name} disabled={detail.status === "INACTIVE"} required className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] disabled:text-[#8a837b]" /></label>
+            <label className="block text-[12px] font-medium text-[#6b6b6b]">Tên lớp <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><input name="name" defaultValue={detail.name} disabled={detail.status === "INACTIVE"} required className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] disabled:text-[#8a837b]" /></label>
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <label className="text-[12px] font-medium text-[#6b6b6b]">Môn<div className="mt-2 flex h-10 items-center rounded-lg border border-[#d8d1c9] bg-[#f3f0ec] px-3 text-[13px] text-[#4f4943]">{subjectLabel(detail.subject)}</div></label>
-              <label className="text-[12px] font-medium text-[#6b6b6b]">Khối<select name="grade" defaultValue={detail.grade} disabled={detail.status === "INACTIVE"} className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]">{grades.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}</select></label>
+              <label className="text-[12px] font-medium text-[#6b6b6b]">Môn <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><div className="mt-2 flex h-10 items-center rounded-lg border border-[#d8d1c9] bg-[#f3f0ec] px-3 text-[13px] text-[#4f4943]">{subjectLabel(detail.subject)}</div></label>
+              <label className="text-[12px] font-medium text-[#6b6b6b]">Khối <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><select name="grade" defaultValue={detail.grade} disabled={detail.status === "INACTIVE"} required className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]">{grades.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}</select></label>
             </div>
             {legacySubject && <p className="mt-3 text-[12px] text-[#8a5a35]">Lớp này được tạo trước khi giới hạn chuyên ngành được áp dụng; môn học hiện tại được giữ nguyên.</p>}
             <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">Mô tả<textarea name="description" defaultValue={detail.description ?? ""} disabled={detail.status === "INACTIVE"} rows={5} className="mt-2 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2 text-[13px] disabled:text-[#8a837b]" /></label>
@@ -101,6 +119,7 @@ export function ClassSettingsPage() {
           </form>
         )}
       </div>
+      {pendingUpdate && <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-class-save-title"><div className="w-full max-w-md rounded-[14px] border border-[#d8d1c9] bg-white p-5 shadow-xl"><h2 id="confirm-class-save-title" className="text-[18px] font-semibold">Lưu thay đổi lớp?</h2><p className="mt-2 text-[13px] leading-6 text-[#6b6b6b]">Thông tin lớp sẽ được cập nhật cho các thành viên trong lớp.</p><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setPendingUpdate(null)} disabled={saving} className="h-9 rounded-[10px] border border-[#d8d1c9] px-3 text-[12px] font-medium disabled:opacity-50">Hủy</button><button type="button" onClick={() => void confirmSave()} disabled={saving} className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#1f1f1f] px-3 text-[12px] font-medium text-white disabled:opacity-50">{saving && <Loader2 className="size-3.5 animate-spin" />} Xác nhận lưu</button></div></div></div>}
     </ClassHubFrame>
   );
 }

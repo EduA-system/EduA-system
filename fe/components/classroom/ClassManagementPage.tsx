@@ -136,6 +136,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
   const [gradeFilter, setGradeFilter] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [confirmCreate, setConfirmCreate] = useState(false);
   const [busyStatusId, setBusyStatusId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -175,10 +176,24 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (creating) return;
+    if (!createForm.name.trim()) {
+      setError("Tên lớp là trường bắt buộc.");
+      return;
+    }
+    if (![10, 11, 12].includes(createForm.grade)) {
+      setError("Khối là trường bắt buộc.");
+      return;
+    }
     if (!isClassSubject(user?.subject) || createForm.subject !== user.subject) {
       setError("Bạn chỉ được tạo lớp thuộc chuyên ngành của mình.");
       return;
     }
+    setError("");
+    setConfirmCreate(true);
+  }
+
+  async function confirmCreateClass() {
+    if (creating || !isClassSubject(user?.subject) || createForm.subject !== user.subject) return;
     setCreating(true);
     setError("");
     setMessage("");
@@ -189,6 +204,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
         grade: createForm.grade,
         description: createForm.description.trim() || null,
       });
+      setConfirmCreate(false);
       setMessage(`Đã tạo lớp ${created.name}.`);
       router.push(`/class-detail?classId=${created.id}`);
     } catch (reason) {
@@ -213,6 +229,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
 
   const closeCreateForm = useCallback(() => {
     setCreateOpen(false);
+    setConfirmCreate(false);
     if (view === "list" && searchParams.get("create") === "1") {
       router.replace("/list-class", { scroll: false });
     }
@@ -254,11 +271,12 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
       </div>
 
       <label className="mt-5 block text-[12px] font-medium text-[#6b6b6b]">
-        Tên lớp
+        Tên lớp <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span>
         <input
           value={createForm.name}
           onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
           maxLength={255}
+          required
           placeholder="Ví dụ: 10A1 - Hóa học"
           className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
         />
@@ -266,17 +284,18 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <label className="block text-[12px] font-medium text-[#6b6b6b]">
-          Môn học
+          Môn học <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span>
           <div className="mt-2 flex h-11 items-center rounded-lg border border-[#d8d1c9] bg-[#f3f0ec] px-3 text-[13px] text-[#4f4943]">
             {allowedSubjects[0] ? subjectLabel(allowedSubjects[0]) : "Chưa thiết lập"}
           </div>
         </label>
         <label className="block text-[12px] font-medium text-[#6b6b6b]">
-          Khối
+          Khối <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span>
           <select
             value={createForm.grade}
             onChange={(event) => setCreateForm((current) => ({ ...current, grade: Number(event.target.value) }))}
             className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]"
+            required
           >
             {GRADES.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}
           </select>
@@ -509,6 +528,18 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
                     </button>
                   </div>
                   {createFormElement}
+                </div>
+              </div>
+            )}
+            {confirmCreate && (
+              <div className="fixed inset-0 z-[60] grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-create-class-title">
+                <div className="w-full max-w-md rounded-[14px] border border-[#d8d1c9] bg-white p-5 shadow-xl">
+                  <h2 id="confirm-create-class-title" className="text-[18px] font-semibold">Tạo lớp học?</h2>
+                  <p className="mt-2 text-[13px] leading-6 text-[#6b6b6b]">Lớp <strong>{createForm.name.trim()}</strong> sẽ được tạo với môn {subjectLabel(createForm.subject)} và khối {createForm.grade}.</p>
+                  <div className="mt-5 flex justify-end gap-2">
+                    <button type="button" onClick={() => setConfirmCreate(false)} disabled={creating} className="h-9 rounded-[10px] border border-[#d8d1c9] px-3 text-[12px] font-medium disabled:opacity-50">Hủy</button>
+                    <button type="button" onClick={() => void confirmCreateClass()} disabled={creating} className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#d97757] px-3 text-[12px] font-medium text-white disabled:opacity-50">{creating && <Loader2 className="size-3.5 animate-spin" />} Xác nhận tạo lớp</button>
+                  </div>
                 </div>
               </div>
             )}

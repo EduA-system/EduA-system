@@ -2,6 +2,9 @@ package com.edua.beeduasystem.service.classroom;
 
 import com.edua.beeduasystem.domain.model.classroom.ResourceSourceType;
 import com.edua.beeduasystem.domain.model.classroom.SubmissionStatus;
+import com.edua.beeduasystem.domain.model.auth.Subject;
+import com.edua.beeduasystem.domain.model.library.LibraryContentType;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.Instant;
 import java.util.List;
@@ -49,6 +52,21 @@ public final class ClassResourceViews {
             int page,
             int size,
             long total
+    ) {
+    }
+
+    /**
+     * Noi dung cua tai nguyen thu vien duoc chia se trong lop. Chi co the lay qua
+     * class resource de ap dung kiem tra quyen giao vien chu lop/hoc sinh trong lop;
+     * khong mo rong quyen doc thu vien ca nhan goc.
+     */
+    public record LibraryContentDetail(
+            UUID id,
+            LibraryContentType type,
+            String title,
+            Subject subject,
+            JsonNode payload,
+            String thumbnailUrl
     ) {
     }
 }

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Loader2,
   RefreshCw,
+  Trash2,
   Upload,
   UserPlus,
   Users,
@@ -21,13 +22,16 @@ import {
   type ClassMember,
   type ClassStatus,
   type ClassSummary,
+  type ExistingAccountInfo,
   type ImportStudentsResult,
   addClassStudent,
+  ClassApiError,
   getClassDetail,
   importClassStudents,
   importSkipReasonLabel,
   listClassMembers,
   listClasses,
+  removeClassStudent,
   statusLabel,
   studentStatusLabel,
   subjectLabel,
@@ -73,7 +77,7 @@ export function AddStudentPage() {
   const [membersTotal, setMembersTotal] = useState(0);
   const [membersLoading, setMembersLoading] = useState(false);
 
-  const [addEmail, setAddEmail] = useState("");
+  const [addForm, setAddForm] = useState({ fullName: "", phoneNumber: "", dateOfBirth: "", email: "" });
   const [addBusy, setAddBusy] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -84,6 +88,16 @@ export function AddStudentPage() {
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const [memberToRemove, setMemberToRemove] = useState<ClassMember | null>(null);
+  const [removeReason, setRemoveReason] = useState("");
+  const [removeBusy, setRemoveBusy] = useState(false);
+
+  const [reuseAccount, setReuseAccount] = useState<{
+    account: ExistingAccountInfo;
+    form: { fullName: string; phoneNumber: string; dateOfBirth: string; email: string };
+  } | null>(null);
+  const [reuseBusy, setReuseBusy] = useState(false);
 
   const loadClasses = useCallback(async () => {
     if (status !== "authenticated") return;
@@ -184,15 +198,81 @@ export function AddStudentPage() {
     setError("");
     setMessage("");
     try {
-      await addClassStudent(authFetch, selectedClass.id, addEmail.trim());
-      setAddEmail("");
+      await addClassStudent(authFetch, selectedClass.id, {
+        fullName: addForm.fullName.trim(), phoneNumber: addForm.phoneNumber.trim(), dateOfBirth: addForm.dateOfBirth, email: addForm.email.trim(),
+      });
+      setAddForm({ fullName: "", phoneNumber: "", dateOfBirth: "", email: "" });
       setAddDialogOpen(false);
       setMessage("Đã thêm học sinh vào lớp.");
       await refreshSelectedClass(selectedClass.id);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không thể thêm học sinh.");
+      if (reason instanceof ClassApiError && reason.reason === "PROFILE_MISMATCH" && reason.existingAccount) {
+        // Email đã tồn tại nhưng hồ sơ không khớp → hỏi giáo viên gán lại tài khoản cũ.
+        setReuseAccount({ account: reason.existingAccount, form: { ...addForm } });
+      } else {
+        setError(reason instanceof Error ? reason.message : "Không thể thêm học sinh.");
+      }
     } finally {
       setAddBusy(false);
+    }
+  }
+
+  async function handleReuseAccount() {
+    if (!selectedClass || !reuseAccount || reuseBusy) return;
+    setReuseBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await addClassStudent(authFetch, selectedClass.id, {
+        ...reuseAccount.form,
+        reuseExistingAccount: true,
+      });
+      setAddForm({ fullName: "", phoneNumber: "", dateOfBirth: "", email: "" });
+      setAddDialogOpen(false);
+      setReuseAccount(null);
+      setMessage("Đã gán lại tài khoản cũ và thêm học sinh vào lớp.");
+      await refreshSelectedClass(selectedClass.id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể gán lại tài khoản.");
+    } finally {
+      setReuseBusy(false);
+    }
+  }
+
+  function openRemoveDialog(member: ClassMember) {
+    setRemoveReason("");
+    setMemberToRemove(member);
+  }
+
+  async function handleRemoveStudent() {
+    if (!selectedClass || !memberToRemove || removeBusy) return;
+    const isInvited = memberToRemove.studentStatus === "INVITED";
+    if (!isInvited && !removeReason.trim()) {
+      setError("Vui lòng nhập lý do xóa để gửi thông báo cho học sinh.");
+      return;
+    }
+    setRemoveBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await removeClassStudent(
+        authFetch,
+        selectedClass.id,
+        memberToRemove.studentId,
+        isInvited ? undefined : removeReason.trim(),
+      );
+      setMessage(
+        result.mode === "HARD_DELETE"
+          ? `Đã xóa học sinh "${memberToRemove.studentName || memberToRemove.studentEmail}" và tài khoản (chưa từng đăng nhập).`
+          : `Đã gỡ học sinh "${memberToRemove.studentName || memberToRemove.studentEmail}" khỏi lớp.`,
+      );
+      setMemberToRemove(null);
+      setRemoveReason("");
+      await refreshSelectedClass(selectedClass.id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể xóa học sinh.");
+    } finally {
+      setRemoveBusy(false);
     }
   }
 
@@ -277,7 +357,7 @@ export function AddStudentPage() {
               <div>
                 <h1 className="font-libertine mt-3 text-[40px] font-normal leading-[1.02] tracking-[-0.025em] sm:text-[52px]">Thành viên lớp</h1>
                 <p className="mt-4 max-w-[620px] text-[14px] leading-6 text-[#6b6b6b]">
-                  Xem danh sách thành viên và quản lý học sinh trong lớp — thêm từng người bằng Gmail hoặc nhập cả danh sách từ tệp .csv/.xlsx.
+                  Xem danh sách thành viên và quản lý học sinh trong lớp — thêm từng người hoặc nhập cả danh sách từ tệp .csv/.xlsx.
                 </p>
               </div>
 
@@ -388,7 +468,7 @@ export function AddStudentPage() {
                       <div className="rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-10 text-center">
                         <Users className="mx-auto size-8 text-[#a8a097]" />
                         <p className="mt-3 text-[13px] font-medium">Lớp chưa có học sinh nào</p>
-                        <p className="mt-1 text-[12px] text-[#6b6b6b]">Thêm học sinh bằng Gmail hoặc nhập tệp ở bên trái.</p>
+                        <p className="mt-1 text-[12px] text-[#6b6b6b]">Thêm học sinh bằng thông tin hồ sơ hoặc nhập tệp.</p>
                       </div>
                     ) : (
                       <div className="overflow-hidden rounded-[12px] border border-[#ede8e1] bg-white">
@@ -398,6 +478,7 @@ export function AddStudentPage() {
                               <th className="px-4 py-3 font-medium">Học sinh</th>
                               <th className="px-4 py-3 font-medium">Trạng thái</th>
                               <th className="px-4 py-3 font-medium">Tham gia</th>
+                              <th className="px-4 py-3 font-medium text-right">Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -421,6 +502,18 @@ export function AddStudentPage() {
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 text-[#6b6b6b]">{formatDateTime(member.joinedAt)}</td>
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => openRemoveDialog(member)}
+                                    disabled={isInactive}
+                                    title="Xóa học sinh khỏi lớp"
+                                    aria-label={`Xóa học sinh ${member.studentName || member.studentEmail || ""} khỏi lớp`}
+                                    className="inline-flex size-8 items-center justify-center rounded-lg border border-transparent text-[#a8a097] transition hover:border-[#e8b4a4] hover:bg-[#fdf3ef] hover:text-[#c0492b] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-transparent disabled:hover:bg-transparent"
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -454,30 +547,35 @@ export function AddStudentPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="add-student-dialog-title" className="text-[18px] font-semibold">Thêm thành viên</h2>
-                <p className="mt-1 text-[12px] text-[#6b6b6b]">Thêm học sinh vào lớp {selectedClass.name} bằng Gmail hoặc danh sách tệp.</p>
+                <p className="mt-1 text-[12px] text-[#6b6b6b]">Thêm học sinh vào lớp {selectedClass.name} bằng thông tin hồ sơ hoặc danh sách tệp.</p>
               </div>
               <button type="button" onClick={() => setAddDialogOpen(false)} aria-label="Đóng cửa sổ thêm thành viên" className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#d8d1c9] text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"><X className="size-4" /></button>
             </div>
             <form onSubmit={handleAddStudent} className="mt-5 rounded-[12px] border border-[#ede8e1] bg-[#faf9f7] p-4">
-              <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]"><UserPlus className="size-4 text-[#d97757]" /> Thêm bằng Gmail</div>
+              <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]"><UserPlus className="size-4 text-[#d97757]" /> Thêm học sinh</div>
               <label className="block text-[12px] font-medium text-[#6b6b6b]">
-                Gmail học sinh
+                Họ và tên *
                 <input
-                  type="email"
-                  value={addEmail}
-                  onChange={(event) => setAddEmail(event.target.value)}
-                  placeholder="hocsinh01@gmail.com"
+                  value={addForm.fullName}
+                  onChange={(event) => setAddForm((current) => ({ ...current, fullName: event.target.value }))}
+                  placeholder="Nguyễn Văn A"
                   autoFocus
+                  required
                   disabled={addBusy || formsDisabled}
                   className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757] disabled:text-[#8a837b]"
                 />
               </label>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <label className="block text-[12px] font-medium text-[#6b6b6b]">Số điện thoại *<input type="tel" value={addForm.phoneNumber} onChange={(event) => setAddForm((current) => ({ ...current, phoneNumber: event.target.value }))} required disabled={addBusy || formsDisabled} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]" /></label>
+                <label className="block text-[12px] font-medium text-[#6b6b6b]">Ngày sinh *<input type="date" value={addForm.dateOfBirth} onChange={(event) => setAddForm((current) => ({ ...current, dateOfBirth: event.target.value }))} required disabled={addBusy || formsDisabled} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]" /></label>
+              </div>
+              <label className="mt-3 block text-[12px] font-medium text-[#6b6b6b]">Gmail *<input type="email" value={addForm.email} onChange={(event) => setAddForm((current) => ({ ...current, email: event.target.value }))} placeholder="hocsinh01@gmail.com" required disabled={addBusy || formsDisabled} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]" /></label>
               {error && <p className="mt-3 text-[12px] leading-5 text-[#c0492b]">{error}</p>}
               {isInactive && <p className="mt-3 text-[12px] leading-5 text-[#8a5a35]">Lớp đang lưu trữ, không thể thêm học sinh.</p>}
               {!isInactive && isFull && <p className="mt-3 text-[12px] leading-5 text-[#c0492b]">Lớp đã đủ {MAX_CLASS_SIZE} thành viên.</p>}
               <div className="mt-5 flex justify-end gap-2">
                 <button type="button" onClick={() => setAddDialogOpen(false)} disabled={addBusy} className="h-10 rounded-[10px] border border-[#d8d1c9] px-4 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] disabled:opacity-50">Hủy</button>
-                <button type="submit" disabled={addBusy || formsDisabled || !addEmail.trim()} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[12px] font-medium text-white transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]">
+                <button type="submit" disabled={addBusy || formsDisabled || !addForm.fullName.trim() || !addForm.phoneNumber.trim() || !addForm.dateOfBirth || !addForm.email.trim()} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[12px] font-medium text-white transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]">
                   {addBusy ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
                   {addBusy ? "Đang thêm..." : "Thêm học sinh"}
                 </button>
@@ -485,11 +583,142 @@ export function AddStudentPage() {
             </form>
             <form onSubmit={handleImport} className="mt-4 rounded-[12px] border border-[#ede8e1] bg-[#faf9f7] p-4">
               <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]"><Upload className="size-4 text-[#d97757]" /> Nhập từ tệp</div>
-              <p className="mt-3 text-[12px] leading-5 text-[#6b6b6b]">Tệp .csv hoặc .xlsx, có cột tên <span className="font-medium text-[#1f1f1f]">gmail</span>. Dòng lỗi hoặc trùng sẽ tự động bị bỏ qua.</p>
+              <p className="mt-3 text-[12px] leading-5 text-[#6b6b6b]">Tệp .csv hoặc .xlsx phải có các cột: <span className="font-medium text-[#1f1f1f]">Họ và tên | Số điện thoại | Ngày/tháng/năm sinh | Gmail</span>. Dòng lỗi hoặc trùng sẽ tự động bị bỏ qua.</p>
               <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">Chọn tệp<input ref={fileInputRef} type="file" accept=".csv,.xlsx" disabled={formsDisabled || importBusy} onChange={(event) => setImportFile(event.target.files?.[0] ?? null)} className="mt-2 block w-full text-[13px] text-[#6b6b6b] file:mr-3 file:rounded-lg file:border-0 file:bg-[#f5f1ec] file:px-3 file:py-2 file:text-[12px] file:font-medium file:text-[#1f1f1f] hover:file:bg-[#edeae5] disabled:opacity-50" /></label>
               <button type="submit" disabled={importBusy || formsDisabled || !importFile} className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#1f1f1f] px-5 text-[12px] font-medium text-white transition hover:bg-[#34312d] disabled:cursor-not-allowed disabled:bg-[#b8b0a8]">{importBusy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}{importBusy ? "Đang nhập danh sách..." : "Nhập danh sách"}</button>
             </form>
             {importResult && <div className="mt-4 rounded-[12px] border border-[#d8d1c9] bg-[#f7f5f2] p-4"><p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">Kết quả import</p><div className="mt-3 grid grid-cols-2 gap-3"><div className="rounded-[10px] border border-[#b7e0c4] bg-[#f0faf3] p-3"><p className="text-[11px] text-[#287447]">Đã thêm</p><p className="mt-1 text-lg font-semibold text-[#287447]">{importResult.addedCount}</p></div><div className="rounded-[10px] border border-[#e6d8cb] bg-[#f8f2ec] p-3"><p className="text-[11px] text-[#8a5a35]">Bỏ qua</p><p className="mt-1 text-lg font-semibold text-[#8a5a35]">{importResult.skippedCount}</p></div></div>{importResult.skipped.length > 0 && <ul className="mt-4 max-h-[220px] space-y-2 overflow-y-auto">{importResult.skipped.map((row) => <li key={`${row.row}-${row.email ?? ""}`} className="rounded-[10px] border border-[#ede8e1] bg-white px-3 py-2 text-[12px]"><span className="font-medium text-[#1f1f1f]">Dòng {row.row}</span><span className="text-[#6b6b6b]"> · {row.email || "(trống)"} · </span><span className="text-[#c0492b]">{importSkipReasonLabel(row.reason)}</span></li>)}</ul>}</div>}
+          </div>
+        </div>
+      )}
+      {memberToRemove && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1f1f]/35 px-4 py-6"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !removeBusy) setMemberToRemove(null);
+          }}
+        >
+          <div role="dialog" aria-modal="true" aria-labelledby="remove-student-dialog-title" className="max-h-[calc(100vh-3rem)] w-full max-w-[520px] overflow-y-auto rounded-[16px] border border-[#d8d1c9] bg-white p-5 shadow-[0_20px_60px_rgba(31,31,31,0.2)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="remove-student-dialog-title" className="text-[18px] font-semibold">
+                  {memberToRemove.studentStatus === "INVITED" ? "Xóa học sinh này?" : "Gỡ học sinh khỏi lớp"}
+                </h2>
+                <p className="mt-1 text-[12px] text-[#6b6b6b]">
+                  {memberToRemove.studentName || memberToRemove.studentEmail || "Học sinh"} · {memberToRemove.studentEmail}
+                </p>
+              </div>
+              <button type="button" onClick={() => setMemberToRemove(null)} disabled={removeBusy} aria-label="Đóng cửa sổ xóa học sinh" className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#d8d1c9] text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f] disabled:opacity-50"><X className="size-4" /></button>
+            </div>
+
+            {memberToRemove.studentStatus === "INVITED" ? (
+              <div className="mt-5 rounded-[12px] border border-[#e8b4a4] bg-[#fdf3ef] p-4">
+                <p className="text-[13px] font-semibold text-[#c0492b]">Học sinh chưa từng đăng nhập</p>
+                <p className="mt-2 text-[12px] leading-5 text-[#8a5a35]">
+                  Sẽ <strong>xóa hết mọi thứ</strong> liên quan: xóa khỏi lớp, xóa tài khoản chờ kích hoạt và mọi dữ liệu kèm theo.
+                  Hành động này <strong>không thể hoàn tác</strong>. Chỗ trong lớp (tối đa {MAX_CLASS_SIZE} chỗ) sẽ được giải phóng.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-5 space-y-3">
+                <div className="rounded-[12px] border border-[#bfdcc8] bg-[#f1faf3] p-4">
+                  <p className="text-[13px] font-semibold text-[#287447]">Chỉ gỡ khỏi lớp này</p>
+                  <p className="mt-2 text-[12px] leading-5 text-[#6b6b6b]">
+                    Tài khoản và toàn bộ dữ liệu trong lớp (bài đã nộp, điểm, ...) được <strong>giữ nguyên</strong>.
+                    Chỗ trong lớp (tối đa {MAX_CLASS_SIZE} chỗ) sẽ được giải phóng.
+                  </p>
+                </div>
+                <label className="block text-[12px] font-medium text-[#6b6b6b]">
+                  Lý do xóa {memberToRemove.studentStatus === "ACTIVE" ? "*" : ""}
+                  <textarea
+                    value={removeReason}
+                    onChange={(event) => setRemoveReason(event.target.value)}
+                    required={memberToRemove.studentStatus === "ACTIVE"}
+                    disabled={removeBusy}
+                    rows={3}
+                    placeholder={memberToRemove.studentStatus === "ACTIVE" ? "Lý do sẽ được gửi dưới dạng thông báo cho học sinh." : "Lý do (không bắt buộc)."}
+                    className="mt-2 w-full resize-none rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757] disabled:text-[#8a837b]"
+                  />
+                </label>
+                {memberToRemove.studentStatus === "ACTIVE" && (
+                  <p className="text-[12px] leading-5 text-[#6b6b6b]">
+                    Học sinh sẽ nhận được thông báo kèm lý do này.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setMemberToRemove(null)} disabled={removeBusy} className="h-10 rounded-[10px] border border-[#d8d1c9] px-4 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] disabled:opacity-50">Hủy</button>
+              <button
+                type="button"
+                onClick={() => void handleRemoveStudent()}
+                disabled={
+                  removeBusy ||
+                  (memberToRemove.studentStatus !== "INVITED" && memberToRemove.studentStatus === "ACTIVE" && !removeReason.trim())
+                }
+                className={`inline-flex h-10 items-center gap-2 rounded-[10px] px-4 text-[12px] font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                  memberToRemove.studentStatus === "INVITED"
+                    ? "bg-[#c0492b] hover:bg-[#a83a20]"
+                    : "bg-[#d97757] hover:bg-[#c96545]"
+                }`}
+              >
+                {removeBusy ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+                {removeBusy
+                  ? "Đang xóa..."
+                  : memberToRemove.studentStatus === "INVITED"
+                    ? "Xóa học sinh"
+                    : "Gỡ khỏi lớp"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {reuseAccount && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1f1f]/35 px-4 py-6"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !reuseBusy) setReuseAccount(null);
+          }}
+        >
+          <div role="dialog" aria-modal="true" aria-labelledby="reuse-account-dialog-title" className="max-h-[calc(100vh-3rem)] w-full max-w-[540px] overflow-y-auto rounded-[16px] border border-[#d8d1c9] bg-white p-5 shadow-[0_20px_60px_rgba(31,31,31,0.2)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="reuse-account-dialog-title" className="text-[18px] font-semibold">Gán lại tài khoản cũ?</h2>
+                <p className="mt-1 text-[12px] leading-5 text-[#6b6b6b]">
+                  Email này đã tồn tại của học sinh{" "}
+                  <strong className="text-[#1f1f1f]">{reuseAccount.account.fullName || "chưa rõ họ tên"}</strong>.
+                  Bạn có muốn <strong className="text-[#1f1f1f]">gán lại tài khoản cũ</strong> vào lớp không?
+                </p>
+              </div>
+              <button type="button" onClick={() => setReuseAccount(null)} disabled={reuseBusy} aria-label="Đóng cửa sổ gán lại tài khoản" className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#d8d1c9] text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f] disabled:opacity-50"><X className="size-4" /></button>
+            </div>
+            <div className="mt-5 rounded-[12px] border border-[#ede8e1] bg-[#faf9f7] p-4">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[12px]">
+                <dt className="font-medium text-[#6b6b6b]">Họ tên</dt>
+                <dd className="text-[#1f1f1f]">{reuseAccount.account.fullName || "—"}</dd>
+                <dt className="font-medium text-[#6b6b6b]">Gmail</dt>
+                <dd className="text-[#1f1f1f]">{reuseAccount.account.email}</dd>
+                <dt className="font-medium text-[#6b6b6b]">Số điện thoại</dt>
+                <dd className="text-[#1f1f1f]">{reuseAccount.account.phoneNumber || "—"}</dd>
+                <dt className="font-medium text-[#6b6b6b]">Ngày sinh</dt>
+                <dd className="text-[#1f1f1f]">{reuseAccount.account.dateOfBirth || "—"}</dd>
+                <dt className="font-medium text-[#6b6b6b]">Trạng thái</dt>
+                <dd className="text-[#1f1f1f]">{studentStatusLabel(reuseAccount.account.status)}</dd>
+              </dl>
+            </div>
+            <p className="mt-4 rounded-[12px] border border-[#e6d8cb] bg-[#f8f2ec] p-4 text-[12px] leading-5 text-[#8a5a35]">
+              Hồ sơ bạn vừa nhập sẽ được bỏ qua; lớp sẽ dùng đúng thông tin của tài khoản cũ này.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setReuseAccount(null)} disabled={reuseBusy} className="h-10 rounded-[10px] border border-[#d8d1c9] px-4 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] disabled:opacity-50">Hủy</button>
+              <button type="button" onClick={() => void handleReuseAccount()} disabled={reuseBusy} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[12px] font-medium text-white transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]">
+                {reuseBusy ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+                {reuseBusy ? "Đang gán..." : "Gán lại account cũ"}
+              </button>
+            </div>
           </div>
         </div>
       )}

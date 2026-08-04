@@ -15,6 +15,7 @@ import {
   updateLibraryContent,
   type LibrarySubject,
 } from "@/lib/library";
+import { getClassResourceLibraryContent } from "@/lib/classroom";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
@@ -31,6 +32,9 @@ export function LessonEditDashboard() {
   const { authFetch } = useAuth();
   const searchParams = useSearchParams();
   const libraryId = searchParams.get("libraryId");
+  const classId = searchParams.get("classId");
+  const resourceId = searchParams.get("resourceId");
+  const readOnlyClassResource = Boolean(classId && resourceId);
   const [aiCollapsed, setAiCollapsed] = useState(false);
   const [margins, setMargins] = useState({ left: 80, right: 80 });
   // Đọc một lần lúc mount (lazy initializer) — tránh đọc lại sau khi
@@ -59,7 +63,7 @@ export function LessonEditDashboard() {
     content: pendingSession
       ? generatingLessonPlanSkeletonHtml(pendingSession.display)
       : lessonPlan5512ToHtml(lessonPlan5512Mock),
-    editable: !pendingSession && !libraryId,
+    editable: !pendingSession && !libraryId && !readOnlyClassResource,
     immediatelyRender: false,
     editorProps: {
       attributes: {
@@ -82,12 +86,14 @@ export function LessonEditDashboard() {
   }, [editor]);
 
   useEffect(() => {
-    if (!libraryId || !editor) return;
+    if ((!libraryId && !readOnlyClassResource) || !editor) return;
 
     let cancelled = false;
     editor.setEditable(false);
 
-    void getLibraryContent(authFetch, libraryId)
+    void (readOnlyClassResource
+      ? getClassResourceLibraryContent(authFetch, classId!, resourceId!)
+      : getLibraryContent(authFetch, libraryId!))
       .then((content) => {
         if (cancelled) return;
         const document = getLessonPlanDocument(content.payload);
@@ -98,19 +104,19 @@ export function LessonEditDashboard() {
         editor.commands.setContent(document);
         revisionRef.current = 0;
         setIsDirty(false);
-        editor.setEditable(true);
+        editor.setEditable(!readOnlyClassResource);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
         setSaveStatus("error");
         setSaveError(error instanceof Error ? error.message : "Không thể mở giáo án đã lưu.");
-        editor.setEditable(true);
+        editor.setEditable(!readOnlyClassResource);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [authFetch, editor, libraryId]);
+  }, [authFetch, classId, editor, libraryId, readOnlyClassResource, resourceId]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -187,7 +193,7 @@ export function LessonEditDashboard() {
   useLessonPlanStream(editor, (session) => {
     setLessonSession(session);
     void saveLesson(session);
-  }, !libraryId);
+  }, !libraryId && !readOnlyClassResource);
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
@@ -198,6 +204,7 @@ export function LessonEditDashboard() {
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
             <div className="@container flex min-h-12 items-center justify-between gap-3 px-3 py-1.5">
               <div className="flex min-w-0 shrink-0 items-center gap-1.5">
+                {!readOnlyClassResource && <>
                 <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
                   <SaveIcon />
                 </HeaderActionButton>
@@ -207,24 +214,26 @@ export function LessonEditDashboard() {
                 <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>
                   <CreateLessonIcon />
                 </HeaderActionButton>
+                </>}
+                {readOnlyClassResource && <span className="text-xs font-medium text-[#6b6b6b]">Chế độ chỉ xem</span>}
               </div>
 
-              <button
+              {!readOnlyClassResource && <button
                 type="button"
                 onClick={() => setAiCollapsed((current) => !current)}
                 className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#e8e2d9] bg-white text-[#d97757] shadow-sm transition hover:bg-[#fff4ed]"
                 aria-label={aiCollapsed ? "Show AI sidebar" : "Hide AI sidebar"}
               >
                 <AiToggleIcon />
-              </button>
+              </button>}
             </div>
-            <div className="overflow-x-auto border-t border-[#efe8df] px-3 py-1.5">
+            {!readOnlyClassResource && <div className="overflow-x-auto border-t border-[#efe8df] px-3 py-1.5">
               <div className="flex w-full justify-center">
                 <div className="inline-flex max-w-full rounded-lg border border-[#e8e2d9] bg-white px-2 py-1 shadow-sm">
                   <ImageEnabledEditorTools editor={editor} authFetch={authFetch} />
                 </div>
               </div>
-            </div>
+            </div>}
             {saveStatus !== "idle" && (
               <p
                 className={`px-3 pb-2 text-[11px] ${
@@ -247,7 +256,7 @@ export function LessonEditDashboard() {
           </div>
         </section>
 
-        <AssistantPanel collapsed={aiCollapsed} />
+        {!readOnlyClassResource && <AssistantPanel collapsed={aiCollapsed} />}
       </div>
 
       {editor && mathClick ? (

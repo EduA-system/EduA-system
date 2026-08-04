@@ -19,4 +19,8 @@ public interface ClassMemberJpaRepository extends JpaRepository<ClassMemberEntit
 
     @Query("select m.studentId from ClassMemberEntity m where m.classId = :classId")
     List<UUID> findStudentIdsByClassId(UUID classId);
+
+    void deleteByClassIdAndStudentId(UUID classId, UUID studentId);
+
+    void deleteByStudentId(UUID studentId);
 }

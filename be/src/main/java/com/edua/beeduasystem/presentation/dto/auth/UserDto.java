@@ -1,9 +1,10 @@
-﻿package com.edua.beeduasystem.presentation.dto.auth;
+package com.edua.beeduasystem.presentation.dto.auth;
 
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 
 import java.util.List;
+import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,6 +17,7 @@ public record UserDto(
         String contactInfo,
         String bio,
         String phoneNumber,
+        LocalDate dateOfBirth,
         String role,
         List<String> roles,
         String subject
@@ -30,6 +32,7 @@ public record UserDto(
                 user.contactInfo(),
                 user.bio(),
                 user.phoneNumber(),
+                user.dateOfBirth(),
                 orderedRoles.isEmpty() ? null : orderedRoles.getFirst(),
                 orderedRoles,
                 user.subject() != null ? user.subject().name() : null);

@@ -395,6 +395,15 @@ export function ResourceDetailPage() {
                   )}
 
                   <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {resource.sourceType === "LIBRARY_SNAPSHOT" && (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/class-resource-content?classId=${encodeURIComponent(classId)}&resourceId=${encodeURIComponent(resource.id)}`)}
+                        className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#d97757] px-2.5 py-1.5 text-[11.5px] font-medium text-white transition hover:bg-[#c96545]"
+                      >
+                        <Library className="size-3.5" /> Mở tài nguyên
+                      </button>
+                    )}
                     {resource.attachment?.url && (
                       <a
                         href={resource.attachment.url}

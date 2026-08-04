@@ -7,6 +7,7 @@ import { CANVAS_H, CANVAS_W, type Slide } from "@/components/slide-editor/types"
 import { loadSlides } from "@/components/slide-editor/lib/storage";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getLibraryContent } from "@/lib/library";
+import { getClassResourceLibraryContent } from "@/lib/classroom";
 import { parseSlideDeck } from "@/lib/slide-deck-library";
 
 function Chevron({ direction }: { direction: "left" | "right" }) {
@@ -38,6 +39,8 @@ export function SlidePresentationClient() {
   const searchParams = useSearchParams();
   const { authFetch } = useAuth();
   const libraryId = searchParams.get("libraryId");
+  const classId = searchParams.get("classId");
+  const resourceId = searchParams.get("resourceId");
   const stageRef = useRef<HTMLDivElement>(null);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -54,7 +57,7 @@ export function SlidePresentationClient() {
       setActiveIndex(0);
       setError(null);
 
-      if (!libraryId) {
+      if (!libraryId && (!classId || !resourceId)) {
         const localSlides = loadSlides();
         if (!localSlides) setError("Không tìm thấy bộ slide để trình chiếu. Hãy mở bộ slide từ thư viện hoặc trình soạn thảo.");
         else setSlides(localSlides);
@@ -62,7 +65,9 @@ export function SlidePresentationClient() {
       }
 
       try {
-        const content = await getLibraryContent(authFetch, libraryId);
+        const content = classId && resourceId
+          ? await getClassResourceLibraryContent(authFetch, classId, resourceId)
+          : await getLibraryContent(authFetch, libraryId!);
         if (cancelled) return;
         if (content.type !== "SLIDE_DECK") throw new Error("Nội dung này không phải là bộ slide.");
         const deck = parseSlideDeck(content.payload);
@@ -76,7 +81,7 @@ export function SlidePresentationClient() {
     void loadDeck();
 
     return () => { cancelled = true; };
-  }, [authFetch, libraryId]);
+  }, [authFetch, classId, libraryId, resourceId]);
 
   const goTo = useCallback((index: number) => {
     setActiveIndex(() => Math.max(0, Math.min(index, Math.max(0, slides.length - 1))));

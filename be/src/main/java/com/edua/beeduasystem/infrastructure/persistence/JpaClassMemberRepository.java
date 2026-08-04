@@ -59,6 +59,18 @@ public class JpaClassMemberRepository implements ClassMemberRepository {
         return jpa.findStudentIdsByClassId(classId);
     }
 
+    @Override
+    @Transactional
+    public void deleteByClassIdAndStudentId(UUID classId, UUID studentId) {
+        jpa.deleteByClassIdAndStudentId(classId, studentId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllByStudentId(UUID studentId) {
+        jpa.deleteByStudentId(studentId);
+    }
+
     private static ClassMember toDomain(ClassMemberEntity entity) {
         return new ClassMember(entity.getId(), entity.getClassId(), entity.getStudentId(), entity.getJoinedAt());
     }

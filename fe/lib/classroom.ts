@@ -25,10 +25,12 @@ export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
 
 export const IMPORT_SKIP_REASON_LABELS: Record<string, string> = {
   INVALID_FORMAT: "Email sai định dạng",
+  INVALID_STUDENT_DATA: "Thiếu hoặc sai Họ tên, Số điện thoại hoặc Ngày sinh",
   DUPLICATE_IN_FILE: "Trùng trong tệp",
   ALREADY_ENROLLED: "Đã có trong lớp",
   ROLE_CONFLICT: "Email đã thuộc vai trò khác",
   ACCOUNT_DISABLED: "Tài khoản đã bị khóa",
+  PROFILE_MISMATCH: "Gmail đã có hồ sơ với thông tin không khớp",
   CLASS_FULL: "Lớp đã đủ sĩ số",
 };
 
@@ -152,6 +154,16 @@ export type ClassResourcePage = {
   total: number;
 };
 
+/** Nội dung thư viện được đọc trong phạm vi lớp; không cấp quyền sửa thư viện gốc. */
+export type ClassResourceLibraryContent = {
+  id: string;
+  type: "LESSON_PLAN" | "SLIDE_DECK" | "TEST" | "SIMULATION";
+  title: string;
+  subject: ClassSubject | null;
+  payload: unknown;
+  thumbnailUrl: string | null;
+};
+
 export type ClassResourceAttachmentInput = {
   url: string;
   fileName: string;
@@ -207,13 +219,19 @@ async function request<T>(authFetch: AuthFetch, path: string, init: RequestInit 
   }
   const response = await authFetch(`/api/classes${path}`, { ...init, headers });
   if (response.status === 204) return null as T;
-  const data = (await response.json().catch(() => null)) as { message?: string } | T | null;
+  const data = (await response.json().catch(() => null)) as
+    | { message?: string; reason?: string; existingAccount?: ExistingAccountInfo | null }
+    | T
+    | null;
   if (!response.ok) {
-    throw new Error(
+    const message =
       data && typeof data === "object" && "message" in data
         ? String(data.message)
-        : response.statusText || "Không thể hoàn tất yêu cầu.",
-    );
+        : response.statusText || "Không thể hoàn tất yêu cầu.";
+    const reason = data && typeof data === "object" && "reason" in data ? String(data.reason) : undefined;
+    const existingAccount =
+      data && typeof data === "object" && "existingAccount" in data ? data.existingAccount : undefined;
+    throw new ClassApiError(message, reason, existingAccount);
   }
   return data as T;
 }
@@ -296,10 +314,41 @@ export function listClassMembers(
   return request<ClassMemberPage>(authFetch, `/${classId}/members?${params.toString()}`);
 }
 
-export function addClassStudent(authFetch: AuthFetch, classId: string, email: string): Promise<ClassMember> {
+export type AddClassStudentPayload = {
+  fullName: string;
+  phoneNumber: string;
+  dateOfBirth: string;
+  email: string;
+  /** true khi giáo viên xác nhận gán lại tài khoản cũ (sau 409 PROFILE_MISMATCH). */
+  reuseExistingAccount?: boolean;
+};
+
+/** Tài khoản cũ trả kèm 409 PROFILE_MISMATCH để hỏi "gán lại account cũ vào lớp không?". */
+export type ExistingAccountInfo = {
+  email: string;
+  fullName: string | null;
+  phoneNumber: string | null;
+  dateOfBirth: string | null;
+  status: string | null;
+};
+
+/** Lỗi API: kèm reason (PROFILE_MISMATCH, ALREADY_ENROLLED, ...) + existingAccount khi có. */
+export class ClassApiError extends Error {
+  reason?: string;
+  existingAccount?: ExistingAccountInfo | null;
+
+  constructor(message: string, reason?: string, existingAccount?: ExistingAccountInfo | null) {
+    super(message);
+    this.name = "ClassApiError";
+    this.reason = reason;
+    this.existingAccount = existingAccount;
+  }
+}
+
+export function addClassStudent(authFetch: AuthFetch, classId: string, payload: AddClassStudentPayload): Promise<ClassMember> {
   return request<ClassMember>(authFetch, `/${classId}/members`, {
     method: "POST",
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -316,6 +365,25 @@ export function importClassStudents(
   });
 }
 
+export type RemoveStudentResult = {
+  /** HARD_DELETE (học sinh chưa đăng nhập, xóa sạch) | SOFT_REMOVE (chỉ gỡ khỏi lớp, giữ dữ liệu). */
+  mode: "HARD_DELETE" | "SOFT_REMOVE";
+  notified: boolean;
+};
+
+/** Xóa học sinh khỏi lớp. `reason` bắt buộc khi học sinh đã kích hoạt (sẽ gửi thông báo kèm lý do). */
+export function removeClassStudent(
+  authFetch: AuthFetch,
+  classId: string,
+  studentId: string,
+  reason?: string,
+): Promise<RemoveStudentResult> {
+  return request<RemoveStudentResult>(authFetch, `/${classId}/members/${studentId}`, {
+    method: "DELETE",
+    body: reason ? JSON.stringify({ reason }) : undefined,
+  });
+}
+
 export function listClassResources(
   authFetch: AuthFetch,
   classId: string,
@@ -324,6 +392,14 @@ export function listClassResources(
 ): Promise<ClassResourcePage> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   return request<ClassResourcePage>(authFetch, `/${classId}/resources?${params.toString()}`);
+}
+
+export function getClassResourceLibraryContent(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+): Promise<ClassResourceLibraryContent> {
+  return request<ClassResourceLibraryContent>(authFetch, `/${classId}/resources/${resourceId}/library-content`);
 }
 
 export function postClassResource(

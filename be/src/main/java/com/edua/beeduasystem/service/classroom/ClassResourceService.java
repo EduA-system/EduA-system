@@ -79,6 +79,20 @@ public class ClassResourceService {
                 toSummaries(result.items(), currentUserId, viewerIsOwner), page, size, result.total());
     }
 
+    /** Doc noi dung thu vien da duoc giao vien chia se, theo quyen truy cap cua lop. */
+    @Transactional(readOnly = true)
+    public ClassResourceViews.LibraryContentDetail getLibraryContent(UUID classId, UUID resourceId) {
+        requireAccessibleClass(classId);
+        ClassResource resource = requireClassResource(classId, resourceId);
+        if (resource.sourceType() != ResourceSourceType.LIBRARY_SNAPSHOT || resource.sourceLibraryContentId() == null) {
+            throw new ResourceNotFoundException("Class resource is not sourced from the Personal Library.");
+        }
+        LibraryContent content = libraryContentRepository.findActiveById(resource.sourceLibraryContentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Shared library content not found."));
+        return new ClassResourceViews.LibraryContentDetail(
+                content.id(), content.type(), content.title(), content.subject(), content.payload(), content.thumbnailUrl());
+    }
+
     @Transactional
     public ClassResourceViews.ResourceSummary postResource(UUID classId, String title, String description,
             ResourceSourceType sourceType, UUID sourceLibraryContentId, ClassResourceViews.AttachmentInput attachment,

@@ -90,4 +90,10 @@ public class JpaNotificationRepository implements NotificationRepository {
     public void markAllRead(UUID recipientId) {
         recipientJpa.markAllRead(recipientId, Instant.now());
     }
+
+    @Override
+    @Transactional
+    public void deleteRecipientsByRecipientId(UUID recipientId) {
+        recipientJpa.deleteByRecipientId(recipientId);
+    }
 }

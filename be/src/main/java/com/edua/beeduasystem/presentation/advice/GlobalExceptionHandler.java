@@ -28,6 +28,10 @@ public class GlobalExceptionHandler {
     public record ErrorResponse(String message) {
     }
 
+    /** 409 them hoc sinh: kèm mã lý do + (khi PROFILE_MISMATCH) thông tin tài khoản cũ để FE xác nhận. */
+    public record ClassEnrollmentConflictResponse(String message, String reason, Object existingAccount) {
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
@@ -93,7 +97,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ClassEnrollmentConflictException.class)
-    public ResponseEntity<ErrorResponse> handleClassEnrollmentConflict(ClassEnrollmentConflictException ex) {
+    public ResponseEntity<?> handleClassEnrollmentConflict(ClassEnrollmentConflictException ex) {
+        if (ex.details() != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ClassEnrollmentConflictResponse(ex.getMessage(), ex.reason(), ex.details()));
+        }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
     }
 

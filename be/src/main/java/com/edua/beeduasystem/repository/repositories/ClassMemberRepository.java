@@ -19,6 +19,12 @@ public interface ClassMemberRepository {
     /** Toan bo student id dang enrolled trong 1 lop, khong phan trang (dung de notify all, BR-46). */
     List<UUID> findAllStudentIds(UUID classId);
 
+    /** Gỡ 1 học sinh khỏi 1 lớp (soft-remove / chế độ mặc định khi xóa ACTIVE student). */
+    void deleteByClassIdAndStudentId(UUID classId, UUID studentId);
+
+    /** Xóa toàn bộ membership của học sinh ở mọi lớp (hard-delete INVITED student). */
+    void deleteAllByStudentId(UUID studentId);
+
     record PageResult(List<ClassMember> items, long total) {
     }
 }

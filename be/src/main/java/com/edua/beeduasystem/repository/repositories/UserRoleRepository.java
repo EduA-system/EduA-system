@@ -23,4 +23,7 @@ public interface UserRoleRepository {
 
     /** Assign the user's single effective role, replacing any previous role assignment. */
     void replaceRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt);
+
+    /** Xóa toàn bộ role của user (dùng khi hard-delete tài khoản). */
+    void deleteByUserId(UUID userId);
 }

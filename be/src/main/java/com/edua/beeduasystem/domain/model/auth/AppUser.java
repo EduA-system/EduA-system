@@ -1,6 +1,7 @@
-﻿package com.edua.beeduasystem.domain.model.auth;
+package com.edua.beeduasystem.domain.model.auth;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -20,7 +21,8 @@ public record AppUser(
         Subject subject,
         UserStatus status,
         Instant createdAt,
-        Instant lastLoginAt
+        Instant lastLoginAt,
+        LocalDate dateOfBirth
 ) {
     public AppUser(UUID id,
                    String email,
@@ -33,7 +35,12 @@ public record AppUser(
                    Instant createdAt,
                    Instant lastLoginAt) {
         this(id, email, googleSub, fullName, avatarUrl, contactInfo, null, null,
-                subject, status, createdAt, lastLoginAt);
+                subject, status, createdAt, lastLoginAt, null);
+    }
+
+    public AppUser(UUID id, String email, String googleSub, String fullName, String avatarUrl, String contactInfo,
+                   String bio, String phoneNumber, Subject subject, UserStatus status, Instant createdAt, Instant lastLoginAt) {
+        this(id, email, googleSub, fullName, avatarUrl, contactInfo, bio, phoneNumber, subject, status, createdAt, lastLoginAt, null);
     }
 
     public boolean isActiveOrInvited() {
