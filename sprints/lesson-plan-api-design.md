@@ -26,7 +26,7 @@
 | 6 | GET | `/api/lesson-plans` | library | sync |
 | 7 | GET | `/api/lesson-plans/{id}` | UC-27/32 | sync |
 | 8 | PATCH | `/api/lesson-plans/{id}` | UC-27 | sync |
-| 9 | POST | `/api/lesson-plans/{id}/ai-edit` | UC-27 | **async + STOMP** |
+| 9 | POST | `/api/lesson-plans/edit-section` | UC-27 | sync |
 | 10 | DELETE | `/api/lesson-plans/{id}` | library | sync |
 | 11 | POST | `/api/lesson-plans/{id}/export` | UC-32 | sync |
 
@@ -94,12 +94,17 @@ body: LessonPlan5512Dto (partial — title / section / activity)
 ```
 Áp BR-23 (luật status khi edit) trong service. FE gọi mỗi phút = auto-save (BR-19). Map: UC-27, MSG08.
 
-### 9. `POST /api/lesson-plans/{id}/ai-edit` — Sửa bằng AI (async + STOMP)
+### 9. `POST /api/lesson-plans/edit-section` — Sửa một phần bằng AI (sync + preview)
 ```
-body: { instruction, scope?, sessionId }   // scope = toàn bài | 1 activity
-→ 202 ACCEPTED  { sessionId, lessonPlanId }
+body: {
+  instruction,
+  sections: [
+    { id, heading, content }   // trích từ editor hiện tại
+  ]
+}
+→ 200  { targetId, content }
 ```
-Tái dùng topic `/topic/lesson-plan/{sessionId}`: phát `FRAME_READY` (bản cập nhật) / `ACTIVITY_READY` (activity đổi) → `DONE`. Lỗi → `ERROR`, giữ bản lưu cuối (REL-02). Map: UC-27 AI edit, MSG06/07.
+AI tự chọn một `targetId` trong danh sách và trả phần thân đã viết lại. Frontend render preview để giáo viên Chấp nhận/Bỏ; Chấp nhận thì thay đúng range section trong TipTap và auto-save như edit tay. Không dùng STOMP cho luồng này vì request nhỏ và đồng bộ. Map: UC-27 AI edit, MSG06/07.
 
 ### 10. `DELETE /api/lesson-plans/{id}` — Xóa
 ```

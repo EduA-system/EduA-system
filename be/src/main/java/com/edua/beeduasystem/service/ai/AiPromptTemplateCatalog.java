@@ -2,6 +2,7 @@ package com.edua.beeduasystem.service.ai;
 
 import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.edua.beeduasystem.service.lessonplan.LessonPlan5512PromptBuilder;
+import com.edua.beeduasystem.service.lessonplan.LessonPlanEditPromptBuilder;
 import com.edua.beeduasystem.service.molecule.MoleculePromptBuilder;
 import com.edua.beeduasystem.service.slidedesign.SlideDesignPromptBuilder;
 import com.edua.beeduasystem.service.slides.SlidePromptBuilder;
@@ -16,13 +17,13 @@ public class AiPromptTemplateCatalog {
                  LESSON_PLAN_MATERIALS,
                  LESSON_PLAN_ACTIVITIES_FRAME,
                  LESSON_PLAN_ACTIVITY_DETAIL -> LessonPlan5512PromptBuilder.defaultInstruction(key);
+            case LESSON_PLAN_EDIT_SECTION -> LessonPlanEditPromptBuilder.defaultInstruction();
             case SLIDE_OUTLINE_DECK_BLUEPRINT,
                  SLIDE_OUTLINE_CONTENT_MAP,
                  SLIDE_OUTLINE_STRUCTURE,
                  SLIDE_OUTLINE_MERGED,
                  SLIDE_OUTLINE_PART_SKELETON,
-                 SLIDE_OUTLINE_EXPAND_PART,
-                 SLIDE_OUTLINE_SPLIT_ITEM -> SlidePromptBuilder.defaultInstruction(key);
+                 SLIDE_OUTLINE_EXPAND_PART -> SlidePromptBuilder.defaultInstruction(key);
             case SLIDE_DESIGN_BACKGROUND,
                  SLIDE_DESIGN_STRUCTURE,
                  SLIDE_DESIGN_CONTENT_FILL,

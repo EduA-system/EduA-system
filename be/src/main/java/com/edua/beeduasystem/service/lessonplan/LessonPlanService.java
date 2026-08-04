@@ -4,6 +4,8 @@ import com.edua.beeduasystem.domain.model.lessonplan.Activity5512;
 import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
 import com.edua.beeduasystem.domain.model.lessonplan.Materials;
 import com.edua.beeduasystem.domain.model.lessonplan.Objectives;
+import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionRequest;
+import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionResponse;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateActivityDetailsRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanRequest;
 import com.edua.beeduasystem.repository.gateways.AiClient;
@@ -18,7 +20,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,6 +46,7 @@ public class LessonPlanService {
     private final TextbookCatalogRepository catalogRepository;
     private final AiClient aiClient;
     private final LessonPlan5512PromptBuilder promptBuilder;
+    private final LessonPlanEditPromptBuilder editPromptBuilder;
     private final ObjectMapper objectMapper;
     private final ExecutorService executor;
     private final AiSystemPromptService systemPromptService;
@@ -53,6 +58,7 @@ public class LessonPlanService {
     public LessonPlanService(TextbookCatalogRepository catalogRepository,
                              AiClient aiClient,
                              LessonPlan5512PromptBuilder promptBuilder,
+                             LessonPlanEditPromptBuilder editPromptBuilder,
                              ObjectMapper objectMapper,
                              @Qualifier("slideSessionExecutor") ExecutorService executor,
                              AiSystemPromptService systemPromptService,
@@ -61,6 +67,7 @@ public class LessonPlanService {
         this.catalogRepository = catalogRepository;
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
+        this.editPromptBuilder = editPromptBuilder;
         this.objectMapper = objectMapper;
         this.executor = executor;
         this.systemPromptService = systemPromptService;
@@ -147,6 +154,46 @@ public class LessonPlanService {
             // Lỗi không lường trước (NPE, serialize…) — log đủ stack + surface message thật cho FE.
             log.error("generateActivitiesDetails lỗi không lường trước", e);
             throw new LessonPlanGenerationException("Lỗi soạn chi tiết Phần III: " + e, e);
+        }
+    }
+
+    /** AI tự chọn và viết lại đúng một phần trong giáo án hiện tại do frontend trích từ editor. */
+    public EditLessonSectionResponse editSection(EditLessonSectionRequest request) {
+        validateEditSectionRequest(request);
+        Set<String> sectionIds = new HashSet<>();
+        for (EditLessonSectionRequest.SectionInput section : request.sections()) {
+            sectionIds.add(section.id());
+        }
+
+        String prompt = editPromptBuilder.buildPrompt(request);
+        EditLessonSectionResponse response = generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                EditLessonSectionResponse.class, "AI không chỉnh sửa được giáo án.",
+                "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+
+        if (isBlank(response.targetId()) || !sectionIds.contains(response.targetId())) {
+            throw new LessonPlanGenerationException("AI chọn phần giáo án không hợp lệ.", null);
+        }
+        if (isBlank(response.content())) {
+            throw new LessonPlanGenerationException("AI trả về bản sửa rỗng.", null);
+        }
+        return new EditLessonSectionResponse(response.targetId().strip(), response.content().strip());
+    }
+
+    private void validateEditSectionRequest(EditLessonSectionRequest request) {
+        if (request == null || isBlank(request.instruction())) {
+            throw new IllegalArgumentException("Thiếu yêu cầu chỉnh sửa giáo án.");
+        }
+        if (request.sections() == null || request.sections().isEmpty()) {
+            throw new IllegalArgumentException("Không có phần giáo án nào để chỉnh sửa.");
+        }
+        Set<String> ids = new HashSet<>();
+        for (EditLessonSectionRequest.SectionInput section : request.sections()) {
+            if (section == null || isBlank(section.id()) || isBlank(section.heading())) {
+                throw new IllegalArgumentException("Danh sách phần giáo án không hợp lệ.");
+            }
+            if (!ids.add(section.id())) {
+                throw new IllegalArgumentException("Danh sách phần giáo án có id trùng lặp.");
+            }
         }
     }
 

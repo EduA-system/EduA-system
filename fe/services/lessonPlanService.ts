@@ -235,14 +235,51 @@ export async function retryActivityDetail(
   return activity;
 }
 
+// ---- Edit Section (POST /api/lesson-plans/edit-section) ------------------
+export interface EditLessonSectionRequest {
+  instruction: string;
+  sections: {
+    id: string;
+    heading: string;
+    content: string;
+  }[];
+}
+
+export interface EditLessonSectionResponse {
+  targetId: string;
+  content: string;
+}
+
+export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export async function editLessonSection(
+  req: EditLessonSectionRequest,
+  authFetch: AuthFetch,
+): Promise<EditLessonSectionResponse> {
+  const res = await authFetch("/api/lesson-plans/edit-section", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Chỉnh sửa giáo án bằng AI thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
 // ---- Streaming (POST /api/lesson-plans/generate-stream) ------------------
 // Kickoff async: BE trả 202 ngay rồi đẩy tiến trình qua STOMP
 // (/topic/lesson-plan/{sessionId}). FE không đọc body — chỉ kiểm 2xx.
 export interface StartLessonPlanStreamRequest extends GenerateLessonPlanRequest {
   sessionId: string;
 }
-
-export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export async function startLessonPlanStream(
   req: StartLessonPlanStreamRequest,

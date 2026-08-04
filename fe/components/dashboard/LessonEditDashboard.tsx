@@ -247,7 +247,7 @@ export function LessonEditDashboard() {
           </div>
         </section>
 
-        <AssistantPanel collapsed={aiCollapsed} />
+        <AssistantPanel collapsed={aiCollapsed} editor={editor} authFetch={authFetch} />
       </div>
 
       {editor && mathClick ? (
