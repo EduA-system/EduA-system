@@ -1,5 +1,6 @@
 import { Client } from "@stomp/stompjs";
 import type { Activity5512 } from "@/data/lessonPlan5512Mock";
+import { BACKEND_WS_URL } from "@/lib/backend-url";
 import type { GeneratedLessonPlan } from "@/services/lessonPlanService";
 
 // Sự kiện streaming sinh giáo án 5512, khớp `LessonPlanEvent` ở BE
@@ -12,7 +13,7 @@ export type LessonPlanEvent =
   | { type: "ERROR"; sessionId: string; message: string };
 
 /**
- * Mở STOMP subscription cho một phiên sinh giáo án. Nối thẳng `ws://localhost:8080/ws`
+ * Mở STOMP subscription cho một phiên sinh giáo án. Nối thẳng BE
  * (KHÔNG qua proxy Next.js — né timeout). Tự `onClose` khi nhận DONE/ERROR.
  */
 export function connectLessonPlanStream({
@@ -26,8 +27,7 @@ export function connectLessonPlanStream({
   onEvent: (event: LessonPlanEvent) => void;
   onClose: () => void;
 }): { disconnect: () => void } {
-  const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080";
-  const brokerURL = `${wsBase}/ws`;
+  const brokerURL = `${BACKEND_WS_URL}/ws`;
   console.log("[lesson-plan WS] connecting", { brokerURL, topic });
 
   const client = new Client({

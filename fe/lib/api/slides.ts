@@ -1,9 +1,10 @@
+import { BACKEND_HTTP_URL } from "@/lib/backend-url";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 import type { SlideContentPlan } from "@/lib/slide-layout/types";
 
 export type { ContentBlock, ContentRelationship, SlideContentPlan, SlideType } from "@/lib/slide-layout/types";
 
-const BE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const BE = BACKEND_HTTP_URL;
 
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
