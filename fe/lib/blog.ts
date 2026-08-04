@@ -56,9 +56,9 @@ export function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("vi");
 }
 
-export type Summary = { id: string; title: string; subject: string; authorId: string; authorName: string; createdAt: string; commentCount: number; excerpt: string; thumbnailUrl: string | null };
-export type Comment = { id: string; content: string; authorId: string; authorName: string; createdAt: string };
-export type Detail = { id: string; title: string; content: string; subject: string; authorId: string; authorName: string; createdAt: string; comments: Comment[] };
+export type Summary = { id: string; title: string; subject: string; authorId: string; authorName: string; authorAvatarUrl: string | null; createdAt: string; commentCount: number; excerpt: string; thumbnailUrl: string | null };
+export type Comment = { id: string; content: string; authorId: string; parentCommentId: string | null; authorName: string; authorAvatarUrl: string | null; createdAt: string };
+export type Detail = { id: string; title: string; content: string; thumbnailUrl: string | null; subject: string; authorId: string; authorName: string; authorAvatarUrl: string | null; createdAt: string; comments: Comment[] };
 
 // ---- gọi BE: thêm Bearer + JSON, ném lỗi kèm message từ BE ----
 export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -86,4 +86,27 @@ export async function uploadFile(authFetch: AuthFetch, file: File): Promise<stri
   }
   const data = await res.json();
   return data.url as string;
+}
+
+/** Tạo ảnh đại diện WebP nhẹ hơn trước khi upload (cạnh dài tối đa 1280 px). */
+export async function optimizeBlogCover(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || typeof document === "undefined") return file;
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = sourceUrl;
+    await image.decode();
+    const scale = Math.min(1, 1280 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.78));
+    if (!blob) return file;
+    return new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.webp`, { type: "image/webp" });
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
 }

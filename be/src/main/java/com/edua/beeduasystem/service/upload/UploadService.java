@@ -15,11 +15,11 @@ import java.util.UUID;
 public class UploadService {
 
     private static final Set<String> ALLOWED_EXTENSIONS =
-            Set.of("docx", "pdf", "pptx", "png", "jpg", "jpeg");
+            Set.of("docx", "pdf", "pptx", "png", "jpg", "jpeg", "webp");
     private static final long MAX_SIZE_BYTES = 10L * 1024 * 1024;
     private static final String MSG13 =
             "Unsupported file type or file exceeds the maximum size. "
-                    + "Allowed: .docx, .pdf, .pptx, .png, .jpg, .jpeg (max 10 MB).";
+                    + "Allowed: .docx, .pdf, .pptx, .png, .jpg, .jpeg, .webp (max 10 MB).";
 
     private final StorageClient storageClient;
 

@@ -41,7 +41,6 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/homepage", expanded: true },
       { label: "V\u1eadt l\u00fd", icon: "physics", href: "/mo-phong-vat-ly", child: true },
-      { label: "H\u00f3a h\u1ecdc", icon: "chemistry", href: "/homepage", child: true },
       { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/periodic-table", child: true },
       { label: "C\u1ea5u t\u1ea1o ch\u1ea5t", icon: "atom", href: "/molecules", child: true },
     ],
@@ -56,7 +55,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Qu\u1ea3n tr\u1ecb",
     items: [
-      { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog/moderation", requiredRole: ["MODERATOR"] },
+      { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog-moderator", requiredRole: ["MODERATOR"] },
       { label: "Hub Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/hub-moderation", requiredRole: ["MODERATOR"] },
       { label: "Duy\u1ec7t gi\u00e1o \u00e1n tu\u1ea7n", icon: "check", href: "/lesson-plan-approval", requiredRole: ["MODERATOR"] },
       { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "PRINCIPAL"] },

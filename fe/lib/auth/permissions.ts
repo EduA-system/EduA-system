@@ -38,7 +38,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/blog":            { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/blog/create":     { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/notifications":   { requireAuth: true },
-  "/blog/moderation": { requireAuth: true, allowedRoles: ["MODERATOR"] },
+  "/blog-moderator":  { requireAuth: true, allowedRoles: ["MODERATOR"] },
   "/community-hub":   { requireAuth: false },
   "/hub-moderation":  { requireAuth: true, allowedRoles: ["MODERATOR"] },
   "/weekly-schedule": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },

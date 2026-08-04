@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 @Component
 public class BlogAuthorResolver {
 
+    public record Profile(String name, String avatarUrl) { }
+
     private final AppUserRepository userRepository;
 
     public BlogAuthorResolver(AppUserRepository userRepository) {
@@ -22,13 +24,22 @@ public class BlogAuthorResolver {
 
     /** Tên hiển thị của một tác giả; {@code null} nếu không tìm thấy. */
     public String name(UUID authorId) {
-        return userRepository.findById(authorId).map(BlogAuthorResolver::displayName).orElse(null);
+        return profile(authorId).name();
+    }
+
+    public Profile profile(UUID authorId) {
+        return userRepository.findById(authorId).map(BlogAuthorResolver::profileOf).orElse(new Profile(null, null));
     }
 
     /** Map authorId → tên hiển thị cho nhiều tác giả (batch, tránh N+1). */
     public Map<UUID, String> names(Collection<UUID> authorIds) {
         return userRepository.findAllById(authorIds).stream()
                 .collect(Collectors.toMap(AppUser::id, BlogAuthorResolver::displayName, (a, b) -> a));
+    }
+
+    public Map<UUID, Profile> profiles(Collection<UUID> authorIds) {
+        return userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(AppUser::id, BlogAuthorResolver::profileOf, (a, b) -> a));
     }
 
     /** Tên hiển thị cho từng phần tử của một danh sách, dùng lại 1 lượt nạp. */
@@ -38,5 +49,9 @@ public class BlogAuthorResolver {
 
     private static String displayName(AppUser user) {
         return user.fullName() != null && !user.fullName().isBlank() ? user.fullName() : user.email();
+    }
+
+    private static Profile profileOf(AppUser user) {
+        return new Profile(displayName(user), user.avatarUrl());
     }
 }

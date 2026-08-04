@@ -36,6 +36,7 @@ public class JpaBlogPostRepository implements BlogPostRepository {
         e.setAuthorId(post.authorId());
         e.setTitle(post.title());
         e.setContent(post.content());
+        e.setThumbnailUrl(post.thumbnailUrl());
         e.setSubject(post.subject());
         e.setStatus(post.status());
         e.setRemovedReason(post.removedReason());
@@ -86,6 +87,7 @@ public class JpaBlogPostRepository implements BlogPostRepository {
                 e.getAuthorId(),
                 e.getTitle(),
                 e.getContent(),
+                e.getThumbnailUrl(),
                 e.getSubject(),
                 e.getStatus(),
                 e.getRemovedReason(),

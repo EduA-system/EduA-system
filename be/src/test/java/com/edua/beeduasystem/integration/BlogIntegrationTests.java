@@ -320,7 +320,31 @@ class BlogIntegrationTests {
     }
 
     @Test
-    void IT_BL_009_moderatorViewsSameSubjectBlogModerationList() throws Exception {
+    void IT_BL_009_postAuthorSoftHidesAnotherUsersComment() throws Exception {
+        AppUser author = user("author-009@blog-it.edua.local", "Author Nine", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
+        AppUser commenter = user("commenter-009@blog-it.edua.local", "Commenter Nine", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
+        AppUser outsider = user("outsider-009@blog-it.edua.local", "Outsider Nine", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
+        UUID postId = seedPost(author.id(), "Hide Comment Blog", "<p>Body</p>", Subject.MATH, "PUBLISHED", null, null);
+        UUID commentId = seedComment(postId, commenter.id(), "Hide this comment");
+
+        mockMvc.perform(post("/api/blog-comments/{commentId}/hide", commentId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(author, Role.TEACHER)))
+                .andExpect(status().isNoContent());
+
+        Map<String, Object> hidden = requireComment(commentId);
+        assertThat(hidden.get("hidden_at")).isNotNull();
+        assertThat(hidden.get("hidden_by")).isEqualTo(author.id());
+        mockMvc.perform(get("/api/blog-posts/{id}", postId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(author, Role.TEACHER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments").isEmpty());
+        mockMvc.perform(post("/api/blog-comments/{commentId}/hide", commentId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(outsider, Role.TEACHER)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void IT_BL_010_moderatorViewsSameSubjectBlogModerationList() throws Exception {
         AppUser moderator = user("moderator-009@blog-it.edua.local", "Math Moderator Nine", Subject.MATH, UserStatus.ACTIVE, Role.MODERATOR);
         AppUser teacher = user("teacher-009@blog-it.edua.local", "Teacher Nine", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
         seedPost(teacher.id(), "Math Moderation Candidate", "<p>Math post</p>", Subject.MATH, "PUBLISHED", null, null);
@@ -491,6 +515,7 @@ class BlogIntegrationTests {
                     author_id UUID NOT NULL,
                     title VARCHAR(255) NOT NULL,
                     content TEXT NOT NULL,
+                    thumbnail_url VARCHAR(1000),
                     subject VARCHAR(20) NOT NULL,
                     status VARCHAR(20) NOT NULL,
                     removed_reason TEXT,
@@ -499,16 +524,23 @@ class BlogIntegrationTests {
                     updated_at TIMESTAMPTZ NOT NULL
                 )
                 """);
+        jdbc.execute("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR(1000)");
         jdbc.execute("""
                 CREATE TABLE IF NOT EXISTS blog_comments (
                     id UUID PRIMARY KEY,
                     post_id UUID NOT NULL,
                     author_id UUID NOT NULL,
+                    parent_comment_id UUID,
                     content TEXT NOT NULL,
                     created_at TIMESTAMPTZ NOT NULL,
-                    updated_at TIMESTAMPTZ NOT NULL
+                    updated_at TIMESTAMPTZ NOT NULL,
+                    hidden_at TIMESTAMPTZ,
+                    hidden_by UUID
                 )
                 """);
+        jdbc.execute("ALTER TABLE blog_comments ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ");
+        jdbc.execute("ALTER TABLE blog_comments ADD COLUMN IF NOT EXISTS hidden_by UUID");
+        jdbc.execute("ALTER TABLE blog_comments ADD COLUMN IF NOT EXISTS parent_comment_id UUID");
         jdbc.execute("""
                 CREATE TABLE IF NOT EXISTS activity_logs (
                     id UUID PRIMARY KEY,
