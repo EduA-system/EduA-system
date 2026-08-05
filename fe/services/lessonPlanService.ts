@@ -242,6 +242,8 @@ export interface EditLessonSectionRequest {
     id: string;
     heading: string;
     content: string;
+    /** Cấu trúc bảng mà mục đang chứa — xem `lessonSections.ts#SectionKind`. */
+    kind: string;
   }[];
 }
 

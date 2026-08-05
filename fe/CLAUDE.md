@@ -19,16 +19,15 @@ npm run dev        # http://localhost:3000
 npm run build      # production build
 npm run lint       # eslint (flat config in eslint.config.mjs)
 npm run typecheck  # tsc --noEmit
+npm test           # vitest run (slide-editor/lib, lib/api, lib/slide-create, lib/slide-layout, simulations)
 ```
-
-No test runner configured yet.
 
 ## Project Conventions
 
-- **Routes:** `fe/app/` — folders under `app/` are routes. Current routes: `/` (re-exports `/home`), `/home`, `/lesson-create`, `/lesson-edit`, `/homepage`.
+- **Routes:** `fe/app/` — folders under `app/` are routes; for the current route list and feature grouping see the "Frontend Architecture" section in the root `CLAUDE.md` (routes have grown well beyond lesson planning — classroom/exam workflows, blog/community, admin screens, etc.). Don't hardcode a route list here; it drifts fast — check `fe/app/` directly.
 - **Import alias:** `@/*` maps to the `fe/` root.
 - **Tailwind v4:** Utility classes only. No theme config file. Global styles in `app/globals.css`.
 - **Fonts:** Inter (Google Fonts, Latin + Vietnamese subsets) + SVN-Linux Libertine (local TTF, weights 400/700, normal/italic). CSS variables: `--font-inter`, `--font-libertine`.
 - **Language:** `<html lang="vi">`.
-- **Components:** Shared components under `fe/components/` (LessonEditor, dashboard, layout, ui).
+- **Components:** Shared components under `fe/components/`, organized by product area (see root `CLAUDE.md`).
 - **Static assets:** `fe/public/` (dashboard icons in `dashboard/icons/`, home page assets in `home/`, screenshots at root).

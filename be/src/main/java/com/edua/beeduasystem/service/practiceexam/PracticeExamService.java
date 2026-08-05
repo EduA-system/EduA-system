@@ -308,12 +308,14 @@ public class PracticeExamService {
                 Mỗi phần tử phải đúng schema: {"order":number,"type":"...","content":"...","options":[{"key":"A","content":"..."}],"answer":{},"explanation":"...","scoreCentiPoints":number,"rubric":[{"criterion":"...","scoreCentiPoints":number}],"sourceLessonRefs":[{"bookCode":"...","chapterCode":"...","lessonCode":"..."}]}.
                 Tạo CHÍNH XÁC __QUESTION_COUNT__ câu loại __QUESTION_TYPE__, tổng __BATCH_SCORE__ centi điểm. MULTIPLE_CHOICE và TRUE_FALSE có đúng 4 options. ESSAY có rubric cộng đúng điểm. Mỗi câu phải có nguồn thuộc phạm vi. Nội dung và giải thích ngắn gọn.
                 QUY TẮC ĐỊNH DẠNG: Chỉ dùng văn bản thường cho nội dung diễn đạt, phương án A/B/C/D là chữ, và đơn vị đơn giản như "100 m", "10 phút". Mọi công thức toán, vật lí, hoá học; phân số, căn, mũ/chỉ số, phương trình phản ứng, vector hoặc ký hiệu khoa học PHẢI viết bằng LaTeX. Công thức trong câu đặt trong MỘT cặp $...$ duy nhất, ví dụ "$v_{tb} = \\frac{s}{t}$", "$\\sqrt{5^2 + 5^2}$", "$\\vec{F_1}$", "$N_2$"; không được đóng $ trước khi công thức kết thúc. Lời giải tính toán nhiều bước PHẢI nằm trọn trong MỘT khối $$...$$ duy nhất; không được tách từng lệnh \\sqrt, \\cdot, \\cos, \\theta, \\approx, \\Rightarrow thành dòng hay thành nhiều khối. Luôn viết vector đúng cú pháp \\vec{F_1}, \\vec{F_2}; không viết vecF_1, \\vecF_1 hoặc \\vec F_1. Phân số PHẢI có ngoặc nhọn, ví dụ \\frac{1}{2}, \\frac{F}{m}; không viết \\frac12, frac12, fracFm. Không viết thiếu dấu gạch chéo như frac, cdot, approx, textm/s. Không viết công thức dạng văn bản thường như "v = s/t", "sqrt(5^2 + 5^2)", "NH4+ + OH- → NH3 + H2O". Trong JSON, phải escape mọi dấu gạch chéo ngược của LaTeX, ví dụ "\\\\frac", "\\\\sqrt", "\\\\mathrm", "\\\\vec".
+                MỤC TIÊU CỦA GIÁO VIÊN (ưu tiên bám sát khi chọn nội dung câu hỏi, vẫn phải nằm trong phạm vi SGK): __TEACHER_OBJECTIVE__
                 CẤU HÌNH ĐỀ: __REQUEST_CONFIG__
                 KNOWLEDGE_JSON: __KNOWLEDGE__
                 __RETRY_INSTRUCTION__"""
                 .replace("__QUESTION_COUNT__", String.valueOf(batchCount))
                 .replace("__QUESTION_TYPE__", type.type())
                 .replace("__BATCH_SCORE__", String.valueOf(batchScore))
+                .replace("__TEACHER_OBJECTIVE__", blank(request.objective()) ? "Không có yêu cầu đặc biệt." : request.objective())
                 .replace("__REQUEST_CONFIG__", objectMapper.writeValueAsString(request))
                 .replace("__KNOWLEDGE__", objectMapper.writeValueAsString(knowledge))
                 .replace("__RETRY_INSTRUCTION__", compactRetry

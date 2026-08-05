@@ -2,30 +2,43 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BookOpen, X } from "lucide-react";
 import { Sidebar } from "../layout/Sidebar";
 import { DashboardIcon } from "../ui/DashboardIcon";
+import { RichView } from "../blog/RichView";
 import { STYLE_OPTIONS } from "./slideData";
 import { writeSlideCreateSession } from "@/lib/slide-create/session";
 import { getLibraryContent, listLibrary, type LibraryContent } from "@/lib/library";
-import { getTiptapDocument, tiptapToStructuredText } from "@/lib/tiptap-to-text";
+import { getTiptapDocument, tiptapToStructuredText, type TiptapNode } from "@/lib/tiptap-to-text";
 import { useAuth } from "@/lib/auth/AuthContext";
 
-type Tab = "library" | "upload";
-type LessonCard = { id: string; title: string; description: string; subject: string; grade: string; updatedAt: string; icon: "book" };
+type LessonCard = { id: string; title: string; description: string; subject: string; grade: string; updatedAt: string };
 const subjectLabel: Record<string, string> = { PHYSICS: "Vật lý", CHEMISTRY: "Hóa học", MATH: "Toán học" };
+
+/** Same "Bài giảng" thumbnail treatment as the personal-library card (`fe/app/library/page.tsx`). */
+function formatUpdatedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Vừa cập nhật";
+  return `Cập nhật ${new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date)}`;
+}
+const DEFAULT_SLIDE_COUNT = 12;
+const DEFAULT_STYLE_HINT = STYLE_OPTIONS[0];
 
 export function SlideCreateDashboard() {
   const router = useRouter();
   const { authFetch, status: authStatus } = useAuth();
-  const [tab, setTab] = useState<Tab>("library");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [items, setItems] = useState<LibraryContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [libraryError, setLibraryError] = useState("");
   const [selectedId, setSelectedId] = useState<string>("");
-  const [slideCount, setSlideCount] = useState(12);
-  const [styleHint, setStyleHint] = useState<string>(STYLE_OPTIONS[0]);
+
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewDetail, setPreviewDetail] = useState<LibraryContent | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const loadLibrary = useCallback(async () => {
     if (authStatus === "loading") return;
@@ -47,7 +60,7 @@ export function SlideCreateDashboard() {
 
   const lessons = useMemo<LessonCard[]>(() => items.map((item) => ({
     id: item.id, title: item.title, description: "Giáo án đã lưu trong thư viện", subject: item.subject ? subjectLabel[item.subject] ?? item.subject : "Chưa phân môn",
-    grade: "Giáo án", updatedAt: new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(new Date(item.updatedAt)), icon: "book",
+    grade: "Giáo án", updatedAt: item.updatedAt,
   })), [items]);
   const visible = useMemo<LessonCard[]>(() => {
     return lessons.filter((lesson) => {
@@ -60,18 +73,58 @@ export function SlideCreateDashboard() {
     });
   }, [lessons, query, filter]);
 
-  const selected =
-    lessons.find((lesson) => lesson.id === selectedId) ?? null;
+  const previewLesson =
+    lessons.find((lesson) => lesson.id === previewId) ?? null;
+  const previewDocument = useMemo<TiptapNode | null>(() => {
+    if (!previewDetail) return null;
+    try { return getTiptapDocument(previewDetail.payload); } catch { return null; }
+  }, [previewDetail]);
 
-  async function handleCreateSlide() {
-    if (!selected) return;
+  const openPreview = useCallback(async (lesson: LessonCard) => {
+    setSelectedId(lesson.id);
+    setPreviewId(lesson.id);
+    setPreviewDetail(null);
+    setPreviewError("");
+    setPreviewLoading(true);
     try {
-      const detail = await getLibraryContent(authFetch, selected.id);
+      const detail = await getLibraryContent(authFetch, lesson.id);
+      setPreviewDetail(detail);
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : "Không thể tải nội dung giáo án.");
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [authFetch]);
+  const closePreview = useCallback(() => setPreviewId(null), []);
+
+  async function createSlideFromDetail(lesson: LessonCard, detail: LibraryContent) {
+    setCreating(true);
+    try {
       const lessonContent = tiptapToStructuredText(getTiptapDocument(detail.payload));
-      writeSlideCreateSession({ lessonCardId: detail.id, libraryContentId: detail.id, lessonTitle: detail.title, lessonSummary: selected.description,
-        subject: detail.subject ? subjectLabel[detail.subject] ?? detail.subject : "", grade: selected.grade, styleHint, slideCount, lessonContent });
+      writeSlideCreateSession({ lessonCardId: detail.id, libraryContentId: detail.id, lessonTitle: detail.title, lessonSummary: lesson.description,
+        subject: detail.subject ? subjectLabel[detail.subject] ?? detail.subject : "", grade: lesson.grade,
+        styleHint: DEFAULT_STYLE_HINT, slideCount: DEFAULT_SLIDE_COUNT, lessonContent });
       router.push("/slide-create/outline");
-    } catch (error) { setLibraryError(error instanceof Error ? error.message : "Không thể đọc giáo án đã chọn."); }
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : "Không thể đọc giáo án đã chọn.");
+      setCreating(false);
+    }
+  }
+
+  async function handleCreateFromPreview() {
+    if (!previewLesson) return;
+    if (previewDetail && previewDetail.id === previewLesson.id) {
+      await createSlideFromDetail(previewLesson, previewDetail);
+      return;
+    }
+    setCreating(true);
+    try {
+      const detail = await getLibraryContent(authFetch, previewLesson.id);
+      await createSlideFromDetail(previewLesson, detail);
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : "Không thể đọc giáo án đã chọn.");
+      setCreating(false);
+    }
   }
 
   return (
@@ -89,73 +142,50 @@ export function SlideCreateDashboard() {
           </nav>
         </header>
 
-        {/* Body: cards + right panel */}
-        <div className="flex min-h-0 flex-1">
-          <div className="min-w-0 flex-1 overflow-y-auto px-8 py-8">
-            <div className="mx-auto w-full max-w-[980px]">
-              {/* Title */}
-              <h1 className="text-[30px] font-medium leading-[37.5px] text-[#1a1a2e]">
-                Tạo bộ Slide mới
-              </h1>
-              <p className="mt-1 text-[14px] leading-5 text-[#9998be]">
-                Chọn giáo án và để AI lo phần còn lại cho bạn.
-              </p>
+        {/* Body: cards */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-8 py-8">
+          <div className="mx-auto w-full max-w-[1280px]">
+            {/* Title */}
+            <h1 className="text-[30px] font-medium leading-[37.5px] text-[#1a1a2e]">
+              Tạo bộ Slide mới
+            </h1>
+            <p className="mt-1 text-[14px] leading-5 text-[#9998be]">
+              Chọn giáo án và để AI lo phần còn lại cho bạn.
+            </p>
 
-              {/* Tab switcher */}
-              <div className="mt-8 inline-flex gap-1 rounded-2xl bg-[rgba(26,26,46,0.06)] p-1">
-                <TabButton
-                  active={tab === "library"}
-                  onClick={() => setTab("library")}
-                  icon="book"
-                  label="Chọn từ thư viện"
-                />
-                <TabButton
-                  active={tab === "upload"}
-                  onClick={() => setTab("upload")}
-                  icon="upload"
-                  label="Tải lên giáo án"
-                  hint=".docx, .pdf"
+            {/* Search + filter */}
+            <div className="mt-8 flex items-center gap-3">
+              <div className="flex h-[38px] flex-1 items-center gap-2 rounded-xl border border-[rgba(26,26,46,0.09)] bg-white px-[15px]">
+                <span className="text-[#aeacb8]">
+                  <SearchIcon />
+                </span>
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Tìm kiếm giáo án..."
+                  className="h-full w-full bg-transparent text-[12px] text-[#1a1a2e] placeholder:text-[rgba(26,26,46,0.5)] focus:outline-none"
                 />
               </div>
-
-              {tab === "library" ? (
-                <>
-                  {/* Search + filter */}
-                  <div className="mt-5 flex items-center gap-3">
-                    <div className="flex h-[38px] flex-1 items-center gap-2 rounded-xl border border-[rgba(26,26,46,0.09)] bg-white px-[15px]">
-                      <span className="text-[#aeacb8]">
-                        <SearchIcon />
-                      </span>
-                      <input
-                        value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Tìm kiếm giáo án..."
-                        className="h-full w-full bg-transparent text-[12px] text-[#1a1a2e] placeholder:text-[rgba(26,26,46,0.5)] focus:outline-none"
-                      />
-                    </div>
-                    <FilterSelect value={filter} onChange={setFilter} />
-                  </div>
-
-                  {/* Cards */}
-                  {loading ? <p className="mt-6 text-[13px] text-[#9998be]">Đang tải giáo án…</p> : libraryError ? <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-700">{libraryError} <button type="button" onClick={() => void loadLibrary()} className="underline">Thử lại</button></div> : <CardGrid lessons={visible} selectedId={selectedId} onSelect={setSelectedId} />}
-                </>
-              ) : (
-                <UploadPanel />
-              )}
+              <FilterSelect value={filter} onChange={setFilter} />
             </div>
-          </div>
 
-          {/* Right config panel */}
-          <ConfigPanel
-            selected={selected}
-            slideCount={slideCount}
-            styleHint={styleHint}
-            onSlideCountChange={setSlideCount}
-            onStyleChange={setStyleHint}
-            onCreate={() => void handleCreateSlide()}
-          />
+            {/* Cards */}
+            {loading ? <p className="mt-6 text-[13px] text-[#9998be]">Đang tải giáo án…</p> : libraryError ? <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-700">{libraryError} <button type="button" onClick={() => void loadLibrary()} className="underline">Thử lại</button></div> : <CardGrid lessons={visible} selectedId={selectedId} onOpen={(lesson) => void openPreview(lesson)} />}
+          </div>
         </div>
       </section>
+
+      {previewId ? (
+        <LessonPreviewModal
+          title={previewLesson?.title ?? previewDetail?.title ?? "Giáo án"}
+          loading={previewLoading}
+          error={previewError}
+          document={previewDocument}
+          creating={creating}
+          onClose={closePreview}
+          onCreate={() => void handleCreateFromPreview()}
+        />
+      ) : null}
     </main>
   );
 }
@@ -190,40 +220,6 @@ function SearchIcon() {
   );
 }
 
-function TabButton({
-  active,
-  onClick,
-  icon,
-  label,
-  hint,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: string;
-  label: string;
-  hint?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-2 rounded-xl px-4 py-2 text-[12px] font-medium transition ${
-        active
-          ? "bg-white text-[#1a1a2e] shadow-[0_1px_2px_rgba(26,26,46,0.1)]"
-          : "text-[#9998be] hover:text-[#1a1a2e]"
-      }`}
-    >
-      <DashboardIcon name={icon} className="size-[13px]" />
-      <span className={active ? "font-medium text-[#1a1a2e]" : "text-[#9998be]"}>
-        {label}
-      </span>
-      {hint ? (
-        <span className="text-[10px] font-normal text-[#aeacb8]">{hint}</span>
-      ) : null}
-    </button>
-  );
-}
-
 function FilterSelect({
   value,
   onChange,
@@ -253,11 +249,11 @@ function FilterSelect({
 function CardGrid({
   lessons,
   selectedId,
-  onSelect,
+  onOpen,
 }: {
   lessons: LessonCard[];
   selectedId: string;
-  onSelect: (id: string) => void;
+  onOpen: (lesson: LessonCard) => void;
 }) {
   if (lessons.length === 0) {
     return (
@@ -267,13 +263,13 @@ function CardGrid({
     );
   }
   return (
-    <div className="mt-5 grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+    <div className="mt-6 grid grid-cols-3 gap-5">
       {lessons.map((lesson) => (
         <LessonCardItem
           key={lesson.id}
           lesson={lesson}
           active={lesson.id === selectedId}
-          onClick={() => onSelect(lesson.id)}
+          onClick={() => onOpen(lesson)}
         />
       ))}
     </div>
@@ -293,254 +289,109 @@ function LessonCardItem({
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex flex-col rounded-2xl border bg-white p-[17px] text-left transition ${
-        active
-          ? "border-[#1c1b2e] shadow-[0_4px_16px_rgba(26,26,46,0.09)]"
-          : "border-[rgba(26,26,46,0.08)] shadow-[0_1px_2px_rgba(26,26,46,0.04)] hover:border-[rgba(26,26,46,0.2)]"
+      aria-label={`Xem trước ${lesson.title}`}
+      className={`group relative min-w-0 rounded-[26px] border bg-white text-left shadow-[0_8px_24px_rgba(43,41,38,0.10)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(43,41,38,0.16)] ${
+        active ? "border-[#8200db]/50" : "border-[#dfe7eb] hover:border-[#cbdde4]"
       }`}
     >
-      {/* Selected radio */}
-      <span
-        aria-hidden
-        className={`absolute right-3.5 top-3.5 flex size-4 items-center justify-center rounded-full border-2 transition ${
-          active
-            ? "border-[#1c1b2e] bg-[#1c1b2e]"
-            : "border-[rgba(26,26,46,0.2)] bg-white"
-        }`}
-      >
-        {active ? (
-          <span className="block size-1.5 rounded-full bg-white" />
-        ) : null}
-      </span>
+      <div className="flex h-full flex-col overflow-visible rounded-[26px] bg-[#f8fbfc] p-3">
+        <div className="flex items-center gap-2 px-1 pb-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#dff8f3] text-[#167b70]">
+            <BookOpen aria-hidden className="size-5" />
+          </div>
+          <p className="min-w-0 flex-1 truncate text-sm font-bold text-[#363a43]">
+            Bài giảng {lesson.subject}
+          </p>
+        </div>
 
-      {/* Icon */}
-      <div className="flex size-9 items-center justify-center rounded-xl bg-[#f9f8f3] text-[#5c5b6e]">
-        <DashboardIcon name={lesson.icon} className="size-4" />
+        <div className="relative block aspect-[16/7] overflow-hidden rounded-2xl border border-[#d7e6eb] bg-gradient-to-br from-amber-100 via-orange-50 to-stone-100">
+          <div className="flex h-full flex-col items-center justify-center gap-4 text-[#275c68]">
+            <span className="flex size-20 items-center justify-center rounded-[28px] bg-white/60 shadow-sm">
+              <BookOpen aria-hidden className="size-10" />
+            </span>
+            <span className="text-xs font-bold uppercase tracking-[0.2em]">Bài giảng</span>
+          </div>
+        </div>
+
+        <div className="px-2 pb-1 pt-2">
+          <p className="line-clamp-1 text-base font-bold leading-5 text-[#30343d]">{lesson.title}</p>
+        </div>
+
+        <div className="mt-auto flex items-center gap-2 rounded-2xl bg-white p-2 shadow-[0_2px_8px_rgba(43,41,38,0.08)]">
+          <div className="min-w-0 flex-1 px-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Cập nhật</p>
+            <p className="truncate text-xs font-medium text-stone-600">{formatUpdatedAt(lesson.updatedAt)}</p>
+          </div>
+          <span className="inline-flex items-center justify-center rounded-xl border border-[#1f2431] bg-[#292d3b] px-5 py-3 text-sm font-bold text-white transition group-hover:bg-[#141825]">
+            Xem trước
+          </span>
+        </div>
       </div>
-
-      {/* Title + description */}
-      <h3 className="mt-3 pr-6 text-[14px] font-medium leading-[19px] text-[#1a1a2e]">
-        {lesson.title}
-      </h3>
-      <p className="mt-1.5 line-clamp-2 text-[11px] font-medium leading-[18px] text-[#9998be]">
-        {lesson.description}
-      </p>
-
-      {/* Tags */}
-      <div className="mt-3 flex items-center gap-2">
-        <SubjectBadge subject={lesson.subject} />
-        <span className="rounded-full border border-[rgba(26,26,46,0.1)] bg-[#f9f8f3] px-2.5 py-[3px] text-[10px] font-medium text-[#7a7870]">
-          {lesson.grade}
-        </span>
-      </div>
-
-      <p className="mt-2 text-[10px] font-medium text-[#aeacb8]">
-        Sửa lần cuối {lesson.updatedAt}
-      </p>
     </button>
   );
 }
 
-function SubjectBadge({ subject }: { subject: string }) {
-  // Figma uses the purple pill for both subjects (#faf5ff / #8200db)
-  return (
-    <span className="flex items-center gap-1 rounded-full border border-[#f3e8ff] bg-[#faf5ff] px-2.5 py-[3px] text-[10px] font-medium text-[#8200db]">
-      <span className="block size-1.5 rounded-full bg-[#c27aff]" />
-      {subject}
-    </span>
-  );
-}
-
-function UploadPanel() {
-  return (
-    <div className="mt-5 flex flex-col items-center justify-center rounded-2xl border border-dashed border-[rgba(26,26,46,0.12)] bg-white/50 px-6 py-16 text-center">
-      <div className="flex size-12 items-center justify-center rounded-2xl bg-[#f9f8f3] text-[#5c5b6e]">
-        <DashboardIcon name="upload" className="size-5" />
-      </div>
-      <p className="mt-4 text-[14px] font-medium text-[#1a1a2e]">
-        Kéo thả giáo án vào đây
-      </p>
-      <p className="mt-1 text-[12px] text-[#9998be]">
-        Hoặc bấm để chọn tệp — hỗ trợ .docx, .pdf (tối đa 20MB)
-      </p>
-      <button
-        type="button"
-        className="mt-5 flex h-[40px] items-center gap-2 rounded-xl border border-[rgba(26,26,46,0.1)] bg-white px-5 text-[12px] font-medium text-[#1a1a2e] transition hover:border-[rgba(26,26,46,0.2)]"
-      >
-        <DashboardIcon name="upload" className="size-[13px]" />
-        Chọn tệp từ máy tính
-      </button>
-    </div>
-  );
-}
-
-function ConfigPanel({
-  selected,
-  slideCount,
-  styleHint,
-  onSlideCountChange,
-  onStyleChange,
+function LessonPreviewModal({
+  title,
+  loading,
+  error,
+  document,
+  creating,
+  onClose,
   onCreate,
 }: {
-  selected: LessonCard | null;
-  slideCount: number;
-  styleHint: string;
-  onSlideCountChange: (value: number) => void;
-  onStyleChange: (value: string) => void;
+  title: string;
+  loading: boolean;
+  error: string;
+  document: TiptapNode | null;
+  creating: boolean;
+  onClose: () => void;
   onCreate: () => void;
 }) {
   return (
-    <aside className="hidden w-[340px] shrink-0 flex-col overflow-y-auto border-l border-[rgba(26,26,46,0.07)] bg-[#f9f8f3] xl:flex">
-      <div className="flex items-center gap-1.5 px-6 pb-3 pt-6 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#aeacb8]">
-        <span className="flex size-4 items-center justify-center rounded-[5px] border border-[#c27aff]/25 bg-[#faf5ff] text-[#8200db]">
-          <DashboardIcon name="aiBadge" className="size-[9px]" />
-        </span>
-        Cấu hình
-      </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <div className="flex h-[80vh] w-[80vw] max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <header className="flex items-center justify-between gap-4 border-b border-[rgba(26,26,46,0.08)] px-6 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Đóng"
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#5c5b6e] transition hover:bg-[rgba(26,26,46,0.06)]"
+            >
+              <X className="size-4" />
+            </button>
+            <h2 className="truncate text-[15px] font-semibold text-[#1a1a2e]">{title}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onCreate}
+            disabled={loading || creating || !document}
+            className="flex h-[38px] shrink-0 items-center gap-2 rounded-xl bg-[#1c1b2e] px-4 text-[13px] font-medium text-[#f9f8f3] transition enabled:hover:bg-[#2a2940] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <DashboardIcon name="createSlide" className="size-4" />
+            {creating ? "Đang xử lý…" : "Tạo Slide"}
+          </button>
+        </header>
 
-      <div className="flex-1 px-6 pb-6">
-        {/* Đã chọn */}
-        <FieldLabel>Đã chọn</FieldLabel>
-        <div className="mt-2">
-          {selected ? (
-            <div className="flex items-center gap-3 rounded-xl border border-[rgba(26,26,46,0.08)] bg-white p-3 shadow-[0_1px_2px_rgba(26,26,46,0.04)]">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-[#f9f8f3] text-[#5c5b6e]">
-                <DashboardIcon name={selected.icon} className="size-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[13px] font-medium text-[#1a1a2e]">
-                  {selected.title}
-                </p>
-                <p className="truncate text-[11px] text-[#9998be]">
-                  {selected.subject} · {selected.grade}
-                </p>
-              </div>
-            </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-10 py-8">
+          {loading ? (
+            <p className="text-[13px] text-[#9998be]">Đang tải nội dung giáo án…</p>
+          ) : error ? (
+            <p className="text-[13px] text-red-600">{error}</p>
+          ) : document ? (
+            <RichView html={document} variant="document" />
           ) : (
-            <p className="rounded-xl border border-dashed border-[rgba(26,26,46,0.12)] px-3 py-4 text-center text-[12px] text-[#aeacb8]">
-              Chưa chọn giáo án nào
-            </p>
+            <p className="text-[13px] text-[#9998be]">Không thể hiển thị nội dung giáo án này.</p>
           )}
         </div>
-
-        {/* Số slide */}
-        <div className="mt-5">
-          <FieldLabel>Số slide dự kiến</FieldLabel>
-          <div className="mt-2">
-            <StepperField value={slideCount} onChange={onSlideCountChange} />
-          </div>
-        </div>
-
-        {/* Phong cách */}
-        <div className="mt-5">
-          <FieldLabel>Phong cách thiết kế</FieldLabel>
-          <div className="mt-2">
-            <ConfigSelect options={[...STYLE_OPTIONS]} value={styleHint} onChange={onStyleChange} />
-          </div>
-        </div>
-
-        {/* Thêm nhanh */}
-        <div className="mt-5">
-          <FieldLabel>Thêm nhanh</FieldLabel>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {["Hình minh họa", "Bài tập", "Câu hỏi", "Tóm tắt"].map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                className="flex items-center gap-1.5 rounded-full border border-[rgba(26,26,46,0.1)] bg-white px-3 py-1.5 text-[11px] font-medium text-[#5c5b6e] transition hover:border-[rgba(26,26,46,0.2)]"
-              >
-                <DashboardIcon name="chipQuestion" className="size-2.5" />
-                {chip}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
-
-      {/* Footer / generate */}
-      <div className="border-t border-[rgba(26,26,46,0.07)] px-6 py-5">
-        <button
-          type="button"
-          disabled={!selected}
-          onClick={onCreate}
-          className="flex h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#1c1b2e] text-[13px] font-medium text-[#f9f8f3] transition enabled:hover:bg-[#2a2940] disabled:cursor-not-allowed disabled:bg-[rgba(26,26,46,0.15)] disabled:text-[#aeacb8]"
-        >
-          <DashboardIcon name="createSlide" className="size-4" />
-          Tạo Slide
-        </button>
-        <p className="mt-2 text-center text-[10px] leading-[15px] text-[#9998be]">
-          AI sẽ tạo bộ slide dựa trên giáo án đã chọn
-        </p>
-      </div>
-    </aside>
-  );
-}
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="text-[12px] font-medium text-[#5c5b6e]">{children}</label>
-  );
-}
-
-function ConfigSelect({
-  options,
-  value,
-  onChange,
-}: {
-  options: string[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-[40px] w-full cursor-pointer appearance-none rounded-xl border border-[rgba(26,26,46,0.09)] bg-white px-3 text-[12px] font-medium text-[#1a1a2e] focus:outline-none"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#aeacb8]">
-        <DashboardIcon name="chevronDown" className="size-3" />
-      </span>
     </div>
   );
 }
 
-function StepperField({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <div className="flex h-[40px] items-center justify-between rounded-xl border border-[rgba(26,26,46,0.09)] bg-white px-2">
-      <button
-        type="button"
-        onClick={() => onChange(Math.max(1, value - 1))}
-        className="flex size-8 items-center justify-center rounded-lg text-[#5c5b6e] transition hover:bg-[rgba(26,26,46,0.05)]"
-        aria-label="Giảm"
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-          <path d="M3 6H9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-      </button>
-      <span className="text-[13px] font-semibold text-[#1a1a2e]">{value}</span>
-      <button
-        type="button"
-        onClick={() => onChange(Math.min(60, value + 1))}
-        className="flex size-8 items-center justify-center rounded-lg text-[#5c5b6e] transition hover:bg-[rgba(26,26,46,0.05)]"
-        aria-label="Tăng"
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-          <path d="M6 3V9M3 6H9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-      </button>
-    </div>
-  );
-}

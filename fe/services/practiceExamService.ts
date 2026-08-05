@@ -11,6 +11,7 @@ export type PracticeExamRequest = {
   teacherConfirmedWarning: boolean;
   questionTypes: { type: PracticeQuestionType; questionCount: number; totalScoreCentiPoints: number; itemsPerQuestion?: number }[];
   knowledgeScope: { bookCode: string; lessonRefs: { chapterCode: string; lessonCode: string }[] };
+  objective?: string;
 };
 
 export type PracticeExam = {

@@ -15,7 +15,12 @@ public record EditLessonSectionRequest(
     public record SectionInput(
             String id,
             String heading,
-            String content
+            String content,
+            /** Cấu trúc bảng mà mục đang chứa — "text" (không bảng), "materials" (bảng thiết
+             * bị/phiếu học tập), "subActivity" (bảng tổ chức/sản phẩm của tiểu hoạt động HĐ2).
+             * FE tự phát hiện qua {@code lessonSections.ts#SectionKind}; null/không nhận diện
+             * được thì coi như "text". */
+            String kind
     ) {
     }
 }

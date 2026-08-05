@@ -2,25 +2,20 @@
 
 import { useMemo, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import { aiSectionTextToHtml } from "../LessonEditor";
+import { extractEditableSections } from "../LessonEditor/lessonSections";
 import {
-  extractEditableSections,
-  replaceSectionRange,
-  type EditableLessonSection,
-} from "../LessonEditor/lessonSections";
+  buildSectionDiffHtml,
+  diffSectionLines,
+  insertSectionDiff,
+  resolveSectionDiff,
+} from "../LessonEditor/sectionDiff";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import {
   editLessonSection,
   type AuthFetch,
 } from "@/services/lessonPlanService";
 
-type AssistantStatus = "idle" | "loading" | "preview" | "error";
-
-type Proposal = {
-  targetId: string;
-  headingLabel: string;
-  previewHtml: string;
-};
+type AssistantStatus = "idle" | "loading" | "error";
 
 interface AssistantPanelProps {
   collapsed?: boolean;
@@ -31,12 +26,14 @@ interface AssistantPanelProps {
 export function AssistantPanel({ collapsed = false, editor = null, authFetch }: AssistantPanelProps) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<AssistantStatus>("idle");
-  const [proposal, setProposal] = useState<Proposal | null>(null);
+  // Mục đang có diff chờ Chấp nhận/Bỏ (đang hiện trực tiếp trong editor chính) — v1 chỉ
+  // cho 1 đề xuất tại 1 thời điểm, chặn gửi yêu cầu mới cho tới khi xử lý xong.
+  const [pendingHeading, setPendingHeading] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   const canSubmit = useMemo(
-    () => Boolean(editor && authFetch && input.trim() && status !== "loading"),
-    [authFetch, editor, input, status],
+    () => Boolean(editor && authFetch && input.trim() && status !== "loading" && !pendingHeading),
+    [authFetch, editor, input, pendingHeading, status],
   );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -46,7 +43,7 @@ export function AssistantPanel({ collapsed = false, editor = null, authFetch }: 
       return;
     }
     const instruction = input.trim();
-    if (!instruction) return;
+    if (!instruction || pendingHeading) return;
 
     const sections = extractEditableSections(editor);
     if (sections.length === 0) {
@@ -55,7 +52,6 @@ export function AssistantPanel({ collapsed = false, editor = null, authFetch }: 
     }
 
     setStatus("loading");
-    setProposal(null);
     setErrorMessage("");
     try {
       const response = await editLessonSection(
@@ -65,6 +61,7 @@ export function AssistantPanel({ collapsed = false, editor = null, authFetch }: 
             id: section.id,
             heading: section.heading,
             content: section.text,
+            kind: section.kind,
           })),
         },
         authFetch,
@@ -74,40 +71,34 @@ export function AssistantPanel({ collapsed = false, editor = null, authFetch }: 
         showError("AI đã chọn một phần không còn tồn tại trong giáo án.");
         return;
       }
-      setProposal({
-        targetId: response.targetId,
-        headingLabel: target.heading,
-        previewHtml: buildSectionHtml(target, response.content),
-      });
-      setStatus("preview");
+
+      const newBodyText = stripReturnedHeading(response.content, target.heading);
+      const chunks = diffSectionLines(target.bodyText, newBodyText);
+      const diffHtml = buildSectionDiffHtml(chunks);
+      if (!chunks.some((chunk) => chunk.state !== "unchanged")) {
+        showError("AI không đề xuất thay đổi nào cho phần này.");
+        return;
+      }
+      if (!insertSectionDiff(editor, target, diffHtml)) {
+        showError("Không thể chèn bản đề xuất vào giáo án. Hãy thử lại.");
+        return;
+      }
+      setPendingHeading(target.heading);
+      setStatus("idle");
     } catch (error) {
       showError(error instanceof Error ? error.message : "Không thể chỉnh sửa giáo án bằng AI.");
     }
   }
 
-  function handleAccept() {
-    if (!editor || editor.isDestroyed || !proposal) return;
-    const sections = extractEditableSections(editor);
-    const target = sections.find(
-      (section) => section.id === proposal.targetId && section.heading === proposal.headingLabel,
-    ) ?? sections.find((section) => section.heading === proposal.headingLabel);
-    if (!target) {
-      showError("Phần cần thay đã thay đổi. Hãy gửi lại yêu cầu để AI tạo bản sửa mới.");
-      return;
-    }
-    const applied = replaceSectionRange(editor, target.from, target.to, proposal.previewHtml);
+  function handleResolve(resolution: "accept" | "discard") {
+    if (!editor || editor.isDestroyed || !pendingHeading) return;
+    const applied = resolveSectionDiff(editor, pendingHeading, resolution);
+    setPendingHeading(null);
     if (!applied) {
-      showError("Không thể áp dụng bản sửa vào giáo án. Hãy thử lại.");
+      showError("Không thể áp dụng thay đổi — mục có thể đã bị sửa. Hãy gửi lại yêu cầu.");
       return;
     }
-    setProposal(null);
     setInput("");
-    setErrorMessage("");
-    setStatus("idle");
-  }
-
-  function handleDiscard() {
-    setProposal(null);
     setErrorMessage("");
     setStatus("idle");
   }
@@ -136,25 +127,24 @@ export function AssistantPanel({ collapsed = false, editor = null, authFetch }: 
           tinh gọn nội dung, bổ sung hoạt động nhóm hoặc tạo câu hỏi kiểm tra.
         </div>
 
-        {proposal ? (
+        {pendingHeading ? (
           <div className="mt-4 rounded-[10px] border border-[#e8e2d9] bg-white p-3 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[#8a8178]">Bản xem trước</p>
-            <h2 className="mt-1 text-[13px] font-semibold leading-5 text-[#2b2926]">{proposal.headingLabel}</h2>
-            <div
-              className="lesson-document-editor mt-3 max-h-[340px] overflow-y-auto rounded-lg border border-[#eee5dc] bg-[#fbfaf8] px-3 py-2 text-[13px] leading-5"
-              dangerouslySetInnerHTML={{ __html: proposal.previewHtml }}
-            />
+            <p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[#8a8178]">Đang chờ duyệt</p>
+            <p className="mt-1 text-[13px] leading-5 text-[#2b2926]">
+              Đề xuất chỉnh sửa cho <b>{pendingHeading}</b> đang hiện trực tiếp trong tài liệu — phần gạch đỏ
+              là nội dung cũ, phần gạch xanh là nội dung mới.
+            </p>
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
-                onClick={handleAccept}
+                onClick={() => handleResolve("accept")}
                 className="flex-1 rounded-lg bg-[#d97757] px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-[#c96545]"
               >
                 Chấp nhận
               </button>
               <button
                 type="button"
-                onClick={handleDiscard}
+                onClick={() => handleResolve("discard")}
                 className="flex-1 rounded-lg border border-[#d8d1c9] bg-white px-3 py-2 text-[12px] font-semibold text-[#4f4943] transition hover:bg-[#f5f1ec]"
               >
                 Bỏ
@@ -176,7 +166,7 @@ export function AssistantPanel({ collapsed = false, editor = null, authFetch }: 
             value={input}
             onChange={(event) => setInput(event.target.value)}
             rows={3}
-            disabled={status === "loading"}
+            disabled={status === "loading" || Boolean(pendingHeading)}
             placeholder="Nhập yêu cầu chỉnh sửa..."
             className="max-h-32 min-h-14 flex-1 resize-none bg-transparent text-[13px] leading-5 text-[#171717] outline-none placeholder:text-[#171717]/50 disabled:cursor-wait"
           />
@@ -191,16 +181,13 @@ export function AssistantPanel({ collapsed = false, editor = null, authFetch }: 
           </button>
         </div>
         <p className="mt-2 text-center text-[10px] leading-[15px] text-[#6b6b6b]">
-          AI sẽ chỉnh sửa trực tiếp trên giáo án của bạn
+          {pendingHeading
+            ? "Chấp nhận hoặc Bỏ đề xuất hiện tại trước khi gửi yêu cầu mới"
+            : "AI sẽ chỉnh sửa trực tiếp trên giáo án của bạn"}
         </p>
       </form>
     </aside>
   );
-}
-
-function buildSectionHtml(section: EditableLessonSection, content: string) {
-  const bodyText = stripReturnedHeading(content, section.heading);
-  return `<h${section.level}>${escapeHtml(section.heading)}</h${section.level}>${aiSectionTextToHtml(bodyText)}`;
 }
 
 function stripReturnedHeading(content: string, heading: string) {
@@ -215,13 +202,4 @@ function stripReturnedHeading(content: string, heading: string) {
 
 function normalizeHeading(value: string) {
   return value.replace(/\s+/g, " ").trim().toLocaleLowerCase("vi-VN");
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }

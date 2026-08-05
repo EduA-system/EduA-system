@@ -17,15 +17,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -162,6 +168,53 @@ class GenerateSlideOutlineUseCaseTest {
                         && slides.get(0).contentPlan().blocks().isEmpty()
                         && slides.get(1).id().equals("p1s2")
                         && !slides.get(1).contentPlan().blocks().isEmpty()));
+    }
+
+    @Test
+    void consolidateDeckPatchesDuplicatedSlideAndPublishesUpdate() {
+        when(aiClient.generate(anyString())).thenReturn("""
+                {"slides":[{"id":"p1s1","contentPlan":{"blocks":[
+                  {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung đã hợp nhất"}
+                ],"relationships":[]}}]}
+                """);
+        SlideItemDto first = new SlideItemDto("p1s1", "Slide 1", "explain", 3, null,
+                new ContentPlan("concept", "fixed", List.of(new ContentPlan.TextBlock(
+                        "b1", "text", "body", "explanation", "primary", true, null, "Nội dung lặp với slide khác")),
+                        List.of()));
+        SlideItemDto second = new SlideItemDto("p1s2", "Slide 2", "practice", 3, null,
+                new ContentPlan("exercise", "fixed", List.of(new ContentPlan.TextBlock(
+                        "b1", "text", "body", "explanation", "primary", true, null, "Nội dung khác")), List.of()));
+        PartDto part = new PartDto("p1", "Phần 1", List.of(first, second), List.of("c1"));
+
+        useCase().consolidateDeck("session-1", lesson(), session(part));
+
+        verify(outlineStream).publishSlideReady(eq("session-1"), eq("p1"), argThat(slide ->
+                slide.id().equals("p1s1")
+                        && ((ContentPlan.TextBlock) slide.contentPlan().blocks().getFirst()).text().equals("Nội dung đã hợp nhất")));
+        verify(outlineStream).publishPartReady(eq("session-1"), eq("p1"), argThat(slides ->
+                slides.size() == 2 && slides.get(1).id().equals("p1s2")));
+    }
+
+    @Test
+    void consolidateDeckIsBestEffortAndSwallowsInvalidResponse() {
+        when(aiClient.generate(anyString())).thenReturn("not json");
+        SlideItemDto first = new SlideItemDto("p1s1", "Slide 1", "explain", 3, null,
+                new ContentPlan("concept", "fixed", List.of(new ContentPlan.TextBlock(
+                        "b1", "text", "body", "explanation", "primary", true, null, "Nội dung")), List.of()));
+        PartDto part = new PartDto("p1", "Phần 1", List.of(first), List.of("c1"));
+
+        useCase().consolidateDeck("session-1", lesson(), session(part));
+
+        verify(outlineStream, never()).publishSlideReady(anyString(), anyString(), any());
+        verify(outlineStream, never()).publishPartReady(anyString(), anyString(), any());
+    }
+
+    private static OutlineGenerationSessionStore.Session session(PartDto part) {
+        GenerateOutlineRequest req = request();
+        LessonSourceContext source = LessonSourceContext.from(req, new LessonContentChunker());
+        Map<String, PartDto> parts = new ConcurrentHashMap<>(Map.of(part.id(), part));
+        return new OutlineGenerationSessionStore.Session(
+                req, source, parts, Instant.now().plus(Duration.ofMinutes(30)), true);
     }
 
     private GenerateSlideOutlineUseCase useCase() {
