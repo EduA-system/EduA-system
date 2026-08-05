@@ -507,6 +507,7 @@ export function ClassDetailPage() {
         setEditForm(null);
         if (isClassAccessRevoked(reason)) {
           setAccessRevoked(true);
+          setCountdown(3);
         } else {
           setError(reason instanceof Error ? reason.message : "Không thể mở lớp. Lớp có thể không tồn tại hoặc bạn chưa được cấp quyền truy cập.");
         }
@@ -528,7 +529,6 @@ export function ClassDetailPage() {
   // Auto-redirect countdown when access is revoked
   useEffect(() => {
     if (!accessRevoked) return;
-    setCountdown(3);
     countdownRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {

@@ -20,16 +20,16 @@ export function ClassResourceLibraryRedirect() {
   const classId = params.get("classId") ?? "";
   const resourceId = params.get("resourceId") ?? "";
   const [error, setError] = useState("");
+  const missingParams = !classId || !resourceId;
 
   useEffect(() => {
-    if (!classId || !resourceId) {
-      setError("Thiếu thông tin lớp hoặc tài nguyên.");
-      return;
-    }
+    if (missingParams) return;
     void getClassResourceLibraryContent(authFetch, classId, resourceId)
       .then((content) => router.replace(`${paths[content.type]}?classId=${encodeURIComponent(classId)}&resourceId=${encodeURIComponent(resourceId)}`))
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Không thể mở tài nguyên từ thư viện."));
-  }, [authFetch, classId, resourceId, router]);
+  }, [authFetch, classId, resourceId, router, missingParams]);
 
-  return <main className="grid min-h-screen place-items-center bg-white p-5 text-sm text-[#6b6b6b]">{error || "Đang mở tài nguyên..."}</main>;
+  const message = missingParams ? "Thiếu thông tin lớp hoặc tài nguyên." : error || "Đang mở tài nguyên...";
+
+  return <main className="grid min-h-screen place-items-center bg-white p-5 text-sm text-[#6b6b6b]">{message}</main>;
 }
