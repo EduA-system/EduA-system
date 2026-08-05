@@ -16,9 +16,7 @@ export function RichView({ html, variant = "blog" }: { html: string | TiptapNode
     editable: false,
     immediatelyRender: false,
     editorProps:
-      variant === "document"
-        ? { attributes: { class: "lesson-document-editor text-[#2b2926]" } }
-        : undefined,
+      variant === "document" ? { attributes: { class: "lesson-document-editor text-[#2b2926]" } } : {},
   });
   return <EditorContent editor={editor} className={variant === "document" ? undefined : "tiptap"} />;
 }
