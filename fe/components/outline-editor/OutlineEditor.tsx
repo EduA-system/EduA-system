@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   slideRoleLabel,
   slideRoleTone,
@@ -8,7 +8,7 @@ import {
   type OutlinePart,
   type SlideItem,
 } from "@/lib/api/slides";
-import { SlideDetailModal } from "@/components/outline-editor/SlideDetailModal";
+import { SlideBasicFields, SlideDetailPanel } from "@/components/outline-editor/SlideDetailModal";
 
 function createDefaultSlide(id: string): SlideItem {
   return {
@@ -27,11 +27,71 @@ function createDefaultSlide(id: string): SlideItem {
   };
 }
 
-function contentPreview(slide: SlideItem): string {
-  const block = slide.contentPlan.blocks[0];
-  if (!block) return "";
-  const value = block.kind === "text" ? block.text : block.kind === "visual" ? block.description : block.kind === "formula" ? block.expression : block.kind === "quiz" ? block.question : "Nội dung có cấu trúc";
-  return value.replace(/\s+/g, " ").trim();
+function slugifyFileName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/gi, "d")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "outline";
+}
+
+function downloadOutlineJson(lessonTitle: string, parts: OutlinePart[]) {
+  const payload = { lessonTitle, exportedAt: new Date().toISOString(), parts };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `outline-${slugifyFileName(lessonTitle)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+
+/** Auto-growing single-line title input that blends into the page until hovered/focused, so it reads as an editable field. */
+function TitleInput({
+  value,
+  onChange,
+  autoFocus,
+  className,
+  ariaLabel,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  autoFocus?: boolean;
+  className?: string;
+  ariaLabel?: string;
+  placeholder?: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (autoFocus) {
+      ref.current?.focus();
+      ref.current?.select();
+    }
+  }, [autoFocus]);
+  return (
+    <span className="group/title relative block">
+      <input
+        ref={ref}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel}
+        placeholder={placeholder}
+        className={`w-full rounded-lg border border-[rgba(26,26,46,0.08)] bg-white/50 px-2.5 py-1.5 pr-7 outline-none transition placeholder:text-[#b7b5c6] hover:border-[rgba(26,26,46,0.2)] hover:bg-white focus:border-[#8200db] focus:bg-white focus:shadow-[0_0_0_3px_rgba(130,0,219,0.12)] ${className ?? ""}`}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-[#c9c6d6] transition group-hover/title:text-[#8200db] group-focus-within/title:text-[#8200db]"
+      >
+        ✎
+      </span>
+    </span>
+  );
 }
 
 export function OutlineEditor({
@@ -57,8 +117,13 @@ export function OutlineEditor({
   failedSlideMessages?: Record<string, string>;
   onRetrySlide?: (partId: string, slideId: string) => void;
 }) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<{ partId: string; slideId: string } | null>(null);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => {
+    const first = parts[0];
+    if (!first) return new Set();
+    return new Set((first.slides ?? []).map((slide) => `${first.id}:${slide.id}`));
+  });
+  const [advanced, setAdvanced] = useState(false);
+  const [focusPartId, setFocusPartId] = useState<string | null>(null);
   const dragPartIndex = useRef<number | null>(null);
 
   const totalSlides = parts.reduce((sum, p) => sum + (p.slides?.length ?? 0), 0);
@@ -91,13 +156,14 @@ export function OutlineEditor({
   }
 
   function addPart() {
+    const id = `p-${Date.now()}`;
     const newPart: OutlinePart = {
-      id: `p-${Date.now()}`,
+      id,
       title: "Phần mới",
-      slides: [createDefaultSlide(`p-${Date.now()}-s1`)],
+      slides: [createDefaultSlide(`${id}-s1`)],
     };
     update([...parts, newPart]);
-    setEditingId(newPart.id);
+    setFocusPartId(id);
   }
 
   function onPartDragStart(index: number) {
@@ -141,15 +207,11 @@ export function OutlineEditor({
   function addSlide(partId: string) {
     const newSlide = createDefaultSlide(`${partId}-s${Date.now()}`);
     update(parts.map((p) => (p.id !== partId ? p : { ...p, slides: [...p.slides, newSlide] })));
-    setDetail({ partId, slideId: newSlide.id });
+    setExpandedKeys((prev) => new Set(prev).add(`${partId}:${newSlide.id}`));
   }
 
-  const detailSlide = detail
-    ? parts.find((p) => p.id === detail.partId)?.slides.find((s) => s.id === detail.slideId)
-    : undefined;
-
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
+    <div className="mx-auto max-w-4xl px-4 py-6">
       <div className="overflow-hidden rounded-2xl border border-[rgba(26,26,46,0.09)] bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-[rgba(26,26,46,0.07)] px-5 py-4">
           <div className="flex items-center gap-3">
@@ -158,47 +220,63 @@ export function OutlineEditor({
             </div>
             <span className="font-medium text-[#1a1a2e]">{lessonTitle}</span>
           </div>
-          <span className="rounded-lg bg-[#f9f8f3] px-2.5 py-1 text-xs font-medium text-[#5c5b6e]">
-            {parts.length} phần · {totalSlides} slides
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="rounded-lg bg-[#f9f8f3] px-2.5 py-1 text-xs font-medium text-[#5c5b6e]">
+              {parts.length} phần · {totalSlides} slides
+            </span>
+            <button
+              type="button"
+              onClick={() => downloadOutlineJson(lessonTitle, parts)}
+              disabled={totalSlides === 0}
+              className="rounded-lg border border-[rgba(26,26,46,0.12)] px-2.5 py-1 text-xs font-medium text-[#5c5b6e] transition hover:border-[#8200db]/40 hover:text-[#8200db] disabled:cursor-not-allowed disabled:opacity-50"
+              title="Xuất toàn bộ outline ra file JSON"
+            >
+              Xuất JSON
+            </button>
+          </div>
         </div>
 
-        <div className="divide-y divide-[rgba(26,26,46,0.06)]">
+        <div className="flex items-center gap-2 bg-[#faf9f5] px-5 py-2 text-[11px] text-[#9998be]">
+          <span aria-hidden>✎</span>
+          <span>Bấm vào tiêu đề phần hoặc slide để sửa trực tiếp; mở “Chi tiết” để chỉnh nội dung.</span>
+        </div>
+
+        <div className="space-y-4 px-4 py-4">
           {parts.map((part, partIndex) => {
             const partSlideKeys = (part.slides ?? []).map((slide) => `${part.id}:${slide.id}`);
             const partExpanding = expandingPartIds.includes(part.id) || partSlideKeys.some((key) => expandingSlideSet.has(key));
             const failureMessage = failedPartMessages[part.id];
             const partHasFailedSlide = partSlideKeys.some((key) => failedSlideIds.has(key));
             return (
-              <div
+              <section
                 key={part.id}
-                draggable
-                onDragStart={() => onPartDragStart(partIndex)}
-                onDragOver={(e) => onPartDragOver(e, partIndex)}
-                onDragEnd={onPartDragEnd}
-                className="px-4 py-3"
+                className="rounded-xl border border-[rgba(26,26,46,0.08)] bg-[#fdfdfb]"
               >
-                <div className="flex items-center gap-2.5">
-                  <span className="cursor-grab text-[#aeacb8] select-none active:cursor-grabbing">⋮⋮</span>
+                <div
+                  draggable
+                  onDragStart={() => onPartDragStart(partIndex)}
+                  onDragOver={(e) => onPartDragOver(e, partIndex)}
+                  onDragEnd={onPartDragEnd}
+                  className="flex items-center gap-2 border-b border-[rgba(26,26,46,0.06)] px-3 py-2.5"
+                >
+                  <span
+                    className="cursor-grab select-none text-[#c9c6d6] active:cursor-grabbing"
+                    title="Kéo để đổi thứ tự phần"
+                  >
+                    ⠿
+                  </span>
+                  <span className="shrink-0 rounded-md bg-[#faf5ff] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#8200db]">
+                    Phần {partIndex + 1}
+                  </span>
                   <div className="min-w-0 flex-1">
-                    {editingId === part.id ? (
-                      <input
-                        autoFocus
-                        value={part.title}
-                        onChange={(e) => updatePartTitle(part.id, e.target.value)}
-                        onBlur={() => setEditingId(null)}
-                        onKeyDown={(e) => e.key === "Enter" && setEditingId(null)}
-                        className="w-full rounded-md border border-[#c27aff]/40 px-2 py-0.5 text-sm font-semibold text-[#1a1a2e] outline-none focus:ring-1 focus:ring-[#8200db]"
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(part.id)}
-                        className="block w-full truncate text-left text-sm font-semibold text-[#1a1a2e] hover:text-[#8200db]"
-                      >
-                        {part.title}
-                      </button>
-                    )}
+                    <TitleInput
+                      value={part.title}
+                      onChange={(title) => updatePartTitle(part.id, title)}
+                      autoFocus={focusPartId === part.id}
+                      ariaLabel={`Tiêu đề phần ${partIndex + 1}`}
+                      placeholder="Tên phần"
+                      className="text-sm font-semibold text-[#1a1a2e]"
+                    />
                   </div>
                   {partExpanding ? (
                     <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-[#9998be]">
@@ -216,13 +294,14 @@ export function OutlineEditor({
                     onClick={() => deletePart(part.id)}
                     className="shrink-0 rounded-lg p-1 text-[#aeacb8] transition hover:bg-red-50 hover:text-red-500"
                     aria-label="Xóa phần"
+                    title="Xóa phần"
                   >
                     ×
                   </button>
                 </div>
 
                 {failureMessage ? (
-                  <div role="alert" className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-left">
+                  <div role="alert" className="mx-3 mt-3 rounded-lg bg-red-50 px-3 py-2 text-left">
                     <p className="text-xs leading-5 text-red-700">
                       <span className="font-medium">Chưa thể soạn nội dung: </span>
                       {failureMessage}
@@ -230,96 +309,128 @@ export function OutlineEditor({
                   </div>
                 ) : null}
 
-                <ul className="mt-2 space-y-1 pl-6">
+                <div className="space-y-2 px-3 py-3">
                   {(part.slides ?? []).map((slide) => {
                     const key = `${part.id}:${slide.id}`;
                     const label = slideRoleLabel(slide);
                     const tone = slideRoleTone(slide);
-                    const preview = contentPreview(slide);
                     const slideExpanding = expandingSlideSet.has(key);
                     const slideFailure = failedSlideMessages[key];
                     const validationErrors = !failureMessage && !slideExpanding ? validateContentPlan(slide.contentPlan) : [];
                     const invalid = !slideFailure && validationErrors.length > 0;
                     const retryMessage = slideFailure || (invalid ? validationErrors.join("\n") : undefined);
+                    const expanded = expandedKeys.has(key);
+                    const toggleDetail = () =>
+                      setExpandedKeys((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(key)) next.delete(key);
+                        else next.add(key);
+                        return next;
+                      });
                     return (
-                      <li key={slide.id} className="flex items-start gap-2">
-                        <span className="mt-1 text-[#d8d1c9]">└</span>
-                        <span
-                          className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${tone}`}
-                        >
-                          {label}
-                        </span>
-                        {slide.aiNote ? (
-                          <span
-                            title={slide.aiNote}
-                            className="mt-0.5 shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
-                          >
-                            AI
+                      <article
+                        key={slide.id}
+                        className={`rounded-lg border bg-white px-3 py-2.5 transition ${
+                          invalid || slideFailure
+                            ? "border-red-200"
+                            : expanded
+                              ? "border-[#8200db]/40 shadow-sm"
+                              : "border-[rgba(26,26,46,0.09)] hover:border-[#8200db]/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${tone}`}>
+                            {label}
                           </span>
-                        ) : null}
-                        {invalid || slideFailure ? <span className="mt-0.5 rounded bg-red-50 px-1.5 py-0.5 text-[10px] text-red-600">Lỗi</span> : null}
-                        <button
-                          type="button"
-                          onClick={() => setDetail({ partId: part.id, slideId: slide.id })}
-                          className="min-w-0 flex-1 text-left"
-                        >
-                          <span className="block truncate text-xs text-[#5c5b6e] hover:text-[#1a1a2e]">
-                            {slide.title}
-                          </span>
-                          {preview ? (
-                            <span className="block truncate text-[11px] text-[#aeacb8]">{preview}</span>
-                          ) : (
-                            <span className="block text-[11px] text-[#c9c6d6]">
-                              {slideExpanding
-                                ? "đang soạn nội dung…"
-                                : slideFailure || failureMessage
-                                  ? "nội dung chưa được tạo"
-                                  : "bấm để soạn nội dung"}
+                          {slide.aiNote ? (
+                            <span
+                              title={slide.aiNote}
+                              className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                            >
+                              AI
                             </span>
-                          )}
-                        </button>
-                        {retryMessage ? (
+                          ) : null}
+                          {invalid || slideFailure ? (
+                            <span className="shrink-0 rounded bg-red-50 px-1.5 py-0.5 text-[10px] text-red-600">Lỗi</span>
+                          ) : null}
+                          <div className="min-w-0 flex-1">
+                            <TitleInput
+                              value={slide.title}
+                              onChange={(title) => updateSlide(part.id, slide.id, { title })}
+                              ariaLabel="Tiêu đề slide"
+                              placeholder="Tiêu đề slide"
+                              className="text-sm text-[#1a1a2e]"
+                            />
+                          </div>
+                          {retryMessage ? (
+                            <button
+                              type="button"
+                              onClick={() => onRetrySlide?.(part.id, slide.id)}
+                              className="shrink-0 rounded-md bg-red-50 px-2 py-1 text-[10px] font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                              disabled={!onRetrySlide}
+                              title={retryMessage}
+                            >
+                              Thử lại
+                            </button>
+                          ) : null}
                           <button
                             type="button"
-                            onClick={() => onRetrySlide?.(part.id, slide.id)}
-                            className="mt-0.5 shrink-0 rounded-md bg-red-50 px-2 py-1 text-[10px] font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50"
-                            disabled={!onRetrySlide}
-                            title={retryMessage}
+                            onClick={toggleDetail}
+                            aria-expanded={expanded}
+                            className={`flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition ${
+                              expanded
+                                ? "border-[#8200db]/40 bg-[#faf5ff] text-[#8200db]"
+                                : "border-[rgba(26,26,46,0.12)] text-[#5c5b6e] hover:border-[#8200db]/40 hover:text-[#8200db]"
+                            }`}
                           >
-                            Thử lại
+                            <span className={`text-[9px] transition-transform ${expanded ? "rotate-90" : ""}`}>▸</span>
+                            {expanded ? "Thu gọn" : "Chi tiết"}
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteSlide(part.id, slide.id)}
+                            className="shrink-0 rounded p-1 text-[#aeacb8] transition hover:bg-red-50 hover:text-red-500"
+                            aria-label="Xóa slide"
+                            title="Xóa slide"
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        {expanded ? (
+                          <div className="mt-3 border-t border-[rgba(26,26,46,0.08)] pt-3">
+                            {advanced ? (
+                              <SlideDetailPanel
+                                slide={slide}
+                                onChange={(updated) => updateSlide(part.id, slide.id, updated)}
+                              />
+                            ) : (
+                              <SlideBasicFields
+                                slide={slide}
+                                onChange={(updated) => updateSlide(part.id, slide.id, updated)}
+                              />
+                            )}
+                          </div>
                         ) : null}
-                        <button
-                          type="button"
-                          onClick={() => deleteSlide(part.id, slide.id)}
-                          className="mt-0.5 shrink-0 text-[#aeacb8] hover:text-red-500"
-                          aria-label="Xóa slide"
-                        >
-                          ×
-                        </button>
-                      </li>
+                      </article>
                     );
                   })}
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => addSlide(part.id)}
-                      className="pl-5 text-xs text-[#9998be] transition hover:text-[#8200db]"
-                    >
-                      + Thêm slide
-                    </button>
-                  </li>
-                </ul>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => addSlide(part.id)}
+                    className="w-full rounded-lg border border-dashed border-[rgba(26,26,46,0.15)] py-1.5 text-xs text-[#9998be] transition hover:border-[#8200db]/40 hover:text-[#8200db]"
+                  >
+                    + Thêm slide
+                  </button>
+                </div>
+              </section>
             );
           })}
-        </div>
 
-        <div className="border-t border-[rgba(26,26,46,0.07)] px-4 py-3">
           <button
             type="button"
             onClick={addPart}
-            className="text-sm text-[#9998be] transition hover:text-[#8200db]"
+            className="w-full rounded-xl border border-dashed border-[rgba(26,26,46,0.15)] py-2.5 text-sm text-[#9998be] transition hover:border-[#8200db]/40 hover:text-[#8200db]"
           >
             + Thêm phần
           </button>
@@ -344,13 +455,28 @@ export function OutlineEditor({
         </div>
       </div>
 
-      {detail && detailSlide ? (
-        <SlideDetailModal
-          slide={detailSlide}
-          onChange={(updated) => updateSlide(detail.partId, detail.slideId, updated)}
-          onClose={() => setDetail(null)}
-        />
-      ) : null}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full border border-[rgba(26,26,46,0.12)] bg-white/95 p-1 shadow-lg backdrop-blur">
+        <span className="pl-2 text-[11px] font-medium text-[#9998be]">Chế độ</span>
+        <div className="inline-flex rounded-full bg-[#f9f8f3] p-0.5 text-[11px] font-medium">
+          <button
+            type="button"
+            onClick={() => setAdvanced(false)}
+            aria-pressed={!advanced}
+            className={`rounded-full px-3 py-1 transition ${!advanced ? "bg-[#1c1b2e] text-white" : "text-[#5c5b6e] hover:text-[#1a1a2e]"}`}
+          >
+            Cơ bản
+          </button>
+          <button
+            type="button"
+            onClick={() => setAdvanced(true)}
+            aria-pressed={advanced}
+            className={`rounded-full px-3 py-1 transition ${advanced ? "bg-[#1c1b2e] text-white" : "text-[#5c5b6e] hover:text-[#1a1a2e]"}`}
+            title="Chỉnh cấu trúc, loại block, quan hệ (dành cho tùy biến sâu)"
+          >
+            Nâng cao
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

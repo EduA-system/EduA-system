@@ -54,6 +54,10 @@ function isAnswerKeyLine(line: string) {
   return /^\d+[.)]\s*[A-Da-d]\.?$/.test(line);
 }
 
+function isMarkdownBulletLine(line: string) {
+  return /^-\s+\S/.test(line);
+}
+
 function answerKeyHtml(lines: string[]) {
   const answers = lines.map((line) => inlineRichText(line.replace(/\.$/, ""))).join("");
   return `<p class="mc-answer-row">${answers}</p>`;
@@ -91,9 +95,23 @@ function paragraphs(text: string) {
       i--;
       continue;
     }
+    if (isMarkdownBulletLine(lines[i])) {
+      const items: string[] = [];
+      while (i < lines.length && isMarkdownBulletLine(lines[i])) {
+        items.push(lines[i].replace(/^-\s+/, ""));
+        i++;
+      }
+      html.push(`<ul>${items.map((item) => `<li>${inlineRichText(item)}</li>`).join("")}</ul>`);
+      i--;
+      continue;
+    }
     html.push(richParagraph(lines[i]));
   }
   return html.join("");
+}
+
+export function aiSectionTextToHtml(text: string): string {
+  return paragraphs(text);
 }
 
 /**

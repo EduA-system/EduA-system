@@ -43,11 +43,6 @@ public class SlidePromptBuilder {
             Giữ nguyên id, bám giáo án/nguồn chuẩn, trả contentPlan blocks và relationships, không chọn tọa độ, font, màu hoặc layout.
             """;
 
-    private static final String SPLIT_ITEM_INSTRUCTION = """
-            Hãy chia đúng một mục outline quá tải thành đúng hai mục outline liên tiếp.
-            Chia theo nhóm ý nghĩa, không cắt giữa dữ kiện, công thức, câu hỏi/đáp án hoặc bảng.
-            """;
-
     public static String defaultInstruction(AiPromptKey key) {
         return switch (key) {
             case SLIDE_OUTLINE_DECK_BLUEPRINT -> DECK_BLUEPRINT_INSTRUCTION;
@@ -56,7 +51,6 @@ public class SlidePromptBuilder {
             case SLIDE_OUTLINE_MERGED -> MERGED_OUTLINE_INSTRUCTION;
             case SLIDE_OUTLINE_PART_SKELETON -> PART_SKELETON_INSTRUCTION;
             case SLIDE_OUTLINE_EXPAND_PART -> EXPAND_PART_INSTRUCTION;
-            case SLIDE_OUTLINE_SPLIT_ITEM -> SPLIT_ITEM_INSTRUCTION;
             default -> throw new IllegalArgumentException("Unsupported slide-outline prompt key: " + key);
         };
     }
@@ -112,13 +106,19 @@ public class SlidePromptBuilder {
                 Không tạo part khác, không đổi id part, không đổi sourceChunkIds, không thêm nguồn mới.
                 Mỗi slide chỉ có id, title, pedagogicalRole, brief, contentPlan{slideType,headerMode}.
                 pedagogicalRole: hook|explain|derive|demonstrate|practice|recap|other. Dùng other khi không khớp sáu vai trò đầu.
+                ĐA DẠNG vai trò theo đúng chức năng thật của từng slide, không gán "explain" cho mọi slide:
+                derive khi suy luận/chứng minh/phân tích nguyên nhân-kết quả, demonstrate khi có ví dụ/hình ảnh/thí nghiệm minh hoạ,
+                practice khi có câu hỏi/bài tập cho học sinh làm, recap khi tổng kết ý phần. Chỉ dùng explain cho slide thuần diễn giải khái niệm.
                 slideType: intro|section|concept|text-image|experiment|comparison|table|process|formula|exercise|quiz|summary.
                 headerMode: hidden cho intro/section, fixed cho các loại khác.
                 Trả JSON thuần, không markdown:
-                {"lessonTitle":"%s","parts":[{"id":"%s","title":"%s","sourceChunkIds":%s,"slides":[{"id":"%ss1","title":"...","pedagogicalRole":"explain","brief":"...","contentPlan":{"slideType":"concept","headerMode":"fixed"}}]}]}
+                {"lessonTitle":"%s","parts":[{"id":"%s","title":"%s","sourceChunkIds":%s,"slides":[
+                  {"id":"%ss1","title":"...","pedagogicalRole":"derive","brief":"...","contentPlan":{"slideType":"concept","headerMode":"fixed"}},
+                  {"id":"%ss2","title":"...","pedagogicalRole":"demonstrate","brief":"...","contentPlan":{"slideType":"text-image","headerMode":"fixed"}}
+                ]}]}
                 """.formatted(teacherPersona(subject), lesson.title(), lesson.grade(), partId, partTitle, sourceIdsJson,
                 activity, userPrompt == null || userPrompt.isBlank() ? "" : "Yêu cầu thêm: " + userPrompt,
-                slideBudget, lesson.title(), partId, partTitle, sourceIdsJson, partId);
+                slideBudget, lesson.title(), partId, partTitle, sourceIdsJson, partId, partId);
     }
 
     public String contentMapPrompt(LessonContext lesson, LessonContentChunker.Chunk chunk) {
@@ -355,47 +355,19 @@ public class SlidePromptBuilder {
                 - concept: tối đa hai text block chính; mỗi block chỉ nêu một ý ngắn, không ghép nhiều tiêu đề/ý song song
                   vào một đoạn văn dài.
 
+                GIỚI HẠN ĐỘ DÀI (bắt buộc, slide sẽ bị từ chối nếu vượt quá — hãy chắt lọc ý chính thay vì nhồi hết nội dung nguồn):
+                - Slide có block visual hoặc molecule: tổng ký tự các block text khác tối đa 60.
+                - Slide slideType=comparison: tổng ký tự (nhãn item, nhãn criteria, toàn bộ values) tối đa 130.
+                - Slide slideType=table: tổng ký tự (cột, toàn bộ ô) tối đa 150; mỗi ô tối đa 40 ký tự.
+                - Các slide còn lại (không visual, không phải comparison/table): tổng ký tự các block text tối đa 100.
+                - Tối đa 6 gạch đầu dòng trong một block text.
+                - Tối đa 2 block quiz (câu hỏi trắc nghiệm) trong một slide.
+
                 {"slide":{"id":"%s","durationMinutes":3,"aiNote":"","contentPlan":{"blocks":[
                   {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung"}
                 ],"relationships":[]}}}
                 """.formatted(targetSlide.id()));
         return sb.toString();
-    }
-
-    /** Splits one already-expanded outline item; it does not alter the original outline prompts. */
-    public String splitOutlineItemPrompt(
-            LessonContext lesson,
-            String partTitle,
-            String itemJson,
-            List<String> reasons,
-            String subject) {
-        return """
-                Bạn là %s. Hãy chia ĐÚNG MỘT MỤC OUTLINE quá tải thành ĐÚNG HAI mục outline liên tiếp.
-
-                BÀI HỌC: %s (lớp %s)
-                PART: %s
-                Lý do cần chia: %s
-
-                MỤC OUTLINE GỐC (đây là toàn bộ dữ liệu thật, không được tự thêm hoặc bỏ kiến thức):
-                %s
-
-                QUY TẮC:
-                - Chia theo nhóm ý nghĩa, không cắt giữa bullet, câu hỏi/đáp án, công thức, hàng bảng hoặc mô tả visual.
-                - Mỗi mục con có title riêng, pedagogicalRole và contentPlan hoàn chỉnh. pedagogicalRole là hook|explain|derive|demonstrate|practice|recap|other; dùng other khi không khớp sáu vai trò đầu.
-                - Nếu có nhiều câu hỏi trắc nghiệm, mỗi mục con chỉ giữ một câu hỏi.
-                - Nếu là bảng, chia theo nhóm hàng và lặp header ở cả hai mục nếu cần.
-                - Visual hoặc molecule (mô hình phân tử 3D) thuộc về ý nào thì đi cùng ý đó; nếu dùng chung thì chỉ xuất hiện ở mục đầu.
-                - Không tạo id: hệ thống sẽ tự cấp id. Không thêm phần giải thích ngoài JSON.
-                - contentPlan.slideType chỉ được là intro|section|concept|text-image|experiment|comparison|table|process|formula|exercise|quiz|summary;
-                  headerMode là hidden cho intro/section, fixed cho các loại còn lại.
-
-                Trả JSON thuần:
-                {"slides":[
-                  {"title":"...","pedagogicalRole":"explain","durationMinutes":2,"aiNote":"","contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[...],"relationships":[...]}},
-                  {"title":"...","pedagogicalRole":"explain","durationMinutes":2,"aiNote":"","contentPlan":{"slideType":"concept","headerMode":"fixed","blocks":[...],"relationships":[...]}}
-                ]}
-                """.formatted(teacherPersona(subject), lesson.title(), lesson.grade(),
-                partTitle == null ? "" : partTitle, String.join("; ", reasons), itemJson);
     }
 
     private void appendPlanSummary(StringBuilder sb, InlineLessonPlanDto plan) {

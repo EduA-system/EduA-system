@@ -199,14 +199,87 @@ export async function generateActivitiesDetails(
   return res.json();
 }
 
+/**
+ * Soạn lại CHI TIẾT cho ĐÚNG MỘT hoạt động Phần III bị lỗi (nút "Thử lại" ở block lỗi).
+ * Tái dùng endpoint `generate-activities-details` với `activities` chỉ gồm skeleton của
+ * hoạt động cần soạn lại → BE chạy đúng 1 call `detailOne` với đầy đủ ngữ cảnh Phần I/II +
+ * dàn ý gửi kèm (giữ nhất quán, không rời rạc). Gửi kèm JWT vì filter auth có thể bật.
+ */
+export async function retryActivityDetail(
+  req: GenerateActivityDetailsRequest,
+  accessToken: string,
+): Promise<Activity5512> {
+  const res = await fetch("/api/lesson-plans/generate-activities-details", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Soạn lại hoạt động thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+  const data = (await res.json()) as { activities?: Activity5512[] };
+  const activity = data.activities?.[0];
+  if (!activity) {
+    throw new Error("Kết quả soạn lại rỗng — không có hoạt động trả về.");
+  }
+  return activity;
+}
+
+// ---- Edit Section (POST /api/lesson-plans/edit-section) ------------------
+export interface EditLessonSectionRequest {
+  instruction: string;
+  sections: {
+    id: string;
+    heading: string;
+    content: string;
+  }[];
+}
+
+export interface EditLessonSectionResponse {
+  targetId: string;
+  content: string;
+}
+
+export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export async function editLessonSection(
+  req: EditLessonSectionRequest,
+  authFetch: AuthFetch,
+): Promise<EditLessonSectionResponse> {
+  const res = await authFetch("/api/lesson-plans/edit-section", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Chỉnh sửa giáo án bằng AI thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
 // ---- Streaming (POST /api/lesson-plans/generate-stream) ------------------
 // Kickoff async: BE trả 202 ngay rồi đẩy tiến trình qua STOMP
 // (/topic/lesson-plan/{sessionId}). FE không đọc body — chỉ kiểm 2xx.
 export interface StartLessonPlanStreamRequest extends GenerateLessonPlanRequest {
   sessionId: string;
 }
-
-export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export async function startLessonPlanStream(
   req: StartLessonPlanStreamRequest,

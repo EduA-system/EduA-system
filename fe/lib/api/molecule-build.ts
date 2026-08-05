@@ -1,7 +1,8 @@
 import type { Molecule } from "@/components/molecules/types";
+import { BACKEND_HTTP_URL } from "@/lib/backend-url";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 
-const BE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const BE = BACKEND_HTTP_URL;
 
 type MoleculeBuildResponse = {
   name: string;
