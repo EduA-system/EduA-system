@@ -4,6 +4,7 @@ import com.edua.beeduasystem.domain.exception.BulkEnrollmentFailedException;
 import com.edua.beeduasystem.domain.exception.ClassEnrollmentConflictException;
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
+import com.edua.beeduasystem.domain.exception.ClassAccessRevokedException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.exception.MoleculeBuildException;
@@ -25,7 +26,14 @@ public class GlobalExceptionHandler {
             "Unsupported file type or file exceeds the maximum size. "
                     + "Allowed: .docx, .pdf, .pptx, .png, .jpg, .jpeg (max 10 MB).";
 
-    public record ErrorResponse(String message) {
+    public record ErrorResponse(String message, String code) {
+        public ErrorResponse(String message) {
+            this(message, null);
+        }
+    }
+
+    /** 409 them hoc sinh: kèm mã lý do + (khi PROFILE_MISMATCH) thông tin tài khoản cũ để FE xác nhận. */
+    public record ClassEnrollmentConflictResponse(String message, String reason, Object existingAccount) {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -82,6 +90,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(ClassAccessRevokedException.class)
+    public ResponseEntity<ErrorResponse> handleClassAccessRevoked(ClassAccessRevokedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(ex.getMessage(), "CLASS_ACCESS_REVOKED"));
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(ex.getMessage()));
@@ -93,8 +107,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ClassEnrollmentConflictException.class)
-    public ResponseEntity<ErrorResponse> handleClassEnrollmentConflict(ClassEnrollmentConflictException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
+    public ResponseEntity<?> handleClassEnrollmentConflict(ClassEnrollmentConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ClassEnrollmentConflictResponse(ex.getMessage(), ex.reason(), ex.details()));
     }
 
     @ExceptionHandler(BulkEnrollmentFailedException.class)

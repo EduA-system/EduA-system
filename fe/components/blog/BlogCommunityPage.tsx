@@ -142,6 +142,8 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   const [comment, setComment] = useState("");
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [commentToHide, setCommentToHide] = useState<Comment | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
   const [postToDelete, setPostToDelete] = useState<{ id: string } | null>(null);
   const showSuccess = useCallback((message: string) => setSuccessMessage(message), []);
 
@@ -254,6 +256,30 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
     if (!detail) return;
     try { await api(authFetch, `/blog-comments/${cid}`, { method: "DELETE" }); showSuccess("Đã xóa bình luận thành công."); await loadDetail(detail.id); }
     catch (e) {
+      if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
+      setMsg(String(e));
+    }
+  }
+
+  function startEditComment(c: Comment) {
+    setEditingCommentId(c.id);
+    setEditCommentText(c.content.replace(/<[^>]*>/g, ""));
+  }
+
+  function cancelEditComment() {
+    setEditingCommentId(null);
+    setEditCommentText("");
+  }
+
+  async function updateComment() {
+    if (!detail || !editingCommentId || !editCommentText.trim()) return;
+    try {
+      await api<Comment>(authFetch, `/blog-comments/${editingCommentId}`, { method: "PATCH", body: JSON.stringify({ content: editCommentText }) });
+      cancelEditComment();
+      showSuccess("Đã cập nhật bình luận thành công.");
+      await loadDetail(detail.id);
+      await loadPosts(activeSubjectFilter);
+    } catch (e) {
       if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
       setMsg(String(e));
     }
@@ -431,23 +457,59 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                           <Avatar name={c.authorName} seed={c.authorId} imageUrl={c.authorAvatarUrl} size={32} />
                           <div className="min-w-0 flex-1">
                             <div className="rounded-[14px] bg-[#f7f7f5] px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[19.5px] text-[#1c1e2e]">
-                                  {c.authorName}
-                                </p>
-                                <span className="shrink-0 text-[11px] text-[#c0c1d0]">{formatRelativeTime(c.createdAt)}</span>
-                              </div>
-                              <div
-                                className="blog-comment-content pt-1.5 text-[13px] leading-[21px] text-[#4a4b5e]"
-                                dangerouslySetInnerHTML={{ __html: c.content }}
-                              />
+                              {editingCommentId === c.id ? (
+                                <div>
+                                  <div className="flex items-center gap-3">
+                                    <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[19.5px] text-[#1c1e2e]">
+                                      {c.authorName}
+                                    </p>
+                                    <span className="shrink-0 text-[11px] text-[#c0c1d0]">Đang sửa</span>
+                                  </div>
+                                  <input
+                                    value={editCommentText}
+                                    onChange={(e) => setEditCommentText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") updateComment();
+                                      if (e.key === "Escape") cancelEditComment();
+                                    }}
+                                    autoFocus
+                                    className="mt-1.5 h-10 w-full rounded-[10px] border-[0.8px] border-[#eaeae7] bg-white px-3 text-[13px] leading-[21px] text-[#4a4b5e] outline-none transition-colors focus:border-[#d8d8d5]"
+                                  />
+                                  <div className="mt-2 flex justify-end gap-2">
+                                    <button type="button" onClick={cancelEditComment} className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-[#9b9caf] transition-colors hover:text-[#4a4b5e]">
+                                      Hủy
+                                    </button>
+                                    <button type="button" onClick={updateComment} className="rounded-lg bg-[#1c1e2e] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#35374b]">
+                                      Lưu
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-3">
+                                    <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[19.5px] text-[#1c1e2e]">
+                                      {c.authorName}
+                                    </p>
+                                    <span className="shrink-0 text-[11px] text-[#c0c1d0]">{formatRelativeTime(c.createdAt)}</span>
+                                  </div>
+                                  <div
+                                    className="blog-comment-content pt-1.5 text-[13px] leading-[21px] text-[#4a4b5e]"
+                                    dangerouslySetInnerHTML={{ __html: c.content }}
+                                  />
+                                </>
+                              )}
                             </div>
                             <div className="flex items-center gap-3 px-1 pt-1.5 text-[11px] font-semibold text-[#9b9caf]">
                               {!c.parentCommentId && <button type="button" onClick={() => setReplyTo(c)} className="hover:text-[#4a4b5e]">Trả lời</button>}
                               {c.authorId === user.id && (
-                                <button type="button" onClick={() => deleteComment(c.id)} className="text-red-500 hover:text-red-600">
-                                  Xóa
-                                </button>
+                                <>
+                                  <button type="button" onClick={() => startEditComment(c)} className="hover:text-[#4a4b5e]">
+                                    Sửa
+                                  </button>
+                                  <button type="button" onClick={() => deleteComment(c.id)} className="text-red-500 hover:text-red-600">
+                                    Xóa
+                                  </button>
+                                </>
                               )}
                               {detail.authorId === user.id && c.authorId !== user.id && (
                                 <button type="button" onClick={() => setCommentToHide(c)} className="text-[#d75a88] hover:text-[#b83b69]">

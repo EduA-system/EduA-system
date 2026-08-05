@@ -39,4 +39,10 @@ public class NotificationEntity {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    @Column(name = "target_type", length = 50)
+    private String targetType;
+
+    @Column(name = "target_url", length = 1000)
+    private String targetUrl;
 }

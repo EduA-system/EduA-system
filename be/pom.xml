@@ -209,6 +209,16 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Integration tests tu tao schema edua_*_it; khong chay cung test/lifecycle mac dinh. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*IntegrationTests.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

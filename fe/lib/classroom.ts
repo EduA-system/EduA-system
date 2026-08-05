@@ -16,6 +16,7 @@ export const STATUS_LABELS: Record<ClassStatus, string> = {
 };
 
 export type StudentStatus = "INVITED" | "ACTIVE" | "DISABLED";
+export type ClassMemberStatus = "ENROLLED" | "REMOVED";
 
 export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
   INVITED: "Chưa đăng nhập",
@@ -23,12 +24,19 @@ export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
   DISABLED: "Đã khóa",
 };
 
+export const MEMBER_STATUS_LABELS: Record<ClassMemberStatus, string> = {
+  ENROLLED: "Đang trong lớp",
+  REMOVED: "Đã gỡ khỏi lớp",
+};
+
 export const IMPORT_SKIP_REASON_LABELS: Record<string, string> = {
   INVALID_FORMAT: "Email sai định dạng",
+  INVALID_STUDENT_DATA: "Thiếu hoặc sai Họ tên, Số điện thoại hoặc Ngày sinh",
   DUPLICATE_IN_FILE: "Trùng trong tệp",
   ALREADY_ENROLLED: "Đã có trong lớp",
   ROLE_CONFLICT: "Email đã thuộc vai trò khác",
   ACCOUNT_DISABLED: "Tài khoản đã bị khóa",
+  PROFILE_MISMATCH: "Gmail đã có hồ sơ với thông tin không khớp",
   CLASS_FULL: "Lớp đã đủ sĩ số",
 };
 
@@ -85,6 +93,7 @@ export type ClassMember = {
   studentEmail: string | null;
   studentName: string | null;
   studentStatus: StudentStatus | null;
+  membershipStatus: ClassMemberStatus;
   joinedAt: string;
 };
 
@@ -95,16 +104,19 @@ export type ClassMemberPage = {
   total: number;
 };
 
-export type ImportSkippedRow = {
+export type ImportErrorRow = {
   row: number;
   email: string | null;
   reason: string;
+  message: string;
 };
 
 export type ImportStudentsResult = {
   addedCount: number;
-  skippedCount: number;
-  skipped: ImportSkippedRow[];
+  createdCount: number;
+  rejoinedCount: number;
+  errorCount: number;
+  errors: ImportErrorRow[];
 };
 
 export const RESOURCE_SOURCE_TYPES = ["LIBRARY_SNAPSHOT", "FILE_UPLOAD"] as const;
@@ -150,6 +162,16 @@ export type ClassResourcePage = {
   page: number;
   size: number;
   total: number;
+};
+
+/** Nội dung thư viện được đọc trong phạm vi lớp; không cấp quyền sửa thư viện gốc. */
+export type ClassResourceLibraryContent = {
+  id: string;
+  type: "LESSON_PLAN" | "SLIDE_DECK" | "TEST" | "SIMULATION";
+  title: string;
+  subject: ClassSubject | null;
+  payload: unknown;
+  thumbnailUrl: string | null;
 };
 
 export type ClassResourceAttachmentInput = {
@@ -207,13 +229,20 @@ async function request<T>(authFetch: AuthFetch, path: string, init: RequestInit 
   }
   const response = await authFetch(`/api/classes${path}`, { ...init, headers });
   if (response.status === 204) return null as T;
-  const data = (await response.json().catch(() => null)) as { message?: string } | T | null;
+  const data = (await response.json().catch(() => null)) as
+    | { message?: string; code?: string; reason?: string; existingAccount?: ExistingAccountInfo | null }
+    | T
+    | null;
   if (!response.ok) {
-    throw new Error(
+    const message =
       data && typeof data === "object" && "message" in data
         ? String(data.message)
-        : response.statusText || "Không thể hoàn tất yêu cầu.",
-    );
+        : response.statusText || "Không thể hoàn tất yêu cầu.";
+    const code = data && typeof data === "object" && "code" in data ? String(data.code) : undefined;
+    const reason = data && typeof data === "object" && "reason" in data ? String(data.reason) : undefined;
+    const existingAccount =
+      data && typeof data === "object" && "existingAccount" in data ? data.existingAccount : undefined;
+    throw new ClassApiError(message, response.status, code, reason, existingAccount);
   }
   return data as T;
 }
@@ -233,6 +262,11 @@ export function isClassSubject(value: string | null | undefined): value is Class
 export function studentStatusLabel(status: string | null): string {
   if (!status) return "—";
   return STUDENT_STATUS_LABELS[status as StudentStatus] ?? status;
+}
+
+export function memberStatusLabel(status: string | null): string {
+  if (!status) return "—";
+  return MEMBER_STATUS_LABELS[status as ClassMemberStatus] ?? status;
 }
 
 export function importSkipReasonLabel(reason: string): string {
@@ -296,10 +330,53 @@ export function listClassMembers(
   return request<ClassMemberPage>(authFetch, `/${classId}/members?${params.toString()}`);
 }
 
-export function addClassStudent(authFetch: AuthFetch, classId: string, email: string): Promise<ClassMember> {
+export type AddClassStudentPayload = {
+  fullName: string;
+  phoneNumber: string;
+  dateOfBirth: string;
+  email: string;
+};
+
+/** Hồ sơ tài khoản đã có trả kèm 409 PROFILE_MISMATCH để xác nhận thêm vào lớp đang chọn. */
+export type ExistingAccountInfo = {
+  email: string;
+  fullName: string | null;
+  phoneNumber: string | null;
+  dateOfBirth: string | null;
+  status: string | null;
+};
+
+/** Lỗi API: kèm reason (PROFILE_MISMATCH, ALREADY_ENROLLED, ...) + existingAccount khi có. */
+export class ClassApiError extends Error {
+  status: number;
+  code?: string;
+  reason?: string;
+  existingAccount?: ExistingAccountInfo | null;
+
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    reason?: string,
+    existingAccount?: ExistingAccountInfo | null,
+  ) {
+    super(message);
+    this.name = "ClassApiError";
+    this.status = status;
+    this.code = code;
+    this.reason = reason;
+    this.existingAccount = existingAccount;
+  }
+}
+
+export function isClassAccessRevoked(error: unknown): boolean {
+  return error instanceof ClassApiError && error.status === 403 && error.code === "CLASS_ACCESS_REVOKED";
+}
+
+export function addClassStudent(authFetch: AuthFetch, classId: string, payload: AddClassStudentPayload): Promise<ClassMember> {
   return request<ClassMember>(authFetch, `/${classId}/members`, {
     method: "POST",
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -316,6 +393,25 @@ export function importClassStudents(
   });
 }
 
+export type RemoveStudentResult = {
+  /** SOFT_REMOVE: chỉ gỡ khỏi lớp, giữ tài khoản và dữ liệu lớp. */
+  mode: "SOFT_REMOVE";
+  notified: boolean;
+};
+
+/** Xóa mềm học sinh khỏi lớp. `reason` là ghi chú tùy chọn; tài khoản và dữ liệu lớp được giữ nguyên. */
+export function removeClassStudent(
+  authFetch: AuthFetch,
+  classId: string,
+  studentId: string,
+  reason?: string,
+): Promise<RemoveStudentResult> {
+  return request<RemoveStudentResult>(authFetch, `/${classId}/members/${studentId}`, {
+    method: "DELETE",
+    body: reason ? JSON.stringify({ reason }) : undefined,
+  });
+}
+
 export function listClassResources(
   authFetch: AuthFetch,
   classId: string,
@@ -324,6 +420,14 @@ export function listClassResources(
 ): Promise<ClassResourcePage> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   return request<ClassResourcePage>(authFetch, `/${classId}/resources?${params.toString()}`);
+}
+
+export function getClassResourceLibraryContent(
+  authFetch: AuthFetch,
+  classId: string,
+  resourceId: string,
+): Promise<ClassResourceLibraryContent> {
+  return request<ClassResourceLibraryContent>(authFetch, `/${classId}/resources/${resourceId}/library-content`);
 }
 
 export function postClassResource(

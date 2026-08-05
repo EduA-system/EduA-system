@@ -7,6 +7,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createLibraryContent, getLibraryContent, updateLibraryContent, type LibrarySubject } from "@/lib/library";
+import { getClassResourceLibraryContent } from "@/lib/classroom";
 import {
   ImageEnabledEditorTools,
   MathEditPopup,
@@ -198,6 +199,9 @@ const questionLinks = [
 export function PracticeExamEditDashboard() {
   const { authFetch } = useAuth();
   const searchParams = useSearchParams();
+  const classId = searchParams.get("classId");
+  const resourceId = searchParams.get("resourceId");
+  const readOnlyClassResource = Boolean(classId && resourceId);
   const [generated] = useState<PracticeExam | null>(() =>
     typeof window === "undefined" ? null : readPracticeExam(),
   );
@@ -227,8 +231,12 @@ export function PracticeExamEditDashboard() {
 
   useEffect(() => {
     const contentId = searchParams.get("libraryId");
-    if (!contentId || !editor) return;
-    void getLibraryContent(authFetch, contentId).then((content) => {
+    if ((!contentId && !readOnlyClassResource) || !editor) return;
+    const contentRequest = readOnlyClassResource
+      ? getClassResourceLibraryContent(authFetch, classId!, resourceId!)
+      : contentId ? getLibraryContent(authFetch, contentId) : null;
+    if (!contentRequest) return;
+    void contentRequest.then((content) => {
       const payload = content.payload as { exam?: PracticeExam; documentHtml?: string; grade?: number } | undefined;
       if (!payload?.documentHtml) return;
       editor.commands.setContent(payload.documentHtml);
@@ -240,8 +248,9 @@ export function PracticeExamEditDashboard() {
         grade: payload.grade ? String(payload.grade) : current.grade,
       }));
       setNotice("Đang mở bài kiểm tra đã lưu từ thư viện.");
+      if (readOnlyClassResource) editor.setEditable(false);
     }).catch(() => setNotice("Không thể mở bài kiểm tra đã lưu."));
-  }, [authFetch, editor, searchParams]);
+  }, [authFetch, classId, editor, readOnlyClassResource, resourceId, searchParams]);
 
   async function saveDraft() {
     const exam = savedExam ?? generated;
@@ -282,24 +291,25 @@ export function PracticeExamEditDashboard() {
               >
                 <SidebarToggleIcon />
               </button>
-              <Link
+              {!readOnlyClassResource && <Link
                 href="/exam-create-new"
                 className="hidden shrink-0 rounded-lg border border-[#e8e2d9] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#5f5750] hover:bg-[#f3efe9] @min-[850px]:inline-flex"
               >
                 ← Cấu hình
-              </Link>
-              <button
+              </Link>}
+              {!readOnlyClassResource && <button
                 type="button"
                 onClick={saveDraft}
                 disabled={saving}
                 className="hidden shrink-0 rounded-lg border border-[#e8e2d9] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#5f5750] hover:bg-[#f3efe9] @min-[750px]:inline-flex"
               >
                 {saving ? "Đang lưu..." : "Lưu"}
-              </button>
-              <div className="flex min-w-0 flex-1 justify-center overflow-x-auto">
+              </button>}
+              {!readOnlyClassResource && <div className="flex min-w-0 flex-1 justify-center overflow-x-auto">
                 <ImageEnabledEditorTools editor={editor} authFetch={authFetch} />
-              </div>
-              <button
+              </div>}
+              {readOnlyClassResource && <div className="flex min-w-0 flex-1 justify-center text-xs font-medium text-[#6b6b6b]">Chế độ chỉ xem</div>}
+              {!readOnlyClassResource && <button
                 type="button"
                 onClick={() =>
                   setNotice(
@@ -309,13 +319,13 @@ export function PracticeExamEditDashboard() {
                 className="shrink-0 rounded-lg bg-[#d97757] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#c96545]"
               >
                 Xuất đề
-              </button>
+              </button>}
             </div>
             <Ruler bare margins={margins} onMarginsChange={setMargins} />
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto grid max-w-[1440px] gap-5 p-5 lg:grid-cols-[230px_minmax(0,1fr)_270px] lg:p-8">
-              <aside className="h-fit rounded-2xl border border-[#e4dcd3] bg-white p-4 lg:sticky lg:top-5">
+            <div className={`mx-auto grid max-w-[1440px] gap-5 p-5 lg:p-8 ${readOnlyClassResource ? "max-w-[920px]" : "lg:grid-cols-[230px_minmax(0,1fr)_270px]"}`}>
+              {!readOnlyClassResource && <aside className="h-fit rounded-2xl border border-[#e4dcd3] bg-white p-4 lg:sticky lg:top-5">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8b8178]">
                   Cấu trúc đề
                 </p>
@@ -356,11 +366,12 @@ export function PracticeExamEditDashboard() {
                 <button
                   type="button"
                   onClick={regenerate}
+                  disabled={readOnlyClassResource}
                   className="mt-5 w-full rounded-lg border border-[#ead4c9] px-3 py-2 text-xs font-semibold text-[#a8573b] hover:bg-[#fff6f1]"
                 >
                   ✦ Tạo lại câu đang chọn
                 </button>
-              </aside>
+              </aside>}
               <main className="min-w-0">
                 <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
                   <div>
@@ -375,9 +386,9 @@ export function PracticeExamEditDashboard() {
                       và ký hiệu.
                     </p>
                   </div>
-                  <span className="rounded-full bg-[#e8f5eb] px-3 py-1.5 text-xs font-semibold text-[#34704b]">
+                  {!readOnlyClassResource && <span className="rounded-full bg-[#e8f5eb] px-3 py-1.5 text-xs font-semibold text-[#34704b]">
                     Đang chỉnh sửa
-                  </span>
+                  </span>}
                 </div>
                 <div className="mx-auto max-w-[816px] pb-10">
                   <div
@@ -391,7 +402,7 @@ export function PracticeExamEditDashboard() {
                   </div>
                 </div>
               </main>
-              <aside className="h-fit rounded-2xl border border-[#e4dcd3] bg-white p-5 lg:sticky lg:top-5">
+              {!readOnlyClassResource && <aside className="h-fit rounded-2xl border border-[#e4dcd3] bg-white p-5 lg:sticky lg:top-5">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8b8178]">
                   Trợ lý đề kiểm tra
                 </p>
@@ -437,7 +448,7 @@ export function PracticeExamEditDashboard() {
                     {notice}
                   </p>
                 ) : null}
-              </aside>
+              </aside>}
             </div>
           </div>
         </section>

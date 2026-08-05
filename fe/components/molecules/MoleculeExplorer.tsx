@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createLibraryContent, getLibraryContent } from "@/lib/library";
+import { getClassResourceLibraryContent } from "@/lib/classroom";
 import { findMolecules, MOLECULE_CATALOG } from "./catalog";
 import { MoleculeViewer } from "./MoleculeViewer";
 import type { Molecule, RenderMode } from "./types";
@@ -11,6 +12,9 @@ import type { Molecule, RenderMode } from "./types";
 export function MoleculeExplorer() {
   const { authFetch, user } = useAuth();
   const searchParams = useSearchParams();
+  const classId = searchParams.get("classId");
+  const resourceId = searchParams.get("resourceId");
+  const readOnlyClassResource = Boolean(classId && resourceId);
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState<"all" | "alkane" | "alkene" | "alkyne">("all");
   const [molecule, setMolecule] = useState<Molecule>(MOLECULE_CATALOG[1]);
@@ -23,22 +27,24 @@ export function MoleculeExplorer() {
 
   useEffect(() => {
     const id = searchParams.get("libraryId");
-    if (!id) return;
-    void getLibraryContent(authFetch, id).then((item) => {
+    if (!id && !readOnlyClassResource) return;
+    void (readOnlyClassResource ? getClassResourceLibraryContent(authFetch, classId!, resourceId!) : getLibraryContent(authFetch, id!)).then((item) => {
       const payload = item.payload as { molecule?: Molecule; mode?: RenderMode; rotating?: boolean };
       if (payload?.molecule) setMolecule(payload.molecule);
       if (payload?.mode) setMode(payload.mode);
       if (typeof payload?.rotating === "boolean") setRotating(payload.rotating);
     }).catch((error: unknown) => setMessage(error instanceof Error ? error.message : "Không thể mở mô phỏng."));
-  }, [authFetch, searchParams]);
+  }, [authFetch, classId, readOnlyClassResource, resourceId, searchParams]);
 
   async function save() {
+    if (readOnlyClassResource) return;
     try {
       await createLibraryContent(authFetch, { type: "SIMULATION", title: molecule.name, subject: user?.subject as "MATH" | "CHEMISTRY" | "PHYSICS" | undefined, payload: { molecule, mode, rotating } });
       setMessage("Đã lưu mô phỏng vào thư viện.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể lưu mô phỏng."); }
   }
   async function buildWithAi() {
+    if (readOnlyClassResource) return;
     if (!aiInput.trim()) return;
     setLoading(true); setMessage("");
     try {

@@ -38,6 +38,7 @@
 | BR-37 | Inactive read-only | Lớp `INACTIVE` chặn cả nộp lẫn thu hồi |
 | BR-39 | Inactive vẫn xem/tải được | Áp dụng cho endpoint đọc (`GET .../submission`) — không áp dụng `POST`/`DELETE` |
 | BR-45 | Xóa resource xóa cả submission | `submissions.class_resource_id` có `ON DELETE CASCADE` — `DELETE` ở `UC-40` tự động dọn sạch |
+| — | Notification nộp bài | Sau khi submit thành công, Teacher owner nhận notification có deep-link tới submission detail |
 | — | Mở rộng ngoài SRS | Submission có thể chứa `textContent` (rich text HTML) độc lập hoặc kết hợp với `files` |
 
 ## 3. Luồng chính

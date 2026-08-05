@@ -5,6 +5,8 @@ export type NotificationSummary = {
   subject: string;
   senderName: string | null;
   createdAt: string;
+  targetType: string | null;
+  targetUrl: string | null;
   read: boolean;
 };
 

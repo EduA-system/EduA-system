@@ -38,6 +38,8 @@ public class JpaNotificationRepository implements NotificationRepository {
         entity.setTitle(notification.title());
         entity.setContent(notification.content());
         entity.setCreatedAt(notification.createdAt());
+        entity.setTargetType(notification.targetType());
+        entity.setTargetUrl(notification.targetUrl());
         notificationJpa.save(entity);
 
         Instant now = Instant.now();
@@ -61,7 +63,8 @@ public class JpaNotificationRepository implements NotificationRepository {
         Page<NotificationRecipientProjection> page = recipientJpa.findForRecipient(recipientId, unreadOnly, pageable);
         return page.map(p -> new RecipientNotification(
                 p.getNotificationId(), p.getSenderId(), p.getSubject(),
-                p.getTitle(), p.getContent(), p.getCreatedAt(), p.getReadAt()));
+                p.getTitle(), p.getContent(), p.getCreatedAt(),
+                p.getTargetType(), p.getTargetUrl(), p.getReadAt()));
     }
 
     @Override
@@ -89,5 +92,11 @@ public class JpaNotificationRepository implements NotificationRepository {
     @Transactional
     public void markAllRead(UUID recipientId) {
         recipientJpa.markAllRead(recipientId, Instant.now());
+    }
+
+    @Override
+    @Transactional
+    public void deleteRecipientsByRecipientId(UUID recipientId) {
+        recipientJpa.deleteByRecipientId(recipientId);
     }
 }

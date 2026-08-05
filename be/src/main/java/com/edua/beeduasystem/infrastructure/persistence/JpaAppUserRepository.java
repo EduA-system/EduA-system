@@ -77,11 +77,18 @@ public class JpaAppUserRepository implements AppUserRepository {
         e.setContactInfo(user.contactInfo());
         e.setBio(user.bio());
         e.setPhoneNumber(user.phoneNumber());
+        e.setDateOfBirth(user.dateOfBirth());
         e.setSubject(user.subject());
         e.setStatus(user.status());
         e.setCreatedAt(user.createdAt() != null ? user.createdAt() : Instant.now());
         e.setLastLoginAt(user.lastLoginAt());
         return toDomain(jpa.save(e));
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(UUID id) {
+        jpa.deleteById(id);
     }
 
     private static AppUser toDomain(AppUserEntity e) {
@@ -97,6 +104,7 @@ public class JpaAppUserRepository implements AppUserRepository {
                 e.getSubject(),
                 e.getStatus(),
                 e.getCreatedAt(),
-                e.getLastLoginAt());
+                e.getLastLoginAt(),
+                e.getDateOfBirth());
     }
 }

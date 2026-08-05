@@ -68,17 +68,18 @@ public class NotificationService {
                 .toList();
 
         Notification saved = notificationRepository.createWithRecipients(
-                new Notification(UUID.randomUUID(), senderId, moderatorSubject, title, content, now),
+                new Notification(UUID.randomUUID(), senderId, moderatorSubject, title, content, now, null, null),
                 recipientIds);
 
         String senderName = displayName(senderId);
         NotificationEvent event = new NotificationEvent(
-                saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt());
+                saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt(),
+                saved.targetType(), saved.targetUrl());
         recipientIds.forEach(recipientId -> streamPort.publishNew(recipientId, event));
 
         return new NotificationViews.NotificationCreated(
                 saved.id(), saved.title(), saved.content(), saved.subject(),
-                senderName, saved.createdAt(), recipientIds.size());
+                senderName, saved.createdAt(), saved.targetType(), saved.targetUrl(), recipientIds.size());
     }
 
     /** Gửi thông báo nghiệp vụ từ Moderator tới một người nhận cụ thể. */
@@ -94,10 +95,11 @@ public class NotificationService {
         Instant now = Instant.now();
 
         Notification saved = notificationRepository.createWithRecipients(
-                new Notification(UUID.randomUUID(), senderId, moderatorSubject, title, content, now),
+                new Notification(UUID.randomUUID(), senderId, moderatorSubject, title, content, now, null, null),
                 List.of(recipientId));
         streamPort.publishNew(recipientId, new NotificationEvent(
-                saved.id(), saved.title(), saved.content(), saved.subject(), displayName(senderId), saved.createdAt()));
+                saved.id(), saved.title(), saved.content(), saved.subject(), displayName(senderId), saved.createdAt(),
+                saved.targetType(), saved.targetUrl()));
     }
 
     /** Danh sách notification của user hiện tại, mới nhất trước. */
@@ -113,7 +115,8 @@ public class NotificationService {
         List<NotificationViews.NotificationSummary> items = page.getContent().stream()
                 .map(r -> new NotificationViews.NotificationSummary(
                         r.id(), r.title(), r.content(), r.subject(),
-                        senderNames.get(r.senderId()), r.createdAt(), r.readAt() != null))
+                        senderNames.get(r.senderId()), r.createdAt(), r.targetType(), r.targetUrl(),
+                        r.readAt() != null))
                 .toList();
 
         long unreadCount = notificationRepository.countUnreadForRecipient(userId);

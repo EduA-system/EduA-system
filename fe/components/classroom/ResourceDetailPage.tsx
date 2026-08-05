@@ -29,6 +29,7 @@ import {
   formatFileSize,
   getClassDetail,
   getMySubmission,
+  isClassAccessRevoked,
   listClassResources,
   sourceTypeLabel,
   submissionStatusLabel,
@@ -39,6 +40,7 @@ import {
 import { deadlineClasses, formatDateTime, isOverdue } from "./shared";
 
 const AUTOSAVE_DEBOUNCE_MS = 800;
+const REDIRECT_SECONDS = 3;
 
 type SubmissionDraft = {
   textContent: string;
@@ -129,6 +131,9 @@ export function ResourceDetailPage() {
   const [resource, setResource] = useState<ClassResourceSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [accessRevoked, setAccessRevoked] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
 
   const [submission, setSubmission] = useState<SubmissionDetail | null>(null);
   const [submissionLoading, setSubmissionLoading] = useState(false);
@@ -157,6 +162,7 @@ export function ResourceDetailPage() {
     setLoading(true);
     setError("");
     setSuccessMessage("");
+    setAccessRevoked(false);
     try {
       const [detail, resourcePage] = await Promise.all([
         getClassDetail(authFetch, classId),
@@ -192,7 +198,12 @@ export function ResourceDetailPage() {
         }
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không thể tải tài nguyên. Lớp hoặc tài nguyên có thể không tồn tại.");
+      if (isClassAccessRevoked(reason)) {
+        setAccessRevoked(true);
+        setError("");
+      } else {
+        setError(reason instanceof Error ? reason.message : "Không thể tải tài nguyên. Lớp hoặc tài nguyên có thể không tồn tại.");
+      }
     } finally {
       setLoading(false);
     }
@@ -204,6 +215,25 @@ export function ResourceDetailPage() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => {
+    if (!accessRevoked) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCountdown(REDIRECT_SECONDS);
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          router.replace("/list-class");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [accessRevoked, classId, router]);
 
   // Tự động lưu (autosave): chỉ lưu nháp cục bộ (localStorage) sau khi người dùng thực sự
   // chỉnh sửa (userEditedRef), không tự nộp bài lên server — "Nộp bài" vẫn là hành động
@@ -308,6 +338,11 @@ export function ResourceDetailPage() {
     }
   }
 
+  function handleGoBackNow() {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    router.replace("/list-class");
+  }
+
   if (!user) return null;
 
   const classInactive = classDetail?.status === "INACTIVE";
@@ -370,12 +405,30 @@ export function ResourceDetailPage() {
               </div>
             )}
 
-            {loading || !resource ? (
+            {loading ? (
               <div className="mt-4 space-y-4">
                 <div className="h-[140px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
                 <div className="h-[220px] animate-pulse rounded-[14px] bg-[#e8e2db]" />
               </div>
-            ) : (
+            ) : accessRevoked ? (
+              <div className="mt-6 rounded-[14px] border border-[#e8b4a4] bg-[#fdf3ef] px-5 py-6 text-center">
+                <AlertCircle className="mx-auto size-8 text-[#c0492b]" />
+                <p className="mt-3 text-[15px] font-semibold text-[#c0492b]">Bạn không còn quyền truy cập lớp học này</p>
+                <p className="mt-2 text-[13px] text-[#6b6b6b]">
+                  Giáo viên đã xóa bạn khỏi lớp. Trang sẽ quay về danh sách lớp sau{" "}
+                  <span className="font-semibold text-[#c0492b]">{countdown}</span> giây.
+                </p>
+                <div className="mt-5 flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleGoBackNow}
+                    className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#1f1f1f] px-4 text-[13px] font-medium text-white transition hover:bg-[#333]"
+                  >
+                    Quay lại ngay
+                  </button>
+                </div>
+              </div>
+            ) : resource ? (
               <>
                 <div className="mt-4 rounded-[14px] border border-[#d8d1c9] bg-white p-5">
                   <div className="flex flex-wrap items-center gap-2">
@@ -395,6 +448,15 @@ export function ResourceDetailPage() {
                   )}
 
                   <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {resource.sourceType === "LIBRARY_SNAPSHOT" && (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/class-resource-content?classId=${encodeURIComponent(classId)}&resourceId=${encodeURIComponent(resource.id)}`)}
+                        className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#d97757] px-2.5 py-1.5 text-[11.5px] font-medium text-white transition hover:bg-[#c96545]"
+                      >
+                        <Library className="size-3.5" /> Mở tài nguyên
+                      </button>
+                    )}
                     {resource.attachment?.url && (
                       <a
                         href={resource.attachment.url}
@@ -576,6 +638,11 @@ export function ResourceDetailPage() {
                   </p>
                 )}
               </>
+            ) : (
+              <div className="mt-6 rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
+                <p className="text-[13px] font-medium">Không tìm thấy tài nguyên</p>
+                <p className="mt-1 text-[12px] text-[#6b6b6b]">Tài nguyên này có thể đã bị xóa hoặc bạn chưa được cấp quyền.</p>
+              </div>
             )}
           </div>
         </section>

@@ -1,5 +1,6 @@
 package com.edua.beeduasystem.service.classroom;
 
+import com.edua.beeduasystem.domain.exception.ClassAccessRevokedException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
@@ -77,6 +78,20 @@ public class ClassResourceService {
         ClassResourceRepository.PageResult result = classResourceRepository.findByClassId(classId, page, size);
         return new ClassResourceViews.Page(
                 toSummaries(result.items(), currentUserId, viewerIsOwner), page, size, result.total());
+    }
+
+    /** Doc noi dung thu vien da duoc giao vien chia se, theo quyen truy cap cua lop. */
+    @Transactional(readOnly = true)
+    public ClassResourceViews.LibraryContentDetail getLibraryContent(UUID classId, UUID resourceId) {
+        requireAccessibleClass(classId);
+        ClassResource resource = requireClassResource(classId, resourceId);
+        if (resource.sourceType() != ResourceSourceType.LIBRARY_SNAPSHOT || resource.sourceLibraryContentId() == null) {
+            throw new ResourceNotFoundException("Class resource is not sourced from the Personal Library.");
+        }
+        LibraryContent content = libraryContentRepository.findActiveById(resource.sourceLibraryContentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Shared library content not found."));
+        return new ClassResourceViews.LibraryContentDetail(
+                content.id(), content.type(), content.title(), content.subject(), content.payload(), content.thumbnailUrl());
     }
 
     @Transactional
@@ -261,11 +276,12 @@ public class ClassResourceService {
         String title = "Tai lieu lop " + classroom.name();
         String content = "Giao vien da dang/cap nhat \"" + resource.title() + "\" trong lop \"" + classroom.name() + "\".";
         Notification saved = notificationRepository.createWithRecipients(
-                new Notification(UUID.randomUUID(), senderId, classroom.subject(), title, content, now),
+                new Notification(UUID.randomUUID(), senderId, classroom.subject(), title, content, now, null, null),
                 studentIds);
         String senderName = resolveSenderName(senderId);
         NotificationEvent event = new NotificationEvent(
-                saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt());
+                saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt(),
+                saved.targetType(), saved.targetUrl());
         studentIds.forEach(id -> notificationStreamPort.publishNew(id, event));
     }
 
@@ -335,7 +351,7 @@ public class ClassResourceService {
         if (classroom.isOwnedBy(currentUserId) || classMemberRepository.existsByClassIdAndStudentId(classId, currentUserId)) {
             return classroom;
         }
-        throw new ForbiddenOperationException("You do not have access to this class.");
+        throw new ClassAccessRevokedException();
     }
 
     private Classroom requireOwnedClass(UUID classId) {

@@ -8,6 +8,8 @@ export type NotificationEvent = {
   subject: string;
   senderName: string | null;
   createdAt: string;
+  targetType: string | null;
+  targetUrl: string | null;
 };
 
 export function connectNotificationsStream({

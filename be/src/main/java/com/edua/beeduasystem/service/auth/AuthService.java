@@ -104,7 +104,8 @@ public class AuthService {
                 user.subject(),
                 UserStatus.ACTIVE,
                 user.createdAt(),
-                now);
+                now,
+                user.dateOfBirth());
         AppUser saved = userRepository.save(activated);
 
         Set<Role> roles = userRoleRepository.findRolesByUserId(saved.id());

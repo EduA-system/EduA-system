@@ -3,13 +3,21 @@
 > Chuc nang Teacher them hoc sinh vao lop minh so huu bang Gmail: them thu cong tung email hoac import file CSV/Excel (UC-36, alias "Enroll Student").
 > API spec: [`../API_designs/add-student.md`](../API_designs/add-student.md). Ke thua CRUD lop o [`../class-management/class-flow.md`](../class-management/class-flow.md). Kien truc theo [`../layered-architecture.md`](../layered-architecture.md).
 
+## Current implementation note — 2026-08-05
+
+- Khong con dung "hoc sinh Active/Inactive" theo `AppUser.status` de quan ly thanh vien lop. `AppUser.status` chi con la trang thai account-level; membership cua lop dung `class_members.status = ENROLLED | REMOVED`.
+- Gmail moi khi Add Student se tao hoc sinh moi trong DB, gan `Role.STUDENT`, roi enroll vao lop. Gmail da ton tai phai la `STUDENT` va thong tin ho so nhap vao phai khop ho so dang luu.
+- Neu Gmail dung nhung ho so sai, backend tra `409 PROFILE_MISMATCH`; FE hien thong bao yeu cau giao vien nhap dung thong tin, khong co buoc "xac nhan dung ho so cu".
+- Xoa hoc sinh khoi lop la soft-remove membership (`ENROLLED -> REMOVED`), giu account, role, bai nop, file, comment/dong gop va lich su. Add lai hoc sinh da bi go khoi lop se reactivate membership cu (`REMOVED -> ENROLLED`).
+- Import CSV/XLS/XLSX theo all-or-nothing: neu bat ky dong nao thieu/sai thong tin, trung Gmail, role conflict, account disabled, profile mismatch, da co trong lop, hoac vuot si so thi khong ghi bat ky hoc sinh nao; response tra danh sach `errors[]` theo dong de giao vien sua file va nop lai.
+
 ## 1. Nguyen tac
 
 - **Nguon chinh la SRS**: chuc nang nay bao phu dung `UC-36 Add Student`, khong lam `UC-37 Remove Student` (xem "Diem mo").
 - **Teacher-only, owner + Active**: chi class owner moi them duoc hoc sinh, va chi khi lop dang `ACTIVE` (`BR-34`, `BR-37`) — ke thua nguyen tac tu `class-management/class-flow.md`.
 - **Them 1 email = ghi ngay, khong batch**: khac voi import, them 1 hoc sinh la 1 transaction don, thanh cong hoac loi ro rang cho tung buoc.
-- **Import theo hang, khong reject ca file** (`BR-38`): dong hop le duoc them, dong loi bi bo qua kem ly do — **khac voi** loi he thong giua qua trinh ghi bulk (vd. mat ket noi DB) khien toan bo bi rollback, khong hoc sinh nao duoc them. Day la 2 tinh huong loi khac nhau trong SRS, khong duoc gop chung.
-- **Tai khoan hoc sinh duoc cap qua Gmail, khong tu dang ky**: giong nguyen tac cap tai khoan Teacher cua Moderator (`BR-01`), Teacher cap quyen cho hoc sinh bang cach them Gmail vao lop; hoc sinh khong tu tao tai khoan.
+- **Import all-or-nothing**: validate toan bo file truoc, neu co bat ky dong loi nao thi khong ghi bat ky hoc sinh nao; tra danh sach loi theo dong de giao vien sua file va nop lai.
+- **Tai khoan hoc sinh duoc cap qua Gmail, khong tu dang ky**: neu Gmail chua ton tai, Teacher tao hoc sinh moi trong luc Add Student; neu Gmail da ton tai, ho so nhap vao phai khop ho so hoc sinh dang luu.
 - **Mot hoc sinh o nhieu lop**: enrollment check theo `(class_id, student_id)`, khong phai theo email toan he thong — mot Gmail co the la thanh vien cua nhieu lop khac nhau.
 - **Gioi han si so 60 thanh vien/lop**: rule bo sung theo yeu cau du an, **khong co trong SRS goc**. Kiem tra o tang service bang `countByClassId`, khong phai DB constraint.
 - **Cot file bat buoc ten la `gmail`** (khong phan biet hoa/thuong), khong phai `email` chung chung — cung la rule bo sung theo yeu cau du an, sieu chinh xac hon cach SRS mo ta "required email column".
@@ -23,7 +31,7 @@
 | BR-06 | Grant access | Chi tai khoan duoc cap quyen (co dong bo hang trong `app_users`) va dang `Active`/`Invited` moi dang nhap duoc |
 | BR-34 | Class access/ownership | Chi owner moi quan ly membership cua lop |
 | BR-37 | Inactive read-only | Lop Inactive chan moi thao tac ghi, gom ca thay doi membership |
-| BR-38 | Import bo qua dong loi | Import file them dong hop le, bo qua dong loi thay vi reject ca file |
+| BR-38 | Import validate loi theo dong | Import file phai sach truoc khi ghi; dong loi duoc bao theo dong va khong ghi DB |
 | BR-45 | Xoa/remove giu submission | Lien quan UC-37 (Remove Student), ngoai pham vi flow nay, chi ghi chu de tranh nham lan khi thiet ke Remove sau nay |
 | BR-46 | Notification khi them | Moi hoc sinh them thanh cong nhan 1 thong bao class-enrollment |
 
@@ -82,7 +90,7 @@ email input
   v
 AppUserRepository.findByEmail(email)
   |
-  +-- khong ton tai --> tao AppUser moi (status=INVITED, subject=null)
+  +-- khong ton tai --> tao AppUser moi (status=ACTIVE, subject=null)
   |                     --> assign Role.STUDENT
   |                     --> dung id moi cho buoc enrollment
   |
@@ -149,11 +157,12 @@ Teacher                         Backend                              Database
   |                                |------------------------------------->
   |<-------------------------------|                                     |
   | 200 ImportStudentsResponse    |                                     |
-  | { addedCount, skippedCount,   |                                     |
-  |   skipped: [...] }            |                                     |
+  | { addedCount, createdCount,   |                                     |
+  |   rejoinedCount, errorCount,  |                                     |
+  |   errors: [...] }             |                                     |
 ```
 
-- Neu **khong con dong nao hop le** sau buoc phan loai (moi dong deu skip), van tra `200` voi `addedCount = 0` va danh sach `skipped` day du — **khong** phai loi, dung nhu SRS "Imported file contains no valid student rows".
+- Neu co **bat ky dong nao loi**, van tra `200` voi `addedCount = 0`, `errorCount > 0` va danh sach `errors` day du; khong ghi bat ky hoc sinh nao.
 - Rollback toan bo **chi** ap dung cho loi he thong trong luc ghi bulk (vd. mat ket noi DB giua chung) — khong ap dung cho dong bi skip do validate hoac do vuot si so (day la hanh vi binh thuong cua `BR-38`, ap dung tuong tu cho gioi han 60).
 - File sai dinh dang/rong/qua gioi han bi chan tu buoc dau, khong parse dong nao, khong tao ban ghi nao (MSG24). File dung ten cot khac (vd. `email` thay vi `gmail`) cung bi coi la thieu cot bat buoc, chan tu buoc nay.
 - Moc dem si so (`countByClassId` + so dong da them trong lan import) duoc tinh **tang dan theo thu tu dong trong file** — dong nao khien tong vuot 60 thi tu dong do tro di deu bi skip `CLASS_FULL`, ke ca khi cac dong sau no thuc ra hop le neu xet rieng.
@@ -168,8 +177,8 @@ Student (Google)                Backend (AuthService.loginWithGoogle)
   |------------------------------->
   |                                | verify Google idToken
   |                                | tim AppUser theo email (da co tu
-  |                                |   buoc Add Student, status=INVITED)
-  |                                | status = ACTIVE, cap nhat lastLoginAt
+  |                                |   buoc Add Student, status=ACTIVE)
+  |                                | cap nhat googleSub/lastLoginAt
   |                                | roles = { STUDENT } (tu buoc 3.1.1)
   |                                | issue JWT (role primary = STUDENT)
   |<-------------------------------|
@@ -190,7 +199,7 @@ flowchart TD
     addOne --> checkCapacity{"Lop du 60 thanh vien?"}
     checkCapacity -- "Roi" --> full409["409 Class full"]
     checkCapacity -- "Chua" --> resolveUser{"Email da ton tai?"}
-    resolveUser -- "Khong" --> createUser["Tao AppUser moi, INVITED"]
+    resolveUser -- "Khong" --> createUser["Tao AppUser moi, ACTIVE"]
     resolveUser -- "Co, role != STUDENT" --> conflict409["409 Role conflict"]
     resolveUser -- "Co, DISABLED" --> disabled409["409 Account disabled"]
     resolveUser -- "Co, STUDENT/chua co role" --> reuseUser["Dung lai AppUser"]
@@ -206,7 +215,7 @@ flowchart TD
     validateFile -- "Co" --> parseRows["Phan loai tung dong (bao gom CLASS_FULL khi vuot 60)"]
     parseRows --> bulkInsert["Bulk insert dong hop le trong gioi han 60"]
     bulkInsert -- "Loi he thong" --> rollback["Rollback toan bo - MSG25"]
-    bulkInsert -- "Thanh cong" --> importSummary["200 - Import summary (added/skipped)"]
+    bulkInsert -- "Thanh cong" --> importSummary["200 - Import summary (added/errors)"]
     importSummary --> notifyEach["Gui notification cho tung hoc sinh them thanh cong"]
 
     memberAdded --> studentLogin["Hoc sinh dang nhap Google lan dau"]
@@ -279,7 +288,7 @@ presentation/controller/          ClassController (them 3 method: GET/POST membe
 | Lop da du 60 thanh vien, goi `POST /members` them 1 hoc sinh moi | `409` |
 | File import sai dinh dang/rong/vuot gioi han/thieu cot `gmail` (vd file dung cot `email`) | `400` (MSG24), khong them ai |
 | File import co dong hop le nhung lop se vuot 60 neu them dong do | dong do va cac dong sau bi skip `CLASS_FULL`, cac dong truoc van duoc them binh thuong |
-| File import hop le nhung khong con dong nao valid sau loc | `200`, `addedCount=0`, `skipped` day du ly do |
+| File import co bat ky dong loi nao | `200`, `addedCount=0`, `errorCount>0`, `errors` day du ly do; khong ghi DB |
 | Loi he thong giua qua trinh ghi bulk import | rollback toan bo, `500`/`502` (MSG25), khong gui notification |
 | Notification gateway loi sau khi da commit member | member van duoc giu (khong rollback vi da commit); ghi log loi rieng, khong chan response thanh cong |
 
@@ -292,7 +301,7 @@ presentation/controller/          ClassController (them 3 method: GET/POST membe
 - Teacher them khi lop `INACTIVE` → chan `403` MSG23, khong tao ban ghi nao.
 - Lop da co dung 60 thanh vien, Teacher them 1 hoc sinh moi hop le → chan `409`, si so khong doi.
 - Import file co cot ten `Email` (khong phai `gmail`) → tu choi ca file `400` MSG24, khong them ai.
-- Import file hop le tron dong loi (sai dinh dang, trung, da enrolled) → chi them dong hop le, tra summary dung so lieu va ly do tung dong bi bo qua.
+- Import file co bat ky dong loi nao (sai dinh dang, trung, da enrolled, sai ho so, vuot si so) → khong ghi DB, tra `errors[]` theo dong.
 - Import file sai dinh dang/qua gioi han → chan `400` MSG24, khong them ai.
 - Lop dang co 55 thanh vien, import file co 10 dong hop le → chi them du 5 dong dau (cho toi 60), 5 dong con lai bi skip `CLASS_FULL`, summary phan anh dung so lieu nay.
 - Import that bai giua chung do loi he thong → rollback toan bo, khong ai duoc them, khong notification nao duoc gui.

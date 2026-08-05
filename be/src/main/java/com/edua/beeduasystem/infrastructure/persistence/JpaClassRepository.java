@@ -1,6 +1,7 @@
 package com.edua.beeduasystem.infrastructure.persistence;
 
 import com.edua.beeduasystem.domain.model.auth.Subject;
+import com.edua.beeduasystem.domain.model.classroom.ClassMemberStatus;
 import com.edua.beeduasystem.domain.model.classroom.ClassStatus;
 import com.edua.beeduasystem.domain.model.classroom.Classroom;
 import com.edua.beeduasystem.infrastructure.persistence.entity.ClassEntity;
@@ -88,7 +89,9 @@ public class JpaClassRepository implements ClassRepository {
             List<Predicate> predicates = new ArrayList<>();
             Subquery<UUID> enrolledClassIds = cq.subquery(UUID.class);
             var memberRoot = enrolledClassIds.from(ClassMemberEntity.class);
-            enrolledClassIds.select(memberRoot.get("classId")).where(cb.equal(memberRoot.get("studentId"), studentId));
+            enrolledClassIds.select(memberRoot.get("classId")).where(
+                    cb.equal(memberRoot.get("studentId"), studentId),
+                    cb.equal(memberRoot.get("status"), ClassMemberStatus.ENROLLED));
             predicates.add(root.get("id").in(enrolledClassIds));
             if (subject != null) {
                 predicates.add(cb.equal(root.get("subject"), subject));

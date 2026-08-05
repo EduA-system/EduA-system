@@ -6,19 +6,23 @@ import java.util.List;
 
 public record ImportStudentsResponse(
         int addedCount,
-        int skippedCount,
-        List<SkippedRowDto> skipped
+        int createdCount,
+        int rejoinedCount,
+        int errorCount,
+        List<ImportErrorDto> errors
 ) {
-    public record SkippedRowDto(int row, String email, String reason) {
-        public static SkippedRowDto from(ClassMemberViews.SkippedRow view) {
-            return new SkippedRowDto(view.row(), view.email(), view.reason());
+    public record ImportErrorDto(int row, String email, String reason, String message) {
+        public static ImportErrorDto from(ClassMemberViews.ImportError view) {
+            return new ImportErrorDto(view.row(), view.email(), view.reason(), view.message());
         }
     }
 
     public static ImportStudentsResponse from(ClassMemberViews.ImportResult view) {
         return new ImportStudentsResponse(
                 view.addedCount(),
-                view.skippedCount(),
-                view.skipped().stream().map(SkippedRowDto::from).toList());
+                view.createdCount(),
+                view.rejoinedCount(),
+                view.errorCount(),
+                view.errors().stream().map(ImportErrorDto::from).toList());
     }
 }

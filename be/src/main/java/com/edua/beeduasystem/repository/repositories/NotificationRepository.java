@@ -30,6 +30,9 @@ public interface NotificationRepository {
     /** Đánh dấu toàn bộ notification chưa đọc của recipient là đã đọc. */
     void markAllRead(UUID recipientId);
 
+    /** Xóa toàn bộ dòng recipient của một user (dùng khi hard-delete tài khoản). */
+    void deleteRecipientsByRecipientId(UUID recipientId);
+
     /** Notification kèm trạng thái đọc riêng của một recipient cụ thể. */
     record RecipientNotification(
             UUID id,
@@ -38,6 +41,8 @@ public interface NotificationRepository {
             String title,
             String content,
             Instant createdAt,
+            String targetType,
+            String targetUrl,
             Instant readAt
     ) {
     }

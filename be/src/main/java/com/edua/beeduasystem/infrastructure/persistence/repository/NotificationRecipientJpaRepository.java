@@ -19,7 +19,8 @@ public interface NotificationRecipientJpaRepository extends JpaRepository<Notifi
     long countByRecipientIdAndReadAtIsNull(UUID recipientId);
 
     @Query("SELECT n.id AS notificationId, n.senderId AS senderId, n.subject AS subject, "
-            + "n.title AS title, n.content AS content, n.createdAt AS createdAt, nr.readAt AS readAt "
+            + "n.title AS title, n.content AS content, n.createdAt AS createdAt, "
+            + "n.targetType AS targetType, n.targetUrl AS targetUrl, nr.readAt AS readAt "
             + "FROM NotificationRecipientEntity nr, NotificationEntity n "
             + "WHERE nr.notificationId = n.id AND nr.recipientId = :recipientId "
             + "AND (:unreadOnly = false OR nr.readAt IS NULL) "
@@ -33,4 +34,6 @@ public interface NotificationRecipientJpaRepository extends JpaRepository<Notifi
     @Query("UPDATE NotificationRecipientEntity nr SET nr.readAt = :now "
             + "WHERE nr.recipientId = :recipientId AND nr.readAt IS NULL")
     void markAllRead(@Param("recipientId") UUID recipientId, @Param("now") Instant now);
+
+    void deleteByRecipientId(UUID recipientId);
 }
