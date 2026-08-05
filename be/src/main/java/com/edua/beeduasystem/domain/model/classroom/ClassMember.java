@@ -7,6 +7,11 @@ public record ClassMember(
         UUID id,
         UUID classId,
         UUID studentId,
-        Instant joinedAt
+        ClassMemberStatus status,
+        Instant joinedAt,
+        Instant removedAt,
+        UUID removedBy,
+        String removedReason,
+        Instant rejoinedAt
 ) {
 }

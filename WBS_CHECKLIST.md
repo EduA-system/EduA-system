@@ -69,7 +69,7 @@ Legend (Done column, based on **Code Reality**, not the raw WBS Status):
 | [x] | Edit Own Blog Post | Blog | Blog Authoring | Iteration 2 | Coded | UC-39 - owner-only PATCH API and the pre-filled edit modal in `BlogCommunityPage` are implemented. |
 | [x] | Remove / Delete Blog Post | Blog | Blog Moderation | Iteration 3 | Coded | UC-18, UC-40 - Coded: Teacher can delete own post; Moderator can remove post with reason. |
 | [x] | Create Class (CRUD) | Classroom | Class Management | Iteration 2 | Coded | CR-01 - Coded: API/UI/service/repository and migrations for create, list, detail, update, activate/deactivate are present (`/api/classes`, `/create-class`, `ClassManagementService`). |
-| [x] | Add Students to Class by Gmail | Classroom | Class Membership | Iteration 2 | Coded | CR-02 - Coded: add by Gmail plus CSV/XLSX import, membership list, and student-role assignment are implemented (`ClassEnrollmentService`, `/add-student`). |
+| [x] | Add Students to Class by Gmail | Classroom | Class Membership | Iteration 2 | Coded | CR-02 - Coded: add by Gmail plus CSV/XLS/XLSX all-or-nothing import, membership list, student-role assignment, and soft-remove/rejoin membership are implemented (`ClassEnrollmentService`, `/add-student`). |
 | [x] | Student View Class Resources | Classroom | Class Resource Access | Iteration 2 | Coded | CR-03 - Coded: `/list-class`, `/class-detail`, `/detail-resource`, `GET /api/classes/{id}/resources`, and classroom resource schema are implemented. |
 | [x] | IT Staff Role & AI Prompt Administration | Common | Access Control | Iteration 2 | Coded | CR-12 - Principal can manage IT Staff; IT Staff can manage AI system prompts. |
 | [x] | Manage Classroom Resources & Assignments | Classroom | Class Hub Management | Iteration 3 | Coded | CR-04, CR-05 - Coded: teacher UI/API can post, edit and delete library/file resources; assignments are resources with `submissionEnabled` and `deadline`. |
@@ -92,7 +92,7 @@ Rows where the WBS tracker's Status column does not match the actual code, found
 - **View & Filter Activity Log** — WBS says `Pending`, code reality is `Coded`: `ActivityLogController`, migration `V22`, and `/it-staff/activity-log` are implemented.
 - **Edit Own Blog Post** — WBS says `Partially Coded`, code reality is `Coded`: `BlogCommunityPage` opens a pre-filled `CreatePostModal`, which PATCHes the post.
 - **Create Class (CRUD)** — WBS says `Partially Coded`, code reality is `Coded`: API/UI/service/repository and Flyway migrations now apply without duplicate versions.
-- **Add Students to Class by Gmail** — WBS says `Partially Coded`, code reality is `Coded`: add-by-Gmail, CSV/XLSX import, membership listing, and student-role assignment are implemented.
+- **Add Students to Class by Gmail** — WBS says `Partially Coded`, code reality is `Coded`: add-by-Gmail, CSV/XLS/XLSX all-or-nothing import, membership listing, student-role assignment, and soft-remove/rejoin membership are implemented.
 - **IT Staff Role & AI Prompt Administration** — WBS says `Planned`, code reality is `Coded`: Principal can manage IT Staff and IT Staff can manage AI system prompts. This overlaps with the separate system-prompt row.
 - **Teacher Review Student Submissions** — WBS says `Planned`, code reality is `Coded`: roster/detail API and UI are implemented.
 

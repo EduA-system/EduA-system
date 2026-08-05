@@ -21,8 +21,10 @@ import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -112,12 +114,13 @@ public class SubmissionService {
         requireOwnedClass(classId);
         ClassResource resource = requireSubmittableResource(classId, resourceId);
 
-        List<UUID> studentIds = classMemberRepository.findAllStudentIds(classId);
-        Map<UUID, AppUser> usersById = userRepository.findAllById(studentIds).stream()
-                .collect(Collectors.toMap(AppUser::id, u -> u));
         Map<UUID, SubmissionRepository.SubmissionWithFiles> submissionsByStudent = submissionRepository
                 .findAllByResource(resourceId).stream()
                 .collect(Collectors.toMap(s -> s.submission().studentId(), s -> s));
+        Set<UUID> studentIds = new LinkedHashSet<>(classMemberRepository.findAllStudentIds(classId));
+        studentIds.addAll(submissionsByStudent.keySet());
+        Map<UUID, AppUser> usersById = userRepository.findAllById(studentIds).stream()
+                .collect(Collectors.toMap(AppUser::id, u -> u));
 
         List<SubmissionViews.RosterEntry> items = studentIds.stream()
                 .map(studentId -> toRosterEntry(studentId, usersById.get(studentId), submissionsByStudent.get(studentId)))

@@ -138,20 +138,19 @@ public class ClassController {
     @PostMapping("/{id}/members")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
-    @Operation(summary = "Thêm 1 học sinh bằng Gmail (UC-36 Normal Flow). reuseExistingAccount = true để gán lại tài khoản cũ khi hồ sơ không khớp.")
+    @Operation(summary = "Thêm 1 học sinh bằng Gmail (UC-36 Normal Flow). Gmail mới sẽ tạo học sinh mới; Gmail đã có phải khớp hồ sơ.")
     public ClassMemberDto addStudent(@PathVariable UUID id, @Valid @RequestBody AddStudentRequest request) {
         return ClassMemberDto.from(classEnrollmentService.addStudent(
                 id,
                 request.fullName(),
                 request.phoneNumber(),
                 request.dateOfBirth(),
-                request.email(),
-                Boolean.TRUE.equals(request.reuseExistingAccount())));
+                request.email()));
     }
 
     @DeleteMapping("/{id}/members/{studentId}")
     @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
-    @Operation(summary = "Xóa học sinh khỏi lớp (UC-37). INVITED → hard-delete (xóa sạch); đã đăng nhập → soft-remove (giữ dữ liệu) + thông báo kèm lý do.")
+    @Operation(summary = "Gỡ mềm học sinh khỏi lớp (UC-37). Chỉ chuyển membership lớp hiện tại sang REMOVED; giữ account, role và dữ liệu lớp.")
     public RemoveStudentResponse removeStudent(@PathVariable UUID id,
                                                @PathVariable UUID studentId,
                                                @RequestBody(required = false) RemoveStudentRequest request) {

@@ -108,11 +108,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ClassEnrollmentConflictException.class)
     public ResponseEntity<?> handleClassEnrollmentConflict(ClassEnrollmentConflictException ex) {
-        if (ex.details() != null) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new ClassEnrollmentConflictResponse(ex.getMessage(), ex.reason(), ex.details()));
-        }
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ClassEnrollmentConflictResponse(ex.getMessage(), ex.reason(), ex.details()));
     }
 
     @ExceptionHandler(BulkEnrollmentFailedException.class)

@@ -5,22 +5,32 @@
 > Luong & thiet ke trien khai BE: [`../add-student/flow.md`](../add-student/flow.md).
 > Ha tang dung chung auth/RBAC/rate-limit theo [`api-chung.md`](./api-chung.md).
 
+## Current implementation note — membership-status model
+
+- Account status `INVITED/ACTIVE` khong con duoc dung de dien giai "hoc sinh inactive/active trong lop". Viec hoc sinh dang o lop hay da bi go khoi lop nam o `class_members.status = ENROLLED | REMOVED`.
+- Add thu cong:
+  - Gmail chua ton tai -> tao `AppUser` hoc sinh moi voi `status = ACTIVE`, gan `Role.STUDENT`, luu ho ten/SDT/ngay sinh/Gmail, roi enroll vao lop.
+  - Gmail da ton tai -> account phai co role `STUDENT` va ho so nhap vao phai khop ho so dang luu. Neu sai ho so, tra `409 PROFILE_MISMATCH` de FE hien message "Ban nhap sai thong tin cua hoc sinh ...".
+  - Neu membership cu dang `REMOVED`, add lai se chuyen ve `ENROLLED` va giu du lieu/bai nop/dong gop cu.
+- Remove student la soft-remove theo lop: set `class_members.status = REMOVED`, khong xoa account, role, bai nop, file hay dong gop.
+- Import CSV/XLS/XLSX la all-or-nothing: validate toan bo file truoc. Neu co bat ky dong loi nao, response tra `errorCount/errors[]` va khong tao/enroll/rejoin hoc sinh nao. Chi khi file sach moi ghi DB.
+
 ## Quyet dinh rieng
 
 - **Bam sat SRS**: mapping truc tiep `UC-36 Add Student`. Khong lam `UC-37 Remove Student` trong tai lieu nay (xem "Diem mo").
 - **Chi email, khong self-join**: dung mo hinh cua `class-management.md` — khong co class code/self-join. Teacher la nguoi duy nhat khoi tao viec them hoc sinh, bang Gmail cua hoc sinh.
 - **Them `STUDENT` vao `Role` enum**: `domain/model/auth/Role.java` hien chi co `TEACHER, MODERATOR, PRINCIPAL, IT_STAFF`. `JwtTokenAdapter.issueAccessToken` goi `Role.primaryOf(roles)` va se throw neu tap role rong — nghia la neu tao `AppUser` moi cho hoc sinh ma khong gan role nao, hoc sinh do **khong dang nhap duoc**. Add Student phai gan `Role.STUDENT` (uu tien thap nhat trong `PRIORITY`) qua `UserRoleRepository.replaceRole` giong cach `ModeratorTeacherService.addTeacher` gan `Role.TEACHER`.
 - **Khong tai su dung nguyen ven guard cua `addTeacher`**: `ModeratorTeacherService.addTeacher` chan luon khi email da ton tai va dang khong `DISABLED` (`DuplicateEmailException`). Add Student **khong the** ap dung y nguyen vi mot hoc sinh phai them duoc vao **nhieu lop**. Thay vao do:
-  - Email chua ton tai → tao `AppUser` moi, `status = INVITED`, gan `Role.STUDENT`.
+  - Email chua ton tai → tao `AppUser` moi, `status = ACTIVE`, gan `Role.STUDENT`.
   - Email ton tai va role hien tai la `STUDENT` (hoac chua co role nao) → dung lai user id, gan/giu `Role.STUDENT`, khong bao loi.
   - Email ton tai va role hien tai **khac `STUDENT`** (TEACHER/MODERATOR/PRINCIPAL/IT_STAFF) → **chan** voi `409` — khong duoc ghi de role qua `replaceRole` vi day la he thong single-role.
   - Email ton tai nhung `status = DISABLED` → **chan** voi `409` — Teacher khong co quyen tu kich hoat lai tai khoan bi khoa (quyen do thuoc Moderator/Principal theo BR-03); khac voi `addTeacher` cho phep Moderator tu reactivate.
 - **Enrollment rieng theo tung lop**: sau khi resolve/tao `AppUser`, kiem tra trung theo `class_members (class_id, student_id)` — khong phai theo email toan he thong. Mot hoc sinh co the o nhieu lop.
 - **Notification tai dung ha tang co san, khong qua `NotificationService`**: `NotificationService` hien gan cung logic "Moderator broadcast theo subject" (bat buoc `moderatorSubject != null`), khong khop ngu canh 1-hoc-sinh. Add Student goi truc tiep `NotificationRepository.createWithRecipients(...)` + `NotificationStreamPort.publishNew(...)` (cung repository/gateway ma `NotificationService` dang dung), voi `subject = classroom.subject()`, `senderId = teacherId`, `recipientIds = [studentId]`.
-- **Import theo hang, khong reject ca file** (BR-38): dong hop le duoc them, dong loi bi bo qua va bao cao ly do; chi rollback toan bo khi loi he thong (vd. transaction that bai giua chung), khong phai khi tung dong khong hop le.
+- **Import all-or-nothing**: validate toan bo file truoc; neu co bat ky dong loi nao thi khong ghi bat ky hoc sinh nao va tra `errors[]` theo dong.
 - **Gioi han si so lop toi da 60 thanh vien** (khong tinh giao vien): rule bo sung theo yeu cau du an, **khong co trong SRS goc** (SRS chi co BR-34/37/38/46, khong de cap capacity) — ghi ro de tranh nham la business rule chinh thuc. Ap dung cho ca 2 endpoint ghi:
   - `POST /members`: neu lop da du 60 thanh vien → chan voi `409`, khong tao/sua ban ghi nao.
-  - `POST /members/import`: them dong hop le cho **den khi du 60**, cac dong con lai (dung ra hop le nhung vuot si so) bi **skip** voi ly do `CLASS_FULL` — ap dung triet ly "bo qua dong loi, khong reject ca file" giong `BR-38`.
+  - `POST /members/import`: neu tong so dong hop le vuot si so 60 thi ca file loi `CLASS_FULL`, khong ghi DB.
   - Kiem tra si so bang `ClassMemberRepository.countByClassId` hien co, **khong** can them cot/constraint moi trong DB — day la rule ap dung o tang service, khong phai DB constraint, de sau nay de doi so neu can ma khong can migration.
 - **Dinh dang file import: chap nhan `.xlsx` va `.csv`**, cot bat buoc phai **dat ten la `gmail`** (khong phai `email` chung chung) — **khong phan biet hoa/thuong** (`gmail`, `Gmail`, `GMAIL` deu hop le). SRS chi ghi "required email column" chung chung; du an chot ten cot cu the la `gmail` de khop UI/template thuc te.
 - **Rui ro schema co san (khong sua trong tai lieu nay)**: migration `V15__create_class_management.sql` tao `classes`/`class_members` bang `BIGSERIAL`/`teacher_id BIGINT REFERENCES users(id)`, trong khi `ClassEntity`/`ClassMemberEntity` (JPA) dung `UUID` + `owner_id`/`app_users`. `spring.jpa.hibernate.ddl-auto=update` dang che giau lech nay. Migration moi phuc vu Add Student phai theo dung schema UUID thuc te cua entity, khong theo V15 cu — xem chi tiet o [`../add-student/flow.md`](../add-student/flow.md#5-model-du-lieu-du-kien).
@@ -49,12 +59,14 @@ Tat ca request can `Authorization: Bearer <access>` theo JWT filter cua `auth.md
   "studentId": "uuid",
   "studentEmail": "student01@gmail.com",
   "studentName": "Nguyen Van B",
-  "studentStatus": "INVITED",
+  "studentStatus": "ACTIVE",
+  "membershipStatus": "ENROLLED",
   "joinedAt": "2026-07-25T10:00:00Z"
 }
 ```
 
-- `studentStatus`: `INVITED | ACTIVE` — phan anh `AppUser.status`, giup FE hien thi "chua dang nhap lan nao" vs "da kich hoat".
+- `studentStatus`: account-level status, giu trong response de tuong thich.
+- `membershipStatus`: `ENROLLED | REMOVED`; danh sach members mac dinh chi tra `ENROLLED`.
 
 ### `ClassMemberPageDto`
 
@@ -85,8 +97,10 @@ ImportStudentsRequest (multipart/form-data):
 ```json
 {
   "addedCount": 27,
-  "skippedCount": 3,
-  "skipped": [
+  "createdCount": 12,
+  "rejoinedCount": 1,
+  "errorCount": 3,
+  "errors": [
     { "row": 5, "email": "invalid-email", "reason": "INVALID_FORMAT" },
     { "row": 9, "email": "student02@gmail.com", "reason": "DUPLICATE_IN_FILE" },
     { "row": 14, "email": "student03@gmail.com", "reason": "ALREADY_ENROLLED" },
@@ -150,8 +164,8 @@ multipart: file (.csv hoac .xlsx, cot bat buoc ten "gmail", khong phan biet hoa/
 - Chi class owner va chi khi lop `ACTIVE` moi duoc goi, giong endpoint (2).
 - Validate file: dinh dang (`.csv`/`.xlsx`), kich thuoc, **co cot ten dung la `gmail`** (khong phan biet hoa/thuong; file dung ten cot khac nhu `email` ma khong co cot `gmail` → coi la thieu cot bat buoc), co it nhat 1 dong du lieu — sai bat ky dieu kien nao tra `400` MSG24, **khong them ai** (SRS Exception "Imported file is invalid").
 - Voi file hop le: duyet tung dong theo thu tu, phan loai `valid / invalid format / duplicate trong file / already enrolled / role conflict / account disabled / class full`.
-- Them dong valid & khong trung **cho den khi lop du 60 thanh vien**; dong sau do bi skip voi ly do `CLASS_FULL` du ban than dong do hop le — ap dung cung triet ly "bo qua dong loi, khong reject ca file" (`BR-38`) cho ca truong hop vuot si so.
-- Them tat ca dong valid & khong trung (trong gioi han si so), **bo qua** dong loi thay vi reject ca file (`BR-38`) — neu khong con dong valid nao, tra `200` voi `addedCount = 0` va danh sach ly do bi bo qua day du (SRS "Imported file contains no valid student rows"), **khong** phai loi.
+- Validate toan bo file truoc; neu co loi ho so, trung Gmail, role conflict, da co trong lop, account disabled, hoac vuot si so thi khong ghi bat ky dong nao.
+- Validate toan bo file truoc; neu co bat ky dong loi nao thi tra `200` voi `addedCount = 0`, `errorCount > 0`, `errors[]` day du va khong ghi DB. Neu file sach thi ghi tat ca dong hop le trong mot transaction.
 - Neu qua trinh ghi bulk that bai vi loi he thong (khong phai loi validate tung dong) → rollback toan bo, khong hoc sinh nao duoc them, khong gui notification nao (SRS "Bulk addition fails", MSG25).
 - Gui notification cho tung hoc sinh them thanh cong (`BR-46`).
 - Tra `ImportStudentsResponse` la import summary hien thi so luong them/bo qua kem ly do.

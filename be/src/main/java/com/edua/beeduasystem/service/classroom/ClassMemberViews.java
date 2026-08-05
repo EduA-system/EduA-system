@@ -1,6 +1,7 @@
 package com.edua.beeduasystem.service.classroom;
 
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
+import com.edua.beeduasystem.domain.model.classroom.ClassMemberStatus;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ public final class ClassMemberViews {
             String studentEmail,
             String studentName,
             UserStatus studentStatus,
+            ClassMemberStatus membershipStatus,
             Instant joinedAt
     ) {
     }
@@ -30,22 +32,25 @@ public final class ClassMemberViews {
     ) {
     }
 
-    /** 1 dong bi bo qua khi import — {@code reason}: INVALID_FORMAT | DUPLICATE_IN_FILE | ALREADY_ENROLLED | ROLE_CONFLICT | ACCOUNT_DISABLED | CLASS_FULL. */
-    public record SkippedRow(
+    /** 1 dong loi khi import all-or-nothing; neu co error thi khong ghi bat ky hoc sinh nao. */
+    public record ImportError(
             int row,
             String email,
-            String reason
+            String reason,
+            String message
     ) {
     }
 
     public record ImportResult(
             int addedCount,
-            int skippedCount,
-            List<SkippedRow> skipped
+            int createdCount,
+            int rejoinedCount,
+            int errorCount,
+            List<ImportError> errors
     ) {
     }
 
-    /** Thông tin tài khoản cũ trả kèm 409 PROFILE_MISMATCH để FE hỏi "gán lại account cũ vào lớp không?". */
+    /** Thông tin tài khoản cũ trả kèm 409 PROFILE_MISMATCH để FE yêu cầu nhập đúng hồ sơ. */
     public record ExistingAccountInfo(
             String email,
             String fullName,
@@ -55,7 +60,7 @@ public final class ClassMemberViews {
     ) {
     }
 
-    /** Kết quả xóa học sinh khỏi lớp. {@code mode}: HARD_DELETE (INVITED, xóa sạch) | SOFT_REMOVE (giữ dữ liệu). */
+    /** Kết quả xóa học sinh khỏi lớp. {@code mode}: SOFT_REMOVE (giữ dữ liệu). */
     public record RemoveResult(
             String mode,
             boolean notified

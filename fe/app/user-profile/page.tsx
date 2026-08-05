@@ -62,10 +62,18 @@ function initialsOf(name: string): string {
   return name.trim().split(/\s+/).map((part) => part[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 }
 
+function fieldClassName(isLocked = false): string {
+  const base = "mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097]";
+  return isLocked
+    ? `${base} cursor-not-allowed bg-[#efede9] text-[#5f5a54]`
+    : `${base} bg-[#faf9f7] focus:border-[#d97757]`;
+}
+
 function UserProfileContent() {
   const { user, authFetch, signOut, updateUser } = useAuth();
   const [fullName, setFullName] = useState(() => user?.fullName ?? "");
   const [phoneNumber, setPhoneNumber] = useState(() => user?.phoneNumber ?? "");
+  const [dateOfBirth, setDateOfBirth] = useState(() => user?.dateOfBirth ?? "");
   const [bio, setBio] = useState(() => user?.bio ?? "");
   const [contactInfo, setContactInfo] = useState(() => user?.contactInfo ?? "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -92,6 +100,7 @@ function UserProfileContent() {
   function resetForm() {
     setFullName(user?.fullName ?? "");
     setPhoneNumber(user?.phoneNumber ?? "");
+    setDateOfBirth(user?.dateOfBirth ?? "");
     setBio(user?.bio ?? "");
     setContactInfo(user?.contactInfo ?? "");
     setAvatarFile(null);
@@ -129,19 +138,23 @@ function UserProfileContent() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || saving) return;
+    const isStudent = user.role === "STUDENT";
     setSaving(true);
     setError("");
     setSuccess("");
     try {
       const avatarUrl = removeAvatar ? "" : avatarFile ? await uploadAvatar(authFetch, avatarFile) : user.avatarUrl;
       const nextUser = await saveProfile(authFetch, {
-        fullName: fullName.trim() || null,
-        phoneNumber: phoneNumber.trim() || null,
+        fullName: isStudent ? user.fullName : fullName.trim() || null,
+        phoneNumber: isStudent ? user.phoneNumber : phoneNumber.trim() || null,
         bio: bio.trim() || null,
         contactInfo: contactInfo.trim() || null,
         avatarUrl,
       });
       updateUser(nextUser);
+      setFullName(nextUser.fullName ?? "");
+      setPhoneNumber(nextUser.phoneNumber ?? "");
+      setDateOfBirth(nextUser.dateOfBirth ?? "");
       setAvatarFile(null);
       setRemoveAvatar(false);
       clearAvatarPreview();
@@ -159,6 +172,7 @@ function UserProfileContent() {
   }
 
   if (!user) return null;
+  const isStudent = user.role === "STUDENT";
   const avatarSource = removeAvatar ? null : avatarPreview ?? user.avatarUrl;
   const showsSubject = user.role === "TEACHER" || user.role === "MODERATOR";
   const bioPlaceholder = user.role === "STUDENT"
@@ -212,13 +226,18 @@ function UserProfileContent() {
                 </div>
 
                 <div className="my-7 h-px bg-[#d8d1c9]" />
-                                <div className="grid gap-5 sm:grid-cols-2">
+                <div className="grid gap-5 sm:grid-cols-2">
                   <label className="text-[12px] font-medium text-[#6b6b6b]">Họ và tên
-                    <input value={fullName} onChange={(event) => setFullName(event.target.value)} maxLength={255} placeholder="Nhập tên hiển thị" className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]" />
+                    <input value={fullName} onChange={(event) => setFullName(event.target.value)} maxLength={255} placeholder="Nhập tên hiển thị" disabled={isStudent || saving} className={fieldClassName(isStudent)} />
                   </label>
                   <label className="text-[12px] font-medium text-[#6b6b6b]">Số điện thoại
-                    <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} maxLength={30} inputMode="tel" placeholder="Nhập số điện thoại" className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]" />
+                    <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} maxLength={30} inputMode="tel" placeholder="Nhập số điện thoại" disabled={isStudent || saving} className={fieldClassName(isStudent)} />
                   </label>
+                  {isStudent ? (
+                    <label className="text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">Ngày sinh
+                      <input type="date" value={dateOfBirth} disabled className={fieldClassName(true)} />
+                    </label>
+                  ) : null}
                   <label className="text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">Giới thiệu ngắn
                     <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={1000} rows={4} placeholder={bioPlaceholder} className="mt-2 w-full resize-y rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]" />
                   </label>

@@ -16,11 +16,17 @@ export const STATUS_LABELS: Record<ClassStatus, string> = {
 };
 
 export type StudentStatus = "INVITED" | "ACTIVE" | "DISABLED";
+export type ClassMemberStatus = "ENROLLED" | "REMOVED";
 
 export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
   INVITED: "Chưa đăng nhập",
   ACTIVE: "Đã kích hoạt",
   DISABLED: "Đã khóa",
+};
+
+export const MEMBER_STATUS_LABELS: Record<ClassMemberStatus, string> = {
+  ENROLLED: "Đang trong lớp",
+  REMOVED: "Đã gỡ khỏi lớp",
 };
 
 export const IMPORT_SKIP_REASON_LABELS: Record<string, string> = {
@@ -87,6 +93,7 @@ export type ClassMember = {
   studentEmail: string | null;
   studentName: string | null;
   studentStatus: StudentStatus | null;
+  membershipStatus: ClassMemberStatus;
   joinedAt: string;
 };
 
@@ -97,16 +104,19 @@ export type ClassMemberPage = {
   total: number;
 };
 
-export type ImportSkippedRow = {
+export type ImportErrorRow = {
   row: number;
   email: string | null;
   reason: string;
+  message: string;
 };
 
 export type ImportStudentsResult = {
   addedCount: number;
-  skippedCount: number;
-  skipped: ImportSkippedRow[];
+  createdCount: number;
+  rejoinedCount: number;
+  errorCount: number;
+  errors: ImportErrorRow[];
 };
 
 export const RESOURCE_SOURCE_TYPES = ["LIBRARY_SNAPSHOT", "FILE_UPLOAD"] as const;
@@ -254,6 +264,11 @@ export function studentStatusLabel(status: string | null): string {
   return STUDENT_STATUS_LABELS[status as StudentStatus] ?? status;
 }
 
+export function memberStatusLabel(status: string | null): string {
+  if (!status) return "—";
+  return MEMBER_STATUS_LABELS[status as ClassMemberStatus] ?? status;
+}
+
 export function importSkipReasonLabel(reason: string): string {
   return IMPORT_SKIP_REASON_LABELS[reason] ?? reason;
 }
@@ -320,11 +335,9 @@ export type AddClassStudentPayload = {
   phoneNumber: string;
   dateOfBirth: string;
   email: string;
-  /** true khi giáo viên xác nhận gán lại tài khoản cũ (sau 409 PROFILE_MISMATCH). */
-  reuseExistingAccount?: boolean;
 };
 
-/** Tài khoản cũ trả kèm 409 PROFILE_MISMATCH để hỏi "gán lại account cũ vào lớp không?". */
+/** Hồ sơ tài khoản đã có trả kèm 409 PROFILE_MISMATCH để xác nhận thêm vào lớp đang chọn. */
 export type ExistingAccountInfo = {
   email: string;
   fullName: string | null;
@@ -381,12 +394,12 @@ export function importClassStudents(
 }
 
 export type RemoveStudentResult = {
-  /** HARD_DELETE (học sinh chưa đăng nhập, xóa sạch) | SOFT_REMOVE (chỉ gỡ khỏi lớp, giữ dữ liệu). */
-  mode: "HARD_DELETE" | "SOFT_REMOVE";
+  /** SOFT_REMOVE: chỉ gỡ khỏi lớp, giữ tài khoản và dữ liệu lớp. */
+  mode: "SOFT_REMOVE";
   notified: boolean;
 };
 
-/** Xóa học sinh khỏi lớp. `reason` bắt buộc khi học sinh đã kích hoạt (sẽ gửi thông báo kèm lý do). */
+/** Xóa mềm học sinh khỏi lớp. `reason` là ghi chú tùy chọn; tài khoản và dữ liệu lớp được giữ nguyên. */
 export function removeClassStudent(
   authFetch: AuthFetch,
   classId: string,

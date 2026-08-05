@@ -9,6 +9,7 @@ import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.domain.model.classroom.ClassMember;
+import com.edua.beeduasystem.domain.model.classroom.ClassMemberStatus;
 import com.edua.beeduasystem.domain.model.classroom.Classroom;
 import com.edua.beeduasystem.domain.model.notification.Notification;
 import com.edua.beeduasystem.repository.gateways.NotificationEvent;
@@ -25,6 +26,7 @@ import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -59,8 +61,10 @@ import java.util.stream.Collectors;
 public class ClassEnrollmentService {
 
     private static final int MAX_CLASS_SIZE = 60;
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("csv", "xlsx");
+    private static final int MIN_STUDENT_AGE_YEARS = 16;
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("csv", "xls", "xlsx");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    private static final Pattern VIETNAM_MOBILE_PHONE_PATTERN = Pattern.compile("^0[35789]\\d{8}$");
 
     private final ClassRepository classRepository;
     private final ClassMemberRepository classMemberRepository;
@@ -95,98 +99,77 @@ public class ClassEnrollmentService {
 
     @Transactional
     public ClassMemberViews.MemberSummary addStudent(UUID classId, String rawFullName, String rawPhoneNumber,
-                                                     LocalDate dateOfBirth, String rawEmail, boolean reuseExistingAccount) {
+                                                     LocalDate dateOfBirth, String rawEmail) {
         Classroom classroom = requireOwnedActiveClass(classId);
         String email = requireEmail(rawEmail);
         StudentProfile profile = requireProfile(rawFullName, rawPhoneNumber, dateOfBirth, email);
         requireCapacity(classroom.id());
         requireEmailNotAlreadyEnrolled(classroom, email);
-        AppUser student = resolveOrCreateStudent(profile, reuseExistingAccount);
-        requireNotEnrolled(classroom, student.id());
-        ClassMember saved = classMemberRepository.save(new ClassMember(
-                UUID.randomUUID(), classroom.id(), student.id(), Instant.now()));
-        notifyEnrollment(classroom, List.of(student.id()));
-        return toMemberSummary(saved, student);
+        ResolvedStudent resolved = resolveOrCreateStudent(profile);
+        ClassMember saved = enrollOrRejoin(classroom, resolved.student());
+        notifyEnrollment(classroom, List.of(resolved.student().id()));
+        return toMemberSummary(saved, resolved.student());
     }
 
     @Transactional
     public ClassMemberViews.ImportResult importStudents(UUID classId, MultipartFile file) {
         Classroom classroom = requireOwnedActiveClass(classId);
         List<ParsedRow> rows = parseFile(file);
-        requireNoDuplicateEmailsInFile(rows);
-        long baseCount = classMemberRepository.countByClassId(classroom.id());
-        if (baseCount + rows.size() > MAX_CLASS_SIZE) {
-            throw new IllegalArgumentException(
-                    "Tệp có " + rows.size() + " học sinh; lớp hiện có " + baseCount
-                            + ". Tổng sĩ số vượt quá " + MAX_CLASS_SIZE + ", nên không có học sinh nào được thêm.");
+        ImportPlan plan = validateImportPlan(classroom, rows);
+        if (!plan.errors().isEmpty()) {
+            return new ClassMemberViews.ImportResult(0, 0, 0, plan.errors().size(), List.copyOf(plan.errors()));
         }
 
-        List<ClassMemberViews.SkippedRow> skipped = new ArrayList<>();
         List<UUID> notifyIds = new ArrayList<>();
-
-        for (ParsedRow row : rows) {
-            String email = normalizeEmail(row.rawEmail());
-            if (email == null || !isValidEmail(email)) {
-                skipped.add(new ClassMemberViews.SkippedRow(row.rowNumber(), row.rawEmail(), "INVALID_FORMAT"));
-                continue;
+        int createdCount = 0;
+        int rejoinedCount = 0;
+        try {
+            for (PlannedEnrollment planned : plan.enrollments()) {
+                ResolvedStudent resolved = resolveOrCreateStudent(planned.profile());
+                enrollOrRejoin(classroom, resolved.student());
+                if (resolved.created()) {
+                    createdCount++;
+                }
+                if (planned.rejoin()) {
+                    rejoinedCount++;
+                }
+                notifyIds.add(resolved.student().id());
             }
-            if (row.dateOfBirth() == null || !StringUtils.hasText(row.fullName()) || !StringUtils.hasText(row.phoneNumber())) {
-                skipped.add(new ClassMemberViews.SkippedRow(row.rowNumber(), row.rawEmail(), "INVALID_STUDENT_DATA"));
-                continue;
-            }
-            try {
-                requireEmailNotAlreadyEnrolled(classroom, email);
-                AppUser student = resolveOrCreateStudent(requireProfile(row.fullName(), row.phoneNumber(), row.dateOfBirth(), email), false);
-                requireNotEnrolled(classroom, student.id());
-                classMemberRepository.save(new ClassMember(
-                        UUID.randomUUID(), classroom.id(), student.id(), Instant.now()));
-                notifyIds.add(student.id());
-            } catch (ClassEnrollmentConflictException ex) {
-                skipped.add(new ClassMemberViews.SkippedRow(row.rowNumber(), email, ex.reason()));
-            } catch (DataAccessException ex) {
-                throw new BulkEnrollmentFailedException("Thao tac that bai. Vui long thu lai.", ex);
-            }
+        } catch (DataAccessException ex) {
+            throw new BulkEnrollmentFailedException("Thao tac that bai. Vui long thu lai.", ex);
         }
 
         notifyEnrollment(classroom, notifyIds);
-        return new ClassMemberViews.ImportResult(notifyIds.size(), skipped.size(), List.copyOf(skipped));
+        return new ClassMemberViews.ImportResult(notifyIds.size(), createdCount, rejoinedCount, 0, List.of());
     }
 
     @Transactional
     public ClassMemberViews.RemoveResult removeStudent(UUID classId, UUID studentId, String reason) {
         Classroom classroom = requireOwnedClass(classId);
-        if (!classMemberRepository.existsByClassIdAndStudentId(classId, studentId)) {
+        ClassMember member = classMemberRepository.findAnyByClassIdAndStudentId(classId, studentId)
+                .filter(m -> m.status() == ClassMemberStatus.ENROLLED)
+                .orElse(null);
+        if (member == null) {
             throw new ResourceNotFoundException("Học sinh này không thuộc lớp " + classroom.name() + ".");
         }
-        AppUser student = userRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found."));
-
-        if (student.status() == UserStatus.INVITED) {
-            // Học sinh chưa từng đăng nhập: xóa sạch (hard-delete) — không có submission/hoạt động nào để giữ.
-            classMemberRepository.deleteAllByStudentId(studentId);
-            userRoleRepository.deleteByUserId(studentId);
-            notificationRepository.deleteRecipientsByRecipientId(studentId);
-            userRepository.deleteById(studentId);
-            return new ClassMemberViews.RemoveResult("HARD_DELETE", false);
-        }
-
-        // Đã từng đăng nhập (ACTIVE/DISABLED): chỉ gỡ khỏi lớp này (soft-remove), giữ nguyên
-        // tài khoản + submissions/dữ liệu trong lớp (BR-45); slot 60 chỗ được giải phóng vì dòng class_members bị xóa.
-        classMemberRepository.deleteByClassIdAndStudentId(classId, studentId);
-        boolean notified = false;
-        if (student.status() == UserStatus.ACTIVE) {
-            if (!StringUtils.hasText(reason)) {
-                throw new IllegalArgumentException("Vui lòng nhập lý do xóa để gửi thông báo cho học sinh.");
-            }
-            notifyRemoval(classroom, student, reason.trim());
-            notified = true;
-        }
-        return new ClassMemberViews.RemoveResult("SOFT_REMOVE", notified);
+        // Chỉ soft-remove membership của lớp đang quản lý. Account, role STUDENT, bài nộp
+        // và đóng góp trong lớp được giữ nguyên để có thể xem lịch sử hoặc add lại sau.
+        classMemberRepository.save(new ClassMember(
+                member.id(),
+                member.classId(),
+                member.studentId(),
+                ClassMemberStatus.REMOVED,
+                member.joinedAt(),
+                Instant.now(),
+                currentUserProvider.requireUserId(),
+                StringUtils.hasText(reason) ? reason.trim() : null,
+                member.rejoinedAt()));
+        return new ClassMemberViews.RemoveResult("SOFT_REMOVE", false);
     }
 
     // ---- resolve-or-create AppUser theo email (dung chung cho add 1 email va tung dong import) ----
 
-    private AppUser resolveOrCreateStudent(StudentProfile profile, boolean reuseExistingAccount) {
+    private ResolvedStudent resolveOrCreateStudent(StudentProfile profile) {
         String email = profile.email();
         UUID actorId = currentUserProvider.requireUserId();
         Instant now = Instant.now();
@@ -194,18 +177,11 @@ public class ClassEnrollmentService {
         if (existing.isEmpty()) {
             AppUser created = userRepository.save(new AppUser(
                     UUID.randomUUID(), email, null, profile.fullName(), null, null,
-                    null, profile.phoneNumber(), null, UserStatus.INVITED, now, null, profile.dateOfBirth()));
+                    null, profile.phoneNumber(), null, UserStatus.ACTIVE, now, null, profile.dateOfBirth()));
             userRoleRepository.replaceRole(created.id(), Role.STUDENT, actorId, now);
-            return created;
+            return new ResolvedStudent(created, true);
         }
         AppUser user = existing.get();
-        if (!reuseExistingAccount && !sameProfile(user, profile)) {
-            // Giáo viên có thể nhập sai thông tin: trả kèm tài khoản cũ để FE hỏi "gán lại account cũ vào lớp không?".
-            throw new ClassEnrollmentConflictException("PROFILE_MISMATCH",
-                    "Email này đã tồn tại với thông tin hồ sơ khác. Bạn có muốn gán lại tài khoản cũ vào lớp?",
-                    new ClassMemberViews.ExistingAccountInfo(
-                            user.email(), user.fullName(), user.phoneNumber(), user.dateOfBirth(), user.status()));
-        }
         if (user.status() == UserStatus.DISABLED) {
             throw new ClassEnrollmentConflictException(
                     "ACCOUNT_DISABLED", "Tai khoan da bi khoa, lien he quan tri vien.");
@@ -215,20 +191,127 @@ public class ClassEnrollmentService {
             throw new ClassEnrollmentConflictException(
                     "ROLE_CONFLICT", "Email nay da duoc cap cho vai tro khac.");
         }
+        if (!sameProfile(user, profile)) {
+            // Gmail đã có trong hệ thống nhưng thông tin hồ sơ không khớp; giáo viên phải sửa dữ liệu nhập.
+            throw new ClassEnrollmentConflictException("PROFILE_MISMATCH",
+                    "Bạn nhập sai thông tin của học sinh " + displayName(user) + " có mail là \"" + user.email()
+                            + "\", vui lòng nhập đúng.",
+                    new ClassMemberViews.ExistingAccountInfo(
+                            user.email(), user.fullName(), user.phoneNumber(), user.dateOfBirth(), user.status()));
+        }
         userRoleRepository.replaceRole(user.id(), Role.STUDENT, actorId, now);
-        return user;
+        return new ResolvedStudent(user, false);
+    }
+
+    private ClassMember enrollOrRejoin(Classroom classroom, AppUser student) {
+        Instant now = Instant.now();
+        Optional<ClassMember> existing = classMemberRepository.findAnyByClassIdAndStudentId(classroom.id(), student.id());
+        if (existing.isPresent()) {
+            ClassMember member = existing.get();
+            if (member.status() == ClassMemberStatus.ENROLLED) {
+                throw new ClassEnrollmentConflictException("ALREADY_ENROLLED", "Học sinh này đã tồn tại trong lớp " + classroom.name() + ".");
+            }
+            return classMemberRepository.save(new ClassMember(
+                    member.id(),
+                    member.classId(),
+                    member.studentId(),
+                    ClassMemberStatus.ENROLLED,
+                    member.joinedAt(),
+                    null,
+                    null,
+                    null,
+                    now));
+        }
+        return classMemberRepository.save(new ClassMember(
+                UUID.randomUUID(), classroom.id(), student.id(), ClassMemberStatus.ENROLLED, now, null, null, null, null));
+    }
+
+    private ImportPlan validateImportPlan(Classroom classroom, List<ParsedRow> rows) {
+        List<ClassMemberViews.ImportError> errors = new ArrayList<>();
+        List<PlannedEnrollment> enrollments = new ArrayList<>();
+        Map<String, Integer> firstRowByEmail = new HashMap<>();
+
+        for (ParsedRow row : rows) {
+            String email = normalizeEmail(row.rawEmail());
+            if (email == null || !isValidEmail(email)) {
+                errors.add(importError(row.rowNumber(), row.rawEmail(), "INVALID_FORMAT",
+                        "Dòng " + row.rowNumber() + " có Gmail không hợp lệ. Vui lòng sửa lại và nộp lại file."));
+                continue;
+            }
+            Integer firstRow = firstRowByEmail.putIfAbsent(email, row.rowNumber());
+            if (firstRow != null) {
+                errors.add(importError(row.rowNumber(), email, "DUPLICATE_IN_FILE",
+                        "Dòng " + row.rowNumber() + " trùng Gmail với dòng " + firstRow
+                                + ". Vui lòng sửa lại và nộp lại file."));
+                continue;
+            }
+            String profileError = validateProfileMessage(row.fullName(), row.phoneNumber(), row.dateOfBirth());
+            if (profileError != null) {
+                errors.add(importError(row.rowNumber(), email, "INVALID_STUDENT_DATA",
+                        "Dòng " + row.rowNumber() + " " + profileError + " Vui lòng sửa lại và nộp lại file."));
+                continue;
+            }
+
+            StudentProfile profile = new StudentProfile(row.fullName().trim(), row.phoneNumber().trim(), row.dateOfBirth(), email);
+            Optional<AppUser> existing = userRepository.findByEmail(email);
+            boolean rejoin = false;
+            if (existing.isPresent()) {
+                AppUser user = existing.get();
+                if (user.status() == UserStatus.DISABLED) {
+                    errors.add(importError(row.rowNumber(), email, "ACCOUNT_DISABLED",
+                            "Tài khoản " + email + " đã bị khóa. Vui lòng sửa lại file rồi nộp lại."));
+                    continue;
+                }
+                Set<Role> roles = userRoleRepository.findRolesByUserId(user.id());
+                if (!roles.isEmpty() && !roles.contains(Role.STUDENT)) {
+                    errors.add(importError(row.rowNumber(), email, "ROLE_CONFLICT",
+                            "Email " + email + " đã thuộc vai trò khác. Vui lòng sửa lại file rồi nộp lại."));
+                    continue;
+                }
+                if (!sameProfile(user, profile)) {
+                    errors.add(importError(row.rowNumber(), email, "PROFILE_MISMATCH",
+                            "Học sinh " + displayName(user) + " có mail là \"" + user.email()
+                                    + "\" sai thông tin. Vui lòng sửa lại file rồi nộp lại."));
+                    continue;
+                }
+                Optional<ClassMember> member = classMemberRepository.findAnyByClassIdAndStudentId(classroom.id(), user.id());
+                if (member.isPresent() && member.get().status() == ClassMemberStatus.ENROLLED) {
+                    errors.add(importError(row.rowNumber(), email, "ALREADY_ENROLLED",
+                            "Học sinh này đã tồn tại trong lớp " + classroom.name()
+                                    + ". Vui lòng sửa lại file rồi nộp lại."));
+                    continue;
+                }
+                rejoin = member.isPresent() && member.get().status() == ClassMemberStatus.REMOVED;
+            }
+            enrollments.add(new PlannedEnrollment(profile, rejoin));
+        }
+
+        long baseCount = classMemberRepository.countByClassId(classroom.id());
+        if (baseCount + enrollments.size() > MAX_CLASS_SIZE) {
+            errors.add(importError(0, null, "CLASS_FULL",
+                    "Tệp có " + enrollments.size() + " học sinh hợp lệ; lớp hiện có " + baseCount
+                            + ". Tổng sĩ số vượt quá " + MAX_CLASS_SIZE + ". Vui lòng sửa lại file rồi nộp lại."));
+        }
+        return new ImportPlan(List.copyOf(enrollments), List.copyOf(errors));
+    }
+
+    private static ClassMemberViews.ImportError importError(int row, String email, String reason, String message) {
+        return new ClassMemberViews.ImportError(row, email, reason, message);
+    }
+
+    private record ResolvedStudent(AppUser student, boolean created) {
+    }
+
+    private record PlannedEnrollment(StudentProfile profile, boolean rejoin) {
+    }
+
+    private record ImportPlan(List<PlannedEnrollment> enrollments, List<ClassMemberViews.ImportError> errors) {
     }
 
     private void requireCapacity(UUID classId) {
         if (classMemberRepository.countByClassId(classId) >= MAX_CLASS_SIZE) {
             throw new ClassEnrollmentConflictException(
                     "CLASS_FULL", "Lop da dat so luong thanh vien toi da (" + MAX_CLASS_SIZE + ").");
-        }
-    }
-
-    private void requireNotEnrolled(Classroom classroom, UUID studentId) {
-        if (classMemberRepository.existsByClassIdAndStudentId(classroom.id(), studentId)) {
-            throw new ClassEnrollmentConflictException("ALREADY_ENROLLED", "Học sinh này đã tồn tại trong lớp " + classroom.name() + ".");
         }
     }
 
@@ -257,21 +340,6 @@ public class ClassEnrollmentService {
                 .orElse(null);
     }
 
-    // ---- notification khi teacher xóa học sinh đã kích hoạt (soft-remove) ----
-
-    private void notifyRemoval(Classroom classroom, AppUser student, String reason) {
-        UUID senderId = currentUserProvider.requireUserId();
-        Instant now = Instant.now();
-        String title = "Ban da bi xoa khoi lop " + classroom.name();
-        String content = "Giao vien da xoa ban khoi lop \"" + classroom.name() + "\". Ly do: " + reason;
-        Notification saved = notificationRepository.createWithRecipients(
-                new Notification(UUID.randomUUID(), senderId, classroom.subject(), title, content, now),
-                List.of(student.id()));
-        NotificationEvent event = new NotificationEvent(
-                saved.id(), saved.title(), saved.content(), saved.subject(), resolveSenderName(senderId), saved.createdAt());
-        notificationStreamPort.publishNew(student.id(), event);
-    }
-
     // ---- view mapping ----
 
     private List<ClassMemberViews.MemberSummary> toMemberSummaries(List<ClassMember> members) {
@@ -291,6 +359,7 @@ public class ClassEnrollmentService {
                 student != null ? student.email() : null,
                 student != null ? student.fullName() : null,
                 student != null ? student.status() : null,
+                member.status(),
                 member.joinedAt());
     }
 
@@ -351,16 +420,44 @@ public class ClassEnrollmentService {
     }
 
     private static StudentProfile requireProfile(String rawFullName, String rawPhoneNumber, LocalDate dateOfBirth, String email) {
-        if (!StringUtils.hasText(rawFullName) || !StringUtils.hasText(rawPhoneNumber) || dateOfBirth == null || !dateOfBirth.isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("Họ tên, số điện thoại và ngày sinh là các trường bắt buộc hợp lệ.");
+        String profileError = validateProfileMessage(rawFullName, rawPhoneNumber, dateOfBirth);
+        if (profileError != null) {
+            throw new IllegalArgumentException(profileError);
         }
         return new StudentProfile(rawFullName.trim(), rawPhoneNumber.trim(), dateOfBirth, email);
+    }
+
+    private static String validateProfileMessage(String rawFullName, String rawPhoneNumber, LocalDate dateOfBirth) {
+        if (!StringUtils.hasText(rawFullName)) {
+            return "Họ tên là bắt buộc.";
+        }
+        if (!StringUtils.hasText(rawPhoneNumber)) {
+            return "Số điện thoại là bắt buộc.";
+        }
+        String phoneNumber = rawPhoneNumber.trim();
+        if (!VIETNAM_MOBILE_PHONE_PATTERN.matcher(phoneNumber).matches()) {
+            return "Số điện thoại phải gồm 10 chữ số, không chứa chữ/khoảng trắng/ký tự đặc biệt, và bắt đầu bằng 03, 05, 07, 08 hoặc 09.";
+        }
+        if (dateOfBirth == null) {
+            return "Ngày sinh là bắt buộc.";
+        }
+        if (!dateOfBirth.isBefore(LocalDate.now())) {
+            return "Ngày sinh phải ở trong quá khứ.";
+        }
+        if (LocalDate.now().getYear() - dateOfBirth.getYear() < MIN_STUDENT_AGE_YEARS) {
+            return "Học sinh phải từ 16 tuổi trở lên.";
+        }
+        return null;
     }
 
     private static boolean sameProfile(AppUser user, StudentProfile profile) {
         return profile.fullName().equals(user.fullName())
                 && profile.phoneNumber().equals(user.phoneNumber())
                 && profile.dateOfBirth().equals(user.dateOfBirth());
+    }
+
+    private static String displayName(AppUser user) {
+        return StringUtils.hasText(user.fullName()) ? user.fullName() : user.email();
     }
 
     private static String normalizeEmail(String raw) {
@@ -376,37 +473,21 @@ public class ClassEnrollmentService {
     private record StudentProfile(String fullName, String phoneNumber, LocalDate dateOfBirth, String email) {
     }
 
-    /** Import la all-or-nothing voi Gmail trung trong tep: khong ghi dong nao neu tep chua sach. */
-    private static void requireNoDuplicateEmailsInFile(List<ParsedRow> rows) {
-        Map<String, Integer> firstRowByEmail = new HashMap<>();
-        for (ParsedRow row : rows) {
-            String email = normalizeEmail(row.rawEmail());
-            if (email == null || !isValidEmail(email)) {
-                continue;
-            }
-            Integer firstRow = firstRowByEmail.putIfAbsent(email, row.rowNumber());
-            if (firstRow != null) {
-                throw new IllegalArgumentException("Dòng " + row.rowNumber() + " trùng Gmail với dòng "
-                        + firstRow + " (" + email + "). Hãy sửa tệp rồi gửi lại; không có học sinh nào được thêm.");
-            }
-        }
-    }
-
     private record ParsedRow(int rowNumber, String fullName, String phoneNumber, LocalDate dateOfBirth, String rawEmail) {
     }
 
     private List<ParsedRow> parseFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File trong. Vui long chon file .csv hoac .xlsx co du lieu.");
+            throw new IllegalArgumentException("File trong. Vui long chon file .csv, .xls hoac .xlsx co du lieu.");
         }
         String extension = extractExtension(file.getOriginalFilename());
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             throw new IllegalArgumentException(
-                    "Dinh dang file khong duoc ho tro (\"." + extension + "\"). Chi chap nhan .csv hoac .xlsx.");
+                    "Dinh dang file khong duoc ho tro (\"." + extension + "\"). Chi chap nhan .csv, .xls hoac .xlsx.");
         }
         List<List<String>> table;
         try (InputStream input = file.getInputStream()) {
-            table = "csv".equals(extension) ? parseCsv(input) : parseXlsx(input);
+            table = "csv".equals(extension) ? parseCsv(input) : parseWorkbook(input, extension);
         } catch (IOException | RuntimeException ex) {
             throw new IllegalArgumentException(
                     "Khong doc duoc noi dung file. File co the bi hong hoac khong dung dinh dang ." + extension + ".");
@@ -502,10 +583,10 @@ public class ClassEnrollmentService {
         return values;
     }
 
-    private static List<List<String>> parseXlsx(InputStream input) throws IOException {
+    private static List<List<String>> parseWorkbook(InputStream input, String extension) throws IOException {
         List<List<String>> rows = new ArrayList<>();
         DataFormatter formatter = new DataFormatter();
-        try (Workbook workbook = new XSSFWorkbook(input)) {
+        try (Workbook workbook = "xls".equals(extension) ? new HSSFWorkbook(input) : new XSSFWorkbook(input)) {
             Sheet sheet = workbook.getSheetAt(0);
             for (Row row : sheet) {
                 List<String> cells = new ArrayList<>();
