@@ -326,11 +326,12 @@ public class ClassEnrollmentService {
         String title = "Ban da duoc them vao lop " + classroom.name();
         String content = "Giao vien da them ban vao lop \"" + classroom.name() + "\". Dang nhap de xem chi tiet.";
         Notification saved = notificationRepository.createWithRecipients(
-                new Notification(UUID.randomUUID(), senderId, classroom.subject(), title, content, now),
+                new Notification(UUID.randomUUID(), senderId, classroom.subject(), title, content, now, null, null),
                 studentIds);
         String senderName = resolveSenderName(senderId);
         NotificationEvent event = new NotificationEvent(
-                saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt());
+                saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt(),
+                saved.targetType(), saved.targetUrl());
         studentIds.forEach(id -> notificationStreamPort.publishNew(id, event));
     }
 

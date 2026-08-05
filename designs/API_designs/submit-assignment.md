@@ -54,8 +54,10 @@
   phải người nộp bài.
 - **Không dọn file cũ trên R2 khi resubmit thay file**: nhất quán với cách `Update Class Resource`
   không dọn file cũ khi đổi `attachment` — ngoài phạm vi tài liệu này.
-- **Không có notification khi nộp/thu hồi bài**: `BR-46` chỉ định notify khi thêm học sinh hoặc đăng
-  resource; nộp bài không nằm trong `BR-46`, không tự thêm hành vi notify mới.
+- **Có notification cho Teacher khi học sinh nộp bài**: sau khi `POST .../submission` lưu thành công,
+  hệ thống tạo notification cho owner của lớp với nội dung học sinh đã làm bài nào ở lớp nào. Notification
+  có `targetType = SUBMISSION_DETAIL` và `targetUrl` trỏ tới màn hình chi tiết bài nộp của học sinh.
+  `DELETE .../submission` không gửi notification riêng.
 
 ---
 
@@ -136,6 +138,9 @@ body: SubmitAssignmentRequest
 - Upsert: xoá toàn bộ `submission_files` cũ (nếu có submission cũ) → ghi/replace dòng `submissions`
   (unique theo `class_resource_id + student_id`) → insert `submission_files` mới từ `files`. Tất cả
   trong 1 transaction.
+- Sau khi lưu thành công, tạo notification cho Teacher owner của lớp: title `Học sinh đã nộp bài`,
+  content dạng `{studentName} đã làm bài "{resourceTitle}" ở lớp "{className}".`, kèm deep-link
+  `/class-detail/assignments/submission?classId=...&resourceId=...&studentId=...`.
 - Map: `UC-47` Normal Flow + Alternative "Class is Inactive" / "File is invalid" (đã validate ở
   `/api/uploads` trước khi gửi `files` lên đây) / "Student cancels submission" (hành vi FE, không gọi
   endpoint) / "File upload fails" (đã xảy ra ở bước gọi `/api/uploads`, không lặp lại ở đây) /
@@ -203,7 +208,9 @@ body: SubmitAssignmentRequest
 8. Cập nhật `ClassResourceService.listResources`/`toSummary` (đã có ở `manage-class-resources.md`) để
    tra `SubmissionRepository` và trả `submissionStatus` thật cho học sinh đang xem, thay placeholder
    `NOT_SUBMITTED` cố định.
-9. Smoke test qua Swagger: Submit chỉ text, Submit chỉ file, Submit cả hai, Submit rỗng (400), Submit
+9. Mở rộng notification target metadata (`targetType`, `targetUrl`) để notification nộp bài có thể
+   điều hướng tới màn chi tiết bài nộp phía Teacher.
+10. Smoke test qua Swagger: Submit chỉ text, Submit chỉ file, Submit cả hai, Submit rỗng (400), Submit
    sau deadline (kiểm tra `LATE`), Unsubmit rồi gọi lại `GET .../submission` (404), Submit lại sau khi
    unsubmit (kiểm tra thay thế đúng, không giữ 2 dòng).
 

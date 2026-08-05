@@ -41,6 +41,8 @@ public interface NotificationRepository {
             String title,
             String content,
             Instant createdAt,
+            String targetType,
+            String targetUrl,
             Instant readAt
     ) {
     }

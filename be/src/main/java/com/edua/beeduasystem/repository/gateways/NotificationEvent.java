@@ -12,6 +12,8 @@ public record NotificationEvent(
         String content,
         Subject subject,
         String senderName,
-        Instant createdAt
+        Instant createdAt,
+        String targetType,
+        String targetUrl
 ) {
 }

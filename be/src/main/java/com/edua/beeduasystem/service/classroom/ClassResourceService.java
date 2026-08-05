@@ -276,11 +276,12 @@ public class ClassResourceService {
         String title = "Tai lieu lop " + classroom.name();
         String content = "Giao vien da dang/cap nhat \"" + resource.title() + "\" trong lop \"" + classroom.name() + "\".";
         Notification saved = notificationRepository.createWithRecipients(
-                new Notification(UUID.randomUUID(), senderId, classroom.subject(), title, content, now),
+                new Notification(UUID.randomUUID(), senderId, classroom.subject(), title, content, now, null, null),
                 studentIds);
         String senderName = resolveSenderName(senderId);
         NotificationEvent event = new NotificationEvent(
-                saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt());
+                saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt(),
+                saved.targetType(), saved.targetUrl());
         studentIds.forEach(id -> notificationStreamPort.publishNew(id, event));
     }
 

@@ -19,5 +19,9 @@ public interface NotificationRecipientProjection {
 
     Instant getCreatedAt();
 
+    String getTargetType();
+
+    String getTargetUrl();
+
     Instant getReadAt();
 }

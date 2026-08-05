@@ -8,10 +8,14 @@ import com.edua.beeduasystem.domain.model.classroom.Classroom;
 import com.edua.beeduasystem.domain.model.classroom.Submission;
 import com.edua.beeduasystem.domain.model.classroom.SubmissionFile;
 import com.edua.beeduasystem.domain.model.classroom.SubmissionStatus;
+import com.edua.beeduasystem.domain.model.notification.Notification;
+import com.edua.beeduasystem.repository.gateways.NotificationEvent;
+import com.edua.beeduasystem.repository.gateways.NotificationStreamPort;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.ClassMemberRepository;
 import com.edua.beeduasystem.repository.repositories.ClassRepository;
 import com.edua.beeduasystem.repository.repositories.ClassResourceRepository;
+import com.edua.beeduasystem.repository.repositories.NotificationRepository;
 import com.edua.beeduasystem.repository.repositories.SubmissionRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import com.edua.beeduasystem.service.blog.BlogContentSanitizer;
@@ -41,6 +45,8 @@ public class SubmissionService {
     private final ClassMemberRepository classMemberRepository;
     private final ClassResourceRepository classResourceRepository;
     private final SubmissionRepository submissionRepository;
+    private final NotificationRepository notificationRepository;
+    private final NotificationStreamPort notificationStreamPort;
     private final AppUserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
     private final BlogContentSanitizer sanitizer;
@@ -49,6 +55,8 @@ public class SubmissionService {
                               ClassMemberRepository classMemberRepository,
                               ClassResourceRepository classResourceRepository,
                               SubmissionRepository submissionRepository,
+                              NotificationRepository notificationRepository,
+                              NotificationStreamPort notificationStreamPort,
                               AppUserRepository userRepository,
                               CurrentUserProvider currentUserProvider,
                               BlogContentSanitizer sanitizer) {
@@ -56,6 +64,8 @@ public class SubmissionService {
         this.classMemberRepository = classMemberRepository;
         this.classResourceRepository = classResourceRepository;
         this.submissionRepository = submissionRepository;
+        this.notificationRepository = notificationRepository;
+        this.notificationStreamPort = notificationStreamPort;
         this.userRepository = userRepository;
         this.currentUserProvider = currentUserProvider;
         this.sanitizer = sanitizer;
@@ -64,7 +74,7 @@ public class SubmissionService {
     @Transactional
     public SubmissionViews.Detail submit(UUID classId, UUID resourceId, String rawTextContent,
             List<SubmissionViews.FileInput> fileInputs) {
-        requireEnrolledActiveClass(classId);
+        Classroom classroom = requireEnrolledActiveClass(classId);
         UUID studentId = currentUserProvider.requireUserId();
         ClassResource resource = requireSubmittableResource(classId, resourceId);
 
@@ -86,6 +96,7 @@ public class SubmissionService {
                 .toList();
 
         SubmissionRepository.SubmissionWithFiles saved = submissionRepository.upsert(submission, submissionFiles);
+        notifyTeacherSubmission(classroom, resource, studentId, saved.submission().submittedAt());
         return toDetail(saved);
     }
 
@@ -180,6 +191,31 @@ public class SubmissionService {
                 files,
                 saved.submission().status(),
                 saved.submission().submittedAt());
+    }
+
+    private void notifyTeacherSubmission(Classroom classroom, ClassResource resource, UUID studentId, Instant submittedAt) {
+        UUID teacherId = classroom.ownerId();
+        if (teacherId == null || teacherId.equals(studentId)) {
+            return;
+        }
+        AppUser student = userRepository.findById(studentId).orElse(null);
+        String studentName = resolveDisplayName(student);
+        if (!StringUtils.hasText(studentName)) {
+            studentName = "Học sinh";
+        }
+        String title = "Học sinh đã nộp bài";
+        String content = studentName + " đã làm bài \"" + resource.title() + "\" ở lớp \"" + classroom.name() + "\".";
+        String targetUrl = "/class-detail/assignments/submission?classId=" + classroom.id()
+                + "&resourceId=" + resource.id()
+                + "&studentId=" + studentId;
+        Notification saved = notificationRepository.createWithRecipients(
+                new Notification(UUID.randomUUID(), studentId, classroom.subject(), title, content, submittedAt,
+                        "SUBMISSION_DETAIL", targetUrl),
+                List.of(teacherId));
+        NotificationEvent event = new NotificationEvent(
+                saved.id(), saved.title(), saved.content(), saved.subject(), studentName, saved.createdAt(),
+                saved.targetType(), saved.targetUrl());
+        notificationStreamPort.publishNew(teacherId, event);
     }
 
     private ClassResource requireSubmittableResource(UUID classId, UUID resourceId) {

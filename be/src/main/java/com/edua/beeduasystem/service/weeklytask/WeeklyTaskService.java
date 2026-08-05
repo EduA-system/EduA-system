@@ -368,10 +368,11 @@ public class WeeklyTaskService {
         Subject subject = requireSubject();
         Instant now = Instant.now();
         Notification saved = notificationRepository.createWithRecipients(
-                new Notification(UUID.randomUUID(), senderId, subject, title, content, now), List.of(recipientId));
+                new Notification(UUID.randomUUID(), senderId, subject, title, content, now, null, null), List.of(recipientId));
         String senderName = userRepository.findById(senderId).map(WeeklyTaskService::displayName).orElse(null);
         streamPort.publishNew(recipientId,
-                new NotificationEvent(saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt()));
+                new NotificationEvent(saved.id(), saved.title(), saved.content(), saved.subject(), senderName,
+                        saved.createdAt(), saved.targetType(), saved.targetUrl()));
     }
 
     private static String displayName(AppUser user) {

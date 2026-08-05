@@ -12,6 +12,8 @@ public record Notification(
         Subject subject,
         String title,
         String content,
-        Instant createdAt
+        Instant createdAt,
+        String targetType,
+        String targetUrl
 ) {
 }

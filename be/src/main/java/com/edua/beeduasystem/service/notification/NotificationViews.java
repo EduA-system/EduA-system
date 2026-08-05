@@ -23,6 +23,8 @@ public final class NotificationViews {
             Subject subject,
             String senderName,
             Instant createdAt,
+            String targetType,
+            String targetUrl,
             boolean read
     ) {
     }
@@ -35,6 +37,8 @@ public final class NotificationViews {
             Subject subject,
             String senderName,
             Instant createdAt,
+            String targetType,
+            String targetUrl,
             int recipientCount
     ) {
     }

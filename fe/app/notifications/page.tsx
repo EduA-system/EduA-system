@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -20,6 +21,7 @@ function formatDateTime(iso: string): string {
 
 function NotificationsScreen() {
   const { user, accessToken, authFetch } = useAuth();
+  const router = useRouter();
   const isModerator = user?.role === "MODERATOR";
 
   const [items, setItems] = useState<NotificationSummary[]>([]);
@@ -69,6 +71,15 @@ function NotificationsScreen() {
       setUnreadCount((count) => Math.max(0, count - 1));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không thể đánh dấu đã đọc.");
+    }
+  };
+
+  const handleOpenNotification = async (notification: NotificationSummary) => {
+    if (!notification.read) {
+      await handleMarkRead(notification.id);
+    }
+    if (notification.targetUrl) {
+      router.push(notification.targetUrl);
     }
   };
 
@@ -199,7 +210,10 @@ function NotificationsScreen() {
               {items.map((n) => (
                 <article
                   key={n.id}
-                  className={`rounded-2xl border bg-white p-4 ${!n.read ? "border-[#e8724a]" : ""}`}
+                  onClick={() => void handleOpenNotification(n)}
+                  className={`rounded-2xl border bg-white p-4 ${
+                    n.targetUrl ? "cursor-pointer transition hover:border-[#d97757] hover:bg-[#fffaf7]" : ""
+                  } ${!n.read ? "border-[#e8724a]" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -211,10 +225,14 @@ function NotificationsScreen() {
                       <p className="mt-2 text-xs text-[#6b6b6b]">
                         {n.senderName ?? "Moderator"} · {subjectLabel(n.subject)} · {formatDateTime(n.createdAt)}
                       </p>
+                      {n.targetUrl ? <p className="mt-2 text-xs font-medium text-[#d97757]">Bấm để xem chi tiết</p> : null}
                     </div>
                     {!n.read ? (
                       <button
-                        onClick={() => void handleMarkRead(n.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleMarkRead(n.id);
+                        }}
                         className="shrink-0 rounded-xl border bg-white px-3 py-1.5 text-xs"
                       >
                         Đánh dấu đã đọc
