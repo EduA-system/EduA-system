@@ -149,6 +149,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
     const toast = searchParams.get("toast");
     if (!toast) return;
     const messages: Record<string, string> = { created: "Đã tạo bài viết thành công.", deleted: "Đã xóa bài viết thành công.", "moderator-removed": "Bài viết đã bị Moderator gỡ và không còn hiển thị trong Blog." };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- toast is a one-shot signal derived from the ?toast= URL param, not component state
     if (messages[toast]) showSuccess(messages[toast]);
     router.replace("/blog");
   }, [router, searchParams, showSuccess]);
@@ -203,6 +204,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
 
   useEffect(() => {
     if (!postId || status !== "authenticated") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting detail when postId/status no longer selects a post
       setDetail(null);
       return;
     }
@@ -211,6 +213,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
 
   useEffect(() => {
     if (postId && searchParams.get("edit") === "1" && detail?.id === postId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- opening the editor is derived from the ?edit=1 URL param
       setEditOpen(true);
     }
   }, [detail?.id, postId, searchParams]);

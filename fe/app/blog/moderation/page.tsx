@@ -51,15 +51,23 @@ export default function BlogModerationPage() {
     finally { setLoading(false); }
   }, [authFetch, isModerator, user]);
 
-  useEffect(() => { if (status === "authenticated" && user && isModerator) void loadPosts(); }, [isModerator, loadPosts, status, user]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadPosts sets its own loading/posts state as the effect's data fetch
+    if (status === "authenticated" && user && isModerator) void loadPosts();
+  }, [isModerator, loadPosts, status, user]);
   useEffect(() => {
     if (searchParams.get("notice") !== "author-deleted") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- notice visibility is derived from the ?notice= URL param
     setNoticeVisible(true);
     const timer = window.setTimeout(() => setNoticeVisible(false), 3500);
     return () => window.clearTimeout(timer);
   }, [searchParams]);
   useEffect(() => {
-    if (!postId || status !== "authenticated") { setDetail(null); return; }
+    if (!postId || status !== "authenticated") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting detail when postId/status no longer selects a post
+      setDetail(null);
+      return;
+    }
     setLoading(true);
     api<Detail>(authFetch, `/blog-posts/${postId}`).then((data) => { setDetail(data); setMessage(""); }).catch((error) => {
       if (error instanceof Error && error.message.includes("Blog post not found")) {
