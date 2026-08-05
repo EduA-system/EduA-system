@@ -63,11 +63,13 @@ export function LandmarksPanel({
   params,
   active,
   onJumpTo,
+  showGhostHint = true,
 }: {
   analysis?: PresetAnalysis;
   params: Record<string, number>;
   active: JumpMark | null;
   onJumpTo: (mark: JumpMark) => void;
+  showGhostHint?: boolean;
 }) {
   const landmarks = analysis?.landmarks ?? [];
 
@@ -82,7 +84,9 @@ export function LandmarksPanel({
           </h3>
         </div>
         <p className="text-[11px] leading-relaxed text-[#6b6b6b]">
-          Bấm t1, t2… để nhảy thẳng tới đúng giây đó — mốc trước hiện tàn ảnh nét đứt để so sánh.
+          {showGhostHint
+            ? "Bấm t1, t2… để nhảy thẳng tới đúng giây đó — mốc trước hiện tàn ảnh nét đứt để so sánh."
+            : "Bấm t1, t2… để nhảy thẳng tới đúng giây đó."}
         </p>
         <div className="flex flex-wrap gap-2">
           {TIME_MARK_SECONDS.map((seconds, i) => {

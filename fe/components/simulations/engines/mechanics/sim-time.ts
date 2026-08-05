@@ -25,3 +25,39 @@ export function computeBodyPositionsAtTime(
   }
   return out;
 }
+
+/**
+ * Thời điểm đầu tiên tâm vật cắt một hoành độ cho trước. Hàm dùng chính kernel
+ * của mô phỏng, nhờ đó mốc thời gian vẫn đúng khi tham số lực hoặc ma sát đổi.
+ */
+export function firstTimeBodyReachesX(
+  scene: Scene,
+  bodyId: string,
+  targetX: number,
+  maxSeconds = 20,
+  sub = 1 / 240,
+): number {
+  const body = scene.bodies.find((candidate) => candidate.id === bodyId);
+  if (!body) return 0;
+
+  const kernel = buildKernel(scene);
+  let state = kernel.project(kernel.initialState);
+  let previous = body.fixed ? { x: body.x, y: body.y } : readPosition(state, bodyId);
+  if (Math.abs(previous.x - targetX) < 1e-9) return 0;
+
+  const direction = targetX > previous.x ? 1 : -1;
+  const steps = Math.ceil(maxSeconds / sub);
+  for (let i = 1; i <= steps; i++) {
+    state = stepScene(kernel, state, sub);
+    const current = body.fixed ? previous : readPosition(state, bodyId);
+    const crossed = direction > 0 ? current.x >= targetX : current.x <= targetX;
+    if (crossed) {
+      const distance = current.x - previous.x;
+      const fraction = Math.abs(distance) < 1e-12 ? 1 : (targetX - previous.x) / distance;
+      return ((i - 1) + Math.max(0, Math.min(1, fraction))) * sub;
+    }
+    previous = current;
+  }
+
+  return maxSeconds;
+}

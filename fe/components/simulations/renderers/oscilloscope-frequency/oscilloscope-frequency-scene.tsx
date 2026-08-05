@@ -147,12 +147,6 @@ function drawTuningFork(
   roundedRect(context, 104, 481, 172, 20, 6);
   context.fill();
 
-  context.fillStyle = metal;
-  context.strokeStyle = "#dbe5ef";
-  context.lineWidth = 2;
-  roundedRect(context, 178, 375, 25, 105, 9);
-  context.fill();
-  context.stroke();
   context.lineWidth = 16;
   context.lineCap = "round";
   context.lineJoin = "round";
@@ -160,24 +154,10 @@ function drawTuningFork(
   context.shadowBlur = 8;
   context.beginPath();
   context.moveTo(151 + vibration, 220);
-  context.bezierCurveTo(
-    151 + vibration * 0.62,
-    270,
-    153 + vibration * 0.18,
-    328,
-    160,
-    354,
-  );
-  context.bezierCurveTo(166, 380, 177, 394, 190, 394);
-  context.bezierCurveTo(203, 394, 214, 380, 220, 354);
-  context.bezierCurveTo(
-    227 - vibration * 0.18,
-    328,
-    229 - vibration * 0.62,
-    270,
-    229 - vibration,
-    220,
-  );
+  context.lineTo(151, 348);
+  context.bezierCurveTo(151, 412, 168, 452, 190, 452);
+  context.bezierCurveTo(212, 452, 229, 412, 229, 348);
+  context.lineTo(229 - vibration, 220);
   context.strokeStyle = metal;
   context.stroke();
   context.shadowBlur = 0;
@@ -265,7 +245,8 @@ function drawMicrophone(
   context.lineWidth = 10;
   context.lineCap = "round";
   context.beginPath();
-  context.moveTo(x, 314);
+  // The stand reaches the microphone body instead of stopping below it.
+  context.moveTo(x, 292);
   context.lineTo(x, 492);
   context.stroke();
   context.fillStyle = "#334155";

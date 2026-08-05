@@ -96,14 +96,11 @@ export function SceneKonvaStringWave({
     // nhìn ban đầu để còn phủ kín khi kéo (pan) canvas. ──
     const xStep = length <= 20 ? 2 : length <= 50 ? 5 : 10;
     const gx0 = -GRID_EXTENT_FACTOR * length, gx1 = (1 + GRID_EXTENT_FACTOR) * length;
-    const gridStart = Math.ceil(gx0 / xStep);
-    const gridEnd = Math.floor(gx1 / xStep);
-    for (let gridIndex = gridStart; gridIndex <= gridEnd; gridIndex += 1) {
-      const gx = gridIndex * xStep;
+    for (let gx = Math.ceil(gx0 / xStep) * xStep; gx <= gx1; gx += xStep) {
       const x = toScreen(gx, 0).x;
       layer.add(new Konva.Line({ points: [x, 0, x, H], stroke: "#1e293b", strokeWidth: 1, listening: false }));
       layer.add(
-        new Konva.Text({ x: x + 2, y: H / 2 + 6, text: `${Number(gx.toFixed(2))}`, fontSize: 10, fill: "#64748b", fontFamily: "monospace", listening: false }),
+        new Konva.Text({ x: x + 2, y: H / 2 + 6, text: `${gx}`, fontSize: 10, fill: "#64748b", fontFamily: "monospace", listening: false }),
       );
     }
     layer.add(

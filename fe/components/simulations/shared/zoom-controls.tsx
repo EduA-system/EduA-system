@@ -27,28 +27,30 @@ function ZoomButton({
   );
 }
 
-/** Cum nut zoom noi dung chung cho cac renderer mo phong. */
+/** Cụm nút zoom nổi góc trên bên phải canvas — dùng chung cho mọi renderer Konva. */
 export function ZoomControls({
   percent,
   onZoomIn,
   onZoomOut,
-  className = "right-3 top-3 justify-end",
-  minPercent = 70,
+  minPercent = 0,
 }: {
   percent: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  className?: string;
   minPercent?: number;
 }) {
   return (
-    <div className={`pointer-events-none absolute z-20 flex ${className}`}>
+    <div className="pointer-events-none absolute right-3 top-3 z-10">
       <div className="pointer-events-auto flex items-center gap-0.5 rounded-[10px] border border-white/10 bg-[#0f172a]/90 px-1 py-1 shadow-lg backdrop-blur">
-        <ZoomButton title="Thu nho" onClick={onZoomOut} disabled={percent <= minPercent}>
+        <ZoomButton
+          title="Thu nhỏ"
+          onClick={onZoomOut}
+          disabled={percent <= minPercent}
+        >
           <ZoomOut className="h-4 w-4" strokeWidth={2} />
         </ZoomButton>
         <span className="w-11 select-none text-center font-mono text-[11px] text-slate-300">{percent}%</span>
-        <ZoomButton title="Phong to" onClick={onZoomIn}>
+        <ZoomButton title="Phóng to" onClick={onZoomIn}>
           <ZoomIn className="h-4 w-4" strokeWidth={2} />
         </ZoomButton>
       </div>

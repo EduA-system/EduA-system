@@ -12,3 +12,6 @@ nul
 
 # Local screenshots and temporary review artifacts
 /trash/
+
+.commandcode/
+.codex-chrome-ac/

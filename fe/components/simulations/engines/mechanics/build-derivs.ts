@@ -11,7 +11,7 @@
 import { rk4, type StateVec } from "./ode";
 import { netForces, type Vec2 } from "./forces";
 import { projectConstraints, type PointState } from "./constraints";
-import { resolveCollisions } from "./collisions";
+import { resolveCollisions, type StickyPair } from "./collisions";
 import type { Scene } from "./types";
 
 /** Một cảnh đã biên dịch thành hệ ODE có thể tích phân từng bước. */
@@ -35,6 +35,7 @@ export function buildKernel(scene: Scene): SceneKernel {
   const dynamic = scene.bodies.filter((b) => !b.fixed);
   // Có vật nào tham gia va chạm không? (quyết định pha 3 có chạy hay không)
   const hasCollidable = scene.bodies.some((b) => b.radius != null);
+  const stickyPairs = new Map<string, StickyPair>();
 
   // Vị trí bất biến của các vật cố định + khối lượng nghịch của mọi vật.
   const fixedPos: Record<string, Vec2> = {};
@@ -91,7 +92,7 @@ export function buildKernel(scene: Scene): SceneKernel {
       pts[b.id] = { x: p.x, y: p.y, vx: v.x, vy: v.y };
     }
     projectConstraints(scene, pts, invMass);
-    if (hasCollidable) resolveCollisions(scene, pts, invMass);
+    if (hasCollidable) resolveCollisions(scene, pts, invMass, stickyPairs);
     // Ghi kết quả trở lại StateVec — chỉ vật động (fixed vẫn đứng yên).
     const out: StateVec = { ...s };
     for (const b of dynamic) {

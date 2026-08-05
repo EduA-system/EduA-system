@@ -22,10 +22,12 @@ export function attachZoomPan(
     // canh giữa khung nhìn gốc. Pan bị khoá trong đúng khoảng này — không cho
     // kéo lộ ra vùng trống ngoài lưới đã vẽ. Mặc định 3 nếu không truyền vào.
     panExtentFactor?: number;
+    /** Tắt kéo nền; zoom và các node draggable riêng vẫn hoạt động. */
+    panEnabled?: boolean;
   },
 ): ZoomActions {
-  // Khóa zoom-out ở 100% để giữ bố cục mô phỏng trong khung EDUA.
-  const minZoom = opts.minZoom ?? 1;
+  // minZoom mặc định 0.8 — cho zoom out một chút để thấy rộng hơn khung gốc.
+  const minZoom = opts.minZoom ?? 0.8;
   const maxZoom = opts.maxZoom ?? 6;
   const panExtentFactor = Math.max(1, opts.panExtentFactor ?? 3);
   let zoom = 1;
@@ -57,9 +59,11 @@ export function attachZoomPan(
 
   // Kéo nền canvas để pan (không đụng vật draggable riêng — chúng vẫn kéo
   // được bình thường, sự kiện dragstart trên vật tự chặn nổi lên Stage).
-  stage.draggable(true);
-  // Khoá NGAY TRONG LÚC kéo (không đợi thả tay mới chỉnh lại) — tránh giật.
-  stage.dragBoundFunc((pos) => clampPos(pos, zoom));
+  stage.draggable(opts.panEnabled ?? true);
+  if (opts.panEnabled ?? true) {
+    // Khoá NGAY TRONG LÚC kéo (không đợi thả tay mới chỉnh lại) — tránh giật.
+    stage.dragBoundFunc((pos) => clampPos(pos, zoom));
+  }
   stage.on("wheel", (e) => {
     e.evt.preventDefault();
     const pointer = stage.getPointerPosition();

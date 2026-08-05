@@ -5,9 +5,10 @@ export const nemXien: Preset = {
   title: "Chuyển động ném xiên",
   domain: "Cơ học",
   grade: 10,
-  desc: "Bắn vật với vận tốc đầu và góc bất kỳ, quan sát quỹ đạo parabol và tầm xa.",
-  objective: "Hiểu quỹ đạo parabol và sự phụ thuộc tầm xa vào góc ném, vận tốc đầu.",
+  desc: "Ném một vật lên cao theo phương xiên góc và quan sát quỹ đạo rơi",
+  objective: "Ném một vật lên cao theo phương xiên góc và quan sát quỹ đạo rơi",
   sgkRef: "Vật lí 10",
+  startPaused: true,
   params: [
     { key: "v0", label: "Vận tốc đầu", unit: "m/s", min: 5, max: 40, step: 1, default: 22 },
     { key: "angle", label: "Góc ném", unit: "°", min: 10, max: 80, step: 1, default: 55 },
@@ -21,7 +22,13 @@ export const nemXien: Preset = {
       forces: [{ kind: "gravity", g: p.g ?? 9.8 }],
       // mặt đất có ma sát → vật chạm đất rồi dừng (không trượt vô tận)
       constraints: [{ kind: "surface", x: 30, y: 0, angle: 0, length: 400, friction: 0.6 }],
+      // Giữ nguyên tỉ lệ bản đồ khi đổi vận tốc/góc ném; người dùng vẫn có thể
+      // tự zoom nếu muốn theo dõi quỹ đạo vượt ra ngoài khung mặc định.
+      view: { minX: 0, maxX: 100, minY: 0, maxY: 60 },
     };
+  },
+  bodyTrails: {
+    ball: { color: "#f472b6", width: 2.5, dash: [8, 7] },
   },
   analysis: {
     landmarks: [

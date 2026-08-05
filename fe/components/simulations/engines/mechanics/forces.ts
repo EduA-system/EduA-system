@@ -58,7 +58,9 @@ export function netForces(scene: Scene, r: Readers): Record<string, Vec2> {
         const vb = r.vel(force.b);
         const relRate = (vb.x - va.x) * ux + (vb.y - va.y) * uy;
         const ext = L - force.restLength; // ext > 0: giãn, ext < 0: nén
-        const mag = force.k * ext + force.damping * relRate;
+        const rawMagnitude = force.k * ext + force.damping * relRate;
+        // Lò xo chỉ-nén (bumper) không kéo hai vật về lại khi đã hết nén.
+        const mag = force.compressionOnly ? Math.min(0, rawMagnitude) : rawMagnitude;
         // mag > 0 (giãn) → kéo a về phía b (+u) và b về phía a (−u).
         add(force.a, mag * ux, mag * uy);
         add(force.b, -mag * ux, -mag * uy);

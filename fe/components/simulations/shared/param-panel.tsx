@@ -66,6 +66,7 @@ export function ParamPanel({
   // Giá trị mà Tweakpane đọc/ghi trực tiếp (object thường, không phải React state).
   const objRef = useRef<Record<string, number>>({ ...values });
   const paneRef = useRef<Pane | null>(null);
+  const syncingRef = useRef(false);
   // Giữ onChange mới nhất qua ref để effect tạo Pane không phụ thuộc nó.
   const onChangeRef = useRef(onChange);
   useEffect(() => {
@@ -87,7 +88,10 @@ export function ParamPanel({
         max: p.max,
         step: p.step,
       });
-      binding.on("change", (ev) => onChangeRef.current(p.key, ev.value as number));
+      binding.on("change", (ev) => {
+        if (syncingRef.current) return;
+        onChangeRef.current(p.key, ev.value as number);
+      });
     }
     return () => {
       pane.dispose();
@@ -108,7 +112,14 @@ export function ParamPanel({
         changed = true;
       }
     }
-    if (changed) paneRef.current?.refresh();
+    if (changed) {
+      syncingRef.current = true;
+      try {
+        paneRef.current?.refresh();
+      } finally {
+        syncingRef.current = false;
+      }
+    }
   }, [values]);
 
   return (
@@ -123,9 +134,25 @@ export function ParamPanel({
   );
 }
 
-/** Một hàng tham số dùng đúng giao diện Tweakpane của các mô phỏng preset cũ. */
-export function ParamRangeField({ label, value, min, max, step = 1, unit, onChange }: { label: string; value: number; min: number; max: number; step?: number; unit?: string; onChange: (value: number) => void }) {
-  const schema = useMemo<ParamDef[]>(() => [{ key: "value", label, min, max, step, unit }], [label, max, min, step, unit]);
+/** Compatibility wrapper for the legacy standalone simulation controls. */
+export function ParamRangeField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+  onChange: (value: number) => void;
+}) {
+  const schema = useMemo<ParamDef[]>(() => [{ key: "value", label, min, max, step, unit }], [label, min, max, step, unit]);
   const values = useMemo(() => ({ value }), [value]);
   return <ParamPanel schema={schema} values={values} onChange={(_, next) => onChange(next)} />;
 }

@@ -19,6 +19,64 @@ export type PointState = { x: number; y: number; vx: number; vy: number };
 // từng cái, lặp lại để hội tụ. Bài THPT chuỗi ngắn → 5 vòng là dư.
 const ITERATIONS = 5;
 
+type ClosestTrackPoint = {
+  x: number;
+  y: number;
+  tx: number;
+  ty: number;
+  t: number;
+  segment: number;
+  dist2: number;
+};
+
+function closestPointOnTrack(points: { x: number; y: number }[], x: number, y: number): ClosestTrackPoint | null {
+  let best: ClosestTrackPoint | null = null;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 < 1e-12) continue;
+    const rawT = ((x - a.x) * dx + (y - a.y) * dy) / len2;
+    const t = Math.max(0, Math.min(1, rawT));
+    const qx = a.x + dx * t;
+    const qy = a.y + dy * t;
+    const distX = x - qx;
+    const distY = y - qy;
+    const dist2 = distX * distX + distY * distY;
+    const len = Math.sqrt(len2);
+    const candidate = { x: qx, y: qy, tx: dx / len, ty: dy / len, t, segment: i, dist2 };
+    if (!best || candidate.dist2 < best.dist2) best = candidate;
+  }
+  return best;
+}
+
+function closestTrackPointAtHeight(
+  points: { x: number; y: number }[],
+  height: number,
+  x: number,
+  y: number,
+): ClosestTrackPoint | null {
+  let best: ClosestTrackPoint | null = null;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    const dy = b.y - a.y;
+    if (Math.abs(dy) < 1e-12) continue;
+    const t = (height - a.y) / dy;
+    if (t < 0 || t > 1) continue;
+    const dx = b.x - a.x;
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-12) continue;
+    const qx = a.x + dx * t;
+    const dist2 = (x - qx) ** 2 + (y - height) ** 2;
+    const candidate = { x: qx, y: height, tx: dx / len, ty: dy / len, t, segment: i, dist2 };
+    if (!best || candidate.dist2 < best.dist2) best = candidate;
+  }
+  return best;
+}
+
 /**
  * Giải toàn bộ ràng buộc của `scene`, sửa trực tiếp các điểm trong `pts`.
  * `invMass[id]` = 1/m, bằng 0 nếu vật cố định (fixed) — vật cố định không bị
@@ -33,6 +91,31 @@ export function projectConstraints(
 
   for (let iter = 0; iter < ITERATIONS; iter++) {
     for (const c of scene.constraints) {
+      if (c.kind === "rightAngleRope") {
+        const cart = pts[c.horizontal];
+        const hanger = pts[c.vertical];
+        if (!cart || !hanger) continue;
+        const cartWeight = invMass[c.horizontal] ?? 0;
+        const hangerWeight = invMass[c.vertical] ?? 0;
+        const weightSum = cartWeight + hangerWeight;
+        if (weightSum <= 0) continue;
+
+        // Giữ quả nặng trên phương thẳng đứng ngay dưới tâm ròng rọc.
+        hanger.x = c.corner.x;
+        hanger.vx = 0;
+
+        // (x_ròng_rọc - x_xe) + (y_ròng_rọc - y_quả_nặng) = chiều dài dây.
+        const error = (c.corner.x - cart.x) + (c.corner.y - hanger.y) - c.length;
+        cart.x += (cartWeight / weightSum) * error;
+        hanger.y += (hangerWeight / weightSum) * error;
+
+        // Đạo hàm ràng buộc: vx_xe + vy_quả_nặng = 0.
+        const velocityError = cart.vx + hanger.vy;
+        cart.vx -= (cartWeight / weightSum) * velocityError;
+        hanger.vy -= (hangerWeight / weightSum) * velocityError;
+        continue;
+      }
+
       // Mặt phẳng cứng: chặn mọi vật động ở phía trên mặt (va chạm một chiều).
       if (c.kind === "surface") {
         const rad = (c.angle * Math.PI) / 180;
@@ -65,6 +148,42 @@ export function projectConstraints(
         continue;
       }
 
+      if (c.kind === "curveTrack") {
+        const P = pts[c.body];
+        if (!P || (invMass[c.body] ?? 0) === 0 || c.points.length < 2) continue;
+        let q = closestPointOnTrack(c.points, P.x, P.y);
+        if (!q) continue;
+        const initialBody = scene.bodies.find((body) => body.id === c.body);
+        const gravity = scene.forces.find((force) => force.kind === "gravity");
+        const g = gravity?.kind === "gravity" ? gravity.g ?? 9.8 : 0;
+        const initialSpecificEnergy = initialBody
+          ? g * initialBody.y + 0.5 * (initialBody.vx ** 2 + initialBody.vy ** 2)
+          : 0;
+        const maxReachableY = g > 0 ? initialSpecificEnergy / g : Number.POSITIVE_INFINITY;
+        if (c.preserveMechanicalEnergy && q.y > maxReachableY) {
+          q = closestTrackPointAtHeight(c.points, maxReachableY, q.x, q.y) ?? q;
+        }
+        const correction = Math.hypot(q.x - P.x, q.y - P.y);
+        let vt = P.vx * q.tx + P.vy * q.ty;
+        const atStart = q.segment === 0 && q.t <= 1e-5;
+        const atEnd = q.segment === c.points.length - 2 && q.t >= 1 - 1e-5;
+        if ((atStart && vt < 0) || (atEnd && vt > 0)) vt = 0;
+        const friction = c.friction ?? 0;
+        if (friction > 0 && correction > 0) {
+          const drop = Math.min(Math.abs(vt), friction * correction);
+          vt -= Math.sign(vt) * drop;
+        }
+        if (c.preserveMechanicalEnergy && g > 0 && friction === 0) {
+          const speed = Math.sqrt(Math.max(0, 2 * (initialSpecificEnergy - g * q.y)));
+          const direction = Math.abs(vt) > 1e-9 ? Math.sign(vt) : Math.sign(-g * q.ty);
+          vt = direction * speed;
+        }
+        P.x = q.x;
+        P.y = q.y;
+        P.vx = q.tx * vt;
+        P.vy = q.ty * vt;
+        continue;
+      }
       const A = pts[c.a];
       const B = pts[c.b];
       if (!A || !B) continue; // tham chiếu id không tồn tại — bỏ qua

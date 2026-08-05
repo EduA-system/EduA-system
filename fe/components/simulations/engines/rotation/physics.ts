@@ -1,0 +1,139 @@
+import type { RotationScene, RotationState, RotationTorques } from "./types";
+
+const EPSILON = 1e-9;
+
+export function diskInertia(scene: RotationScene): number {
+  const factor = scene.inertiaModel === "rod" ? 1 / 3 : 1 / 2;
+  return factor * scene.diskMass * scene.diskRadius * scene.diskRadius;
+}
+
+export function totalInertia(scene: RotationScene): number {
+  return diskInertia(scene) + scene.left.mass * scene.left.radius ** 2 + scene.right.mass * scene.right.radius ** 2;
+}
+
+export function rotationTorques(scene: RotationScene, theta = 0): RotationTorques {
+  if (scene.torqueModel === "attachedCords" && scene.attachmentGeometry) {
+    const geometry = scene.attachmentGeometry;
+    const torqueFromCord = (
+      radius: number,
+      referenceAngle: number,
+      guideDistance: number,
+      mass: number,
+      tangentDirection?: number,
+    ) => {
+      const angle = referenceAngle + theta;
+      const anchor = {
+        x: radius * Math.cos(angle),
+        y: radius * Math.sin(angle),
+      };
+      const initialAnchor = {
+        x: radius * Math.cos(referenceAngle),
+        y: radius * Math.sin(referenceAngle),
+      };
+      const guide =
+        tangentDirection == null
+          ? { x: initialAnchor.x, y: initialAnchor.y - guideDistance }
+          : {
+              x:
+                initialAnchor.x +
+                guideDistance * Math.cos(tangentDirection),
+              y:
+                initialAnchor.y +
+                guideDistance * Math.sin(tangentDirection),
+            };
+      const dx = guide.x - anchor.x;
+      const dy = guide.y - anchor.y;
+      const length = Math.hypot(dx, dy) || 1;
+      const force = mass * scene.gravity;
+      return (
+        anchor.x * ((force * dy) / length) -
+        anchor.y * ((force * dx) / length)
+      );
+    };
+
+    // Vật m₂ nằm thẳng dưới điểm móc nên dây trái luôn thẳng đứng.
+    const leftTorque =
+      -scene.left.mass *
+      scene.gravity *
+      scene.left.radius *
+      Math.cos(geometry.leftAnchorAngle + theta);
+    const rightTorque = torqueFromCord(
+      scene.right.radius,
+      geometry.rightAnchorAngle,
+      geometry.rightGuideDistance,
+      scene.right.mass,
+      geometry.rightAnchorAngle - Math.PI / 2,
+    );
+    return {
+      left: Math.max(0, leftTorque),
+      right: Math.max(0, -rightTorque),
+      net: leftTorque + rightTorque,
+      inertia: totalInertia(scene),
+    };
+  }
+
+  // Dây quấn trên rãnh luôn kéo tiếp tuyến nên cánh tay đòn bằng đúng bán kính.
+  // Bập bênh/vật gắn vào thanh vẫn dùng hình chiếu d·cos(theta).
+  const leverFactor =
+    scene.torqueModel === "fixedTangential" ? 1 : Math.cos(theta);
+  const left = scene.left.mass * scene.gravity * scene.left.radius * leverFactor;
+  const right = scene.right.mass * scene.gravity * scene.right.radius * leverFactor;
+  return { left, right, net: left - right, inertia: totalInertia(scene) };
+}
+
+export function initialRotationState(scene: RotationScene): RotationState {
+  return { theta: scene.initialTheta ?? 0, omega: scene.initialOmega ?? 0, stoppedAtLimit: false };
+}
+
+export function angularAcceleration(scene: RotationScene, state: Pick<RotationState, "theta" | "omega">): number {
+  const { net, inertia } = rotationTorques(scene, state.theta);
+  return (net - scene.angularDamping * state.omega) / Math.max(inertia, EPSILON);
+}
+
+function derivative(scene: RotationScene, theta: number, omega: number) {
+  return { dTheta: omega, dOmega: angularAcceleration(scene, { theta, omega }) };
+}
+
+/** Một bước RK4 cho I.alpha = sum(tau), có chặn hành trình dây. */
+export function stepRotation(scene: RotationScene, state: RotationState, dt: number): RotationState {
+  if (dt <= 0) return state;
+
+  if (state.stoppedAtLimit) {
+    const acceleration = angularAcceleration(scene, state);
+    const atMin = scene.minTheta != null && state.theta <= scene.minTheta + EPSILON;
+    const atMax = scene.maxTheta != null && state.theta >= scene.maxTheta - EPSILON;
+    if ((atMin && acceleration <= 0) || (atMax && acceleration >= 0)) return state;
+  }
+
+  const k1 = derivative(scene, state.theta, state.omega);
+  const k2 = derivative(scene, state.theta + (dt * k1.dTheta) / 2, state.omega + (dt * k1.dOmega) / 2);
+  const k3 = derivative(scene, state.theta + (dt * k2.dTheta) / 2, state.omega + (dt * k2.dOmega) / 2);
+  const k4 = derivative(scene, state.theta + dt * k3.dTheta, state.omega + dt * k3.dOmega);
+
+  let theta = state.theta + (dt * (k1.dTheta + 2 * k2.dTheta + 2 * k3.dTheta + k4.dTheta)) / 6;
+  let omega = state.omega + (dt * (k1.dOmega + 2 * k2.dOmega + 2 * k3.dOmega + k4.dOmega)) / 6;
+  let stoppedAtLimit = false;
+
+  if (scene.minTheta != null && theta <= scene.minTheta) {
+    theta = scene.minTheta;
+    omega = 0;
+    stoppedAtLimit = true;
+  }
+  if (scene.maxTheta != null && theta >= scene.maxTheta) {
+    theta = scene.maxTheta;
+    omega = 0;
+    stoppedAtLimit = true;
+  }
+  return { theta, omega, stoppedAtLimit };
+}
+
+export function rotationStateAt(scene: RotationScene, seconds: number, step = 1 / 240): RotationState {
+  let state = initialRotationState(scene);
+  let remaining = Math.max(0, seconds);
+  while (remaining > EPSILON && !state.stoppedAtLimit) {
+    const dt = Math.min(step, remaining);
+    state = stepRotation(scene, state, dt);
+    remaining -= dt;
+  }
+  return state;
+}
