@@ -180,7 +180,8 @@ public class GenerateSlideOutlineUseCase {
         String learningGoal = source.activities().stream().filter(chapter -> chapter.id().equals(placeholder.id()))
                 .findFirst().map(LessonSourceContext.Activity::goal).orElse("");
         String prompt = promptBuilder.partSkeletonPrompt(lesson, req.plan(), req.userPrompt(), req.subject(),
-                placeholder.id(), placeholder.title(), ids, slideBudget(placeholder.id(), source))
+                placeholder.id(), placeholder.title(), ids, slideBudget(placeholder.id(), source),
+                deckOutline(source))
                 + "\nCHAPTER TEACHING GOAL: " + learningGoal;
         prompt = withLessonSource(prompt, source.readSource(ids));
         ParsedSkeleton parsed = generateSkeletonWithRetry(lesson, prompt, ids, !ids.isEmpty(), "part-skeleton " + placeholder.id());
@@ -220,6 +221,19 @@ public class GenerateSlideOutlineUseCase {
     private static int slideBudget(String partId, LessonSourceContext source) {
         return source.activities().stream().filter(chapter -> chapter.id().equals(partId))
                 .findFirst().map(LessonSourceContext.Activity::slideBudget).orElse(4);
+    }
+
+    /** Ordered summary of every chapter's title/goal so a part-skeleton call can see its siblings' scope. */
+    private static String deckOutline(LessonSourceContext source) {
+        StringBuilder sb = new StringBuilder();
+        for (LessonSourceContext.Activity chapter : source.activities()) {
+            sb.append(chapter.id()).append(": ").append(chapter.title());
+            if (chapter.goal() != null && !chapter.goal().isBlank()) {
+                sb.append(" — ").append(chapter.goal());
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 
     private List<LessonSourceContext.Activity> createDeckBlueprint(

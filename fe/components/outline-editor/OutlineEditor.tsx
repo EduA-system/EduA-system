@@ -354,13 +354,19 @@ export function OutlineEditor({
                             <span className="shrink-0 rounded bg-red-50 px-1.5 py-0.5 text-[10px] text-red-600">Lỗi</span>
                           ) : null}
                           <div className="min-w-0 flex-1">
-                            <TitleInput
-                              value={slide.title}
-                              onChange={(title) => updateSlide(part.id, slide.id, { title })}
-                              ariaLabel="Tiêu đề slide"
-                              placeholder="Tiêu đề slide"
-                              className="text-sm text-[#1a1a2e]"
-                            />
+                            {expanded ? (
+                              <span className="block truncate px-2.5 py-1.5 text-sm font-medium text-[#1a1a2e]">
+                                {slide.title || "Slide chưa đặt tên"}
+                              </span>
+                            ) : (
+                              <TitleInput
+                                value={slide.title}
+                                onChange={(title) => updateSlide(part.id, slide.id, { title })}
+                                ariaLabel="Tiêu đề slide"
+                                placeholder="Tiêu đề slide"
+                                className="text-sm text-[#1a1a2e]"
+                              />
+                            )}
                           </div>
                           {retryMessage ? (
                             <button

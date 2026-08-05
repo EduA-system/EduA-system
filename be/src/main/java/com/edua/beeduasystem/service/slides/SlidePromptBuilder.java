@@ -67,7 +67,11 @@ public class SlidePromptBuilder {
 
                 Rules: 4 to 6 chapters; total slideBudget from 20 to 30; p1 includes cover and hook;
                 the final chapter recaps or checks learning. Every sourceChunkId must be from %s and every allowed chunk
-                must appear in at least one chapter. %s
+                must appear in at least one chapter. Each chapter's learningGoal must cover a distinct facet of the
+                lesson — never restate a fact, definition, or comparison another chapter already owns. When two
+                chapters must share a sourceChunkId (too few chunks for the chapter count), split that chunk's
+                material by facet across them (e.g. one owns the definition, another owns worked examples or
+                practice) instead of letting both re-explain the same concept. %s
                 """.formatted(lesson.title(), lesson.grade(), teacherPersona(subject), contentMapsJson, allowedChunkIds,
                 userPrompt == null || userPrompt.isBlank() ? "" : "Teacher preference: " + userPrompt);
     }
@@ -86,7 +90,7 @@ public class SlidePromptBuilder {
     /** Small, bounded skeleton request for exactly one manifest part. */
     public String partSkeletonPrompt(
             LessonContext lesson, InlineLessonPlanDto plan, String userPrompt, String subject,
-            String partId, String partTitle, List<String> sourceChunkIds, int slideBudget) {
+            String partId, String partTitle, List<String> sourceChunkIds, int slideBudget, String deckOutline) {
         String sourceIdsJson = sourceChunkIds.stream().map(id -> "\"" + id + "\"")
                 .collect(Collectors.joining(",", "[", "]"));
         String activity = plan == null || plan.activities() == null ? "" : plan.activities().stream()
@@ -98,12 +102,17 @@ public class SlidePromptBuilder {
         return """
                 Bạn là %s. Hãy lập KHUNG ngữ nghĩa cho đúng MỘT phần của bộ slide, dựa hoàn toàn vào dữ liệu nguồn được cung cấp.
                 BÀI HỌC: %s (lớp %s)
+                TOÀN BỘ DÀN Ý DECK (các phần khác đã được phân công chủ đề riêng — không lặp lại nội dung của phần khác,
+                và không dùng trước khái niệm/so sánh thuộc phần xuất hiện sau phần hiện tại):
+                %s
                 PART CỐ ĐỊNH: id=\"%s\", title=\"%s\", sourceChunkIds=%s
                 %s
                 %s
 
                 Tạo CHÍNH XÁC %d slide. Đây là slide thật của deck, không phải placeholder hay tóm tắt hoạt động.
                 Không tạo part khác, không đổi id part, không đổi sourceChunkIds, không thêm nguồn mới.
+                Chỉ soạn nội dung thuộc đúng phạm vi PART CỐ ĐỊNH ở trên; nếu một khái niệm/so sánh thuộc chủ đề của
+                một phần khác trong dàn ý deck, bỏ qua nó ở đây và để phần đó tự trình bày.
                 Mỗi slide chỉ có id, title, pedagogicalRole, brief, contentPlan{slideType,headerMode}.
                 pedagogicalRole: hook|explain|derive|demonstrate|practice|recap|other. Dùng other khi không khớp sáu vai trò đầu.
                 ĐA DẠNG vai trò theo đúng chức năng thật của từng slide, không gán "explain" cho mọi slide:
@@ -116,7 +125,9 @@ public class SlidePromptBuilder {
                   {"id":"%ss1","title":"...","pedagogicalRole":"derive","brief":"...","contentPlan":{"slideType":"concept","headerMode":"fixed"}},
                   {"id":"%ss2","title":"...","pedagogicalRole":"demonstrate","brief":"...","contentPlan":{"slideType":"text-image","headerMode":"fixed"}}
                 ]}]}
-                """.formatted(teacherPersona(subject), lesson.title(), lesson.grade(), partId, partTitle, sourceIdsJson,
+                """.formatted(teacherPersona(subject), lesson.title(), lesson.grade(),
+                deckOutline == null || deckOutline.isBlank() ? "(không có)" : deckOutline,
+                partId, partTitle, sourceIdsJson,
                 activity, userPrompt == null || userPrompt.isBlank() ? "" : "Yêu cầu thêm: " + userPrompt,
                 slideBudget, lesson.title(), partId, partTitle, sourceIdsJson, partId, partId);
     }
