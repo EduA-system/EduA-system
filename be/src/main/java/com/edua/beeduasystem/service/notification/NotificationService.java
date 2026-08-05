@@ -81,6 +81,25 @@ public class NotificationService {
                 senderName, saved.createdAt(), recipientIds.size());
     }
 
+    /** Gửi thông báo nghiệp vụ từ Moderator tới một người nhận cụ thể. */
+    @Transactional
+    public void createForRecipient(UUID recipientId, String rawTitle, String rawContent) {
+        Subject moderatorSubject = currentUser.require().subject();
+        if (moderatorSubject == null) {
+            throw new ForbiddenOperationException("Moderator phải có subject để gửi thông báo.");
+        }
+        String title = requireText(rawTitle, TITLE_MAX_LENGTH, "Tiêu đề");
+        String content = requireText(rawContent, CONTENT_MAX_LENGTH, "Nội dung");
+        UUID senderId = currentUser.requireUserId();
+        Instant now = Instant.now();
+
+        Notification saved = notificationRepository.createWithRecipients(
+                new Notification(UUID.randomUUID(), senderId, moderatorSubject, title, content, now),
+                List.of(recipientId));
+        streamPort.publishNew(recipientId, new NotificationEvent(
+                saved.id(), saved.title(), saved.content(), saved.subject(), displayName(senderId), saved.createdAt()));
+    }
+
     /** Danh sách notification của user hiện tại, mới nhất trước. */
     @Transactional(readOnly = true)
     public NotificationViews.Page<NotificationViews.NotificationSummary> listMine(boolean unreadOnly, Pageable pageable) {

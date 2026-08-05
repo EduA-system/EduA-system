@@ -50,7 +50,7 @@ export function BlogSidebar({
               >
                 <p className="line-clamp-2 text-[13px] font-semibold text-[#1c1e2e]">{p.title}</p>
                 <div className="flex items-center gap-2 pt-2">
-                  <Avatar name={p.authorName} seed={p.authorId} size={28} />
+                  <Avatar name={p.authorName} seed={p.authorId} imageUrl={p.authorAvatarUrl} size={28} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[12px] font-medium text-[#1c1e2e]">{p.authorName}</p>
                     <div className="flex items-center gap-1.5 pt-1">
@@ -94,7 +94,7 @@ export function BlogSidebar({
                 onClick={() => onSelectPost(p.id)}
                 className="flex items-start gap-2.5 text-left"
               >
-                <Avatar name={p.authorName} seed={p.authorId} size={28} />
+                  <Avatar name={p.authorName} seed={p.authorId} imageUrl={p.authorAvatarUrl} size={28} />
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-[12px] font-semibold text-[#1c1e2e]">{p.title}</p>
                   <p className="pt-0.5 text-[11px] text-[#c0c1d0]">{p.commentCount} bình luận</p>

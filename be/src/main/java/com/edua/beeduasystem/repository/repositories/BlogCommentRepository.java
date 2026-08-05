@@ -3,6 +3,7 @@ package com.edua.beeduasystem.repository.repositories;
 import com.edua.beeduasystem.domain.model.blog.BlogComment;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,6 +18,9 @@ public interface BlogCommentRepository {
     List<BlogComment> findByPostId(UUID postId);
 
     long countByPostId(UUID postId);
+
+    /** Đếm bình luận hiển thị cho nhiều bài trong một lượt query, tránh N+1 ở trang danh sách Blog. */
+    Map<UUID, Long> countByPostIds(List<UUID> postIds);
 
     void deleteById(UUID id);
 }

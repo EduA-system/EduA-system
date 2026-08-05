@@ -73,14 +73,14 @@ public class BlogController {
     @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Tạo bài blog (publish trực tiếp — BR-20)")
     public BlogViews.PostDetail create(@RequestBody CreateBlogPostRequest request) {
-        return postService.create(request.title(), request.content(), request.subject());
+        return postService.create(request.title(), request.content(), request.subject(), request.thumbnailUrl());
     }
 
     @PatchMapping("/blog-posts/{id}")
     @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
     @Operation(summary = "Sửa bài của mình (owner-only — BR-16)")
     public BlogViews.PostDetail update(@PathVariable UUID id, @RequestBody UpdateBlogPostRequest request) {
-        return postService.update(id, request.title(), request.content(), request.subject());
+        return postService.update(id, request.title(), request.content(), request.subject(), request.thumbnailUrl());
     }
 
     @DeleteMapping("/blog-posts/{id}")
@@ -105,7 +105,7 @@ public class BlogController {
     @Operation(summary = "Bình luận trên một bài (BR-22)")
     public BlogViews.CommentView createComment(@PathVariable UUID id,
                                                @RequestBody CreateBlogCommentRequest request) {
-        return commentService.create(id, request.content());
+        return commentService.create(id, request.content(), request.parentCommentId());
     }
 
     @PatchMapping("/blog-comments/{commentId}")
@@ -122,6 +122,14 @@ public class BlogController {
     @Operation(summary = "Xóa bình luận của mình (owner-only — BR-16)")
     public void deleteComment(@PathVariable UUID commentId) {
         commentService.delete(commentId);
+    }
+
+    @PostMapping("/blog-comments/{commentId}/hide")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
+    @Operation(summary = "Chủ bài viết ẩn mềm bình luận của người khác")
+    public void hideComment(@PathVariable UUID commentId) {
+        commentService.hideByPostAuthor(commentId);
     }
 
     /** 'me' → user hiện tại; UUID hợp lệ → chính nó; null/blank → không lọc. */

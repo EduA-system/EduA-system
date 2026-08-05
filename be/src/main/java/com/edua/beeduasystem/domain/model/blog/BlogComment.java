@@ -8,8 +8,11 @@ public record BlogComment(
         UUID id,
         UUID postId,
         UUID authorId,
+        UUID parentCommentId,
         String content,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Instant hiddenAt,
+        UUID hiddenBy
 ) {
 }

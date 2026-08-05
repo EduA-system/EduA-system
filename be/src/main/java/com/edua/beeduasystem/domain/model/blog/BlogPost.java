@@ -14,6 +14,7 @@ public record BlogPost(
         UUID authorId,
         String title,
         String content,
+        String thumbnailUrl,
         Subject subject,
         BlogPostStatus status,
         String removedReason,

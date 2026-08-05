@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   api,
   formatRelativeTime,
@@ -16,6 +17,7 @@ import { CreatePostModal } from "./CreatePostModal";
 import { RichView } from "./RichView";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { hasAnyRole } from "@/lib/auth/permissions";
 
 function BackIcon() {
   return (
@@ -26,30 +28,41 @@ function BackIcon() {
   );
 }
 
-function ShareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-full">
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="12" r="3" />
-      <circle cx="18" cy="19" r="3" />
-      <path d="m8.6 10.7 6.8-4.4M8.6 13.3l6.8 4.4" />
-    </svg>
-  );
-}
-
-function BookmarkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-full">
-      <path d="M6 4.8A2.8 2.8 0 0 1 8.8 2h6.4A2.8 2.8 0 0 1 18 4.8V21l-6-3.6L6 21V4.8Z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function CommentBubbleIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-full">
       <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3H13a8.5 8.5 0 0 1 8 8.5Z" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function BlogSuccessToast({ message, onClose }: { message: string; onClose: () => void }) {
+  return <div className="fixed right-5 top-5 z-[70] flex max-w-sm items-center gap-3 rounded-2xl border border-[#bde6ce] bg-white px-4 py-3 text-sm font-semibold text-[#23613d] shadow-[0_14px_34px_rgba(22,82,49,0.18)]" role="status"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#31a66a] text-sm text-white">✓</span><span className="flex-1">{message}</span><button type="button" onClick={onClose} aria-label="Đóng thông báo" className="text-lg font-normal leading-none text-[#548266] hover:text-[#23613d]">×</button></div>;
+}
+
+function BlogConfirmationDialog({ title, description, confirmLabel, onCancel, onConfirm }: { title: string; description: string; confirmLabel: string; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#3f2634]/25 px-4" role="dialog" aria-modal="true" aria-labelledby="blog-confirmation-title">
+      <div className="w-full max-w-[600px] overflow-hidden rounded-[34px] bg-white shadow-[0_28px_50px_rgba(64,43,54,0.28)]">
+        <div className="relative flex h-[205px] items-center justify-center overflow-hidden bg-[#f38eb5]">
+          <span className="absolute size-32 translate-x-10 rounded-[42px] bg-[#ef3d7c]" />
+          <span className="absolute -translate-x-8 translate-y-5 size-28 rounded-full bg-[#f470a2]" />
+          <span className="relative flex size-[116px] items-center justify-center rounded-full border-[5px] border-[#19201f] bg-white shadow-[inset_0_0_0_7px_#ecf0e8]">
+            <span className="size-12 rounded-full border-[4px] border-[#19201f] bg-[#d7efdf]" />
+            <span className="absolute -bottom-5 right-0 h-11 w-5 rotate-[-40deg] rounded-full border-[4px] border-[#19201f] bg-white" />
+          </span>
+          <button type="button" onClick={onCancel} aria-label="Đóng" className="absolute right-7 top-7 flex size-12 items-center justify-center rounded-full bg-white text-[38px] font-light leading-none text-[#ef4d8b] transition hover:scale-105">×</button>
+        </div>
+        <div className="px-8 pb-9 pt-7 text-center sm:px-16 sm:pb-11 sm:pt-9">
+          <h2 id="blog-confirmation-title" className="text-[30px] font-bold tracking-[-0.03em] text-[#35353b] sm:text-[36px]">{title}</h2>
+          <p className="mx-auto mt-4 max-w-[450px] text-[15px] leading-6 text-[#7d7c81] sm:text-[17px]">{description}</p>
+          <div className="mt-8 grid grid-cols-2 gap-4">
+            <button type="button" onClick={onConfirm} className="h-14 rounded-xl bg-[#f04484] text-[15px] font-bold text-white shadow-sm transition hover:bg-[#dc3372]">{confirmLabel}</button>
+            <button type="button" onClick={onCancel} className="h-14 rounded-xl bg-[#fff0f5] text-[15px] font-semibold text-[#e14f85] transition hover:bg-[#ffe2ed]">Để tôi suy nghĩ lại</button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -67,7 +80,7 @@ function MagazineListItem({ post, onClick }: { post: Summary; onClick: () => voi
     <button type="button" onClick={onClick} className="group flex w-full gap-3 text-left">
       <div className="h-[76px] w-[98px] shrink-0 overflow-hidden rounded-xl bg-[#eceae5]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={post.thumbnailUrl ?? "/blog-detail-cover.png"} alt="" className="size-full object-cover transition duration-300 group-hover:scale-105" />
+        <img src={post.thumbnailUrl ?? "/blog-detail-cover.png"} alt="" loading="lazy" decoding="async" className="size-full object-cover transition duration-300 group-hover:scale-105" />
       </div>
       <div className="min-w-0 py-0.5">
         <div className="flex items-center gap-2">
@@ -95,17 +108,57 @@ function BlogMagazineSkeleton() {
   );
 }
 
-export function BlogCommunityPage() {
+function BlogDetailSkeleton() {
+  return (
+    <div className="animate-pulse pt-1" role="status" aria-label="Đang tải chi tiết bài viết">
+      <div className="mb-6 h-4 w-28 rounded bg-[#eeece8]" />
+      <article className="overflow-hidden rounded-2xl border-[0.8px] border-[#eaeae7] bg-white">
+        <div className="h-[332px] bg-[#eeece8]" />
+        <div className="p-8">
+          <div className="h-5 w-24 rounded-full bg-[#eeece8]" />
+          <div className="mt-5 h-9 w-3/4 rounded bg-[#eeece8]" />
+          <div className="mt-6 flex items-center gap-3 border-b border-[#f5f5f3] pb-6"><div className="size-10 rounded-full bg-[#eeece8]" /><div className="space-y-2"><div className="h-3 w-28 rounded bg-[#eeece8]" /><div className="h-3 w-20 rounded bg-[#eeece8]" /></div></div>
+          <div className="mt-7 space-y-3"><div className="h-4 w-full rounded bg-[#eeece8]" /><div className="h-4 w-11/12 rounded bg-[#eeece8]" /><div className="h-4 w-4/5 rounded bg-[#eeece8]" /></div>
+          <div className="mt-9 h-24 rounded-[14px] bg-[#eeece8]" />
+        </div>
+      </article>
+      <span className="sr-only">Đang tải chi tiết bài viết...</span>
+    </div>
+  );
+}
+
+export function BlogCommunityPage({ postId }: { postId?: string }) {
   const { user, status, authFetch } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState<Summary[]>([]);
   const [isPostsLoading, setIsPostsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [msg, setMsg] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [activeSubjectFilter, setActiveSubjectFilter] = useState<string | null>(null);
   const [comment, setComment] = useState("");
-  const [copiedDetailLink, setCopiedDetailLink] = useState(false);
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const [commentToHide, setCommentToHide] = useState<Comment | null>(null);
+  const [postToDelete, setPostToDelete] = useState<{ id: string } | null>(null);
+  const showSuccess = useCallback((message: string) => setSuccessMessage(message), []);
+
+  useEffect(() => {
+    const toast = searchParams.get("toast");
+    if (!toast) return;
+    const messages: Record<string, string> = { created: "Đã tạo bài viết thành công.", deleted: "Đã xóa bài viết thành công.", "moderator-removed": "Bài viết đã bị Moderator gỡ và không còn hiển thị trong Blog." };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- toast is a one-shot signal derived from the ?toast= URL param, not component state
+    if (messages[toast]) showSuccess(messages[toast]);
+    router.replace("/blog");
+  }, [router, searchParams, showSuccess]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = window.setTimeout(() => setSuccessMessage(""), 3500);
+    return () => window.clearTimeout(timer);
+  }, [successMessage]);
   const loadPosts = useCallback(async (subject?: string | null) => {
     setIsPostsLoading(true);
     try {
@@ -133,11 +186,44 @@ export function BlogCommunityPage() {
     };
   }, [authFetch, status]);
 
-  async function openDetail(id: string) {
+  const handleModeratorRemoved = useCallback(() => {
+    setDetail(null);
+    setEditOpen(false);
+    router.replace("/blog?toast=moderator-removed");
+  }, [router]);
+
+  const loadDetail = useCallback(async (id: string) => {
     setIsDetailLoading(true);
     try { setDetail(await api<Detail>(authFetch, `/blog-posts/${id}`)); setMsg(""); }
-    catch (e) { setMsg(String(e)); }
+    catch (e) {
+      if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
+      setMsg(String(e));
+    }
     finally { setIsDetailLoading(false); }
+  }, [authFetch, handleModeratorRemoved]);
+
+  useEffect(() => {
+    if (!postId || status !== "authenticated") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting detail when postId/status no longer selects a post
+      setDetail(null);
+      return;
+    }
+    void loadDetail(postId);
+  }, [loadDetail, postId, status]);
+
+  useEffect(() => {
+    if (postId && searchParams.get("edit") === "1" && detail?.id === postId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- opening the editor is derived from the ?edit=1 URL param
+      setEditOpen(true);
+    }
+  }, [detail?.id, postId, searchParams]);
+
+  function openDetail(id: string) {
+    router.push(`/blog/${id}`);
+  }
+
+  function openEdit(id: string) {
+    router.push(`/blog/${id}?edit=1`);
   }
 
   function handleFilterChange(subject: string | null) {
@@ -146,32 +232,44 @@ export function BlogCommunityPage() {
   }
 
   async function deletePost(id: string) {
-    try { await api(authFetch, `/blog-posts/${id}`, { method: "DELETE" }); setDetail(null); await loadPosts(activeSubjectFilter); }
-    catch (e) { setMsg(String(e)); }
+    try { await api(authFetch, `/blog-posts/${id}`, { method: "DELETE" }); setPostToDelete(null); setDetail(null); router.push("/blog?toast=deleted"); await loadPosts(activeSubjectFilter); }
+    catch (e) {
+      if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
+      setMsg(String(e));
+    }
   }
 
   async function addComment() {
     if (!detail || !comment.trim()) return;
     try {
-      await api<Comment>(authFetch, `/blog-posts/${detail.id}/comments`, { method: "POST", body: JSON.stringify({ content: comment }) });
-      setComment(""); await openDetail(detail.id); await loadPosts(activeSubjectFilter);
-    } catch (e) { setMsg(String(e)); }
+      await api<Comment>(authFetch, `/blog-posts/${detail.id}/comments`, { method: "POST", body: JSON.stringify({ content: comment, parentCommentId: replyTo?.id ?? null }) });
+      setComment(""); setReplyTo(null); showSuccess("Đã đăng bình luận thành công."); await loadDetail(detail.id); await loadPosts(activeSubjectFilter);
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
+      setMsg(String(e));
+    }
   }
 
   async function deleteComment(cid: string) {
     if (!detail) return;
-    try { await api(authFetch, `/blog-comments/${cid}`, { method: "DELETE" }); await openDetail(detail.id); }
-    catch (e) { setMsg(String(e)); }
+    try { await api(authFetch, `/blog-comments/${cid}`, { method: "DELETE" }); showSuccess("Đã xóa bình luận thành công."); await loadDetail(detail.id); }
+    catch (e) {
+      if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
+      setMsg(String(e));
+    }
   }
 
-  async function copyDetailLink() {
-    if (!detail) return;
+  async function hideComment() {
+    if (!commentToHide || !detail) return;
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/blog?post=${detail.id}`);
-      setCopiedDetailLink(true);
-      setTimeout(() => setCopiedDetailLink(false), 1500);
-    } catch {
-      // clipboard API không khả dụng — bỏ qua, không phải luồng chính.
+      await api(authFetch, `/blog-comments/${commentToHide.id}/hide`, { method: "POST" });
+      setCommentToHide(null);
+      showSuccess("Đã ẩn bình luận thành công.");
+      await loadDetail(detail.id);
+      await loadPosts(activeSubjectFilter);
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
+      setMsg(String(e));
     }
   }
 
@@ -191,8 +289,13 @@ export function BlogCommunityPage() {
   }
 
   const currentSummary = detail ? posts.find((p) => p.id === detail.id) : null;
-  const detailCover = currentSummary?.thumbnailUrl ?? "/blog-detail-cover.png";
+  const isDetailRoute = Boolean(postId);
+  const detailCover = detail?.thumbnailUrl ?? currentSummary?.thumbnailUrl ?? "/blog-detail-cover.png";
   const currentUserName = user.fullName ?? user.email;
+  const isModerator = hasAnyRole(user, ["MODERATOR"]);
+  const commentsForDisplay = detail ? detail.comments
+    .filter((commentItem) => !commentItem.parentCommentId)
+    .flatMap((commentItem) => [commentItem, ...detail.comments.filter((reply) => reply.parentCommentId === commentItem.id)]) : [];
   const featuredPost = posts[0];
   const recentPosts = posts.slice(1, 5);
   const discussionPosts = [...posts].sort((a, b) => b.commentCount - a.commentCount).slice(0, 3);
@@ -203,7 +306,7 @@ export function BlogCommunityPage() {
 
       <main className="min-w-0 flex-1 px-6 py-8">
         <div className="mx-auto max-w-[1104px]">
-          {!detail && (
+          {!detail && !isDetailRoute && (
             <>
               <header className="flex flex-col gap-5 border-b border-[#eaeae7] pb-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -211,7 +314,10 @@ export function BlogCommunityPage() {
                   <h1 className="mt-1 font-[family-name:var(--font-libertine)] text-[34px] font-bold tracking-[-0.04em] text-[#1c1e2e]">Blog EDUA</h1>
                   <p className="mt-1 text-[14px] text-[#77798c]">Chia sẻ kiến thức, ý tưởng và trải nghiệm giảng dạy.</p>
                 </div>
-                <Link href="/blog/create" className="flex h-10 items-center rounded-full bg-[#1c1e2e] px-5 text-[13px] font-semibold text-white transition hover:bg-[#35374b]">+ Tạo bài viết</Link>
+                <div className="flex items-center gap-2">
+                  {isModerator && <Link href="/blog-moderator" className="flex h-10 items-center rounded-full bg-[#1c1e2e] px-5 text-[13px] font-semibold text-white transition hover:bg-[#35374b]">Quản lý Blog</Link>}
+                  <Link href="/blog/create" className="flex h-10 items-center rounded-full bg-[#1c1e2e] px-5 text-[13px] font-semibold text-white transition hover:bg-[#35374b]">+ Tạo bài viết</Link>
+                </div>
               </header>
               <nav aria-label="Lọc bài viết theo môn" className="flex gap-5 overflow-x-auto border-b border-[#eaeae7] py-3.5 scrollbar-none">
                 <button type="button" onClick={() => handleFilterChange(null)} className={`shrink-0 text-[13px] font-semibold transition ${activeSubjectFilter === null ? "border-b-2 border-[#1c1e2e] pb-1 text-[#1c1e2e]" : "text-[#8b8c9d] hover:text-[#1c1e2e]"}`}>Tất cả</button>
@@ -222,11 +328,13 @@ export function BlogCommunityPage() {
 
           {msg && <p className="mb-4 rounded-2xl bg-white px-4 py-2.5 text-sm text-[#4a4b5e]">{msg}</p>}
 
-          {detail ? (
+          {isDetailRoute && isDetailLoading && !detail ? (
+            <BlogDetailSkeleton />
+          ) : detail ? (
             <div className="w-full">
               <button
                 type="button"
-                onClick={() => setDetail(null)}
+                onClick={() => router.push("/blog")}
                 className="mb-6 flex items-center gap-1.5 text-[13px] font-medium text-[#9b9caf] transition-colors hover:text-[#4a4b5e]"
               >
                 <span className="size-3.5"><BackIcon /></span>
@@ -251,31 +359,16 @@ export function BlogCommunityPage() {
                   </h2>
 
                   <div className="flex items-center gap-3 border-b-[0.8px] border-[#f5f5f3] pb-6 pt-5">
-                    <Avatar name={detail.authorName} seed={detail.authorId} size={40} />
+                    <Avatar name={detail.authorName} seed={detail.authorId} imageUrl={detail.authorAvatarUrl} size={40} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-semibold leading-[21px] text-[#1c1e2e]">{detail.authorName}</p>
                       <p className="truncate text-[12px] leading-[18px] text-[#9b9caf]">Giáo viên EDUA</p>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={copyDetailLink}
-                        className="flex h-8 items-center gap-1.5 rounded-[14px] border-[0.8px] border-[#eaeae7] px-3 text-[12px] font-medium text-[#4a4b5e] transition-colors hover:bg-[#f7f7f5]"
-                      >
-                        <span className="size-3"><ShareIcon /></span>
-                        {copiedDetailLink ? "Đã sao chép" : "Chia sẻ"}
-                      </button>
-                      <button
-                        type="button"
-                        title="Lưu bài viết"
-                        className="flex size-8 items-center justify-center rounded-[14px] border-[0.8px] border-[#eaeae7] text-[#4a4b5e] transition-colors hover:bg-[#f7f7f5]"
-                      >
-                        <span className="size-[13px]"><BookmarkIcon /></span>
-                      </button>
                       {detail.authorId === user.id && (
                         <button
                           type="button"
-                          onClick={() => setEditOpen(true)}
+                          onClick={() => openEdit(detail.id)}
                           className="h-8 rounded-[14px] border-[0.8px] border-[#eaeae7] px-3 text-[12px] font-medium text-[#4a4b5e] transition-colors hover:bg-[#f7f7f5]"
                         >
                           Sửa bài
@@ -284,7 +377,7 @@ export function BlogCommunityPage() {
                       {detail.authorId === user.id && (
                         <button
                           type="button"
-                          onClick={() => deletePost(detail.id)}
+                          onClick={() => setPostToDelete(detail)}
                           className="h-8 rounded-[14px] border-[0.8px] border-red-100 px-3 text-[12px] font-medium text-red-600 transition-colors hover:bg-red-50"
                         >
                           Xóa bài
@@ -306,6 +399,8 @@ export function BlogCommunityPage() {
 
                   <section className="pt-5">
                     <h3 className="text-[14px] font-semibold text-[#1c1e2e]">Bình luận</h3>
+
+                    {replyTo && <div className="mt-3 flex items-center justify-between rounded-xl bg-[#f4f3f8] px-3 py-2 text-[12px] text-[#5d6381]"><span>Đang trả lời <strong>{replyTo.authorName}</strong></span><button type="button" onClick={() => setReplyTo(null)} className="font-semibold text-[#7661b3] hover:text-[#4f3e8a]">Hủy</button></div>}
 
                     <div className="flex items-start gap-3 pt-4">
                       <Avatar name={currentUserName} seed={user.id} size={32} />
@@ -331,9 +426,9 @@ export function BlogCommunityPage() {
                     </div>
 
                     <ul className="space-y-4 pt-5">
-                      {detail.comments.map((c) => (
-                        <li key={c.id} className="flex items-start gap-3">
-                          <Avatar name={c.authorName} seed={c.authorId} size={32} />
+                      {commentsForDisplay.map((c) => (
+                        <li key={c.id} className={`flex items-start gap-3 ${c.parentCommentId ? "ml-8 border-l-2 border-[#ece9f3] pl-4 sm:ml-12" : ""}`}>
+                          <Avatar name={c.authorName} seed={c.authorId} imageUrl={c.authorAvatarUrl} size={32} />
                           <div className="min-w-0 flex-1">
                             <div className="rounded-[14px] bg-[#f7f7f5] px-4 py-3">
                               <div className="flex items-center gap-3">
@@ -348,11 +443,15 @@ export function BlogCommunityPage() {
                               />
                             </div>
                             <div className="flex items-center gap-3 px-1 pt-1.5 text-[11px] font-semibold text-[#9b9caf]">
-                              <button type="button" className="hover:text-[#4a4b5e]">Thích</button>
-                              <button type="button" className="hover:text-[#4a4b5e]">Trả lời</button>
+                              {!c.parentCommentId && <button type="button" onClick={() => setReplyTo(c)} className="hover:text-[#4a4b5e]">Trả lời</button>}
                               {c.authorId === user.id && (
                                 <button type="button" onClick={() => deleteComment(c.id)} className="text-red-500 hover:text-red-600">
                                   Xóa
+                                </button>
+                              )}
+                              {detail.authorId === user.id && c.authorId !== user.id && (
+                                <button type="button" onClick={() => setCommentToHide(c)} className="text-[#d75a88] hover:text-[#b83b69]">
+                                  Ẩn bình luận
                                 </button>
                               )}
                             </div>
@@ -364,7 +463,7 @@ export function BlogCommunityPage() {
                 </div>
               </article>
             </div>
-          ) : isPostsLoading || isDetailLoading ? (
+          ) : !isDetailRoute && isPostsLoading ? (
             <BlogMagazineSkeleton />
           ) : posts.length > 0 ? (
             <div className="pt-7">
@@ -388,12 +487,12 @@ export function BlogCommunityPage() {
 
               <section className="border-t border-[#eaeae7] pt-7">
                 <div className="mb-5"><p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7661b3]">Đang được quan tâm</p><h2 className="mt-1 text-[23px] font-bold tracking-[-0.03em] text-[#1c1e2e]">Thảo luận nổi bật</h2></div>
-                <div className="grid gap-5 md:grid-cols-3">{discussionPosts.map((post) => <PostCard key={post.id} post={post} onClick={() => openDetail(post.id)} />)}</div>
+                <div className="grid gap-5 md:grid-cols-3">{discussionPosts.map((post) => <PostCard key={post.id} post={post} onClick={() => openDetail(post.id)} onEdit={post.authorId === user.id ? () => void openEdit(post.id) : undefined} onDelete={post.authorId === user.id ? () => setPostToDelete(post) : undefined} />)}</div>
               </section>
 
               <section className="mt-10 border-t border-[#eaeae7] pt-7">
                 <div className="mb-5 flex items-center justify-between"><div><p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7661b3]">Cập nhật cộng đồng</p><h2 className="mt-1 text-[23px] font-bold tracking-[-0.03em] text-[#1c1e2e]">Tất cả bài viết</h2></div><span className="text-[12px] text-[#9b9caf]">{posts.length} bài viết</span></div>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{posts.map((post) => <PostCard key={post.id} post={post} onClick={() => openDetail(post.id)} />)}</div>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{posts.map((post) => <PostCard key={post.id} post={post} onClick={() => openDetail(post.id)} onEdit={post.authorId === user.id ? () => void openEdit(post.id) : undefined} onDelete={post.authorId === user.id ? () => setPostToDelete(post) : undefined} />)}</div>
               </section>
             </div>
           ) : (
@@ -404,16 +503,22 @@ export function BlogCommunityPage() {
         {detail && (
           <CreatePostModal
             open={editOpen}
-            onClose={() => setEditOpen(false)}
+            onClose={() => { setEditOpen(false); if (postId) router.replace(`/blog/${postId}`); }}
             authFetch={authFetch}
             post={detail}
+            onPostUnavailable={handleModeratorRemoved}
             onCreated={() => {
               setEditOpen(false);
-              void openDetail(detail.id);
+              if (postId) router.replace(`/blog/${postId}`);
+              showSuccess("Đã cập nhật bài viết thành công.");
+              void loadDetail(detail.id);
               void loadPosts(activeSubjectFilter);
             }}
           />
         )}
+        {successMessage && <BlogSuccessToast message={successMessage} onClose={() => setSuccessMessage("")} />}
+        {commentToHide && <BlogConfirmationDialog title="Ẩn bình luận này?" description="Bình luận sẽ không còn hiển thị với người xem bài viết. Bạn vẫn có thể xem lại dữ liệu này trong hệ thống." confirmLabel="Ẩn bình luận" onCancel={() => setCommentToHide(null)} onConfirm={hideComment} />}
+        {postToDelete && <BlogConfirmationDialog title="Xóa bài viết này?" description="Bài viết sẽ bị gỡ khỏi Blog và không còn hiển thị với người đọc." confirmLabel="Xóa bài viết" onCancel={() => setPostToDelete(null)} onConfirm={() => void deletePost(postToDelete.id)} />}
       </main>
     </div>
   );

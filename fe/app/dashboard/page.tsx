@@ -22,7 +22,7 @@ const descriptions: Record<string, string> = {
   "/periodic-table": "Tra cứu bảng tuần hoàn tương tác một cách dễ dàng.",
   "/molecules": "Khám phá cấu tạo chất qua các mô hình trực quan.",
   "/help": "Tìm hướng dẫn và nhận hỗ trợ khi sử dụng EDUA.",
-  "/blog/moderation": "Kiểm duyệt bài viết và duy trì cộng đồng tích cực.",
+  "/blog-moderator": "Kiểm duyệt bài viết và duy trì cộng đồng tích cực.",
   "/user-management": "Quản lý tài khoản, vai trò và quyền truy cập người dùng.",
 };
 

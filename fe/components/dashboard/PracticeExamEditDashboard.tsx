@@ -18,6 +18,7 @@ import {
   readPracticeExam,
   type PracticeExam,
 } from "@/services/practiceExamService";
+import { normalizePracticeExamLatex, normalizePracticeExamMathText } from "@/lib/practice-exam-math";
 
 type Metadata = {
   subject: string;
@@ -36,21 +37,16 @@ function escapeHtml(value: string) {
 }
 
 function mathAttribute(value: string) {
-  const normalized = value
-    .trim()
+  const normalized = normalizePracticeExamLatex(value)
     // AI đôi khi thiếu ngoặc sau \vec hoặc bỏ luôn dấu gạch chéo của lệnh vector.
     .replace(/\\vec\s*([A-Za-z](?:_\{?[A-Za-z0-9]+\}?)?)/g, "\\\\vec{$1}")
     .replace(/\bvec\s*([A-Za-z](?:_\{?[A-Za-z0-9]+\}?)?)/g, "\\\\vec{$1}")
-    // Chỉ chuẩn hoá các lệnh toán học thường bị AI bỏ dấu gạch chéo trong vùng LaTeX.
-    .replace(
-      /(?<!\\)\b(frac|sqrt|cdot|times|approx|cos|sin|tan|theta|alpha|beta|gamma|pi|Rightarrow|leftarrow|leq|geq)\b/g,
-      "\\\\$1",
-    );
+    .replace(/\\vec\{([A-Za-z])_\{?([A-Za-z0-9]+)\}?\}/g, "\\\\vec{$1_$2}");
   return escapeHtml(normalized);
 }
 
 function inlineRichText(value: string) {
-  return escapeHtml(value).replace(
+  return escapeHtml(normalizePracticeExamMathText(value)).replace(
     /\\\((.+?)\\\)|(?<!\$)\$([^$\n]+?)\$(?!\$)/g,
     (
       _match,
@@ -66,7 +62,7 @@ function inlineRichText(value: string) {
 function richTextBlocks(value: string) {
   // Chỉ nhận $$...$$ làm display math. Không tách theo \[...\] vì \[ có thể xuất
   // hiện bên trong một công thức LaTeX và khiến các lệnh phía sau bị rơi thành text.
-  return value
+  return normalizePracticeExamMathText(value)
     .split(/(\$\$[\s\S]+?\$\$)/)
     .filter(Boolean)
     .map((part) => {
@@ -122,47 +118,6 @@ function examHtml(metadata: Metadata, generated: PracticeExam | null) {
           .join("") ?? "";
       return `<section><p><b>Câu ${question.order}. (${formatScore(question.scoreCentiPoints)} điểm)</b></p>${richTextBlocks(question.content)}${options}</section>`;
     };
-    const textValue = (value: unknown) =>
-      typeof value === "string" && value.trim() ? value.trim() : null;
-    const trueFalseAnswer = (value: unknown) => {
-      if (!value || typeof value !== "object" || Array.isArray(value))
-        return "";
-      return Object.entries(value)
-        .filter(
-          ([key, answer]) =>
-            /^[a-d]$/i.test(key) && typeof answer === "boolean",
-        )
-        .sort(([first], [second]) => first.localeCompare(second))
-        .map(
-          ([key, answer]) =>
-            `Phát biểu ${key.toUpperCase()}: ${answer ? "Đúng" : "Sai"}.`,
-        )
-        .join(" ");
-    };
-    const answerText = (question: PracticeExam["questions"][number]) => {
-      const answer = question.answer;
-      if (question.type === "MULTIPLE_CHOICE") {
-        const key =
-          textValue(answer.correctOptionKey) ??
-          textValue(answer.answerKey) ??
-          textValue(answer.key);
-        return key ? `Chọn đáp án ${key}.` : "Xem hướng dẫn chấm bên dưới.";
-      }
-      if (question.type === "TRUE_FALSE") {
-        const statements =
-          trueFalseAnswer(answer) || trueFalseAnswer(answer.values);
-        return statements || "Xem hướng dẫn chấm bên dưới.";
-      }
-      const content =
-        textValue(answer.content) ??
-        textValue(answer.answer) ??
-        textValue(answer.value) ??
-        textValue(answer.sampleAnswer);
-      if (content) return content;
-      return question.type === "ESSAY"
-        ? "Chấm theo hướng dẫn và rubric bên dưới."
-        : "Xem hướng dẫn chấm bên dưới.";
-    };
     const sections = sectionDefinitions
       .map(([type, label], index) => {
         const questions = generated.questions.filter(
@@ -176,19 +131,29 @@ function examHtml(metadata: Metadata, generated: PracticeExam | null) {
         return `<section><h3>PHẦN ${index + 1}. ${label} (${formatScore(score)} điểm)</h3>${questions.map(questionContent).join("")}</section>`;
       })
       .join("");
-    const answers = generated.questions
-      .map((question) => {
-        const answer = answerText(question);
-        const rubric =
-          question.rubric
-            ?.map(
-              (item) =>
-                `<li>${inlineRichText(item.criterion)}: ${formatScore(item.scoreCentiPoints)} điểm</li>`,
-            )
-            .join("") ?? "";
-        return `<section><p><b>Câu ${question.order} (${formatScore(question.scoreCentiPoints)} điểm)</b></p><p><b>Đáp án:</b> ${inlineRichText(answer)}</p><p><b>Hướng dẫn:</b></p>${richTextBlocks(question.explanation)}${rubric ? `<ul>${rubric}</ul>` : ""}</section>`;
-      })
-      .join("");
+    const textValue = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
+    const trueFalseAnswer = (value: unknown) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+      return Object.entries(value)
+        .filter(([key, answer]) => /^[a-d]$/i.test(key) && typeof answer === "boolean")
+        .sort(([first], [second]) => first.localeCompare(second))
+        .map(([key, answer]) => `Phát biểu ${key.toUpperCase()}: ${answer ? "Đúng" : "Sai"}.`)
+        .join(" ");
+    };
+    const answerText = (question: PracticeExam["questions"][number]) => {
+      const answer = question.answer;
+      const content = textValue(answer.content) ?? textValue(answer.answer) ?? textValue(answer.value) ?? textValue(answer.sampleAnswer);
+      if (question.type === "MULTIPLE_CHOICE") {
+        const key = textValue(answer.correctOptionKey) ?? textValue(answer.answerKey) ?? textValue(answer.key);
+        return key ? `Chọn đáp án ${key}.` : "Xem hướng dẫn chấm bên dưới.";
+      }
+      if (question.type === "TRUE_FALSE") return trueFalseAnswer(answer) || trueFalseAnswer(answer.values) || "Xem hướng dẫn chấm bên dưới.";
+      return content ?? (question.type === "ESSAY" ? "Chấm theo hướng dẫn và rubric bên dưới." : "Xem hướng dẫn chấm bên dưới.");
+    };
+    const answers = generated.questions.map((question) => {
+      const rubric = question.rubric?.map((item) => `<li>${inlineRichText(item.criterion)}: ${formatScore(item.scoreCentiPoints)} điểm</li>`).join("") ?? "";
+      return `<section><p><b>Câu ${question.order} (${formatScore(question.scoreCentiPoints)} điểm)</b></p><p><b>Đáp án:</b> ${inlineRichText(answerText(question))}</p><p><b>Hướng dẫn:</b></p>${richTextBlocks(question.explanation)}${rubric ? `<ul>${rubric}</ul>` : ""}</section>`;
+    }).join("");
     return `<h1>${generated.title}</h1><p class="document-meta">${generated.instructions} · Tổng điểm: 10 điểm</p><section><h2>I. ĐỀ KIỂM TRA</h2>${sections}</section><section><h2>II. ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM</h2>${answers}</section>`;
   }
   return `

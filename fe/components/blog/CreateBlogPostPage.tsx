@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { api, SUBJECTS, subjectLabel, uploadFile, type Detail, type SubjectValue } from "@/lib/blog";
+import { api, optimizeBlogCover, SUBJECTS, subjectLabel, uploadFile, type Detail, type SubjectValue } from "@/lib/blog";
 import { RichEditor } from "./RichEditor";
 
 const DRAFT_STORAGE_KEY = "edua:blog-create-draft";
@@ -61,14 +61,14 @@ export function CreateBlogPostPage() {
 
   async function handleCoverFile(file: File | undefined) {
     if (!file) return;
-    if (!["image/png", "image/jpeg"].includes(file.type)) {
-      setError("Ảnh đại diện chỉ hỗ trợ định dạng PNG hoặc JPG.");
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setError("Ảnh đại diện chỉ hỗ trợ định dạng PNG, JPG hoặc WebP.");
       return;
     }
     setUploadingCover(true);
     setError("");
     try {
-      setCoverImageUrl(await uploadFile(authFetch, file));
+      setCoverImageUrl(await uploadFile(authFetch, await optimizeBlogCover(file)));
     } catch (err) {
       setError(String(err));
     } finally {
@@ -84,13 +84,12 @@ export function CreateBlogPostPage() {
     setSubmitting(true);
     setError("");
     try {
-      const finalContent = coverImageUrl ? `<p><img src="${coverImageUrl}" alt="" /></p>${content}` : content;
       await api<Detail>(authFetch, "/blog-posts", {
         method: "POST",
-        body: JSON.stringify({ title, content: finalContent, subject }),
+        body: JSON.stringify({ title, content, subject, thumbnailUrl: coverImageUrl }),
       });
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
-      router.push("/blog");
+      router.push("/blog?toast=created");
     } catch (err) {
       setError(String(err));
     } finally {
@@ -148,7 +147,7 @@ export function CreateBlogPostPage() {
               <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Ảnh đại diện <span className="font-normal normal-case text-[#c0c1d0]">(tùy chọn)</span></span>
               <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void handleCoverFile(event.dataTransfer.files?.[0]); }} className="mt-1.5 rounded-[14px] border-[1.6px] border-dashed border-[#d8d8d5] p-3 text-center">
                 {coverImageUrl ? <div className="flex flex-col items-center gap-3 sm:flex-row sm:text-left"><img src={coverImageUrl} alt="Ảnh đại diện bài viết" className="h-20 w-32 rounded-lg object-cover" /><div className="text-[12px] text-[#4a4b5e]"><p>Ảnh đại diện đã sẵn sàng.</p><div className="mt-2 flex justify-center gap-3 sm:justify-start"><button type="button" onClick={() => fileRef.current?.click()} className="font-semibold text-[#7661b3] underline">Đổi ảnh</button><button type="button" onClick={() => setCoverImageUrl(null)} className="font-semibold text-[#b45309] underline">Xóa ảnh</button></div></div></div> : <div className="flex h-20 flex-col items-center justify-center gap-2 text-[12px] text-[#9b9caf]">{uploadingCover ? "Đang tải ảnh..." : <>Kéo thả ảnh PNG/JPG hoặc <button type="button" onClick={() => fileRef.current?.click()} className="font-semibold text-[#f5a623]">chọn file</button></>}</div>}
-                <input ref={fileRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(event) => { void handleCoverFile(event.target.files?.[0]); event.target.value = ""; }} />
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => { void handleCoverFile(event.target.files?.[0]); event.target.value = ""; }} />
               </div>
               </div>
             </div>

@@ -7,6 +7,7 @@ import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.exception.MoleculeBuildException;
+import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
 import com.edua.beeduasystem.service.slides.SlideAiResponseException;
@@ -58,6 +59,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SlideAiResponseException.class)
     public ResponseEntity<ErrorResponse> handleSlideAiResponse(SlideAiResponseException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PracticeExamGenerationException.class)
+    public ResponseEntity<ErrorResponse> handlePracticeExamGeneration(PracticeExamGenerationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
     }
 

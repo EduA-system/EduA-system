@@ -20,7 +20,9 @@ public final class BlogViews {
             UUID id,
             String content,
             UUID authorId,
+            UUID parentCommentId,
             String authorName,
+            String authorAvatarUrl,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -33,6 +35,7 @@ public final class BlogViews {
             Subject subject,
             UUID authorId,
             String authorName,
+            String authorAvatarUrl,
             Instant createdAt,
             long commentCount,
             String excerpt,
@@ -45,9 +48,11 @@ public final class BlogViews {
             UUID id,
             String title,
             String content,
+            String thumbnailUrl,
             Subject subject,
             UUID authorId,
             String authorName,
+            String authorAvatarUrl,
             Instant createdAt,
             Instant updatedAt,
             List<CommentView> comments
