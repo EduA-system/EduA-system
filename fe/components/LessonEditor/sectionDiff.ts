@@ -5,6 +5,7 @@ import type { Editor } from "@tiptap/react";
 import { aiSectionTextToHtml } from "./LessonEditor";
 import { extractEditableSections, type EditableLessonSection } from "./lessonSections";
 import { DIFF_RESOLUTION_META, type DiffState } from "./diffStateExtension";
+import { TABLE_BREAK_LINE, buildTableDiffHtml, isTableRowLine, type TableDiffLine } from "./tableText";
 
 export type SectionDiffChunk = { state: "unchanged" | DiffState; text: string };
 
@@ -33,13 +34,47 @@ function markDiffState(html: string, state: DiffState): string {
     .replace(/<div(?=\s+data-type="block-math")/g, `<div data-diff-state="${state}"`);
 }
 
+/** Một chunk CHỈ chứa dòng bảng (tiêu đề/dữ liệu/ranh giới bảng) — không lẫn văn bản
+ * thường. Chunk lẫn cả hai loại (hiếm, vd một đoạn văn dính liền một bảng không có ranh
+ * giới lại NẰM TRỌN trong 1 hunk `diffLines`) vẫn render đúng cấu trúc qua nhánh dưới
+ * (paragraphs() tự nhận diện dòng bảng), chỉ mất tô màu diff trên phần bảng đó — coi là
+ * giới hạn chấp nhận được của v1, giống cách một đoạn văn bị lẫn nhiều loại nội dung khác. */
+function isTableChunk(chunk: SectionDiffChunk): boolean {
+  return chunk.text
+    .split("\n")
+    .every((line) => line.trim() === TABLE_BREAK_LINE || isTableRowLine(line.trim()));
+}
+
+/**
+ * Build lại từng chunk độc lập thành HTML rồi ghép chuỗi lại — dùng được cho `<p>`/`<li>`/
+ * công thức khối vì mỗi block đã là 1 đơn vị diff đầy đủ. KHÔNG dùng được cho bảng: một
+ * bảng có thể bị `diffLines` cắt thành nhiều chunk (vd dòng tiêu đề "giữ nguyên" tách khỏi
+ * các dòng dữ liệu "đã sửa"), và build từng chunk bảng riêng lẻ qua `aiSectionTextToHtml`
+ * sẽ mất ngữ cảnh dòng nào là tiêu đề (suy theo VỊ TRÍ trong chunk, không phải trong bảng
+ * gốc) — nên các chunk bảng liên tiếp được gộp lại và đưa qua `buildTableDiffHtml`, cho ra
+ * đúng MỘT `<table>` với state diff gắn theo từng hàng thay vì nhiều `<table>` rời rạc.
+ */
 export function buildSectionDiffHtml(chunks: SectionDiffChunk[]): string {
-  return chunks
-    .map((chunk) => {
-      const html = aiSectionTextToHtml(chunk.text);
-      return chunk.state === "unchanged" ? html : markDiffState(html, chunk.state);
-    })
-    .join("");
+  const html: string[] = [];
+  let i = 0;
+  while (i < chunks.length) {
+    if (isTableChunk(chunks[i])) {
+      const rows: TableDiffLine[] = [];
+      while (i < chunks.length && isTableChunk(chunks[i])) {
+        for (const line of chunks[i].text.split("\n")) {
+          rows.push({ line: line.trim(), state: chunks[i].state });
+        }
+        i++;
+      }
+      html.push(buildTableDiffHtml(rows, aiSectionTextToHtml));
+      continue;
+    }
+    const chunk = chunks[i];
+    const chunkHtml = aiSectionTextToHtml(chunk.text);
+    html.push(chunk.state === "unchanged" ? chunkHtml : markDiffState(chunkHtml, chunk.state));
+    i++;
+  }
+  return html.join("");
 }
 
 /** Chèn diff (cũ gạch đỏ + mới gạch xanh) vào đúng phần thân mục, thay vì ghi đè thẳng. */

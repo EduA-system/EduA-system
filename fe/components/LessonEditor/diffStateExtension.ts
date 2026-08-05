@@ -9,10 +9,10 @@ export type DiffState = "added" | "removed";
 
 /**
  * Gắn attribute `diffState` lên các node block có thể là 1 "dòng" diff (đoạn văn, mục
- * bullet, công thức khối) — không cần Mark/Node riêng vì diff chạy theo dòng/đoạn, mỗi
- * node block đã là đúng 1 đơn vị diff. Không gồm bảng: `aiSectionTextToHtml` (nội dung AI
- * trả về) không bao giờ sinh ra `<table>`, nên mục có bảng sẽ diff dạng gộp dòng thô —
- * chấp nhận sẽ thay bảng bằng đoạn văn thường (giới hạn đã biết của v1).
+ * bullet, công thức khối, hàng bảng) — không cần Mark/Node riêng vì diff chạy theo
+ * dòng/đoạn/hàng, mỗi node block đã là đúng 1 đơn vị diff. `tableRow` được gắn trực tiếp
+ * bởi `tableText.ts#buildTableDiffHtml` (không qua `markDiffState` như các loại còn lại)
+ * vì hàng tiêu đề không bao giờ được đánh dấu diff — xem `sectionDiff.ts`.
  */
 export const DiffStateExtension = Extension.create({
   name: "diffState",
@@ -20,7 +20,7 @@ export const DiffStateExtension = Extension.create({
   addGlobalAttributes() {
     return [
       {
-        types: ["paragraph", "listItem", "blockMath"],
+        types: ["paragraph", "listItem", "blockMath", "tableRow"],
         attributes: {
           diffState: {
             default: null,

@@ -77,12 +77,19 @@ body: LessonPlan5512Dto (partial — title / section / activity)
 body: {
   instruction,
   sections: [
-    { id, heading, content }   // trích từ editor hiện tại; id do frontend gán ổn định theo thứ tự section
+    { id, heading, content, kind }   // trích từ editor hiện tại; id do frontend gán ổn định theo thứ tự section
   ]
 }
 → 200  { targetId, content }
 ```
-AI tự chọn đúng một `targetId` trong danh sách và trả phần thân đã viết lại. Frontend render preview để giáo viên Chấp nhận/Bỏ; khi Chấp nhận, TipTap thay đúng range section và auto-save xử lý như edit tay. Không dùng STOMP vì mỗi lượt sửa nhỏ, đồng bộ. Map: UC-27 AI edit, MSG06/07.
+AI tự chọn đúng một `targetId` trong danh sách và trả phần thân đã viết lại. Frontend render preview (diff dòng, gạch đỏ/gạch xanh) ngay trong editor để giáo viên Chấp nhận/Bỏ; khi Chấp nhận, TipTap thay đúng range section và auto-save xử lý như edit tay. Không dùng STOMP vì mỗi lượt sửa nhỏ, đồng bộ. Map: UC-27 AI edit, MSG06/07.
+
+`content` là text phẳng: mỗi đoạn/bullet/công thức một dòng (xem `LessonPlanEditPromptBuilder`). Mục có bảng (thiết bị 2 cột, phiếu học tập, bảng tổ chức/sản phẩm của tiểu hoạt động HĐ2) mã hoá bảng theo quy ước dòng riêng thay vì bị làm phẳng mất cấu trúc — xem `fe/components/LessonEditor/tableText.ts`:
+- Hàng tiêu đề: `‖ Cột 1 ‖ Cột 2 ‖`; hàng dữ liệu: `| Ô 1 | Ô 2 |`. Bảng 1 cột (phiếu học tập) không có hàng tiêu đề.
+- Nhiều đoạn trong cùng một ô nối bằng token `<br>` (không xuống dòng thật, để cả hàng vẫn nằm trên 1 dòng cho diff theo dòng).
+- Nhiều bảng liên tiếp không có văn bản xen giữa ngăn cách bằng một dòng riêng `---`.
+
+`kind` (do FE phát hiện cấu trúc, gửi kèm mỗi section) là `"text"` | `"materials"` | `"subActivity"` — cho AI biết cần giữ đúng quy tắc cấu trúc 5512 nào (2 cột thiết bị, 1 cột phiếu học tập, hay 2 cột "Hoạt động của GV và HS"/"Sản phẩm dự kiến") khi viết lại phần có bảng.
 
 ### 8. `DELETE /api/lesson-plans/{id}` — Xóa
 ```

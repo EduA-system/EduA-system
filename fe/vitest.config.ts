@@ -17,6 +17,7 @@ export default defineConfig({
       "lib/slide-html-export.test.ts",
       "lib/slide-layout/**/*.test.ts",
       "components/LessonEditor/sectionDiff.test.ts",
+      "components/LessonEditor/tableText.test.ts",
     ],
   },
 });

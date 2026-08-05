@@ -23,7 +23,8 @@ public class AiPromptTemplateCatalog {
                  SLIDE_OUTLINE_STRUCTURE,
                  SLIDE_OUTLINE_MERGED,
                  SLIDE_OUTLINE_PART_SKELETON,
-                 SLIDE_OUTLINE_EXPAND_PART -> SlidePromptBuilder.defaultInstruction(key);
+                 SLIDE_OUTLINE_EXPAND_PART,
+                 SLIDE_OUTLINE_CONSOLIDATE -> SlidePromptBuilder.defaultInstruction(key);
             case SLIDE_DESIGN_BACKGROUND,
                  SLIDE_DESIGN_STRUCTURE,
                  SLIDE_DESIGN_CONTENT_FILL,

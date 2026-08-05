@@ -8,6 +8,7 @@ import type {
   Worksheet,
 } from "@/data/lessonPlan5512Mock";
 import type { LessonPlanDisplayMetadata } from "@/services/lessonPlanService";
+import { TABLE_BREAK_LINE, isTableRowLine, pipeTextToTableHtml } from "./tableText";
 
 function escapeHtml(value: string | null | undefined) {
   if (!value) return "";
@@ -85,6 +86,17 @@ function paragraphs(text: string) {
   if (lines.length === 0) return "<p></p>";
   const html: string[] = [];
   for (let i = 0; i < lines.length; i++) {
+    if (lines[i] === TABLE_BREAK_LINE) continue;
+    if (isTableRowLine(lines[i])) {
+      const tableLines: string[] = [];
+      while (i < lines.length && isTableRowLine(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      html.push(pipeTextToTableHtml(tableLines, paragraphs));
+      i--;
+      continue;
+    }
     if (isAnswerKeyLine(lines[i])) {
       const answers: string[] = [];
       while (i < lines.length && isAnswerKeyLine(lines[i])) {

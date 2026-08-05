@@ -61,6 +61,7 @@ export function AssistantPanel({ collapsed = false, editor = null, authFetch }: 
             id: section.id,
             heading: section.heading,
             content: section.text,
+            kind: section.kind,
           })),
         },
         authFetch,

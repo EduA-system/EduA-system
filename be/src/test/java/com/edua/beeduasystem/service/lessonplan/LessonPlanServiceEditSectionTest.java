@@ -40,8 +40,8 @@ class LessonPlanServiceEditSectionTest {
         return new EditLessonSectionRequest(
                 "làm ngắn gọn phần Mục tiêu",
                 List.of(
-                        new SectionInput("sec-1", "I. MỤC TIÊU", "I. MỤC TIÊU\nNội dung dài"),
-                        new SectionInput("sec-2", "Hoạt động 1: Khởi động", "Hoạt động 1\nNhiệm vụ")
+                        new SectionInput("sec-1", "I. MỤC TIÊU", "I. MỤC TIÊU\nNội dung dài", "text"),
+                        new SectionInput("sec-2", "Hoạt động 1: Khởi động", "Hoạt động 1\nNhiệm vụ", "text")
                 )
         );
     }
