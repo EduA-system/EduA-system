@@ -28,8 +28,6 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/detail-resource": { requireAuth: true },
   "/slide-create":    { requireAuth: true },
   "/slide-maker":     { requireAuth: true },
-  "/exam-create":     { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
-  "/exam-matrix":     { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/exam-create-new": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/exam-edit-new":   { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/molecules":       { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
