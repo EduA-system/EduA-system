@@ -75,8 +75,8 @@ This is Next.js 16, which has breaking changes compared with older remembered pa
 
 ### Frontend Architecture
 
-- `fe/app/` uses the App Router. `app/page.tsx` re-exports the landing page, and feature routes live in route folders such as `lesson-create`, `lesson-edit`, `slide-create`, `slide-maker`, `slide-present`, `slide-layout-gallery`, `view-slide-template`, `blog`, `community-hub`, `hub-moderation`, `library`, `molecules`, `periodic-table`, `mo-phong-vat-ly`, `dashboard`, `user-profile`, `user-management`, `it-management`, `it-management-users`, and `login`.
-- `fe/components/` is organized by product area rather than by primitive type: lesson editor, lesson-plan workspace, outline editor, slide editor, slide maker, blog, dashboard, molecules, periodic-table, simulations, layout, and shared `ui` components.
+- `fe/app/` uses the App Router. `app/page.tsx` re-exports the landing page, and feature routes live in route folders covering lesson planning (`lesson-create`, `lesson-edit`, `lesson-plan-approval`), slides (`slide-create`, `slide-maker`, `slide-present`, `slide-layout-gallery`), classroom/exam workflows (`class-detail`, `create-class`, `list-class`, `add-student`, `exam-create`, `exam-create-new`, `exam-edit-new`, `exam-matrix`, `weekly-schedule`), content/community (`blog`, `community-hub`, `hub-moderation`, `library`, `detail-resource`, `molecules`, `periodic-table`, `mo-phong-vat-ly`), account/admin (`dashboard`, `user-profile`, `user-management`, `it-staff`, `login`, `auth-debug`), and `notifications`, `help`.
+- `fe/components/` is organized by product area rather than by primitive type: `LessonEditor`, `lesson-plan`, `outline-editor`, `slide-editor`, `slide-maker`, `slide-presentation`, `blog`, `classroom`, `exam-matrix`, `dashboard`, `hub`, `molecules`, `periodic-table`, `simulations`, `layout`, and shared `ui` components.
 - Most frontend API calls go through same-origin `/api/*`, which Next rewrites to the backend via `fe/next.config.ts`. This avoids CORS for standard REST calls.
 - Slide generation/design clients are a separate path: `fe/lib/api/slides.ts` and `fe/lib/api/slide-design.ts` call the backend directly via `NEXT_PUBLIC_API_URL` instead of the Next rewrite.
 - Real-time generation flows use raw STOMP over WebSocket, not SockJS. Frontend clients in `fe/lib/ws/` connect to `NEXT_PUBLIC_WS_URL` (default `ws://localhost:8080`) and pass the JWT in the STOMP `CONNECT` headers.
@@ -133,11 +133,11 @@ Rules:
 
 ### Backend Architecture
 
-- The backend is feature-oriented inside the service layer: current areas include `auth`, `blog`, `lessonplan`, `library`, `molecule`, `slides`, `slidedesign`, `textbook`, and `upload`.
+- The backend is feature-oriented inside the service layer: current areas include `activitylog`, `ai`, `auth`, `blog`, `classroom`, `exam`, `lessonplan`, `library`, `molecule`, `notification`, `practiceexam`, `slides`, `slidedesign`, `textbook`, `upload`, and `weeklytask`.
 - Persistence is PostgreSQL + Flyway. Migrations currently cover textbook catalog, auth, blog, roles/user roles, audit history, library content, and textbook cleanup/profile updates.
 - Authentication is stateless JWT. Google sign-in starts in the frontend, then backend auth endpoints issue/refresh tokens. Request auth is enforced by `JwtAuthenticationFilter`, and role checks are done with method security.
-- WebSocket streaming is part of the main architecture, not a side feature. Spring exposes a raw STOMP endpoint at `/ws`; JWT is validated on STOMP `CONNECT` via `StompAuthChannelInterceptor`; lesson-plan and outline generators publish progress events through stream port interfaces and STOMP adapters.
-- AI access is abstracted behind `repository/gateways/AiClient`. `infrastructure/ai/config/AiClientConfig.java` currently wires a `FallbackAiClient` that effectively uses DeepSeek; OpenAI adapter code exists but is commented out for now.
+- WebSocket streaming is part of the main architecture, not a side feature. Spring exposes a raw STOMP endpoint at `/ws`; JWT is validated on STOMP `CONNECT` via `StompAuthChannelInterceptor`; lesson-plan, outline, and notification flows publish progress/events through stream port interfaces (`LessonPlanStreamPort`, `OutlineStreamPort`, `NotificationStreamPort`) and STOMP adapters.
+- AI access is abstracted behind `repository/gateways/AiClient`. `infrastructure/ai/config/AiClientConfig.java` wires a `FallbackAiClient` that tries the OpenAI adapter first (vision-capable) and falls back to DeepSeek; a separate `jsonAiClient` bean forces OpenAI's `json_object` response format for prompts that always request JSON (not safe for HTML-generating prompts).
 - Storage abstractions live behind repository gateways as well. Upload flows go through `StorageClient`, with the current implementation targeting Cloudflare R2.
 - The backend serves both synchronous REST flows and asynchronous generation pipelines. Prompt builders, HTML extractors, and output post-processing are part of the service layer rather than controllers.
 
@@ -154,6 +154,7 @@ com.edua.beeduasystem/
 │   └── repositories/          service-facing persistence interfaces
 └── infrastructure/
     ├── ai/                    provider adapters, fallback client, Spring AI config
+    ├── logging/               request logging filters
     ├── messaging/             STOMP stream adapters
     ├── persistence/           JPA entities, repositories, adapters, importers
     ├── security/              JWT, Google token verification, STOMP auth, rate limiting
