@@ -312,6 +312,24 @@ body::-webkit-scrollbar {
   color: #c0492b;
 }
 
+/* Diff AI đang chờ Chấp nhận/Bỏ — vùng bị khoá, xem AssistantPanel + diffStateExtension. */
+.lesson-document-editor [data-diff-state="removed"] {
+  background: #fdecea;
+  text-decoration: line-through;
+  text-decoration-color: #c0492b;
+  color: #8a4a3a;
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.lesson-document-editor [data-diff-state="added"] {
+  background: #e8f5e9;
+  text-decoration: underline;
+  text-decoration-color: #2e7d32;
+  color: #1f5c22;
+  cursor: not-allowed;
+}
+
 .lesson-document-editor ul,
 .lesson-document-editor ol {
   margin-top: 12px;

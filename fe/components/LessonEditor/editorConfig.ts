@@ -11,6 +11,7 @@ import type { Extensions } from "@tiptap/react";
 import { ParagraphClass } from "./paragraphClassExtension";
 import { PendingActivity } from "./pendingActivityNode";
 import { PendingSection } from "./pendingSectionNode";
+import { DiffStateExtension } from "./diffStateExtension";
 
 /** Thông tin công thức được bấm vào — đủ để mở popup sửa tại đúng vị trí node. */
 export type MathClickInfo = { pos: number; latex: string; display: boolean };
@@ -69,5 +70,7 @@ export function createEditorExtensions(options: {
     PendingActivity,
     // Block "đang soạn" tĩnh cho cả một phần (I/II/III) trong lúc chờ FRAME_READY.
     PendingSection,
+    // Đánh dấu + khoá vùng diff AI đang chờ Chấp nhận/Bỏ (xem AssistantPanel).
+    DiffStateExtension,
   ];
 }

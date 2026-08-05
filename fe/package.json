@@ -28,14 +28,15 @@
     "@tiptap/pm": "^3.27.1",
     "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
+    "diff": "^9.0.0",
     "katex": "^0.16.47",
     "konva": "^10.3.0",
     "lucide-react": "^1.23.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "tweakpane": "^4.0.5",
     "three": "^0.184.0",
+    "tweakpane": "^4.0.5",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
