@@ -1,4 +1,5 @@
 import { Client } from "@stomp/stompjs";
+import { BACKEND_WS_URL } from "@/lib/backend-url";
 
 export type NotificationEvent = {
   id: string;
@@ -18,8 +19,7 @@ export function connectNotificationsStream({
   accessToken: string;
   onEvent: (event: NotificationEvent) => void;
 }): { disconnect: () => void } {
-  const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080";
-  const brokerURL = `${wsBase}/ws`;
+  const brokerURL = `${BACKEND_WS_URL}/ws`;
 
   const client = new Client({
     brokerURL,

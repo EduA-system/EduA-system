@@ -1,5 +1,6 @@
 import { Client } from "@stomp/stompjs";
 import type { SlideItem } from "@/lib/api/slides";
+import { BACKEND_WS_URL } from "@/lib/backend-url";
 import { logSlideApi, logSlideStreamLifecycle } from "@/lib/ws/slide-debug-log";
 
 export type OutlineEvent =
@@ -24,8 +25,7 @@ export function connectOutlineStream({
   onReady: () => void;
   onClose: () => void;
 }): { disconnect: () => void } {
-  const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080";
-  const brokerURL = `${wsBase}/ws`;
+  const brokerURL = `${BACKEND_WS_URL}/ws`;
   logSlideStreamLifecycle("outline connecting");
 
   const client = new Client({

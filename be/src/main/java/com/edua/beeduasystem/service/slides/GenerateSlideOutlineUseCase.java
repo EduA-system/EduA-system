@@ -2,7 +2,6 @@ package com.edua.beeduasystem.service.slides;
 
 import com.edua.beeduasystem.domain.model.lesson.LessonContext;
 import com.edua.beeduasystem.domain.model.slide.ContentPlan;
-import com.edua.beeduasystem.domain.model.slide.OutlineItemSplitPolicy;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineRequest;
 import com.edua.beeduasystem.presentation.dto.slides.GenerateOutlineResponse;
 import com.edua.beeduasystem.presentation.dto.slides.InlineLessonPlanDto;
@@ -42,8 +41,6 @@ public class GenerateSlideOutlineUseCase {
     /** Số phần expand chạy song song tối đa (khớp SLIDE_CONCURRENCY=4 ở FE). */
     private static final int EXPAND_CONCURRENCY = 4;
     private static final int CONTENT_MAP_CONCURRENCY = 3;
-    /** A single dense outline item may become no more than three slides. */
-    private static final int MAX_AUTO_SPLIT_SLIDES = 3;
     private static final java.util.Set<String> PEDAGOGICAL_ROLES = java.util.Set.of(
             "hook", "explain", "derive", "demonstrate", "practice", "recap", "other");
 
@@ -57,7 +54,7 @@ public class GenerateSlideOutlineUseCase {
 
     @Autowired
     public GenerateSlideOutlineUseCase(
-            AiClient aiClient,
+            @Qualifier("jsonAiClient") AiClient aiClient,
             SlidePromptBuilder promptBuilder,
             OutlineStreamPort outlineStream,
             @Qualifier("slideSessionExecutor") ExecutorService executor,
@@ -234,12 +231,14 @@ public class GenerateSlideOutlineUseCase {
         String prompt = originalPrompt;
         Exception first = null;
         for (int attempt = 1; attempt <= 2; attempt++) {
+            String raw = null;
             try {
                 log.info("slide deck-blueprint attempt={} promptLength={} chunks={}", attempt, prompt.length(), allowedChunkIds.size());
-                String raw = generate(AiPromptKey.SLIDE_OUTLINE_DECK_BLUEPRINT, prompt);
+                raw = generate(AiPromptKey.SLIDE_OUTLINE_DECK_BLUEPRINT, prompt);
                 log.info("slide deck-blueprint attempt={} responseLength={}", attempt, raw == null ? 0 : raw.length());
                 return parseDeckBlueprint(raw, allowedChunkIds);
             } catch (Exception e) {
+                logRawOnFailure("deck-blueprint", attempt, raw);
                 if (attempt == 1) { first = e; prompt = promptBuilder.strictJsonRetryPrompt(originalPrompt, "deck-blueprint"); }
                 else throw new SlideAiResponseException("AI không thể lập kịch bản deck sau 2 lần thử: " + e.getMessage(), first);
             }
@@ -248,7 +247,7 @@ public class GenerateSlideOutlineUseCase {
     }
 
     private static List<LessonSourceContext.Activity> parseDeckBlueprint(String raw, List<String> allowedChunkIds) throws Exception {
-        JsonNode chapters = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(raw)).path("chapters");
+        JsonNode chapters = LENIENT_MAPPER.readTree(stripAndRepair(raw)).path("chapters");
         if (!chapters.isArray() || chapters.size() < 4 || chapters.size() > 6) throw new IllegalArgumentException("chapters phải có 4 đến 6 phần");
         List<LessonSourceContext.Activity> result = new ArrayList<>();
         java.util.Set<String> ids = new java.util.HashSet<>();
@@ -338,14 +337,18 @@ public class GenerateSlideOutlineUseCase {
         String prompt = originalPrompt;
         Exception first = null;
         for (int attempt = 1; attempt <= 2; attempt++) {
+            String raw = null;
             try {
                 log.info("content-map chunk={} heading={} attempt={} promptLength={}",
                         chunk.id(), headingLabel(chunk), attempt, prompt.length());
-                JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(generate(AiPromptKey.SLIDE_OUTLINE_CONTENT_MAP, prompt)));
+                raw = generate(AiPromptKey.SLIDE_OUTLINE_CONTENT_MAP, prompt);
+                log.info("content-map chunk={} attempt={} responseLength={}", chunk.id(), attempt, raw == null ? 0 : raw.length());
+                JsonNode root = LENIENT_MAPPER.readTree(stripAndRepair(raw));
                 normalizeContentMapSuggestedRoles(root);
                 validateContentMap(root, chunk.id());
                 return root;
             } catch (Exception e) {
+                logRawOnFailure("content-map " + chunk.id(), attempt, raw);
                 if (attempt == 1) {
                     first = e;
                     prompt = promptBuilder.strictJsonRetryPrompt(originalPrompt, "content-map " + chunk.id());
@@ -390,12 +393,14 @@ public class GenerateSlideOutlineUseCase {
         String prompt = originalPrompt;
         Exception first = null;
         for (int attempt = 1; attempt <= 2; attempt++) {
+            String raw = null;
             try {
                 log.info("slide {} attempt={} promptLength={} chunks={}", phase, attempt, prompt.length(), allowedIds.size());
-                String raw = generate(keyForPhase(phase), prompt);
+                raw = generate(keyForPhase(phase), prompt);
                 log.info("slide {} attempt={} responseLength={}", phase, attempt, raw == null ? 0 : raw.length());
                 return parseSkeleton(lesson, raw, allowedIds, requireCoverage);
             } catch (Exception e) {
+                logRawOnFailure(phase, attempt, raw);
                 if (attempt == 1) {
                     first = e;
                     prompt = promptBuilder.strictJsonRetryPrompt(originalPrompt, phase);
@@ -476,7 +481,7 @@ public class GenerateSlideOutlineUseCase {
     private List<SlideItemDto> mergeExpanded(PartDto part, String raw) {
         java.util.Map<String, JsonNode> byId = new java.util.HashMap<>();
         try {
-            JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(raw));
+            JsonNode root = LENIENT_MAPPER.readTree(stripAndRepair(raw));
             if (!root.path("slides").isArray()) throw new IllegalArgumentException("Expanded response needs slides[]");
             for (JsonNode s : root.path("slides")) {
                 String id = requiredText(s, "id");
@@ -506,7 +511,7 @@ public class GenerateSlideOutlineUseCase {
     ParsedSkeleton parseSkeleton(
             LessonContext lesson, String raw, List<String> allowedChunkIds, boolean requireCoverage) {
         try {
-            String json = SlidePromptBuilder.stripFences(raw);
+            String json = stripAndRepair(raw);
             JsonNode root = LENIENT_MAPPER.readTree(json);
             String lessonTitle = root.path("lessonTitle").asText(lesson.title());
             List<PartDto> parts = new ArrayList<>();
@@ -588,7 +593,6 @@ public class GenerateSlideOutlineUseCase {
                     outlineStream.publishSlideError(sessionId, part.id(), slide.id(), e.getMessage());
                 }
             }
-            filled = autoSplitDenseOutlineItems(lesson, req, part, filled);
             if (session != null) updateSessionPart(session, new PartDto(part.id(), part.title(), filled, part.sourceChunkIds()));
             outlineStream.publishPartReady(sessionId, part.id(), filled);
             return failures == 0;
@@ -616,7 +620,7 @@ public class GenerateSlideOutlineUseCase {
         SlideItemDto expanded = expandSingleSlideWithRetry(
                 lesson, session.request(), skeletonJson, part, target, source,
                 selected.isEmpty() ? session.request().plan() : null, chunkIds(selected));
-        List<SlideItemDto> replacement = autoSplitDenseOutlineItems(lesson, session.request(), part, List.of(expanded));
+        List<SlideItemDto> replacement = List.of(expanded);
         replaceSessionSlide(session, partId, target.id(), replacement);
         replacement.forEach(slide -> outlineStream.publishSlideReady(sessionId, partId, slide));
         PartDto updated = session.parts().get(partId);
@@ -667,100 +671,6 @@ public class GenerateSlideOutlineUseCase {
         });
     }
 
-    /**
-     * This happens while the outline is being generated, before the completed
-     * part is sent to the client and before any visual-design step starts.
-     */
-    List<SlideItemDto> autoSplitDenseOutlineItems(
-            LessonContext lesson, GenerateOutlineRequest req, PartDto part, List<SlideItemDto> items) {
-        java.util.Set<String> usedIds = new java.util.HashSet<>();
-        items.forEach(item -> usedIds.add(item.id()));
-        List<SlideItemDto> result = new ArrayList<>();
-
-        for (SlideItemDto item : items) {
-            result.addAll(autoSplitDenseOutlineItem(
-                    lesson, req, part, item, usedIds, new SplitBudget(MAX_AUTO_SPLIT_SLIDES - 1)));
-        }
-        return result;
-    }
-
-    private List<SlideItemDto> autoSplitDenseOutlineItem(
-            LessonContext lesson,
-            GenerateOutlineRequest req,
-            PartDto part,
-            SlideItemDto item,
-            java.util.Set<String> usedIds,
-            SplitBudget splitBudget) {
-        OutlineItemSplitPolicy.Decision decision = OutlineItemSplitPolicy.evaluate(item.contentPlan());
-        if (!decision.shouldSplit()) return List.of(item);
-        if (!splitBudget.hasRemaining()) {
-            log.warn("Keeping dense outline item={} because automatic split reached max slides={} reasons={}",
-                    item.id(), MAX_AUTO_SPLIT_SLIDES, decision.reasons());
-            return List.of(item);
-        }
-
-        try {
-            usedIds.remove(item.id());
-            List<SlideItemDto> splitItems = splitOutlineItemWithRetry(lesson, req, part, item, decision.reasons(), usedIds);
-            splitBudget.consume();
-            log.info("Auto-split dense outline item={} into={} reasons={}", item.id(),
-                    splitItems.stream().map(SlideItemDto::id).toList(), decision.reasons());
-            List<SlideItemDto> result = new ArrayList<>();
-            for (SlideItemDto splitItem : splitItems) {
-                result.addAll(autoSplitDenseOutlineItem(lesson, req, part, splitItem, usedIds, splitBudget));
-            }
-            return result;
-        } catch (Exception e) {
-            usedIds.add(item.id());
-            log.warn("Keeping dense outline item={} because automatic split failed: {}", item.id(), e.getMessage());
-            return List.of(item);
-        }
-    }
-
-    /** Splitting one slide into two consumes one slot from the three-slide cap. */
-    private static final class SplitBudget {
-        private int remainingSplits;
-
-        private SplitBudget(int remainingSplits) {
-            this.remainingSplits = remainingSplits;
-        }
-
-        private boolean hasRemaining() {
-            return remainingSplits > 0;
-        }
-
-        private void consume() {
-            remainingSplits--;
-        }
-    }
-
-    private List<SlideItemDto> splitOutlineItemWithRetry(
-            LessonContext lesson,
-            GenerateOutlineRequest req,
-            PartDto part,
-            SlideItemDto item,
-            List<String> reasons,
-            java.util.Set<String> usedIds) throws Exception {
-        String itemJson = LENIENT_MAPPER.writeValueAsString(item);
-        String originalPrompt = promptBuilder.splitOutlineItemPrompt(lesson, part.title(), itemJson, reasons, req.subject());
-        String prompt = originalPrompt;
-        Exception first = null;
-        for (int attempt = 1; attempt <= 2; attempt++) {
-            try {
-                log.info("split outline item={} part={} attempt={} promptLength={}", item.id(), part.id(), attempt, prompt.length());
-                return parseSplitOutlineItems(generate(AiPromptKey.SLIDE_OUTLINE_SPLIT_ITEM, prompt), item, usedIds);
-            } catch (Exception e) {
-                if (attempt == 1) {
-                    first = e;
-                    prompt = promptBuilder.strictJsonRetryPrompt(originalPrompt, "split outline item " + item.id());
-                } else {
-                    throw new SlideAiResponseException("AI không thể tách mục outline " + item.id() + " sau 2 lần thử: " + e.getMessage(), first);
-                }
-            }
-        }
-        throw new IllegalStateException("Unreachable");
-    }
-
     private List<SlideItemDto> expandSlidesOneByOne(
             LessonContext lesson,
             GenerateOutlineRequest req,
@@ -790,11 +700,15 @@ public class GenerateSlideOutlineUseCase {
         String prompt = originalPrompt;
         Exception first = null;
         for (int attempt = 1; attempt <= 2; attempt++) {
+            String raw = null;
             try {
                 log.info("expand slide={} part={} chunks={} attempt={} promptLength={}",
                         slide.id(), part.id(), selectedChunkIds, attempt, prompt.length());
-                return parseExpandedSlide(slide, generate(AiPromptKey.SLIDE_OUTLINE_EXPAND_PART, prompt));
+                raw = generate(AiPromptKey.SLIDE_OUTLINE_EXPAND_PART, prompt);
+                log.info("expand slide={} part={} attempt={} responseLength={}", slide.id(), part.id(), attempt, raw == null ? 0 : raw.length());
+                return parseExpandedSlide(slide, raw);
             } catch (Exception e) {
+                logRawOnFailure("expand slide " + slide.id(), attempt, raw);
                 if (attempt == 1) {
                     first = e;
                     prompt = promptBuilder.strictJsonRetryPrompt(originalPrompt, "expand slide " + slide.id());
@@ -809,7 +723,7 @@ public class GenerateSlideOutlineUseCase {
 
     static SlideItemDto parseExpandedSlide(SlideItemDto skeleton, String raw) {
         try {
-            JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(raw));
+            JsonNode root = LENIENT_MAPPER.readTree(stripAndRepair(raw));
             JsonNode node;
             if (root.path("slide").isObject()) {
                 node = root.path("slide");
@@ -844,45 +758,49 @@ public class GenerateSlideOutlineUseCase {
         return aiClient.generate(systemPromptService == null ? prompt : systemPromptService.apply(key, prompt));
     }
 
+    /** Dumps the raw AI response whenever parsing/validation fails, so truncation or malformed JSON is visible in logs. */
+    private static void logRawOnFailure(String phase, int attempt, String raw) {
+        if (raw == null) return; // generate() itself threw; nothing to show.
+        log.warn("{} attempt={} raw AI response ({} chars) that failed to parse:\n{}", phase, attempt, raw.length(), raw);
+    }
+
+    /** Strips markdown fences, then repairs the common case of the model omitting trailing '}'/']'. */
+    private static String stripAndRepair(String raw) {
+        return closeUnbalancedJson(SlidePromptBuilder.stripFences(raw));
+    }
+
+    /** Appends any structural closers ('}', ']') left unmatched outside of string literals. */
+    static String closeUnbalancedJson(String json) {
+        if (json == null || json.isBlank()) return json;
+        StringBuilder openStack = new StringBuilder();
+        boolean inString = false;
+        boolean escape = false;
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (escape) { escape = false; continue; }
+            if (inString) {
+                if (c == '\\') escape = true;
+                else if (c == '"') inString = false;
+                continue;
+            }
+            if (c == '"') { inString = true; continue; }
+            if (c == '{' || c == '[') openStack.append(c);
+            else if (c == '}' && openStack.length() > 0 && openStack.charAt(openStack.length() - 1) == '{') openStack.deleteCharAt(openStack.length() - 1);
+            else if (c == ']' && openStack.length() > 0 && openStack.charAt(openStack.length() - 1) == '[') openStack.deleteCharAt(openStack.length() - 1);
+        }
+        if (openStack.isEmpty() && !inString) return json;
+        StringBuilder repaired = new StringBuilder(json);
+        if (inString) repaired.append('"');
+        for (int i = openStack.length() - 1; i >= 0; i--) {
+            repaired.append(openStack.charAt(i) == '{' ? '}' : ']');
+        }
+        return repaired.toString();
+    }
+
     private static AiPromptKey keyForPhase(String phase) {
         if (phase.startsWith("part-skeleton")) return AiPromptKey.SLIDE_OUTLINE_PART_SKELETON;
         if (phase.startsWith("merge-outline")) return AiPromptKey.SLIDE_OUTLINE_MERGED;
         return AiPromptKey.SLIDE_OUTLINE_STRUCTURE;
-    }
-
-    static List<SlideItemDto> parseSplitOutlineItems(String raw, SlideItemDto original, java.util.Set<String> usedIds) throws Exception {
-        JsonNode root = LENIENT_MAPPER.readTree(SlidePromptBuilder.stripFences(raw));
-        JsonNode slides = root.path("slides");
-        if (!slides.isArray() || slides.size() != 2) {
-            throw new IllegalArgumentException("Split response must contain exactly two slides");
-        }
-
-        java.util.Set<String> allocatedIds = new java.util.HashSet<>(usedIds);
-        List<SlideItemDto> result = new ArrayList<>(2);
-        for (int index = 0; index < 2; index++) {
-            JsonNode node = slides.get(index);
-            String title = requiredText(node, "title");
-            String role = normalizePedagogicalRole(requiredText(node, "pedagogicalRole"));
-            JsonNode semantic = semanticNode(node);
-            String slideType = normalizeSkeletonSlideType(requiredText(semantic, "slideType"), role, title);
-            String headerMode = requiredText(semantic, "headerMode");
-            ContentPlan contentPlan = parseContentPlan(slideType, headerMode,
-                    semantic.path("blocks"), semantic.path("relationships"));
-            validateContentPlanMatchesSlideType(contentPlan);
-            String id = nextSplitId(original.id(), index == 0 ? "a" : "b", allocatedIds);
-            result.add(new SlideItemDto(id, title, role, intOrNull(node, "durationMinutes"),
-                    textOrNull(node, "aiNote"), contentPlan));
-            allocatedIds.add(id);
-        }
-        usedIds.addAll(result.stream().map(SlideItemDto::id).toList());
-        return result;
-    }
-
-    private static String nextSplitId(String originalId, String suffix, java.util.Set<String> usedIds) {
-        String candidate = originalId + "-" + suffix;
-        int duplicate = 2;
-        while (usedIds.contains(candidate)) candidate = originalId + "-" + suffix + "-" + duplicate++;
-        return candidate;
     }
 
     /** Pedagogical roles are metadata; preserve known roles and safely bucket every other AI label. */

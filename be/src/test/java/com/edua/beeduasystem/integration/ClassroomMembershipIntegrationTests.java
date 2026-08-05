@@ -38,7 +38,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -48,11 +47,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=none",
         "spring.jpa.show-sql=false",
-        // Test nay tu tao schema/bang rieng trong ensureTables(), nen Flyway khong duoc chay tren schema do.
-        "spring.flyway.enabled=false",
-        "spring.datasource.url=${IT_DB_URL:${DB_URL}}",
-        "spring.datasource.username=${IT_DB_USERNAME:${DB_USERNAME}}",
-        "spring.datasource.password=${IT_DB_PASSWORD:${DB_PASSWORD}}",
+        "spring.flyway.enabled=${IT_FLYWAY_ENABLED:false}",
+        "spring.datasource.url=${IT_DB_URL:jdbc:postgresql://localhost:${POSTGRES_PORT:9118}/${POSTGRES_DB:edua_system}}",
+        "spring.datasource.username=${IT_DB_USERNAME:${POSTGRES_USER:postgres}}",
+        "spring.datasource.password=${IT_DB_PASSWORD:${POSTGRES_PASSWORD:himawari}}",
         "spring.datasource.hikari.connection-init-sql=SET search_path TO edua_classroom_membership_it",
         "app.auth.jwt.secret=0123456789abcdef0123456789abcdef0123456789abcdef",
         "app.auth.principal-seed-email=",
@@ -113,7 +111,7 @@ class ClassroomMembershipIntegrationTests {
         mockMvc.perform(post("/api/classes/{id}/members", classId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fullName\":\"New Student One\",\"phoneNumber\":\"0901000001\",\"dateOfBirth\":\"2010-01-01\",\"email\":\"  NEW-STUDENT-001@CLASSROOM-MEMBERSHIP-IT.EDUA.LOCAL  \"}"))
+                        .content("{\"email\":\"  NEW-STUDENT-001@CLASSROOM-MEMBERSHIP-IT.EDUA.LOCAL  \"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.studentEmail").value("new-student-001@classroom-membership-it.edua.local"))
                 .andExpect(jsonPath("$.studentStatus").value("INVITED"));
@@ -228,7 +226,7 @@ class ClassroomMembershipIntegrationTests {
         mockMvc.perform(post("/api/classes/{id}/members", classId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fullName\":\"Duplicate Student\",\"phoneNumber\":\"0901000005\",\"dateOfBirth\":\"2010-01-05\",\"email\":\"student-005@classroom-membership-it.edua.local\"}"))
+                        .content("{\"email\":\"student-005@classroom-membership-it.edua.local\"}"))
                 .andExpect(status().isConflict());
 
         MockMultipartFile csv = new MockMultipartFile(
@@ -260,7 +258,7 @@ class ClassroomMembershipIntegrationTests {
         AppUser strangerTeacher = user("teacher-006@classroom-membership-it.edua.local", "Stranger Teacher", Subject.PHYSICS, UserStatus.ACTIVE, Role.TEACHER);
         UUID classId = seedClass(owner.id(), "Protected Membership Class", "Protected", Subject.PHYSICS, 12, "ACTIVE", Instant.now());
         UUID inactiveClassId = seedClass(owner.id(), "Inactive Membership Class", "Inactive", Subject.PHYSICS, 12, "INACTIVE", Instant.now());
-        String payload = "{\"fullName\":\"Denied Student\",\"phoneNumber\":\"0901000006\",\"dateOfBirth\":\"2010-01-06\",\"email\":\"denied-006@classroom-membership-it.edua.local\"}";
+        String payload = "{\"email\":\"denied-006@classroom-membership-it.edua.local\"}";
         int beforeMembers = count("class_members");
         int beforeUsers = count("app_users");
 
@@ -294,157 +292,6 @@ class ClassroomMembershipIntegrationTests {
         verifyNoInteractions(notificationStreamPort);
     }
 
-    @Test
-    void IT_CM_007_hardDeletesInvitedStudentAndFreesSlot() throws Exception {
-        AppUser owner = user("owner-007@classroom-membership-it.edua.local", "Hard Delete Owner", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
-        AppUser invited = user("invited-007@classroom-membership-it.edua.local", "Invited Seven", Subject.MATH, UserStatus.INVITED, Role.STUDENT);
-        UUID classId = seedClass(owner.id(), "Hard Delete Class", "Remove target", Subject.MATH, 10, "ACTIVE", Instant.now());
-        UUID otherClassId = seedClass(owner.id(), "Other Hard Delete Class", "Other target", Subject.MATH, 10, "ACTIVE", Instant.now());
-        seedMember(classId, invited.id(), Instant.now());
-        seedMember(otherClassId, invited.id(), Instant.now().minusSeconds(5));
-        seedRecipient(invited.id());
-        int beforeUsers = count("app_users");
-        int beforeRoles = count("user_roles");
-
-        mockMvc.perform(delete("/api/classes/{id}/members/{studentId}", classId, invited.id())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mode").value("HARD_DELETE"))
-                .andExpect(jsonPath("$.notified").value(false));
-
-        // INVITED chưa từng đăng nhập → hard-delete: xóa hết membership (mọi lớp), role, recipient, tài khoản.
-        assertThat(userRepository.findByEmail("invited-007@classroom-membership-it.edua.local")).isEmpty();
-        assertThat(count("app_users")).isEqualTo(beforeUsers - 1);
-        assertThat(count("user_roles")).isEqualTo(beforeRoles - 1);
-        assertThat(memberCount(classId)).isZero();
-        assertThat(memberCount(otherClassId)).isZero();
-        assertThat(recipientCount(invited.id())).isZero();
-        assertThat(hasRole(invited.id(), "STUDENT")).isFalse();
-        verifyNoInteractions(notificationStreamPort);
-    }
-
-    @Test
-    void IT_CM_008_softRemovesActiveStudentKeepsDataAndNotifiesWithReason() throws Exception {
-        AppUser owner = user("owner-008@classroom-membership-it.edua.local", "Soft Remove Owner", Subject.CHEMISTRY, UserStatus.ACTIVE, Role.TEACHER);
-        AppUser activeStudent = user("active-008@classroom-membership-it.edua.local", "Active Eight", Subject.CHEMISTRY, UserStatus.ACTIVE, Role.STUDENT);
-        UUID classId = seedClass(owner.id(), "Soft Remove Class", "Remove target", Subject.CHEMISTRY, 11, "ACTIVE", Instant.now());
-        seedMember(classId, activeStudent.id(), Instant.now());
-        int beforeUsers = count("app_users");
-
-        mockMvc.perform(delete("/api/classes/{id}/members/{studentId}", classId, activeStudent.id())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"Qua so luong hoc sinh, lop can gan gon.\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mode").value("SOFT_REMOVE"))
-                .andExpect(jsonPath("$.notified").value(true));
-
-        // Soft-remove: chỉ gỡ khỏi lớp này, giữ nguyên tài khoản + dữ liệu; slot 60 được giải phóng.
-        assertThat(memberCount(classId)).isZero();
-        assertThat(count("app_users")).isEqualTo(beforeUsers);
-        assertThat(userRepository.findByEmail("active-008@classroom-membership-it.edua.local")).isPresent();
-        assertThat(hasRole(activeStudent.id(), "STUDENT")).isTrue();
-        Map<String, Object> removalNotification = jdbc.queryForMap(
-                "SELECT * FROM notifications WHERE title = 'Ban da bi xoa khoi lop Soft Remove Class'");
-        assertThat(removalNotification.get("content").toString()).contains("Qua so luong hoc sinh");
-        assertRecipientIds((UUID) removalNotification.get("id"), List.of(activeStudent.id()));
-        verify(notificationStreamPort).publishNew(eq(activeStudent.id()), any(NotificationEvent.class));
-    }
-
-    @Test
-    void IT_CM_009_requiresReasonWhenRemovingActiveStudent() throws Exception {
-        AppUser owner = user("owner-009@classroom-membership-it.edua.local", "Reason Owner", Subject.PHYSICS, UserStatus.ACTIVE, Role.TEACHER);
-        AppUser activeStudent = user("active-009@classroom-membership-it.edua.local", "Active Nine", Subject.PHYSICS, UserStatus.ACTIVE, Role.STUDENT);
-        UUID classId = seedClass(owner.id(), "Reason Class", "Remove target", Subject.PHYSICS, 12, "ACTIVE", Instant.now());
-        seedMember(classId, activeStudent.id(), Instant.now());
-
-        mockMvc.perform(delete("/api/classes/{id}/members/{studentId}", classId, activeStudent.id())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"\"}"))
-                .andExpect(status().isBadRequest());
-
-        assertThat(memberCount(classId)).isEqualTo(1);
-        verifyNoInteractions(notificationStreamPort);
-    }
-
-    @Test
-    void IT_CM_010_softRemovesDisabledStudentWithoutNotification() throws Exception {
-        AppUser owner = user("owner-010@classroom-membership-it.edua.local", "Disabled Owner", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
-        AppUser disabled = user("disabled-010@classroom-membership-it.edua.local", "Disabled Ten", Subject.MATH, UserStatus.DISABLED, Role.STUDENT);
-        UUID classId = seedClass(owner.id(), "Disabled Class", "Remove target", Subject.MATH, 10, "ACTIVE", Instant.now());
-        seedMember(classId, disabled.id(), Instant.now());
-
-        mockMvc.perform(delete("/api/classes/{id}/members/{studentId}", classId, disabled.id())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"Tai khoan da khoa.\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mode").value("SOFT_REMOVE"))
-                .andExpect(jsonPath("$.notified").value(false));
-
-        assertThat(memberCount(classId)).isZero();
-        assertThat(userRepository.findByEmail("disabled-010@classroom-membership-it.edua.local")).isPresent();
-        verifyNoInteractions(notificationStreamPort);
-    }
-
-    @Test
-    void IT_CM_011_rejectsRemovalOfNonMemberAndStranger() throws Exception {
-        AppUser owner = user("owner-011@classroom-membership-it.edua.local", "Permission Remove Owner", Subject.CHEMISTRY, UserStatus.ACTIVE, Role.TEACHER);
-        AppUser strangerTeacher = user("teacher-011@classroom-membership-it.edua.local", "Stranger Remove Teacher", Subject.CHEMISTRY, UserStatus.ACTIVE, Role.TEACHER);
-        AppUser outsider = user("outsider-011@classroom-membership-it.edua.local", "Outsider Eleven", Subject.CHEMISTRY, UserStatus.ACTIVE, Role.STUDENT);
-        UUID classId = seedClass(owner.id(), "Protected Remove Class", "Protected", Subject.CHEMISTRY, 11, "ACTIVE", Instant.now());
-        UUID otherClassMemberId = UUID.randomUUID();
-        seedMember(classId, otherClassMemberId, Instant.now());
-
-        mockMvc.perform(delete("/api/classes/{id}/members/{studentId}", classId, outsider.id())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"khong co\"}"))
-                .andExpect(status().isNotFound());
-        mockMvc.perform(delete("/api/classes/{id}/members/{studentId}", classId, otherClassMemberId)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(strangerTeacher, Role.TEACHER))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"khong co\"}"))
-                .andExpect(status().isForbidden());
-        assertThat(memberCount(classId)).isEqualTo(1);
-        verifyNoInteractions(notificationStreamPort);
-    }
-
-    @Test
-    void IT_CM_012_profileMismatchReturnsExistingAccountThenReuseAddsIt() throws Exception {
-        AppUser owner = user("owner-012@classroom-membership-it.edua.local", "Reuse Owner", Subject.PHYSICS, UserStatus.ACTIVE, Role.TEACHER);
-        AppUser existing = user("reuse-012@classroom-membership-it.edua.local", "Original Name", Subject.PHYSICS, UserStatus.ACTIVE, Role.STUDENT);
-        UUID classId = seedClass(owner.id(), "Reuse Class", "Reuse target", Subject.PHYSICS, 12, "ACTIVE", Instant.now());
-
-        // Nhập sai hồ sơ so với tài khoản cũ → 409 PROFILE_MISMATCH kèm thông tin tài khoản cũ.
-        mockMvc.perform(post("/api/classes/{id}/members", classId)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fullName\":\"Different Name\",\"phoneNumber\":\"0901000123\",\"dateOfBirth\":\"2009-02-02\",\"email\":\"reuse-012@classroom-membership-it.edua.local\"}"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.reason").value("PROFILE_MISMATCH"))
-                .andExpect(jsonPath("$.existingAccount.email").value("reuse-012@classroom-membership-it.edua.local"))
-                .andExpect(jsonPath("$.existingAccount.fullName").value("Original Name"));
-
-        assertThat(memberCount(classId)).isZero();
-
-        // Giáo viên xác nhận "gán lại account cũ" → reuseExistingAccount=true → thêm được dù hồ sơ không khớp.
-        mockMvc.perform(post("/api/classes/{id}/members", classId)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fullName\":\"Different Name\",\"phoneNumber\":\"0901000123\",\"dateOfBirth\":\"2009-02-02\",\"email\":\"reuse-012@classroom-membership-it.edua.local\",\"reuseExistingAccount\":true}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.studentId").value(existing.id().toString()));
-
-        assertThat(memberCount(classId)).isEqualTo(1);
-        assertThat(isEnrolled(classId, existing.id())).isTrue();
-        assertThat(count("app_users")).isEqualTo(2);
-        verify(notificationStreamPort).publishNew(eq(existing.id()), any(NotificationEvent.class));
-    }
-
     private AppUser user(String email, String fullName, Subject subject, UserStatus status, Role role) {
         AppUser user = userRepository.save(new AppUser(
                 UUID.randomUUID(),
@@ -472,9 +319,6 @@ class ClassroomMembershipIntegrationTests {
                     full_name VARCHAR(255),
                     avatar_url VARCHAR(1000),
                     contact_info VARCHAR(1000),
-                    bio VARCHAR(1000),
-                    phone_number VARCHAR(30),
-                    date_of_birth DATE,
                     subject VARCHAR(20),
                     status VARCHAR(20) NOT NULL DEFAULT 'INVITED',
                     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -590,26 +434,6 @@ class ClassroomMembershipIntegrationTests {
                 classId,
                 studentId,
                 Timestamp.from(joinedAt));
-    }
-
-    private void seedRecipient(UUID studentId) {
-        UUID notificationId = UUID.randomUUID();
-        jdbc.update("""
-                INSERT INTO notifications (id, sender_id, subject, title, content, created_at)
-                VALUES (?, ?, 'MATH', 'Enrollment', 'content', ?)
-                """, notificationId, UUID.randomUUID(), Timestamp.from(Instant.now()));
-        jdbc.update("""
-                INSERT INTO notification_recipients (id, notification_id, recipient_id, created_at)
-                VALUES (?, ?, ?, ?)
-                """, UUID.randomUUID(), notificationId, studentId, Timestamp.from(Instant.now()));
-    }
-
-    private long recipientCount(UUID studentId) {
-        Long count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM notification_recipients WHERE recipient_id = ?",
-                Long.class,
-                studentId);
-        return count == null ? 0 : count;
     }
 
     private void deleteTestData() {
