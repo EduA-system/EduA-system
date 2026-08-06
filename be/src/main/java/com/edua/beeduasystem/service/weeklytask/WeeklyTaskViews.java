@@ -15,7 +15,7 @@ public final class WeeklyTaskViews {
 
     public record Summary(UUID id, UUID teacherId, String teacherName, Subject subject, Integer grade, LocalDate weekStartDate,
                            String scopeDescription, String textbookCode, String chapterCode, String chapterName, String lessonCode, String lessonName,
-                           Instant deadline, WeeklyTaskReviewStatus reviewStatus, Instant submittedAt, Instant createdAt) { }
+                           Instant deadline, WeeklyTaskReviewStatus reviewStatus, UUID sourceLibraryContentId, Instant submittedAt, Instant createdAt) { }
 
     public record Detail(UUID id, UUID moderatorId, String moderatorName, Subject subject, Integer grade, UUID teacherId,
                           String teacherName, LocalDate weekStartDate, String scopeDescription, String textbookCode,
@@ -35,7 +35,7 @@ public final class WeeklyTaskViews {
     static Summary toSummary(WeeklyTask t, Map<UUID, String> userNames) {
         return new Summary(t.id(), t.teacherId(), userNames.get(t.teacherId()), t.subject(), t.grade(), t.weekStartDate(),
                 t.scopeDescription(), t.textbookCode(), t.chapterCode(), t.chapterName(), t.lessonCode(), t.lessonName(),
-                t.deadline(), t.reviewStatus(), t.submittedAt(), t.createdAt());
+                t.deadline(), t.reviewStatus(), t.sourceLibraryContentId(), t.submittedAt(), t.createdAt());
     }
 
     static Detail toDetail(WeeklyTask t, Map<UUID, String> userNames) {

@@ -244,6 +244,7 @@ function WeeklyScheduleScreen() {
   const createPicker = useTextbookPicker(user?.subject ?? undefined, modGrade, createOpen);
 
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [resubmittingId, setResubmittingId] = useState<string | null>(null);
   const [submitMode, setSubmitMode] = useState<"library" | "upload">("library");
   const [ownedLessonPlans, setOwnedLessonPlans] = useState<LibraryContent[]>([]);
   const [selectedLessonPlanId, setSelectedLessonPlanId] = useState("");
@@ -378,6 +379,23 @@ function WeeklyScheduleScreen() {
       setError(e instanceof Error ? e.message : "Không thể nộp giáo án.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  // Bị từ chối + đã từng nộp từ thư viện → nộp lại đúng giáo án cũ, không bắt chọn lại dropdown (dễ bấm
+  // nhầm dưa bài khác vào). Chỉ áp dụng khi nguồn cũ là thư viện (sourceLibraryContentId có giá trị) —
+  // nộp bằng tệp tải lên thì vẫn phải mở panel chọn/tải lại như cũ.
+  async function handleResubmit(t: WeeklyTaskSummary) {
+    if (!t.sourceLibraryContentId) return;
+    setResubmittingId(t.id);
+    try {
+      await submitWeeklyTask(authFetch, t.id, { libraryContentId: t.sourceLibraryContentId });
+      setMsg("Đã nộp lại giáo án.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không thể nộp lại giáo án.");
+    } finally {
+      setResubmittingId(null);
     }
   }
 
@@ -685,7 +703,18 @@ function WeeklyScheduleScreen() {
                               </p>
                             </div>
                             <div className="flex shrink-0 items-center gap-2 text-sm">
-                              {current && !expired && (t.reviewStatus === "NOT_SUBMITTED" || t.reviewStatus === "REJECTED") ? (
+                              {current && !expired && t.reviewStatus === "REJECTED" && t.sourceLibraryContentId ? (
+                                <button
+                                  onClick={() => void handleResubmit(t)}
+                                  disabled={resubmittingId === t.id}
+                                  title="Nộp lại đúng giáo án đã chọn trước đó"
+                                  className="text-[#b85c3b] underline disabled:opacity-50"
+                                >
+                                  {resubmittingId === t.id ? "Đang nộp lại..." : "Nộp lại"}
+                                </button>
+                              ) : current &&
+                                !expired &&
+                                (t.reviewStatus === "NOT_SUBMITTED" || (t.reviewStatus === "REJECTED" && !t.sourceLibraryContentId)) ? (
                                 <button onClick={() => openSubmitPanel(t)} className="text-[#b85c3b] underline">
                                   Nộp giáo án
                                 </button>

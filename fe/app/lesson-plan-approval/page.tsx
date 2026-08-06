@@ -77,6 +77,14 @@ function LessonPlanApprovalScreen() {
     void load();
   }, [load]);
 
+  // Đổi bộ lọc (khối/chương/bài) là đổi ngữ cảnh — thông báo "Đã duyệt."/"Đã từ chối." của lần thao tác
+  // trước không còn liên quan, phải xoá ngay chứ không để trôi sang tới khi F5 mới mất.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMsg("");
+    setError("");
+  }, [gradeFilter, picker.chapterCode, picker.lessonCode]);
+
   async function handleExpand(id: string) {
     if (expandedId === id) {
       setExpandedId(null);

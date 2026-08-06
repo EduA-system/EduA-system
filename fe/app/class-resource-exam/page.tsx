@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { PracticeExamEditDashboard } from "@/components/dashboard/PracticeExamEditDashboard";
+import { ClassResourceDocumentViewer } from "@/components/classroom/ClassResourceDocumentViewer";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 
 export default function ClassResourceExamPage() {
-  return <RouteGuard pathname="/class-resource-exam"><Suspense fallback={<main>Đang mở bài kiểm tra...</main>}><PracticeExamEditDashboard /></Suspense></RouteGuard>;
+  return <RouteGuard pathname="/class-resource-exam"><Suspense fallback={<main>Đang mở bài kiểm tra...</main>}><ClassResourceDocumentViewer kind="exam" /></Suspense></RouteGuard>;
 }

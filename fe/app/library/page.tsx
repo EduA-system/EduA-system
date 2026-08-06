@@ -5,7 +5,9 @@ import {
   Atom,
   BookOpen,
   CheckCircle2,
+  Clock,
   FileText,
+  Lock,
   MoreHorizontal,
   Pencil,
   Presentation,
@@ -13,11 +15,13 @@ import {
   Trash2,
   Undo2,
   X,
+  XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { hasAnyRole } from "@/lib/auth/permissions";
 import {
   deleteLibraryContent,
   getLibraryContent,
@@ -30,6 +34,7 @@ import {
 } from "@/lib/library";
 import { createLessonThumbnail, createSlideThumbnail } from "@/lib/library-thumbnail";
 import { parseSlideDeck } from "@/lib/slide-deck-library";
+import { getWeeklySchedule } from "@/lib/weekly-task";
 
 const tabs: [string, LibraryType][] = [
   ["Bài giảng", "LESSON_PLAN"],
@@ -60,11 +65,42 @@ const contentMeta: Record<LibraryType, { label: string; icon: typeof BookOpen; c
 
 type PendingAction = { content: LibraryContent; kind: "submit" | "unsubmit" | "delete" };
 
-function statusMeta(content: LibraryContent) {
-  if (content.status === "SUBMITTED") return { label: "Đang chờ duyệt", className: "bg-amber-100 text-amber-800" };
-  if (content.status === "APPROVED") return { label: "Đã lên Hub", className: "bg-emerald-100 text-emerald-800" };
-  if (content.status === "REJECTED") return { label: "Cần chỉnh sửa", className: "bg-rose-100 text-rose-800" };
-  return { label: "Riêng tư", className: "bg-stone-100 text-stone-700" };
+/**
+ * 4 trạng thái vòng đời giáo án theo đúng yêu cầu: AI tạo xong/nằm trong lib cá nhân → Nháp; lúc gửi cho
+ * Mod → Chờ duyệt; lúc được duyệt → Đã duyệt; bị từ chối → Từ chối.
+ *
+ * "Gửi cho mod" có 2 kênh độc lập trong hệ thống (cố tình tách biệt — xem comment gốc trong
+ * `WeeklyTaskService.java`): (1) `LibraryContent.status` — nút giấy máy bay "Gửi duyệt lên Hub cộng đồng"
+ * trên chính trang này; (2) `WeeklyTaskReviewStatus` — nộp giáo án này làm nguồn cho 1 Weekly Task ở trang
+ * `/weekly-schedule`. Card ở đây ưu tiên hiện trạng thái Weekly Task nếu có (đó là kênh "gửi cho mod" phổ
+ * biến hơn với giáo án — nộp giáo án tuần), rồi mới rơi về trạng thái Hub-publish.
+ */
+function statusMeta(status: "PRIVATE" | "SUBMITTED" | "APPROVED" | "REJECTED", source: "hub" | "weeklyTask") {
+  if (status === "SUBMITTED") {
+    return {
+      label: "Chờ duyệt",
+      className: "bg-amber-50 text-amber-700 border border-amber-200",
+      icon: Clock,
+      title: source === "weeklyTask" ? "Đã nộp cho Moderator trong Lịch tuần, đang chờ duyệt" : "Đã gửi lên Hub cộng đồng, đang chờ duyệt",
+    };
+  }
+  if (status === "APPROVED") {
+    return {
+      label: "Đã duyệt",
+      className: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+      icon: CheckCircle2,
+      title: source === "weeklyTask" ? "Giáo án tuần đã được Moderator duyệt" : "Đã lên Hub cộng đồng",
+    };
+  }
+  if (status === "REJECTED") {
+    return {
+      label: "Từ chối",
+      className: "bg-rose-50 text-rose-700 border border-rose-200",
+      icon: XCircle,
+      title: source === "weeklyTask" ? "Giáo án tuần bị Moderator từ chối, cần chỉnh sửa và nộp lại" : "Bị từ chối trên Hub cộng đồng",
+    };
+  }
+  return { label: "Nháp", className: "bg-slate-50 text-slate-600 border border-slate-200", icon: Lock, title: "Riêng tư, chưa gửi duyệt" };
 }
 
 function formatUpdatedAt(value: string) {
@@ -100,7 +136,7 @@ function extractGradeFromPayload(payload: unknown): number | undefined {
 }
 
 function LibraryScreen() {
-  const { authFetch } = useAuth();
+  const { authFetch, user } = useAuth();
   const [type, setType] = useState<LibraryType>("LESSON_PLAN");
   const [items, setItems] = useState<LibraryContent[]>([]);
   const [total, setTotal] = useState(0);
@@ -115,6 +151,34 @@ function LibraryScreen() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [saving, setSaving] = useState(false);
   const metadataBackfillIds = useRef(new Set<string>());
+  // Giáo án đang là nguồn 1 Weekly Task (đã nộp qua "chọn từ thư viện") → contentId -> reviewStatus mới
+  // nhất. Chỉ Teacher mới có Weekly Task của riêng mình (Moderator không nộp task).
+  const [weeklyTaskStatusByContentId, setWeeklyTaskStatusByContentId] = useState<Map<string, "SUBMITTED" | "APPROVED" | "REJECTED">>(new Map());
+
+  useEffect(() => {
+    if (!hasAnyRole(user, ["TEACHER"])) return;
+    let cancelled = false;
+    // Khoảng rộng để bắt hết task đã nộp, không chỉ tuần hiện tại (schedule mặc định chỉ -4/+8 tuần).
+    const from = `${new Date().getFullYear() - 1}-01-01`;
+    const to = `${new Date().getFullYear() + 1}-12-31`;
+    void getWeeklySchedule(authFetch, from, to)
+      .then((schedule) => {
+        if (cancelled) return;
+        const map = new Map<string, "SUBMITTED" | "APPROVED" | "REJECTED">();
+        for (const week of schedule.weeks) {
+          for (const task of week.tasks) {
+            if (!task.sourceLibraryContentId) continue;
+            if (task.reviewStatus === "NOT_SUBMITTED") continue;
+            map.set(task.sourceLibraryContentId, task.reviewStatus);
+          }
+        }
+        setWeeklyTaskStatusByContentId(map);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, user]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -237,7 +301,8 @@ function LibraryScreen() {
             : <div className="mt-6 grid grid-cols-3 gap-5">{createPaths[type] ? <Link href={createPaths[type]} className="group flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#e6b5a2] bg-[#fffaf7] p-6 text-center transition hover:border-[#e8724a] hover:bg-[#fff4ee]"><span className="flex size-12 items-center justify-center rounded-full bg-[#fbe1d5] text-3xl font-light leading-none text-[#c65838] transition group-hover:scale-110 group-hover:bg-[#e8724a] group-hover:text-white">+</span><span className="mt-4 font-semibold text-[#75402e]">Tạo {contentMeta[type].label.toLowerCase()} mới</span><span className="mt-1 text-sm text-stone-500">Bắt đầu một nội dung mới</span></Link> : <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50 p-6 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-stone-200 text-3xl font-light leading-none text-stone-500">+</span><span className="mt-4 font-semibold text-stone-600">Tạo bài kiểm tra</span><span className="mt-1 text-sm text-stone-500">Tính năng đang được phát triển</span></div>}{items.map((content) => {
               const meta = contentMeta[content.type];
               const Icon = meta.icon;
-              const status = statusMeta(content);
+              const weeklyTaskStatus = content.type === "LESSON_PLAN" ? weeklyTaskStatusByContentId.get(content.id) : undefined;
+              const status = weeklyTaskStatus ? statusMeta(weeklyTaskStatus, "weeklyTask") : statusMeta(content.status, "hub");
               const grade = gradeLabel(content.grade);
               return <article key={content.id} className="group relative min-w-0 rounded-[26px] border border-[#dfe7eb] bg-white shadow-[0_8px_24px_rgba(43,41,38,0.10)] transition duration-200 hover:-translate-y-1 hover:border-[#cbdde4] hover:shadow-[0_14px_30px_rgba(43,41,38,0.16)]">
                 <div className="flex h-full flex-col overflow-visible rounded-[26px] bg-[#f8fbfc] p-3">
@@ -247,7 +312,7 @@ function LibraryScreen() {
                       <p className="min-w-0 truncate text-sm font-bold text-[#363a43]">{meta.label} {subjectLabel(content.subject)}</p>
                       {grade && <span className="shrink-0 rounded-full bg-[#edf4ff] px-2 py-1 text-[10px] font-semibold text-[#2f5f9b]">{grade}</span>}
                     </div>
-                    <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${status.className}`}>{status.label}</span>
+                    <span title={status.title} className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-semibold ${status.className}`}><status.icon className="size-3.5" />{status.label}</span>
                     {content.status !== "APPROVED" && <div className="group/approval relative"><button type="button" aria-label={content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"} onClick={() => requestAction(content, content.status === "SUBMITTED" ? "unsubmit" : "submit")} className="flex size-9 items-center justify-center rounded-xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900">{content.status === "SUBMITTED" ? <Undo2 className="size-4" /> : <Send className="size-4" />}</button><span role="tooltip" className="pointer-events-none absolute right-0 top-11 z-20 w-max max-w-48 rounded-lg bg-[#292d3b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition group-hover/approval:opacity-100">{content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"}</span></div>}
                   </div>
                   <Link href={open(content)} aria-label={`Mở ${content.title}`} className={`relative block aspect-[16/7] overflow-hidden rounded-2xl border border-[#d7e6eb] bg-gradient-to-br ${meta.color}`}>

@@ -21,6 +21,9 @@ export type WeeklyTaskSummary = {
   lessonName: string;
   deadline: string;
   reviewStatus: WeeklyTaskReviewStatus;
+  /** Giáo án nguồn (thư viện cá nhân) đã dùng để nộp task này, nếu nộp qua "chọn từ thư viện" — null nếu
+   * chưa nộp hoặc nộp bằng tệp tải lên. Dùng để đối chiếu status trên `/library` (`fe/app/library/page.tsx`). */
+  sourceLibraryContentId: string | null;
   submittedAt: string | null;
   createdAt: string;
 };

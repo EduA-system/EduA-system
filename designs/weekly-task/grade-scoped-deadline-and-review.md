@@ -164,3 +164,25 @@ Thay đổi (FE-only, `fe/app/weekly-schedule/page.tsx`):
   ở `WeeklyTaskService` giữ nguyên — rule "chỉ tuần đang diễn ra" hiện chỉ là UI gating, chưa phải rule
   server-side. Nếu cần chặn cứng ở API (vd. Mod gọi thẳng `POST /api/weekly-tasks/bulk` cho tuần tương
   lai), cần bổ sung riêng — chưa làm trong đợt này.
+
+### Library status badge (2026-08-06) — hiện trạng thái Weekly Task trên `/library`
+
+> Nguồn: người dùng phát hiện — 1 giáo án đang `SUBMITTED` trên Weekly Task (đã nộp cho Mod ở
+> `/weekly-schedule`) vẫn hiện "Riêng tư" trên card `/library`, vì đó là 2 field trạng thái độc lập:
+> `LibraryContent.status` (Hub-publish, nút giấy máy bay trên chính `/library`) và
+> `WeeklyTaskReviewStatus` (nộp giáo án tuần) — tách biệt hoàn toàn theo đúng nguyên tắc comment gốc
+> trong `WeeklyTaskService.java`. Người dùng coi 4 trạng thái Weekly Task (Nháp/Chờ duyệt/Đã duyệt/Từ
+> chối) chính là "trạng thái của giáo án" mà họ quan tâm hàng ngày, không phải Hub-publish status.
+
+- Thêm `sourceLibraryContentId` vào `WeeklyTaskViews.Summary` (trước đây chỉ có ở `Detail`) — field bổ
+  sung thuần túy, không đổi hành vi backend nào khác, không đổi nguyên tắc tách biệt 2 status trong tầng
+  service/domain (chỉ FE dùng field này để đối chiếu hiển thị).
+- FE `fe/app/library/page.tsx`: Teacher load thêm `GET /api/weekly-tasks` (khoảng ngày rộng, 1 năm
+  trước → 1 năm sau, để không bỏ sót task ngoài cửa sổ mặc định -4/+8 tuần của API) một lần lúc mount,
+  dựng `Map<sourceLibraryContentId, reviewStatus>`. Card `LESSON_PLAN` nào có trong map thì hiện badge
+  theo `reviewStatus` đó (kèm icon, tooltip nói rõ "đã nộp cho Moderator trong Lịch tuần") thay vì
+  `LibraryContent.status`; card nào không có (chưa từng nộp task tuần) vẫn hiện `LibraryContent.status`
+  như cũ (mặc định "Nháp"). Nút "Gửi duyệt lên Hub cộng đồng" (giấy máy bay) không đổi — vẫn thao tác
+  trên `LibraryContent.status` gốc, độc lập với badge hiển thị.
+- Nhãn thống nhất cho cả 2 nguồn status: Nháp/Chờ duyệt/Đã duyệt/Từ chối, kèm icon (Lock/Clock/
+  CheckCircle2/XCircle) — không còn nhãn cũ "Riêng tư"/"Đang chờ duyệt"/"Đã lên Hub"/"Cần chỉnh sửa".

@@ -1,8 +1,13 @@
 "use client";
 
-import { EditorContent, useEditor } from "@tiptap/react";
+import { generateHTML, type JSONContent } from "@tiptap/core";
 import { createEditorExtensions } from "@/components/LessonEditor/editorConfig";
 import type { TiptapNode } from "@/lib/tiptap-to-text";
+
+function toHtml(content: string | TiptapNode): string {
+  if (typeof content === "string") return content;
+  return generateHTML(content as JSONContent, createEditorExtensions());
+}
 
 /**
  * `variant="document"` reuses the "lesson-document-editor" CSS (headings, tables, math)
@@ -10,15 +15,10 @@ import type { TiptapNode } from "@/lib/tiptap-to-text";
  * previewing a full lesson-plan document (which always has tables/formulas) read-only.
  */
 export function RichView({ html, variant = "blog" }: { html: string | TiptapNode; variant?: "blog" | "document" }) {
-  const editor = useEditor({
-    extensions: createEditorExtensions(),
-    content: html,
-    editable: false,
-    immediatelyRender: false,
-    editorProps:
-      variant === "document"
-        ? { attributes: { class: "lesson-document-editor text-[#2b2926]" } }
-        : undefined,
-  });
-  return <EditorContent editor={editor} className={variant === "document" ? undefined : "tiptap"} />;
+  return (
+    <div
+      className={variant === "document" ? "lesson-document-editor text-[#2b2926]" : "tiptap"}
+      dangerouslySetInnerHTML={{ __html: toHtml(html) }}
+    />
+  );
 }
