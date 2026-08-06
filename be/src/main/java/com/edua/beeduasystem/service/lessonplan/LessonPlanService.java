@@ -4,10 +4,13 @@ import com.edua.beeduasystem.domain.model.lessonplan.Activity5512;
 import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
 import com.edua.beeduasystem.domain.model.lessonplan.Materials;
 import com.edua.beeduasystem.domain.model.lessonplan.Objectives;
+import com.edua.beeduasystem.presentation.dto.lessonplan.ActivityEditContent;
 import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionResponse;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateActivityDetailsRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanRequest;
+import com.edua.beeduasystem.presentation.dto.lessonplan.SubActivityEditContent;
+import com.edua.beeduasystem.presentation.dto.lessonplan.TextEditContent;
 import com.edua.beeduasystem.repository.gateways.AiClient;
 import com.edua.beeduasystem.service.ai.AiSystemPromptService;
 import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
@@ -250,26 +253,72 @@ public class LessonPlanService {
 
     /** Bước 2/2 — một call AI hẹp cho ĐÚNG MỘT target đã xác nhận ở bước chọn; chỉ thấy nội dung
      * của target đó + quy tắc kind tương ứng + (nếu có) kiến thức SGK của bài. AI không trả
-     * targetId, Java tự gắn lại. */
+     * targetId, Java tự gắn lại.
+     *
+     * <p>Parse theo ĐÚNG type khớp {@code kind} — AI trả JSON có cấu trúc (không còn một chuỗi
+     * {@code content} tự mã hoá bảng bằng "‖"/"|"/"<br>") — rồi gói nguyên vẹn thành cây JSON
+     * ({@code objectMapper.valueToTree}) để FE tự diễn giải theo `kind` và "làm đẹp" thành nội
+     * dung hiển thị; xem {@code EditLessonSectionResponse}. */
     private EditLessonSectionResponse writeSection(String instruction, EditLessonSectionRequest.SectionInput target,
                                                     String knowledge) {
         String prompt = editPromptBuilder.buildWritePrompt(instruction, target, knowledge);
-        EditLessonSectionWriteAiResponse aiResponse = generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
-                EditLessonSectionWriteAiResponse.class, "AI không viết lại được phần giáo án.",
-                "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+        String kind = isBlank(target.kind()) ? "text" : target.kind();
+        Object content = switch (kind) {
+            case "materials" -> generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                    Materials.class, "AI không viết lại được phần giáo án.",
+                    "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+            case "subActivity" -> generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                    SubActivityEditContent.class, "AI không viết lại được phần giáo án.",
+                    "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+            case "activity" -> generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                    ActivityEditContent.class, "AI không viết lại được phần giáo án.",
+                    "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+            default -> generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                    TextEditContent.class, "AI không viết lại được phần giáo án.",
+                    "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+        };
 
-        if (aiResponse == null || isBlank(aiResponse.content())) {
+        if (content == null || isBlankEditContent(kind, content)) {
             throw new LessonPlanGenerationException("AI trả về bản sửa rỗng.", null);
         }
-        return new EditLessonSectionResponse(target.id(), aiResponse.content().strip());
+        return new EditLessonSectionResponse(target.id(), kind, objectMapper.valueToTree(content));
+    }
+
+    /** Mọi field có nội dung đều rỗng — coi như AI không đề xuất gì (giữ hành vi lọc "bản sửa
+     * rỗng" như trước, chỉ đổi cách kiểm tra cho khớp JSON có cấu trúc thay vì 1 chuỗi). */
+    private boolean isBlankEditContent(String kind, Object content) {
+        return switch (kind) {
+            case "materials" -> {
+                Materials materials = (Materials) content;
+                boolean noEquipment = materials.equipment() == null
+                        || materials.equipment().rows() == null || materials.equipment().rows().isEmpty();
+                boolean noWorksheets = materials.worksheets() == null || materials.worksheets().isEmpty();
+                yield noEquipment && noWorksheets;
+            }
+            case "subActivity" -> {
+                SubActivityEditContent sub = (SubActivityEditContent) content;
+                yield isBlank(sub.objective()) && isBlank(sub.content()) && isBlank(sub.product())
+                        && isBlankOrganization(sub.organization());
+            }
+            case "activity" -> {
+                ActivityEditContent activity = (ActivityEditContent) content;
+                yield isBlank(activity.objective()) && isBlank(activity.content())
+                        && isBlank(activity.product()) && isBlank(activity.organizationText());
+            }
+            default -> {
+                TextEditContent text = (TextEditContent) content;
+                yield text.lines() == null || text.lines().stream().allMatch(this::isBlank);
+            }
+        };
+    }
+
+    private boolean isBlankOrganization(Activity5512.Organization organization) {
+        return organization == null || (isBlank(organization.transfer()) && isBlank(organization.perform())
+                && isBlank(organization.report()) && isBlank(organization.conclude()));
     }
 
     /** Wrapper chỉ để parse JSON {"targetIds":[...]} từ call chọn phần (bước 1). */
     private record EditLessonSectionSelectAiResponse(List<String> targetIds) {
-    }
-
-    /** Wrapper chỉ để parse JSON {"content":"..."} từ call viết lại MỘT phần (bước 2, song song). */
-    private record EditLessonSectionWriteAiResponse(String content) {
     }
 
     private void validateEditSectionRequest(EditLessonSectionRequest request) {

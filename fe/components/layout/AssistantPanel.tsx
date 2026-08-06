@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { extractEditableSections, type EditableLessonSection } from "../LessonEditor/lessonSections";
+import { editDataToBodyText } from "../LessonEditor/editContentToLines";
 import {
   buildSectionDiffHtml,
   diffSectionLines,
@@ -105,7 +106,7 @@ export function AssistantPanel({
 
       const newPending: PendingSectionDiff[] = [];
       for (const { edit, target } of matched) {
-        const newBodyText = stripReturnedHeading(edit.content, target.heading);
+        const newBodyText = editDataToBodyText(edit);
         const chunks = diffSectionLines(target.bodyText, newBodyText);
         if (!chunks.some((chunk) => chunk.state !== "unchanged")) continue;
         const diffHtml = buildSectionDiffHtml(chunks);
@@ -229,18 +230,4 @@ export function AssistantPanel({
       </form>
     </aside>
   );
-}
-
-function stripReturnedHeading(content: string, heading: string) {
-  const lines = content.split("\n");
-  const firstContentLine = lines.findIndex((line) => line.trim());
-  if (firstContentLine < 0) return "";
-  if (normalizeHeading(lines[firstContentLine]) === normalizeHeading(heading)) {
-    return lines.slice(firstContentLine + 1).join("\n").trim();
-  }
-  return content.trim();
-}
-
-function normalizeHeading(value: string) {
-  return value.replace(/\s+/g, " ").trim().toLocaleLowerCase("vi-VN");
 }

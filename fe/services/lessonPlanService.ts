@@ -1,4 +1,11 @@
-import type { Activity5512, EquipmentAndMaterials, Objectives } from "@/data/lessonPlan5512Mock";
+import type {
+  Activity5512,
+  EquipmentAndMaterials,
+  EquipmentTable,
+  Objectives,
+  Organization,
+  Worksheet,
+} from "@/data/lessonPlan5512Mock";
 
 // API client cho luồng tạo giáo án 5512. Gọi qua same-origin `/api/*`
 // (proxy tới backend cấu hình ở next.config.ts) nên không vướng CORS.
@@ -254,10 +261,48 @@ export interface EditLessonSectionRequest {
   lessonId?: string;
 }
 
-export interface EditLessonSectionEdit {
-  targetId: string;
-  content: string;
+/** kind = "text" — mảng dòng độc lập (mỗi phần tử là một đoạn/câu hỏi/bullet...), thay vì một
+ * chuỗi nối bằng "\n" — xem `LessonPlanEditPromptBuilder.TEXT_KIND_INSTRUCTIONS` (BE). */
+export interface TextEditData {
+  lines: string[];
 }
+
+/** kind = "activity" — Hoạt động cấp 1 (HĐ1/3/4), dùng `organizationText` (văn ngắn). Khớp
+ * `ActivityEditContent` (BE). */
+export interface ActivityEditData {
+  objective: string;
+  content: string;
+  product: string;
+  organizationText: string;
+}
+
+/** kind = "subActivity" — tiểu hoạt động của Hoạt động 2, dùng `organization` (4 bước). Khớp
+ * `SubActivityEditContent` (BE), tái dùng `Organization` đã có ở `lessonPlan5512Mock.ts`. */
+export interface SubActivityEditData {
+  objective: string;
+  content: string;
+  organization: Organization;
+  product: string;
+}
+
+/** kind = "materials" — khớp domain `Materials` (BE), tái dùng `EquipmentTable`/`Worksheet` đã
+ * có ở `lessonPlan5512Mock.ts`. */
+export interface MaterialsEditData {
+  equipment: EquipmentTable;
+  worksheets: Worksheet[];
+}
+
+/**
+ * Bản sửa AI đề xuất cho một section — `data` là JSON có cấu trúc theo đúng `kind` (BE không
+ * còn trả một chuỗi `content` tự mã hoá bảng bằng "‖"/"|"/"<br>"; xem
+ * `EditLessonSectionResponse` phía BE). FE tự diễn giải theo `kind` rồi "làm đẹp" thành nội
+ * dung hiển thị (TipTap) — xem `editContentToLines.ts`.
+ */
+export type EditLessonSectionEdit =
+  | { targetId: string; kind: "text"; data: TextEditData }
+  | { targetId: string; kind: "activity"; data: ActivityEditData }
+  | { targetId: string; kind: "subActivity"; data: SubActivityEditData }
+  | { targetId: string; kind: "materials"; data: MaterialsEditData };
 
 export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 

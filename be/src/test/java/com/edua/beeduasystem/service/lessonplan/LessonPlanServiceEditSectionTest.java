@@ -4,6 +4,7 @@ import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionRequest.SectionInput;
 import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionResponse;
+import com.edua.beeduasystem.presentation.dto.lessonplan.TextEditContent;
 import com.edua.beeduasystem.repository.gateways.AiClient;
 import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
 import com.edua.beeduasystem.service.ai.AiSystemPromptService;
@@ -32,10 +33,18 @@ class LessonPlanServiceEditSectionTest {
     @Mock private AiClient aiClient;
     @Mock private AiSystemPromptService systemPromptService;
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
     private LessonPlanService service() {
         return new LessonPlanService(
                 catalogRepository, aiClient, new LessonPlan5512PromptBuilder(), new LessonPlanEditPromptBuilder(),
-                new ObjectMapper(), Executors.newVirtualThreadPerTaskExecutor(), systemPromptService, 1, 0L);
+                mapper, Executors.newVirtualThreadPerTaskExecutor(), systemPromptService, 1, 0L);
+    }
+
+    /** kind "text" (dùng trong `request()`) trả JSON {"lines": [...]} — tiện đọc lại thành danh
+     * sách dòng để assert, thay vì đào JsonNode thủ công trong từng test. */
+    private List<String> linesOf(EditLessonSectionResponse response) {
+        return mapper.convertValue(response.data(), TextEditContent.class).lines();
     }
 
     private EditLessonSectionRequest request() {
@@ -82,13 +91,14 @@ class LessonPlanServiceEditSectionTest {
         stubPromptApply();
         stubAiResponses(
                 "{\"targetIds\":[\"sec-1\"]}",
-                java.util.Map.of("sec-1", "{\"content\":\"**1. Kiến thức**\\n- Nêu được ý chính.\"}"));
+                java.util.Map.of("sec-1", "{\"lines\":[\"**1. Kiến thức**\",\"- Nêu được ý chính.\"]}"));
 
         List<EditLessonSectionResponse> response = service().editSection(request());
 
         assertEquals(1, response.size());
         assertEquals("sec-1", response.get(0).targetId());
-        assertEquals("**1. Kiến thức**\n- Nêu được ý chính.", response.get(0).content());
+        assertEquals("text", response.get(0).kind());
+        assertEquals(List.of("**1. Kiến thức**", "- Nêu được ý chính."), linesOf(response.get(0)));
     }
 
     @Test
@@ -97,16 +107,16 @@ class LessonPlanServiceEditSectionTest {
         stubAiResponses(
                 "{\"targetIds\":[\"sec-1\",\"sec-2\"]}",
                 java.util.Map.of(
-                        "sec-1", "{\"content\":\"A\"}",
-                        "sec-2", "{\"content\":\"B\"}"));
+                        "sec-1", "{\"lines\":[\"A\"]}",
+                        "sec-2", "{\"lines\":[\"B\"]}"));
 
         List<EditLessonSectionResponse> response = service().editSection(request());
 
         assertEquals(2, response.size());
         assertEquals("sec-1", response.get(0).targetId());
-        assertEquals("A", response.get(0).content());
+        assertEquals(List.of("A"), linesOf(response.get(0)));
         assertEquals("sec-2", response.get(1).targetId());
-        assertEquals("B", response.get(1).content());
+        assertEquals(List.of("B"), linesOf(response.get(1)));
     }
 
     // ---- Bước chọn (select) trả dữ liệu không hợp lệ ------------------------------------
@@ -164,14 +174,14 @@ class LessonPlanServiceEditSectionTest {
         stubAiResponses(
                 "{\"targetIds\":[\"sec-1\",\"sec-2\"]}",
                 java.util.Map.of(
-                        "sec-1", "{\"content\":\"\"}",
-                        "sec-2", "{\"content\":\"B\"}"));
+                        "sec-1", "{\"lines\":[]}",
+                        "sec-2", "{\"lines\":[\"B\"]}"));
 
         List<EditLessonSectionResponse> response = service().editSection(request());
 
         assertEquals(1, response.size());
         assertEquals("sec-2", response.get(0).targetId());
-        assertEquals("B", response.get(0).content());
+        assertEquals(List.of("B"), linesOf(response.get(0)));
     }
 
     @Test
@@ -181,7 +191,7 @@ class LessonPlanServiceEditSectionTest {
                 "{\"targetIds\":[\"sec-1\",\"sec-2\"]}",
                 java.util.Map.of(
                         "sec-1", "not json",
-                        "sec-2", "{\"content\":\"B\"}"));
+                        "sec-2", "{\"lines\":[\"B\"]}"));
 
         List<EditLessonSectionResponse> response = service().editSection(request());
 
@@ -196,7 +206,7 @@ class LessonPlanServiceEditSectionTest {
                 "{\"targetIds\":[\"sec-1\",\"sec-2\"]}",
                 java.util.Map.of(
                         "sec-1", "not json",
-                        "sec-2", "{\"content\":\"\"}"));
+                        "sec-2", "{\"lines\":[]}"));
 
         LessonPlanGenerationException ex = assertThrows(LessonPlanGenerationException.class,
                 () -> service().editSection(request()));

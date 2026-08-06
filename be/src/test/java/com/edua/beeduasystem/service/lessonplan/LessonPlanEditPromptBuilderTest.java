@@ -77,35 +77,54 @@ class LessonPlanEditPromptBuilderTest {
     }
 
     // ---- buildWritePrompt (bước 2 — viết lại một mục đã chọn) -----------------------------
+    // AI trả JSON có cấu trúc theo đúng kind (không còn tự mã hoá bảng bằng "‖"/"|"/"<br>" —
+    // xem PromptBuilder javadoc) — mỗi test kiểm tra ĐÚNG MỘT khối "CẤU TRÚC RIÊNG" (và schema
+    // JSON riêng của nó) được ghép vào, không lẫn khối của kind khác.
 
     @Test
-    void writePromptOmitsTableAndKindRulesForTextKind() {
+    void writePromptIncludesLinesSchemaForTextKind() {
         String prompt = builder.buildWritePrompt("làm ngắn gọn",
                 new SectionInput("sec-1", "I. MỤC TIÊU", "Nội dung", "text"), null);
 
-        assertFalse(prompt.contains("QUY ƯỚC BẢNG TRONG TEXT"), "kind text không cần quy ước bảng");
+        assertTrue(prompt.contains("kind \"text\""));
+        assertTrue(prompt.contains("\"lines\""), "schema đầu ra kind text phải có field lines");
+        assertFalse(prompt.contains("QUY ƯỚC BẢNG TRONG TEXT"), "quy ước text/‖/|/<br> cũ đã bỏ hoàn toàn");
         assertFalse(prompt.contains("kind \"materials\""));
         assertFalse(prompt.contains("kind \"subActivity\""));
+        assertFalse(prompt.contains("kind \"activity\""));
     }
 
     @Test
-    void writePromptIncludesTableAndMaterialsRulesForMaterialsKind() {
+    void writePromptIncludesEquipmentSchemaForMaterialsKind() {
         String prompt = builder.buildWritePrompt("thêm thiết bị",
                 new SectionInput("sec-2", "II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU", "‖ A ‖ B ‖\n| 1 | 2 |", "materials"), null);
 
-        assertTrue(prompt.contains("QUY ƯỚC BẢNG TRONG TEXT"));
         assertTrue(prompt.contains("kind \"materials\""));
+        assertTrue(prompt.contains("\"equipment\""), "schema đầu ra kind materials phải có field equipment");
+        assertTrue(prompt.contains("\"worksheets\""));
         assertFalse(prompt.contains("kind \"subActivity\""), "không cần nhồi quy tắc subActivity cho mục materials");
+        assertFalse(prompt.contains("\"lines\""));
     }
 
     @Test
-    void writePromptIncludesTableAndSubActivityRulesForSubActivityKind() {
+    void writePromptIncludesOrganizationSchemaForSubActivityKind() {
         String prompt = builder.buildWritePrompt("sửa tiểu hoạt động",
                 new SectionInput("sec-4", "2.1 Tìm hiểu khái niệm", "‖ A ‖ B ‖\n| 1 | 2 |", "subActivity"), null);
 
-        assertTrue(prompt.contains("QUY ƯỚC BẢNG TRONG TEXT"));
         assertTrue(prompt.contains("kind \"subActivity\""));
+        assertTrue(prompt.contains("\"organization\""), "schema đầu ra kind subActivity phải có field organization");
+        assertTrue(prompt.contains("\"transfer\""));
         assertFalse(prompt.contains("kind \"materials\""), "không cần nhồi quy tắc materials cho mục subActivity");
+    }
+
+    @Test
+    void writePromptIncludesOrganizationTextSchemaForActivityKind() {
+        String prompt = builder.buildWritePrompt("soạn lại",
+                new SectionInput("sec-5", "Hoạt động 3: Luyện tập (15 phút)", "Mời soạn tay.", "activity"), null);
+
+        assertTrue(prompt.contains("kind \"activity\""));
+        assertTrue(prompt.contains("\"organizationText\""), "schema đầu ra kind activity phải có field organizationText");
+        assertFalse(prompt.contains("\"organization\":"), "kind activity dùng organizationText, không dùng organization 4 bước");
     }
 
     @Test
@@ -124,17 +143,7 @@ class LessonPlanEditPromptBuilderTest {
 
         assertTrue(prompt.contains("kind: text"));
         assertFalse(prompt.contains("kind: null"));
-        assertFalse(prompt.contains("QUY ƯỚC BẢNG TRONG TEXT"));
-    }
-
-    @Test
-    void writePromptOutputContractRequestsContentField() {
-        String prompt = builder.buildWritePrompt("sửa",
-                new SectionInput("sec-1", "I. MỤC TIÊU", "Nội dung", "text"), null);
-
-        assertTrue(prompt.contains("\"content\""), "schema đầu ra bước viết phải có field content");
-        assertFalse(prompt.contains("\"edits\""));
-        assertFalse(prompt.contains("\"targetIds\""));
+        assertTrue(prompt.contains("\"lines\""), "kind rỗng phải fallback về text (schema lines)");
     }
 
     // ---- buildWritePrompt kind "activity" (Hoạt động cấp 1 — HĐ1/3/4) ---------------------

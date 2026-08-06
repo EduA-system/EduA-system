@@ -20,6 +20,7 @@ export default defineConfig({
       "components/LessonEditor/tableText.test.ts",
       "components/LessonEditor/pendingActivityNode.test.ts",
       "components/LessonEditor/lessonSections.test.ts",
+      "components/LessonEditor/editContentToLines.test.ts",
     ],
   },
 });

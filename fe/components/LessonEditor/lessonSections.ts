@@ -30,17 +30,29 @@ type HeadingBlock = {
   to: number;
 };
 
+/** Mốc tiêu đề tiểu hoạt động của Hoạt động 2 — KHÔNG phải node `heading`, mà là
+ * `<p class="activity-sub-title">` (xem `subActivityTableHtml` trong LessonEditor.tsx). Trước
+ * đây `extractEditableSections` chỉ cắt section tại node `heading` nên các tiểu hoạt động này
+ * không có `id` riêng — bị gộp chìm vào content của section "Hoạt động 2: ..." cha, khiến AI
+ * edit-section không có cách nào chọn đúng khi giáo viên nhắc tới tên một tiểu hoạt động cụ
+ * thể (nó không tồn tại trong danh sách section được gửi đi). */
+type SubActivityMarker = {
+  heading: string;
+  from: number;
+  /** Vị trí ngay sau node marker — nơi phần thân tiểu hoạt động bắt đầu. */
+  to: number;
+};
+
 /** Tiêu đề 2 cột đúng của bảng tiểu hoạt động HĐ2 (xem `subActivityTableHtml` trong
  * LessonEditor.tsx) — dùng để phân biệt với bảng thiết bị/phiếu học tập. */
 const SUB_ACTIVITY_HEADERS = ["Hoạt động của GV và HS", "Sản phẩm dự kiến"];
 
-/** Khớp mẫu tiêu đề "Hoạt động <số>: ..." — dùng cho CẢ Hoạt động cấp 1 (vd "Hoạt động 3: Luyện
- * tập (15 phút)", xem `LessonPlan5512PromptBuilder`/`activityHtml`/`pendingActivityFallbackNodes`)
- * LẪN tiểu hoạt động của Hoạt động 2 (vd "Hoạt động 4: Lập phương trình đường thẳng đi qua hai
- * điểm (5 phút)" — `LessonPlan5512PromptBuilder` đặt tên tiểu hoạt động cùng quy ước "Hoạt động
- * x: <tên đơn vị kiến thức>"). CHỈ so khớp CHỮ, không phân biệt được cấp — bắt buộc gọi kèm kiểm
- * tra `level === 2` ở nơi dùng (xem `extractEditableSections`) để không gắn nhầm "activity" cho
- * tiểu hoạt động cấp 3 (đúng ra phải là "subActivity", có bảng 2 cột). */
+/** Khớp mẫu tiêu đề "Hoạt động <số>: ..." của Hoạt động cấp 1 (vd "Hoạt động 3: Luyện tập (15
+ * phút)", xem `activityHtml` trong LessonEditor.tsx — LUÔN emit `<h3>`). Tiểu hoạt động của
+ * Hoạt động 2 dùng CÙNG quy ước đặt tên "Hoạt động x: <tên đơn vị kiến thức>" nhưng KHÔNG BAO
+ * GIỜ là node `heading` (xem `SubActivityMarker`/`collectSubActivityMarkers`) nên không khớp
+ * hàm này — vẫn giữ điều kiện `level === 3` ở nơi gọi để phòng trường hợp hiếm giáo viên tự gõ
+ * tay một heading cấp 2 tình cờ khớp mẫu số. */
 const ACTIVITY_HEADING_PATTERN = /^Hoạt động\s+\d+\b/;
 
 export function isTopLevelActivityHeading(heading: string): boolean {
@@ -67,6 +79,21 @@ function collectTopLevelNodes(doc: PMNode, from: number, to: number): PMNode[] {
     if (offset >= from && offset < to) nodes.push(node);
   });
   return nodes;
+}
+
+/** Quét trong [from, to) tìm các `<p class="activity-sub-title">` — tiêu đề tiểu hoạt động của
+ * Hoạt động 2. Node này KHÔNG lồng trong node `heading` khác nên có thể tìm bằng cùng cách
+ * duyệt node con trực tiếp như `collectTopLevelNodes`. */
+function collectSubActivityMarkers(doc: PMNode, from: number, to: number): SubActivityMarker[] {
+  const markers: SubActivityMarker[] = [];
+  doc.forEach((node, offset) => {
+    if (offset < from || offset >= to) return;
+    if (node.type.name !== "paragraph" || node.attrs.class !== "activity-sub-title") return;
+    const heading = node.textContent.trim();
+    if (!heading) return;
+    markers.push({ heading, from: offset, to: offset + node.nodeSize });
+  });
+  return markers;
 }
 
 function detectTableKind(pipeLines: string[]): SectionKind {
@@ -144,25 +171,73 @@ export function extractEditableSections(editor: Editor | null): EditableLessonSe
       && headings.slice(i + 1).some((heading) => heading.from < to && heading.level === 3);
     if (hasChildHeading) continue;
 
-    const body = sectionBodyText(editor.state.doc, current.to, to);
-    // `level === 2`: chỉ Hoạt động cấp 1 (HĐ1/3/4) mới có kind "activity" (a/b/c/d, không bảng).
-    // Tiểu hoạt động của HĐ2 nằm ở heading cấp 3 và cũng được đặt tên "Hoạt động <số>: ..." nên
-    // KHỚP CÙNG PATTERN — nếu không loại bằng level sẽ bị gắn nhầm "activity" thay vì
-    // "subActivity" (mất bảng 2 cột "Hoạt động của GV và HS"/"Sản phẩm dự kiến" khi AI viết lại).
-    const kind: SectionKind =
-      current.level === 2 && isTopLevelActivityHeading(current.heading) ? "activity" : body.kind;
+    // Hoạt động cấp 1 (HĐ1/3/4) LUÔN ở heading cấp 3 (`activityHtml` chỉ emit `<h3>`, xem
+    // LessonEditor.tsx) — tiểu hoạt động của HĐ2 KHÔNG BAO GIỜ là node `heading` (xem
+    // `collectSubActivityMarkers`), nên không có nguy cơ trùng pattern ở tầng heading. Chỉ cần
+    // lọc `level === 3` để phòng trường hợp giáo viên tự gõ tay một heading cấp 2 tình cờ khớp
+    // mẫu "Hoạt động <số>".
+    const subMarkers = current.level === 3
+      ? collectSubActivityMarkers(editor.state.doc, current.to, to)
+      : [];
 
-    sections.push({
-      id: `sec-${sections.length + 1}`,
-      heading: current.heading,
-      level: current.level,
-      from: current.from,
-      bodyFrom: current.to,
-      to,
-      text: [current.heading, body.text].filter(Boolean).join("\n"),
-      bodyText: body.text,
-      kind,
-    });
+    if (subMarkers.length === 0) {
+      const body = sectionBodyText(editor.state.doc, current.to, to);
+      const kind: SectionKind =
+        current.level === 3 && isTopLevelActivityHeading(current.heading) ? "activity" : body.kind;
+
+      sections.push({
+        id: `sec-${sections.length + 1}`,
+        heading: current.heading,
+        level: current.level,
+        from: current.from,
+        bodyFrom: current.to,
+        to,
+        text: [current.heading, body.text].filter(Boolean).join("\n"),
+        bodyText: body.text,
+        kind,
+      });
+      continue;
+    }
+
+    // Có tiểu hoạt động: KHÔNG gộp chung thành một section "Hoạt động N: ..." như trước (nội
+    // dung tiểu hoạt động khi đó chìm bên trong content của section cha, không có id riêng để
+    // AI edit-section chọn) — tách mỗi tiểu hoạt động thành một section độc lập, id riêng.
+    const introTo = subMarkers[0].from;
+    if (introTo > current.to) {
+      const introBody = sectionBodyText(editor.state.doc, current.to, introTo);
+      // Nội dung đứng trước tiểu hoạt động đầu tiên (nếu có) không thuộc khuôn a/b/c/d của
+      // Hoạt động cấp 1 — giữ kind theo nội dung thực tế thay vì ép "activity".
+      if (introBody.text) {
+        sections.push({
+          id: `sec-${sections.length + 1}`,
+          heading: current.heading,
+          level: current.level,
+          from: current.from,
+          bodyFrom: current.to,
+          to: introTo,
+          text: [current.heading, introBody.text].filter(Boolean).join("\n"),
+          bodyText: introBody.text,
+          kind: introBody.kind,
+        });
+      }
+    }
+
+    for (let k = 0; k < subMarkers.length; k++) {
+      const marker = subMarkers[k];
+      const subTo = k + 1 < subMarkers.length ? subMarkers[k + 1].from : to;
+      const subBody = sectionBodyText(editor.state.doc, marker.to, subTo);
+      sections.push({
+        id: `sec-${sections.length + 1}`,
+        heading: marker.heading,
+        level: current.level,
+        from: marker.from,
+        bodyFrom: marker.to,
+        to: subTo,
+        text: [marker.heading, subBody.text].filter(Boolean).join("\n"),
+        bodyText: subBody.text,
+        kind: "subActivity",
+      });
+    }
   }
 
   return sections;
