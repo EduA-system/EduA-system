@@ -10,9 +10,9 @@ import { getLibraryContent } from "@/lib/library";
 import { getClassResourceLibraryContent } from "@/lib/classroom";
 import { parseSlideDeck } from "@/lib/slide-deck-library";
 
-function Chevron({ direction }: { direction: "left" | "right" }) {
+function Chevron({ direction, className = "size-5" }: { direction: "left" | "right"; className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-5">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       {direction === "left" ? <path d="m15 18-6-6 6-6" /> : <path d="m9 18 6-6-6-6" />}
     </svg>
   );
@@ -42,10 +42,10 @@ export function SlidePresentationClient() {
   const classId = searchParams.get("classId");
   const resourceId = searchParams.get("resourceId");
   const stageRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [scale, setScale] = useState(1);
-  const [showPicker, setShowPicker] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,11 +89,45 @@ export function SlidePresentationClient() {
   const previous = useCallback(() => goTo(activeIndex - 1), [activeIndex, goTo]);
   const next = useCallback(() => goTo(activeIndex + 1), [activeIndex, goTo]);
 
+  // Lăn chuột trên vùng slide: xuống → slide tiếp, lên → slide trước.
+  // Dùng native listener (non-passive) để chắc chắn bắt được wheel event.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.deltaY > 0) next();
+      else if (e.deltaY < 0) previous();
+    };
+    stage.addEventListener("wheel", onWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", onWheel);
+  }, [next, previous]);
+
+  // Lăn chuột trên timeline: cuộn ngang danh sách thumbnail.
+  useEffect(() => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      timeline.scrollLeft += e.deltaY + e.deltaX;
+    };
+    timeline.addEventListener("wheel", onWheel, { passive: false });
+    return () => timeline.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Tự cuộn timeline để slide đang trình chiếu luôn nằm trong tầm nhìn.
+  useEffect(() => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+    const thumb = timeline.querySelector<HTMLElement>(`[data-slide-idx="${activeIndex}"]`);
+    thumb?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [activeIndex]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (showPicker) setShowPicker(false);
-        else router.back();
+        router.back();
         return;
       }
       if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(event.key)) {
@@ -104,11 +138,10 @@ export function SlidePresentationClient() {
         event.preventDefault();
         previous();
       }
-      if (event.key.toLowerCase() === "g") setShowPicker((value) => !value);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [next, previous, router, showPicker]);
+  }, [next, previous, router]);
 
   useLayoutEffect(() => {
     const stage = stageRef.current;
@@ -138,13 +171,11 @@ export function SlidePresentationClient() {
 
   return (
     <main className="flex min-h-screen flex-col overflow-hidden bg-[#171513] text-white">
-      <header className="flex h-14 shrink-0 items-center justify-between px-4 sm:px-6">
-        <button onClick={() => router.back()} className="rounded-lg px-3 py-2 text-sm text-white/75 hover:bg-white/10 hover:text-white">Thoát</button>
-        <p className="text-sm font-medium tabular-nums text-white/80">{slides.length ? `${activeIndex + 1} / ${slides.length}` : "Đang tải..."}</p>
-        <button onClick={toggleFullscreen} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/75 hover:bg-white/10 hover:text-white"><FullscreenIcon />{isFullscreen ? "Thu nhỏ" : "Toàn màn hình"}</button>
-      </header>
-
-      <section ref={stageRef} className="relative min-h-0 flex-1" aria-label="Slide hiện tại">
+      <section
+        ref={stageRef}
+        className="relative min-h-0 flex-1"
+        aria-label="Slide hiện tại"
+      >
         {current ? (
           <div className="absolute left-1/2 top-1/2" style={{ width: CANVAS_W, height: CANVAS_H, transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: "center" }}>
             <SlideSurface slide={current} interactive />
@@ -152,27 +183,50 @@ export function SlidePresentationClient() {
         ) : <div className="grid h-full place-items-center text-sm text-white/60">Đang tải bộ slide...</div>}
       </section>
 
-      <footer className="flex h-20 shrink-0 items-center justify-center gap-3 px-4">
-        <button onClick={previous} disabled={activeIndex === 0} aria-label="Slide trước" className="grid size-11 place-items-center rounded-full border border-white/20 text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"><Chevron direction="left" /></button>
-        <button onClick={() => setShowPicker(true)} className="min-w-28 rounded-lg bg-white/12 px-4 py-2 text-sm font-medium text-white hover:bg-white/20">Chọn slide</button>
-        <button onClick={next} disabled={!slides.length || activeIndex === slides.length - 1} aria-label="Slide tiếp" className="grid size-11 place-items-center rounded-full border border-white/20 text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"><Chevron direction="right" /></button>
-      </footer>
-
-      {showPicker ? (
-        <div className="fixed inset-0 z-50 overflow-auto bg-[#171513]/95 p-6" role="dialog" aria-modal="true" aria-label="Chọn slide">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-6 flex items-center justify-between"><h1 className="text-lg font-semibold">Chọn slide</h1><button onClick={() => setShowPicker(false)} className="rounded-lg px-3 py-2 text-sm text-white/75 hover:bg-white/10">Đóng</button></div>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {slides.map((slide, index) => (
-                <button key={slide.id} onClick={() => { goTo(index); setShowPicker(false); }} className={`overflow-hidden rounded-xl border text-left transition ${index === activeIndex ? "border-[#f08a62] ring-2 ring-[#f08a62]" : "border-white/15 hover:border-white/50"}`}>
-                  <div className="relative aspect-video overflow-hidden bg-white"><div style={{ width: CANVAS_W, height: CANVAS_H, transform: "scale(0.3)", transformOrigin: "top left" }}><SlideSurface slide={slide} /></div></div>
-                  <span className="block px-3 py-2 text-sm text-white/80">Slide {index + 1}</span>
-                </button>
-              ))}
-            </div>
+      <footer className="flex h-24 shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-4">
+        <button onClick={() => router.back()} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-white/75 transition hover:bg-white/10 hover:text-white">
+          <Chevron direction="left" className="size-4" />
+          Thoát
+        </button>
+        <div className="flex flex-col items-center gap-2.5">
+          <div
+            ref={timelineRef}
+            className="scrollbar-none flex max-w-[520px] items-center gap-2 overflow-x-auto px-2 pb-1"
+          >
+            {slides.map((slide, index) => (
+              <button
+                key={slide.id}
+                data-slide-idx={index}
+                onClick={() => goTo(index)}
+                title={`Slide ${index + 1}`}
+                aria-label={`Slide ${index + 1}`}
+                aria-current={index === activeIndex ? "true" : undefined}
+                className={`relative shrink-0 overflow-hidden rounded-md transition-all duration-200 ${
+                  index === activeIndex
+                    ? "ring-2 ring-[#f08a62]"
+                    : "opacity-55 ring-1 ring-white/20 hover:opacity-90 hover:ring-white/50"
+                }`}
+                style={{ width: 88, height: 50 }}
+              >
+                <div style={{ width: CANVAS_W, height: CANVAS_H, transform: "scale(0.0917)", transformOrigin: "top left", background: slide.bg }}>
+                  {slide.elements.map((element) => <ElementView key={element.id} el={element} />)}
+                </div>
+                {index === activeIndex && (
+                  <span className="absolute bottom-0.5 right-1 rounded bg-[#f08a62] px-1 text-[9px] font-semibold text-white">
+                    {index + 1}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={previous} disabled={activeIndex === 0} aria-label="Slide trước" className="grid size-9 place-items-center rounded-full border border-white/20 text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"><Chevron direction="left" /></button>
+            <p className="min-w-24 text-center text-sm font-medium tabular-nums text-white/85">{activeIndex + 1} / {slides.length || "–"}</p>
+            <button onClick={next} disabled={!slides.length || activeIndex === slides.length - 1} aria-label="Slide tiếp" className="grid size-9 place-items-center rounded-full border border-white/20 text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"><Chevron direction="right" /></button>
           </div>
         </div>
-      ) : null}
+        <button onClick={toggleFullscreen} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/75 transition hover:bg-white/10 hover:text-white"><FullscreenIcon />{isFullscreen ? "Thu nhỏ" : "Toàn màn hình"}</button>
+      </footer>
     </main>
   );
 }

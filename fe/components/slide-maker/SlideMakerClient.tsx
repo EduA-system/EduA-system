@@ -36,8 +36,14 @@ type StepStates = {
 
 const INITIAL_STEPS: StepStates = { step1: "idle", step2: "idle", step3: "idle" };
 
-function stepLabel(step: 1 | 2 | 3) {
-  return step === 1 ? "Bước 1: Giao diện deck" : step === 2 ? "Bước 2: Bố cục động" : "Bước 3: Điền nội dung";
+// Id của slides seed mặc định trong editor; dùng để phân biệt "store chưa có
+// nội dung" (cần nạp skeleton/library) với "đã có slides đang soạn" (giữ nguyên
+// khi quay lại từ trình chiếu).
+const SEED_SLIDE_IDS = new Set(["slide-1", "slide-2", "slide-3", "slide-4"]);
+
+function isSeedState() {
+  const current = useEditorStore.getState().slides;
+  return current.length === SEED_SLIDE_IDS.size && current.every((slide) => SEED_SLIDE_IDS.has(slide.id));
 }
 
 export function SlideMakerClient() {
@@ -50,7 +56,9 @@ export function SlideMakerClient() {
   const bootedSessionIdRef = useRef<string | null>(null);
   const loadedLibraryIdRef = useRef<string | null>(null);
   const [steps, setSteps] = useState<StepStates>(INITIAL_STEPS);
-  const [message, setMessage] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [leftPanelCloseSignal, setLeftPanelCloseSignal] = useState(0);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [libraryId, setLibraryId] = useState<string | null>(null);
   const [failedLibraryId, setFailedLibraryId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -74,15 +82,16 @@ export function SlideMakerClient() {
         if (content.type !== "SLIDE_DECK") throw new Error("Nội dung này không phải là bộ slide.");
         const slides = parseSlideDeck(content.payload);
         if (!slides) throw new Error("Bộ slide đã lưu có định dạng không hợp lệ.");
-        replaceSlides(slides);
+        // Chỉ nạp khi store vẫn là seed; nếu đã có nội dung (quay lại từ trình
+        // chiếu) thì giữ nguyên slides hiện tại để không mất chỉnh sửa.
+        if (isSeedState()) replaceSlides(slides);
         loadedLibraryIdRef.current = content.id;
         setLibraryId(content.id);
         setFailedLibraryId(null);
       })
-      .catch((error: unknown) => {
+      .catch(() => {
         if (cancelled) return;
         setFailedLibraryId(requestedLibraryId);
-        setMessage(error instanceof Error ? error.message : "Không thể mở bộ slide đã lưu.");
       });
 
     return () => {
@@ -149,7 +158,11 @@ export function SlideMakerClient() {
     activeRef.current = active;
     if (bootedSessionIdRef.current !== active.sessionId) {
       bootedSessionIdRef.current = active.sessionId;
-      replaceSlides(skeletonSlidesFromParts(active.parts));
+      // Nếu store vẫn đang là seed mặc định (chưa có nội dung từ phiên gen này)
+      // thì tạo skeleton; ngược lại (quay lại từ trình chiếu) giữ slides đã gen.
+      if (isSeedState()) {
+        replaceSlides(skeletonSlidesFromParts(active.parts));
+      }
     }
   }, [generating, replaceSlides, router]);
 
@@ -166,13 +179,12 @@ export function SlideMakerClient() {
   const saveDeck = useCallback(async (metadata?: { title: string; subject: LibrarySubject }) => {
     if (saving) return;
     setSaving(true);
-    setMessage(null);
     const slides = serializeSlideDeck(useEditorStore.getState().slides);
     const thumbnailUrl = createSlideThumbnail(slides.slides);
     try {
       if (savedLibraryId) {
         await updateLibraryContent(authFetch, savedLibraryId, { payload: slides, thumbnailUrl: thumbnailUrl ?? undefined });
-        setMessage("Đã cập nhật bộ slide trong thư viện cá nhân.");
+        setSaveNotice("Đã cập nhật bộ slide trong thư viện cá nhân.");
       } else if (metadata) {
         const created = await createLibraryContent(authFetch, {
           type: "SLIDE_DECK",
@@ -184,10 +196,10 @@ export function SlideMakerClient() {
         loadedLibraryIdRef.current = created.id;
         setLibraryId(created.id);
         router.replace(`/slide-maker?libraryId=${created.id}`);
-        setMessage("Đã lưu bộ slide vào thư viện cá nhân.");
+        setSaveNotice("Đã lưu bộ slide vào thư viện cá nhân.");
       }
     } catch (error: unknown) {
-      setMessage(error instanceof Error ? error.message : "Không thể lưu bộ slide.");
+      setSaveNotice(error instanceof Error ? error.message : "Không thể lưu bộ slide.");
     } finally {
       setSaving(false);
     }
@@ -212,29 +224,30 @@ export function SlideMakerClient() {
 
   const openPresentation = useCallback(() => {
     saveSlides(useEditorStore.getState().slides);
-    const query = savedLibraryId ? `?libraryId=${encodeURIComponent(savedLibraryId)}` : "";
-    router.push(`/slide-present${query}`);
-  }, [router, savedLibraryId]);
+    const params = new URLSearchParams();
+    if (savedLibraryId) params.set("libraryId", savedLibraryId);
+    else if (generating) params.set("generating", "1");
+    const query = params.toString();
+    router.push(`/slide-present${query ? `?${query}` : ""}`);
+  }, [generating, router, savedLibraryId]);
 
   const finishStep = useCallback((step: 1 | 2 | 3, failedSlideIds: string[] = []) => {
     const key = `step${step}` as keyof StepStates;
     setSteps((current) => ({ ...current, [key]: failedSlideIds.length ? "error" : "complete" }));
-    setMessage(
-      failedSlideIds.length
-        ? `${stepLabel(step)} lỗi ở ${failedSlideIds.length} slide. Bạn có thể chạy lại bước này.`
-        : `${stepLabel(step)} hoàn tất.`,
-    );
+    // Sau bước 3 thành công, tự đóng thanh công cụ bên trái để nhường chỗ cho canvas.
+    if (step === 3 && failedSlideIds.length === 0) {
+      setLeftPanelCloseSignal((value) => value + 1);
+    }
   }, []);
 
   const runStep = useCallback(async (step: 1 | 2 | 3) => {
     const active = activeRef.current;
     if (!active) {
-      setMessage("Không tìm thấy phiên tạo slide. Vui lòng quay lại tạo outline.");
+      setSteps((current) => ({ ...current, [`step${step}` as keyof StepStates]: "error" }));
       return;
     }
 
     const key = `step${step}` as keyof StepStates;
-    setMessage(null);
     setSteps((current) => ({ ...current, [key]: "running" }));
     try {
       if (step === 1) {
@@ -262,33 +275,24 @@ export function SlideMakerClient() {
 
       const result = await runContentFillStep({ onSlideReady: handleSlideReady, onSlideFailed: handleSlideFailed });
       finishStep(3, result.failedSlideIds);
-    } catch (error) {
+    } catch {
       setSteps((current) => ({ ...current, [key]: "error" }));
-      setMessage(error instanceof Error ? error.message : String(error));
     }
   }, [finishStep, handleSlideFailed, handleSlideFrames, handleSlideReady, markSlidesPending]);
 
   const designSteps: DesignStepControls | undefined = generating
     ? { ...steps, onRunStep: (step) => void runStep(step) }
     : undefined;
-  const runningStep = ([1, 2, 3] as const).find((step) => steps[`step${step}`] === "running");
 
   return (
     <main className="h-screen w-full overflow-hidden bg-white font-sans text-[#2b2926]">
       <div className="flex h-full w-full">
-        <Sidebar activeHref="/slide-create" />
+        <Sidebar
+          activeHref="/slide-create"
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
+        />
         <div className="flex min-w-0 flex-1 flex-col">
-          {runningStep ? (
-            <div className="flex h-9 shrink-0 items-center gap-3 border-b border-[#eadfd7] bg-[#fff7f1] px-4 text-xs text-[#9f5a3e]">
-              <span className="size-3.5 animate-spin rounded-full border-2 border-[#d97757] border-t-transparent" />
-              <span>Đang chạy {stepLabel(runningStep)} cho toàn bộ deck…</span>
-            </div>
-          ) : null}
-          {message ? (
-            <div className="flex h-9 shrink-0 items-center border-b border-[#d8d1c9] bg-[#f7f3ee] px-4 text-xs text-[#4f4943]">
-              {message}
-            </div>
-          ) : null}
           <section className="relative min-h-0 flex-1 overflow-hidden">
             {libraryLoading ? (
               <div className="grid h-full place-items-center bg-white text-sm text-[#6b625a]">Đang mở bộ slide...</div>
@@ -299,11 +303,20 @@ export function SlideMakerClient() {
                 onSaveToLibrary={openSaveDialog}
                 savingToLibrary={saving}
                 onPresent={openPresentation}
+                closeLeftPanelSignal={leftPanelCloseSignal}
               />
             )}
           </section>
         </div>
       </div>
+      {saveNotice ? (
+        <p
+          role="status"
+          className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 rounded-lg bg-[#2b2926] px-4 py-2 text-xs text-white shadow-lg"
+        >
+          {saveNotice}
+        </p>
+      ) : null}
       {saveDialogOpen ? (
         <div className="fixed inset-0 z-[100] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-labelledby="save-deck-title">
           <div className="w-full max-w-md rounded-xl border border-[#e8e2d9] bg-white p-5 shadow-xl">

@@ -151,6 +151,19 @@ body::-webkit-scrollbar {
   -ms-overflow-style: none;
 }
 
+.slide-tray-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.slide-tray-scroll::-webkit-scrollbar {
+  display: none;
+}
+.slide-tray-scroll::-webkit-scrollbar-track,
+.slide-tray-scroll::-webkit-scrollbar-thumb {
+  display: none;
+  background: transparent;
+}
+
 /* Tweakpane (ParamPanel — bảng tham số mô phỏng vật lý) mặc định theme tối,
    lệch tông với giao diện sáng EDUA. Override biến CSS của Tweakpane để khớp
    màu nền/viền/chữ đang dùng trong Slide Maker & Lesson Editor.

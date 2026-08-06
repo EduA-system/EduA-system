@@ -75,7 +75,7 @@ function LockIcon({ locked }: { locked?: boolean }) {
   );
 }
 
-function LayersIcon() {
+export function LayersIcon() {
   return (
     <svg className="h-[13px] w-[13px]" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
       <path d="M8 2.2 2.4 5 8 7.8 13.6 5z" />
@@ -85,7 +85,7 @@ function LayersIcon() {
   );
 }
 
-function PropertiesIcon() {
+export function PropertiesIcon() {
   return (
     <svg className="h-[13px] w-[13px]" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round">
       <path d="M4 4h8" />
@@ -268,9 +268,87 @@ export function LayersPanel({
   activeTab: RightPanelTab;
   onTabChange: (tab: RightPanelTab) => void;
 }) {
+  return (
+    <aside className="flex w-[268px] shrink-0 flex-col border-l border-[#e8e2d9] bg-white">
+      <div className="flex shrink-0 border-b border-[#e8e2d9]">
+        <TabButton active={activeTab === "layers"} icon={<LayersIcon />} label="Layers" onClick={() => onTabChange("layers")} />
+        <TabButton active={activeTab === "properties"} icon={<PropertiesIcon />} label="Properties" onClick={() => onTabChange("properties")} />
+      </div>
+      {activeTab === "layers" ? <LayersContent /> : <PropertiesContent />}
+    </aside>
+  );
+}
+
+export function LayersContent() {
   const slide = useEditorStore((s) => s.slides.find((sl) => sl.id === s.currentSlideId));
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const select = useEditorStore((s) => s.select);
+  const updateElement = useEditorStore((s) => s.updateElement);
+  const slideLocked = isSlideLockedForGeneration(slide);
+  const elements = slide?.elements ?? [];
+  const sorted = [...elements].sort((a, b) => b.zIndex - a.zIndex);
+
+  return (
+    <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
+      {sorted.length === 0 && (
+        <div className="px-3 py-8 text-center text-[11px] text-[#b8aea5]">No layers</div>
+      )}
+      {sorted.map((el) => {
+        const isSelected = selectedIds.includes(el.id);
+        return (
+          <div
+            key={el.id}
+            onClick={() => {
+              if (!slideLocked) select([el.id]);
+            }}
+            className={`group flex items-center gap-2 rounded-[8px] px-2.5 py-[7px] transition-colors ${
+              isSelected ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee]"
+            } ${slideLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${el.hidden ? "opacity-40" : ""}`}
+          >
+            <span className={isSelected ? "text-[#d97757]" : "text-[#b8aea5]"}>
+              {TYPE_ICONS[el.type] ?? TYPE_ICONS.shape}
+            </span>
+            <span className={`min-w-0 flex-1 truncate text-[11px] ${isSelected ? "font-semibold" : ""}`} title={elemLabel(el)}>
+              {elemLabel(el)}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (slideLocked) return;
+                updateElement(el.id, { hidden: !el.hidden });
+              }}
+              disabled={slideLocked}
+              title={el.hidden ? "Show" : "Hide"}
+              className={`shrink-0 rounded p-0.5 transition-colors hover:text-[#d97757] ${
+                el.hidden ? "text-[#8a8178]" : "text-[#b8aea5] opacity-0 group-hover:opacity-100"
+              }`}
+            >
+              <EyeIcon hidden={el.hidden} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (slideLocked) return;
+                updateElement(el.id, { locked: !el.locked });
+              }}
+              disabled={slideLocked}
+              title={el.locked ? "Unlock" : "Lock"}
+              className={`shrink-0 rounded p-0.5 transition-colors hover:text-[#d97757] ${
+                el.locked ? "text-[#4f4943]" : "text-[#b8aea5] opacity-0 group-hover:opacity-100"
+              }`}
+            >
+              <LockIcon locked={el.locked} />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function PropertiesContent() {
+  const slide = useEditorStore((s) => s.slides.find((sl) => sl.id === s.currentSlideId));
+  const selectedIds = useEditorStore((s) => s.selectedIds);
   const updateElement = useEditorStore((s) => s.updateElement);
   const bringForward = useEditorStore((s) => s.bringForward);
   const sendBackward = useEditorStore((s) => s.sendBackward);
@@ -279,7 +357,6 @@ export function LayersPanel({
   const [lockRatio, setLockRatio] = useState(false);
 
   const elements = slide?.elements ?? [];
-  const sorted = [...elements].sort((a, b) => b.zIndex - a.zIndex);
   const selected = selectedIds.length === 1 ? elements.find((el) => el.id === selectedIds[0]) : null;
   const slideLocked = isSlideLockedForGeneration(slide);
   const panelDisabled = slideLocked || !selected;
@@ -303,140 +380,76 @@ export function LayersPanel({
   };
 
   return (
-    <aside className="flex w-[268px] shrink-0 flex-col border-l border-[#e8e2d9] bg-white">
-      <div className="flex shrink-0 border-b border-[#e8e2d9]">
-        <TabButton active={activeTab === "layers"} icon={<LayersIcon />} label="Layers" onClick={() => onTabChange("layers")} />
-        <TabButton active={activeTab === "properties"} icon={<PropertiesIcon />} label="Properties" onClick={() => onTabChange("properties")} />
-      </div>
-
-      {activeTab === "layers" ? (
-        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
-          {sorted.length === 0 && (
-            <div className="px-3 py-8 text-center text-[11px] text-[#b8aea5]">No layers</div>
-          )}
-          {sorted.map((el) => {
-            const isSelected = selectedIds.includes(el.id);
-            return (
-              <div
-                key={el.id}
-                onClick={() => {
-                  if (!slideLocked) select([el.id]);
-                }}
-                className={`group flex items-center gap-2 rounded-[8px] px-2.5 py-[7px] transition-colors ${
-                  isSelected ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee]"
-                } ${slideLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${el.hidden ? "opacity-40" : ""}`}
-              >
-                <span className={isSelected ? "text-[#d97757]" : "text-[#b8aea5]"}>
-                  {TYPE_ICONS[el.type] ?? TYPE_ICONS.shape}
-                </span>
-                <span className={`min-w-0 flex-1 truncate text-[11px] ${isSelected ? "font-semibold" : ""}`} title={elemLabel(el)}>
-                  {elemLabel(el)}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (slideLocked) return;
-                    updateElement(el.id, { hidden: !el.hidden });
-                  }}
-                  disabled={slideLocked}
-                  title={el.hidden ? "Show" : "Hide"}
-                  className={`shrink-0 rounded p-0.5 transition-colors hover:text-[#d97757] ${
-                    el.hidden ? "text-[#8a8178]" : "text-[#b8aea5] opacity-0 group-hover:opacity-100"
-                  }`}
-                >
-                  <EyeIcon hidden={el.hidden} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (slideLocked) return;
-                    updateElement(el.id, { locked: !el.locked });
-                  }}
-                  disabled={slideLocked}
-                  title={el.locked ? "Unlock" : "Lock"}
-                  className={`shrink-0 rounded p-0.5 transition-colors hover:text-[#d97757] ${
-                    el.locked ? "text-[#4f4943]" : "text-[#b8aea5] opacity-0 group-hover:opacity-100"
-                  }`}
-                >
-                  <LockIcon locked={el.locked} />
-                </button>
-              </div>
-            );
-          })}
+    <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-3 py-4">
+      {!selected ? (
+        <div className="flex h-48 flex-col items-center justify-center gap-2 text-center">
+          <div className="flex size-10 items-center justify-center rounded-[14px] bg-[#f7f3ee] text-[#b8aea5]">
+            <PointerIcon />
+          </div>
+          <div className="text-[12px] font-medium text-[#8a8178]">No selection</div>
+          <div className="text-[10px] text-[#b8aea5]">Click an element to edit</div>
         </div>
       ) : (
-        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-3 py-4">
-          {!selected ? (
-            <div className="flex h-48 flex-col items-center justify-center gap-2 text-center">
-              <div className="flex size-10 items-center justify-center rounded-[14px] bg-[#f7f3ee] text-[#b8aea5]">
-                <PointerIcon />
+        <div className="space-y-4">
+          <section>
+            <SectionTitle>Thứ tự lớp</SectionTitle>
+            <div className="grid grid-cols-2 gap-1.5">
+              <PanelButton icon={<SideLayerUpIcon />} label="Tiến một lớp" onClick={() => bringForward(selected.id)} disabled={panelDisabled} />
+              <PanelButton icon={<SideLayerDownIcon />} label="Lùi một lớp" onClick={() => sendBackward(selected.id)} disabled={panelDisabled} />
+              <PanelButton icon={<SideSendFrontIcon />} label="Lên trước" onClick={() => bringToFront(selected.id)} disabled={panelDisabled} />
+              <PanelButton icon={<SideSendBackIcon />} label="Xuống cuối" onClick={() => sendToBack(selected.id)} disabled={panelDisabled} />
+            </div>
+          </section>
+
+          <section className="border-t border-[#e8e2d9] pt-3">
+            <SectionTitle>Căn chỉnh theo trang</SectionTitle>
+            <div className="grid grid-cols-2 gap-1.5">
+              <PanelButton icon={<SideAlignTopIcon />} label="Trên" onClick={() => upd({ y: 0 })} disabled={panelDisabled} />
+              <PanelButton icon={<SideAlignLeftIcon />} label="Trái" onClick={() => upd({ x: 0 })} disabled={panelDisabled} />
+              <PanelButton icon={<SideAlignCenterVIcon />} label="Giữa dọc" onClick={() => upd({ y: Math.round((CANVAS_H - selected.h) / 2) })} disabled={panelDisabled} />
+              <PanelButton icon={<SideAlignCenterHIcon />} label="Giữa ngang" onClick={() => upd({ x: Math.round((CANVAS_W - selected.w) / 2) })} disabled={panelDisabled} />
+              <PanelButton icon={<SideAlignBottomIcon />} label="Dưới" onClick={() => upd({ y: Math.round(CANVAS_H - selected.h) })} disabled={panelDisabled} />
+              <PanelButton icon={<SideAlignRightIcon />} label="Phải" onClick={() => upd({ x: Math.round(CANVAS_W - selected.w) })} disabled={panelDisabled} />
+            </div>
+          </section>
+
+          <section className="border-t border-[#e8e2d9] pt-3">
+            <SectionTitle>Nâng cao</SectionTitle>
+            <div className="grid grid-cols-3 gap-1.5">
+              <UnitNumberInput label="Rộng" value={selected.w} min={1} onChange={setWidth} disabled={panelDisabled} />
+              <UnitNumberInput label="Cao" value={selected.h} min={1} onChange={setHeight} disabled={panelDisabled} />
+              <div className="min-w-0">
+                <span className="mb-1 block truncate text-[10px] font-medium text-[#6b625a]">Tỉ lệ</span>
+                <button
+                  type="button"
+                  onClick={() => setLockRatio((value) => !value)}
+                  disabled={panelDisabled}
+                  title="Khóa tỉ lệ"
+                  className={`flex h-8 w-full items-center justify-center rounded-[7px] border transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    lockRatio ? "border-[#d97757] bg-[#f6eadf] text-[#d97757]" : "border-[#e8e2d9] bg-white text-[#8a8178] hover:bg-[#fbfaf8]"
+                  }`}
+                >
+                  <SideLinkIcon locked={lockRatio} />
+                </button>
               </div>
-              <div className="text-[12px] font-medium text-[#8a8178]">No selection</div>
-              <div className="text-[10px] text-[#b8aea5]">Click an element to edit</div>
+              <UnitNumberInput label="X" value={selected.x} unit="px" onChange={(value) => upd({ x: value })} disabled={panelDisabled} />
+              <UnitNumberInput label="Y" value={selected.y} unit="px" onChange={(value) => upd({ y: value })} disabled={panelDisabled} />
+              <UnitNumberInput label="Xoay" value={selected.rotation} unit="°" onChange={(value) => upd({ rotation: value })} disabled={panelDisabled} />
             </div>
-          ) : (
-            <div className="space-y-4">
-              <section>
-                <SectionTitle>Thứ tự lớp</SectionTitle>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <PanelButton icon={<SideLayerUpIcon />} label="Tiến một lớp" onClick={() => bringForward(selected.id)} disabled={panelDisabled} />
-                  <PanelButton icon={<SideLayerDownIcon />} label="Lùi một lớp" onClick={() => sendBackward(selected.id)} disabled={panelDisabled} />
-                  <PanelButton icon={<SideSendFrontIcon />} label="Lên trước" onClick={() => bringToFront(selected.id)} disabled={panelDisabled} />
-                  <PanelButton icon={<SideSendBackIcon />} label="Xuống cuối" onClick={() => sendToBack(selected.id)} disabled={panelDisabled} />
-                </div>
-              </section>
+          </section>
 
-              <section className="border-t border-[#e8e2d9] pt-3">
-                <SectionTitle>Căn chỉnh theo trang</SectionTitle>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <PanelButton icon={<SideAlignTopIcon />} label="Trên" onClick={() => upd({ y: 0 })} disabled={panelDisabled} />
-                  <PanelButton icon={<SideAlignLeftIcon />} label="Trái" onClick={() => upd({ x: 0 })} disabled={panelDisabled} />
-                  <PanelButton icon={<SideAlignCenterVIcon />} label="Giữa dọc" onClick={() => upd({ y: Math.round((CANVAS_H - selected.h) / 2) })} disabled={panelDisabled} />
-                  <PanelButton icon={<SideAlignCenterHIcon />} label="Giữa ngang" onClick={() => upd({ x: Math.round((CANVAS_W - selected.w) / 2) })} disabled={panelDisabled} />
-                  <PanelButton icon={<SideAlignBottomIcon />} label="Dưới" onClick={() => upd({ y: Math.round(CANVAS_H - selected.h) })} disabled={panelDisabled} />
-                  <PanelButton icon={<SideAlignRightIcon />} label="Phải" onClick={() => upd({ x: Math.round(CANVAS_W - selected.w) })} disabled={panelDisabled} />
-                </div>
-              </section>
-
-              <section className="border-t border-[#e8e2d9] pt-3">
-                <SectionTitle>Nâng cao</SectionTitle>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <UnitNumberInput label="Rộng" value={selected.w} min={1} onChange={setWidth} disabled={panelDisabled} />
-                  <UnitNumberInput label="Cao" value={selected.h} min={1} onChange={setHeight} disabled={panelDisabled} />
-                  <div className="min-w-0">
-                    <span className="mb-1 block truncate text-[10px] font-medium text-[#6b625a]">Tỉ lệ</span>
-                    <button
-                      type="button"
-                      onClick={() => setLockRatio((value) => !value)}
-                      disabled={panelDisabled}
-                      title="Khóa tỉ lệ"
-                      className={`flex h-8 w-full items-center justify-center rounded-[7px] border transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                        lockRatio ? "border-[#d97757] bg-[#f6eadf] text-[#d97757]" : "border-[#e8e2d9] bg-white text-[#8a8178] hover:bg-[#fbfaf8]"
-                      }`}
-                    >
-                      <SideLinkIcon locked={lockRatio} />
-                    </button>
-                  </div>
-                  <UnitNumberInput label="X" value={selected.x} unit="px" onChange={(value) => upd({ x: value })} disabled={panelDisabled} />
-                  <UnitNumberInput label="Y" value={selected.y} unit="px" onChange={(value) => upd({ y: value })} disabled={panelDisabled} />
-                  <UnitNumberInput label="Xoay" value={selected.rotation} unit="°" onChange={(value) => upd({ rotation: value })} disabled={panelDisabled} />
-                </div>
-              </section>
-
-              <section className="border-t border-[#e8e2d9] pt-3">
-                <SectionTitle>Trạng thái</SectionTitle>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <PanelButton icon={<EyeIcon hidden={selected.hidden} />} label={selected.hidden ? "Hiện" : "Ẩn"} onClick={() => upd({ hidden: !selected.hidden })} active={!!selected.hidden} disabled={panelDisabled} />
-                  <PanelButton icon={<LockIcon locked={selected.locked} />} label={selected.locked ? "Mở khóa" : "Khóa"} onClick={() => upd({ locked: !selected.locked })} active={!!selected.locked} disabled={panelDisabled} />
-                </div>
-                <div className="mt-3 rounded-[8px] border border-[#e8e2d9] bg-white px-2 py-2">
-                  <SliderRow label="Độ mờ" value={Math.round(selected.opacity * 100)} onChange={(value) => upd({ opacity: value / 100 })} disabled={panelDisabled} />
-                </div>
-              </section>
+          <section className="border-t border-[#e8e2d9] pt-3">
+            <SectionTitle>Trạng thái</SectionTitle>
+            <div className="grid grid-cols-2 gap-1.5">
+              <PanelButton icon={<EyeIcon hidden={selected.hidden} />} label={selected.hidden ? "Hiện" : "Ẩn"} onClick={() => upd({ hidden: !selected.hidden })} active={!!selected.hidden} disabled={panelDisabled} />
+              <PanelButton icon={<LockIcon locked={selected.locked} />} label={selected.locked ? "Mở khóa" : "Khóa"} onClick={() => upd({ locked: !selected.locked })} active={!!selected.locked} disabled={panelDisabled} />
             </div>
-          )}
+            <div className="mt-3 rounded-[8px] border border-[#e8e2d9] bg-white px-2 py-2">
+              <SliderRow label="Độ mờ" value={Math.round(selected.opacity * 100)} onChange={(value) => upd({ opacity: value / 100 })} disabled={panelDisabled} />
+            </div>
+          </section>
         </div>
       )}
-    </aside>
+    </div>
   );
 }

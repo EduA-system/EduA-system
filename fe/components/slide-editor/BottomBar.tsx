@@ -127,14 +127,12 @@ function GridOverview({ onClose }: { onClose: () => void }) {
 }
 
 export function BottomBar({
-  zoomMode,
   onZoomModeChange,
   currentScale,
   showTray,
   onToggleTray,
 }: {
-  zoomMode: "fit" | number;
-  onZoomModeChange: (zoom: "fit" | number) => void;
+  onZoomModeChange: (zoom: number) => void;
   currentScale: number;
   showTray: boolean;
   onToggleTray: () => void;
@@ -189,11 +187,11 @@ export function BottomBar({
           <ZoomOutIcon />
         </button>
         <button
-          onClick={() => onZoomModeChange(zoomMode === "fit" ? 1 : "fit")}
+          onClick={() => onZoomModeChange(1)}
           className="w-11 rounded-[10px] px-1 py-1 text-center text-[11px] font-semibold tabular-nums text-[#4f4943] hover:bg-[#f7f3ee]"
-          title="Fit / actual zoom"
+          title="Về 100%"
         >
-          {zoomMode === "fit" ? "Fit" : `${zoomPercent}%`}
+          {zoomPercent}%
         </button>
         <button
           onClick={() => onZoomModeChange(Math.min(ZOOM_MAX, currentScale + 0.1))}

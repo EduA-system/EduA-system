@@ -9,3 +9,6 @@ nul
 
 # Office temp/lock files (e.g. ~$Phu_luc_4_...doc)
 ~$*
+trash/
+.codex-chrome-ac/
+.commandcode/
