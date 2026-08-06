@@ -16,34 +16,34 @@ export function Modal({ open, onClose, title, description, children, maxWidthCla
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
       role="presentation"
       onClick={onClose}
     >
       <div
-        className={`w-full ${maxWidthClassName} max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-5 shadow-xl`}
+        className={`flex w-full ${maxWidthClassName} max-h-[90vh] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#f0ece5] px-6 py-4">
           <div>
-            <h2 id="modal-title" className="text-lg font-semibold">
+            <h2 id="modal-title" className="text-xl font-semibold">
               {title}
             </h2>
-            {description ? <p className="mt-1 text-xs text-[#6b6b6b]">{description}</p> : null}
+            {description ? <p className="mt-1 text-sm text-[#6b6b6b]">{description}</p> : null}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="shrink-0 rounded-full p-1.5 text-[#8a8178] hover:bg-[#f5f1ec]"
+            className="shrink-0 rounded-full p-1.5 text-[#8a8178] transition hover:bg-[#f5f1ec] hover:text-[#2b2926]"
           >
             ✕
           </button>
         </div>
-        <div className="mt-3">{children}</div>
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
       </div>
     </div>
   );

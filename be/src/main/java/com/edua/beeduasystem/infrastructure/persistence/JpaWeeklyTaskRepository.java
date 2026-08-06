@@ -22,8 +22,11 @@ public class JpaWeeklyTaskRepository implements WeeklyTaskRepository {
 
     @Override @Transactional public WeeklyTask save(WeeklyTask t) {
         WeeklyTaskEntity e = jpa.findById(t.id()).orElseGet(WeeklyTaskEntity::new);
-        e.setId(t.id()); e.setModeratorId(t.moderatorId()); e.setSubject(t.subject()); e.setTeacherId(t.teacherId());
+        e.setId(t.id()); e.setModeratorId(t.moderatorId()); e.setSubject(t.subject()); e.setGrade(t.grade());
+        e.setTeacherId(t.teacherId());
         e.setWeekStartDate(t.weekStartDate()); e.setScopeDescription(t.scopeDescription()); e.setDeadline(t.deadline());
+        e.setTextbookCode(t.textbookCode()); e.setChapterCode(t.chapterCode()); e.setChapterName(t.chapterName());
+        e.setLessonCode(t.lessonCode()); e.setLessonName(t.lessonName());
         e.setReviewStatus(t.reviewStatus()); e.setSourceLibraryContentId(t.sourceLibraryContentId());
         e.setSourceLibraryContentTitle(t.sourceLibraryContentTitle()); e.setSourceLibraryContentPayload(t.sourceLibraryContentPayload());
         e.setSourceDocumentUrl(t.sourceDocumentUrl()); e.setSourceDocumentName(t.sourceDocumentName());
@@ -44,13 +47,18 @@ public class JpaWeeklyTaskRepository implements WeeklyTaskRepository {
         return jpa.findBySubjectAndWeekStartDateBetweenOrderByWeekStartDateAsc(subject, fromWeek, toWeek).stream().map(JpaWeeklyTaskRepository::toDomain).toList();
     }
 
-    @Override @Transactional(readOnly = true) public Page<WeeklyTask> findBySubjectAndStatus(Subject subject, WeeklyTaskReviewStatus status, Pageable pageable) {
-        return jpa.findBySubjectAndReviewStatus(subject, status, pageable).map(JpaWeeklyTaskRepository::toDomain);
+    @Override @Transactional(readOnly = true) public List<WeeklyTask> findBySubjectAndGrade(Subject subject, Integer grade, LocalDate fromWeek, LocalDate toWeek) {
+        return jpa.findBySubjectAndGradeAndWeekStartDateBetweenOrderByWeekStartDateAsc(subject, grade, fromWeek, toWeek).stream().map(JpaWeeklyTaskRepository::toDomain).toList();
+    }
+
+    @Override @Transactional(readOnly = true) public Page<WeeklyTask> searchModerationQueue(Subject subject, WeeklyTaskReviewStatus status, Integer grade, String chapterCode, String lessonCode, Pageable pageable) {
+        return jpa.searchModerationQueue(subject, status, grade, chapterCode, lessonCode, pageable).map(JpaWeeklyTaskRepository::toDomain);
     }
 
     private static WeeklyTask toDomain(WeeklyTaskEntity e) {
-        return new WeeklyTask(e.getId(), e.getModeratorId(), e.getSubject(), e.getTeacherId(), e.getWeekStartDate(),
-                e.getScopeDescription(), e.getDeadline(), e.getReviewStatus(), e.getSourceLibraryContentId(),
+        return new WeeklyTask(e.getId(), e.getModeratorId(), e.getSubject(), e.getGrade(), e.getTeacherId(), e.getWeekStartDate(),
+                e.getScopeDescription(), e.getTextbookCode(), e.getChapterCode(), e.getChapterName(), e.getLessonCode(), e.getLessonName(),
+                e.getDeadline(), e.getReviewStatus(), e.getSourceLibraryContentId(),
                 e.getSourceLibraryContentTitle(), e.getSourceLibraryContentPayload(), e.getSourceDocumentUrl(), e.getSourceDocumentName(), e.getSubmittedAt(), e.getReviewedBy(),
                 e.getReviewedAt(), e.getRejectionReason(), e.getCreatedAt(), e.getUpdatedAt(), e.getVersion());
     }

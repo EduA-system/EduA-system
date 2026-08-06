@@ -34,13 +34,14 @@ public class WeeklyTaskController {
     }
 
     @GetMapping
-    @Operation(summary = "View Weekly Schedule (UC-80)", description = "Teacher: lịch của mình. Moderator: lịch cả subject. Mặc định 4 tuần trước tới 8 tuần sau.")
+    @Operation(summary = "View Weekly Schedule (UC-80)", description = "Teacher: lịch của mình, mọi khối. Moderator: lịch cả subject, lọc theo khối nếu truyền `grade` (BR-51). Mặc định 4 tuần trước tới 8 tuần sau.")
     public WeeklyTaskViews.Schedule schedule(
             @RequestParam(required = false) LocalDate from,
-            @RequestParam(required = false) LocalDate to) {
+            @RequestParam(required = false) LocalDate to,
+            @RequestParam(required = false) Integer grade) {
         LocalDate resolvedFrom = from != null ? from : LocalDate.now().minusWeeks(4);
         LocalDate resolvedTo = to != null ? to : LocalDate.now().plusWeeks(8);
-        return service.schedule(resolvedFrom, resolvedTo);
+        return service.schedule(resolvedFrom, resolvedTo, grade);
     }
 
     @GetMapping("/{id}")
@@ -52,28 +53,30 @@ public class WeeklyTaskController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('MODERATOR')")
-    @Operation(summary = "Create Weekly Task (UC-81)")
+    @Operation(summary = "Create Weekly Task (UC-81)", description = "Khối bắt buộc (BR-51); Chương/Bài chọn từ danh mục SGK (BR-53); hạn nộp server tự tính (BR-52).")
     public WeeklyTaskViews.Detail create(@Valid @RequestBody CreateWeeklyTaskRequest r) {
-        return service.create(r.teacherId(), r.weekStartDate(), r.scopeDescription(), r.deadline());
+        return service.create(r.teacherId(), r.weekStartDate(), r.grade(), r.scopeDescription(),
+                r.textbookCode(), r.chapterCode(), r.lessonCode());
     }
 
     @PostMapping("/bulk")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('MODERATOR')")
     @Operation(summary = "Bulk Create Weekly Tasks (UC-81)",
-            description = "Giao cùng lúc N bài cho mọi Teacher active cùng subject trong 1 tuần.")
+            description = "Giao 1 bài (1 ô lịch tuần) cho mọi Teacher active cùng subject dạy đúng khối trong 1 tuần (BR-51/BR-53).")
     public WeeklyTaskViews.BulkResult bulkCreate(@Valid @RequestBody BulkCreateWeeklyTaskRequest r) {
         List<WeeklyTaskService.LessonRequest> lessons = r.lessons().stream()
-                .map(l -> new WeeklyTaskService.LessonRequest(l.scopeDescription(), l.deadline()))
+                .map(l -> new WeeklyTaskService.LessonRequest(l.scopeDescription(), l.chapterCode(), l.lessonCode()))
                 .toList();
-        return service.bulkCreate(r.weekStartDate(), lessons);
+        return service.bulkCreate(r.weekStartDate(), r.grade(), r.textbookCode(), lessons);
     }
 
     @PatchMapping("/{id}")
     @PreAuthorize("hasRole('MODERATOR')")
-    @Operation(summary = "Edit Weekly Task (UC-82)", description = "Chỉ sửa được trước hạn nộp (BR-47).")
+    @Operation(summary = "Edit Weekly Task (UC-82)", description = "Chỉ sửa được trước hạn nộp (BR-47). Khối giữ nguyên; hạn nộp server tự tính lại (BR-52); Chương/Bài sửa được (BR-53).")
     public WeeklyTaskViews.Detail update(@PathVariable UUID id, @Valid @RequestBody UpdateWeeklyTaskRequest r) {
-        return service.update(id, r.teacherId(), r.weekStartDate(), r.scopeDescription(), r.deadline());
+        return service.update(id, r.teacherId(), r.weekStartDate(), r.scopeDescription(),
+                r.textbookCode(), r.chapterCode(), r.lessonCode());
     }
 
     @PostMapping("/{id}/submission")
@@ -92,11 +95,15 @@ public class WeeklyTaskController {
 
     @GetMapping("/moderation-queue")
     @PreAuthorize("hasRole('MODERATOR')")
-    @Operation(summary = "View Lesson Plan Approval List (UC-86)")
+    @Operation(summary = "View Lesson Plan Approval List (UC-86)",
+            description = "Lọc theo khối (`grade`), Chương (`chapterCode`) và/hoặc Bài (`lessonCode`) — chọn từ dropdown danh mục SGK, không phải tìm tự do (BR-51/BR-53).")
     public WeeklyTaskViews.Page moderationQueue(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return service.listModerationQueue(page, size);
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Integer grade,
+            @RequestParam(required = false) String chapterCode,
+            @RequestParam(required = false) String lessonCode) {
+        return service.listModerationQueue(page, size, grade, chapterCode, lessonCode);
     }
 
     @PostMapping("/{id}/approval")

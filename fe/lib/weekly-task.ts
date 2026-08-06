@@ -2,16 +2,27 @@ import type { LibrarySubject } from "@/lib/library";
 
 export type WeeklyTaskReviewStatus = "NOT_SUBMITTED" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
+/** Khối — mỗi Weekly Task thuộc đúng 1 khối (BR-51). */
+export type WeeklyTaskGrade = 10 | 11 | 12;
+
 export type WeeklyTaskSummary = {
   id: string;
   teacherId: string;
   teacherName: string | null;
   subject: LibrarySubject;
+  grade: WeeklyTaskGrade;
   weekStartDate: string;
   scopeDescription: string;
+  /** Chương/Bài chọn từ danh mục SGK (BR-53) — không phải mô tả tự do. */
+  textbookCode: string;
+  chapterCode: string;
+  chapterName: string;
+  lessonCode: string;
+  lessonName: string;
   deadline: string;
   reviewStatus: WeeklyTaskReviewStatus;
   submittedAt: string | null;
+  createdAt: string;
 };
 
 export type WeeklyTaskDetail = {
@@ -19,10 +30,16 @@ export type WeeklyTaskDetail = {
   moderatorId: string;
   moderatorName: string | null;
   subject: LibrarySubject;
+  grade: WeeklyTaskGrade;
   teacherId: string;
   teacherName: string | null;
   weekStartDate: string;
   scopeDescription: string;
+  textbookCode: string;
+  chapterCode: string;
+  chapterName: string;
+  lessonCode: string;
+  lessonName: string;
   deadline: string;
   reviewStatus: WeeklyTaskReviewStatus;
   sourceLibraryContentId: string | null;
@@ -55,10 +72,11 @@ async function unpack<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function getWeeklySchedule(authFetch: AuthFetch, from?: string, to?: string) {
+export function getWeeklySchedule(authFetch: AuthFetch, from?: string, to?: string, grade?: WeeklyTaskGrade) {
   const params = new URLSearchParams();
   if (from) params.set("from", from);
   if (to) params.set("to", to);
+  if (grade) params.set("grade", String(grade));
   const qs = params.toString();
   return authFetch(`/api/weekly-tasks${qs ? `?${qs}` : ""}`).then(unpack<WeeklyTaskSchedule>);
 }
@@ -69,7 +87,15 @@ export function getWeeklyTask(authFetch: AuthFetch, id: string) {
 
 export function createWeeklyTask(
   authFetch: AuthFetch,
-  body: { teacherId: string; weekStartDate: string; scopeDescription: string; deadline: string },
+  body: {
+    teacherId: string;
+    weekStartDate: string;
+    grade: WeeklyTaskGrade;
+    scopeDescription: string;
+    textbookCode: string;
+    chapterCode: string;
+    lessonCode: string;
+  },
 ) {
   return authFetch("/api/weekly-tasks", {
     method: "POST",
@@ -80,7 +106,12 @@ export function createWeeklyTask(
 
 export function bulkCreateWeeklyTasks(
   authFetch: AuthFetch,
-  body: { weekStartDate: string; lessons: { scopeDescription: string; deadline: string }[] },
+  body: {
+    weekStartDate: string;
+    grade: WeeklyTaskGrade;
+    textbookCode: string;
+    lessons: { scopeDescription: string; chapterCode: string; lessonCode: string }[];
+  },
 ) {
   return authFetch("/api/weekly-tasks/bulk", {
     method: "POST",
@@ -92,7 +123,14 @@ export function bulkCreateWeeklyTasks(
 export function updateWeeklyTask(
   authFetch: AuthFetch,
   id: string,
-  body: { teacherId: string; weekStartDate: string; scopeDescription: string; deadline: string },
+  body: {
+    teacherId: string;
+    weekStartDate: string;
+    scopeDescription: string;
+    textbookCode: string;
+    chapterCode: string;
+    lessonCode: string;
+  },
 ) {
   return authFetch(`/api/weekly-tasks/${id}`, {
     method: "PATCH",

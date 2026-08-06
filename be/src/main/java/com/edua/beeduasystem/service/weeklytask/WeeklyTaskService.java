@@ -12,6 +12,7 @@ import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.domain.model.library.LibraryContent;
 import com.edua.beeduasystem.domain.model.library.LibraryContentType;
 import com.edua.beeduasystem.domain.model.notification.Notification;
+import com.edua.beeduasystem.domain.model.textbook.TextbookCatalog;
 import com.edua.beeduasystem.domain.model.weeklytask.WeeklyTask;
 import com.edua.beeduasystem.domain.model.weeklytask.WeeklyTaskReviewStatus;
 import com.edua.beeduasystem.repository.gateways.NotificationEvent;
@@ -19,18 +20,23 @@ import com.edua.beeduasystem.repository.gateways.NotificationStreamPort;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
 import com.edua.beeduasystem.repository.repositories.NotificationRepository;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
+import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.repository.repositories.WeeklyTaskRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,20 +47,30 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Use-case Weekly Task (UC-80..89): Moderator giao yêu cầu giáo án cho Teacher cùng subject, kèm hạn nộp;
+ * Use-case Weekly Task (UC-80..89): Moderator giao yêu cầu giáo án cho Teacher cùng subject + khối, kèm hạn nộp;
  * Teacher nộp/nộp lại/rút giáo án; Moderator duyệt. {@code reviewStatus} tách biệt hoàn toàn với
  * Publish Status (Hub) trên {@code LibraryContent}.
+ *
+ * <p>BR-51/BR-52/BR-53 (đề xuất, {@code designs/weekly-task/grade-scoped-deadline-and-review.md}): mỗi
+ * task thuộc đúng 1 khối (10/11/12) — giáo viên nhận task phải dạy khối đó theo {@code teacher_grades};
+ * hạn nộp không còn là input của Mod, luôn được server tính từ {@code weekStartDate} (Chủ Nhật 23:59:59
+ * giờ VN của chính tuần đó, xem {@link #computeDeadline(LocalDate)}); mỗi task gắn đúng 1 Chương + 1 Bài
+ * chọn từ danh mục SGK (không phải mô tả tự do) — tối đa 2 bài/tuần cho 1 (subject, grade).</p>
  */
 @Service
 public class WeeklyTaskService {
 
+    private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final DateTimeFormatter DEADLINE_FMT =
-            DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy").withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
+            DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy").withZone(VN_ZONE);
+    private static final int MAX_LESSONS_PER_WEEK = 2;
 
     private final WeeklyTaskRepository repository;
     private final LibraryContentRepository libraryContentRepository;
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
+    private final TeacherGradeRepository teacherGradeRepository;
+    private final TextbookCatalogRepository textbookCatalogRepository;
     private final CurrentUserProvider currentUser;
     private final NotificationRepository notificationRepository;
     private final NotificationStreamPort streamPort;
@@ -62,25 +78,33 @@ public class WeeklyTaskService {
 
     public WeeklyTaskService(WeeklyTaskRepository repository, LibraryContentRepository libraryContentRepository,
                               AppUserRepository userRepository, UserRoleRepository userRoleRepository,
+                              TeacherGradeRepository teacherGradeRepository, TextbookCatalogRepository textbookCatalogRepository,
                               CurrentUserProvider currentUser, NotificationRepository notificationRepository,
                               NotificationStreamPort streamPort, ActivityLogService activityLogService) {
         this.repository = repository;
         this.libraryContentRepository = libraryContentRepository;
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
+        this.teacherGradeRepository = teacherGradeRepository;
+        this.textbookCatalogRepository = textbookCatalogRepository;
         this.currentUser = currentUser;
         this.notificationRepository = notificationRepository;
         this.streamPort = streamPort;
         this.activityLogService = activityLogService;
     }
 
-    /** UC-80: lịch tuần theo scope của current user (Teacher: của mình; Moderator: cả subject). */
+    /** UC-80: lịch tuần theo scope của current user (Teacher: của mình, mọi khối; Moderator: cả subject, lọc khối nếu có). */
     @Transactional(readOnly = true)
-    public WeeklyTaskViews.Schedule schedule(LocalDate from, LocalDate to) {
+    public WeeklyTaskViews.Schedule schedule(LocalDate from, LocalDate to, Integer grade) {
         AccessTokenClaims claims = currentUser.require();
-        List<WeeklyTask> tasks = claims.roles().contains(Role.MODERATOR)
-                ? repository.findBySubject(requireSubject(), from, to)
-                : repository.findByTeacher(claims.userId(), from, to);
+        List<WeeklyTask> tasks;
+        if (claims.roles().contains(Role.MODERATOR)) {
+            tasks = grade != null
+                    ? repository.findBySubjectAndGrade(requireSubject(), grade, from, to)
+                    : repository.findBySubject(requireSubject(), from, to);
+        } else {
+            tasks = repository.findByTeacher(claims.userId(), from, to);
+        }
         return WeeklyTaskViews.toSchedule(tasks, resolveNames(tasks));
     }
 
@@ -91,85 +115,113 @@ public class WeeklyTaskService {
         return WeeklyTaskViews.toDetail(t, resolveNames(List.of(t)));
     }
 
-    /** UC-81: Moderator giao task cho 1 Teacher Active cùng subject. */
+    /** UC-81: Moderator giao task cho 1 Teacher Active cùng subject + khối (BR-51), gắn 1 Chương + 1 Bài (BR-53). */
     @Transactional
-    public WeeklyTaskViews.Detail create(UUID teacherId, LocalDate weekStartDate, String rawScope, Instant deadline) {
+    public WeeklyTaskViews.Detail create(UUID teacherId, LocalDate weekStartDate, Integer grade, String title,
+                                          String textbookCode, String chapterCode, String lessonCode) {
         Subject moderatorSubject = requireSubject();
-        String scope = requireScope(rawScope);
-        requireFutureDeadline(deadline);
-        requireActiveTeacherInSubject(teacherId, moderatorSubject);
+        Integer requiredGrade = requireGrade(grade);
+        String scope = requireScope(title);
+        ResolvedLesson lesson = resolveLesson(textbookCode, chapterCode, lessonCode);
+        requireBookMatchesGrade(lesson.textbookCode(), moderatorSubject, requiredGrade);
+        LocalDate monday = mondayOf(weekStartDate);
+        Instant deadline = computeDeadline(monday);
+        requireWeekNotEnded(deadline);
+        requireActiveTeacherInSubjectAndGrade(teacherId, moderatorSubject, requiredGrade);
+        requireLessonSlotAvailable(moderatorSubject, requiredGrade, monday, List.of(lesson.lessonCode()), null);
+
         Instant now = Instant.now();
         WeeklyTask saved = repository.save(new WeeklyTask(UUID.randomUUID(), currentUser.requireUserId(), moderatorSubject,
-                teacherId, weekStartDate, scope, deadline, WeeklyTaskReviewStatus.NOT_SUBMITTED,
+                requiredGrade, teacherId, monday, scope, lesson.textbookCode(), lesson.chapterCode(), lesson.chapterName(),
+                lesson.lessonCode(), lesson.lessonName(), deadline, WeeklyTaskReviewStatus.NOT_SUBMITTED,
                 null, null, null, null, null, null, null, null, null, now, now, null));
-        notify(teacherId, "Nhiệm vụ tuần mới", "Bạn được giao soạn: " + scope + ". Hạn nộp: " + DEADLINE_FMT.format(deadline) + ".");
+        notify(teacherId, "Nhiệm vụ tuần mới", "Bạn được giao soạn: " + scope + " (" + lesson.chapterName() + " - " + lesson.lessonName()
+                + "). Hạn nộp: " + DEADLINE_FMT.format(deadline) + ".");
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
 
-    /** 1 bài học trong lịch tuần chung của môn — dùng cho {@link #bulkCreate}. */
-    public record LessonRequest(String scopeDescription, Instant deadline) {
+    /** 1 bài học (1 ô lịch tuần) — dùng cho {@link #bulkCreate}. Chương/Bài chọn từ dropdown, không phải mô tả tự do (BR-53). */
+    public record LessonRequest(String title, String chapterCode, String lessonCode) {
     }
 
     /**
-     * Bulk UC-81: Moderator giao cùng lúc N bài (vd. Bài 1, Bài 2) cho MỌI Teacher active cùng subject
-     * trong 1 tuần — vì cùng môn thì mọi lớp theo cùng phân phối chương trình. Chỉ dùng để khởi tạo lần
-     * đầu cho 1 tuần; sửa từng giáo viên sau đó dùng {@link #update}.
+     * Bulk UC-81: Moderator giao 1 bài (1 ô lịch tuần) cho MỌI Teacher active cùng subject dạy đúng khối
+     * đã chọn (BR-51), trong 1 tuần. Nhận danh sách {@code lessons} để linh hoạt, nhưng UI hiện tại luôn
+     * gửi đúng 1 phần tử — mỗi ô lịch = 1 bài. Tối đa {@value #MAX_LESSONS_PER_WEEK} bài/tuần cho 1
+     * (subject, grade) (BR-53). Sửa từng giáo viên sau đó dùng {@link #update}.
      */
     @Transactional
-    public WeeklyTaskViews.BulkResult bulkCreate(LocalDate weekStartDate, List<LessonRequest> lessons) {
+    public WeeklyTaskViews.BulkResult bulkCreate(LocalDate weekStartDate, Integer grade, String textbookCode, List<LessonRequest> lessons) {
         Subject moderatorSubject = requireSubject();
+        Integer requiredGrade = requireGrade(grade);
         if (lessons.isEmpty()) {
             throw new IllegalArgumentException("Phải có ít nhất 1 bài học.");
         }
-        List<LessonRequest> validated = lessons.stream()
-                .map(l -> new LessonRequest(requireScope(l.scopeDescription()), l.deadline()))
+        List<ResolvedLesson> resolvedLessons = lessons.stream()
+                .map(l -> resolveLesson(textbookCode, l.chapterCode(), l.lessonCode()).withTitle(requireScope(l.title())))
                 .toList();
-        validated.forEach(l -> requireFutureDeadline(l.deadline()));
+        requireBookMatchesGrade(textbookCode, moderatorSubject, requiredGrade);
 
-        if (!repository.findBySubject(moderatorSubject, weekStartDate, weekStartDate).isEmpty()) {
-            throw new IllegalArgumentException("Tuần này đã có lịch — sửa từng nhiệm vụ thay vì tạo lại.");
-        }
+        LocalDate monday = mondayOf(weekStartDate);
+        Instant deadline = computeDeadline(monday);
+        requireWeekNotEnded(deadline);
+        requireLessonSlotAvailable(moderatorSubject, requiredGrade, monday,
+                resolvedLessons.stream().map(ResolvedLesson::lessonCode).toList(), null);
 
-        List<AppUser> teachers = userRepository.findAllByRoleAndSubject(Role.TEACHER, moderatorSubject, Pageable.unpaged())
+        List<AppUser> activeTeachers = userRepository.findAllByRoleAndSubject(Role.TEACHER, moderatorSubject, Pageable.unpaged())
                 .getContent().stream()
                 .filter(t -> t.status() == UserStatus.ACTIVE)
                 .toList();
+        Map<UUID, List<Integer>> gradesByTeacher = teacherGradeRepository.findGradesByUserIds(
+                activeTeachers.stream().map(AppUser::id).toList());
+        List<AppUser> teachers = activeTeachers.stream()
+                .filter(t -> gradesByTeacher.getOrDefault(t.id(), List.of()).contains(requiredGrade))
+                .toList();
         if (teachers.isEmpty()) {
-            throw new IllegalArgumentException("Chưa có giáo viên active nào trong môn của bạn.");
+            throw new IllegalArgumentException("Chưa có giáo viên active nào dạy khối " + requiredGrade + " trong môn của bạn.");
         }
 
         UUID moderatorId = currentUser.requireUserId();
         Instant now = Instant.now();
         List<WeeklyTask> created = new ArrayList<>();
         for (AppUser teacher : teachers) {
-            for (LessonRequest lesson : validated) {
-                created.add(repository.save(new WeeklyTask(UUID.randomUUID(), moderatorId, moderatorSubject,
-                        teacher.id(), weekStartDate, lesson.scopeDescription(), lesson.deadline(),
+            for (ResolvedLesson lesson : resolvedLessons) {
+                created.add(repository.save(new WeeklyTask(UUID.randomUUID(), moderatorId, moderatorSubject, requiredGrade,
+                        teacher.id(), monday, lesson.title(), lesson.textbookCode(), lesson.chapterCode(), lesson.chapterName(),
+                        lesson.lessonCode(), lesson.lessonName(), deadline,
                         WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null, now, now, null)));
             }
         }
         for (AppUser teacher : teachers) {
             notify(teacher.id(), "Lịch tuần mới",
-                    "Bạn được giao " + validated.size() + " bài cho tuần " + weekStartDate + ".");
+                    "Bạn được giao " + resolvedLessons.size() + " bài (khối " + requiredGrade + ") cho tuần " + monday + ".");
         }
-        return WeeklyTaskViews.toBulkResult(created, resolveNames(created), teachers.size(), validated.size());
+        return WeeklyTaskViews.toBulkResult(created, resolveNames(created), teachers.size(), resolvedLessons.size());
     }
 
-    /** UC-82: Moderator sửa task còn hạn (BR-47); đổi Teacher sẽ reset reviewStatus vì người mới chưa nộp gì. */
+    /** UC-82: Moderator sửa task còn hạn (BR-47); đổi Teacher sẽ reset reviewStatus vì người mới chưa nộp gì. Khối giữ nguyên, không sửa được. */
     @Transactional
-    public WeeklyTaskViews.Detail update(UUID id, UUID teacherId, LocalDate weekStartDate, String rawScope, Instant deadline) {
+    public WeeklyTaskViews.Detail update(UUID id, UUID teacherId, LocalDate weekStartDate, String title,
+                                          String textbookCode, String chapterCode, String lessonCode) {
         WeeklyTask t = requireModeratorOwnerInSubject(id);
         requireBeforeDeadline(t);
-        String scope = requireScope(rawScope);
-        requireFutureDeadline(deadline);
+        String scope = requireScope(title);
+        ResolvedLesson lesson = resolveLesson(textbookCode, chapterCode, lessonCode);
+        requireBookMatchesGrade(lesson.textbookCode(), t.subject(), t.grade());
+        LocalDate monday = mondayOf(weekStartDate);
+        Instant deadline = computeDeadline(monday);
+        requireWeekNotEnded(deadline);
+        requireLessonSlotAvailable(t.subject(), t.grade(), monday, List.of(lesson.lessonCode()), t.id());
         boolean reassigned = !teacherId.equals(t.teacherId());
         if (reassigned) {
-            requireActiveTeacherInSubject(teacherId, t.subject());
+            requireActiveTeacherInSubjectAndGrade(teacherId, t.subject(), t.grade());
         }
         WeeklyTask updated = reassigned
-                ? new WeeklyTask(t.id(), t.moderatorId(), t.subject(), teacherId, weekStartDate, scope, deadline,
+                ? new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.grade(), teacherId, monday, scope,
+                        lesson.textbookCode(), lesson.chapterCode(), lesson.chapterName(), lesson.lessonCode(), lesson.lessonName(), deadline,
                         WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null, t.createdAt(), Instant.now(), t.version())
-                : new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(), weekStartDate, scope, deadline,
+                : new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.grade(), t.teacherId(), monday, scope,
+                        lesson.textbookCode(), lesson.chapterCode(), lesson.chapterName(), lesson.lessonCode(), lesson.lessonName(), deadline,
                         t.reviewStatus(), t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(),
                         t.submittedAt(), t.reviewedBy(), t.reviewedAt(), t.rejectionReason(), t.createdAt(), Instant.now(), t.version());
         WeeklyTask saved = repository.save(updated);
@@ -207,8 +259,9 @@ public class WeeklyTaskService {
             }
             source = c;
         }
-        WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
-                t.weekStartDate(), t.scopeDescription(), t.deadline(), WeeklyTaskReviewStatus.SUBMITTED,
+        WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.grade(), t.teacherId(),
+                t.weekStartDate(), t.scopeDescription(), t.textbookCode(), t.chapterCode(), t.chapterName(), t.lessonCode(), t.lessonName(),
+                t.deadline(), WeeklyTaskReviewStatus.SUBMITTED,
                 hasLibraryContent ? libraryContentId : null, source != null ? source.title() : null, source != null ? source.payload().deepCopy() : null, hasDocument ? documentUrl.trim() : null,
                 hasDocument ? (documentName == null ? null : documentName.trim()) : null, Instant.now(),
                 null, null, null, t.createdAt(), Instant.now(), t.version()));
@@ -225,17 +278,18 @@ public class WeeklyTaskService {
             throw new IllegalArgumentException("Chỉ có thể rút khi nhiệm vụ đang ở trạng thái đã nộp.");
         }
         WeeklyTaskReviewStatus reverted = t.rejectionReason() != null ? WeeklyTaskReviewStatus.REJECTED : WeeklyTaskReviewStatus.NOT_SUBMITTED;
-        WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
-                t.weekStartDate(), t.scopeDescription(), t.deadline(), reverted, null, null, null, null, null, null,
+        WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.grade(), t.teacherId(),
+                t.weekStartDate(), t.scopeDescription(), t.textbookCode(), t.chapterCode(), t.chapterName(), t.lessonCode(), t.lessonName(),
+                t.deadline(), reverted, null, null, null, null, null, null,
                 t.reviewedBy(), t.reviewedAt(), t.rejectionReason(), t.createdAt(), Instant.now(), t.version()));
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
 
-    /** UC-86: hàng đợi duyệt — task SUBMITTED cùng subject với Moderator hiện tại. */
+    /** UC-86: hàng đợi duyệt — task SUBMITTED cùng subject với Moderator hiện tại, lọc thêm khối/chương/bài nếu có (BR-51/BR-53). */
     @Transactional(readOnly = true)
-    public WeeklyTaskViews.Page listModerationQueue(int page, int size) {
-        Page<WeeklyTask> result = repository.findBySubjectAndStatus(requireSubject(), WeeklyTaskReviewStatus.SUBMITTED,
-                PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 100)));
+    public WeeklyTaskViews.Page listModerationQueue(int page, int size, Integer grade, String chapterCode, String lessonCode) {
+        Page<WeeklyTask> result = repository.searchModerationQueue(requireSubject(), WeeklyTaskReviewStatus.SUBMITTED,
+                grade, blankToNull(chapterCode), blankToNull(lessonCode), PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 100)));
         Map<UUID, String> names = resolveNames(result.getContent());
         return new WeeklyTaskViews.Page(result.getContent().stream().map(t -> WeeklyTaskViews.toSummary(t, names)).toList(),
                 page, size, result.getTotalElements());
@@ -246,8 +300,9 @@ public class WeeklyTaskService {
     public WeeklyTaskViews.Detail approve(UUID id) {
         WeeklyTask t = requireSubmittedInModeratorSubject(id);
         UUID moderatorId = currentUser.requireUserId();
-        WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
-                t.weekStartDate(), t.scopeDescription(), t.deadline(), WeeklyTaskReviewStatus.APPROVED,
+        WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.grade(), t.teacherId(),
+                t.weekStartDate(), t.scopeDescription(), t.textbookCode(), t.chapterCode(), t.chapterName(), t.lessonCode(), t.lessonName(),
+                t.deadline(), WeeklyTaskReviewStatus.APPROVED,
                 t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
                 moderatorId, Instant.now(), null, t.createdAt(), Instant.now(), t.version()));
         notify(t.teacherId(), "Giáo án đã được duyệt", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã được duyệt.");
@@ -265,8 +320,9 @@ public class WeeklyTaskService {
         WeeklyTask t = requireSubmittedInModeratorSubject(id);
         String reason = rawReason.trim();
         UUID moderatorId = currentUser.requireUserId();
-        WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.teacherId(),
-                t.weekStartDate(), t.scopeDescription(), t.deadline(), WeeklyTaskReviewStatus.REJECTED,
+        WeeklyTask saved = repository.save(new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.grade(), t.teacherId(),
+                t.weekStartDate(), t.scopeDescription(), t.textbookCode(), t.chapterCode(), t.chapterName(), t.lessonCode(), t.lessonName(),
+                t.deadline(), WeeklyTaskReviewStatus.REJECTED,
                 t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
                 moderatorId, Instant.now(), reason, t.createdAt(), Instant.now(), t.version()));
         notify(t.teacherId(), "Giáo án bị từ chối", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã bị từ chối. Lý do: " + reason);
@@ -319,13 +375,27 @@ public class WeeklyTaskService {
         }
     }
 
-    private void requireFutureDeadline(Instant deadline) {
-        if (deadline == null || !deadline.isAfter(Instant.now())) {
-            throw new IllegalArgumentException("Hạn nộp phải ở trong tương lai.");
+    /** BR-52: hạn nộp = 23:59:59 (giờ VN) Chủ Nhật của chính tuần {@code weekStartDate} (đã chuẩn hoá về Thứ Hai). */
+    private static Instant computeDeadline(LocalDate mondayWeekStartDate) {
+        return mondayWeekStartDate.plusDays(6).atTime(23, 59, 59).atZone(VN_ZONE).toInstant();
+    }
+
+    /** Chuẩn hoá 1 ngày bất kỳ về Thứ Hai của tuần chứa nó — weekStartDate luôn được lưu là Thứ Hai (BR-52). */
+    private static LocalDate mondayOf(LocalDate date) {
+        if (date == null) {
+            throw new IllegalArgumentException("Tuần dạy là bắt buộc.");
+        }
+        return date.with(DayOfWeek.MONDAY);
+    }
+
+    private void requireWeekNotEnded(Instant computedDeadline) {
+        if (!computedDeadline.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("Tuần này đã kết thúc, không thể tạo/sửa nhiệm vụ.");
         }
     }
 
-    private void requireActiveTeacherInSubject(UUID teacherId, Subject moderatorSubject) {
+    /** BR-51: giáo viên nhận task phải active, cùng subject, và có khối này trong teacher_grades. */
+    private void requireActiveTeacherInSubjectAndGrade(UUID teacherId, Subject moderatorSubject, Integer grade) {
         AppUser teacher = userRepository.findById(teacherId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giáo viên."));
         if (teacher.subject() != moderatorSubject) {
             throw new ForbiddenOperationException("Chỉ có thể giao nhiệm vụ cho giáo viên cùng môn.");
@@ -335,6 +405,71 @@ public class WeeklyTaskService {
         }
         if (!userRoleRepository.findRolesByUserId(teacherId).contains(Role.TEACHER)) {
             throw new IllegalArgumentException("Tài khoản được chọn không phải giáo viên.");
+        }
+        List<Integer> teacherGrades = teacherGradeRepository.findGradesByUserIds(List.of(teacherId)).getOrDefault(teacherId, List.of());
+        if (!teacherGrades.contains(grade)) {
+            throw new IllegalArgumentException("Giáo viên này không dạy khối " + grade + ".");
+        }
+    }
+
+    private static Integer requireGrade(Integer grade) {
+        if (grade == null || (grade != 10 && grade != 11 && grade != 12)) {
+            throw new IllegalArgumentException("Khối chỉ được chọn 10, 11 hoặc 12.");
+        }
+        return grade;
+    }
+
+    /** BR-53: Chương/Bài phải chọn từ danh mục SGK thật (không phải mô tả tự do) — server resolve tên tại chỗ, không tin dữ liệu client gửi lên. */
+    private record ResolvedLesson(String title, String textbookCode, String chapterCode, String chapterName, String lessonCode, String lessonName) {
+        ResolvedLesson withTitle(String newTitle) {
+            return new ResolvedLesson(newTitle, textbookCode, chapterCode, chapterName, lessonCode, lessonName);
+        }
+    }
+
+    private ResolvedLesson resolveLesson(String textbookCode, String chapterCode, String lessonCode) {
+        if (isBlank(textbookCode) || isBlank(chapterCode) || isBlank(lessonCode)) {
+            throw new IllegalArgumentException("Phải chọn đủ Sách giáo khoa, Chương và Bài.");
+        }
+        String chapterName = textbookCatalogRepository.listChapters(textbookCode).stream()
+                .filter(c -> c.id().equals(chapterCode))
+                .map(TextbookCatalog.ChapterSummary::name)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chương đã chọn trong sách giáo khoa."));
+        String lessonName = textbookCatalogRepository.listLessons(textbookCode, chapterCode).stream()
+                .filter(l -> l.id().equals(lessonCode))
+                .map(TextbookCatalog.LessonSummary::name)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bài đã chọn trong chương này."));
+        return new ResolvedLesson(null, textbookCode, chapterCode, chapterName, lessonCode, lessonName);
+    }
+
+    /** BR-53: sách giáo khoa đã chọn phải thuộc đúng khối/môn — chặn Mod gửi mã sách của khối/môn khác. */
+    private void requireBookMatchesGrade(String textbookCode, Subject subject, Integer grade) {
+        boolean matches = textbookCatalogRepository.listBookNames(subject.name()).stream()
+                .anyMatch(b -> b.id().equals(textbookCode) && b.grade() == grade);
+        if (!matches) {
+            throw new IllegalArgumentException("Sách giáo khoa không khớp với khối/môn đã chọn.");
+        }
+    }
+
+    /**
+     * BR-53: tối đa {@value #MAX_LESSONS_PER_WEEK} bài/tuần cho 1 (subject, grade); không được trùng
+     * lessonCode với bài đã có trong tuần đó. {@code excludeTaskId} dùng khi sửa 1 task (bỏ qua chính nó
+     * khi đếm/so trùng).
+     */
+    private void requireLessonSlotAvailable(Subject subject, Integer grade, LocalDate monday, List<String> newLessonCodes, UUID excludeTaskId) {
+        List<WeeklyTask> existing = repository.findBySubjectAndGrade(subject, grade, monday, monday).stream()
+                .filter(t -> excludeTaskId == null || !t.id().equals(excludeTaskId))
+                .toList();
+        Set<String> existingLessonCodes = existing.stream().map(WeeklyTask::lessonCode).collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<String> distinctNew = new LinkedHashSet<>(newLessonCodes);
+        for (String code : distinctNew) {
+            if (existingLessonCodes.contains(code)) {
+                throw new IllegalArgumentException("Bài này đã được giao trong tuần — sửa nhiệm vụ hiện có thay vì tạo lại.");
+            }
+        }
+        if (existingLessonCodes.size() + distinctNew.size() > MAX_LESSONS_PER_WEEK) {
+            throw new IllegalArgumentException("Mỗi tuần chỉ được tối đa " + MAX_LESSONS_PER_WEEK + " bài cho 1 khối.");
         }
     }
 
@@ -348,9 +483,17 @@ public class WeeklyTaskService {
 
     private static String requireScope(String raw) {
         if (raw == null || raw.isBlank()) {
-            throw new IllegalArgumentException("Yêu cầu giáo án là bắt buộc.");
+            throw new IllegalArgumentException("Tiêu đề là bắt buộc.");
         }
         return raw.trim();
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
+
+    private static String blankToNull(String s) {
+        return s != null && !s.isBlank() ? s.trim() : null;
     }
 
     private Map<UUID, String> resolveNames(List<WeeklyTask> tasks) {

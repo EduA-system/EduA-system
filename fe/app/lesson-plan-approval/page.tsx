@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { GradeSelect } from "@/components/ui/GradeSelect";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { subjectLabel } from "@/lib/blog";
+import { useTextbookPicker } from "@/lib/textbook-picker";
 import {
   approveWeeklyTask,
   getWeeklyTask,
@@ -18,13 +21,35 @@ function formatDateTime(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString("vi") : "-";
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Nhãn tuần lịch thực (BR-52): Thứ 2 → Chủ Nhật, vd "06/08 - 09/08". */
+function weekLabel(weekStartDate: string): string {
+  const start = new Date(`${weekStartDate}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const fmt = (d: Date) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+  return `${fmt(start)} - ${fmt(end)}`;
+}
+
 function LessonPlanApprovalScreen() {
-  const { authFetch } = useAuth();
+  const { user, authFetch } = useAuth();
 
   const [items, setItems] = useState<WeeklyTaskSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
+
+  // BR-51/BR-53: filter theo khối rồi Chương/Bài — chọn từ dropdown danh mục SGK, không phải tìm tự do.
+  const [gradeFilter, setGradeFilter] = useState<number | null>(null);
+  const picker = useTextbookPicker(user?.subject ?? undefined, gradeFilter, gradeFilter !== null);
+
+  function handleGradeChange(grade: number | null) {
+    setGradeFilter(grade);
+    picker.reset();
+  }
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<WeeklyTaskDetail | null>(null);
@@ -33,7 +58,11 @@ function LessonPlanApprovalScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await listWeeklyTaskModerationQueue(authFetch, new URLSearchParams({ size: "50" }));
+      const params = new URLSearchParams({ size: "50" });
+      if (gradeFilter !== null) params.set("grade", String(gradeFilter));
+      if (picker.chapterCode) params.set("chapterCode", picker.chapterCode);
+      if (picker.lessonCode) params.set("lessonCode", picker.lessonCode);
+      const data = await listWeeklyTaskModerationQueue(authFetch, params);
       setItems(data.items);
       setError("");
     } catch (e) {
@@ -41,7 +70,7 @@ function LessonPlanApprovalScreen() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch]);
+  }, [authFetch, gradeFilter, picker.chapterCode, picker.lessonCode]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -103,6 +132,33 @@ function LessonPlanApprovalScreen() {
             <p className="mt-2 text-sm text-[#6b6b6b]">Giáo án giáo viên đã nộp cho nhiệm vụ tuần, chờ duyệt.</p>
           </header>
 
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <GradeSelect value={gradeFilter} onChange={handleGradeChange} includeAll />
+            <div className="w-48">
+              <Dropdown
+                placeholder="Chọn chương..."
+                value={picker.chapterCode || null}
+                options={picker.chapters.map((c) => ({ value: c.id, label: c.name }))}
+                onChange={picker.setChapterCode}
+                disabled={!picker.bookCode}
+              />
+            </div>
+            <div className="w-48">
+              <Dropdown
+                placeholder="Chọn bài..."
+                value={picker.lessonCode || null}
+                options={picker.lessons.map((l) => ({ value: l.id, label: l.name }))}
+                onChange={picker.setLessonCode}
+                disabled={!picker.chapterCode}
+              />
+            </div>
+            {picker.chapterCode || picker.lessonCode ? (
+              <button type="button" onClick={picker.reset} className="text-sm text-[#b85c3b] underline">
+                Xóa bộ lọc chương/bài
+              </button>
+            ) : null}
+          </div>
+
           {msg ? <p className="mt-4 text-sm text-emerald-700">{msg}</p> : null}
           {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
 
@@ -122,10 +178,18 @@ function LessonPlanApprovalScreen() {
                 <article key={t.id} className="rounded-2xl border bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-semibold">{t.teacherName ?? "Giáo viên"}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold">{t.teacherName ?? "Giáo viên"}</p>
+                        <span className="rounded-full bg-[#edf4ff] px-2 py-0.5 text-xs font-semibold text-[#2f5f9b]">
+                          Khối {t.grade}
+                        </span>
+                      </div>
                       <p className="mt-1 text-sm">{t.scopeDescription}</p>
+                      <p className="mt-0.5 text-xs text-[#6b6b6b]">
+                        {t.chapterName} · {t.lessonName}
+                      </p>
                       <p className="mt-2 text-xs text-[#6b6b6b]">
-                        {subjectLabel(t.subject)} · Nộp lúc {formatDateTime(t.submittedAt)}
+                        {subjectLabel(t.subject)} · Tuần {weekLabel(t.weekStartDate)} · Nộp lúc {formatDateTime(t.submittedAt)}
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-3 text-sm">

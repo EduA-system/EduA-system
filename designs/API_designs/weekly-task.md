@@ -8,12 +8,10 @@
 > Status (Hub) của `LibraryContent` — xem `layered-architecture.md` và comment gốc ở
 > `WeeklyTaskService.java`.
 >
-> **Trạng thái: endpoint đã code và chạy** (`WeeklyTaskController`, `WeeklyTaskService`,
-> `weekly_tasks` table — `V21`, `V28`). File này lấp khoảng trống document API_designs cho epic đã có,
-> đồng thời mô tả phần mở rộng **khối (grade) + hạn nộp khoá cứng + filter màn duyệt** đang ở dạng đề
-> xuất — xem [`../weekly-task/grade-scoped-deadline-and-review.md`](../weekly-task/grade-scoped-deadline-and-review.md)
-> cho business rule đầy đủ (BR-51, BR-52). Phần đánh dấu **(mới)** dưới đây là phần đề xuất, chưa code.
-> Hạ tầng dùng chung auth/RBAC/rate-limit theo [`api-chung.md`](./api-chung.md).
+> **Trạng thái: đã code (2026-08-06)**, gồm cả phần mở rộng khối/hạn nộp khoá cứng/Chương-Bài từ danh mục
+> SGK — xem [`../weekly-task/grade-scoped-deadline-and-review.md`](../weekly-task/grade-scoped-deadline-and-review.md)
+> cho business rule đầy đủ (BR-51, BR-52, BR-53). Hạ tầng dùng chung auth/RBAC/rate-limit theo
+> [`api-chung.md`](./api-chung.md).
 
 ## Quyết định riêng
 
@@ -31,12 +29,22 @@
 - **Khoá theo `deadline`, không khoá theo tuần lịch riêng**: mọi thao tác ghi (`submit`, `unsubmit`,
   `update`) đều chặn khi `Instant.now()` đã qua `deadline` (BR-47) — không có cơ chế khoá riêng theo
   `weekStartDate`.
-- **Bulk create validate trùng lịch theo subject (mới: + grade)**: `POST .../bulk` từ chối nếu tuần đó
-  (cùng subject, **(mới) cùng khối**) đã có Weekly Task — buộc Mod sửa từng task thay vì tạo chồng lịch.
-- **(mới) `grade` bắt buộc, không suy ra từ `subject`**: một môn có 3 khối riêng biệt, Weekly Task phải
-  khai báo rõ khối để lọc đúng giáo viên (`teacher_grades`) và đúng hàng đợi duyệt.
-- **(mới) `deadline` không còn là input**: server tự tính từ `weekStartDate` theo BR-52 (Chủ Nhật 23:59:59
-  giờ VN của chính tuần đó) — bỏ field `deadline` khỏi mọi request body ghi.
+- **`grade` bắt buộc, không suy ra từ `subject`** (BR-51): một môn có 3 khối riêng biệt, Weekly Task phải
+  khai báo rõ khối để lọc đúng giáo viên (`teacher_grades`) và đúng hàng đợi duyệt. Không sửa được sau khi
+  tạo (đổi khối = tạo bài mới).
+- **`deadline` không phải input** (BR-52): server tự tính từ `weekStartDate` (Chủ Nhật 23:59:59 giờ VN
+  của chính tuần đó) — không có field `deadline` trong bất kỳ request body ghi nào.
+- **Chương/Bài chọn từ danh mục SGK, không phải mô tả tự do** (BR-53): `chapterCode`/`lessonCode` phải
+  khớp dữ liệu thật trong `TextbookCatalogRepository` (bảng `textbooks`/`chapters`/`lessons`, cùng nguồn
+  với `TextbookController`) — server tự resolve `chapterName`/`lessonName` tại thời điểm ghi, không tin
+  text client gửi lên. `scopeDescription` đổi nghĩa thành "Tiêu đề" Mod tự nhập (không còn là mô tả
+  chương/bài).
+- **Tối đa 2 bài/tuần cho 1 (subject, grade)** (BR-53): `bulkCreate`/`create`/`update` đều chặn nếu tổng
+  số `lessonCode` phân biệt trong tuần đó vượt 2, hoặc trùng `lessonCode` với bài đã có — khớp đúng "2 ô
+  lịch tuần" ở FE.
+- **`bulkCreate` nhận danh sách nhưng UI hiện tại luôn gửi 1 phần tử**: mỗi ô lịch tuần ở FE = 1 lần gọi
+  `POST .../bulk` với `lessons` chỉ có 1 lesson — giữ dạng mảng ở API để linh hoạt, không phải vì UI cần
+  tạo nhiều bài cùng lúc nữa (khác thiết kế ban đầu).
 
 ---
 
@@ -44,14 +52,14 @@
 
 | # | Method | Path | UC / Role | Auth |
 |---|--------|------|-----------|------|
-| 1 | GET | `/api/weekly-tasks` | UC-80 View Weekly Schedule | TEACHER (của mình) / MODERATOR (cả subject, **(mới)** + khối) |
+| 1 | GET | `/api/weekly-tasks` | UC-80 View Weekly Schedule | TEACHER (của mình) / MODERATOR (cả subject + khối) |
 | 2 | GET | `/api/weekly-tasks/{id}` | UC-83 (Teacher) / UC-87 (Moderator) View Detail | TEACHER assignee / MODERATOR cùng subject |
 | 3 | POST | `/api/weekly-tasks` | UC-81 Create Weekly Task | MODERATOR |
-| 4 | POST | `/api/weekly-tasks/bulk` | UC-81 Create Weekly Task (bulk, N bài × mọi Teacher active cùng subject **(mới)** + khối) | MODERATOR |
+| 4 | POST | `/api/weekly-tasks/bulk` | UC-81 Create Weekly Task (bulk, 1 bài × mọi Teacher active cùng subject + khối) | MODERATOR |
 | 5 | PATCH | `/api/weekly-tasks/{id}` | UC-82 Edit Weekly Task | MODERATOR owner-subject |
 | 6 | POST | `/api/weekly-tasks/{id}/submission` | UC-84 Submit | TEACHER assignee |
 | 7 | DELETE | `/api/weekly-tasks/{id}/submission` | UC-85 Unsubmit | TEACHER assignee |
-| 8 | GET | `/api/weekly-tasks/moderation-queue` | UC-86 View Approval List (**(mới)** + filter khối/tìm bài) | MODERATOR |
+| 8 | GET | `/api/weekly-tasks/moderation-queue` | UC-86 View Approval List (filter khối/Chương/Bài) | MODERATOR |
 | 9 | POST | `/api/weekly-tasks/{id}/approval` | UC-88 Approve | MODERATOR cùng subject |
 | 10 | POST | `/api/weekly-tasks/{id}/rejection` | UC-89 Reject | MODERATOR cùng subject |
 
@@ -73,15 +81,23 @@ method.
   "subject": "PHYSICS",
   "grade": 10,
   "weekStartDate": "2026-08-03",
-  "scopeDescription": "Chương 3 - Định luật Newton, Vật lý 10",
+  "scopeDescription": "Kiểm tra 15 phút",
+  "textbookCode": "LI10",
+  "chapterCode": "CH3",
+  "chapterName": "Chương 3 - Động lực học",
+  "lessonCode": "B10",
+  "lessonName": "Định luật 2 Newton",
   "deadline": "2026-08-09T16:59:59Z",
   "reviewStatus": "SUBMITTED",
-  "submittedAt": "2026-08-06T10:00:00Z"
+  "submittedAt": "2026-08-06T10:00:00Z",
+  "createdAt": "2026-08-06T08:00:00Z"
 }
 ```
 
-`grade` (**mới**): `10 | 11 | 12`, bắt buộc. `deadline` (**đổi hành vi**): luôn = Thứ Hai của
-`weekStartDate` cộng 6 ngày, 23:59:59 giờ VN — server tính, không phải giá trị Mod nhập.
+`grade`: `10 | 11 | 12`, bắt buộc, không sửa được. `deadline`: luôn = Thứ Hai của `weekStartDate` cộng 6
+ngày, 23:59:59 giờ VN — server tính, không phải giá trị Mod nhập. `scopeDescription` là Tiêu đề Mod tự
+nhập; `chapterName`/`lessonName` server tự resolve từ danh mục SGK, không tin client. `createdAt` dùng để
+FE sắp thứ tự "bài thứ nhất/hai" trong 1 tuần (ổn định theo thời điểm tạo).
 
 ### `WeeklyTaskDetailDto`
 
@@ -95,7 +111,12 @@ method.
   "teacherId": "uuid",
   "teacherName": "Nguyen Van A",
   "weekStartDate": "2026-08-03",
-  "scopeDescription": "Chương 3 - Định luật Newton, Vật lý 10",
+  "scopeDescription": "Kiểm tra 15 phút",
+  "textbookCode": "LI10",
+  "chapterCode": "CH3",
+  "chapterName": "Chương 3 - Động lực học",
+  "lessonCode": "B10",
+  "lessonName": "Định luật 2 Newton",
   "deadline": "2026-08-09T16:59:59Z",
   "reviewStatus": "APPROVED",
   "sourceLibraryContentId": "uuid | null",
@@ -128,7 +149,7 @@ method.
 ### `WeeklyTaskBulkResultDto` (response bulk create)
 
 ```json
-{ "created": [ WeeklyTaskSummaryDto ], "teacherCount": 4, "lessonCount": 2 }
+{ "created": [ WeeklyTaskSummaryDto ], "teacherCount": 4, "lessonCount": 1 }
 ```
 
 ---
@@ -141,9 +162,9 @@ method.
 → 200  WeeklyTaskScheduleDto
 ```
 
-- Query: `from`, `to` (`LocalDate`, optional — mặc định `now-4weeks` .. `now+8weeks`); **(mới)**
-  `grade` (optional — Moderator dùng để lọc đúng 1 khối; nếu bỏ trống, Moderator thấy mọi khối cùng
-  subject — FE luôn truyền vì UX bắt chọn khối trước khi vào màn).
+- Query: `from`, `to` (`LocalDate`, optional — mặc định `now-4weeks` .. `now+8weeks`); `grade` (optional
+  — Moderator dùng để lọc đúng 1 khối; nếu bỏ trống, Moderator thấy mọi khối cùng subject — FE luôn
+  truyền vì UX bắt chọn khối trước khi vào màn).
 - Teacher: `findByTeacher(claims.userId(), from, to)` — không lọc theo `grade` (Teacher thấy mọi khối
   mình được giao).
 - Moderator: `findBySubject[AndGrade](requireSubject(), [grade,] from, to)`.
@@ -160,52 +181,70 @@ method.
 ### 3. `POST /api/weekly-tasks` — Giao 1 task (UC-81)
 
 ```json
-{ "teacherId": "uuid", "weekStartDate": "2026-08-03", "grade": 10, "scopeDescription": "..." }
+{
+  "teacherId": "uuid",
+  "weekStartDate": "2026-08-03",
+  "grade": 10,
+  "scopeDescription": "Kiểm tra 15 phút",
+  "textbookCode": "LI10",
+  "chapterCode": "CH3",
+  "lessonCode": "B10"
+}
 ```
 
 ```http
 → 201  WeeklyTaskDetailDto
-→ 400  tuan da ket thuc (deadline tinh ra <= now) / scope rong
+→ 400  tuan da ket thuc / tieu de rong / chuong-bai khong ton tai trong sach / sach khong khop khoi-mon / da du 2 bai trong tuan / trung lessonCode
 → 403  giao vien khac subject, khac khoi, hoac khong active (khong phai TEACHER)
 ```
 
-- **(mới)** bỏ field `deadline` khỏi request; thêm `grade` (bắt buộc).
-- Guard giáo viên: cùng `subject` (như hiện tại) **+ (mới)** có `grade` này trong `teacher_grades`.
+- Không có field `deadline`. `textbookCode`/`chapterCode`/`lessonCode` bắt buộc, server tra
+  `TextbookCatalogRepository` để validate + resolve `chapterName`/`lessonName`.
+- Guard giáo viên: cùng `subject` + có `grade` này trong `teacher_grades`.
 
-### 4. `POST /api/weekly-tasks/bulk` — Giao N bài cho cả khối (UC-81, bulk)
+### 4. `POST /api/weekly-tasks/bulk` — Giao 1 bài cho cả khối (UC-81, bulk)
 
 ```json
 {
   "weekStartDate": "2026-08-03",
   "grade": 10,
-  "lessons": [ { "scopeDescription": "Bài 1 - ..." }, { "scopeDescription": "Bài 2 - ..." } ]
+  "textbookCode": "LI10",
+  "lessons": [ { "scopeDescription": "Kiểm tra 15 phút", "chapterCode": "CH3", "lessonCode": "B10" } ]
 }
 ```
 
 ```http
 → 201  WeeklyTaskBulkResultDto
-→ 400  tuan da co lich (cung subject+grade+week) / khong co giao vien active nao day khoi nay / danh sach bai rong
+→ 400  chuong-bai khong hop le / sach khong khop khoi-mon / da du 2 bai trong tuan (subject+grade+week) / trung lessonCode / khong co giao vien active nao day khoi nay / danh sach bai rong
 ```
 
-- Target: mọi Teacher `ACTIVE` cùng `subject` **và (mới)** có `grade` trong `teacher_grades`.
-- **(mới)** check trùng lịch theo `(subject, grade, weekStartDate)` thay vì chỉ `(subject,
-  weekStartDate)` — 2 khối khác nhau được phép có lịch riêng cùng tuần.
+- Target: mọi Teacher `ACTIVE` cùng `subject` và có `grade` trong `teacher_grades`.
+- `textbookCode` dùng chung cho cả `lessons` trong 1 lần gọi (1 modal = 1 sách).
+- Check theo `(subject, grade, weekStartDate)`: tổng số `lessonCode` phân biệt (đã có + mới thêm) không
+  vượt 2; không trùng `lessonCode` với bài đã có.
 
 ### 5. `PATCH /api/weekly-tasks/{id}` — Sửa task còn hạn (UC-82, BR-47)
 
 ```json
-{ "teacherId": "uuid", "weekStartDate": "2026-08-03", "scopeDescription": "..." }
+{
+  "teacherId": "uuid",
+  "weekStartDate": "2026-08-03",
+  "scopeDescription": "Kiểm tra 15 phút (đã sửa)",
+  "textbookCode": "LI10",
+  "chapterCode": "CH3",
+  "lessonCode": "B11"
+}
 ```
 
 ```http
 → 200  WeeklyTaskDetailDto
-→ 400  da qua han sua (BR-47) / tuan moi da ket thuc
+→ 400  da qua han sua (BR-47) / tuan moi da ket thuc / chuong-bai khong hop le / trung lessonCode voi bai khac trong tuan
 → 403  khong cung subject / giao vien moi khong active, khac subject, hoac khac khoi task hien tai
 ```
 
-- **(mới)** bỏ `deadline` khỏi request (đổi `weekStartDate` sẽ tự tính lại deadline theo BR-52); `grade`
-  **không sửa được** qua endpoint này — giữ nguyên `grade` gốc của task, chỉ đổi giáo viên/tuần/mô tả.
-  Nếu đổi giáo viên: giáo viên mới phải có cùng `grade` của task.
+- Không có field `deadline` (đổi `weekStartDate` tự tính lại) hay `grade` (giữ nguyên từ lúc tạo). Chương
+  /Bài **sửa được** — Mod có thể đổi bài đã giao cho 1 task, miễn không trùng `lessonCode` với task còn
+  lại trong cùng tuần.
 
 ### 6. `POST /api/weekly-tasks/{id}/submission` — Nộp giáo án (UC-84)
 
@@ -219,7 +258,7 @@ method.
 → 403  khong phai Teacher duoc giao / giao an khong thuoc so huu / khong phai loai LESSON_PLAN
 ```
 
-Không đổi so với hiện tại.
+Không đổi.
 
 ### 7. `DELETE /api/weekly-tasks/{id}/submission` — Rút nộp (UC-85)
 
@@ -236,9 +275,8 @@ Khôi phục về `REJECTED` nếu lần nộp này theo sau 1 lần bị từ c
 → 200  WeeklyTaskPageDto
 ```
 
-- Query: `page`, `size` (như hiện tại) **+ (mới)** `grade` (optional — lọc đúng khối) và `search`
-  (optional — tìm text trong `scopeDescription`, chưa có taxonomy chương/bài có cấu trúc nên đây là
-  tìm-kiếm-tự-do, không đảm bảo khớp chính xác).
+- Query: `page`, `size` + `grade` (optional — lọc đúng khối) + `chapterCode`/`lessonCode` (optional —
+  chọn từ dropdown danh mục SGK ở FE, so khớp chính xác, **không phải tìm text tự do**).
 - Luôn giới hạn `subject` = subject của Moderator hiện tại + `reviewStatus = SUBMITTED`.
 
 ### 9. `POST /api/weekly-tasks/{id}/approval` — Duyệt (UC-88)
@@ -272,36 +310,46 @@ Ghi `activityLogService.record(..., REJECT_WEEKLY_TASK, ...)`, notify Teacher k�
 - **RBAC**: class-level `@PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")`, siết method-level theo role
   (`hasRole('MODERATOR')`/`hasRole('TEACHER')`) + owner/subject/grade check trong service.
 - **Notification**: mọi thao tác ghi có tác động tới phía kia (giao mới, sửa, reassign, submit, approve,
-  reject) đều bắn `NotificationStreamPort` qua `notify()` — không đổi bởi phần mở rộng này.
+  reject) đều bắn `NotificationStreamPort` qua `notify()`.
 - **Không có transaction đọc/ghi lẫn lộn**: `schedule`/`get`/`listModerationQueue`
   `@Transactional(readOnly = true)`, còn lại `@Transactional` ghi.
-- **Optimistic locking**: `version` (`@Version`) trên `weekly_tasks` — không đổi.
+- **Optimistic locking**: `version` (`@Version`) trên `weekly_tasks`.
 - **Rate-limit, CORS, error envelope**: theo `api-chung.md`.
+- **Phụ thuộc `TextbookCatalogRepository`**: `WeeklyTaskService` inject thêm repository này (đã có sẵn,
+  dùng chung với `TextbookService`/`TextbookController`) để validate + resolve tên Chương/Bài — không gọi
+  qua service khác, đúng nguyên tắc "service → repository interfaces".
 
-## Phụ thuộc & thứ tự build (phần mở rộng)
+## Phụ thuộc & thứ tự build
 
-1. Migration `V37__add_grade_to_weekly_tasks.sql` (xem `grade-scoped-deadline-and-review.md` mục 3) —
-   xác nhận dữ liệu cũ trước khi chạy trên DB chung.
+1. Migration `V37__add_grade_to_weekly_tasks.sql` (khối) rồi
+   `V38__add_textbook_reference_to_weekly_tasks.sql` (Chương/Bài) — cả 2 đều xóa dòng cũ thiếu field bắt
+   buộc trước khi `SET NOT NULL` (xem `grade-scoped-deadline-and-review.md` mục 3, 2c).
 2. `WeeklyTask` (domain record) + `WeeklyTaskEntity` + `WeeklyTaskJpaRepository`/`JpaWeeklyTaskRepository`
-   + `WeeklyTaskRepository` (interface): thêm field/param `grade`, thêm query method lọc theo grade và
-   check trùng lịch theo `(subject, grade, weekStartDate)`.
-3. `WeeklyTaskService`: bỏ `deadline` khỏi tham số các method ghi, thêm helper tính deadline từ
-   `weekStartDate` (BR-52); thêm `grade` vào `create`/`bulkCreate`/`schedule`/`listModerationQueue`; inject
-   `TeacherGradeRepository` để validate giáo viên theo khối.
+   + `WeeklyTaskRepository` (interface): field `grade` + `textbookCode`/`chapterCode`/`chapterName`
+   /`lessonCode`/`lessonName`; query lọc theo grade/chapterCode/lessonCode.
+3. `WeeklyTaskService`: bỏ `deadline` khỏi tham số ghi, thêm helper tính deadline từ `weekStartDate`
+   (BR-52); inject `TeacherGradeRepository` (BR-51) + `TextbookCatalogRepository` (BR-53, resolve +
+   validate Chương/Bài, cap 2 bài/tuần, chặn trùng `lessonCode`).
 4. DTO (`presentation/dto/weeklytask/`): `CreateWeeklyTaskRequest`, `BulkCreateWeeklyTaskRequest`
-   (+ `LessonSlot`), `UpdateWeeklyTaskRequest` — bỏ `deadline`, thêm `grade` (create/bulk).
-5. `WeeklyTaskController`: thêm query param `grade` (schedule, moderation-queue).
-6. `WeeklyTaskViews`: thêm `grade` vào `Summary`/`Detail`.
-7. FE: `fe/lib/weekly-task.ts` (types + hàm gọi API), `weekly-schedule/page.tsx` (chọn khối + đổi lưới
-   tuần sang lịch thực + bỏ input hạn nộp), `lesson-plan-approval/page.tsx` (thêm filter khối + tìm bài).
-   Chi tiết ở `grade-scoped-deadline-and-review.md` mục 5.
-8. Smoke test qua Swagger: bulk-create 2 khối cùng tuần (không bị chặn trùng lịch), giáo viên không dạy
-   khối đó không nhận được task/notify, deadline trả về đúng Chủ Nhật giờ VN không nhận từ client, submit
-   /reject/nộp lại trong tuần vẫn hoạt động như cũ (regression UC-84/85/88/89), moderation-queue lọc đúng
-   theo `grade` + `search`.
+   (+ `LessonSlot`), `UpdateWeeklyTaskRequest` — bỏ `deadline`, thêm `grade`/`textbookCode`/`chapterCode`
+   /`lessonCode`.
+5. `WeeklyTaskController`: query param `grade` (schedule), `grade`+`chapterCode`+`lessonCode`
+   (moderation-queue).
+6. `WeeklyTaskViews`: thêm các field trên vào `Summary` (+ `createdAt`, `textbookCode`) và `Detail`.
+7. FE: `fe/lib/weekly-task.ts` (types + hàm gọi API), `fe/lib/textbook-picker.ts` (hook dùng chung, gọi
+   `fe/services/lessonPlanService.ts` — `fetchTextbookNames`/`fetchTextbookChapters`/`fetchChapterLessons`
+   đã có sẵn), `weekly-schedule/page.tsx` (chọn khối + lưới 2-ô/tuần + modal Tiêu đề/Chương/Bài),
+   `lesson-plan-approval/page.tsx` (filter khối + Chương + Bài). Chi tiết ở
+   `grade-scoped-deadline-and-review.md` mục 5.
+8. Smoke test qua Swagger: bulk-create 2 khối cùng tuần (không bị chặn trùng lịch), bulk-create bài thứ 3
+   trong cùng tuần+khối (400), trùng `lessonCode` (400), giáo viên không dạy khối đó không nhận được
+   task/notify, deadline trả về đúng Chủ Nhật giờ VN không nhận từ client, `chapterCode`/`lessonCode`
+   không tồn tại trong `textbookCode` (400), submit/reject/nộp lại trong tuần vẫn hoạt động như cũ
+   (regression UC-84/85/88/89), moderation-queue lọc đúng theo `grade`+`chapterCode`+`lessonCode`.
 
 ## Điểm mở
 
-- Backfill `grade` cho dữ liệu `weekly_tasks` cũ (nếu có) trên DB Supabase chung — chưa quyết.
-- `search` ở moderation-queue là tìm-kiếm-tự-do trên `scopeDescription`, không phải filter chương/bài có
-  cấu trúc — nâng cấp lên taxonomy thật (nếu cần) là một thiết kế riêng sau này.
+- `requireBookMatchesGrade` tra `listBookNames` mỗi lần ghi (không cache) — chấp nhận được vì danh mục
+  SGK nhỏ và đây không phải đường nóng (hot path), nhưng có thể cache sau nếu cần.
+- Trang tính chuyện nghỉ lễ/dời lịch (mục 3.4, 6 của `deadline-rule.md`) vẫn để ngỏ, không thuộc phạm vi
+  đợt này.

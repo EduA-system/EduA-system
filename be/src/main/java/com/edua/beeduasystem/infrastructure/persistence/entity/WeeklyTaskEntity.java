@@ -18,9 +18,15 @@ public class WeeklyTaskEntity {
     @Id private UUID id;
     @Column(name = "moderator_id", nullable = false) private UUID moderatorId;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private Subject subject;
+    @Column(nullable = false) private Integer grade;
     @Column(name = "teacher_id", nullable = false) private UUID teacherId;
     @Column(name = "week_start_date", nullable = false) private LocalDate weekStartDate;
     @Column(name = "scope_description", nullable = false, columnDefinition = "TEXT") private String scopeDescription;
+    @Column(name = "textbook_code", nullable = false, length = 20) private String textbookCode;
+    @Column(name = "chapter_code", nullable = false, length = 20) private String chapterCode;
+    @Column(name = "chapter_name", nullable = false, length = 500) private String chapterName;
+    @Column(name = "lesson_code", nullable = false, length = 20) private String lessonCode;
+    @Column(name = "lesson_name", nullable = false, length = 500) private String lessonName;
     @Column(nullable = false) private Instant deadline;
     @Enumerated(EnumType.STRING) @Column(name = "review_status", nullable = false, length = 20) private WeeklyTaskReviewStatus reviewStatus;
     @Column(name = "source_library_content_id") private UUID sourceLibraryContentId;

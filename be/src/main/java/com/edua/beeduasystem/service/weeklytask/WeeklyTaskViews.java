@@ -13,12 +13,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 public final class WeeklyTaskViews {
     private WeeklyTaskViews() { }
 
-    public record Summary(UUID id, UUID teacherId, String teacherName, Subject subject, LocalDate weekStartDate,
-                           String scopeDescription, Instant deadline, WeeklyTaskReviewStatus reviewStatus,
-                           Instant submittedAt) { }
+    public record Summary(UUID id, UUID teacherId, String teacherName, Subject subject, Integer grade, LocalDate weekStartDate,
+                           String scopeDescription, String textbookCode, String chapterCode, String chapterName, String lessonCode, String lessonName,
+                           Instant deadline, WeeklyTaskReviewStatus reviewStatus, Instant submittedAt, Instant createdAt) { }
 
-    public record Detail(UUID id, UUID moderatorId, String moderatorName, Subject subject, UUID teacherId,
-                          String teacherName, LocalDate weekStartDate, String scopeDescription, Instant deadline,
+    public record Detail(UUID id, UUID moderatorId, String moderatorName, Subject subject, Integer grade, UUID teacherId,
+                          String teacherName, LocalDate weekStartDate, String scopeDescription, String textbookCode,
+                          String chapterCode, String chapterName, String lessonCode, String lessonName, Instant deadline,
                           WeeklyTaskReviewStatus reviewStatus, UUID sourceLibraryContentId, String sourceLibraryContentTitle, JsonNode sourceLibraryContentPayload, String sourceDocumentUrl,
                           String sourceDocumentName, Instant submittedAt, UUID reviewedBy, String reviewedByName,
                           Instant reviewedAt, String rejectionReason, Instant createdAt, Instant updatedAt) { }
@@ -32,13 +33,15 @@ public final class WeeklyTaskViews {
     public record BulkResult(List<Summary> created, int teacherCount, int lessonCount) { }
 
     static Summary toSummary(WeeklyTask t, Map<UUID, String> userNames) {
-        return new Summary(t.id(), t.teacherId(), userNames.get(t.teacherId()), t.subject(), t.weekStartDate(),
-                t.scopeDescription(), t.deadline(), t.reviewStatus(), t.submittedAt());
+        return new Summary(t.id(), t.teacherId(), userNames.get(t.teacherId()), t.subject(), t.grade(), t.weekStartDate(),
+                t.scopeDescription(), t.textbookCode(), t.chapterCode(), t.chapterName(), t.lessonCode(), t.lessonName(),
+                t.deadline(), t.reviewStatus(), t.submittedAt(), t.createdAt());
     }
 
     static Detail toDetail(WeeklyTask t, Map<UUID, String> userNames) {
-        return new Detail(t.id(), t.moderatorId(), userNames.get(t.moderatorId()), t.subject(), t.teacherId(),
-                userNames.get(t.teacherId()), t.weekStartDate(), t.scopeDescription(), t.deadline(), t.reviewStatus(),
+        return new Detail(t.id(), t.moderatorId(), userNames.get(t.moderatorId()), t.subject(), t.grade(), t.teacherId(),
+                userNames.get(t.teacherId()), t.weekStartDate(), t.scopeDescription(), t.textbookCode(),
+                t.chapterCode(), t.chapterName(), t.lessonCode(), t.lessonName(), t.deadline(), t.reviewStatus(),
                 t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
                 t.reviewedBy(), t.reviewedBy() != null ? userNames.get(t.reviewedBy()) : null, t.reviewedAt(),
                 t.rejectionReason(), t.createdAt(), t.updatedAt());

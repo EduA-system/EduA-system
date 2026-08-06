@@ -5,23 +5,27 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Modal } from "@/components/ui/Modal";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { MonthPicker } from "@/components/ui/MonthPicker";
+import { GradeSelect } from "@/components/ui/GradeSelect";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { hasAnyRole } from "@/lib/auth/permissions";
 import { subjectLabel, uploadFile } from "@/lib/blog";
 import { listLibrary, type LibraryContent } from "@/lib/library";
+import { useTextbookPicker } from "@/lib/textbook-picker";
 import {
   bulkCreateWeeklyTasks,
   getWeeklySchedule,
   submitWeeklyTask,
   unsubmitWeeklyTask,
   updateWeeklyTask,
+  type WeeklyTaskGrade,
   type WeeklyTaskReviewStatus,
   type WeeklyTaskSchedule,
   type WeeklyTaskSummary,
 } from "@/lib/weekly-task";
 
-type TeacherOption = { id: string; fullName: string | null; email: string; status: string };
+type TeacherOption = { id: string; fullName: string | null; email: string; status: string; grades: number[] };
 
 const statusLabels: Record<WeeklyTaskReviewStatus, string> = {
   NOT_SUBMITTED: "Chưa nộp",
@@ -37,56 +41,126 @@ const statusClasses: Record<WeeklyTaskReviewStatus, string> = {
   REJECTED: "bg-red-100 text-red-800",
 };
 
-type LessonGroup = { key: string; scopeDescription: string; deadline: string; tasks: WeeklyTaskSummary[] };
+type LessonGroup = {
+  key: string;
+  scopeDescription: string;
+  chapterName: string;
+  lessonName: string;
+  deadline: string;
+  tasks: WeeklyTaskSummary[];
+};
 
+/** Mỗi ô lịch tuần = 1 bài (BR-53) — nhóm theo lessonCode (không phải text tiêu đề), sắp theo thứ tự tạo. */
 function groupByLesson(tasks: WeeklyTaskSummary[]): LessonGroup[] {
   const map = new Map<string, LessonGroup>();
   for (const t of tasks) {
-    const key = `${t.scopeDescription}__${t.deadline}`;
-    const existing = map.get(key);
+    const existing = map.get(t.lessonCode);
     if (existing) {
       existing.tasks.push(t);
     } else {
-      map.set(key, { key, scopeDescription: t.scopeDescription, deadline: t.deadline, tasks: [t] });
+      map.set(t.lessonCode, {
+        key: t.lessonCode,
+        scopeDescription: t.scopeDescription,
+        chapterName: t.chapterName,
+        lessonName: t.lessonName,
+        deadline: t.deadline,
+        tasks: [t],
+      });
     }
   }
-  return Array.from(map.values()).sort((a, b) => a.deadline.localeCompare(b.deadline));
+  return Array.from(map.values()).sort((a, b) => a.tasks[0].createdAt.localeCompare(b.tasks[0].createdAt));
 }
 
-/** Ngày bắt đầu của 4 tuần cố định (1/8/15/22) trong 1 tháng — khớp cách chia PPCT theo tuần. */
-function monthWeekStarts(year: number, month: number): string[] {
-  return [1, 8, 15, 22].map((day) => `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+/** Đúng 2 ô cố định/tuần (BR-53) — null nghĩa là ô còn trống, chưa giao bài. */
+function weekSlots(tasks: WeeklyTaskSummary[]): (LessonGroup | null)[] {
+  const groups = groupByLesson(tasks);
+  return [groups[0] ?? null, groups[1] ?? null];
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function toDateOnly(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/**
+ * BR-52: "tuần" là tuần lịch thực Thứ 2 → Chủ Nhật, không phải quy ước 1/8/15/22 cũ. Trả về mọi Thứ 2
+ * phủ tháng đang xem (kể cả tuần đầu/cuối tháng bị "cắt" — tuần đó vẫn hiển thị, chấp nhận thiếu ngày).
+ */
+function mondaysInMonth(year: number, month: number): string[] {
+  const firstOfMonth = new Date(year, month, 1);
+  const mondayOffset = (firstOfMonth.getDay() + 6) % 7; // 0 = Thứ 2
+  const cursor = new Date(year, month, 1 - mondayOffset);
+  const lastOfMonth = new Date(year, month + 1, 0);
+  const mondays: string[] = [];
+  while (cursor <= lastOfMonth) {
+    mondays.push(toDateOnly(cursor));
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return mondays;
 }
 
 function monthRange(year: number, month: number): { from: string; to: string } {
   const lastDay = new Date(year, month + 1, 0).getDate();
   return {
-    from: `${year}-${String(month + 1).padStart(2, "0")}-01`,
-    to: `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+    from: `${year}-${pad2(month + 1)}-01`,
+    to: `${year}-${pad2(month + 1)}-${pad2(lastDay)}`,
   };
 }
 
 function buildMonthSchedule(weeks: WeeklyTaskSchedule["weeks"], year: number, month: number): WeeklyTaskSchedule["weeks"] {
   const byDate = new Map(weeks.map((w) => [w.weekStartDate, w]));
-  return monthWeekStarts(year, month).map((date) => byDate.get(date) ?? { weekStartDate: date, tasks: [] });
+  return mondaysInMonth(year, month).map((date) => byDate.get(date) ?? { weekStartDate: date, tasks: [] });
 }
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("vi");
 }
 
-function formatWeek(dateOnly: string): string {
-  return new Date(`${dateOnly}T00:00:00`).toLocaleDateString("vi");
+/** Nhãn 1 tuần lịch thực: khoảng ngày Thứ 2 → Chủ Nhật, vd "06/08 - 09/08" cho tuần bị cắt đầu tháng. */
+function weekLabel(weekStartDate: string): string {
+  if (!weekStartDate) return "";
+  const start = new Date(`${weekStartDate}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const fmt = (d: Date) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+  return `${fmt(start)} - ${fmt(end)}`;
 }
 
-function toDatetimeLocalValue(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** Xem trước hạn nộp (BR-52) trước khi task được tạo — server tính lại giá trị chính thức. */
+function weekDeadlinePreview(weekStartDate: string): string {
+  if (!weekStartDate) return "";
+  const start = new Date(`${weekStartDate}T00:00:00`);
+  const sunday = new Date(start);
+  sunday.setDate(sunday.getDate() + 6);
+  return `Chủ Nhật ${pad2(sunday.getDate())}/${pad2(sunday.getMonth() + 1)}/${sunday.getFullYear()} lúc 23:59`;
 }
 
 function isPastDeadline(iso: string): boolean {
   return new Date(iso).getTime() <= Date.now();
+}
+
+/** Thứ Hai của tuần chứa hôm nay (giờ máy khách) — dùng để xác định "tuần đang diễn ra". */
+function currentWeekStartDate(): string {
+  const now = new Date();
+  const mondayOffset = (now.getDay() + 6) % 7; // 0 = Thứ 2
+  now.setDate(now.getDate() - mondayOffset);
+  return toDateOnly(now);
+}
+
+/** Chỉ tuần chứa hôm nay mới được thao tác (giao bài/nộp bài) — tuần tương lai/quá khứ bị khoá. */
+function isCurrentWeek(weekStartDate: string): boolean {
+  return weekStartDate === currentWeekStartDate();
+}
+
+/** Tuần đã kết thúc (qua hết Chủ Nhật) — dùng để bỏ hẳn các tuần quá khứ khỏi lưới lịch. */
+function weekHasEnded(weekStartDate: string): boolean {
+  if (!weekStartDate) return false;
+  const end = new Date(`${weekStartDate}T00:00:00`);
+  end.setDate(end.getDate() + 7); // đầu Thứ 2 tuần sau = hết tuần này
+  return end.getTime() <= Date.now();
 }
 
 function LessonGroupCard({
@@ -105,7 +179,10 @@ function LessonGroupCard({
     <div className="rounded-2xl border bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm">{group.scopeDescription}</p>
+          <p className="text-sm font-medium">{group.scopeDescription}</p>
+          <p className="mt-0.5 text-xs text-[#6b6b6b]">
+            {group.chapterName} · {group.lessonName}
+          </p>
           <p className="mt-1 text-xs text-[#6b6b6b]">Hạn nộp: {formatDateTime(group.deadline)}</p>
         </div>
         <button type="button" onClick={onToggle} className="shrink-0 text-xs text-[#b85c3b] underline">
@@ -146,21 +223,25 @@ function WeeklyScheduleScreen() {
   const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null);
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
+  // BR-51: Mod luôn thao tác trong phạm vi đúng 1 khối đã chọn.
+  const [modGrade, setModGrade] = useState<WeeklyTaskGrade>(10);
 
   // ── Sửa 1 giáo viên trong 1 tuần (Moderator) ──────────────────────────
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formTeacherId, setFormTeacherId] = useState("");
   const [formWeekStart, setFormWeekStart] = useState("");
-  const [formScope, setFormScope] = useState("");
-  const [formDeadline, setFormDeadline] = useState("");
+  const [formTitle, setFormTitle] = useState("");
+  const [formGrade, setFormGrade] = useState<WeeklyTaskGrade>(10);
   const [saving, setSaving] = useState(false);
+  const editPicker = useTextbookPicker(user?.subject ?? undefined, formGrade, formOpen);
 
-  // ── Tạo lịch tuần chung cho cả môn (Moderator, bulk-assign) ───────────
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [bulkWeekStart, setBulkWeekStart] = useState("");
-  const [bulkLessons, setBulkLessons] = useState<{ scope: string; deadline: string }[]>([{ scope: "", deadline: "" }]);
-  const [bulkSaving, setBulkSaving] = useState(false);
+  // ── Giao 1 bài cho cả khối (Moderator) — mỗi ô lịch tuần = 1 bài (BR-53) ─
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createWeekStart, setCreateWeekStart] = useState("");
+  const [createTitle, setCreateTitle] = useState("");
+  const [createSaving, setCreateSaving] = useState(false);
+  const createPicker = useTextbookPicker(user?.subject ?? undefined, modGrade, createOpen);
 
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [submitMode, setSubmitMode] = useState<"library" | "upload">("library");
@@ -174,7 +255,7 @@ function WeeklyScheduleScreen() {
     try {
       const range = monthRange(viewYear, viewMonth);
       const data = isModerator
-        ? await getWeeklySchedule(authFetch, range.from, range.to)
+        ? await getWeeklySchedule(authFetch, range.from, range.to, modGrade)
         : await getWeeklySchedule(authFetch);
       setSchedule(data);
       setError("");
@@ -183,7 +264,7 @@ function WeeklyScheduleScreen() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, isModerator, viewYear, viewMonth]);
+  }, [authFetch, isModerator, viewYear, viewMonth, modGrade]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -202,20 +283,35 @@ function WeeklyScheduleScreen() {
     setEditingId(t.id);
     setFormTeacherId(t.teacherId);
     setFormWeekStart(t.weekStartDate);
-    setFormScope(t.scopeDescription);
-    setFormDeadline(toDatetimeLocalValue(t.deadline));
+    setFormTitle(t.scopeDescription);
+    setFormGrade(t.grade);
+    editPicker.reset();
+    editPicker.setBookCode(t.textbookCode);
+    editPicker.setChapterCode(t.chapterCode);
+    editPicker.setLessonCode(t.lessonCode);
     setFormOpen(true);
   }
 
   async function handleSaveTask() {
-    if (!editingId || !formTeacherId || !formWeekStart || !formScope.trim() || !formDeadline) return;
+    if (
+      !editingId ||
+      !formTeacherId ||
+      !formWeekStart ||
+      !formTitle.trim() ||
+      !editPicker.bookCode ||
+      !editPicker.chapterCode ||
+      !editPicker.lessonCode
+    )
+      return;
     setSaving(true);
     try {
       await updateWeeklyTask(authFetch, editingId, {
         teacherId: formTeacherId,
         weekStartDate: formWeekStart,
-        scopeDescription: formScope.trim(),
-        deadline: new Date(formDeadline).toISOString(),
+        scopeDescription: formTitle.trim(),
+        textbookCode: editPicker.bookCode,
+        chapterCode: editPicker.chapterCode,
+        lessonCode: editPicker.lessonCode,
       });
       setMsg("Đã cập nhật nhiệm vụ.");
       setFormOpen(false);
@@ -227,36 +323,30 @@ function WeeklyScheduleScreen() {
     }
   }
 
-  function openBulkPanel(weekStartDate: string) {
-    setBulkWeekStart(weekStartDate);
-    setBulkLessons([{ scope: "", deadline: "" }]);
-    setBulkOpen(true);
+  function openCreatePanel(weekStartDate: string) {
+    setCreateWeekStart(weekStartDate);
+    setCreateTitle("");
+    createPicker.reset();
+    setCreateOpen(true);
   }
 
-  function updateBulkLesson(index: number, field: "scope" | "deadline", value: string) {
-    setBulkLessons((prev) => prev.map((l, i) => (i === index ? { ...l, [field]: value } : l)));
-  }
-
-  function addBulkLesson() {
-    setBulkLessons((prev) => [...prev, { scope: "", deadline: "" }]);
-  }
-
-  async function handleBulkCreate() {
-    const lessons = bulkLessons.filter((l) => l.scope.trim() && l.deadline);
-    if (!bulkWeekStart || lessons.length === 0) return;
-    setBulkSaving(true);
+  async function handleCreateLesson() {
+    if (!createWeekStart || !createTitle.trim() || !createPicker.bookCode || !createPicker.chapterCode || !createPicker.lessonCode) return;
+    setCreateSaving(true);
     try {
       await bulkCreateWeeklyTasks(authFetch, {
-        weekStartDate: bulkWeekStart,
-        lessons: lessons.map((l) => ({ scopeDescription: l.scope.trim(), deadline: new Date(l.deadline).toISOString() })),
+        weekStartDate: createWeekStart,
+        grade: modGrade,
+        textbookCode: createPicker.bookCode,
+        lessons: [{ scopeDescription: createTitle.trim(), chapterCode: createPicker.chapterCode, lessonCode: createPicker.lessonCode }],
       });
-      setMsg("Đã tạo lịch tuần cho cả môn.");
-      setBulkOpen(false);
+      setMsg(`Đã giao bài cho khối ${modGrade}.`);
+      setCreateOpen(false);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể tạo lịch tuần.");
+      setError(e instanceof Error ? e.message : "Không thể giao bài.");
     } finally {
-      setBulkSaving(false);
+      setCreateSaving(false);
     }
   }
 
@@ -313,14 +403,14 @@ function WeeklyScheduleScreen() {
               <h1 className="mt-1 text-3xl font-semibold">Lịch tuần</h1>
               <p className="mt-2 text-sm text-[#6b6b6b]">
                 {isModerator
-                  ? "Lịch giáo án tuần áp dụng chung cho mọi giáo viên cùng môn."
+                  ? "Lịch giáo án tuần theo khối, áp dụng cho giáo viên dạy khối đó cùng môn."
                   : "Nhiệm vụ giáo án tuần được giao cho bạn."}
               </p>
             </div>
           </header>
 
           {isModerator ? (
-            <div className="mt-4 flex items-center gap-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <MonthPicker
                 year={viewYear}
                 month={viewMonth}
@@ -329,59 +419,98 @@ function WeeklyScheduleScreen() {
                   setViewMonth(m);
                 }}
               />
+              <GradeSelect value={modGrade} onChange={(g) => g !== null && setModGrade(g as WeeklyTaskGrade)} />
             </div>
           ) : null}
 
           <Modal
-            open={bulkOpen}
-            onClose={() => setBulkOpen(false)}
-            title="Tạo lịch tuần"
-            description="Áp dụng tự động cho mọi giáo viên đang hoạt động cùng môn với bạn."
-            maxWidthClassName="max-w-2xl"
+            open={createOpen}
+            onClose={() => setCreateOpen(false)}
+            title={`Giao bài — Khối ${modGrade}`}
+            description="Áp dụng tự động cho mọi giáo viên đang hoạt động, cùng môn và dạy đúng khối này."
+            maxWidthClassName="max-w-5xl"
           >
-            <p className="w-full rounded-xl border bg-[#f5f1ec] p-2 text-sm sm:w-64">Tuần bắt đầu {formatWeek(bulkWeekStart)}</p>
-            <div className="mt-3 space-y-3">
-              {bulkLessons.map((lesson, i) => (
-                <div key={i} className="grid gap-3 rounded-xl border border-dashed p-3 sm:grid-cols-2">
-                  <p className="text-xs font-medium text-[#6b6b6b] sm:col-span-2">Bài {i + 1}</p>
-                  <textarea
-                    value={lesson.scope}
-                    onChange={(e) => updateBulkLesson(i, "scope", e.target.value)}
-                    placeholder="Yêu cầu giáo án (vd: Chương 3 - Định luật Newton, Vật lý 10)"
-                    rows={2}
-                    className="rounded-xl border p-2 text-sm sm:col-span-2"
-                  />
-                  <DatePicker
-                    withTime
-                    value={lesson.deadline}
-                    onChange={(v) => updateBulkLesson(i, "deadline", v)}
-                    placeholder="Chọn hạn nộp"
-                    className="sm:col-span-2"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <button type="button" onClick={addBulkLesson} className="text-sm text-[#b85c3b] underline">
-                + Thêm bài
-              </button>
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setBulkOpen(false)} className="rounded-xl px-4 py-2 text-sm">
-                  Hủy
-                </button>
-                <button
-                  onClick={() => void handleBulkCreate()}
-                  disabled={bulkSaving || !bulkWeekStart || bulkLessons.every((l) => !l.scope.trim() || !l.deadline)}
-                  className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
-                >
-                  {bulkSaving ? "Đang tạo..." : "Tạo lịch"}
-                </button>
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+              <div className="space-y-4">
+                <p className="w-full rounded-xl border border-[#e4ddd4] bg-[#f7f3ee] px-4 py-3 text-sm text-[#4f4943]">
+                  Tuần <span className="font-semibold text-[#2b2926]">{weekLabel(createWeekStart)}</span> · Hạn nộp:{" "}
+                  <span className="font-semibold text-[#2b2926]">{weekDeadlinePreview(createWeekStart)}</span>
+                </p>
+                <label className="text-xs font-medium text-[#6b6b6b]">Tiêu đề</label>
+                <textarea
+                  value={createTitle}
+                  onChange={(e) => setCreateTitle(e.target.value)}
+                  placeholder="Vd: Ôn tập cuối chương, Kiểm tra 15 phút..."
+                  rows={7}
+                  className="mt-1.5 w-full resize-none rounded-xl border border-[#d8d1c9] bg-[#fffdfb] p-3 text-sm leading-6 outline-none transition focus:border-[#e8724a] focus:ring-2 focus:ring-[#e8724a]/15"
+                />
               </div>
+              <div className="space-y-4 rounded-xl border border-[#ebe4dc] bg-[#fffdfb] p-4">
+                {createPicker.matchingBooks.length > 1 ? (
+                  <div>
+                    <label className="text-xs font-medium text-[#6b6b6b]">Sách giáo khoa</label>
+                    <div className="mt-1.5">
+                      <Dropdown
+                        placeholder="Chọn sách..."
+                        value={createPicker.bookCode || null}
+                        options={createPicker.matchingBooks.map((b) => ({ value: b.id, label: b.name }))}
+                        onChange={createPicker.setBookCode}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                <div>
+                  <label className="text-xs font-medium text-[#6b6b6b]">Chương</label>
+                  <div className="mt-1.5">
+                    <Dropdown
+                      placeholder="Chọn chương..."
+                      value={createPicker.chapterCode || null}
+                      options={createPicker.chapters.map((c) => ({ value: c.id, label: c.name }))}
+                      onChange={createPicker.setChapterCode}
+                      disabled={!createPicker.bookCode}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[#6b6b6b]">Bài</label>
+                  <div className="mt-1.5">
+                    <Dropdown
+                      placeholder="Chọn bài..."
+                      value={createPicker.lessonCode || null}
+                      options={createPicker.lessons.map((l) => ({ value: l.id, label: l.name }))}
+                      onChange={createPicker.setLessonCode}
+                      disabled={!createPicker.chapterCode}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2 border-t border-[#f0ece5] pt-4">
+              <button onClick={() => setCreateOpen(false)} className="rounded-xl px-4 py-2 text-sm hover:bg-[#f5f1ec]">
+                Hủy
+              </button>
+              <button
+                onClick={() => void handleCreateLesson()}
+                disabled={
+                  createSaving || !createTitle.trim() || !createPicker.bookCode || !createPicker.chapterCode || !createPicker.lessonCode
+                }
+                className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white transition hover:bg-[#d9633b] disabled:opacity-50"
+              >
+                {createSaving ? "Đang giao..." : "Giao bài"}
+              </button>
             </div>
           </Modal>
 
-          <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Sửa nhiệm vụ tuần">
+          <Modal
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            title="Sửa nhiệm vụ tuần"
+            maxWidthClassName="max-w-2xl"
+          >
             <div className="grid gap-3 sm:grid-cols-2">
+              <span className="flex items-center rounded-xl border bg-[#f5f1ec] px-3 py-2 text-sm text-[#4f4943] sm:col-span-2">
+                Khối {formGrade} (không đổi được — tạo nhiệm vụ khối khác thì tạo lịch mới)
+              </span>
               <select
                 value={formTeacherId}
                 onChange={(e) => setFormTeacherId(e.target.value)}
@@ -389,7 +518,7 @@ function WeeklyScheduleScreen() {
               >
                 <option value="">Chọn giáo viên...</option>
                 {teachers
-                  .filter((t) => t.status === "ACTIVE" || t.id === formTeacherId)
+                  .filter((t) => (t.status === "ACTIVE" || t.id === formTeacherId) && t.grades.includes(formGrade))
                   .map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.fullName ?? t.email}
@@ -397,14 +526,43 @@ function WeeklyScheduleScreen() {
                   ))}
               </select>
               <DatePicker value={formWeekStart} onChange={setFormWeekStart} placeholder="Chọn tuần" />
-              <DatePicker withTime value={formDeadline} onChange={setFormDeadline} placeholder="Chọn hạn nộp" className="sm:col-span-2" />
-              <textarea
-                value={formScope}
-                onChange={(e) => setFormScope(e.target.value)}
-                placeholder="Yêu cầu giáo án (vd: Chương 3 - Định luật Newton, Vật lý 10)"
-                rows={3}
-                className="rounded-xl border p-2 text-sm sm:col-span-2"
-              />
+              <p className="text-xs text-[#8a8178] sm:col-span-2">
+                Hệ thống tự làm tròn về Thứ 2 của tuần chứa ngày này. Hạn nộp: {weekDeadlinePreview(formWeekStart)}.
+              </p>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-[#6b6b6b]">Tiêu đề</label>
+                <textarea
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="Vd: Ôn tập cuối chương, Kiểm tra 15 phút..."
+                  rows={2}
+                  className="mt-1 w-full rounded-xl border p-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#6b6b6b]">Chương</label>
+                <div className="mt-1">
+                  <Dropdown
+                    placeholder="Chọn chương..."
+                    value={editPicker.chapterCode || null}
+                    options={editPicker.chapters.map((c) => ({ value: c.id, label: c.name }))}
+                    onChange={editPicker.setChapterCode}
+                    disabled={!editPicker.bookCode}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#6b6b6b]">Bài</label>
+                <div className="mt-1">
+                  <Dropdown
+                    placeholder="Chọn bài..."
+                    value={editPicker.lessonCode || null}
+                    options={editPicker.lessons.map((l) => ({ value: l.id, label: l.name }))}
+                    onChange={editPicker.setLessonCode}
+                    disabled={!editPicker.chapterCode}
+                  />
+                </div>
+              </div>
             </div>
             <div className="mt-3 flex justify-end gap-2">
               <button onClick={() => setFormOpen(false)} className="rounded-xl px-4 py-2 text-sm">
@@ -412,7 +570,9 @@ function WeeklyScheduleScreen() {
               </button>
               <button
                 onClick={() => void handleSaveTask()}
-                disabled={saving || !formTeacherId || !formWeekStart || !formScope.trim() || !formDeadline}
+                disabled={
+                  saving || !formTeacherId || !formWeekStart || !formTitle.trim() || !editPicker.chapterCode || !editPicker.lessonCode
+                }
                 className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
               >
                 {saving ? "Đang lưu..." : "Lưu"}
@@ -437,49 +597,55 @@ function WeeklyScheduleScreen() {
                   <col />
                 </colgroup>
                 <tbody>
-                  {buildMonthSchedule(schedule.weeks, viewYear, viewMonth).map((week, i) => {
-                    const groups = groupByLesson(week.tasks);
-                    return (
-                      <tr key={week.weekStartDate} className="border-t border-[#e8e2db] align-top">
-                        <td className="border-r border-[#e8e2db] p-3">
-                          <p className="text-sm font-medium">Tuần {i + 1}</p>
-                          <p className="mt-1 text-xs text-[#8a8178]">{formatWeek(week.weekStartDate)}</p>
-                        </td>
-                        <td className="p-3">
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {groups.length === 0 ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => openBulkPanel(week.weekStartDate)}
-                                  className="flex h-20 items-center justify-center rounded-2xl border border-dashed p-2 text-center text-xs text-[#8a8178] hover:bg-[#f5f1ec]"
-                                >
-                                  Ấn để thêm bài thứ nhất
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openBulkPanel(week.weekStartDate)}
-                                  className="flex h-20 items-center justify-center rounded-2xl border border-dashed p-2 text-center text-xs text-[#8a8178] hover:bg-[#f5f1ec]"
-                                >
-                                  Ấn để thêm bài thứ hai 
-                                </button>
-                              </>
-                            ) : (
-                              groups.map((g) => (
-                                <LessonGroupCard
-                                  key={g.key}
-                                  group={g}
-                                  expanded={expandedGroupKey === g.key}
-                                  onToggle={() => setExpandedGroupKey((k) => (k === g.key ? null : g.key))}
-                                  onEditTeacher={openEditForm}
-                                />
-                              ))
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {buildMonthSchedule(schedule.weeks, viewYear, viewMonth)
+                    .filter((week) => !weekHasEnded(week.weekStartDate))
+                    .map((week) => {
+                      const current = isCurrentWeek(week.weekStartDate);
+                      return (
+                        <tr key={week.weekStartDate} className="border-t border-[#e8e2db] align-top">
+                          <td className="border-r border-[#e8e2db] p-3">
+                            <p className="text-sm font-medium">{weekLabel(week.weekStartDate)}</p>
+                            {current ? (
+                              <span className="mt-1 inline-block rounded-full bg-[#e8724a]/10 px-2 py-0.5 text-[11px] font-medium text-[#b85c3b]">
+                                Đang diễn ra
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="p-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {weekSlots(week.tasks).map((group, slotIndex) =>
+                                group ? (
+                                  <LessonGroupCard
+                                    key={group.key}
+                                    group={group}
+                                    expanded={expandedGroupKey === group.key}
+                                    onToggle={() => setExpandedGroupKey((k) => (k === group.key ? null : group.key))}
+                                    onEditTeacher={openEditForm}
+                                  />
+                                ) : current ? (
+                                  <button
+                                    key={`empty-${slotIndex}`}
+                                    type="button"
+                                    onClick={() => openCreatePanel(week.weekStartDate)}
+                                    className="flex h-20 items-center justify-center rounded-2xl border border-dashed p-2 text-center text-xs text-[#8a8178] hover:bg-[#f5f1ec]"
+                                  >
+                                    {slotIndex === 0 ? "Ấn để thêm bài thứ nhất" : "Ấn để thêm bài thứ hai"}
+                                  </button>
+                                ) : (
+                                  <div
+                                    key={`empty-${slotIndex}`}
+                                    title="Chỉ có thể giao bài cho tuần đang diễn ra"
+                                    className="flex h-20 cursor-not-allowed items-center justify-center rounded-2xl border border-dashed bg-[#f5f1ec] p-2 text-center text-xs text-[#c2bcb3]"
+                                  >
+                                    Đã khoá
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -491,10 +657,11 @@ function WeeklyScheduleScreen() {
             <div className="mt-6 space-y-6">
               {schedule.weeks.map((week) => (
                 <div key={week.weekStartDate}>
-                  <h2 className="mb-3 text-sm font-semibold text-[#6b6b6b]">Tuần bắt đầu {formatWeek(week.weekStartDate)}</h2>
+                  <h2 className="mb-3 text-sm font-semibold text-[#6b6b6b]">Tuần {weekLabel(week.weekStartDate)}</h2>
                   <div className="space-y-3">
                     {week.tasks.map((t) => {
                       const expired = isPastDeadline(t.deadline);
+                      const current = isCurrentWeek(t.weekStartDate);
                       return (
                         <article key={t.id} className="rounded-2xl border bg-white p-4">
                           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -503,24 +670,38 @@ function WeeklyScheduleScreen() {
                                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses[t.reviewStatus]}`}>
                                   {statusLabels[t.reviewStatus]}
                                 </span>
+                                <span className="rounded-full bg-[#edf4ff] px-2 py-0.5 text-xs font-semibold text-[#2f5f9b]">
+                                  Khối {t.grade}
+                                </span>
                                 <span className="text-xs text-[#6b6b6b]">{subjectLabel(t.subject)}</span>
                               </div>
-                              <p className="mt-2 text-sm">{t.scopeDescription}</p>
+                              <p className="mt-2 text-sm font-medium">{t.scopeDescription}</p>
+                              <p className="mt-0.5 text-xs text-[#6b6b6b]">
+                                {t.chapterName} · {t.lessonName}
+                              </p>
                               <p className="mt-2 text-xs text-[#6b6b6b]">
                                 Hạn nộp: {formatDateTime(t.deadline)}
                                 {expired ? " (đã quá hạn)" : ""}
                               </p>
                             </div>
-                            <div className="flex shrink-0 gap-2 text-sm">
-                              {!expired && (t.reviewStatus === "NOT_SUBMITTED" || t.reviewStatus === "REJECTED") ? (
+                            <div className="flex shrink-0 items-center gap-2 text-sm">
+                              {current && !expired && (t.reviewStatus === "NOT_SUBMITTED" || t.reviewStatus === "REJECTED") ? (
                                 <button onClick={() => openSubmitPanel(t)} className="text-[#b85c3b] underline">
                                   Nộp giáo án
                                 </button>
                               ) : null}
-                              {!expired && t.reviewStatus === "SUBMITTED" ? (
+                              {current && !expired && t.reviewStatus === "SUBMITTED" ? (
                                 <button onClick={() => void handleUnsubmit(t.id, t.scopeDescription)} className="text-red-600 underline">
                                   Hủy nộp
                                 </button>
+                              ) : null}
+                              {!current ? (
+                                <span
+                                  className="text-xs text-[#8a8178]"
+                                  title="Chỉ có thể nộp/rút giáo án trong tuần đang diễn ra"
+                                >
+                                  {weekHasEnded(t.weekStartDate) ? "Đã qua tuần" : "Chưa tới tuần"}
+                                </span>
                               ) : null}
                             </div>
                           </div>

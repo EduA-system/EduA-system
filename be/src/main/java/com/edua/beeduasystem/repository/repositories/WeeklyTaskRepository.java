@@ -18,8 +18,15 @@ public interface WeeklyTaskRepository {
     Optional<WeeklyTask> findById(UUID id);
     /** UC-80 (Teacher): lịch tuần của một teacher, trong khoảng weekStartDate [from, to]. */
     List<WeeklyTask> findByTeacher(UUID teacherId, LocalDate fromWeek, LocalDate toWeek);
-    /** UC-80 (Moderator): lịch tuần của cả subject moderator phụ trách. */
+    /** UC-80 (Moderator, không chọn khối): lịch tuần của cả subject moderator phụ trách, mọi khối. */
     List<WeeklyTask> findBySubject(Subject subject, LocalDate fromWeek, LocalDate toWeek);
-    /** UC-86: hàng đợi duyệt — task theo một reviewStatus + subject cụ thể (Moderator chỉ thấy đúng môn mình). */
-    Page<WeeklyTask> findBySubjectAndStatus(Subject subject, WeeklyTaskReviewStatus status, Pageable pageable);
+    /** UC-80 (Moderator, BR-51): lịch tuần của cả subject, lọc đúng 1 khối. Dùng luôn cho check trùng lịch ở bulkCreate (from=to=weekStartDate). */
+    List<WeeklyTask> findBySubjectAndGrade(Subject subject, Integer grade, LocalDate fromWeek, LocalDate toWeek);
+    /**
+     * UC-86: hàng đợi duyệt — task theo reviewStatus + subject (Moderator chỉ thấy đúng môn mình).
+     * {@code grade}, {@code chapterCode}, {@code lessonCode} (BR-51/BR-53, chọn qua dropdown, không phải
+     * tìm tự do) đều optional — {@code null} nghĩa là không lọc theo chiều đó.
+     */
+    Page<WeeklyTask> searchModerationQueue(Subject subject, WeeklyTaskReviewStatus status, Integer grade,
+                                            String chapterCode, String lessonCode, Pageable pageable);
 }
