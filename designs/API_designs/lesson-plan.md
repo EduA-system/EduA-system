@@ -72,7 +72,7 @@ body: LessonPlan5512Dto (partial — title / section / activity)
 ```
 Áp BR-23 (luật status khi edit) trong service. FE gọi mỗi phút = auto-save (BR-19). Map: UC-27, MSG08.
 
-### 7. `POST /api/lesson-plans/edit-section` — Sửa một phần bằng AI (sync + preview)
+### 7. `POST /api/lesson-plans/edit-section` — Sửa một hoặc nhiều phần bằng AI (sync + preview)
 ```
 body: {
   instruction,
@@ -80,9 +80,9 @@ body: {
     { id, heading, content, kind }   // trích từ editor hiện tại; id do frontend gán ổn định theo thứ tự section
   ]
 }
-→ 200  { targetId, content }
+→ 200  [ { targetId, content }, ... ]
 ```
-AI tự chọn đúng một `targetId` trong danh sách và trả phần thân đã viết lại. Frontend render preview (diff dòng, gạch đỏ/gạch xanh) ngay trong editor để giáo viên Chấp nhận/Bỏ; khi Chấp nhận, TipTap thay đúng range section và auto-save xử lý như edit tay. Không dùng STOMP vì mỗi lượt sửa nhỏ, đồng bộ. Map: UC-27 AI edit, MSG06/07.
+AI tự chọn một hoặc nhiều `targetId` trong danh sách khi yêu cầu thực sự ảnh hưởng logic tới nhiều phần (ví dụ xoá một phiếu học tập được nhắc tới cả ở bảng học liệu lẫn trong một tiểu hoạt động), mỗi phần tử trả phần thân đã viết lại cho đúng một `targetId` (không trùng `targetId` giữa các phần tử). Frontend render preview (diff dòng, gạch đỏ/gạch xanh) cho TỪNG phần được chọn ngay trong editor, mỗi phần có card Chấp nhận/Bỏ riêng; khi Chấp nhận, TipTap thay đúng range section đó và auto-save xử lý như edit tay. Gửi yêu cầu mới bị chặn cho tới khi mọi diff đang chờ đã được xử lý. Không dùng STOMP vì mỗi lượt sửa nhỏ, đồng bộ. Map: UC-27 AI edit, MSG06/07.
 
 `content` là text phẳng: mỗi đoạn/bullet/công thức một dòng (xem `LessonPlanEditPromptBuilder`). Mục có bảng (thiết bị 2 cột, phiếu học tập, bảng tổ chức/sản phẩm của tiểu hoạt động HĐ2) mã hoá bảng theo quy ước dòng riêng thay vì bị làm phẳng mất cấu trúc — xem `fe/components/LessonEditor/tableText.ts`:
 - Hàng tiêu đề: `‖ Cột 1 ‖ Cột 2 ‖`; hàng dữ liệu: `| Ô 1 | Ô 2 |`. Bảng 1 cột (phiếu học tập) không có hàng tiêu đề.

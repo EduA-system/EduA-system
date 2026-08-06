@@ -90,17 +90,19 @@ export function insertSectionDiff(editor: Editor, section: EditableLessonSection
 }
 
 /**
- * Chấp nhận hoặc bỏ diff đang chờ duyệt của 1 mục, xác định lại vị trí mục theo tiêu đề
+ * Chấp nhận hoặc bỏ diff đang chờ duyệt của 1 mục, xác định lại vị trí mục theo `id`
  * tại thời điểm gọi (không dùng offset đã lưu trước đó — tài liệu có thể đã đổi kích
- * thước từ lúc chèn diff tới lúc bấm Chấp nhận/Bỏ).
+ * thước từ lúc chèn diff tới lúc bấm Chấp nhận/Bỏ, kể cả do 1 diff khác đang chờ duyệt
+ * song song vừa được xử lý). Khoá theo `id` thay vì tiêu đề để không đụng độ khi nhiều
+ * diff cùng chờ duyệt.
  */
 export function resolveSectionDiff(
   editor: Editor,
-  headingLabel: string,
+  sectionId: string,
   resolution: "accept" | "discard",
 ): boolean {
   if (editor.isDestroyed) return false;
-  const target = extractEditableSections(editor).find((section) => section.heading === headingLabel);
+  const target = extractEditableSections(editor).find((section) => section.id === sectionId);
   if (!target || target.bodyFrom >= target.to) return false;
 
   const dropState: DiffState = resolution === "accept" ? "removed" : "added";

@@ -60,11 +60,15 @@ public class LessonPlanEditPromptBuilder {
 
             Nhiệm vụ:
             - Đọc yêu cầu của giáo viên và danh sách các phần trong giáo án hiện tại.
-            - Tự chọn ĐÚNG MỘT phần phù hợp nhất để chỉnh sửa.
-            - Viết lại phần thân của phần đó, không viết lại dòng tiêu đề.
+            - Tự chọn các phần cần chỉnh sửa: nếu yêu cầu chỉ liên quan một phần, CHỈ chọn đúng
+              phần đó; nếu yêu cầu ảnh hưởng logic tới nhiều phần (ví dụ xoá một phiếu học tập
+              được nhắc tới cả ở bảng học liệu lẫn trong một tiểu hoạt động), chọn ĐẦY ĐỦ các
+              phần đó — không bỏ sót phần liên quan, cũng không chọn thêm phần không liên quan
+              "cho chắc".
+            - Với MỖI phần đã chọn, viết lại phần thân của phần đó, không viết lại dòng tiêu đề.
 
             Quy tắc biên tập:
-            - Không đổi tiêu đề phần, không đổi id, không sửa nhiều hơn một phần.
+            - Không đổi tiêu đề phần, không đổi id.
             - Giữ văn phong giáo án 5512 KNTT, cụ thể, dùng được ngay trên lớp.
             - Giữ các dữ kiện sư phạm quan trọng, đáp án, số liệu, công thức và thời lượng nếu yêu cầu không đòi đổi.
             - Giữ quy ước định dạng: mỗi dòng là một đoạn; dùng **đậm** cho nhãn quan trọng; dùng "- " ở đầu dòng cho bullet.
@@ -82,10 +86,15 @@ public class LessonPlanEditPromptBuilder {
             %s
             QUY TẮC ĐẦU RA - BẮT BUỘC:
             - Chỉ in ra DUY NHẤT một object JSON, không markdown, không giải thích.
-            - JSON đúng schema sau:
+            - JSON đúng schema sau, "edits" có 1 hoặc nhiều phần tử, mỗi phần tử ứng với ĐÚNG MỘT
+              phần cần sửa, KHÔNG được có hai phần tử trùng "targetId":
             {
-              "targetId": "<id trong danh sách>",
-              "content": "<phần thân đã viết lại, không bao gồm tiêu đề>"
+              "edits": [
+                {
+                  "targetId": "<id trong danh sách>",
+                  "content": "<phần thân đã viết lại, không bao gồm tiêu đề>"
+                }
+              ]
             }
             """.formatted(TABLE_CONVENTION_INSTRUCTIONS, MATERIALS_KIND_INSTRUCTIONS, SUB_ACTIVITY_KIND_INSTRUCTIONS);
 

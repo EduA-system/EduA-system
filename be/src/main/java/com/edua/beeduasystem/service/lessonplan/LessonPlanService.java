@@ -157,8 +157,8 @@ public class LessonPlanService {
         }
     }
 
-    /** AI tự chọn và viết lại đúng một phần trong giáo án hiện tại do frontend trích từ editor. */
-    public EditLessonSectionResponse editSection(EditLessonSectionRequest request) {
+    /** AI tự chọn và viết lại một hoặc nhiều phần trong giáo án hiện tại do frontend trích từ editor. */
+    public List<EditLessonSectionResponse> editSection(EditLessonSectionRequest request) {
         validateEditSectionRequest(request);
         Set<String> sectionIds = new HashSet<>();
         for (EditLessonSectionRequest.SectionInput section : request.sections()) {
@@ -166,17 +166,33 @@ public class LessonPlanService {
         }
 
         String prompt = editPromptBuilder.buildPrompt(request);
-        EditLessonSectionResponse response = generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
-                EditLessonSectionResponse.class, "AI không chỉnh sửa được giáo án.",
+        EditLessonSectionsAiResponse aiResponse = generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                EditLessonSectionsAiResponse.class, "AI không chỉnh sửa được giáo án.",
                 "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
 
-        if (isBlank(response.targetId()) || !sectionIds.contains(response.targetId())) {
-            throw new LessonPlanGenerationException("AI chọn phần giáo án không hợp lệ.", null);
+        if (aiResponse == null || aiResponse.edits() == null || aiResponse.edits().isEmpty()) {
+            throw new LessonPlanGenerationException("AI không đề xuất chỉnh sửa nào.", null);
         }
-        if (isBlank(response.content())) {
-            throw new LessonPlanGenerationException("AI trả về bản sửa rỗng.", null);
+
+        Set<String> seenTargetIds = new HashSet<>();
+        List<EditLessonSectionResponse> result = new ArrayList<>(aiResponse.edits().size());
+        for (EditLessonSectionResponse edit : aiResponse.edits()) {
+            if (edit == null || isBlank(edit.targetId()) || !sectionIds.contains(edit.targetId())) {
+                throw new LessonPlanGenerationException("AI chọn phần giáo án không hợp lệ.", null);
+            }
+            if (!seenTargetIds.add(edit.targetId())) {
+                throw new LessonPlanGenerationException("AI chọn trùng lặp một phần giáo án để sửa.", null);
+            }
+            if (isBlank(edit.content())) {
+                throw new LessonPlanGenerationException("AI trả về bản sửa rỗng.", null);
+            }
+            result.add(new EditLessonSectionResponse(edit.targetId().strip(), edit.content().strip()));
         }
-        return new EditLessonSectionResponse(response.targetId().strip(), response.content().strip());
+        return result;
+    }
+
+    /** Wrapper chỉ để parse JSON {"edits":[...]} từ call chỉnh sửa (một hoặc nhiều phần). */
+    private record EditLessonSectionsAiResponse(List<EditLessonSectionResponse> edits) {
     }
 
     private void validateEditSectionRequest(EditLessonSectionRequest request) {
@@ -199,11 +215,18 @@ public class LessonPlanService {
 
     /**
      * Một call AI điền chi tiết cho một hoạt động; merge giữ identity từ frame, lấy nội dung từ AI.
+     * Hoạt động 2 (có tiểu hoạt động) rẽ sang {@link #detailActivityWithSubActivities} — mỗi tiểu
+     * hoạt động một call riêng, tránh 1 call phải gánh cả N tiểu hoạt động và bị cắt dở giữa chừng.
      *
      * <p>Package-private để {@link GenerateLessonPlanStreamUseCase} tái dùng cho luồng streaming.
      */
     Activity5512 detailOne(Activity5512 frameActivity, String knowledge, String objectivesJson,
                                    String materialsJson, String frameOutlineJson, String userPrompt) {
+        List<Activity5512> frameSubs = frameActivity.subActivities();
+        if (frameSubs != null && !frameSubs.isEmpty()) {
+            return detailActivityWithSubActivities(frameActivity, frameSubs, knowledge,
+                    objectivesJson, materialsJson, frameOutlineJson, userPrompt);
+        }
         String targetJson = toJson(frameActivity);
         String prompt = promptBuilder.buildActivityDetailPrompt(knowledge, objectivesJson,
                 materialsJson, frameOutlineJson, targetJson, frameActivity, userPrompt);
@@ -211,6 +234,48 @@ public class LessonPlanService {
                 Activity5512.class, "AI không sinh được nội dung hoạt động.",
                 "Kết quả AI không đúng định dạng hoạt động.");
         return mergeDetail(frameActivity, detail);
+    }
+
+    /**
+     * Hoạt động 2 luôn để trống ở cấp 1 (theo quy ước 5512, không cần gọi AI cho khung chứa) —
+     * mỗi tiểu hoạt động là MỘT call AI riêng, chạy song song trên {@code executor}. Một tiểu
+     * hoạt động lỗi thì giữ skeleton của riêng nó; chỉ khi TẤT CẢ tiểu hoạt động đều lỗi mới coi
+     * Hoạt động 2 là thất bại (ném lỗi để lời gọi ngoài xử lý giống một activity lỗi bình thường).
+     */
+    private Activity5512 detailActivityWithSubActivities(Activity5512 frameActivity,
+            List<Activity5512> frameSubs, String knowledge, String objectivesJson,
+            String materialsJson, String frameOutlineJson, String userPrompt) {
+        String parentJson = toJson(frameActivity);
+        AtomicInteger subFailures = new AtomicInteger();
+        List<CompletableFuture<Activity5512>> futures = frameSubs.stream()
+                .map(sub -> CompletableFuture
+                        .supplyAsync(() -> detailSubActivity(sub, parentJson, knowledge,
+                                objectivesJson, materialsJson, frameOutlineJson, userPrompt), executor)
+                        .exceptionally(ex -> {
+                            log.warn("Soạn chi tiết tiểu hoạt động '{}' (của '{}') thất bại, giữ skeleton:",
+                                    sub.name(), frameActivity.name(), ex);
+                            subFailures.incrementAndGet();
+                            return sub;
+                        }))
+                .toList();
+        List<Activity5512> detailedSubs = futures.stream().map(CompletableFuture::join).toList();
+        if (subFailures.get() == frameSubs.size()) {
+            throw new LessonPlanGenerationException(
+                    "Không soạn được tiểu hoạt động nào của '" + frameActivity.name() + "'.", null);
+        }
+        return new Activity5512(frameActivity.order(), frameActivity.name(), frameActivity.duration(),
+                "", "", "", null, "", detailedSubs);
+    }
+
+    private Activity5512 detailSubActivity(Activity5512 sub, String parentActivityJson, String knowledge,
+            String objectivesJson, String materialsJson, String frameOutlineJson, String userPrompt) {
+        String targetJson = toJson(sub);
+        String prompt = promptBuilder.buildSubActivityDetailPrompt(knowledge, objectivesJson,
+                materialsJson, frameOutlineJson, parentActivityJson, targetJson, userPrompt);
+        Activity5512 detail = generateAndParse(AiPromptKey.LESSON_PLAN_SUB_ACTIVITY_DETAIL, prompt,
+                Activity5512.class, "AI không sinh được nội dung tiểu hoạt động.",
+                "Kết quả AI không đúng định dạng tiểu hoạt động.");
+        return mergeDetail(sub, detail);
     }
 
     /** Giữ order/name/duration của frame; lấy a/b/c/d + organization(Text) từ AI; zip tiểu hoạt động. */

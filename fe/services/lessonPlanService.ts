@@ -247,7 +247,7 @@ export interface EditLessonSectionRequest {
   }[];
 }
 
-export interface EditLessonSectionResponse {
+export interface EditLessonSectionEdit {
   targetId: string;
   content: string;
 }
@@ -257,7 +257,7 @@ export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promis
 export async function editLessonSection(
   req: EditLessonSectionRequest,
   authFetch: AuthFetch,
-): Promise<EditLessonSectionResponse> {
+): Promise<EditLessonSectionEdit[]> {
   const res = await authFetch("/api/lesson-plans/edit-section", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

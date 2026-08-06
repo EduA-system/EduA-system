@@ -42,4 +42,13 @@ class LessonPlanEditPromptBuilderTest {
         assertTrue(prompt.contains("kind: text"));
         assertFalse(prompt.contains("kind: null"));
     }
+
+    @Test
+    void outputContractRequestsEditsArray() {
+        String prompt = builder.buildPrompt(new EditLessonSectionRequest(
+                "sửa",
+                List.of(new SectionInput("sec-1", "I. MỤC TIÊU", "Nội dung", "text"))));
+
+        assertTrue(prompt.contains("\"edits\""), "schema đầu ra phải là mảng edits, không phải object đơn");
+    }
 }

@@ -55,19 +55,61 @@ class LessonPlanServiceEditSectionTest {
     void editSectionReturnsValidAiProposal() {
         stubPromptApply();
         when(aiClient.generate(anyString()))
-                .thenReturn("{\"targetId\":\"sec-1\",\"content\":\"**1. Kiến thức**\\n- Nêu được ý chính.\"}");
+                .thenReturn("{\"edits\":[{\"targetId\":\"sec-1\",\"content\":\"**1. Kiến thức**\\n- Nêu được ý chính.\"}]}");
 
-        EditLessonSectionResponse response = service().editSection(request());
+        List<EditLessonSectionResponse> response = service().editSection(request());
 
-        assertEquals("sec-1", response.targetId());
-        assertEquals("**1. Kiến thức**\n- Nêu được ý chính.", response.content());
+        assertEquals(1, response.size());
+        assertEquals("sec-1", response.get(0).targetId());
+        assertEquals("**1. Kiến thức**\n- Nêu được ý chính.", response.get(0).content());
+    }
+
+    @Test
+    void editSectionReturnsMultipleValidProposals() {
+        stubPromptApply();
+        when(aiClient.generate(anyString()))
+                .thenReturn("{\"edits\":[{\"targetId\":\"sec-1\",\"content\":\"A\"},{\"targetId\":\"sec-2\",\"content\":\"B\"}]}");
+
+        List<EditLessonSectionResponse> response = service().editSection(request());
+
+        assertEquals(2, response.size());
+        assertEquals("sec-1", response.get(0).targetId());
+        assertEquals("A", response.get(0).content());
+        assertEquals("sec-2", response.get(1).targetId());
+        assertEquals("B", response.get(1).content());
     }
 
     @Test
     void editSectionRejectsUnknownTargetId() {
         stubPromptApply();
         when(aiClient.generate(anyString()))
-                .thenReturn("{\"targetId\":\"sec-x\",\"content\":\"Nội dung\"}");
+                .thenReturn("{\"edits\":[{\"targetId\":\"sec-x\",\"content\":\"Nội dung\"}]}");
+
+        assertThrows(LessonPlanGenerationException.class, () -> service().editSection(request()));
+    }
+
+    @Test
+    void editSectionRejectsDuplicateTargetId() {
+        stubPromptApply();
+        when(aiClient.generate(anyString()))
+                .thenReturn("{\"edits\":[{\"targetId\":\"sec-1\",\"content\":\"A\"},{\"targetId\":\"sec-1\",\"content\":\"B\"}]}");
+
+        assertThrows(LessonPlanGenerationException.class, () -> service().editSection(request()));
+    }
+
+    @Test
+    void editSectionRejectsEmptyEditsList() {
+        stubPromptApply();
+        when(aiClient.generate(anyString())).thenReturn("{\"edits\":[]}");
+
+        assertThrows(LessonPlanGenerationException.class, () -> service().editSection(request()));
+    }
+
+    @Test
+    void editSectionRejectsBlankContentInAnyEdit() {
+        stubPromptApply();
+        when(aiClient.generate(anyString()))
+                .thenReturn("{\"edits\":[{\"targetId\":\"sec-1\",\"content\":\"\"}]}");
 
         assertThrows(LessonPlanGenerationException.class, () -> service().editSection(request()));
     }
