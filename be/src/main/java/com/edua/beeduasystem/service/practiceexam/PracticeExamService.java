@@ -5,16 +5,20 @@ import com.edua.beeduasystem.domain.model.practiceexam.PracticeExamValidation;
 import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
 import com.edua.beeduasystem.presentation.dto.practiceexam.PracticeExamRequest;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.repository.gateways.PracticeExamEvent;
+import com.edua.beeduasystem.repository.gateways.PracticeExamStreamPort;
 import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,7 +36,8 @@ public class PracticeExamService {
     private final long essayBatchTimeoutSeconds;
     private final long totalTimeoutSeconds;
 
-    public PracticeExamService(TextbookCatalogRepository catalogRepository, AiClient aiClient, ObjectMapper objectMapper,
+    public PracticeExamService(TextbookCatalogRepository catalogRepository,
+                               @Qualifier("practiceExamAiClient") AiClient aiClient, ObjectMapper objectMapper,
                                @Value("${app.ai.practice-exam.max-concurrency:4}") int maxConcurrency,
                                @Value("${app.ai.practice-exam.timeout.regular-seconds:60}") long regularBatchTimeoutSeconds,
                                @Value("${app.ai.practice-exam.timeout.essay-seconds:90}") long essayBatchTimeoutSeconds,
@@ -64,6 +69,129 @@ public class PracticeExamService {
         log.info("PRACTICE_EXAM_KNOWLEDGE_LOADED lessonCount={} characters={}", knowledge.size(),
                 knowledge.values().stream().mapToInt(String::length).sum());
         return generateInBatches(request, knowledge);
+    }
+
+    /**
+     * Sinh đề kiểm tra theo kiểu STREAMING: trả tiến trình qua {@link PracticeExamStreamPort}
+     * thay vì chờ toàn bộ rồi trả 1 lần. Khác {@link #generate(PracticeExamRequest)}: KHÔNG
+     * cascade-cancel khi 1 batch lỗi — mỗi batch chạy độc lập, câu nào lỗi chỉ mình câu đó
+     * bị đánh dấu "Thử lại", các câu khác vẫn tiếp tục/giữ nguyên. Dùng lại nguyên
+     * {@link #generateBatch} (prompt, retry, sửa LaTeX) — chỉ khác cách điều phối kết quả.
+     */
+    public void generateStreaming(PracticeExamRequest request, String sessionId, PracticeExamStreamPort stream) {
+        PracticeExamValidation validation;
+        try {
+            validation = validate(request);
+        } catch (IllegalArgumentException exception) {
+            stream.publishFailed(sessionId, exception.getMessage());
+            return;
+        }
+        log.info("PRACTICE_EXAM_STREAM_STARTED sessionId={} subject={} grade={} questionCount={} validationStatus={}",
+                sessionId, request.subject(), request.grade(), request.totalQuestionCount(), validation.status());
+        if ("INFEASIBLE".equals(validation.status())) {
+            stream.publishFailed(sessionId, validation.message());
+            return;
+        }
+        if ("WARNING".equals(validation.status()) && !Boolean.TRUE.equals(request.teacherConfirmedWarning())) {
+            stream.publishFailed(sessionId, "Cấu hình cần xác nhận vì thời lượng ước tính quá sát thời gian làm bài.");
+            return;
+        }
+        Map<String, String> knowledge;
+        try {
+            knowledge = loadKnowledge(request);
+        } catch (IllegalArgumentException exception) {
+            stream.publishFailed(sessionId, exception.getMessage());
+            return;
+        }
+        List<BatchTask> tasks = buildBatchTasks(request);
+        stream.publishPlanReady(sessionId, request.title(), "Đọc kỹ từng câu hỏi và trình bày bài làm rõ ràng.",
+                request.durationMinutes(), request.totalScoreCentiPoints(), expandStubs(tasks));
+
+        ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+        Semaphore permits = new Semaphore(Math.min(maxConcurrency, Math.max(1, tasks.size())));
+        AtomicBoolean cancelled = new AtomicBoolean(false);
+        AtomicInteger successCount = new AtomicInteger();
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        try {
+            for (BatchTask task : tasks) {
+                futures.add(CompletableFuture.runAsync(() -> {
+                    boolean acquired = false;
+                    try {
+                        permits.acquire();
+                        acquired = true;
+                        List<PracticeExam.Question> questions = generateBatch(request, knowledge, task, cancelled);
+                        successCount.incrementAndGet();
+                        stream.publishBatchReady(sessionId, questions);
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                    } catch (Exception exception) {
+                        log.warn("PRACTICE_EXAM_STREAM_BATCH_FAILED sessionId={} type={} firstOrder={} message={}",
+                                sessionId, task.type().type(), task.firstOrder(), exception.getMessage());
+                        stream.publishBatchFailed(sessionId, orderRange(task), rootMessage(exception));
+                    } finally {
+                        if (acquired) permits.release();
+                    }
+                }, executor));
+            }
+            try {
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(totalTimeoutSeconds, TimeUnit.SECONDS);
+            } catch (TimeoutException exception) {
+                cancelled.set(true);
+                futures.forEach(future -> future.cancel(true));
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                cancelled.set(true);
+            } catch (ExecutionException exception) {
+                log.error("PRACTICE_EXAM_STREAM_UNEXPECTED sessionId={}", sessionId, exception);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+        if (successCount.get() == 0) {
+            stream.publishFailed(sessionId, "AI không tạo được câu hỏi nào cho đề này. Vui lòng thử lại.");
+            return;
+        }
+        log.info("PRACTICE_EXAM_STREAM_DONE sessionId={} successBatches={}/{}", sessionId, successCount.get(), tasks.size());
+        stream.publishDone(sessionId);
+    }
+
+    /** Sinh lại ĐÚNG MỘT câu hỏi (nút "Thử lại" trên 1 câu lỗi) — tái dùng {@link #generateBatch} với batch giả 1 câu. */
+    public PracticeExam.Question regenerateQuestion(PracticeExamRequest request, int order, String type, int scoreCentiPoints) {
+        if (!TYPES.contains(type)) throw new IllegalArgumentException("Loại câu hỏi không hợp lệ.");
+        Map<String, String> knowledge = loadKnowledge(request);
+        PracticeExamRequest.QuestionType questionType = new PracticeExamRequest.QuestionType(
+                type, 1, scoreCentiPoints, "TRUE_FALSE".equals(type) ? 4 : null);
+        BatchTask task = new BatchTask(questionType, 0, 1, scoreCentiPoints, order);
+        try {
+            return generateBatch(request, knowledge, task, new AtomicBoolean(false)).get(0);
+        } catch (PracticeExamGenerationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new PracticeExamGenerationException("AI không tạo lại được câu hỏi này. Vui lòng thử lại.", exception);
+        }
+    }
+
+    private List<PracticeExamEvent.QuestionStub> expandStubs(List<BatchTask> tasks) {
+        List<PracticeExamEvent.QuestionStub> stubs = new ArrayList<>();
+        for (BatchTask task : tasks) {
+            for (int index = 0; index < task.batchCount(); index++) {
+                int score = proportionalScore(task.batchScore(), task.batchCount(), index, 1);
+                stubs.add(new PracticeExamEvent.QuestionStub(task.firstOrder() + index, task.type().type(), score));
+            }
+        }
+        return stubs;
+    }
+
+    private static List<Integer> orderRange(BatchTask task) {
+        List<Integer> orders = new ArrayList<>(task.batchCount());
+        for (int index = 0; index < task.batchCount(); index++) orders.add(task.firstOrder() + index);
+        return orders;
+    }
+
+    private static String rootMessage(Throwable exception) {
+        Throwable cause = exception;
+        while (cause.getCause() != null && cause.getCause() != cause) cause = cause.getCause();
+        return cause.getMessage() != null ? cause.getMessage() : cause.toString();
     }
 
     private PracticeExam generateInBatches(PracticeExamRequest request, Map<String, String> knowledge) {
@@ -209,10 +337,12 @@ public class PracticeExamService {
                         throw new IllegalArgumentException("AI trả sai loại câu hỏi trong một lô.");
                     }
                     int score = proportionalScore(task.batchScore(), task.batchCount(), index, 1);
-                    normalized.add(new PracticeExam.Question(task.firstOrder() + index, question.type(),
+                    PracticeExam.Question normalizedQuestion = new PracticeExam.Question(task.firstOrder() + index, question.type(),
                             repairMathText(question.content()), repairOptions(question.options()),
                             repairAnswer(question.answer()), repairMathText(question.explanation()), score,
-                            repairRubric(question.rubric()), question.sourceLessonRefs()));
+                            repairRubric(question.rubric()), question.sourceLessonRefs());
+                    validateQuestionStructure(normalizedQuestion);
+                    normalized.add(normalizedQuestion);
                 }
                 return normalized;
             } catch (CancellationException failure) {
@@ -307,6 +437,7 @@ public class PracticeExamService {
                 Bạn là giáo viên Việt Nam. Chỉ dùng dữ liệu SGK được cung cấp. Trả về DUY NHẤT một JSON array, không markdown và không có text khác.
                 Mỗi phần tử phải đúng schema: {"order":number,"type":"...","content":"...","options":[{"key":"A","content":"..."}],"answer":{},"explanation":"...","scoreCentiPoints":number,"rubric":[{"criterion":"...","scoreCentiPoints":number}],"sourceLessonRefs":[{"bookCode":"...","chapterCode":"...","lessonCode":"..."}]}.
                 Tạo CHÍNH XÁC __QUESTION_COUNT__ câu loại __QUESTION_TYPE__, tổng __BATCH_SCORE__ centi điểm. MULTIPLE_CHOICE và TRUE_FALSE có đúng 4 options. ESSAY có rubric cộng đúng điểm. Mỗi câu phải có nguồn thuộc phạm vi. Nội dung và giải thích ngắn gọn.
+                GIỚI HẠN ĐỘ DÀI: content tối đa 60 từ. explanation tối đa 40 từ. Mỗi tiêu chí trong rubric tối đa 12 từ và ESSAY tối đa 4 tiêu chí rubric. Không lặp lại đề bài trong explanation.
                 QUY TẮC ĐỊNH DẠNG: Chỉ dùng văn bản thường cho nội dung diễn đạt, phương án A/B/C/D là chữ, và đơn vị đơn giản như "100 m", "10 phút". Mọi công thức toán, vật lí, hoá học; phân số, căn, mũ/chỉ số, phương trình phản ứng, vector hoặc ký hiệu khoa học PHẢI viết bằng LaTeX. Công thức trong câu đặt trong MỘT cặp $...$ duy nhất, ví dụ "$v_{tb} = \\frac{s}{t}$", "$\\sqrt{5^2 + 5^2}$", "$\\vec{F_1}$", "$N_2$"; không được đóng $ trước khi công thức kết thúc. Lời giải tính toán nhiều bước PHẢI nằm trọn trong MỘT khối $$...$$ duy nhất; không được tách từng lệnh \\sqrt, \\cdot, \\cos, \\theta, \\approx, \\Rightarrow thành dòng hay thành nhiều khối. Luôn viết vector đúng cú pháp \\vec{F_1}, \\vec{F_2}; không viết vecF_1, \\vecF_1 hoặc \\vec F_1. Phân số PHẢI có ngoặc nhọn, ví dụ \\frac{1}{2}, \\frac{F}{m}; không viết \\frac12, frac12, fracFm. Không viết thiếu dấu gạch chéo như frac, cdot, approx, textm/s. Không viết công thức dạng văn bản thường như "v = s/t", "sqrt(5^2 + 5^2)", "NH4+ + OH- → NH3 + H2O". Trong JSON, phải escape mọi dấu gạch chéo ngược của LaTeX, ví dụ "\\\\frac", "\\\\sqrt", "\\\\mathrm", "\\\\vec".
                 MỤC TIÊU CỦA GIÁO VIÊN (ưu tiên bám sát khi chọn nội dung câu hỏi, vẫn phải nằm trong phạm vi SGK): __TEACHER_OBJECTIVE__
                 CẤU HÌNH ĐỀ: __REQUEST_CONFIG__
@@ -403,20 +534,37 @@ public class PracticeExamService {
         return value;
     }
 
+    /**
+     * Check cấu trúc CHO 1 CÂU (thiếu content/answer/nguồn, đủ 4 phương án MC/TRUE_FALSE, rubric
+     * tự luận cộng đúng điểm). Gọi ngay trong {@link #generateBatch} (mỗi batch xong) để
+     * {@code generateStreaming} báo lỗi đúng lúc, và lại trong {@link #validateCompletedExam}
+     * làm lớp phòng vệ cuối cho đường {@link #generate(PracticeExamRequest)} đồng bộ.
+     */
+    private void validateQuestionStructure(PracticeExam.Question question) {
+        if (question == null || blank(question.content()) || question.answer() == null
+                || question.sourceLessonRefs() == null || question.sourceLessonRefs().isEmpty()) {
+            throw new IllegalArgumentException("AI trả câu hỏi thiếu nội dung, đáp án hoặc nguồn SGK.");
+        }
+        if ("MULTIPLE_CHOICE".equals(question.type()) && (question.options() == null || question.options().size() != 4)) {
+            throw new IllegalArgumentException("Câu trắc nghiệm nhiều lựa chọn phải có 4 phương án.");
+        }
+        if ("TRUE_FALSE".equals(question.type()) && (question.options() == null || question.options().size() != 4)) {
+            throw new IllegalArgumentException("Câu đúng-sai phải có 4 mệnh đề.");
+        }
+        if ("ESSAY".equals(question.type()) && (question.rubric() == null
+                || question.rubric().stream().mapToInt(PracticeExam.Rubric::scoreCentiPoints).sum() != question.scoreCentiPoints())) {
+            throw new IllegalArgumentException("Rubric tự luận không khớp điểm câu.");
+        }
+    }
+
     private void validateCompletedExam(PracticeExam exam, PracticeExamRequest request) {
         if (exam == null || exam.questions() == null || exam.questions().size() != request.totalQuestionCount() || exam.totalScoreCentiPoints() != 1000) throw new IllegalArgumentException("AI trả thiếu câu hỏi hoặc sai tổng điểm.");
         Map<String, PracticeExamRequest.QuestionType> expected = new HashMap<>(); request.questionTypes().forEach(type -> expected.put(type.type(), type));
         Map<String, Integer> counts = new HashMap<>(); Map<String, Integer> scores = new HashMap<>();
-        Set<String> allowed = new HashSet<>(); for (PracticeExamRequest.LessonRef ref : request.knowledgeScope().lessonRefs()) allowed.add(request.knowledgeScope().bookCode() + ":" + ref.chapterCode() + ":" + ref.lessonCode());
         for (PracticeExam.Question question : exam.questions()) {
-            if (question == null || !expected.containsKey(question.type()) || blank(question.content()) || question.answer() == null || question.sourceLessonRefs() == null || question.sourceLessonRefs().isEmpty()) throw new IllegalArgumentException("AI trả câu hỏi thiếu nội dung, đáp án hoặc nguồn SGK.");
+            if (question == null || !expected.containsKey(question.type())) throw new IllegalArgumentException("AI trả câu hỏi thiếu nội dung, đáp án hoặc nguồn SGK.");
+            validateQuestionStructure(question);
             counts.merge(question.type(), 1, Integer::sum); scores.merge(question.type(), question.scoreCentiPoints(), Integer::sum);
-            for (PracticeExam.LessonRef ref : question.sourceLessonRefs()) if (!allowed.contains(ref.bookCode() + ":" + ref.chapterCode() + ":" + ref.lessonCode())) throw new IllegalArgumentException("AI sử dụng kiến thức ngoài phạm vi SGK đã chọn.");
-            if ("MULTIPLE_CHOICE".equals(question.type()) && (question.options() == null || question.options().size() != 4)) throw new IllegalArgumentException("Câu trắc nghiệm nhiều lựa chọn phải có 4 phương án.");
-            if ("TRUE_FALSE".equals(question.type()) && (question.options() == null || question.options().size() != 4)) throw new IllegalArgumentException("Câu đúng-sai phải có 4 mệnh đề.");
-            if ("ESSAY".equals(question.type()) && (question.rubric() == null || question.rubric().stream().mapToInt(PracticeExam.Rubric::scoreCentiPoints).sum() != question.scoreCentiPoints())) {
-                throw new IllegalArgumentException("Rubric tự luận không khớp điểm câu.");
-            }
         }
         for (PracticeExamRequest.QuestionType type : request.questionTypes()) {
             if (counts.getOrDefault(type.type(), 0).intValue() != type.questionCount()

@@ -63,6 +63,55 @@ public class AiClientConfig {
     }
 
     /**
+     * Dedicated client for practice-exam batch generation only. Same OpenAI-primary/DeepSeek-fallback
+     * shape as {@link #aiClient}, but with a much lower, independently tunable maxTokens: practice-exam
+     * batches are capped at 1-5 questions each and normally need well under 1500 tokens, whereas a small
+     * fraction of ESSAY/SHORT_ANSWER single-question batches balloon to 2600-2900 tokens/40+ seconds.
+     * Capping maxTokens here bounds that worst-case latency without affecting slide-HTML, lesson-plan,
+     * or molecule generation, which use the shared {@link #aiClient} and need far larger completions.
+     */
+    @Bean("practiceExamAiClient")
+    public AiClient practiceExamAiClient(
+            @Value("${app.ai.openai.api-key}") String openaiApiKey,
+            @Value("${app.ai.openai.base-url:https://api.openai.com}") String openaiBaseUrl,
+            @Value("${app.ai.openai.default-model:gpt-4o-mini}") String openaiModel,
+            @Value("${app.ai.deepseek.api-key}") String deepseekApiKey,
+            @Value("${app.ai.deepseek.base-url:https://api.deepseek.com}") String deepseekBaseUrl,
+            @Value("${app.ai.deepseek.default-model:deepseek-chat}") String deepseekModel,
+            @Value("${app.ai.practice-exam.max-tokens:2600}") int practiceExamMaxTokens,
+            @Autowired(required = false) AiDiagnosticsListener diagnostics
+    ) {
+        var openaiApi = OpenAiApi.builder()
+                .baseUrl(openaiBaseUrl)
+                .apiKey(openaiApiKey)
+                .build();
+        var openaiChatModel = OpenAiChatModel.builder()
+                .openAiApi(openaiApi)
+                .defaultOptions(OpenAiChatOptions.builder()
+                        .model(openaiModel)
+                        .maxTokens(practiceExamMaxTokens)
+                        .build())
+                .build();
+
+        var deepseekApi = OpenAiApi.builder()
+                .baseUrl(deepseekBaseUrl)
+                .apiKey(deepseekApiKey)
+                .build();
+        var deepseekChatModel = OpenAiChatModel.builder()
+                .openAiApi(deepseekApi)
+                .defaultOptions(OpenAiChatOptions.builder()
+                        .model(deepseekModel)
+                        .maxTokens(practiceExamMaxTokens)
+                        .build())
+                .build();
+
+        return new FallbackAiClient(List.of(
+                new OpenAiAdapter(openaiChatModel),
+                new DeepSeekAdapter(deepseekChatModel)
+        ), diagnostics != null ? diagnostics : AiDiagnosticsListener.NO_OP);
+    }
+
+    /**
      * Same providers/fallback order as the primary client, but forces the OpenAI-compatible
      * "json_object" response format so the API rejects/repairs syntactically invalid JSON itself
      * instead of returning free-form text that may omit closing brackets. Only safe for callers
