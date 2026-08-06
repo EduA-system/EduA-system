@@ -27,6 +27,11 @@ import { Ruler } from "../LessonEditor/Ruler";
 import { openLessonPlanPrintDialog } from "@/lib/lesson-plan-pdf-export";
 import { createLessonThumbnail } from "@/lib/library-thumbnail";
 
+function parseLessonGrade(value: string | undefined): number | undefined {
+  const match = value?.match(/\b(10|11|12)\b/);
+  return match ? Number(match[1]) : undefined;
+}
+
 export function LessonEditDashboard() {
   const { authFetch } = useAuth();
   const searchParams = useSearchParams();
@@ -42,6 +47,7 @@ export function LessonEditDashboard() {
   const [isDirty, setIsDirty] = useState(false);
   const libraryContentIdRef = useRef<string | null>(null);
   const librarySubjectRef = useRef<LibrarySubject | undefined>(undefined);
+  const libraryGradeRef = useRef<number | undefined>(undefined);
   const savingRef = useRef(false);
   const revisionRef = useRef(0);
   // Công thức AI sinh ra (hoặc chèn qua toolbar) là node atom — bấm vào sẽ mở
@@ -95,6 +101,7 @@ export function LessonEditDashboard() {
 
         libraryContentIdRef.current = content.id;
         librarySubjectRef.current = content.subject ?? undefined;
+        libraryGradeRef.current = content.grade ?? undefined;
         editor.commands.setContent(document);
         revisionRef.current = 0;
         setIsDirty(false);
@@ -132,6 +139,7 @@ export function LessonEditDashboard() {
       setSaveError(null);
       const title = editor.state.doc.firstChild?.textContent.trim() || session?.display?.title || "Giáo án mới";
       const subject = (session?.display?.subjectCode as LibrarySubject | undefined) ?? librarySubjectRef.current;
+      const grade = parseLessonGrade(session?.display?.grade) ?? libraryGradeRef.current;
       const revisionAtSave = revisionRef.current;
       const payload = {
         format: "tiptap-json",
@@ -150,17 +158,19 @@ export function LessonEditDashboard() {
 
       try {
         if (libraryContentIdRef.current) {
-          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, payload, thumbnailUrl });
+          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, grade, payload, thumbnailUrl });
         } else {
           const created = await createLibraryContent(authFetch, {
             type: "LESSON_PLAN",
             title,
             subject,
+            grade,
             payload,
             thumbnailUrl,
           });
           libraryContentIdRef.current = created.id;
           librarySubjectRef.current = created.subject ?? undefined;
+          libraryGradeRef.current = created.grade ?? undefined;
         }
         setSaveStatus("saved");
         if (revisionRef.current === revisionAtSave) setIsDirty(false);

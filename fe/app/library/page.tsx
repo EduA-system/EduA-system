@@ -80,6 +80,25 @@ function subjectLabel(subject: LibraryContent["subject"]) {
   return "Chưa chọn môn";
 }
 
+function gradeLabel(grade: LibraryContent["grade"]) {
+  return grade ? `Khối ${grade}` : null;
+}
+
+function collectTiptapText(node: unknown): string {
+  if (!node || typeof node !== "object") return "";
+  const record = node as { text?: unknown; content?: unknown };
+  const ownText = typeof record.text === "string" ? record.text : "";
+  const childText = Array.isArray(record.content) ? record.content.map(collectTiptapText).join(" ") : "";
+  return `${ownText} ${childText}`.trim();
+}
+
+function extractGradeFromPayload(payload: unknown): number | undefined {
+  const document = (payload as { document?: unknown } | undefined)?.document;
+  const text = collectTiptapText(document);
+  const match = text.match(/\b(?:lớp|lop|khối|khoi)\s*:?\s*(10|11|12)\b/i);
+  return match ? Number(match[1]) : undefined;
+}
+
 function LibraryScreen() {
   const { authFetch } = useAuth();
   const [type, setType] = useState<LibraryType>("LESSON_PLAN");
@@ -95,7 +114,7 @@ function LibraryScreen() {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [saving, setSaving] = useState(false);
-  const thumbnailBackfillIds = useRef(new Set<string>());
+  const metadataBackfillIds = useRef(new Set<string>());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,21 +139,27 @@ function LibraryScreen() {
   }, [load]);
 
   useEffect(() => {
-    const missingThumbnails = items.filter((content) =>
-      !content.thumbnailUrl
-      && (content.type === "LESSON_PLAN" || content.type === "SLIDE_DECK")
-      && !thumbnailBackfillIds.current.has(content.id),
+    const missingMetadata = items.filter((content) =>
+      (
+        (!content.thumbnailUrl && (content.type === "LESSON_PLAN" || content.type === "SLIDE_DECK"))
+        || (content.type === "LESSON_PLAN" && !content.grade)
+      )
+      && !metadataBackfillIds.current.has(content.id),
     );
-    missingThumbnails.forEach((summary) => {
-      thumbnailBackfillIds.current.add(summary.id);
+    missingMetadata.forEach((summary) => {
+      metadataBackfillIds.current.add(summary.id);
       void getLibraryContent(authFetch, summary.id)
         .then(async (detail) => {
           const thumbnailUrl = detail.type === "LESSON_PLAN"
             ? createLessonThumbnail(detail.title, detail.subject, (detail.payload as { document?: unknown } | undefined)?.document)
             : createSlideThumbnail(parseSlideDeck(detail.payload) ?? []);
-          if (!thumbnailUrl) return;
-          await updateLibraryContent(authFetch, detail.id, { thumbnailUrl });
-          setItems((current) => current.map((content) => content.id === detail.id ? { ...content, thumbnailUrl } : content));
+          const grade = detail.grade ?? (detail.type === "LESSON_PLAN" ? extractGradeFromPayload(detail.payload) : undefined);
+          const patch: { thumbnailUrl?: string; grade?: number } = {};
+          if (!detail.thumbnailUrl && thumbnailUrl) patch.thumbnailUrl = thumbnailUrl;
+          if (!detail.grade && grade) patch.grade = grade;
+          if (!patch.thumbnailUrl && !patch.grade) return;
+          await updateLibraryContent(authFetch, detail.id, patch);
+          setItems((current) => current.map((content) => content.id === detail.id ? { ...content, ...patch } : content));
         })
         .catch(() => undefined);
     });
@@ -213,11 +238,15 @@ function LibraryScreen() {
               const meta = contentMeta[content.type];
               const Icon = meta.icon;
               const status = statusMeta(content);
+              const grade = gradeLabel(content.grade);
               return <article key={content.id} className="group relative min-w-0 rounded-[26px] border border-[#dfe7eb] bg-white shadow-[0_8px_24px_rgba(43,41,38,0.10)] transition duration-200 hover:-translate-y-1 hover:border-[#cbdde4] hover:shadow-[0_14px_30px_rgba(43,41,38,0.16)]">
                 <div className="flex h-full flex-col overflow-visible rounded-[26px] bg-[#f8fbfc] p-3">
                   <div className="flex items-center gap-2 px-1 pb-3">
                     <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#dff8f3] text-[#167b70]"><Icon aria-hidden className="size-5" /></div>
-                    <p className="min-w-0 flex-1 truncate text-sm font-bold text-[#363a43]">{meta.label} {subjectLabel(content.subject)}</p>
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <p className="min-w-0 truncate text-sm font-bold text-[#363a43]">{meta.label} {subjectLabel(content.subject)}</p>
+                      {grade && <span className="shrink-0 rounded-full bg-[#edf4ff] px-2 py-1 text-[10px] font-semibold text-[#2f5f9b]">{grade}</span>}
+                    </div>
                     <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${status.className}`}>{status.label}</span>
                     {content.status !== "APPROVED" && <div className="group/approval relative"><button type="button" aria-label={content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"} onClick={() => requestAction(content, content.status === "SUBMITTED" ? "unsubmit" : "submit")} className="flex size-9 items-center justify-center rounded-xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900">{content.status === "SUBMITTED" ? <Undo2 className="size-4" /> : <Send className="size-4" />}</button><span role="tooltip" className="pointer-events-none absolute right-0 top-11 z-20 w-max max-w-48 rounded-lg bg-[#292d3b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition group-hover/approval:opacity-100">{content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"}</span></div>}
                   </div>

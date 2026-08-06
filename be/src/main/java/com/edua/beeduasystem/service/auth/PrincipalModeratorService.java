@@ -10,14 +10,17 @@ import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -30,17 +33,31 @@ public class PrincipalModeratorService {
 
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
+    private final TeacherGradeRepository teacherGradeRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ActivityLogService activityLogService;
 
+    @Autowired
     public PrincipalModeratorService(AppUserRepository userRepository,
                                  UserRoleRepository userRoleRepository,
+                                 TeacherGradeRepository teacherGradeRepository,
                                  CurrentUserProvider currentUserProvider,
                                  ActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
+        this.teacherGradeRepository = teacherGradeRepository;
         this.currentUserProvider = currentUserProvider;
         this.activityLogService = activityLogService;
+    }
+
+    PrincipalModeratorService(AppUserRepository userRepository,
+                              UserRoleRepository userRoleRepository,
+                              CurrentUserProvider currentUserProvider,
+                              ActivityLogService activityLogService) {
+        this(userRepository, userRoleRepository, new TeacherGradeRepository() {
+            @Override public void replaceGrades(UUID userId, java.util.Collection<Integer> grades) { }
+            @Override public java.util.Map<UUID, java.util.List<Integer>> findGradesByUserIds(java.util.Collection<UUID> userIds) { return java.util.Map.of(); }
+        }, currentUserProvider, activityLogService);
     }
 
     public record ModeratorListResult(
@@ -158,6 +175,7 @@ public class PrincipalModeratorService {
         // Both updates share this transaction, so a failure restores the original moderator.
         userRepository.save(demotedModerator);
         assignRole(demotedModerator.id(), Role.TEACHER, currentUserId, now);
+        teacherGradeRepository.replaceGrades(demotedModerator.id(), List.of(10, 11, 12));
 
         AppUser savedReplacement = userRepository.save(replacement);
         assignRole(savedReplacement.id(), Role.MODERATOR, currentUserId, now);

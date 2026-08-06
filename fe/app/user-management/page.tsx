@@ -18,6 +18,7 @@ import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { hasAnyRole } from "@/lib/auth/permissions";
 
 const SUBJECTS = ["MATH", "CHEMISTRY", "PHYSICS"] as const;
+const GRADES = [10, 11, 12] as const;
 
 const SUBJECT_LABELS: Record<string, string> = {
   MATH: "Toán",
@@ -44,6 +45,7 @@ type AccountItem = {
 
 type SubjectAccountItem = AccountItem & {
   subject: string;
+  grades?: number[];
   grantedAt: string;
   grantedByEmail: string | null;
 };
@@ -102,6 +104,37 @@ function StatusBadge({ status }: { status: string }) {
       {STATUS_LABELS[status] ?? status}
     </span>
   );
+}
+
+function GradeCheckboxes({
+  value,
+  onChange,
+}: {
+  value: number[];
+  onChange: (value: number[]) => void;
+}) {
+  const toggle = (grade: number) => {
+    onChange(value.includes(grade) ? value.filter((item) => item !== grade) : [...value, grade].sort((a, b) => a - b));
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2" aria-label="Chọn khối giảng dạy">
+      {GRADES.map((grade) => (
+        <label key={grade} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#d8d1c9] bg-white px-3 text-sm text-[#4f4943]">
+          <input
+            type="checkbox"
+            checked={value.includes(grade)}
+            onChange={() => toggle(grade)}
+            className="size-4 accent-[#1f1f1f]"
+          />
+          Khối {grade}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function gradeText(grades: number[] | undefined) {
+  return grades && grades.length > 0 ? ` · Khối ${grades.join(", ")}` : "";
 }
 
 function Pager({
@@ -174,6 +207,7 @@ function UserManagementContent() {
   const [teacherData, setTeacherData] = useState<PageResponse<SubjectAccountItem> | null>(null);
   const [teacherEmail, setTeacherEmail] = useState("");
   const [teacherFullName, setTeacherFullName] = useState("");
+  const [teacherGrades, setTeacherGrades] = useState<number[]>([10, 11, 12]);
 
   const loadTeachers = useCallback(
     async (page: number) => {
@@ -273,14 +307,15 @@ function UserManagementContent() {
   }
 
   async function addTeacher() {
-    if (!teacherEmail.trim() || !user?.subject) return;
+    if (!teacherEmail.trim() || !user?.subject || teacherGrades.length === 0) return;
     try {
       await api(authFetch, "/moderator/teachers", {
         method: "POST",
-        body: JSON.stringify({ email: teacherEmail, subject: user.subject, fullName: teacherFullName || null }),
+        body: JSON.stringify({ email: teacherEmail, subject: user.subject, fullName: teacherFullName || null, grades: teacherGrades }),
       });
       setTeacherEmail("");
       setTeacherFullName("");
+      setTeacherGrades([10, 11, 12]);
       setMsg("Đã thêm Teacher.");
       await loadTeachers(teacherData?.page ?? 0);
     } catch (e) {
@@ -548,7 +583,8 @@ function UserManagementContent() {
                     <span className="rounded-lg bg-[#f5f1ec] px-3 py-2 text-sm text-[#6b6b6b]">
                       Môn: {SUBJECT_LABELS[user?.subject ?? ""] ?? user?.subject ?? "—"}
                     </span>
-                    <button onClick={addTeacher} className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e]">
+                    <GradeCheckboxes value={teacherGrades} onChange={setTeacherGrades} />
+                    <button disabled={teacherGrades.length === 0} onClick={addTeacher} className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e] disabled:cursor-not-allowed disabled:opacity-50">
                       Thêm
                     </button>
                   </div>
@@ -569,6 +605,7 @@ function UserManagementContent() {
                             </div>
                             <div className="mt-1 text-xs text-[#8a8178]">
                               {item.email} · Môn {SUBJECT_LABELS[item.subject] ?? item.subject}
+                              {gradeText(item.grades)}
                               {item.grantedByEmail ? ` · cấp bởi ${item.grantedByEmail}` : ""}
                             </div>
                           </div>

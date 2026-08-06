@@ -10,6 +10,7 @@ import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.springframework.data.domain.Page;
@@ -18,7 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -31,15 +36,18 @@ public class ModeratorTeacherService {
 
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
+    private final TeacherGradeRepository teacherGradeRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ActivityLogService activityLogService;
 
     public ModeratorTeacherService(AppUserRepository userRepository,
                                    UserRoleRepository userRoleRepository,
+                                   TeacherGradeRepository teacherGradeRepository,
                                    CurrentUserProvider currentUserProvider,
                                    ActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
+        this.teacherGradeRepository = teacherGradeRepository;
         this.currentUserProvider = currentUserProvider;
         this.activityLogService = activityLogService;
     }
@@ -48,7 +56,8 @@ public class ModeratorTeacherService {
             Page<AppUser> teachers,
             Map<UUID, String> grantedByNames,
             Map<UUID, UUID> granterUserIds,
-            Map<UUID, Instant> grantedAts
+            Map<UUID, Instant> grantedAts,
+            Map<UUID, List<Integer>> gradesByUserIds
     ) {
     }
 
@@ -61,11 +70,12 @@ public class ModeratorTeacherService {
         Page<AppUser> teachers = userRepository.findAllByRoleAndSubject(Role.TEACHER, moderatorSubject, pageable);
         var userIds = teachers.getContent().stream().map(AppUser::id).collect(Collectors.toSet());
         if (userIds.isEmpty()) {
-            return new TeacherListResult(teachers, Map.of(), Map.of(), Map.of());
+            return new TeacherListResult(teachers, Map.of(), Map.of(), Map.of(), Map.of());
         }
 
         var granterUserIds = userRoleRepository.findGrantedByUserIdsByUserIds(userIds, Role.TEACHER);
         var grantedAts = userRoleRepository.findGrantedAtsByUserIds(userIds, Role.TEACHER);
+        var gradesByUserIds = teacherGradeRepository.findGradesByUserIds(userIds);
 
         var granterIds = granterUserIds.values().stream()
                 .filter(id -> id != null)
@@ -77,11 +87,11 @@ public class ModeratorTeacherService {
             granterNames = userRepository.findAllById(granterIds).stream()
                     .collect(Collectors.toMap(AppUser::id, u -> u.fullName() != null ? u.fullName() : u.email()));
         }
-        return new TeacherListResult(teachers, granterNames, granterUserIds, grantedAts);
+        return new TeacherListResult(teachers, granterNames, granterUserIds, grantedAts, gradesByUserIds);
     }
 
     @Transactional
-    public AppUser addTeacher(String email, String rawSubject, String fullName) {
+    public AppUser addTeacher(String email, String rawSubject, String fullName, Collection<Integer> grades) {
         Subject moderatorSubject = currentUserProvider.require().subject();
         if (moderatorSubject == null) {
             throw new ForbiddenOperationException("Moderator phải có subject để quản lý giáo viên.");
@@ -94,6 +104,7 @@ public class ModeratorTeacherService {
 
         String normalizedEmail = AppUserFieldValidator.normalizeEmail(email);
         String normalizedFullName = AppUserFieldValidator.normalizeOptionalFullName(fullName);
+        List<Integer> normalizedGrades = normalizeGrades(grades);
         UUID currentUserId = currentUserProvider.requireUserId();
         Instant now = Instant.now();
 
@@ -110,6 +121,7 @@ public class ModeratorTeacherService {
                     u.bio(), u.phoneNumber(),
                     moderatorSubject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
             assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
+            teacherGradeRepository.replaceGrades(reactivated.id(), normalizedGrades);
             activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
                     ActivityLogAction.GRANT_TEACHER, "APP_USER", reactivated.id(), null);
             return reactivated;
@@ -121,6 +133,7 @@ public class ModeratorTeacherService {
                 null, null,
                 moderatorSubject, UserStatus.INVITED, now, null));
         assignRole(saved.id(), Role.TEACHER, currentUserId, now);
+        teacherGradeRepository.replaceGrades(saved.id(), normalizedGrades);
         activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.GRANT_TEACHER, "APP_USER", saved.id(), null);
         return saved;
@@ -188,5 +201,19 @@ public class ModeratorTeacherService {
 
     private void assignRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt) {
         userRoleRepository.replaceRole(userId, role, grantedBy, grantedAt);
+    }
+
+    private static List<Integer> normalizeGrades(Collection<Integer> grades) {
+        if (grades == null || grades.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn ít nhất một khối.");
+        }
+        Set<Integer> normalized = new LinkedHashSet<>();
+        for (Integer grade : grades) {
+            if (grade == null || grade < 10 || grade > 12) {
+                throw new IllegalArgumentException("Khối chỉ được chọn 10, 11 hoặc 12.");
+            }
+            normalized.add(grade);
+        }
+        return normalized.stream().sorted().toList();
     }
 }

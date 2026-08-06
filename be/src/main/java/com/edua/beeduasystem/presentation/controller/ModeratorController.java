@@ -47,7 +47,7 @@ public class ModeratorController {
         return result.teachers().map(u -> {
             UUID granterId = result.granterUserIds().get(u.id());
             String granterName = granterId != null ? result.grantedByNames().get(granterId) : null;
-            return TeacherDto.from(u, result.grantedAts().get(u.id()), granterName);
+            return TeacherDto.from(u, result.gradesByUserIds().get(u.id()), result.grantedAts().get(u.id()), granterName);
         });
     }
 
@@ -56,8 +56,8 @@ public class ModeratorController {
     @Operation(summary = "Thêm Teacher (UC-14)",
             description = "Cấp quyền bằng email. Subject phải trùng với subject của moderator. Email chưa tồn tại.")
     public TeacherDto addTeacher(@Valid @RequestBody AddTeacherRequest request) {
-        var user = moderatorTeacherService.addTeacher(request.email(), request.subject(), request.fullName());
-        return TeacherDto.from(user, null, null);
+        var user = moderatorTeacherService.addTeacher(request.email(), request.subject(), request.fullName(), request.grades());
+        return TeacherDto.from(user, request.grades(), null, null);
     }
 
     @DeleteMapping("/teachers/{id}")
@@ -74,6 +74,6 @@ public class ModeratorController {
             description = "Set status = INVITED, cập nhật granted_by/granted_at.")
     public TeacherDto reactivateTeacher(@PathVariable UUID id) {
         var user = moderatorTeacherService.reactivateTeacher(id);
-        return TeacherDto.from(user, null, null);
+        return TeacherDto.from(user, null, null, null);
     }
 }

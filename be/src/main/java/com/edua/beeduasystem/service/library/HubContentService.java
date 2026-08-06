@@ -54,11 +54,11 @@ public class HubContentService {
         UUID ownerId = currentUser.requireUserId();
         Instant now = Instant.now();
         LibraryContent copy = new LibraryContent(UUID.randomUUID(), ownerId, original.type(), original.title() + " (bản sao)",
-                original.subject(), LibraryContentStatus.PRIVATE, original.payload(), original.thumbnailUrl(),
+                original.subject(), original.grade(), LibraryContentStatus.PRIVATE, original.payload(), original.thumbnailUrl(),
                 now, now, null, null, null, null, null);
         LibraryContent saved = repository.save(copy);
         return new LibraryViews.Detail(saved.id(), saved.type(), saved.title(),
-                saved.subject(), saved.status(), saved.payload(), saved.thumbnailUrl(), saved.createdAt(),
+                saved.subject(), saved.grade(), saved.status(), saved.payload(), saved.thumbnailUrl(), saved.createdAt(),
                 saved.updatedAt(), saved.submittedAt(), saved.rejectionReason());
     }
 
