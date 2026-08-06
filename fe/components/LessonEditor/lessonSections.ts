@@ -4,9 +4,10 @@ import type { Editor } from "@tiptap/react";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { TABLE_BREAK_LINE, tableHeaderCells, tableNodeToPipeText } from "./tableText";
 
-/** Cấu trúc bảng mà mục đang chứa — quyết định AI cần biết quy tắc cấu trúc 5512 nào khi
- * viết lại mục đó (xem LessonPlanEditPromptBuilder ở backend). */
-export type SectionKind = "text" | "materials" | "subActivity";
+/** Cấu trúc mà mục đang chứa — quyết định AI cần biết quy tắc cấu trúc 5512 nào khi viết lại
+ * mục đó (xem LessonPlanEditPromptBuilder ở backend). "activity" = Hoạt động cấp 1 (HĐ1/3/4,
+ * cấu trúc a/b/c/d, không bảng) — khác "subActivity" (tiểu hoạt động của HĐ2, có bảng 2 cột). */
+export type SectionKind = "text" | "materials" | "subActivity" | "activity";
 
 export type EditableLessonSection = {
   id: string;
@@ -32,6 +33,17 @@ type HeadingBlock = {
 /** Tiêu đề 2 cột đúng của bảng tiểu hoạt động HĐ2 (xem `subActivityTableHtml` trong
  * LessonEditor.tsx) — dùng để phân biệt với bảng thiết bị/phiếu học tập. */
 const SUB_ACTIVITY_HEADERS = ["Hoạt động của GV và HS", "Sản phẩm dự kiến"];
+
+/** Khớp tiêu đề Hoạt động cấp 1 do luồng sinh gốc đặt tên (vd "Hoạt động 3: Luyện tập (15
+ * phút)") — xem `LessonPlan5512PromptBuilder`/`activityHtml`/`pendingActivityFallbackNodes`.
+ * Chỉ HĐ1/3/4 rơi vào đây: HĐ2 luôn bị `hasChildHeading` loại khỏi danh sách section khi có
+ * tiểu hoạt động (trường hợp hiếm HĐ2 không có tiểu hoạt động thì vẫn khớp — chấp nhận được,
+ * vẫn tốt hơn xử lý như "text" thuần). */
+const ACTIVITY_HEADING_PATTERN = /^Hoạt động\s+\d+\b/;
+
+export function isTopLevelActivityHeading(heading: string): boolean {
+  return ACTIVITY_HEADING_PATTERN.test(heading.trim());
+}
 
 /**
  * `textBetween` bỏ qua node atom (công thức toán) trừ khi có `leafText` — không truyền
@@ -131,6 +143,7 @@ export function extractEditableSections(editor: Editor | null): EditableLessonSe
     if (hasChildHeading) continue;
 
     const body = sectionBodyText(editor.state.doc, current.to, to);
+    const kind: SectionKind = isTopLevelActivityHeading(current.heading) ? "activity" : body.kind;
 
     sections.push({
       id: `sec-${sections.length + 1}`,
@@ -141,7 +154,7 @@ export function extractEditableSections(editor: Editor | null): EditableLessonSe
       to,
       text: [current.heading, body.text].filter(Boolean).join("\n"),
       bodyText: body.text,
-      kind: body.kind,
+      kind,
     });
   }
 

@@ -245,6 +245,13 @@ export interface EditLessonSectionRequest {
     /** Cấu trúc bảng mà mục đang chứa — xem `lessonSections.ts#SectionKind`. */
     kind: string;
   }[];
+  /** Nguồn SGK của giáo án (từ phiên streaming đang sống hoặc `payload.source` khi mở lại từ
+   * Personal Library) — optional, cho phép thiếu (tài liệu cũ chưa có source). Khi có đủ, BE
+   * nạp lại `knowledge_json` để bước viết bám đúng kiến thức bài, đặc biệt khi viết mới hoàn
+   * toàn một mục còn trống (vd "Mời soạn tay."). */
+  bookId?: string;
+  chapterId?: string;
+  lessonId?: string;
 }
 
 export interface EditLessonSectionEdit {

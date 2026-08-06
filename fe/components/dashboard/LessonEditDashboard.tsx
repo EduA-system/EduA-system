@@ -21,11 +21,16 @@ import { Sidebar } from "../layout/Sidebar";
 import { ImageEnabledEditorTools } from "../LessonEditor";
 import { LessonEditor, generatingLessonPlanSkeletonHtml, lessonPlan5512ToHtml } from "../LessonEditor";
 import { createEditorExtensions, type MathClickInfo } from "../LessonEditor/editorConfig";
+import { resolveDeadPendingActivities } from "../LessonEditor/pendingActivityNode";
 import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
 import { openLessonPlanPrintDialog } from "@/lib/lesson-plan-pdf-export";
 import { createLessonThumbnail } from "@/lib/library-thumbnail";
+
+/** Nguồn SGK của giáo án — dùng để BE nạp lại `knowledge_json` khi AssistantPanel viết mới
+ * hoàn toàn một mục còn trống. Khớp `source` trong payload lưu ở Personal Library. */
+type LessonSource = { bookId: string; chapterId: string; lessonId: string };
 
 export function LessonEditDashboard() {
   const { authFetch } = useAuth();
@@ -37,6 +42,10 @@ export function LessonEditDashboard() {
   // `useLessonPlanStream` đã `clearLessonPlanSession()`, khiến `editable` bị tính lại.
   const [pendingSession] = useState(() => readLessonPlanSession());
   const [lessonSession, setLessonSession] = useState<LessonPlanSession | null>(pendingSession);
+  // Nguồn SGK khi mở lại giáo án đã lưu (không có phiên streaming sống nên không có
+  // `lessonSession`) — đọc từ `payload.source` lúc load, dùng để BE nạp lại `knowledge_json`
+  // cho AssistantPanel (xem `getLessonPlanSource`).
+  const [lessonSource, setLessonSource] = useState<LessonSource | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -92,10 +101,16 @@ export function LessonEditDashboard() {
         if (cancelled) return;
         const document = getLessonPlanDocument(content.payload);
         if (!document) throw new Error("Giáo án đã lưu có định dạng không hợp lệ.");
+        // Mở lại từ Library là chắc chắn không còn phiên streaming sống — mọi node
+        // pendingActivity còn sót lại (đang soạn dở hoặc đã lỗi) không thể tự phục hồi nữa,
+        // nên "hoá" thành heading + "Mời soạn tay." thường để GV/AI chat sửa được ngay.
+        const healedDocument = resolveDeadPendingActivities(document, true);
+        const source = getLessonPlanSource(content.payload);
+        if (source) setLessonSource(source);
 
         libraryContentIdRef.current = content.id;
         librarySubjectRef.current = content.subject ?? undefined;
-        editor.commands.setContent(document);
+        editor.commands.setContent(healedDocument);
         revisionRef.current = 0;
         setIsDirty(false);
         editor.setEditable(true);
@@ -133,10 +148,14 @@ export function LessonEditDashboard() {
       const title = editor.state.doc.firstChild?.textContent.trim() || session?.display?.title || "Giáo án mới";
       const subject = (session?.display?.subjectCode as LibrarySubject | undefined) ?? librarySubjectRef.current;
       const revisionAtSave = revisionRef.current;
+      // Chỉ thay node ĐÃ "failed" — node còn "pending" có thể vẫn đang sinh THẬT trong phiên
+      // hiện tại (vd bấm "Lưu" tay giữa lúc generate), không được đụng vào (xem
+      // `resolveDeadPendingActivities`). Chỉ transform bản JSON gửi đi lưu, không sửa editor
+      // đang sống — luồng streaming vẫn cần node gốc để patch khi ACTIVITY_READY/FAILED về.
       const payload = {
         format: "tiptap-json",
         version: 1,
-        document: editor.getJSON(),
+        document: resolveDeadPendingActivities(editor.getJSON(), false),
         source: session
           ? {
               bookId: session.bookId,
@@ -188,6 +207,12 @@ export function LessonEditDashboard() {
     setLessonSession(session);
     void saveLesson(session);
   }, !libraryId);
+
+  // Ưu tiên phiên streaming đang sống (mới nhất); mở lại từ Library thì dùng `lessonSource`
+  // đọc từ payload đã lưu.
+  const activeSource: LessonSource | null = lessonSession
+    ? { bookId: lessonSession.bookId, chapterId: lessonSession.chapterId, lessonId: lessonSession.lessonId }
+    : lessonSource;
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
@@ -247,7 +272,14 @@ export function LessonEditDashboard() {
           </div>
         </section>
 
-        <AssistantPanel collapsed={aiCollapsed} editor={editor} authFetch={authFetch} />
+        <AssistantPanel
+          collapsed={aiCollapsed}
+          editor={editor}
+          authFetch={authFetch}
+          bookId={activeSource?.bookId}
+          chapterId={activeSource?.chapterId}
+          lessonId={activeSource?.lessonId}
+        />
       </div>
 
       {editor && mathClick ? (
@@ -262,6 +294,16 @@ function getLessonPlanDocument(payload: unknown): JSONContent | null {
   const document = (payload as { document?: unknown }).document;
   if (!document || typeof document !== "object") return null;
   return document as JSONContent;
+}
+
+function getLessonPlanSource(payload: unknown): LessonSource | null {
+  if (!payload || typeof payload !== "object") return null;
+  const source = (payload as { source?: unknown }).source;
+  if (!source || typeof source !== "object") return null;
+  const { bookId, chapterId, lessonId } = source as Record<string, unknown>;
+  if (typeof bookId !== "string" || typeof chapterId !== "string" || typeof lessonId !== "string") return null;
+  if (!bookId || !chapterId || !lessonId) return null;
+  return { bookId, chapterId, lessonId };
 }
 
 function HeaderActionButton({

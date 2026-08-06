@@ -18,6 +18,8 @@ export default defineConfig({
       "lib/slide-layout/**/*.test.ts",
       "components/LessonEditor/sectionDiff.test.ts",
       "components/LessonEditor/tableText.test.ts",
+      "components/LessonEditor/pendingActivityNode.test.ts",
+      "components/LessonEditor/lessonSections.test.ts",
     ],
   },
 });

@@ -21,7 +21,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -157,42 +160,114 @@ public class LessonPlanService {
         }
     }
 
-    /** AI tự chọn và viết lại một hoặc nhiều phần trong giáo án hiện tại do frontend trích từ editor. */
+    /**
+     * AI chọn (bước 1, một call hẹp chỉ thấy id/heading/kind) rồi viết lại (bước 2, N call song
+     * song, mỗi call chỉ thấy ĐÚNG MỘT mục đã chọn) một hoặc nhiều phần trong giáo án hiện tại do
+     * frontend trích từ editor. Tách hai bước để bước chọn không bị loãng bởi việc phải viết nội
+     * dung, và bước viết không còn cách nào chọn nhầm targetId — Java đã biết sẵn target trước khi
+     * gọi AI viết, AI ở bước đó không trả (và không cần trả) targetId nữa.
+     */
     public List<EditLessonSectionResponse> editSection(EditLessonSectionRequest request) {
         validateEditSectionRequest(request);
-        Set<String> sectionIds = new HashSet<>();
+        Map<String, EditLessonSectionRequest.SectionInput> sectionsById = new LinkedHashMap<>();
         for (EditLessonSectionRequest.SectionInput section : request.sections()) {
-            sectionIds.add(section.id());
+            sectionsById.put(section.id(), section);
         }
 
-        String prompt = editPromptBuilder.buildPrompt(request);
-        EditLessonSectionsAiResponse aiResponse = generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
-                EditLessonSectionsAiResponse.class, "AI không chỉnh sửa được giáo án.",
-                "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+        List<String> targetIds = selectTargetIds(request, sectionsById.keySet());
+        // Nạp một lần, dùng chung cho mọi call viết bên dưới — cùng một giáo án, cùng một
+        // knowledge_json. Best-effort: thiếu/sai bookId-chapterId-lessonId thì vẫn sửa được,
+        // chỉ là không có ngữ cảnh SGK để bám khi viết mới hoàn toàn một mục còn trống.
+        String knowledge = loadKnowledgeForEdit(request);
 
-        if (aiResponse == null || aiResponse.edits() == null || aiResponse.edits().isEmpty()) {
-            throw new LessonPlanGenerationException("AI không đề xuất chỉnh sửa nào.", null);
-        }
+        AtomicInteger failures = new AtomicInteger();
+        List<CompletableFuture<EditLessonSectionResponse>> futures = targetIds.stream()
+                .map(targetId -> CompletableFuture
+                        .supplyAsync(() -> writeSection(request.instruction(), sectionsById.get(targetId), knowledge), executor)
+                        .exceptionally(ex -> {
+                            log.warn("Viết lại phần giáo án '{}' thất bại:", targetId, ex);
+                            failures.incrementAndGet();
+                            return null;
+                        }))
+                .toList();
 
-        Set<String> seenTargetIds = new HashSet<>();
-        List<EditLessonSectionResponse> result = new ArrayList<>(aiResponse.edits().size());
-        for (EditLessonSectionResponse edit : aiResponse.edits()) {
-            if (edit == null || isBlank(edit.targetId()) || !sectionIds.contains(edit.targetId())) {
-                throw new LessonPlanGenerationException("AI chọn phần giáo án không hợp lệ.", null);
-            }
-            if (!seenTargetIds.add(edit.targetId())) {
-                throw new LessonPlanGenerationException("AI chọn trùng lặp một phần giáo án để sửa.", null);
-            }
-            if (isBlank(edit.content())) {
-                throw new LessonPlanGenerationException("AI trả về bản sửa rỗng.", null);
-            }
-            result.add(new EditLessonSectionResponse(edit.targetId().strip(), edit.content().strip()));
+        List<EditLessonSectionResponse> result = futures.stream()
+                .map(CompletableFuture::join)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (failures.get() == targetIds.size()) {
+            throw new LessonPlanGenerationException(
+                    "Không viết lại được phần giáo án nào (AI lỗi mọi phần).", null);
         }
         return result;
     }
 
-    /** Wrapper chỉ để parse JSON {"edits":[...]} từ call chỉnh sửa (một hoặc nhiều phần). */
-    private record EditLessonSectionsAiResponse(List<EditLessonSectionResponse> edits) {
+    /** Bước 1/2 — một call AI hẹp, chỉ thấy id/heading/kind của mọi phần (không có nội dung),
+     * chọn (các) targetId liên quan tới yêu cầu của giáo viên. */
+    private List<String> selectTargetIds(EditLessonSectionRequest request, Set<String> sectionIds) {
+        String prompt = editPromptBuilder.buildSelectPrompt(request);
+        EditLessonSectionSelectAiResponse aiResponse = generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION_SELECT,
+                prompt, EditLessonSectionSelectAiResponse.class, "AI không chọn được phần giáo án cần sửa.",
+                "Kết quả AI không đúng định dạng chọn phần giáo án.");
+
+        if (aiResponse == null || aiResponse.targetIds() == null || aiResponse.targetIds().isEmpty()) {
+            throw new LessonPlanGenerationException("AI không đề xuất chỉnh sửa nào.", null);
+        }
+
+        Set<String> seenTargetIds = new HashSet<>();
+        List<String> result = new ArrayList<>(aiResponse.targetIds().size());
+        for (String rawTargetId : aiResponse.targetIds()) {
+            String targetId = isBlank(rawTargetId) ? null : rawTargetId.strip();
+            if (targetId == null || !sectionIds.contains(targetId)) {
+                throw new LessonPlanGenerationException("AI chọn phần giáo án không hợp lệ.", null);
+            }
+            if (!seenTargetIds.add(targetId)) {
+                throw new LessonPlanGenerationException("AI chọn trùng lặp một phần giáo án để sửa.", null);
+            }
+            result.add(targetId);
+        }
+        return result;
+    }
+
+    /** Best-effort: chỉ nạp {@code knowledge_json} khi request có đủ bookId/chapterId/lessonId
+     * VÀ bài học thực sự có dữ liệu số hóa — thiếu/sai thì trả null (log cảnh báo), KHÔNG chặn
+     * edit-section (nhiều mục chỉ cần tinh chỉnh văn phong, không cần tra lại SGK). */
+    private String loadKnowledgeForEdit(EditLessonSectionRequest request) {
+        if (isBlank(request.bookId()) || isBlank(request.chapterId()) || isBlank(request.lessonId())) {
+            return null;
+        }
+        try {
+            return loadKnowledge(request.bookId(), request.chapterId(), request.lessonId());
+        } catch (IllegalArgumentException e) {
+            log.warn("Không nạp được knowledge_json cho edit-section (bookId={}, chapterId={}, lessonId={}): {}",
+                    request.bookId(), request.chapterId(), request.lessonId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /** Bước 2/2 — một call AI hẹp cho ĐÚNG MỘT target đã xác nhận ở bước chọn; chỉ thấy nội dung
+     * của target đó + quy tắc kind tương ứng + (nếu có) kiến thức SGK của bài. AI không trả
+     * targetId, Java tự gắn lại. */
+    private EditLessonSectionResponse writeSection(String instruction, EditLessonSectionRequest.SectionInput target,
+                                                    String knowledge) {
+        String prompt = editPromptBuilder.buildWritePrompt(instruction, target, knowledge);
+        EditLessonSectionWriteAiResponse aiResponse = generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                EditLessonSectionWriteAiResponse.class, "AI không viết lại được phần giáo án.",
+                "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+
+        if (aiResponse == null || isBlank(aiResponse.content())) {
+            throw new LessonPlanGenerationException("AI trả về bản sửa rỗng.", null);
+        }
+        return new EditLessonSectionResponse(target.id(), aiResponse.content().strip());
+    }
+
+    /** Wrapper chỉ để parse JSON {"targetIds":[...]} từ call chọn phần (bước 1). */
+    private record EditLessonSectionSelectAiResponse(List<String> targetIds) {
+    }
+
+    /** Wrapper chỉ để parse JSON {"content":"..."} từ call viết lại MỘT phần (bước 2, song song). */
+    private record EditLessonSectionWriteAiResponse(String content) {
     }
 
     private void validateEditSectionRequest(EditLessonSectionRequest request) {
@@ -429,7 +504,11 @@ public class LessonPlanService {
                 "\\frac", "\\sqrt", "\\text", "\\cos", "\\sin", "\\tan",
                 "\\omega", "\\Omega", "\\varphi", "\\phi", "\\pi", "\\Delta",
                 "\\theta", "\\alpha", "\\beta", "\\gamma", "\\times", "\\cdot",
-                "\\left", "\\right", "\\mathrm", "\\mathbf"
+                "\\left", "\\right", "\\mathrm", "\\mathbf",
+                // Lệnh spacing ngắn — hay gặp trước đơn vị (vd "220\,\text{V}", xem ví dụ công
+                // thức trong LessonPlan5512PromptBuilder) nhưng AI hay quên tự escape vì chỉ có
+                // 1 ký tự, khác các lệnh chữ ở trên.
+                "\\,", "\\;", "\\!", "\\quad", "\\qquad"
         };
 
         StringBuilder out = new StringBuilder(json.length() + 16);

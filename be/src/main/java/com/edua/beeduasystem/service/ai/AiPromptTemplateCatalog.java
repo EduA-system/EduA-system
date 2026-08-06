@@ -18,6 +18,7 @@ public class AiPromptTemplateCatalog {
                  LESSON_PLAN_ACTIVITIES_FRAME,
                  LESSON_PLAN_ACTIVITY_DETAIL,
                  LESSON_PLAN_SUB_ACTIVITY_DETAIL -> LessonPlan5512PromptBuilder.defaultInstruction(key);
+            case LESSON_PLAN_EDIT_SECTION_SELECT -> LessonPlanEditPromptBuilder.defaultSelectInstruction();
             case LESSON_PLAN_EDIT_SECTION -> LessonPlanEditPromptBuilder.defaultInstruction();
             case SLIDE_OUTLINE_DECK_BLUEPRINT,
                  SLIDE_OUTLINE_CONTENT_MAP,

@@ -22,11 +22,25 @@ interface AssistantPanelProps {
   collapsed?: boolean;
   editor?: Editor | null;
   authFetch?: AuthFetch;
+  /** Nguồn SGK của giáo án đang mở (phiên streaming sống hoặc `payload.source` khi mở lại từ
+   * Personal Library) — optional, cho phép thiếu. Gửi kèm request sửa mục để BE nạp lại
+   * `knowledge_json`, giúp viết mới một mục còn trống bám đúng kiến thức bài thay vì bịa khung
+   * rỗng — xem `LessonEditDashboard`. */
+  bookId?: string;
+  chapterId?: string;
+  lessonId?: string;
 }
 
 type PendingSectionDiff = { id: string; heading: string };
 
-export function AssistantPanel({ collapsed = false, editor = null, authFetch }: AssistantPanelProps) {
+export function AssistantPanel({
+  collapsed = false,
+  editor = null,
+  authFetch,
+  bookId,
+  chapterId,
+  lessonId,
+}: AssistantPanelProps) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<AssistantStatus>("idle");
   // Các mục đang có diff chờ Chấp nhận/Bỏ (đang hiện trực tiếp trong editor chính) — một
@@ -68,6 +82,9 @@ export function AssistantPanel({ collapsed = false, editor = null, authFetch }: 
             content: section.text,
             kind: section.kind,
           })),
+          bookId,
+          chapterId,
+          lessonId,
         },
         authFetch,
       );

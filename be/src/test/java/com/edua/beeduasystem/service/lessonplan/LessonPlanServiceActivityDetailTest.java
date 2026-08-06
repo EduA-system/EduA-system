@@ -190,4 +190,25 @@ class LessonPlanServiceActivityDetailTest {
         assertEquals(0, result.subActivities().size());
         verify(aiClient, times(1)).generate(anyString());
     }
+
+    /**
+     * Tái hiện lỗi thật: AI copy đúng ví dụ công thức trong prompt (vd "220\,\text{V}") nhưng
+     * không tự escape "\," thành "\\," trong JSON, khiến Jackson báo
+     * "Unrecognized character escape ','". {@code repairLatexEscapes} phải tự vá được, không
+     * cần AI trả JSON hợp lệ ngay từ đầu — xem `LessonPlanService.repairLatexEscapes`.
+     */
+    @Test
+    void detailOneRepairsUnescapedLatexThinSpaceInAiJson() {
+        stubSystemPrompt();
+        Activity5512 frame = new Activity5512(1, "Hoạt động 1: Khởi động/Xác định vấn đề", "5 phút",
+                null, null, null, null, null, List.of());
+        when(aiClient.generate(anyString())).thenReturn("""
+                {"objective":"obj","content":"content","product":"$$U = 220\\,\\text{V}$$",
+                 "organization":null,"organizationText":"to-chuc","subActivities":[]}
+                """);
+
+        Activity5512 result = service().detailOne(frame, "{}", "{}", "{}", "{}", null);
+
+        assertEquals("$$U = 220\\,\\text{V}$$", result.product());
+    }
 }

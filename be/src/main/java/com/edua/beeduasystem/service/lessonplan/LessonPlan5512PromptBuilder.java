@@ -173,6 +173,9 @@ public class LessonPlan5512PromptBuilder {
               + Trong JSON, mọi dấu gạch chéo ngược của LaTeX phải được escape đúng
                 (ví dụ viết "\\\\frac", "\\\\omega", "\\\\sqrt", "\\\\text"), không được tạo
                 chuỗi JSON chứa escape không hợp lệ như "\\(" hoặc "\\w".
+              + Lệnh spacing ngắn như "\\,", "\\;", "\\!" (hay dùng trước đơn vị, vd 220\\,V)
+                CŨNG phải escape thành "\\\\,", "\\\\;", "\\\\!" trong JSON như mọi lệnh LaTeX
+                khác — KHÔNG bỏ qua chỉ vì chúng chỉ có 1 ký tự.
             """;
 
     private static final String ACTIVITY_NOTE_KHOI_DONG = """
@@ -272,6 +275,9 @@ public class LessonPlan5512PromptBuilder {
               + Trong JSON, mọi dấu gạch chéo ngược của LaTeX phải được escape đúng
                 (ví dụ viết "\\\\frac", "\\\\omega", "\\\\sqrt", "\\\\text"), không được tạo
                 chuỗi JSON chứa escape không hợp lệ như "\\(" hoặc "\\w".
+              + Lệnh spacing ngắn như "\\,", "\\;", "\\!" (hay dùng trước đơn vị, vd 220\\,V)
+                CŨNG phải escape thành "\\\\,", "\\\\;", "\\\\!" trong JSON như mọi lệnh LaTeX
+                khác — KHÔNG bỏ qua chỉ vì chúng chỉ có 1 ký tự.
             """;
 
     private static final String SUB_ACTIVITY_DETAIL_OUTPUT = """
