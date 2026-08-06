@@ -34,11 +34,13 @@ type HeadingBlock = {
  * LessonEditor.tsx) — dùng để phân biệt với bảng thiết bị/phiếu học tập. */
 const SUB_ACTIVITY_HEADERS = ["Hoạt động của GV và HS", "Sản phẩm dự kiến"];
 
-/** Khớp tiêu đề Hoạt động cấp 1 do luồng sinh gốc đặt tên (vd "Hoạt động 3: Luyện tập (15
- * phút)") — xem `LessonPlan5512PromptBuilder`/`activityHtml`/`pendingActivityFallbackNodes`.
- * Chỉ HĐ1/3/4 rơi vào đây: HĐ2 luôn bị `hasChildHeading` loại khỏi danh sách section khi có
- * tiểu hoạt động (trường hợp hiếm HĐ2 không có tiểu hoạt động thì vẫn khớp — chấp nhận được,
- * vẫn tốt hơn xử lý như "text" thuần). */
+/** Khớp mẫu tiêu đề "Hoạt động <số>: ..." — dùng cho CẢ Hoạt động cấp 1 (vd "Hoạt động 3: Luyện
+ * tập (15 phút)", xem `LessonPlan5512PromptBuilder`/`activityHtml`/`pendingActivityFallbackNodes`)
+ * LẪN tiểu hoạt động của Hoạt động 2 (vd "Hoạt động 4: Lập phương trình đường thẳng đi qua hai
+ * điểm (5 phút)" — `LessonPlan5512PromptBuilder` đặt tên tiểu hoạt động cùng quy ước "Hoạt động
+ * x: <tên đơn vị kiến thức>"). CHỈ so khớp CHỮ, không phân biệt được cấp — bắt buộc gọi kèm kiểm
+ * tra `level === 2` ở nơi dùng (xem `extractEditableSections`) để không gắn nhầm "activity" cho
+ * tiểu hoạt động cấp 3 (đúng ra phải là "subActivity", có bảng 2 cột). */
 const ACTIVITY_HEADING_PATTERN = /^Hoạt động\s+\d+\b/;
 
 export function isTopLevelActivityHeading(heading: string): boolean {
@@ -143,7 +145,12 @@ export function extractEditableSections(editor: Editor | null): EditableLessonSe
     if (hasChildHeading) continue;
 
     const body = sectionBodyText(editor.state.doc, current.to, to);
-    const kind: SectionKind = isTopLevelActivityHeading(current.heading) ? "activity" : body.kind;
+    // `level === 2`: chỉ Hoạt động cấp 1 (HĐ1/3/4) mới có kind "activity" (a/b/c/d, không bảng).
+    // Tiểu hoạt động của HĐ2 nằm ở heading cấp 3 và cũng được đặt tên "Hoạt động <số>: ..." nên
+    // KHỚP CÙNG PATTERN — nếu không loại bằng level sẽ bị gắn nhầm "activity" thay vì
+    // "subActivity" (mất bảng 2 cột "Hoạt động của GV và HS"/"Sản phẩm dự kiến" khi AI viết lại).
+    const kind: SectionKind =
+      current.level === 2 && isTopLevelActivityHeading(current.heading) ? "activity" : body.kind;
 
     sections.push({
       id: `sec-${sections.length + 1}`,

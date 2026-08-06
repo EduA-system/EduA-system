@@ -161,11 +161,12 @@ public class LessonPlanService {
     }
 
     /**
-     * AI chọn (bước 1, một call hẹp chỉ thấy id/heading/kind) rồi viết lại (bước 2, N call song
-     * song, mỗi call chỉ thấy ĐÚNG MỘT mục đã chọn) một hoặc nhiều phần trong giáo án hiện tại do
-     * frontend trích từ editor. Tách hai bước để bước chọn không bị loãng bởi việc phải viết nội
-     * dung, và bước viết không còn cách nào chọn nhầm targetId — Java đã biết sẵn target trước khi
-     * gọi AI viết, AI ở bước đó không trả (và không cần trả) targetId nữa.
+     * AI chọn (bước 1, một call thấy id/heading/kind/content của MỌI phần, để chọn đúng ngay cả
+     * khi có heading trùng/gần trùng) rồi viết lại (bước 2, N call song song, mỗi call chỉ thấy
+     * ĐÚNG MỘT mục đã chọn) một hoặc nhiều phần trong giáo án hiện tại do frontend trích từ
+     * editor. Tách hai bước để bước chọn không phải quyết định cách viết lại nội dung, và bước
+     * viết không còn cách nào chọn nhầm targetId — Java đã biết sẵn target trước khi gọi AI viết,
+     * AI ở bước đó không trả (và không cần trả) targetId nữa.
      */
     public List<EditLessonSectionResponse> editSection(EditLessonSectionRequest request) {
         validateEditSectionRequest(request);
@@ -203,8 +204,9 @@ public class LessonPlanService {
         return result;
     }
 
-    /** Bước 1/2 — một call AI hẹp, chỉ thấy id/heading/kind của mọi phần (không có nội dung),
-     * chọn (các) targetId liên quan tới yêu cầu của giáo viên. */
+    /** Bước 1/2 — một call AI thấy id/heading/kind/content của MỌI phần trong giáo án, chọn (các)
+     * targetId liên quan tới yêu cầu của giáo viên. Gửi cả content (không chỉ heading) để AI phân
+     * biệt được các heading trùng/gần trùng nhau — xem javadoc {@code buildSelectPrompt}. */
     private List<String> selectTargetIds(EditLessonSectionRequest request, Set<String> sectionIds) {
         String prompt = editPromptBuilder.buildSelectPrompt(request);
         EditLessonSectionSelectAiResponse aiResponse = generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION_SELECT,

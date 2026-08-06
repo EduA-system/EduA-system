@@ -16,17 +16,17 @@ class LessonPlanEditPromptBuilderTest {
     // ---- buildSelectPrompt (bước 1 — chọn mục) --------------------------------------------
 
     @Test
-    void selectPromptOmitsSectionContent() {
+    void selectPromptIncludesSectionContent() {
         String prompt = builder.buildSelectPrompt(new EditLessonSectionRequest(
                 "soạn lại hoạt động 3",
-                List.of(new SectionInput("sec-1", "I. MỤC TIÊU", "NOI_DUNG_BI_MAT_KHONG_DUOC_LO", "text"))));
+                List.of(new SectionInput("sec-1", "I. MỤC TIÊU", "NOI_DUNG_DAY_DU_DE_PHAN_BIET", "text"))));
 
-        assertFalse(prompt.contains("NOI_DUNG_BI_MAT_KHONG_DUOC_LO"), "không được gửi content ở bước chọn");
-        assertFalse(prompt.contains("content:"), "không được có nhãn content: ở bước chọn");
+        assertTrue(prompt.contains("NOI_DUNG_DAY_DU_DE_PHAN_BIET"), "bước chọn phải thấy content để phân biệt heading trùng nhau");
+        assertTrue(prompt.contains("content:"), "phải có nhãn content: ở bước chọn");
     }
 
     @Test
-    void selectPromptIncludesIdHeadingKindForEverySection() {
+    void selectPromptIncludesIdHeadingKindContentForEverySection() {
         String prompt = builder.buildSelectPrompt(new EditLessonSectionRequest(
                 "sửa",
                 List.of(
@@ -35,9 +35,26 @@ class LessonPlanEditPromptBuilderTest {
 
         assertTrue(prompt.contains("id: sec-1"));
         assertTrue(prompt.contains("heading: I. MỤC TIÊU"));
+        assertTrue(prompt.contains("Nội dung 1"));
         assertTrue(prompt.contains("id: sec-5"));
         assertTrue(prompt.contains("heading: Hoạt động 3: Luyện tập (20 phút)"));
+        assertTrue(prompt.contains("Nội dung 2"));
         assertTrue(prompt.contains("kind: text"));
+    }
+
+    @Test
+    void selectPromptDisambiguatesDuplicateActivityNumberingWithContent() {
+        String prompt = builder.buildSelectPrompt(new EditLessonSectionRequest(
+                "soạn lại Hoạt động 4: Lập phương trình đường thẳng đi qua hai điểm (5 phút)",
+                List.of(
+                        new SectionInput("sec-sub4", "Hoạt động 4: Lập phương trình đường thẳng đi qua hai điểm (5 phút)",
+                                "Nội dung tiểu hoạt động HĐ2", "subActivity"),
+                        new SectionInput("sec-top4", "Hoạt động 4: Vận dụng (10 phút)",
+                                "Nội dung hoạt động vận dụng", "activity"))));
+
+        assertTrue(prompt.contains("Nội dung tiểu hoạt động HĐ2"));
+        assertTrue(prompt.contains("Nội dung hoạt động vận dụng"));
+        assertTrue(prompt.contains("KHÔNG được mặc định chọn theo khuôn mẫu quen thuộc"));
     }
 
     @Test
@@ -64,7 +81,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptOmitsTableAndKindRulesForTextKind() {
         String prompt = builder.buildWritePrompt("làm ngắn gọn",
-                new SectionInput("sec-1", "I. MỤC TIÊU", "Nội dung", "text"));
+                new SectionInput("sec-1", "I. MỤC TIÊU", "Nội dung", "text"), null);
 
         assertFalse(prompt.contains("QUY ƯỚC BẢNG TRONG TEXT"), "kind text không cần quy ước bảng");
         assertFalse(prompt.contains("kind \"materials\""));
@@ -74,7 +91,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptIncludesTableAndMaterialsRulesForMaterialsKind() {
         String prompt = builder.buildWritePrompt("thêm thiết bị",
-                new SectionInput("sec-2", "II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU", "‖ A ‖ B ‖\n| 1 | 2 |", "materials"));
+                new SectionInput("sec-2", "II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU", "‖ A ‖ B ‖\n| 1 | 2 |", "materials"), null);
 
         assertTrue(prompt.contains("QUY ƯỚC BẢNG TRONG TEXT"));
         assertTrue(prompt.contains("kind \"materials\""));
@@ -84,7 +101,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptIncludesTableAndSubActivityRulesForSubActivityKind() {
         String prompt = builder.buildWritePrompt("sửa tiểu hoạt động",
-                new SectionInput("sec-4", "2.1 Tìm hiểu khái niệm", "‖ A ‖ B ‖\n| 1 | 2 |", "subActivity"));
+                new SectionInput("sec-4", "2.1 Tìm hiểu khái niệm", "‖ A ‖ B ‖\n| 1 | 2 |", "subActivity"), null);
 
         assertTrue(prompt.contains("QUY ƯỚC BẢNG TRONG TEXT"));
         assertTrue(prompt.contains("kind \"subActivity\""));
@@ -94,7 +111,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptThreadsSingleSectionContentAndKind() {
         String prompt = builder.buildWritePrompt("thêm thiết bị",
-                new SectionInput("sec-2", "II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU", "‖ A ‖ B ‖\n| 1 | 2 |", "materials"));
+                new SectionInput("sec-2", "II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU", "‖ A ‖ B ‖\n| 1 | 2 |", "materials"), null);
 
         assertTrue(prompt.contains("kind: materials"));
         assertTrue(prompt.contains("‖ A ‖ B ‖"));
@@ -103,7 +120,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptDefaultsMissingKindToText() {
         String prompt = builder.buildWritePrompt("sửa",
-                new SectionInput("sec-3", "I. MỤC TIÊU", "Nội dung", null));
+                new SectionInput("sec-3", "I. MỤC TIÊU", "Nội dung", null), null);
 
         assertTrue(prompt.contains("kind: text"));
         assertFalse(prompt.contains("kind: null"));
@@ -113,7 +130,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptOutputContractRequestsContentField() {
         String prompt = builder.buildWritePrompt("sửa",
-                new SectionInput("sec-1", "I. MỤC TIÊU", "Nội dung", "text"));
+                new SectionInput("sec-1", "I. MỤC TIÊU", "Nội dung", "text"), null);
 
         assertTrue(prompt.contains("\"content\""), "schema đầu ra bước viết phải có field content");
         assertFalse(prompt.contains("\"edits\""));
@@ -125,7 +142,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptIncludesAbcdStructureAndLuyenTapNoteForActivityThree() {
         String prompt = builder.buildWritePrompt("soạn lại",
-                new SectionInput("sec-5", "Hoạt động 3: Luyện tập (15 phút)", "Mời soạn tay.", "activity"));
+                new SectionInput("sec-5", "Hoạt động 3: Luyện tập (15 phút)", "Mời soạn tay.", "activity"), null);
 
         assertTrue(prompt.contains("a) Mục tiêu"));
         assertTrue(prompt.contains("b) Nội dung"));
@@ -141,7 +158,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptPicksKhoiDongNoteForActivityOne() {
         String prompt = builder.buildWritePrompt("soạn lại",
-                new SectionInput("sec-3", "Hoạt động 1: Khởi động/Xác định vấn đề (5 phút)", "Mời soạn tay.", "activity"));
+                new SectionInput("sec-3", "Hoạt động 1: Khởi động/Xác định vấn đề (5 phút)", "Mời soạn tay.", "activity"), null);
 
         assertTrue(prompt.contains("HOẠT ĐỘNG 1 (KHỞI ĐỘNG"));
         assertFalse(prompt.contains("HOẠT ĐỘNG 3 (LUYỆN TẬP)"));
@@ -151,7 +168,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptPicksVanDungNoteForActivityFour() {
         String prompt = builder.buildWritePrompt("soạn lại",
-                new SectionInput("sec-7", "Hoạt động 4: Vận dụng (10 phút)", "Mời soạn tay.", "activity"));
+                new SectionInput("sec-7", "Hoạt động 4: Vận dụng (10 phút)", "Mời soạn tay.", "activity"), null);
 
         assertTrue(prompt.contains("HOẠT ĐỘNG 4 (VẬN DỤNG)"));
         assertFalse(prompt.contains("HOẠT ĐỘNG 1 (KHỞI ĐỘNG"));
@@ -161,7 +178,7 @@ class LessonPlanEditPromptBuilderTest {
     @Test
     void writePromptActivityKindWithoutRecognizedOrderSkipsSpecificNoteButKeepsStructure() {
         String prompt = builder.buildWritePrompt("soạn lại",
-                new SectionInput("sec-9", "Hoạt động mở đầu tuỳ chỉnh", "Mời soạn tay.", "activity"));
+                new SectionInput("sec-9", "Hoạt động mở đầu tuỳ chỉnh", "Mời soạn tay.", "activity"), null);
 
         assertTrue(prompt.contains("a) Mục tiêu"));
         assertTrue(prompt.contains("d) Tổ chức thực hiện"));
