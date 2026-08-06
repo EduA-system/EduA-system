@@ -19,7 +19,6 @@ import { makeDraw } from "./lib/factory";
 
 export type ActiveTool = "select" | "brush" | "pencil" | "eraser";
 
-const PADDING = 72;
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 
@@ -53,7 +52,7 @@ export function Canvas({
   onZoomModeChange,
 }: {
   dragRef: DragRef;
-  zoomMode: "fit" | number;
+  zoomMode: number;
   lockAspect: boolean;
   activeTool?: ActiveTool;
   drawColor?: string;
@@ -73,7 +72,13 @@ export function Canvas({
   const scaleRef = useRef(1);
   const zoomFrameRef = useRef<number | null>(null);
   const pendingZoomRef = useRef<number | null>(null);
-  const [fitScale, setFitScale] = useState(1);
+  const pendingPanRef = useRef<{ x: number; y: number } | null>(null);
+  // Vị trí dời canvas (px, toạ độ màn hình). Mô hình Canva: world div dùng
+  // transform translate(pan) scale(zoom), không dùng scroll.
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const panRef = useRef(pan);
+  const [isPanning, setIsPanning] = useState(false);
+  const panDragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const editSnapRef = useRef<{
@@ -86,7 +91,7 @@ export function Canvas({
   const [rubberBand, setRubberBand] = useState<RubberBand | null>(null);
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
 
-  const scale = zoomMode === "fit" ? fitScale : zoomMode;
+  const scale = zoomMode;
   const slideLocked = isSlideLockedForGeneration(slide);
   const slideFailed = slide?.generationStatus === "failed";
 
@@ -94,52 +99,63 @@ export function Canvas({
     scaleRef.current = scale;
   }, [scale]);
 
+  // Đồng bộ panRef (dùng trong event handlers).
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+
   // Báo tỉ lệ render thật lên cha (để BottomBar hiển thị % và đặt vị trí slider).
   useEffect(() => {
     onScaleChange?.(scale);
   }, [scale, onScaleChange]);
 
-  useLayoutEffect(() => {
-    if (zoomMode !== "fit") return;
-
-    const area = areaRef.current;
-    if (!area) return;
-
-    const fit = () => {
-      const aw = area.clientWidth - PADDING * 2;
-      const ah = area.clientHeight - PADDING * 2;
-      const s = Math.min(aw / CANVAS_W, ah / CANVAS_H, 1);
-      setFitScale(s);
-    };
-
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(area);
-    return () => ro.disconnect();
-  }, [zoomMode]);
-
-  // Ctrl/⌘ + wheel (kể cả pinch trên touchpad) chỉ zoom canvas, không zoom browser.
-  // Touchpad có thể bắn nhiều wheel event trong cùng một lượt xử lý, nên chỉ
-  // đưa giá trị zoom mới vào React một lần mỗi frame.
+  // Wheel trên canvas: Ctrl/⌘ → zoom quanh con trỏ; không Ctrl → chặn hoàn toàn
+  // (không cuộn trang, không pan, không zoom).
   useEffect(() => {
     const area = areaRef.current;
     if (!area) return;
 
     const handleWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey && !event.metaKey) return;
-
+      // Chặn wheel để trang không bị cuộn khi con trỏ đang trong canvas.
       event.preventDefault();
+
+      if (!event.ctrlKey && !event.metaKey) {
+        // Không làm gì cả — disable wheel thường trong canvas.
+        return;
+      }
+
+      const areaRect = area.getBoundingClientRect();
+      const cursorX = event.clientX - areaRect.left;
+      const cursorY = event.clientY - areaRect.top;
+
       const factor = Math.exp(-event.deltaY * 0.0015);
-      const nextScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, scaleRef.current * factor));
+      const oldScale = scaleRef.current;
+      const nextScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, oldScale * factor));
+      const ratio = nextScale / oldScale;
+      const p = panRef.current;
+
+      // Giữ điểm dưới con trỏ cố định: pan' = cursor - (cursor - pan) * ratio
+      // (world scale quanh tâm viewport nhờ flex căn giữa).
+      const nextPanX = cursorX - (cursorX - p.x) * ratio;
+      const nextPanY = cursorY - (cursorY - p.y) * ratio;
+
       scaleRef.current = nextScale;
       pendingZoomRef.current = nextScale;
+      pendingPanRef.current = { x: nextPanX, y: nextPanY };
 
       if (zoomFrameRef.current !== null) return;
       zoomFrameRef.current = requestAnimationFrame(() => {
         zoomFrameRef.current = null;
-        if (pendingZoomRef.current !== null) {
-          onZoomModeChange(pendingZoomRef.current);
-          pendingZoomRef.current = null;
+        const zoom = pendingZoomRef.current;
+        const nextPan = pendingPanRef.current;
+        pendingZoomRef.current = null;
+        pendingPanRef.current = null;
+        if (zoom !== null) {
+          onZoomModeChange(zoom);
+          if (nextPan) {
+            panRef.current = nextPan;
+            setPan(nextPan);
+          }
         }
       });
     };
@@ -150,6 +166,7 @@ export function Canvas({
       if (zoomFrameRef.current !== null) cancelAnimationFrame(zoomFrameRef.current);
       zoomFrameRef.current = null;
       pendingZoomRef.current = null;
+      pendingPanRef.current = null;
     };
   }, [onZoomModeChange]);
 
@@ -476,6 +493,31 @@ export function Canvas({
     }
   }, [slideLocked]);
 
+  // Giữ chuột giữa kéo để di chuyển không gian (pan) — như Canva.
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      const drag = panDragRef.current;
+      if (!drag) return;
+      const dx = e.clientX - drag.startX;
+      const dy = e.clientY - drag.startY;
+      const next = { x: drag.panX + dx, y: drag.panY + dy };
+      panRef.current = next;
+      setPan(next);
+    };
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 1 && panDragRef.current) {
+        panDragRef.current = null;
+        setIsPanning(false);
+      }
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
   const editingEl =
     editingId && slide
       ? slide.elements.find((e) => e.id === editingId)
@@ -484,27 +526,39 @@ export function Canvas({
   return (
     <div
       ref={areaRef}
-      className="scrollbar-none min-h-0 flex-1 overflow-auto"
+      className="relative min-h-0 flex-1 overflow-hidden"
       style={{
         background: "#f5f1ec",
         backgroundImage: "radial-gradient(circle, rgba(216,209,201,0.78) 1px, transparent 1px)",
         backgroundSize: "20px 20px",
+        cursor: isPanning ? "grabbing" : "default",
+      }}
+      onMouseDown={(e) => {
+        // Giữ chuột giữa để di chuyển không gian (pan) — như Canva.
+        if (e.button === 1) {
+          e.preventDefault();
+          panDragRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
+          setIsPanning(true);
+          return;
+        }
       }}
     >
-      {/* Bọc canvas: căn giữa khi vừa khung, chỉ cuộn từ mép khi phóng to tràn khung. */}
-      <div className="flex w-max min-w-full min-h-full items-center justify-center px-[72px] py-[72px]">
+      {/* World: căn giữa slide; translate(pan) + scale(zoom) quanh tâm — mô hình
+          Canva đơn giản, không lồng transform nên không lệch. */}
       <div
-        style={{ width: CANVAS_W * scale, height: CANVAS_H * scale }}
-        className="shrink-0 overflow-hidden rounded-[12px] shadow-[0_18px_52px_rgba(43,41,38,0.16),0_3px_12px_rgba(43,41,38,0.10)]"
+        className="flex h-full w-full items-center justify-center"
+        style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
       >
+        <div
+          className="shrink-0 overflow-hidden rounded-[12px] shadow-[0_10px_32px_rgba(43,41,38,0.12),0_2px_8px_rgba(43,41,38,0.07)]"
+          style={{ width: CANVAS_W, height: CANVAS_H }}
+        >
         <div
           ref={canvasInnerRef}
           data-canvas="true"
           style={{
             width: CANVAS_W,
             height: CANVAS_H,
-            transform: `scale(${scale})`,
-            transformOrigin: "top left",
             background: slide?.bg ?? "#ffffff",
           }}
           className="relative"
@@ -612,8 +666,8 @@ export function Canvas({
             </div>
           )}
         </div>
-      </div>
-      </div>
+        </div>
+        </div>
 
       {ctxMenu && (
         <ContextMenu

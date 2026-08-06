@@ -10,8 +10,11 @@ import { isLikelySvgSource, parseSvgToLine, parseSvgToPoly, svgTextFromDataUri, 
 import type { ActiveTool } from "./Canvas";
 import { MOLECULE_CATALOG } from "@/components/molecules/catalog";
 import type { Molecule } from "@/components/molecules/types";
+import { LayersContent, LayersIcon, PropertiesContent, PropertiesIcon } from "./LayersPanel";
 
-type Tab = null | "shapes" | "text" | "upload" | "tools" | "bg" | "simulation";
+export type LeftPanelTab = null | "shapes" | "text" | "upload" | "tools" | "bg" | "simulation" | "layers" | "properties";
+
+type Tab = LeftPanelTab;
 
 type ShapePaletteItem =
   | {
@@ -152,6 +155,8 @@ const ICON_TABS: { id: Exclude<Tab, null>; label: string; icon: ReactNode }[] = 
   { id: "simulation", label: "Mô phỏng", icon: <SimulationIcon /> },
   { id: "tools", label: "Tools", icon: <ToolsIcon /> },
   { id: "bg", label: "Background", icon: <BackgroundIcon /> },
+  { id: "layers", label: "Layers", icon: <LayersIcon /> },
+  { id: "properties", label: "Properties", icon: <PropertiesIcon /> },
 ];
 
 function primitiveItem(
@@ -462,8 +467,12 @@ export function LeftPanel({
   onDrawColorChange,
   drawSize,
   onDrawSizeChange,
-}: LeftPanelProps) {
-  const [tab, setTab] = useState<Tab>("shapes");
+  tab,
+  onTabChange,
+}: LeftPanelProps & {
+  tab: Tab;
+  onTabChange: (tab: Tab) => void;
+}) {
   const [urlInput, setUrlInput] = useState("");
   const [query, setQuery] = useState("");
   const [allShapesSectionId, setAllShapesSectionId] = useState<string | null>(null);
@@ -476,7 +485,9 @@ export function LeftPanel({
     isSlideLockedForGeneration(s.slides.find((sl) => sl.id === s.currentSlideId)),
   );
   const setSlideBackground = useEditorStore((s) => s.setSlideBackground);
-  const visibleTab = currentSlideLocked ? null : tab;
+  // Layers/Properties vẫn cho xem khi slide bị khóa (read-only); các tab thêm
+  // element thì ẩn đi để không bấm được.
+  const visibleTab = currentSlideLocked && tab !== "layers" && tab !== "properties" ? null : tab;
   const trimmedQuery = query.trim();
   const allShapesSection = SHAPE_SECTIONS.find((section) => section.id === allShapesSectionId) ?? null;
 
@@ -691,8 +702,8 @@ export function LeftPanel({
             tab={visibleTab}
             label={t.label}
             icon={t.icon}
-            disabled={currentSlideLocked}
-            onClick={() => setTab(visibleTab === t.id ? null : t.id)}
+            disabled={currentSlideLocked && t.id !== "layers" && t.id !== "properties"}
+            onClick={() => onTabChange(visibleTab === t.id ? null : t.id)}
           />
         ))}
         <div className="flex-1" />
@@ -700,14 +711,31 @@ export function LeftPanel({
 
       {visibleTab && (
         <aside className="scrollbar-none w-[216px] shrink-0 overflow-y-auto border-r border-[#e8e2d9] bg-white">
-          {visibleTab === "shapes" && allShapesSection && !trimmedQuery ? (
+          {visibleTab === "layers" || visibleTab === "properties" ? (
+            <>
+              <div className="flex items-center gap-2 border-b border-[#e8e2d9] px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => onTabChange(null)}
+                  className="-ml-1 flex size-7 items-center justify-center rounded-full text-[#2b2926] hover:bg-[#f7f3ee]"
+                  title="Đóng bảng"
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <div className="min-w-0 flex-1 truncate text-[11px] font-bold text-[#2b2926]">
+                  {visibleTab === "layers" ? "Layers" : "Properties"}
+                </div>
+              </div>
+              {visibleTab === "layers" ? <LayersContent /> : <PropertiesContent />}
+            </>
+          ) : visibleTab === "shapes" && allShapesSection && !trimmedQuery ? (
             <AllShapesView section={allShapesSection} onBack={() => setAllShapesSectionId(null)} onAdd={addShapeItem} />
           ) : visibleTab === "shapes" ? (
             <div className="px-3 py-3">
               <div className="mb-3 flex items-center gap-2 text-[11px] font-bold text-[#2b2926]">
                 <button
                   type="button"
-                  onClick={() => setTab(null)}
+                  onClick={() => onTabChange(null)}
                   className="-ml-1 flex size-7 items-center justify-center rounded-full text-[#2b2926] hover:bg-[#f7f3ee]"
                   title="Đóng bảng"
                 >

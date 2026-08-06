@@ -15,8 +15,8 @@ export interface DesignStepControls {
 }
 
 interface TopBarProps {
-  showRightPanel: boolean;
-  onToggleRightPanel: () => void;
+  aiOpen: boolean;
+  onToggleAi: () => void;
   designSteps?: DesignStepControls;
   onRetrySlide?: (slideId: string) => void;
   onSaveToLibrary?: () => void;
@@ -71,16 +71,6 @@ function ExportIcon() {
   );
 }
 
-function SidebarRightIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2.2" y="2.4" width="11.6" height="11.2" rx="2" />
-      <path d="M10 2.4v11.2" />
-      <path d="M11.9 7.9h.01" />
-    </svg>
-  );
-}
-
 function PresentIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -97,6 +87,24 @@ function Divider() {
 
 function RetrySvg() {
   return <SparkIcon />;
+}
+
+function CheckIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 8.5 6.5 12 13 4.5" />
+    </svg>
+  );
+}
+
+function ErrorIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 5v3.5" />
+      <path d="M8 11h.01" />
+    </svg>
+  );
 }
 
 function IconButton({
@@ -232,8 +240,8 @@ function deckTitle(slide: Slide | undefined) {
 }
 
 export function TopBar({
-  showRightPanel,
-  onToggleRightPanel,
+  aiOpen,
+  onToggleAi,
   designSteps,
   onRetrySlide,
   onSaveToLibrary,
@@ -318,7 +326,6 @@ export function TopBar({
     <header className="flex h-12 shrink-0 items-center gap-1 border-b border-[#e8e2d9] bg-white px-3">
       <button className="flex max-w-[260px] items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-left text-[12px] font-medium text-[#4f4943] hover:bg-[#f7f3ee]">
         <span className="truncate">{deckTitle(currentSlide)}</span>
-        <span className="text-[#b8aea5]">&gt;</span>
       </button>
 
       {onRetrySlide ? (
@@ -343,10 +350,27 @@ export function TopBar({
             const disabled = status === "complete" || status === "running" || !previousComplete ||
               Object.values(designSteps).some((value) => value === "running");
             const label = step === 1 ? "Bước 1: Giao diện" : step === 2 ? "Bước 2: Bố cục mẫu" : "Bước 3: Nội dung";
+            const statusIcon =
+              status === "running" ? (
+                <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : status === "complete" ? (
+                <CheckIcon />
+              ) : status === "error" ? (
+                <ErrorIcon />
+              ) : (
+                <SparkIcon />
+              );
             return (
-              <ActionButton key={step} onClick={() => designSteps.onRunStep(step)} disabled={disabled} title={label} variant="ai">
-                {status === "running" ? <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <SparkIcon />}
+              <ActionButton
+                key={step}
+                onClick={() => designSteps.onRunStep(step)}
+                disabled={disabled}
+                title={label}
+                variant={status === "complete" ? "ghost" : "ai"}
+              >
+                {statusIcon}
                 {label}
+                {status === "complete" ? <span className="sr-only"> (hoàn tất)</span> : null}
               </ActionButton>
             );
           })}
@@ -368,21 +392,15 @@ export function TopBar({
         <SaveIcon />
         {savingToLibrary ? "Đang lưu..." : "Lưu"}
       </ActionButton>
-      {onPresent ? (
-        <ActionButton onClick={onPresent} variant="dark" title="Trình chiếu bộ slide">
-          <PresentIcon />
-          Trình chiếu
-        </ActionButton>
-      ) : null}
-      <ActionButton onClick={() => undefined} variant="ai">
-        <SparkIcon />
-        AI
-      </ActionButton>
       <Dropdown
         trigger={
           <button
             onClick={() => setMenu(menu === "export" ? null : "export")}
-            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-[#2b2926] px-3 text-[12px] font-medium text-white shadow-[0_4px_10px_rgba(43,41,38,0.16)] transition-colors hover:bg-[#3b3733]"
+            disabled={hasLockedSlides}
+            title={hasLockedSlides ? "Hoàn tất tạo slide trước khi xuất" : undefined}
+            className={`flex h-8 items-center gap-1.5 rounded-[10px] bg-[#2b2926] px-3 text-[12px] font-medium text-white shadow-[0_4px_10px_rgba(43,41,38,0.16)] transition-colors ${
+              hasLockedSlides ? "cursor-not-allowed opacity-35" : "hover:bg-[#3b3733]"
+            }`}
           >
             <ExportIcon />
             Export
@@ -392,22 +410,26 @@ export function TopBar({
         onToggle={() => setMenu(menu === "export" ? null : "export")}
         align="right"
       >
-        <DropdownItem onClick={() => void exportHtml()} disabled={exportingHtml}>
+        <DropdownItem onClick={() => void exportHtml()} disabled={exportingHtml || hasLockedSlides}>
           {exportingHtml ? "Đang đóng gói..." : "Export HTML offline"}
         </DropdownItem>
-        <DropdownItem onClick={() => { exportJSON(); setMenu(null); }}>
+        <DropdownItem onClick={() => { exportJSON(); setMenu(null); }} disabled={hasLockedSlides}>
           Export JSON
         </DropdownItem>
-        <DropdownItem onClick={() => { fileRef.current?.click(); setMenu(null); }}>
+        <DropdownItem onClick={() => { fileRef.current?.click(); setMenu(null); }} disabled={hasLockedSlides}>
           Import JSON
         </DropdownItem>
       </Dropdown>
-
-      <Divider />
-
-      <IconButton onClick={onToggleRightPanel} active={showRightPanel} title="Toggle right sidebar">
-        <SidebarRightIcon />
-      </IconButton>
+      {onPresent ? (
+        <ActionButton onClick={onPresent} variant="dark" disabled={hasLockedSlides} title={hasLockedSlides ? "Hoàn tất tạo slide trước khi trình chiếu" : "Trình chiếu bộ slide"}>
+          <PresentIcon />
+          Trình chiếu
+        </ActionButton>
+      ) : null}
+      <ActionButton onClick={onToggleAi} variant={aiOpen ? "dark" : "ai"} title="Bật/tắt bảng AI">
+        <SparkIcon />
+        AI
+      </ActionButton>
 
       <input
         ref={fileRef}

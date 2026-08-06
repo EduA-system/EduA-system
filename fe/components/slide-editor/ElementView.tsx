@@ -254,7 +254,8 @@ export function ElementView({
         style={{
           ...base,
           background: el.fill,
-          border: el.strokeW ? `${el.strokeW}px solid ${el.stroke}` : undefined,
+          borderWidth: el.strokeW || 0,
+          borderColor: el.stroke,
           borderStyle,
           borderRadius: el.shape === "ellipse" ? "50%" : el.borderRadius,
         }}

@@ -5,11 +5,11 @@ import { useEditorStore } from "@/stores/slide-editor-store";
 import { isSlideLockedForGeneration } from "./types";
 import { TopBar, type DesignStepControls } from "./TopBar";
 import { ContextualToolbar } from "./ContextualToolbar";
-import { LeftPanel } from "./LeftPanel";
+import { LeftPanel, type LeftPanelTab } from "./LeftPanel";
 import { Canvas, type ActiveTool } from "./Canvas";
 import { SlideTray } from "./SlideTray";
 import { BottomBar } from "./BottomBar";
-import { LayersPanel, type RightPanelTab } from "./LayersPanel";
+import { AiPanel } from "./AiPanel";
 import { loadSlides, saveSlides } from "./lib/storage";
 
 interface DragState {
@@ -32,25 +32,39 @@ export function SlideEditor({
   onSaveToLibrary,
   savingToLibrary = false,
   onPresent,
+  closeLeftPanelSignal = 0,
 }: {
   skipInitialLoad?: boolean;
   designSteps?: DesignStepControls;
   onSaveToLibrary?: () => void;
   savingToLibrary?: boolean;
   onPresent?: () => void;
+  closeLeftPanelSignal?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [zoomMode, setZoomMode] = useState<"fit" | number>("fit");
+  // Mặc định zoom 100%.
+  const [zoomMode, setZoomMode] = useState<number>(1);
   const lockAspect = false;
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
   const [drawColor, setDrawColor] = useState("#2b2926");
   const [drawSize, setDrawSize] = useState(6);
-  const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>("properties");
-  const [showRightPanel, setShowRightPanel] = useState(true);
+  const [aiOpen, setAiOpen] = useState(false);
+  // Sidebar trái đóng mặc định — chỉ mở khi người dùng bấm vào icon, không tự
+  // bật lên trong quá trình chạy các bước gen slide.
+  const [leftTab, setLeftTab] = useState<LeftPanelTab>(null);
   const [showTray, setShowTray] = useState(true);
   const [currentScale, setCurrentScale] = useState(1);
 
   const clearSelection = useEditorStore((s) => s.clearSelection);
+
+  // Khi bước 3 hoàn tất (signal từ trang tăng lên), tự đóng thanh công cụ bên trái.
+  // Điều chỉnh state ngay trong render (pattern React chính thức) thay vì effect.
+  const [prevCloseSignal, setPrevCloseSignal] = useState(closeLeftPanelSignal);
+  if (closeLeftPanelSignal !== prevCloseSignal) {
+    setPrevCloseSignal(closeLeftPanelSignal);
+    setLeftTab(null);
+    setAiOpen(false);
+  }
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -238,8 +252,8 @@ export function SlideEditor({
       onMouseDown={handleMouseDown}
     >
       <TopBar
-        showRightPanel={showRightPanel}
-        onToggleRightPanel={() => setShowRightPanel((value) => !value)}
+        aiOpen={aiOpen}
+        onToggleAi={() => setAiOpen((value) => !value)}
         designSteps={designSteps}
         onSaveToLibrary={onSaveToLibrary}
         savingToLibrary={savingToLibrary}
@@ -253,13 +267,15 @@ export function SlideEditor({
           onDrawColorChange={setDrawColor}
           drawSize={drawSize}
           onDrawSizeChange={setDrawSize}
+          tab={leftTab}
+          onTabChange={setLeftTab}
         />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div className="relative min-h-0 flex-1 overflow-hidden">
             <ContextualToolbar
               onOpenProperties={() => {
-                setShowRightPanel(true);
-                setRightPanelTab("properties");
+                setAiOpen(false);
+                setLeftTab("properties");
               }}
             />
             <Canvas
@@ -273,7 +289,6 @@ export function SlideEditor({
               onZoomModeChange={setZoomMode}
             />
             <BottomBar
-              zoomMode={zoomMode}
               onZoomModeChange={setZoomMode}
               currentScale={currentScale}
               showTray={showTray}
@@ -282,7 +297,7 @@ export function SlideEditor({
           </div>
           {showTray && <SlideTray />}
         </div>
-        {showRightPanel && <LayersPanel activeTab={rightPanelTab} onTabChange={setRightPanelTab} />}
+        {aiOpen && <AiPanel />}
       </div>
     </div>
   );
