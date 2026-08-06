@@ -1,5 +1,12 @@
 # Weekly Task Deadline Rule (đề xuất bổ sung SRS)
 
+> **ĐÃ THAY THẾ (2026-08-06):** Đề xuất BR-50 ở file này (hạn nộp = Chủ Nhật tuần **liền trước** tuần
+> dạy) đã được thay bằng BR-52 ở
+> [`grade-scoped-deadline-and-review.md`](./grade-scoped-deadline-and-review.md) (hạn nộp = Chủ Nhật của
+> **chính tuần dạy đó**), sau khi xác nhận lại với người yêu cầu. Giữ file này lại làm lịch sử thảo luận
+> — mục 3.1 (điều kiện tiên quyết đổi `weekStartDate` sang neo Thứ Hai ISO) vẫn còn đúng và được kế thừa
+> nguyên vẹn ở tài liệu mới.
+
 Trạng thái: **Đề xuất mới** — chưa có trong `Report3_Software Requirement Specification v1.2.docx` và chưa có trong code (`WeeklyTaskService.java` hiện chỉ validate `deadline > now()`, không ràng buộc gì với `weekStartDate`). Tài liệu này mô tả rule để bổ sung như một Business Rule mới (đặt tên tạm `BR-50`, nối tiếp `BR-49` cuối SRS hiện tại) và các UC bị ảnh hưởng.
 
 ## 1. Phát biểu rule

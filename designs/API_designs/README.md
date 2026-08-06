@@ -14,6 +14,7 @@ Thiết kế endpoint, tách theo ranh giới **chung (hạ tầng dùng lại)*
 | [`manage-class-resources.md`](./manage-class-resources.md) | Teacher đăng/sửa/xóa resource-assignment trong lớp mình sở hữu (UC-38/39/40, BR-34/35/37/46) | Team class |
 | [`submit-assignment.md`](./submit-assignment.md) | Student nộp/thu hồi bài nộp — text và/hoặc file (UC-47/48, BR-34/36/37/45) | Team class |
 | [`review-submissions.md`](./review-submissions.md) | Teacher xem danh sách/chi tiết bài nộp và tải file (UC-44/45/46, BR-34/39) | Team class |
+| [`weekly-task.md`](./weekly-task.md) | Mod giao/duyệt giáo án tuần theo khối, Teacher nộp (UC-80→89, BR-47, BR-51/52 đề xuất) | Team lesson-plan |
 
 > Nguồn gốc: `sprints/lesson-plan-api-design.md`. Các file ở đây là bản tách chi tiết, dùng làm spec chính thức.
 
