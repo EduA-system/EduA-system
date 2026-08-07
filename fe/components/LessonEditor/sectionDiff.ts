@@ -9,6 +9,30 @@ import { TABLE_BREAK_LINE, buildTableDiffHtml, isTableRowLine, type TableDiffLin
 
 export type SectionDiffChunk = { state: "unchanged" | DiffState; text: string };
 
+export type PendingSectionDiff = { id: string; heading: string };
+
+/**
+ * Quét toàn bộ tài liệu tìm các mục đang có node dán `diffState` (đề xuất AI chưa được
+ * Chấp nhận/Bỏ) — nguồn DUY NHẤT cho danh sách "đang chờ duyệt" của AssistantPanel, thay vì
+ * một state cục bộ ghi tay ở từng nơi gọi (dễ lệch khỏi tài liệu thật: Ctrl+Z hồi sinh một
+ * diff đã Chấp nhận/Bỏ, hoặc một edit khác trong cùng batch lỗi giữa chừng khiến các diff
+ * chèn trước đó không được ghi nhận). Trả về theo đúng thứ tự xuất hiện trong tài liệu vì
+ * `extractEditableSections` đã duyệt top-down.
+ */
+export function scanPendingDiffs(editor: Editor | null): PendingSectionDiff[] {
+  if (!editor || editor.isDestroyed) return [];
+  const pending: PendingSectionDiff[] = [];
+  for (const section of extractEditableSections(editor)) {
+    if (section.bodyFrom >= section.to) continue;
+    let hasDiff = false;
+    editor.state.doc.nodesBetween(section.bodyFrom, section.to, (node) => {
+      if (node.attrs.diffState) hasDiff = true;
+    });
+    if (hasDiff) pending.push({ id: section.id, heading: section.heading });
+  }
+  return pending;
+}
+
 /** So sánh nội dung cũ/mới theo dòng (giống git diff) — khớp quy ước backend trả nội
  * dung "mỗi đoạn/bullet/công thức 1 dòng" (xem LessonPlanEditPromptBuilder). */
 export function diffSectionLines(oldText: string, newText: string): SectionDiffChunk[] {

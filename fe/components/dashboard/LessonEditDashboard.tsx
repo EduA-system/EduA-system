@@ -22,6 +22,7 @@ import { ImageEnabledEditorTools } from "../LessonEditor";
 import { LessonEditor, generatingLessonPlanSkeletonHtml, lessonPlan5512ToHtml } from "../LessonEditor";
 import { createEditorExtensions, type MathClickInfo } from "../LessonEditor/editorConfig";
 import { resolveDeadPendingActivities } from "../LessonEditor/pendingActivityNode";
+import { scanPendingDiffs } from "../LessonEditor/sectionDiff";
 import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
@@ -49,6 +50,13 @@ export function LessonEditDashboard() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  // Còn đề xuất AI (đang hiện diff đỏ/xanh trong tài liệu) chưa Chấp nhận/Bỏ — chặn "Lưu" khi
+  // true, tránh lưu một bản giáo án dở dang có cả nội dung cũ/mới lẫn lộn mà sau khi mở lại
+  // không còn cách nào chấp nhận/bỏ nữa (AssistantPanel dựng lại UI duyệt diff từ chính tài
+  // liệu nên vẫn phục hồi được, nhưng tốt hơn là ngăn từ đầu). Suy từ chính tài liệu qua
+  // `scanPendingDiffs`, không phải state riêng của AssistantPanel — đúng cho cả trường hợp
+  // diff "mồ côi" (vd còn sót lại sau Ctrl+Z hồi sinh một diff đã xử lý).
+  const [hasPendingAiDiff, setHasPendingAiDiff] = useState(false);
   const libraryContentIdRef = useRef<string | null>(null);
   const librarySubjectRef = useRef<LibrarySubject | undefined>(undefined);
   const savingRef = useRef(false);
@@ -80,11 +88,19 @@ export function LessonEditDashboard() {
   useEffect(() => {
     if (!editor) return;
 
+    const syncPendingAiDiff = () => setHasPendingAiDiff(scanPendingDiffs(editor).length > 0);
     const markDirty = () => {
       revisionRef.current += 1;
       setIsDirty(true);
+      syncPendingAiDiff();
     };
     editor.on("update", markDirty);
+    // Quét ngay lúc gắn listener (qua hàm riêng, không gọi `markDirty` — không muốn đánh dấu
+    // "dirty" chỉ vì mount) — nội dung ban đầu (mock/skeleton) không có diff nên thường là
+    // false, nhưng khi mở lại từ Personal Library (`editor.commands.setContent` ở effect bên
+    // dưới) vẫn phát sự kiện "update" nên `markDirty` tự chạy lại và bắt được cả trường hợp
+    // một giáo án đã lưu TỪ TRƯỚC lỡ dính diff dở dang (vd do bug đã sửa).
+    syncPendingAiDiff();
     return () => {
       editor.off("update", markDirty);
     };
@@ -141,6 +157,14 @@ export function LessonEditDashboard() {
   const saveLesson = useCallback(
     async (session: LessonPlanSession | null = lessonSession) => {
       if (!editor || savingRef.current) return;
+      // Chặn lưu khi tài liệu còn diff AI chưa Chấp nhận/Bỏ — quét trực tiếp thay vì tin
+      // `hasPendingAiDiff` (state React có thể chưa kịp đồng bộ ngay sau lần "update" cuối)
+      // để đảm bảo không bao giờ lưu một bản có cả nội dung cũ/mới lẫn lộn.
+      if (scanPendingDiffs(editor).length > 0) {
+        setSaveStatus("error");
+        setSaveError("Còn đề xuất chỉnh sửa AI chưa Chấp nhận/Bỏ — hãy xử lý xong ở khung EDUA AI rồi lưu lại.");
+        return;
+      }
 
       savingRef.current = true;
       setSaveStatus("saving");
@@ -223,7 +247,17 @@ export function LessonEditDashboard() {
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
             <div className="@container flex min-h-12 items-center justify-between gap-3 px-3 py-1.5">
               <div className="flex min-w-0 shrink-0 items-center gap-1.5">
-                <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
+                <HeaderActionButton
+                  onClick={() => void saveLesson()}
+                  disabled={hasPendingAiDiff}
+                  label={
+                    saveStatus === "saving"
+                      ? "Đang lưu..."
+                      : hasPendingAiDiff
+                        ? "Còn đề xuất AI chưa duyệt"
+                        : "Lưu"
+                  }
+                >
                   <SaveIcon />
                 </HeaderActionButton>
                 <HeaderActionButton onClick={exportPdf} label="Xuất PDF">
@@ -234,16 +268,29 @@ export function LessonEditDashboard() {
                 </HeaderActionButton>
               </div>
 
-              <button
-                type="button"
+              {/* Trước đây chỉ có icon lấp lánh trơ trọi + `aria-label` tiếng Anh — không có
+               * tooltip, không có chữ, GV nhìn vào không đoán được đây là nút bật/tắt trợ lý AI.
+               * Giờ dùng đúng khuôn `HeaderActionButton` (title + nhãn hiện ở màn rộng) như 3 nút
+               * bên trái, cộng thêm viền/nền đổi màu theo trạng thái đang mở/đóng để rõ cả 2 chiều
+               * (đang bấm thì trông "nhấn xuống", không phải đoán qua icon suông). */}
+              <HeaderActionButton
                 onClick={() => setAiCollapsed((current) => !current)}
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#e8e2d9] bg-white text-[#d97757] shadow-sm transition hover:bg-[#fff4ed]"
-                aria-label={aiCollapsed ? "Show AI sidebar" : "Hide AI sidebar"}
+                active={!aiCollapsed}
+                label={aiCollapsed ? "Mở trợ lý AI" : "Đóng trợ lý AI"}
               >
                 <AiToggleIcon />
-              </button>
+              </HeaderActionButton>
             </div>
-            <div className="overflow-x-auto border-t border-[#efe8df] px-3 py-1.5">
+            {/* KHÔNG đặt overflow-x-auto ở đây — theo spec CSS, "nếu overflow-x không phải
+             * `visible` mà overflow-y LÀ `visible` (dù khai tường minh hay để mặc định), trình
+             * duyệt tự đổi overflow-y thành `auto`" — nghĩa là dù có ghi thêm overflow-y-visible
+             * (đã thử, KHÔNG ăn thua vì quy tắc trên xét trên GIÁ TRỊ visible chứ không phân biệt
+             * khai tường minh hay mặc định) thì trục dọc vẫn bị ép thành auto, tự sinh thanh cuộn
+             * dọc bất cứ khi nào chiều cao nội dung nhích quá khoảng chừa. `overflow-x-auto` ở
+             * đây từ đầu cũng THỪA: EditorTools.tsx đã tự `flex-wrap` xuống dòng khi hẹp (không
+             * cần cuộn ngang) — bỏ hẳn overflow-x-auto vừa hết vướng quy tắc trên, vừa đúng ý:
+             * khối công cụ là khối cứng, không cuộn hướng nào, chỉ cao thêm khi bọc xuống dòng. */}
+            <div className="border-t border-[#efe8df] px-3 py-1.5">
               <div className="flex w-full justify-center">
                 <div className="inline-flex max-w-full rounded-lg border border-[#e8e2d9] bg-white px-2 py-1 shadow-sm">
                   <ImageEnabledEditorTools editor={editor} authFetch={authFetch} />
@@ -274,6 +321,7 @@ export function LessonEditDashboard() {
 
         <AssistantPanel
           collapsed={aiCollapsed}
+          onClose={() => setAiCollapsed(true)}
           editor={editor}
           authFetch={authFetch}
           bookId={activeSource?.bookId}
@@ -311,21 +359,32 @@ function HeaderActionButton({
   label,
   onClick,
   primary = false,
+  disabled = false,
+  active = false,
 }: {
   children: React.ReactNode;
   label: string;
   onClick: () => void;
   primary?: boolean;
+  disabled?: boolean;
+  /** Trạng thái "đang bật" cho nút kiểu toggle (vd mở/đóng panel AI) — khác `primary` (dành
+   * cho nút hành động chính, luôn tô đặc màu cam bất kể trạng thái). `active` chỉ tô nhạt +
+   * viền cam khi đang bật, để phân biệt trực quan với lúc tắt mà không lẫn với CTA chính. */
+  active?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       title={label}
-      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium shadow-sm transition @min-[1100px]:px-3 ${
+      aria-pressed={active}
+      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium shadow-sm transition @min-[1100px]:px-3 disabled:cursor-not-allowed disabled:opacity-50 ${
         primary
           ? "border border-[#d97757] bg-[#d97757] text-white hover:bg-[#c96545]"
-          : "border border-[#e8e2d9] bg-white text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
+          : active
+            ? "border border-[#d97757] bg-[#fff4ed] text-[#d97757] hover:bg-[#ffe9dc]"
+            : "border border-[#e8e2d9] bg-white text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
       }`}
     >
       {children}

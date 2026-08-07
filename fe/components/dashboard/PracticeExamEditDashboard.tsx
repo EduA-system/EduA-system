@@ -139,7 +139,11 @@ export function PracticeExamEditDashboard() {
                 Xuất đề
               </button>}
             </div>
-            {!readOnlyClassResource && <div className="overflow-x-auto border-t border-[#efe8df] px-3 py-1.5">
+            {/* Không đặt overflow-x-auto — EditorTools.tsx đã tự flex-wrap khi hẹp nên không cần
+             * cuộn ngang, và overflow-x-auto một mình từng ép overflow-y thành auto theo spec CSS
+             * (kể cả có khai overflow-y-visible tường minh cũng không chặn được, xem ghi chú ở
+             * LessonEditDashboard.tsx) — bỏ hẳn để khối công cụ luôn là khối cứng. */}
+            {!readOnlyClassResource && <div className="border-t border-[#efe8df] px-3 py-1.5">
               <div className="flex w-full justify-center">
                 <div className="inline-flex max-w-full rounded-lg border border-[#e8e2d9] bg-white px-2 py-1 shadow-sm">
                   <ImageEnabledEditorTools editor={editor} authFetch={authFetch} />
