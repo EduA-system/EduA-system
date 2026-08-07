@@ -65,6 +65,15 @@ public class WeeklyTaskService {
             DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy").withZone(VN_ZONE);
     private static final int MAX_LESSONS_PER_WEEK = 2;
 
+    // Đích điều hướng khi bấm vào notification. Teacher luôn về màn nộp giáo án (không deep-link — 1
+    // giáo viên chỉ có tối đa vài task/tuần, tự nhận ra trong lịch). Moderator về hàng đợi duyệt kèm
+    // taskId — bắt buộc phải deep-link vì 1 Moderator có thể nhận nhiều notification nộp bài cùng lúc từ
+    // 5-10 giáo viên khác nhau, targetUrl tĩnh sẽ không phân biệt được submission nào ứng với thông báo nào.
+    private static final String TARGET_TYPE_TEACHER_SUBMIT = "WEEKLY_TASK_SUBMIT";
+    private static final String TARGET_URL_TEACHER_SUBMIT = "/weekly-schedule";
+    private static final String TARGET_TYPE_MODERATOR_REVIEW = "WEEKLY_TASK_REVIEW";
+    private static final String TARGET_URL_MODERATOR_REVIEW = "/lesson-plan-approval";
+
     private final WeeklyTaskRepository repository;
     private final LibraryContentRepository libraryContentRepository;
     private final AppUserRepository userRepository;
@@ -136,7 +145,7 @@ public class WeeklyTaskService {
                 lesson.lessonCode(), lesson.lessonName(), deadline, WeeklyTaskReviewStatus.NOT_SUBMITTED,
                 null, null, null, null, null, null, null, null, null, now, now, null));
         notify(teacherId, "Nhiệm vụ tuần mới", "Bạn được giao soạn: " + scope + " (" + lesson.chapterName() + " - " + lesson.lessonName()
-                + "). Hạn nộp: " + DEADLINE_FMT.format(deadline) + ".");
+                + "). Hạn nộp: " + DEADLINE_FMT.format(deadline) + ".", TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
 
@@ -194,7 +203,8 @@ public class WeeklyTaskService {
         }
         for (AppUser teacher : teachers) {
             notify(teacher.id(), "Lịch tuần mới",
-                    "Bạn được giao " + resolvedLessons.size() + " bài (khối " + requiredGrade + ") cho tuần " + monday + ".");
+                    "Bạn được giao " + resolvedLessons.size() + " bài (khối " + requiredGrade + ") cho tuần " + monday + ".",
+                    TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
         }
         return WeeklyTaskViews.toBulkResult(created, resolveNames(created), teachers.size(), resolvedLessons.size());
     }
@@ -226,10 +236,13 @@ public class WeeklyTaskService {
                         t.submittedAt(), t.reviewedBy(), t.reviewedAt(), t.rejectionReason(), t.createdAt(), Instant.now(), t.version());
         WeeklyTask saved = repository.save(updated);
         if (reassigned) {
-            notify(t.teacherId(), "Nhiệm vụ tuần đã được chuyển", "Nhiệm vụ \"" + scope + "\" đã được chuyển cho giáo viên khác.");
-            notify(teacherId, "Nhiệm vụ tuần mới", "Bạn được giao soạn: " + scope + ". Hạn nộp: " + DEADLINE_FMT.format(deadline) + ".");
+            notify(t.teacherId(), "Nhiệm vụ tuần đã được chuyển", "Nhiệm vụ \"" + scope + "\" đã được chuyển cho giáo viên khác.",
+                    TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
+            notify(teacherId, "Nhiệm vụ tuần mới", "Bạn được giao soạn: " + scope + ". Hạn nộp: " + DEADLINE_FMT.format(deadline) + ".",
+                    TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
         } else {
-            notify(t.teacherId(), "Nhiệm vụ tuần đã được cập nhật", "Nhiệm vụ \"" + scope + "\" đã được chỉnh sửa. Hạn nộp mới: " + DEADLINE_FMT.format(deadline) + ".");
+            notify(t.teacherId(), "Nhiệm vụ tuần đã được cập nhật", "Nhiệm vụ \"" + scope + "\" đã được chỉnh sửa. Hạn nộp mới: " + DEADLINE_FMT.format(deadline) + ".",
+                    TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
         }
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
@@ -265,7 +278,8 @@ public class WeeklyTaskService {
                 hasLibraryContent ? libraryContentId : null, source != null ? source.title() : null, source != null ? source.payload().deepCopy() : null, hasDocument ? documentUrl.trim() : null,
                 hasDocument ? (documentName == null ? null : documentName.trim()) : null, Instant.now(),
                 null, null, null, t.createdAt(), Instant.now(), t.version()));
-        notify(t.moderatorId(), "Giáo án chờ duyệt", "Giáo viên đã nộp giáo án cho nhiệm vụ \"" + t.scopeDescription() + "\".");
+        notify(t.moderatorId(), "Giáo án chờ duyệt", "Giáo viên đã nộp giáo án cho nhiệm vụ \"" + t.scopeDescription() + "\".",
+                TARGET_TYPE_MODERATOR_REVIEW, TARGET_URL_MODERATOR_REVIEW + "?taskId=" + saved.id());
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
 
@@ -305,7 +319,8 @@ public class WeeklyTaskService {
                 t.deadline(), WeeklyTaskReviewStatus.APPROVED,
                 t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
                 moderatorId, Instant.now(), null, t.createdAt(), Instant.now(), t.version()));
-        notify(t.teacherId(), "Giáo án đã được duyệt", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã được duyệt.");
+        notify(t.teacherId(), "Giáo án đã được duyệt", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã được duyệt.",
+                TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
                 ActivityLogAction.APPROVE_WEEKLY_TASK, "WEEKLY_TASK", t.id(), null);
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
@@ -325,7 +340,8 @@ public class WeeklyTaskService {
                 t.deadline(), WeeklyTaskReviewStatus.REJECTED,
                 t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(), t.submittedAt(),
                 moderatorId, Instant.now(), reason, t.createdAt(), Instant.now(), t.version()));
-        notify(t.teacherId(), "Giáo án bị từ chối", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã bị từ chối. Lý do: " + reason);
+        notify(t.teacherId(), "Giáo án bị từ chối", "Giáo án nộp cho nhiệm vụ \"" + t.scopeDescription() + "\" đã bị từ chối. Lý do: " + reason,
+                TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
                 ActivityLogAction.REJECT_WEEKLY_TASK, "WEEKLY_TASK", t.id(), reason);
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
@@ -506,12 +522,12 @@ public class WeeklyTaskService {
                 .collect(Collectors.toMap(AppUser::id, WeeklyTaskService::displayName));
     }
 
-    private void notify(UUID recipientId, String title, String content) {
+    private void notify(UUID recipientId, String title, String content, String targetType, String targetUrl) {
         UUID senderId = currentUser.requireUserId();
         Subject subject = requireSubject();
         Instant now = Instant.now();
         Notification saved = notificationRepository.createWithRecipients(
-                new Notification(UUID.randomUUID(), senderId, subject, title, content, now, null, null), List.of(recipientId));
+                new Notification(UUID.randomUUID(), senderId, subject, title, content, now, targetType, targetUrl), List.of(recipientId));
         String senderName = userRepository.findById(senderId).map(WeeklyTaskService::displayName).orElse(null);
         streamPort.publishNew(recipientId,
                 new NotificationEvent(saved.id(), saved.title(), saved.content(), saved.subject(), senderName,

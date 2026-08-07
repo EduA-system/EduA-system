@@ -1,7 +1,8 @@
 "use client";
 
 import { AlertCircle, BookOpen, CalendarClock, CheckCircle2, Eye, Filter, Inbox, Library, Loader2, UserRound, X, XCircle } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RichView } from "@/components/blog/RichView";
 import { GradeSelect } from "@/components/ui/GradeSelect";
@@ -40,6 +41,11 @@ function weekLabel(weekStartDate: string): string {
 
 function LessonPlanApprovalScreen() {
   const { user, authFetch } = useAuth();
+  // Deep-link từ notification "Giáo án chờ duyệt" (WeeklyTaskService.submit): mang theo taskId để tự mở
+  // đúng submission được nộp, thay vì chỉ đưa Moderator tới danh sách chung — cần thiết vì nhiều giáo viên
+  // có thể nộp gần như cùng lúc và mỗi notification phải phân biệt đúng bài của ai.
+  const focusTaskId = useSearchParams().get("taskId");
+  const focusedRef = useRef(false);
 
   const [items, setItems] = useState<WeeklyTaskSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,24 +96,44 @@ function LessonPlanApprovalScreen() {
     setError("");
   }, [gradeFilter, picker.chapterCode, picker.lessonCode]);
 
-  async function handleExpand(id: string) {
-    if (expandedId === id) {
-      setExpandedId(null);
+  const handleExpand = useCallback(
+    async (id: string) => {
+      if (expandedId === id) {
+        setExpandedId(null);
+        setDetail(null);
+        return;
+      }
+      setExpandedId(id);
       setDetail(null);
+      setDetailLoading(true);
+      try {
+        const d = await getWeeklyTask(authFetch, id);
+        setDetail(d);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Không thể tải chi tiết giáo án.");
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [authFetch, expandedId],
+  );
+
+  // Sau khi hàng đợi tải xong lần đầu, nếu có taskId từ notification thì tự mở rộng + cuộn tới đúng thẻ đó.
+  // Nếu không tìm thấy (đã được xử lý bởi Moderator khác, hoặc bị lọc mất) thì báo rõ thay vì im lặng.
+  useEffect(() => {
+    if (!focusTaskId || focusedRef.current || loading) return;
+    focusedRef.current = true;
+    const target = items.find((t) => t.id === focusTaskId);
+    if (!target) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError("Không tìm thấy nhiệm vụ được thông báo trong hàng đợi hiện tại — có thể đã được xử lý.");
       return;
     }
-    setExpandedId(id);
-    setDetail(null);
-    setDetailLoading(true);
-    try {
-      const d = await getWeeklyTask(authFetch, id);
-      setDetail(d);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể tải chi tiết giáo án.");
-    } finally {
-      setDetailLoading(false);
-    }
-  }
+    void handleExpand(target.id);
+    requestAnimationFrame(() => {
+      document.getElementById(`weekly-task-${target.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [focusTaskId, items, loading, handleExpand]);
 
   async function handleApprove(id: string) {
     if (!confirm("Duyệt giáo án này?")) return;
@@ -228,7 +254,13 @@ function LessonPlanApprovalScreen() {
           ) : (
             <div className="mt-6 space-y-4">
               {items.map((t) => (
-                <article key={t.id} className="overflow-hidden rounded-xl border border-[#e4ddd4] bg-white shadow-sm">
+                <article
+                  key={t.id}
+                  id={`weekly-task-${t.id}`}
+                  className={`overflow-hidden rounded-xl border bg-white shadow-sm transition ${
+                    focusTaskId === t.id ? "border-[#e8724a] ring-2 ring-[#e8724a]/25" : "border-[#e4ddd4]"
+                  }`}
+                >
                   <div className="flex flex-wrap items-start justify-between gap-4 p-5">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -379,7 +411,15 @@ function LessonPlanApprovalScreen() {
 export default function Page() {
   return (
     <RouteGuard pathname="/lesson-plan-approval">
-      <LessonPlanApprovalScreen />
+      <Suspense
+        fallback={
+          <main className="flex min-h-screen items-center justify-center bg-[#f7f5f2] text-sm text-[#6b6b6b]">
+            Đang tải hàng đợi duyệt...
+          </main>
+        }
+      >
+        <LessonPlanApprovalScreen />
+      </Suspense>
     </RouteGuard>
   );
 }
