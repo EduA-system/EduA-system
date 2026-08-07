@@ -101,9 +101,23 @@ export function buildKernel(scene: Scene): SceneKernel {
   };
   const mechanicalEnergyOfPoints = (pts: Record<string, PointState>): number =>
     kineticEnergyOfPoints(pts) + potentialEnergyOfPoints(pts);
-  const targetMechanicalEnergy = scene.conserveMechanicalEnergy
-    ? mechanicalEnergyOfPoints(pointsOf(initialState))
-    : null;
+  // Mục tiêu năng lượng được khoá từ trạng thái ĐÃ CHIẾU ràng buộc (giống hệt
+  // trạng thái mà mọi bước chạy thật xuất phát từ, xem stepScene/kernel.project
+  // ở renderer) — không phải từ toạ độ khai báo thô. Nếu vị trí ban đầu trong
+  // Scene không khớp tuyệt đối rod/curveTrack (vd lệch nhỏ do làm tròn số),
+  // dùng thẳng toạ độ thô sẽ khoá sai mục tiêu và bơm/rút năng lượng từ frame 1.
+  //
+  // Đồng thời: nếu scene vừa bật conserveMechanicalEnergy vừa có va chạm KHÔNG
+  // đàn hồi (restitution < 1), bỏ qua việc khoá năng lượng hoàn toàn — va chạm
+  // đó CHỦ ĐÍCH làm mất động năng, ép năng lượng về lại target sẽ triệt tiêu
+  // đúng phần mất mát đó. Hai cấu hình này không nên dùng chung.
+  const targetMechanicalEnergy = (() => {
+    if (!scene.conserveMechanicalEnergy) return null;
+    if (hasCollidable && (scene.restitution ?? 1) < 1) return null;
+    const pts = pointsOf(initialState);
+    projectConstraints(scene, pts, invMass);
+    return mechanicalEnergyOfPoints(pts);
+  })();
 
   // Pha 1 — LỰC: cộng hợp lực rồi áp định luật II Newton a = F/m.
   const derivs = (s: StateVec): StateVec => {
@@ -124,7 +138,11 @@ export function buildKernel(scene: Scene): SceneKernel {
   // Pha 2 — RÀNG BUỘC: chiếu trạng thái về thoả mãn rod/rope.
   // Pha 3 — VA CHẠM: giải xung lượng tròn–tròn (chạy cả khi không có ràng buộc).
   const project = (s: StateVec): StateVec => {
-    if (scene.constraints.length === 0 && !hasCollidable) return s;
+    // Không được early-return chỉ dựa vào constraints/hasCollidable — scene
+    // thuần lực (lò xo/trọng lực, không ràng buộc, không va chạm) vẫn có thể
+    // bật conserveMechanicalEnergy và cần chạy khối hiệu chỉnh năng lượng bên
+    // dưới; targetMechanicalEnergy == null tương đương cờ đó đang tắt.
+    if (scene.constraints.length === 0 && !hasCollidable && targetMechanicalEnergy == null) return s;
     // Gom mọi vật (cả fixed) thành các điểm cho bộ giải ràng buộc.
     const pts: Record<string, PointState> = {};
     for (const b of scene.bodies) {

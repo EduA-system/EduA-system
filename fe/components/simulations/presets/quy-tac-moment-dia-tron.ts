@@ -16,7 +16,10 @@ function values(p: Record<string, number>) {
   const MLeft = PLeft * dLeft;
   const MRight = PRight * dRight;
   const netMoment = MLeft - MRight;
-  const balanced = Math.abs(netMoment) < 1e-9;
+  // Dung sai tương đối, đồng bộ với quy-tac-moment.ts — tránh việc 2 preset
+  // dạy cùng quy tắc moment nhưng báo "Cân bằng" ở ngưỡng khác nhau.
+  const tolerance = Math.max(0.05, 0.005 * Math.max(MLeft, MRight));
+  const balanced = Math.abs(netMoment) <= tolerance;
   return { mLeft, dLeft, mRight, dRight, PLeft, PRight, MLeft, MRight, netMoment, balanced };
 }
 

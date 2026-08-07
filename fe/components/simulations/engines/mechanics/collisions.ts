@@ -45,15 +45,28 @@ function commonVelocity(pa: PointState, pb: PointState, wA: number, wB: number) 
   };
 }
 
-function enforceStickyPair(pair: StickyPair, pts: Record<string, PointState>, invMass: Record<string, number>) {
+/**
+ * Giữ 2 vật KHÔNG XUYÊN QUA nhau khi đang chồng lấn — ràng buộc MỘT CHIỀU,
+ * giống hệt non-penetration trong resolvePair(), khác ràng buộc rod (ép đúng
+ * khoảng cách 2 chiều). e = 0 chỉ quy định vận tốc pháp tuyến khớp nhau NGAY
+ * LÚC va chạm; nó không phải một mối hàn giữ khoảng cách mãi mãi. Vì vậy khi
+ * đã tách quá minDist (dist ≥ pair.distance) thì KHÔNG kéo ngược lại — trả
+ * false để nơi gọi xoá cặp khỏi stickyPairs, coi như 2 vật tự do từ đây (lực
+ * khác trong scene toàn quyền quyết định chúng còn đi cùng nhau hay tách ra).
+ */
+function enforceStickyPair(
+  pair: StickyPair,
+  pts: Record<string, PointState>,
+  invMass: Record<string, number>,
+): boolean {
   const PA = pts[pair.a];
   const PB = pts[pair.b];
-  if (!PA || !PB) return;
+  if (!PA || !PB) return false;
 
   const wA = invMass[pair.a] ?? 0;
   const wB = invMass[pair.b] ?? 0;
   const wSum = wA + wB;
-  if (wSum === 0) return;
+  if (wSum === 0) return false;
 
   const dx = PB.x - PA.x;
   const dy = PB.y - PA.y;
@@ -69,11 +82,13 @@ function enforceStickyPair(pair: StickyPair, pts: Record<string, PointState>, in
     dist = 0;
   }
 
-  const correction = pair.distance - dist;
-  PA.x -= nx * correction * (wA / wSum);
-  PA.y -= ny * correction * (wA / wSum);
-  PB.x += nx * correction * (wB / wSum);
-  PB.y += ny * correction * (wB / wSum);
+  const overlap = pair.distance - dist;
+  if (overlap <= 0) return false; // đã tách hẳn — mối "dính" chấm dứt
+
+  PA.x -= nx * overlap * (wA / wSum);
+  PA.y -= ny * overlap * (wA / wSum);
+  PB.x += nx * overlap * (wB / wSum);
+  PB.y += ny * overlap * (wB / wSum);
 
   const v = commonVelocity(PA, PB, wA, wB);
   if (wA > 0) {
@@ -84,6 +99,7 @@ function enforceStickyPair(pair: StickyPair, pts: Record<string, PointState>, in
     PB.vx = v.vx;
     PB.vy = v.vy;
   }
+  return true;
 }
 
 /**
@@ -91,7 +107,10 @@ function enforceStickyPair(pair: StickyPair, pts: Record<string, PointState>, in
  * Chỉ vật có `radius` mới tham gia. `invMass[id]` = 1/m (0 nếu fixed).
  *
  * Với `restitution = 0`, cặp vật sau khi va chạm được đưa vào `stickyPairs` để
- * tiếp tục đi cùng nhau như một vật ghép, đúng nghĩa va chạm mềm hoàn toàn.
+ * khớp vận tốc và không xuyên qua nhau MIỄN LÀ còn chồng lấn — ràng buộc một
+ * chiều, không phải mối hàn giữ khoảng cách vĩnh viễn. Nếu lực khác trong
+ * scene sau đó kéo chúng tách quá `minDist`, cặp tự động rời khỏi
+ * `stickyPairs` và được coi là 2 vật tự do.
  */
 export function resolveCollisions(
   scene: Scene,
@@ -102,8 +121,10 @@ export function resolveCollisions(
   const e = scene.restitution ?? 1; // hệ số đàn hồi: 1 đàn hồi, 0 mềm hoàn toàn (dính)
   const collidable = scene.bodies.filter((b) => b.radius != null);
 
-  for (const pair of stickyPairs?.values() ?? []) {
-    enforceStickyPair(pair, pts, invMass);
+  if (stickyPairs) {
+    for (const [key, pair] of stickyPairs) {
+      if (!enforceStickyPair(pair, pts, invMass)) stickyPairs.delete(key);
+    }
   }
 
   for (let i = 0; i < collidable.length; i++) {

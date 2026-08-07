@@ -128,14 +128,22 @@ export function projectConstraints(
         if (!P || (invMass[c.body] ?? 0) === 0 || c.points.length < 2) continue;
         const q = closestPointOnTrack(c.points, P.x, P.y);
         if (!q) continue;
-        const correction = Math.hypot(q.x - P.x, q.y - P.y);
+        // Ma sát Coulomb dùng vận tốc PHÁP TUYẾN (trước khi ép vật về track)
+        // làm proxy cho xung pháp tuyến — cùng cách với ràng buộc `surface` ở
+        // trên. KHÔNG dùng độ lệch vị trí (Math.hypot(q.x-P.x, q.y-P.y)): độ
+        // lệch đó tích luỹ theo ~dt² (bắt đầu từ vận tốc pháp tuyến 0 sau mỗi
+        // lần ép), trong khi vận tốc pháp tuyến tích luỹ theo ~dt — dùng vị
+        // trí làm ma sát biến mất dần khi substep càng nhỏ, sai vật lý.
+        const nx = -q.ty;
+        const ny = q.tx;
+        const vn = P.vx * nx + P.vy * ny;
         let vt = P.vx * q.tx + P.vy * q.ty;
         const atStart = q.segment === 0 && q.t <= 1e-5;
         const atEnd = q.segment === c.points.length - 2 && q.t >= 1 - 1e-5;
         if ((atStart && vt < 0) || (atEnd && vt > 0)) vt = 0;
         const friction = c.friction ?? 0;
-        if (friction > 0 && correction > 0) {
-          const drop = Math.min(Math.abs(vt), friction * correction);
+        if (friction > 0) {
+          const drop = Math.min(Math.abs(vt), friction * Math.abs(vn));
           vt -= Math.sign(vt) * drop;
         }
         P.x = q.x;

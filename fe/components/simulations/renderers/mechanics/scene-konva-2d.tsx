@@ -903,10 +903,16 @@ export function SceneKonva2D({
       const wheelY = height / 2 - wheelRadius * 0.55;
       return wheelY + wheelRadius;
     };
-    const featherAsset = new window.Image();
-    featherAsset.decoding = "async";
-    featherAsset.onload = () => layer.batchDraw();
-    featherAsset.src = "/simulations/newton/feather.png";
+    // Chỉ tải ảnh lông vũ khi scene THẬT SỰ có vật dùng shape "feather" — effect
+    // này chạy lại mỗi lần đổi tham số (phụ thuộc `scene`), nên tải vô điều
+    // kiện ở đây sẽ load lại ảnh trên MỌI preset cơ học mỗi lần kéo slider.
+    const usesFeather = work.bodies.some((b) => b.visual?.shape === "feather");
+    const featherAsset = usesFeather ? new window.Image() : null;
+    if (featherAsset) {
+      featherAsset.decoding = "async";
+      featherAsset.onload = () => layer.batchDraw();
+      featherAsset.src = "/simulations/newton/feather.png";
+    }
 
 
     // Tàn ảnh (ghost) — vị trí các vật động tại mốc VỪA đi qua trước đó, vẽ nét
@@ -1065,7 +1071,7 @@ export function SceneKonva2D({
           y: -size / 2,
           width: size,
           height: size,
-          image: featherAsset,
+          image: featherAsset ?? undefined,
           shadowBlur: 7,
           shadowColor: "#020617",
           shadowOpacity: 0.34,
@@ -2195,7 +2201,10 @@ export function SceneKonva2D({
 
     return () => {
       anim.stop();
-      featherAsset.onload = null;
+      if (featherAsset) {
+        featherAsset.onload = null;
+        featherAsset.src = ""; // huỷ tải dở dang thay vì để network request tiếp tục chạy nền
+      }
       stage.destroy();
     };
     // resetSignal/seekToken: tăng → dựng lại cảnh từ đầu (reset/đi tới mốc).

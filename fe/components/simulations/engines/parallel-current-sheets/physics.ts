@@ -1,5 +1,6 @@
 import type { ParallelCurrentSheetsScene, ParallelCurrentSheetsState } from "./types";
 const MU_0 = 4 * Math.PI * 1e-7;
+const EPSILON = 1e-9;
 export const MIN_SHEET_SEPARATION = 0.075;
 export function currentSheetForce(scene: ParallelCurrentSheetsScene, state: ParallelCurrentSheetsState) {
   const distance = Math.max(MIN_SHEET_SEPARATION, scene.separation + state.rightX - state.leftX);
@@ -12,8 +13,9 @@ export function initialCurrentSheetsState(): ParallelCurrentSheetsState { return
 export function stepCurrentSheets(scene: ParallelCurrentSheetsScene, state: ParallelCurrentSheetsState, dt: number): ParallelCurrentSheetsState {
   if (dt <= 0) return state;
   const force = currentSheetForce(scene, state);
-  const leftA = (force.left - scene.suspensionStiffness * state.leftX - scene.damping * state.leftV) / scene.mass;
-  const rightA = (force.right - scene.suspensionStiffness * state.rightX - scene.damping * state.rightV) / scene.mass;
+  const mass = Math.max(scene.mass, EPSILON);
+  const leftA = (force.left - scene.suspensionStiffness * state.leftX - scene.damping * state.leftV) / mass;
+  const rightA = (force.right - scene.suspensionStiffness * state.rightX - scene.damping * state.rightV) / mass;
   let leftV = state.leftV + leftA * dt;
   let rightV = state.rightV + rightA * dt;
   let leftX = state.leftX + leftV * dt;
