@@ -3,12 +3,16 @@ package com.edua.beeduasystem.service.blog;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.blog.BlogComment;
+import com.edua.beeduasystem.domain.model.blog.BlogPost;
 import com.edua.beeduasystem.repository.repositories.BlogCommentRepository;
 import com.edua.beeduasystem.repository.repositories.BlogPostRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
+import com.edua.beeduasystem.service.notification.NotificationService;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -23,28 +27,31 @@ public class BlogCommentService {
     private final BlogContentSanitizer sanitizer;
     private final BlogAuthorResolver authorResolver;
     private final CurrentUserProvider currentUser;
+    private final NotificationService notificationService;
 
     public BlogCommentService(BlogCommentRepository commentRepository,
                               BlogPostRepository postRepository,
                               BlogContentSanitizer sanitizer,
                               BlogAuthorResolver authorResolver,
-                              CurrentUserProvider currentUser) {
+                              CurrentUserProvider currentUser,
+                              NotificationService notificationService) {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.sanitizer = sanitizer;
         this.authorResolver = authorResolver;
         this.currentUser = currentUser;
+        this.notificationService = notificationService;
     }
 
     /** Bình luận trên một bài đang PUBLISHED. */
     public BlogViews.CommentView create(UUID postId, String rawContent, UUID parentCommentId) {
-        if (postRepository.findPublishedById(postId).isEmpty()) {
-            throw new ResourceNotFoundException("Blog post not found.");
-        }
+        BlogPost post = postRepository.findPublishedById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Blog post not found."));
         UUID authorId = currentUser.requireUserId();
         String content = requireContent(rawContent);
+        BlogComment parent = null;
         if (parentCommentId != null) {
-            BlogComment parent = requireComment(parentCommentId);
+            parent = requireComment(parentCommentId);
             if (!parent.postId().equals(postId) || parent.parentCommentId() != null) {
                 throw new IllegalArgumentException("Reply target is invalid.");
             }
@@ -52,7 +59,38 @@ public class BlogCommentService {
         Instant now = Instant.now();
         BlogComment saved = commentRepository.save(new BlogComment(
                 UUID.randomUUID(), postId, authorId, parentCommentId, content, now, now, null, null));
+        notifyParticipants(post, parent, authorId);
         return toView(saved);
+    }
+
+    /**
+     * Thông báo cho chủ bài viết (có bình luận mới) và/hoặc tác giả comment cha (có người trả lời),
+     * bỏ qua nếu người nhận chính là người vừa bình luận (BR: không tự thông báo cho bản thân).
+     * Nếu chủ bài viết cũng chính là tác giả comment cha, chỉ gửi 1 thông báo (nội dung "trả lời") — tránh trùng lặp.
+     */
+    private void notifyParticipants(BlogPost post, BlogComment parent, UUID commentAuthorId) {
+        String actorName = authorResolver.name(commentAuthorId);
+        if (actorName == null) actorName = "Một giáo viên";
+        String targetUrl = "/blog/" + post.id();
+
+        Map<UUID, Runnable> notifications = new LinkedHashMap<>();
+        if (!post.authorId().equals(commentAuthorId)) {
+            String finalActorName = actorName;
+            notifications.put(post.authorId(), () -> notificationService.notifyRecipient(
+                    post.authorId(), commentAuthorId, post.subject(),
+                    "Bình luận mới trên bài viết của bạn",
+                    finalActorName + " đã bình luận bài viết \"" + post.title() + "\" của bạn.",
+                    "BLOG_POST", targetUrl));
+        }
+        if (parent != null && !parent.authorId().equals(commentAuthorId)) {
+            String finalActorName = actorName;
+            notifications.put(parent.authorId(), () -> notificationService.notifyRecipient(
+                    parent.authorId(), commentAuthorId, post.subject(),
+                    "Có người trả lời bình luận của bạn",
+                    finalActorName + " đã trả lời bình luận của bạn trong bài viết \"" + post.title() + "\".",
+                    "BLOG_COMMENT", targetUrl));
+        }
+        notifications.values().forEach(Runnable::run);
     }
 
     /** Sửa bình luận của chính mình. */

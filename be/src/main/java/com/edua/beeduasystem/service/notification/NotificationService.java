@@ -102,6 +102,26 @@ public class NotificationService {
                 saved.targetType(), saved.targetUrl()));
     }
 
+    /**
+     * Gửi thông báo nghiệp vụ tới một người dùng cụ thể, không giới hạn người gửi là Moderator
+     * (ví dụ: thông báo bình luận blog). Gọi trực tiếp {@code senderId}/{@code subject} thay vì
+     * suy ra từ {@code currentUser} như {@link #createForRecipient}.
+     */
+    @Transactional
+    public void notifyRecipient(UUID recipientId, UUID senderId, Subject subject, String rawTitle, String rawContent,
+                                String targetType, String targetUrl) {
+        String title = requireText(rawTitle, TITLE_MAX_LENGTH, "Tiêu đề");
+        String content = requireText(rawContent, CONTENT_MAX_LENGTH, "Nội dung");
+        Instant now = Instant.now();
+
+        Notification saved = notificationRepository.createWithRecipients(
+                new Notification(UUID.randomUUID(), senderId, subject, title, content, now, targetType, targetUrl),
+                List.of(recipientId));
+        streamPort.publishNew(recipientId, new NotificationEvent(
+                saved.id(), saved.title(), saved.content(), saved.subject(), displayName(senderId), saved.createdAt(),
+                saved.targetType(), saved.targetUrl()));
+    }
+
     /** Danh sách notification của user hiện tại, mới nhất trước. */
     @Transactional(readOnly = true)
     public NotificationViews.Page<NotificationViews.NotificationSummary> listMine(boolean unreadOnly, Pageable pageable) {
