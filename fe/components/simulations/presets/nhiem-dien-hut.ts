@@ -37,8 +37,8 @@ export const nhiemDienHut: Preset = {
     const drag = 0.01; // cản nhẹ — hệ tắt dần về góc nghiêng ổn định thay vì đung đưa mãi
     return {
       bodies: [
-        { id: "anchor1", x: x1, y: py, vx: 0, vy: 0, mass: 1, fixed: true },
-        { id: "anchor2", x: x2, y: py, vx: 0, vy: 0, mass: 1, fixed: true },
+        { id: "anchor1", x: x1, y: py, vx: 0, vy: 0, mass: 1, radius: 0.012, fixed: true },
+        { id: "anchor2", x: x2, y: py, vx: 0, vy: 0, mass: 1, radius: 0.012, fixed: true },
         { id: "bob1", x: x1 + L * Math.sin(th0), y: py - L * Math.cos(th0), vx: 0, vy: 0, mass: m, radius: ballRadius },
         { id: "bob2", x: x2 - L * Math.sin(th0), y: py - L * Math.cos(th0), vx: 0, vy: 0, mass: m, radius: ballRadius },
       ],
@@ -56,9 +56,24 @@ export const nhiemDienHut: Preset = {
       // chúng áp sát rồi dừng hẳn thay vì bật qua lại (lực hút vẫn còn nên nảy
       // đàn hồi sẽ dội qua dội lại mãi).
       restitution: 0,
+      view: { minX: -0.55, maxX: 0.55, minY: 0.65, maxY: 1.38 },
+      groundPadding: 58,
     };
   },
+  annotations: (p) => {
+    const d = (p.d ?? 35) / 100;
+    return [
+      { kind: "rect", x: 0, y: 1.29, width: d + 0.3, height: 0.055, fill: "#cbd5e1", stroke: "#64748b", strokeWidth: 2 },
+      { kind: "rect", x: -d / 2, y: 1.235, width: 0.025, height: 0.11, fill: "#94a3b8", stroke: "#cbd5e1", strokeWidth: 1 },
+      { kind: "rect", x: d / 2, y: 1.235, width: 0.025, height: 0.11, fill: "#94a3b8", stroke: "#cbd5e1", strokeWidth: 1 },
+    ];
+  },
   bodyLabels: { bob1: "1", bob2: "2" },
+  bodySigns: { bob1: "+", bob2: "−" },
+  minimalOverlay: true,
+  hideBodyCoordinates: true,
+  hideFixedSupportDecoration: true,
+  lockPan: true,
   analysis: {
     landmarks: [
       {

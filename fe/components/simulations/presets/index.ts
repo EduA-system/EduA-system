@@ -9,6 +9,8 @@ import { quyTacMoment } from "./quy-tac-moment";
 import { quyTacMomentDiaTron } from "./quy-tac-moment-dia-tron";
 import { phanTichLuc } from "./phan-tich-luc";
 import { tongHopHaiLucCungPhuong } from "./tong-hop-hai-luc-cung-phuong";
+import { roiTuDo } from "./roi-tu-do";
+import { matNghiengMaSat } from "./mat-nghieng-ma-sat";
 import { nemXien } from "./nem-xien";
 import { nemNgang } from "./nem-ngang";
 import { mangCongGalilei } from "./mang-cong-galilei";
@@ -37,6 +39,27 @@ import { tuPho } from "./tu-pho";
 import { camUngDienTu } from "./cam-ung-dien-tu";
 import { bienThienDongDienBangBienTroKhoaK } from "./bien-thien-dong-dien-bang-bien-tro-khoa-k";
 import { khungDayQuayTrongTuTruong } from "./khung-day-quay-trong-tu-truong";
+import { nutBacBat } from "./nut-bac-bat";
+import { becquerelUraniumKinhAnh } from "./becquerel-uranium-kinh-anh";
+import { brownianPollen } from "./brownian";
+import { dunNong } from "./dun-nong";
+import { nguyenLyTruyenNhiet } from "./nguyen-ly-truyen-nhiet";
+import { isothermalBoyle } from "./isothermal-boyle";
+import { isobaricProcess } from "./isobaric-process";
+import { buongSuongBlackett } from "./buong-suong-blackett";
+import { doLechTiaAlphaBetaGamma } from "./do-lech-tia-alpha-beta-gamma";
+import { canXoanCoulomb } from "./can-xoan-coulomb";
+import { doTanSoBangDaoDongKi } from "./do-tan-so-bang-dao-dong-ki";
+import { songTrenMatNuoc } from "./song-tren-mat-nuoc";
+import { rutherfordBienDoiHatNhanNito } from "./rutherford-bien-doi-hat-nhan-nito";
+import { tanXaAlphaRutherford } from "./tan-xa-alpha-rutherford";
+import { chuongDien } from "./chuong-dien";
+import { daySatDotGiay } from "./day-sat-dot-giay";
+import { dacTrungVaBongDen } from "./dac-trung-va-bong-den";
+import { doSuatDienDongPin } from "./do-suat-dien-dong-pin";
+import { doNhietDungRiengCuaNuoc } from "./do-nhiet-dung-rieng-cua-nuoc";
+import { doNhietNongChayRiengCuaNuocDa } from "./do-nhiet-nong-chay-rieng-cua-nuoc-da";
+import { doNhietHoaHoiRiengCuaNuoc } from "./do-nhiet-hoa-hoi-rieng-cua-nuoc";
 
 export type { Preset, PresetParam, ParamCalculation, Domain } from "./types";
 
@@ -48,7 +71,8 @@ export const PRESETS: Preset[] = [
   quyTacMomentDiaTron,
   phanTichLuc,
   tongHopHaiLucCungPhuong,
-
+  roiTuDo,
+  matNghiengMaSat,
   nemXien,
   nemNgang,
   mangCongGalilei,
@@ -77,6 +101,27 @@ export const PRESETS: Preset[] = [
   camUngDienTu,
   bienThienDongDienBangBienTroKhoaK,
   khungDayQuayTrongTuTruong,
+  nutBacBat,
+  becquerelUraniumKinhAnh,
+  brownianPollen,
+  dunNong,
+  nguyenLyTruyenNhiet,
+  isothermalBoyle,
+  isobaricProcess,
+  buongSuongBlackett,
+  doLechTiaAlphaBetaGamma,
+  canXoanCoulomb,
+  doTanSoBangDaoDongKi,
+  songTrenMatNuoc,
+  rutherfordBienDoiHatNhanNito,
+  tanXaAlphaRutherford,
+  chuongDien,
+  daySatDotGiay,
+  dacTrungVaBongDen,
+  doSuatDienDongPin,
+  doNhietDungRiengCuaNuoc,
+  doNhietNongChayRiengCuaNuocDa,
+  doNhietHoaHoiRiengCuaNuoc,
 ];
 
 export function getPreset(id: string): Preset | undefined {

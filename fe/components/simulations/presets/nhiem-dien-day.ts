@@ -34,7 +34,7 @@ export const nhiemDienDay: Preset = {
     const drag = 0.01; // cản nhẹ — hệ tắt dần về góc cân bằng thay vì đung đưa mãi
     return {
       bodies: [
-        { id: "pivot", x: px, y: py, vx: 0, vy: 0, mass: 1, fixed: true },
+        { id: "pivot", x: px, y: py, vx: 0, vy: 0, mass: 1, radius: 0.012, fixed: true },
         { id: "bob1", x: px - L * Math.sin(th0), y: py - L * Math.cos(th0), vx: 0, vy: 0, mass: m, radius: ballRadius },
         { id: "bob2", x: px + L * Math.sin(th0), y: py - L * Math.cos(th0), vx: 0, vy: 0, mass: m, radius: ballRadius },
       ],
@@ -49,9 +49,20 @@ export const nhiemDienDay: Preset = {
         { kind: "rod", a: "pivot", b: "bob2", length: L },
       ],
       restitution: 0,
+      view: { minX: -0.5, maxX: 0.5, minY: 0.65, maxY: 1.38 },
+      groundPadding: 58,
     };
   },
+  annotations: () => [
+    { kind: "rect", x: 0, y: 1.29, width: 0.9, height: 0.055, fill: "#cbd5e1", stroke: "#64748b", strokeWidth: 2 },
+    { kind: "rect", x: 0, y: 1.235, width: 0.025, height: 0.11, fill: "#94a3b8", stroke: "#cbd5e1", strokeWidth: 1 },
+  ],
   bodyLabels: { bob1: "1", bob2: "2" },
+  bodySigns: { bob1: "+", bob2: "+" },
+  minimalOverlay: true,
+  hideBodyCoordinates: true,
+  hideFixedSupportDecoration: true,
+  lockPan: true,
   analysis: {
     landmarks: [
       {

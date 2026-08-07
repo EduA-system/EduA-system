@@ -4,7 +4,7 @@
 // Đưa vào một danh sách ParamDef + giá trị hiện tại; mỗi lần kéo slider gọi onChange.
 // Đồng bộ 2 chiều: nếu `values` đổi từ bên ngoài (reset / AI sửa) → panel tự refresh.
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { Pane } from "tweakpane";
 
 export type ParamDef = {
@@ -151,4 +151,27 @@ export function ParamPanel({
       <div ref={containerRef} />
     </div>
   );
+}
+
+/** Compatibility wrapper for the legacy standalone simulation controls. */
+export function ParamRangeField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+  onChange: (value: number) => void;
+}) {
+  const schema = useMemo<ParamDef[]>(() => [{ key: "value", label, min, max, step, unit }], [label, min, max, step, unit]);
+  const values = useMemo(() => ({ value }), [value]);
+  return <ParamPanel schema={schema} values={values} onChange={(_, next) => onChange(next)} />;
 }
