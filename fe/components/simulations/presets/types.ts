@@ -10,6 +10,15 @@ import type { WaveScene } from "../engines/wave/types";
 import type { StringWaveScene } from "../engines/string-wave/types";
 import type { WaveFieldScene } from "../engines/wave-field/types";
 import type { PointChargeFieldScene } from "../engines/point-charge-field/types";
+import type { RotationScene } from "../engines/rotation/types";
+import type { MagneticLoopScene } from "../engines/magnetic-loop/types";
+import type { MagneticScene } from "../engines/magnetism/types";
+import type { ParallelCurrentSheetsScene } from "../engines/parallel-current-sheets/types";
+import type { IronFilingsScene } from "../engines/iron-filings/types";
+import type {
+  ElectromagneticInductionScene,
+  VariableCurrentInductionScene,
+} from "../engines/electromagnetic-induction/types";
 import type { ParamDef } from "../shared/param-panel";
 import type { SceneAnnotation } from "../shared/scene-types";
 
@@ -17,6 +26,14 @@ export type Domain = "Cơ học" | "Dao động & Sóng" | "Quang học" | "Đi�
 
 /** ParamDef của panel + giá trị mặc định cho preset. */
 export type PresetParam = ParamDef & { default: number };
+
+export type ParamCalculation = {
+  label: string;
+  formula: string;
+  substitution: string;
+  value: string;
+  unit?: string;
+};
 
 export type LandmarkValue = { label: string; value: string; unit?: string };
 
@@ -48,6 +65,13 @@ type PresetBase = {
   objective: string; // mục tiêu học tập (hiển thị dưới sân khấu)
   sgkRef?: string; // tham chiếu SGK, vd "Vật lí 10 — Bài 7"
   params: PresetParam[];
+  // Lời dẫn ngắn luôn hiện trong tab Tham số, giúp người học biết cần thay đổi
+  // đại lượng nào và quan sát kết quả gì.
+  paramGuide?: string;
+  // Các phép tính cập nhật theo tham số, hiển thị ngay trong tab Tham số.
+  paramCalculations?: (p: Record<string, number>) => ParamCalculation[];
+  // Bắt đầu ở trạng thái dừng để người học chủ động nhả cơ cấu ban đầu.
+  startPaused?: boolean;
   // Điểm giá trị quan trọng (tuỳ chọn) — panel "Phân tích" còn hiện mốc thời
   // gian chung (1s, 2s…) cho MỌI preset, không phụ thuộc field này.
   analysis?: PresetAnalysis;
@@ -66,18 +90,28 @@ export type MechanicsPreset = PresetBase & {
   // (chỉ hiện khi xem 1 mốc thời gian). Object tĩnh (đa số preset) hoặc hàm của
   // params khi nhãn cần phản ánh giá trị hiện tại (vd dấu điện tích q).
   bodyLabels?: Record<string, string> | ((p: Record<string, number>) => Record<string, string>);
+  // Tên dễ hiểu chỉ dùng trong bảng theo dõi; vắng thì dùng bodyLabels/id.
+  trackingLabels?: Record<string, string>;
   // Chú thích trực quan tuỳ chọn (mũi tên trường đều, nhãn +/− bản tụ…) — THUẦN
   // HIỂN THỊ, không ảnh hưởng vật lý. Toạ độ world tĩnh, không bám vật động.
   annotations?: (p: Record<string, number>) => SceneAnnotation[];
   // Màu riêng cho từng vật (id → mã màu) — TĨNH, giống bodyLabels (không phải
   // hàm của params) để tránh tạo reference mới mỗi render.
   bodyColors?: Record<string, string>;
+  // Vệt chuyển động được renderer nối dần theo vị trí thật của từng vật.
+  bodyTrails?: Record<string, { color?: string; width?: number; dash?: number[] }>;
   // Ký hiệu ngắn đè lên TÂM vật (vd "+"/"−"/"0" dấu điện tích), bám theo vật
   // khi di chuyển — khác bodyLabels (vẽ dưới vật). Object tĩnh hoặc hàm params.
   bodySigns?: Record<string, string> | ((p: Record<string, number>) => Record<string, string>);
   // Ẩn trục toạ độ/nhãn toạ độ debug (KHÔNG ẩn lưới nền) — dùng cho sơ đồ giáo
   // khoa tối giản tự vẽ mọi thứ qua annotations. Xem SceneKonva2D.
   minimalOverlay?: boolean;
+  // Giữ bodyLabels cho bảng theo dõi nhưng không vẽ chúng trên canvas.
+  hideBodyLabelsOnCanvas?: boolean;
+  // Ẩn nhãn tọa độ động bám theo vật trên canvas, bảng theo dõi vẫn giữ nguyên.
+  hideCoordinateLabels?: boolean;
+  // Tắt thanh treo tự sinh của renderer cho các scene có giá đỡ riêng, như bập bênh.
+  hideFixedSupportDecoration?: boolean;
 };
 
 /** Preset sóng trường (giao thoa…) — biên độ là hàm giải tích, xem engines/wave. */
@@ -110,4 +144,30 @@ export type PointChargeFieldPreset = PresetBase & {
   applyParams: (p: Record<string, number>) => PointChargeFieldScene;
 };
 
-export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset;
+export type RotationPreset = PresetBase & {
+  kind: "rotation";
+  applyParams: (p: Record<string, number>) => RotationScene;
+};
+
+export type MagneticLoopPreset = PresetBase & {
+  kind: "magnetic-loop";
+  applyParams: (p: Record<string, number>) => MagneticLoopScene;
+};
+
+export type MagneticPreset = PresetBase & {
+  kind: "magnetism";
+  applyParams: (p: Record<string, number>) => MagneticScene;
+};
+
+export type ParallelCurrentSheetsPreset = PresetBase & {
+  kind: "parallel-current-sheets";
+  applyParams: (p: Record<string, number>) => ParallelCurrentSheetsScene;
+};
+
+export type IronFilingsPreset = PresetBase & { kind: "iron-filings"; applyParams: (p: Record<string, number>) => IronFilingsScene; };
+
+export type ElectromagneticInductionPreset = PresetBase & { kind: "electromagnetic-induction"; applyParams: (p: Record<string, number>) => ElectromagneticInductionScene; };
+
+export type VariableCurrentInductionPreset = PresetBase & { kind: "variable-current-induction"; applyParams: (p: Record<string, number>) => VariableCurrentInductionScene; };
+
+export type Preset = MechanicsPreset | WavePreset | StringWavePreset | WaveFieldPreset | PointChargeFieldPreset | RotationPreset | MagneticLoopPreset | MagneticPreset | ParallelCurrentSheetsPreset | IronFilingsPreset | ElectromagneticInductionPreset | VariableCurrentInductionPreset;
