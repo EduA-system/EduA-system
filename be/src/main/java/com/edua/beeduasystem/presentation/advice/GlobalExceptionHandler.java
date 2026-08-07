@@ -1,12 +1,17 @@
 package com.edua.beeduasystem.presentation.advice;
 
+import com.edua.beeduasystem.domain.exception.BulkEnrollmentFailedException;
+import com.edua.beeduasystem.domain.exception.ClassEnrollmentConflictException;
 import com.edua.beeduasystem.domain.exception.DuplicateEmailException;
 import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
+import com.edua.beeduasystem.domain.exception.ClassAccessRevokedException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
 import com.edua.beeduasystem.domain.exception.MoleculeBuildException;
+import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
+import com.edua.beeduasystem.service.slides.SlideAiResponseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,7 +26,14 @@ public class GlobalExceptionHandler {
             "Unsupported file type or file exceeds the maximum size. "
                     + "Allowed: .docx, .pdf, .pptx, .png, .jpg, .jpeg (max 10 MB).";
 
-    public record ErrorResponse(String message) {
+    public record ErrorResponse(String message, String code) {
+        public ErrorResponse(String message) {
+            this(message, null);
+        }
+    }
+
+    /** 409 them hoc sinh: kèm mã lý do + (khi PROFILE_MISMATCH) thông tin tài khoản cũ để FE xác nhận. */
+    public record ClassEnrollmentConflictResponse(String message, String reason, Object existingAccount) {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -53,6 +65,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(SlideAiResponseException.class)
+    public ResponseEntity<ErrorResponse> handleSlideAiResponse(SlideAiResponseException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PracticeExamGenerationException.class)
+    public ResponseEntity<ErrorResponse> handlePracticeExamGeneration(PracticeExamGenerationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
+    }
+
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ErrorResponse> handleInvalidToken(InvalidTokenException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(ex.getMessage()));
@@ -68,6 +90,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(ClassAccessRevokedException.class)
+    public ResponseEntity<ErrorResponse> handleClassAccessRevoked(ClassAccessRevokedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(ex.getMessage(), "CLASS_ACCESS_REVOKED"));
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(ex.getMessage()));
@@ -76,5 +104,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateEmail(DuplicateEmailException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ClassEnrollmentConflictException.class)
+    public ResponseEntity<?> handleClassEnrollmentConflict(ClassEnrollmentConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ClassEnrollmentConflictResponse(ex.getMessage(), ex.reason(), ex.details()));
+    }
+
+    @ExceptionHandler(BulkEnrollmentFailedException.class)
+    public ResponseEntity<ErrorResponse> handleBulkEnrollmentFailed(BulkEnrollmentFailedException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
     }
 }

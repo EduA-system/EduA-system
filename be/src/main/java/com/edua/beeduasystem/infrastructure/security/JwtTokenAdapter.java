@@ -10,8 +10,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -27,13 +25,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Phát/verify access JWT nội bộ (HS256) bằng jjwt.
+ * Issues and verifies internal HS256 access JWTs.
  * Claims: sub = userId, email, roles (comma-separated), role (primary), subject.
  */
 @Component
 public class JwtTokenAdapter implements TokenService {
-
-    private static final Logger log = LoggerFactory.getLogger(JwtTokenAdapter.class);
 
     private final SecretKey key;
     private final Duration accessTtl;
@@ -42,12 +38,10 @@ public class JwtTokenAdapter implements TokenService {
             @Value("${app.auth.jwt.secret:}") String secret,
             @Value("${app.auth.jwt.access-ttl:PT60M}") Duration accessTtl) {
         this.accessTtl = accessTtl;
-        if (StringUtils.hasText(secret) && secret.getBytes(StandardCharsets.UTF_8).length >= 32) {
-            this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        } else {
-            log.warn("app.auth.jwt.secret chưa được cấu hình hợp lệ (>=32 bytes). Dùng key HS256 tạm cho dev.");
-            this.key = Jwts.SIG.HS256.key().build();
+        if (!StringUtils.hasText(secret) || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("app.auth.jwt.secret must be configured with at least 32 UTF-8 bytes.");
         }
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override

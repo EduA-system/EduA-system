@@ -51,7 +51,7 @@ events: FRAME_READY → (ACTIVITY_READY | ACTIVITY_FAILED)×4 → DONE | ERROR
 ## Cross-cutting (xử lý ở filter/service, không phải endpoint)
 
 - **Auth / JWT filter** (SEC-01/03): mọi request (trừ `/api/auth/google|refresh`, `/api/health`, swagger) phải kèm `Authorization: Bearer <access>`. Filter verify chữ ký + `exp`; thiếu/hết hạn → **401**. Chi tiết luồng: [`auth.md`](./auth.md).
-- **RBAC** (SEC-04): `@EnableMethodSecurity` + `@PreAuthorize` theo role {TEACHER, MODERATOR, ADMINISTRATOR} (+ subject cho màn đặc thù), theo ma trận Screen Authorization 1.4.2. Owner-only edit/delete (BR-16) check trong service.
+- **RBAC** (SEC-04): `@EnableMethodSecurity` + `@PreAuthorize` theo role {TEACHER, MODERATOR, PRINCIPAL, IT_STAFF} (+ subject cho màn đặc thù), theo ma trận Screen Authorization 1.4.2. Owner-only edit/delete (BR-16) check trong service.
 - **WebSocket auth**: STOMP `CONNECT` tới `/ws` phải mang `Authorization: Bearer <access>`; `StompAuthChannelInterceptor` verify và gán Principal = userId, sai → reject (chặn rò rỉ nội dung qua `/topic/...`).
 - **Rate limit** (SEC-07): key theo userId — **60 req/phút/user** endpoint thường, **10 req/phút/user** cho endpoint AI (`/generate*`, `/ai-edit`, slide generate). In-memory (Bucket4j), vượt → **429**.
 - **CORS**: `allowCredentials(true)` + origin cố định (dev `http://localhost:3000`, prod HTTPS) để dùng cookie refresh (SEC-02).

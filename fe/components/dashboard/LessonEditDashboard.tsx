@@ -18,12 +18,20 @@ import {
 import { useAuth } from "@/lib/auth/AuthContext";
 import { AssistantPanel } from "../layout/AssistantPanel";
 import { Sidebar } from "../layout/Sidebar";
-import { EditorTools } from "../LessonEditor";
+import { ImageEnabledEditorTools } from "../LessonEditor";
 import { LessonEditor, generatingLessonPlanSkeletonHtml, lessonPlan5512ToHtml } from "../LessonEditor";
 import { createEditorExtensions, type MathClickInfo } from "../LessonEditor/editorConfig";
+import { resolveDeadPendingActivities } from "../LessonEditor/pendingActivityNode";
+import { scanPendingDiffs } from "../LessonEditor/sectionDiff";
 import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
+import { openLessonPlanPrintDialog } from "@/lib/lesson-plan-pdf-export";
+import { createLessonThumbnail } from "@/lib/library-thumbnail";
+
+/** Nguồn SGK của giáo án — dùng để BE nạp lại `knowledge_json` khi AssistantPanel viết mới
+ * hoàn toàn một mục còn trống. Khớp `source` trong payload lưu ở Personal Library. */
+type LessonSource = { bookId: string; chapterId: string; lessonId: string };
 
 export function LessonEditDashboard() {
   const { authFetch } = useAuth();
@@ -35,9 +43,20 @@ export function LessonEditDashboard() {
   // `useLessonPlanStream` đã `clearLessonPlanSession()`, khiến `editable` bị tính lại.
   const [pendingSession] = useState(() => readLessonPlanSession());
   const [lessonSession, setLessonSession] = useState<LessonPlanSession | null>(pendingSession);
+  // Nguồn SGK khi mở lại giáo án đã lưu (không có phiên streaming sống nên không có
+  // `lessonSession`) — đọc từ `payload.source` lúc load, dùng để BE nạp lại `knowledge_json`
+  // cho AssistantPanel (xem `getLessonPlanSource`).
+  const [lessonSource, setLessonSource] = useState<LessonSource | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  // Còn đề xuất AI (đang hiện diff đỏ/xanh trong tài liệu) chưa Chấp nhận/Bỏ — chặn "Lưu" khi
+  // true, tránh lưu một bản giáo án dở dang có cả nội dung cũ/mới lẫn lộn mà sau khi mở lại
+  // không còn cách nào chấp nhận/bỏ nữa (AssistantPanel dựng lại UI duyệt diff từ chính tài
+  // liệu nên vẫn phục hồi được, nhưng tốt hơn là ngăn từ đầu). Suy từ chính tài liệu qua
+  // `scanPendingDiffs`, không phải state riêng của AssistantPanel — đúng cho cả trường hợp
+  // diff "mồ côi" (vd còn sót lại sau Ctrl+Z hồi sinh một diff đã xử lý).
+  const [hasPendingAiDiff, setHasPendingAiDiff] = useState(false);
   const libraryContentIdRef = useRef<string | null>(null);
   const librarySubjectRef = useRef<LibrarySubject | undefined>(undefined);
   const savingRef = useRef(false);
@@ -69,11 +88,19 @@ export function LessonEditDashboard() {
   useEffect(() => {
     if (!editor) return;
 
+    const syncPendingAiDiff = () => setHasPendingAiDiff(scanPendingDiffs(editor).length > 0);
     const markDirty = () => {
       revisionRef.current += 1;
       setIsDirty(true);
+      syncPendingAiDiff();
     };
     editor.on("update", markDirty);
+    // Quét ngay lúc gắn listener (qua hàm riêng, không gọi `markDirty` — không muốn đánh dấu
+    // "dirty" chỉ vì mount) — nội dung ban đầu (mock/skeleton) không có diff nên thường là
+    // false, nhưng khi mở lại từ Personal Library (`editor.commands.setContent` ở effect bên
+    // dưới) vẫn phát sự kiện "update" nên `markDirty` tự chạy lại và bắt được cả trường hợp
+    // một giáo án đã lưu TỪ TRƯỚC lỡ dính diff dở dang (vd do bug đã sửa).
+    syncPendingAiDiff();
     return () => {
       editor.off("update", markDirty);
     };
@@ -90,10 +117,16 @@ export function LessonEditDashboard() {
         if (cancelled) return;
         const document = getLessonPlanDocument(content.payload);
         if (!document) throw new Error("Giáo án đã lưu có định dạng không hợp lệ.");
+        // Mở lại từ Library là chắc chắn không còn phiên streaming sống — mọi node
+        // pendingActivity còn sót lại (đang soạn dở hoặc đã lỗi) không thể tự phục hồi nữa,
+        // nên "hoá" thành heading + "Mời soạn tay." thường để GV/AI chat sửa được ngay.
+        const healedDocument = resolveDeadPendingActivities(document, true);
+        const source = getLessonPlanSource(content.payload);
+        if (source) setLessonSource(source);
 
         libraryContentIdRef.current = content.id;
         librarySubjectRef.current = content.subject ?? undefined;
-        editor.commands.setContent(document);
+        editor.commands.setContent(healedDocument);
         revisionRef.current = 0;
         setIsDirty(false);
         editor.setEditable(true);
@@ -124,6 +157,14 @@ export function LessonEditDashboard() {
   const saveLesson = useCallback(
     async (session: LessonPlanSession | null = lessonSession) => {
       if (!editor || savingRef.current) return;
+      // Chặn lưu khi tài liệu còn diff AI chưa Chấp nhận/Bỏ — quét trực tiếp thay vì tin
+      // `hasPendingAiDiff` (state React có thể chưa kịp đồng bộ ngay sau lần "update" cuối)
+      // để đảm bảo không bao giờ lưu một bản có cả nội dung cũ/mới lẫn lộn.
+      if (scanPendingDiffs(editor).length > 0) {
+        setSaveStatus("error");
+        setSaveError("Còn đề xuất chỉnh sửa AI chưa Chấp nhận/Bỏ — hãy xử lý xong ở khung EDUA AI rồi lưu lại.");
+        return;
+      }
 
       savingRef.current = true;
       setSaveStatus("saving");
@@ -131,10 +172,14 @@ export function LessonEditDashboard() {
       const title = editor.state.doc.firstChild?.textContent.trim() || session?.display?.title || "Giáo án mới";
       const subject = (session?.display?.subjectCode as LibrarySubject | undefined) ?? librarySubjectRef.current;
       const revisionAtSave = revisionRef.current;
+      // Chỉ thay node ĐÃ "failed" — node còn "pending" có thể vẫn đang sinh THẬT trong phiên
+      // hiện tại (vd bấm "Lưu" tay giữa lúc generate), không được đụng vào (xem
+      // `resolveDeadPendingActivities`). Chỉ transform bản JSON gửi đi lưu, không sửa editor
+      // đang sống — luồng streaming vẫn cần node gốc để patch khi ACTIVITY_READY/FAILED về.
       const payload = {
         format: "tiptap-json",
         version: 1,
-        document: editor.getJSON(),
+        document: resolveDeadPendingActivities(editor.getJSON(), false),
         source: session
           ? {
               bookId: session.bookId,
@@ -144,16 +189,18 @@ export function LessonEditDashboard() {
             }
           : undefined,
       };
+      const thumbnailUrl = createLessonThumbnail(title, subject, payload.document);
 
       try {
         if (libraryContentIdRef.current) {
-          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, payload });
+          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, payload, thumbnailUrl });
         } else {
           const created = await createLibraryContent(authFetch, {
             type: "LESSON_PLAN",
             title,
             subject,
             payload,
+            thumbnailUrl,
           });
           libraryContentIdRef.current = created.id;
           librarySubjectRef.current = created.subject ?? undefined;
@@ -170,11 +217,26 @@ export function LessonEditDashboard() {
     [authFetch, editor, lessonSession],
   );
 
+  const exportPdf = useCallback(() => {
+    if (!editor) return;
+    const title = editor.state.doc.firstChild?.textContent.trim() || "Giáo án";
+    if (!openLessonPlanPrintDialog(title, editor.getHTML())) {
+      setSaveStatus("error");
+      setSaveError("Trình duyệt đã chặn cửa sổ in. Hãy cho phép popup rồi thử lại.");
+    }
+  }, [editor]);
+
   // Khi AI đã hoàn thành toàn bộ activity, lưu bản giáo án đầu tiên vào thư viện.
   useLessonPlanStream(editor, (session) => {
     setLessonSession(session);
     void saveLesson(session);
   }, !libraryId);
+
+  // Ưu tiên phiên streaming đang sống (mới nhất); mở lại từ Library thì dùng `lessonSource`
+  // đọc từ payload đã lưu.
+  const activeSource: LessonSource | null = lessonSession
+    ? { bookId: lessonSession.bookId, chapterId: lessonSession.chapterId, lessonId: lessonSession.lessonId }
+    : lessonSource;
 
   return (
     <main className="relative h-screen w-full overflow-hidden bg-[#F7F5F2] text-[#2b2926]">
@@ -183,28 +245,57 @@ export function LessonEditDashboard() {
 
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
-            <div className="@container flex h-12 items-center gap-2 px-3">
-              <div className="flex shrink-0 items-center gap-1.5">
-                <HeaderActionButton onClick={() => void saveLesson()} label={saveStatus === "saving" ? "Đang lưu..." : "Lưu"}>
+            <div className="@container flex min-h-12 items-center justify-between gap-3 px-3 py-1.5">
+              <div className="flex min-w-0 shrink-0 items-center gap-1.5">
+                <HeaderActionButton
+                  onClick={() => void saveLesson()}
+                  disabled={hasPendingAiDiff}
+                  label={
+                    saveStatus === "saving"
+                      ? "Đang lưu..."
+                      : hasPendingAiDiff
+                        ? "Còn đề xuất AI chưa duyệt"
+                        : "Lưu"
+                  }
+                >
                   <SaveIcon />
+                </HeaderActionButton>
+                <HeaderActionButton onClick={exportPdf} label="Xuất PDF">
+                  <PrintIcon />
                 </HeaderActionButton>
                 <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>
                   <CreateLessonIcon />
                 </HeaderActionButton>
               </div>
 
-              <div className="flex min-w-0 flex-1 items-center justify-center px-2">
-                <EditorTools editor={editor} />
-              </div>
-
-              <button
-                type="button"
+              {/* Trước đây chỉ có icon lấp lánh trơ trọi + `aria-label` tiếng Anh — không có
+               * tooltip, không có chữ, GV nhìn vào không đoán được đây là nút bật/tắt trợ lý AI.
+               * Giờ dùng đúng khuôn `HeaderActionButton` (title + nhãn hiện ở màn rộng) như 3 nút
+               * bên trái, cộng thêm viền/nền đổi màu theo trạng thái đang mở/đóng để rõ cả 2 chiều
+               * (đang bấm thì trông "nhấn xuống", không phải đoán qua icon suông). */}
+              <HeaderActionButton
                 onClick={() => setAiCollapsed((current) => !current)}
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#e8e2d9] bg-white text-[#d97757] shadow-sm transition hover:bg-[#fff4ed]"
-                aria-label={aiCollapsed ? "Show AI sidebar" : "Hide AI sidebar"}
+                active={!aiCollapsed}
+                label={aiCollapsed ? "Mở trợ lý AI" : "Đóng trợ lý AI"}
               >
                 <AiToggleIcon />
-              </button>
+              </HeaderActionButton>
+            </div>
+            {/* KHÔNG đặt overflow-x-auto ở đây — theo spec CSS, "nếu overflow-x không phải
+             * `visible` mà overflow-y LÀ `visible` (dù khai tường minh hay để mặc định), trình
+             * duyệt tự đổi overflow-y thành `auto`" — nghĩa là dù có ghi thêm overflow-y-visible
+             * (đã thử, KHÔNG ăn thua vì quy tắc trên xét trên GIÁ TRỊ visible chứ không phân biệt
+             * khai tường minh hay mặc định) thì trục dọc vẫn bị ép thành auto, tự sinh thanh cuộn
+             * dọc bất cứ khi nào chiều cao nội dung nhích quá khoảng chừa. `overflow-x-auto` ở
+             * đây từ đầu cũng THỪA: EditorTools.tsx đã tự `flex-wrap` xuống dòng khi hẹp (không
+             * cần cuộn ngang) — bỏ hẳn overflow-x-auto vừa hết vướng quy tắc trên, vừa đúng ý:
+             * khối công cụ là khối cứng, không cuộn hướng nào, chỉ cao thêm khi bọc xuống dòng. */}
+            <div className="border-t border-[#efe8df] px-3 py-1.5">
+              <div className="flex w-full justify-center">
+                <div className="inline-flex max-w-full rounded-lg border border-[#e8e2d9] bg-white px-2 py-1 shadow-sm">
+                  <ImageEnabledEditorTools editor={editor} authFetch={authFetch} />
+                </div>
+              </div>
             </div>
             {saveStatus !== "idle" && (
               <p
@@ -228,7 +319,15 @@ export function LessonEditDashboard() {
           </div>
         </section>
 
-        <AssistantPanel collapsed={aiCollapsed} />
+        <AssistantPanel
+          collapsed={aiCollapsed}
+          onClose={() => setAiCollapsed(true)}
+          editor={editor}
+          authFetch={authFetch}
+          bookId={activeSource?.bookId}
+          chapterId={activeSource?.chapterId}
+          lessonId={activeSource?.lessonId}
+        />
       </div>
 
       {editor && mathClick ? (
@@ -245,26 +344,47 @@ function getLessonPlanDocument(payload: unknown): JSONContent | null {
   return document as JSONContent;
 }
 
+function getLessonPlanSource(payload: unknown): LessonSource | null {
+  if (!payload || typeof payload !== "object") return null;
+  const source = (payload as { source?: unknown }).source;
+  if (!source || typeof source !== "object") return null;
+  const { bookId, chapterId, lessonId } = source as Record<string, unknown>;
+  if (typeof bookId !== "string" || typeof chapterId !== "string" || typeof lessonId !== "string") return null;
+  if (!bookId || !chapterId || !lessonId) return null;
+  return { bookId, chapterId, lessonId };
+}
+
 function HeaderActionButton({
   children,
   label,
   onClick,
   primary = false,
+  disabled = false,
+  active = false,
 }: {
   children: React.ReactNode;
   label: string;
   onClick: () => void;
   primary?: boolean;
+  disabled?: boolean;
+  /** Trạng thái "đang bật" cho nút kiểu toggle (vd mở/đóng panel AI) — khác `primary` (dành
+   * cho nút hành động chính, luôn tô đặc màu cam bất kể trạng thái). `active` chỉ tô nhạt +
+   * viền cam khi đang bật, để phân biệt trực quan với lúc tắt mà không lẫn với CTA chính. */
+  active?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       title={label}
-      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium shadow-sm transition @min-[1100px]:px-3 ${
+      aria-pressed={active}
+      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium shadow-sm transition @min-[1100px]:px-3 disabled:cursor-not-allowed disabled:opacity-50 ${
         primary
           ? "border border-[#d97757] bg-[#d97757] text-white hover:bg-[#c96545]"
-          : "border border-[#e8e2d9] bg-white text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
+          : active
+            ? "border border-[#d97757] bg-[#fff4ed] text-[#d97757] hover:bg-[#ffe9dc]"
+            : "border border-[#e8e2d9] bg-white text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
       }`}
     >
       {children}
@@ -287,6 +407,14 @@ function CreateLessonIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M12 4l1.3 4.4L18 10l-4.7 1.6L12 16l-1.3-4.4L6 10l4.7-1.6L12 4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
       <path d="M5 17h4M7 15v4M17 17h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PrintIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M7 8V3h10v5M6 18H4V9h16v9h-2M7 14h10v7H7z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
     </svg>
   );
 }

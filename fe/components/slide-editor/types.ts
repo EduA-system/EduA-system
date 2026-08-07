@@ -2,6 +2,8 @@
 // Model có kiểu (discriminated union). Các field nâng cao để optional để giữ
 // tương thích ngược với slide đã lưu (localStorage / JSON cũ).
 
+import type { Molecule, RenderMode } from "@/components/molecules/types";
+
 export const CANVAS_W = 960;
 export const CANVAS_H = 540;
 
@@ -12,7 +14,8 @@ export type ElementType =
   | "line"
   | "arrow"
   | "poly"
-  | "draw";
+  | "draw"
+  | "simulation";
 
 // Kiểu đầu mút line/arrow (marker SVG).
 export type LineMarker =
@@ -50,6 +53,8 @@ interface ElementBase {
   hidden?: boolean;
   // Group / Ungroup
   groupId?: string;
+  /** Stable semantic slot created by slide-design step 2. */
+  contentSlot?: string;
 }
 
 export interface TextElement extends ElementBase {
@@ -92,6 +97,8 @@ export interface ImageElement extends ElementBase {
   flipV?: boolean;
   brightness?: number; // %, mặc định 100
   contrast?: number; // %, mặc định 100
+  /** AI-generated English prompt retained while this image is still a placeholder. */
+  imagePrompt?: string;
 }
 
 export interface LineElement extends ElementBase {
@@ -142,13 +149,24 @@ export interface DrawElement extends ElementBase {
   strokeW: number;
 }
 
+// Element nhúng một mô phỏng tương tác (click-to-simulate khi trình chiếu).
+// `kind` là literal đơn cho MVP — mở rộng thành union khi thêm periodic-table/physics.
+export interface SimulationElement extends ElementBase {
+  type: "simulation";
+  kind: "molecule";
+  molecule: Molecule;
+  mode: RenderMode;
+  rotating: boolean;
+}
+
 export type SlideElement =
   | TextElement
   | ShapeElement
   | ImageElement
   | LineElement
   | PolyElement
-  | DrawElement;
+  | DrawElement
+  | SimulationElement;
 
 // Patch dùng cho update: intersection (đã bỏ `type` để tránh literal xung đột →
 // never) cho phép vá field riêng của từng loại. Partial<SlideElement> chỉ cho
@@ -159,7 +177,8 @@ export type ElementPatch = Partial<
     Omit<ImageElement, "type"> &
     Omit<LineElement, "type"> &
     Omit<PolyElement, "type"> &
-    Omit<DrawElement, "type">
+    Omit<DrawElement, "type"> &
+    Omit<SimulationElement, "type">
 >;
 
 export type AlignDir = "left" | "right" | "top" | "bottom" | "cx" | "cy";
@@ -172,6 +191,8 @@ export interface Slide {
   elements: SlideElement[];
   aiPrompt?: string;
   generationStatus?: SlideGenerationStatus;
+  /** Error returned while generating this specific slide, shown on its canvas. */
+  generationError?: string;
 }
 
 export function isSlideLockedForGeneration(slide: Slide | undefined): boolean {

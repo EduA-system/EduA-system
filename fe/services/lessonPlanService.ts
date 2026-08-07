@@ -1,4 +1,10 @@
-import type { Activity5512, EquipmentAndMaterials, Objectives } from "@/data/lessonPlan5512Mock";
+import type {
+  Activity5512,
+  EquipmentAndMaterials,
+  EquipmentTable,
+  Objectives,
+  Worksheet,
+} from "@/data/lessonPlan5512Mock";
 
 // API client cho luồng tạo giáo án 5512. Gọi qua same-origin `/api/*`
 // (proxy tới backend cấu hình ở next.config.ts) nên không vướng CORS.
@@ -199,14 +205,142 @@ export async function generateActivitiesDetails(
   return res.json();
 }
 
+/**
+ * Soạn lại CHI TIẾT cho ĐÚNG MỘT hoạt động Phần III bị lỗi (nút "Thử lại" ở block lỗi).
+ * Tái dùng endpoint `generate-activities-details` với `activities` chỉ gồm skeleton của
+ * hoạt động cần soạn lại → BE chạy đúng 1 call `detailOne` với đầy đủ ngữ cảnh Phần I/II +
+ * dàn ý gửi kèm (giữ nhất quán, không rời rạc). Gửi kèm JWT vì filter auth có thể bật.
+ */
+export async function retryActivityDetail(
+  req: GenerateActivityDetailsRequest,
+  accessToken: string,
+): Promise<Activity5512> {
+  const res = await fetch("/api/lesson-plans/generate-activities-details", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Soạn lại hoạt động thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+  const data = (await res.json()) as { activities?: Activity5512[] };
+  const activity = data.activities?.[0];
+  if (!activity) {
+    throw new Error("Kết quả soạn lại rỗng — không có hoạt động trả về.");
+  }
+  return activity;
+}
+
+// ---- Edit Section (POST /api/lesson-plans/edit-section) ------------------
+export interface EditLessonSectionRequest {
+  instruction: string;
+  sections: {
+    id: string;
+    heading: string;
+    content: string;
+    /** Cấu trúc bảng mà mục đang chứa — xem `lessonSections.ts#SectionKind`. */
+    kind: string;
+  }[];
+  /** Nguồn SGK của giáo án (từ phiên streaming đang sống hoặc `payload.source` khi mở lại từ
+   * Personal Library) — optional, cho phép thiếu (tài liệu cũ chưa có source). Khi có đủ, BE
+   * nạp lại `knowledge_json` để bước viết bám đúng kiến thức bài, đặc biệt khi viết mới hoàn
+   * toàn một mục còn trống (vd "Mời soạn tay."). */
+  bookId?: string;
+  chapterId?: string;
+  lessonId?: string;
+}
+
+/** kind = "text" — mảng dòng độc lập (mỗi phần tử là một đoạn/câu hỏi/bullet...), thay vì một
+ * chuỗi nối bằng "\n" — xem `LessonPlanEditPromptBuilder.TEXT_KIND_INSTRUCTIONS` (BE). */
+export interface TextEditData {
+  lines: string[];
+}
+
+/** kind = "activity" — Hoạt động cấp 1 (HĐ1/3/4), dùng `organizationText` (văn ngắn). Khớp
+ * `ActivityEditContent` (BE). Mỗi field là MẢNG từng câu (không phải 1 chuỗi nối "\n") — cùng lý
+ * do với `TextEditData.lines`: tránh AI phải tự giữ kỷ luật xuống dòng thật/copy nhầm quy ước
+ * "‖"/"|"/"<br>" từ nội dung cũ gửi kèm làm ngữ cảnh. */
+export interface ActivityEditData {
+  objective: string[];
+  content: string[];
+  product: string[];
+  organizationText: string[];
+}
+
+/** kind = "subActivity" — tiểu hoạt động của Hoạt động 2, dùng `organization` (4 bước). Khớp
+ * `SubActivityEditContent` (BE). Mỗi field/bước là MẢNG từng câu — cùng lý do với
+ * `ActivityEditData`. */
+export interface SubActivityEditData {
+  objective: string[];
+  content: string[];
+  organization: {
+    transfer: string[];
+    perform: string[];
+    report: string[];
+    conclude: string[];
+  };
+  product: string[];
+}
+
+/** kind = "materials" — khớp domain `Materials` (BE), tái dùng `EquipmentTable`/`Worksheet` đã
+ * có ở `lessonPlan5512Mock.ts`. */
+export interface MaterialsEditData {
+  equipment: EquipmentTable;
+  worksheets: Worksheet[];
+}
+
+/**
+ * Bản sửa AI đề xuất cho một section — `data` là JSON có cấu trúc theo đúng `kind` (BE không
+ * còn trả một chuỗi `content` tự mã hoá bảng bằng "‖"/"|"/"<br>"; xem
+ * `EditLessonSectionResponse` phía BE). FE tự diễn giải theo `kind` rồi "làm đẹp" thành nội
+ * dung hiển thị (TipTap) — xem `editContentToLines.ts`.
+ */
+export type EditLessonSectionEdit =
+  | { targetId: string; kind: "text"; data: TextEditData }
+  | { targetId: string; kind: "activity"; data: ActivityEditData }
+  | { targetId: string; kind: "subActivity"; data: SubActivityEditData }
+  | { targetId: string; kind: "materials"; data: MaterialsEditData };
+
+export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export async function editLessonSection(
+  req: EditLessonSectionRequest,
+  authFetch: AuthFetch,
+): Promise<EditLessonSectionEdit[]> {
+  const res = await authFetch("/api/lesson-plans/edit-section", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Chỉnh sửa giáo án bằng AI thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
 // ---- Streaming (POST /api/lesson-plans/generate-stream) ------------------
 // Kickoff async: BE trả 202 ngay rồi đẩy tiến trình qua STOMP
 // (/topic/lesson-plan/{sessionId}). FE không đọc body — chỉ kiểm 2xx.
 export interface StartLessonPlanStreamRequest extends GenerateLessonPlanRequest {
   sessionId: string;
 }
-
-export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export async function startLessonPlanStream(
   req: StartLessonPlanStreamRequest,

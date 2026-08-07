@@ -37,15 +37,21 @@ public class BlogCommentService {
     }
 
     /** Bình luận trên một bài đang PUBLISHED. */
-    public BlogViews.CommentView create(UUID postId, String rawContent) {
+    public BlogViews.CommentView create(UUID postId, String rawContent, UUID parentCommentId) {
         if (postRepository.findPublishedById(postId).isEmpty()) {
             throw new ResourceNotFoundException("Blog post not found.");
         }
         UUID authorId = currentUser.requireUserId();
         String content = requireContent(rawContent);
+        if (parentCommentId != null) {
+            BlogComment parent = requireComment(parentCommentId);
+            if (!parent.postId().equals(postId) || parent.parentCommentId() != null) {
+                throw new IllegalArgumentException("Reply target is invalid.");
+            }
+        }
         Instant now = Instant.now();
         BlogComment saved = commentRepository.save(new BlogComment(
-                UUID.randomUUID(), postId, authorId, content, now, now));
+                UUID.randomUUID(), postId, authorId, parentCommentId, content, now, now, null, null));
         return toView(saved);
     }
 
@@ -55,8 +61,8 @@ public class BlogCommentService {
         requireOwner(comment.authorId());
         String content = requireContent(rawContent);
         BlogComment saved = commentRepository.save(new BlogComment(
-                comment.id(), comment.postId(), comment.authorId(), content,
-                comment.createdAt(), Instant.now()));
+                comment.id(), comment.postId(), comment.authorId(), comment.parentCommentId(), content,
+                comment.createdAt(), Instant.now(), comment.hiddenAt(), comment.hiddenBy()));
         return toView(saved);
     }
 
@@ -67,15 +73,37 @@ public class BlogCommentService {
         commentRepository.deleteById(commentId);
     }
 
+    /** Chủ bài viết có thể ẩn mềm bình luận của người khác trên bài của mình. */
+    public void hideByPostAuthor(UUID commentId) {
+        BlogComment comment = requireComment(commentId);
+        UUID userId = currentUser.requireUserId();
+        if (comment.authorId().equals(userId)) {
+            throw new IllegalArgumentException("Use the delete action to remove your own comment.");
+        }
+        var post = postRepository.findPublishedById(comment.postId())
+                .orElseThrow(() -> new ResourceNotFoundException("Blog post not found."));
+        if (!post.authorId().equals(userId)) {
+            throw new ForbiddenOperationException("You can only hide comments on your own blog post.");
+        }
+        commentRepository.save(new BlogComment(
+                comment.id(), comment.postId(), comment.authorId(), comment.parentCommentId(), comment.content(),
+                comment.createdAt(), Instant.now(), Instant.now(), userId));
+    }
+
     private BlogViews.CommentView toView(BlogComment comment) {
+        BlogAuthorResolver.Profile author = authorResolver.profile(comment.authorId());
         return new BlogViews.CommentView(
-                comment.id(), comment.content(), comment.authorId(),
-                authorResolver.name(comment.authorId()), comment.createdAt(), comment.updatedAt());
+                comment.id(), comment.content(), comment.authorId(), comment.parentCommentId(),
+                author.name(), author.avatarUrl(), comment.createdAt(), comment.updatedAt());
     }
 
     private BlogComment requireComment(UUID commentId) {
-        return commentRepository.findById(commentId)
+        BlogComment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found."));
+        if (comment.hiddenAt() != null) {
+            throw new ResourceNotFoundException("Comment not found.");
+        }
+        return comment;
     }
 
     private void requireOwner(UUID authorId) {

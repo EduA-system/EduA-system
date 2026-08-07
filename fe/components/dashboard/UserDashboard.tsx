@@ -194,10 +194,10 @@ export function UserDashboard() {
   }
 
   return (
-    <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] text-[#171717]">
+    <main className="h-screen w-full overflow-hidden bg-white text-[#171717]">
       <div className="flex h-full w-full">
         <Sidebar />
-        <section className="relative min-w-0 flex-1 overflow-y-auto bg-[#f5f1ec] px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
+        <section className="relative min-w-0 flex-1 overflow-y-auto bg-white px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
           <div className="mx-auto w-full max-w-[980px]">
             <div>
               <div className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 text-[11px] font-medium text-[#d97757]">

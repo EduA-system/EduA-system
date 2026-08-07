@@ -2,6 +2,8 @@ package com.edua.beeduasystem.service.auth;
 
 import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
+import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.AuthTokens;
 import com.edua.beeduasystem.domain.model.auth.GoogleIdentity;
@@ -13,6 +15,7 @@ import com.edua.beeduasystem.repository.gateways.TokenService;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
+import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +40,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRoleRepository userRoleRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ActivityLogService activityLogService;
     private final Duration refreshTtl;
 
     private final SecureRandom secureRandom = new SecureRandom();
@@ -47,6 +51,7 @@ public class AuthService {
                        RefreshTokenRepository refreshTokenRepository,
                        UserRoleRepository userRoleRepository,
                        CurrentUserProvider currentUserProvider,
+                       ActivityLogService activityLogService,
                        @Value("${app.auth.jwt.refresh-ttl:PT24H}") Duration refreshTtl) {
         this.googleVerifier = googleVerifier;
         this.tokenService = tokenService;
@@ -54,6 +59,7 @@ public class AuthService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.userRoleRepository = userRoleRepository;
         this.currentUserProvider = currentUserProvider;
+        this.activityLogService = activityLogService;
         this.refreshTtl = refreshTtl;
     }
 
@@ -80,21 +86,32 @@ public class AuthService {
         }
 
         Instant now = Instant.now();
+        String googleSub = user.googleSub() != null
+                ? user.googleSub()
+                : AppUserFieldValidator.normalizeGoogleSubject(identity.subject());
+        String fullName = StringUtils.hasText(user.fullName())
+                ? user.fullName()
+                : AppUserFieldValidator.normalizeOptionalFullName(identity.fullName());
         AppUser activated = new AppUser(
                 user.id(),
                 user.email(),
-                user.googleSub() != null ? user.googleSub() : identity.subject(),
-                StringUtils.hasText(user.fullName()) ? user.fullName() : identity.fullName(),
+                googleSub,
+                fullName,
                 user.avatarUrl(),
                 user.contactInfo(),
+                user.bio(),
+                user.phoneNumber(),
                 user.subject(),
                 UserStatus.ACTIVE,
                 user.createdAt(),
-                now);
+                now,
+                user.dateOfBirth());
         AppUser saved = userRepository.save(activated);
 
         Set<Role> roles = userRoleRepository.findRolesByUserId(saved.id());
         AuthTokens tokens = issueTokens(saved, roles, now);
+        activityLogService.record(saved.id(), roleNameOf(roles), ActivityLogCategory.AUTH, ActivityLogAction.LOGIN,
+                "APP_USER", saved.id(), null);
         return new LoginResult(saved, roles, tokens);
     }
 
@@ -133,7 +150,11 @@ public class AuthService {
             return;
         }
         refreshTokenRepository.findByTokenHash(sha256Hex(rawRefreshToken))
-                .ifPresent(rt -> refreshTokenRepository.revoke(rt.id()));
+                .ifPresent(rt -> {
+                    refreshTokenRepository.revoke(rt.id());
+                    activityLogService.record(rt.userId(), null, ActivityLogCategory.AUTH, ActivityLogAction.LOGOUT,
+                            "APP_USER", rt.userId(), null);
+                });
     }
 
     @Transactional(readOnly = true)
@@ -162,6 +183,10 @@ public class AuthService {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private static String roleNameOf(Set<Role> roles) {
+        return roles.stream().findFirst().map(Enum::name).orElse(null);
     }
 
     private static String sha256Hex(String value) {

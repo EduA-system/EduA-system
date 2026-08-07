@@ -13,9 +13,12 @@ const AVATAR_TYPES = new Set(["image/png", "image/jpeg"]);
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 function roleLabel(role: string | null): string {
-  if (role === "ADMINISTRATOR") return "Quản trị viên";
+  if (role === "PRINCIPAL") return "Hiệu trưởng";
   if (role === "MODERATOR") return "Người kiểm duyệt";
-  return "Giáo viên";
+  if (role === "IT_STAFF") return "Nhân viên IT";
+  if (role === "STUDENT") return "Học sinh";
+  if (role === "TEACHER") return "Giáo viên";
+  return "Chưa xác định";
 }
 
 function subjectLabel(subject: string | null): string {
@@ -44,7 +47,7 @@ async function uploadAvatar(authFetch: AuthFetch, file: File): Promise<string> {
 
 async function saveProfile(
   authFetch: AuthFetch,
-  payload: Pick<AuthUser, "fullName" | "avatarUrl" | "contactInfo">,
+  payload: Pick<AuthUser, "fullName" | "avatarUrl" | "contactInfo" | "bio" | "phoneNumber">,
 ): Promise<AuthUser> {
   const response = await authFetch("/api/users/me", {
     method: "PATCH",
@@ -59,12 +62,24 @@ function initialsOf(name: string): string {
   return name.trim().split(/\s+/).map((part) => part[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 }
 
+function fieldClassName(isLocked = false): string {
+  const base = "mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097]";
+  return isLocked
+    ? `${base} cursor-not-allowed bg-[#efede9] text-[#5f5a54]`
+    : `${base} bg-[#faf9f7] focus:border-[#d97757]`;
+}
+
 function UserProfileContent() {
   const { user, authFetch, signOut, updateUser } = useAuth();
   const [fullName, setFullName] = useState(() => user?.fullName ?? "");
+  const [phoneNumber, setPhoneNumber] = useState(() => user?.phoneNumber ?? "");
+  const [dateOfBirth, setDateOfBirth] = useState(() => user?.dateOfBirth ?? "");
+  const [bio, setBio] = useState(() => user?.bio ?? "");
   const [contactInfo, setContactInfo] = useState(() => user?.contactInfo ?? "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const avatarPreviewRef = useRef<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -84,8 +99,13 @@ function UserProfileContent() {
 
   function resetForm() {
     setFullName(user?.fullName ?? "");
+    setPhoneNumber(user?.phoneNumber ?? "");
+    setDateOfBirth(user?.dateOfBirth ?? "");
+    setBio(user?.bio ?? "");
     setContactInfo(user?.contactInfo ?? "");
     setAvatarFile(null);
+    setRemoveAvatar(false);
+    setAvatarLoadFailed(false);
     clearAvatarPreview();
     setError("");
     setSuccess("");
@@ -107,6 +127,8 @@ function UserProfileContent() {
     setError("");
     setSuccess("");
     clearAvatarPreview();
+    setRemoveAvatar(false);
+    setAvatarLoadFailed(false);
     const preview = URL.createObjectURL(file);
     avatarPreviewRef.current = preview;
     setAvatarFile(file);
@@ -116,17 +138,26 @@ function UserProfileContent() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || saving) return;
+    const isStudent = user.role === "STUDENT";
     setSaving(true);
     setError("");
     setSuccess("");
     try {
-      const avatarUrl = avatarFile ? await uploadAvatar(authFetch, avatarFile) : user.avatarUrl;
+      const avatarUrl = removeAvatar ? "" : avatarFile ? await uploadAvatar(authFetch, avatarFile) : user.avatarUrl;
       const nextUser = await saveProfile(authFetch, {
-        fullName: fullName.trim() || null,
+        fullName: isStudent ? user.fullName : fullName.trim() || null,
+        phoneNumber: isStudent ? user.phoneNumber : phoneNumber.trim() || null,
+        bio: bio.trim() || null,
         contactInfo: contactInfo.trim() || null,
         avatarUrl,
       });
       updateUser(nextUser);
+      setFullName(nextUser.fullName ?? "");
+      setPhoneNumber(nextUser.phoneNumber ?? "");
+      setDateOfBirth(nextUser.dateOfBirth ?? "");
+      setAvatarFile(null);
+      setRemoveAvatar(false);
+      clearAvatarPreview();
       setSuccess("Đã lưu thay đổi hồ sơ.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể lưu hồ sơ. Vui lòng thử lại.");
@@ -141,10 +172,18 @@ function UserProfileContent() {
   }
 
   if (!user) return null;
-  const avatarSource = avatarPreview ?? user.avatarUrl;
+  const isStudent = user.role === "STUDENT";
+  const avatarSource = removeAvatar ? null : avatarPreview ?? user.avatarUrl;
+  const showsSubject = user.role === "TEACHER" || user.role === "MODERATOR";
+  const bioPlaceholder = user.role === "STUDENT"
+    ? "Giới thiệu ngắn về bản thân, sở thích hoặc mục tiêu học tập"
+    : "Một vài dòng về vai trò, chuyên môn hoặc thông tin muốn hiển thị";
+  const contactInfoPlaceholder = user.role === "STUDENT"
+    ? "Zalo hoặc thông tin liên hệ khác"
+    : "Zalo, website, phòng ban hoặc liên hệ khác";
 
   return (
-    <main className="h-screen w-full overflow-hidden bg-[#f5f1ec] text-[#1f1f1f]">
+    <main className="h-screen w-full overflow-hidden bg-white text-[#1f1f1f]">
       <div className="flex h-full w-full">
         <Sidebar activeHref="/user-profile" />
         <section className="min-w-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
@@ -162,9 +201,9 @@ function UserProfileContent() {
                 </div>
                 <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-center">
                   <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-[22px] bg-[#1f1f1f] text-xl font-semibold text-white">
-                    {avatarSource ? (
+                    {avatarSource && !avatarLoadFailed ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={avatarSource} alt="Ảnh đại diện" className="size-full object-cover" />
+                      <img src={avatarSource} alt="Ảnh đại diện" className="size-full object-cover" onError={() => setAvatarLoadFailed(true)} />
                     ) : initialsOf(user.fullName ?? user.email)}
                   </div>
                   <div>
@@ -172,6 +211,16 @@ function UserProfileContent() {
                       <DashboardIcon name="upload" className="size-3.5" /> {avatarFile ? "Đổi ảnh đã chọn" : "Tải ảnh lên"}
                       <input type="file" accept="image/png,image/jpeg" className="sr-only" onChange={handleAvatarChange} />
                     </label>
+                    {avatarSource ? (
+                      <button type="button" disabled={saving} onClick={() => {
+                        setAvatarFile(null);
+                        clearAvatarPreview();
+                        setRemoveAvatar(true);
+                        setAvatarLoadFailed(false);
+                      }} className="ml-3 text-[13px] font-medium text-[#c0492b] underline decoration-[#e8b4a4] underline-offset-4 transition hover:text-[#9f351d] disabled:cursor-not-allowed disabled:opacity-60">
+                        Gỡ ảnh
+                      </button>
+                    ) : null}
                     <p className="mt-2 text-[11px] leading-4 text-[#6b6b6b]">PNG, JPG hoặc JPEG · tối đa 10 MB</p>
                   </div>
                 </div>
@@ -179,10 +228,21 @@ function UserProfileContent() {
                 <div className="my-7 h-px bg-[#d8d1c9]" />
                 <div className="grid gap-5 sm:grid-cols-2">
                   <label className="text-[12px] font-medium text-[#6b6b6b]">Họ và tên
-                    <input value={fullName} onChange={(event) => setFullName(event.target.value)} maxLength={255} placeholder="Nhập tên hiển thị" className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]" />
+                    <input value={fullName} onChange={(event) => setFullName(event.target.value)} maxLength={255} placeholder="Nhập tên hiển thị" disabled={isStudent || saving} className={fieldClassName(isStudent)} />
                   </label>
-                  <label className="text-[12px] font-medium text-[#6b6b6b]">Thông tin liên hệ
-                    <input value={contactInfo} onChange={(event) => setContactInfo(event.target.value)} maxLength={500} placeholder="Số điện thoại hoặc liên hệ khác" className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]" />
+                  <label className="text-[12px] font-medium text-[#6b6b6b]">Số điện thoại
+                    <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} maxLength={30} inputMode="tel" placeholder="Nhập số điện thoại" disabled={isStudent || saving} className={fieldClassName(isStudent)} />
+                  </label>
+                  {isStudent ? (
+                    <label className="text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">Ngày sinh
+                      <input type="date" value={dateOfBirth} disabled className={fieldClassName(true)} />
+                    </label>
+                  ) : null}
+                  <label className="text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">Giới thiệu ngắn
+                    <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={1000} rows={4} placeholder={bioPlaceholder} className="mt-2 w-full resize-y rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]" />
+                  </label>
+                  <label className="text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">Thông tin liên hệ khác
+                    <input value={contactInfo} onChange={(event) => setContactInfo(event.target.value)} maxLength={500} placeholder={contactInfoPlaceholder} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]" />
                   </label>
                 </div>
 
@@ -201,7 +261,7 @@ function UserProfileContent() {
                   <dl className="mt-5 space-y-4 text-[13px]">
                     <div><dt className="text-[11px] text-[#8a837b]">Email</dt><dd className="mt-1 break-all font-medium text-[#1f1f1f]">{user.email}</dd></div>
                     <div><dt className="text-[11px] text-[#8a837b]">Vai trò</dt><dd className="mt-1 font-medium text-[#1f1f1f]">{roleLabel(user.role)}</dd></div>
-                    <div><dt className="text-[11px] text-[#8a837b]">Môn học</dt><dd className="mt-1 font-medium text-[#1f1f1f]">{subjectLabel(user.subject)}</dd></div>
+                    {showsSubject ? <div><dt className="text-[11px] text-[#8a837b]">Môn phụ trách</dt><dd className="mt-1 font-medium text-[#1f1f1f]">{subjectLabel(user.subject)}</dd></div> : null}
                   </dl>
                 </div>
                 <div className="rounded-[14px] border border-[#d8d1c9] bg-[#faf9f7] p-5">

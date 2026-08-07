@@ -1,4 +1,4 @@
-export type Role = "TEACHER" | "MODERATOR" | "ADMINISTRATOR";
+export type Role = "TEACHER" | "MODERATOR" | "PRINCIPAL" | "IT_STAFF" | "STUDENT";
 
 export type NavItem = {
   label: string;
@@ -17,43 +17,50 @@ export type NavGroup = {
 
 export const navGroups: NavGroup[] = [
   {
-    label: "COMMUNITY",
+    label: "Kh\u00f4ng gian chung",
     items: [
-      { label: "Community Hub", icon: "community", href: "/homepage" },
-      { label: "Blog", icon: "community", href: "/blog" },
+      { label: "Community Hub", icon: "community", href: "/community-hub" },
+      { label: "Blog", icon: "community", href: "/blog", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "Thông báo", icon: "notification", href: "/notifications" },
     ],
   },
   {
-    label: "CONTENT",
+    label: "N\u1ed9i dung gi\u1ea3ng d\u1ea1y",
     items: [
       { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "B\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-edit", active: true },
-      { label: "Slide", icon: "slides", href: "/slide-create" },
-      { label: "B\u00e0i ki\u1ec3m tra", icon: "check", href: "/lesson-create" },
+      { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["STUDENT"] },
+      { label: "Lịch tuần", icon: "book", href: "/weekly-schedule", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "T\u1ea1o b\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-create", active: true },
+      { label: "T\u1ea1o slide", icon: "slides", href: "/slide-create" },
+      { label: "T\u1ea1o b\u00e0i ki\u1ec3m tra", icon: "check", href: "/exam-create-new", requiredRole: ["TEACHER", "MODERATOR"] },
     ],
   },
   {
-    label: "SIMULATIONS",
+    label: "M\u00f4 ph\u1ecfng & kh\u00e1m ph\u00e1",
     items: [
       { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/homepage", expanded: true },
       { label: "V\u1eadt l\u00fd", icon: "physics", href: "/mo-phong-vat-ly", child: true },
-      { label: "H\u00f3a h\u1ecdc", icon: "chemistry", href: "/homepage", child: true },
       { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/periodic-table", child: true },
       { label: "C\u1ea5u t\u1ea1o ch\u1ea5t", icon: "atom", href: "/molecules", child: true },
     ],
   },
   {
-    label: "SYSTEM",
+    label: "H\u1ec7 th\u1ed1ng & h\u1ed7 tr\u1ee3",
     items: [
       { label: "C\u00e0i \u0111\u1eb7t", icon: "settings", href: "/homepage" },
       { label: "Tr\u1ee3 gi\u00fap", icon: "help", href: "/help" },
     ],
   },
   {
-    label: "ADMIN",
+    label: "Qu\u1ea3n tr\u1ecb",
     items: [
-      { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog/moderation", requiredRole: ["MODERATOR", "ADMINISTRATOR"] },
-      { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "ADMINISTRATOR"] },
+      { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog-moderator", requiredRole: ["MODERATOR"] },
+      { label: "Hub Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/hub-moderation", requiredRole: ["MODERATOR"] },
+      { label: "Duy\u1ec7t gi\u00e1o \u00e1n tu\u1ea7n", icon: "check", href: "/lesson-plan-approval", requiredRole: ["MODERATOR"] },
+      { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "PRINCIPAL"] },
+      { label: "C\u1ea5u h\u00ecnh AI", icon: "settings", href: "/it-staff", requiredRole: ["IT_STAFF"] },
+      { label: "Nh\u1eadt k\u00fd ho\u1ea1t \u0111\u1ed9ng", icon: "settings", href: "/it-staff/activity-log", requiredRole: ["IT_STAFF"] },
     ],
   },
 ];

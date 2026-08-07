@@ -5,9 +5,13 @@ import com.edua.beeduasystem.domain.model.MoleculeAtom;
 import com.edua.beeduasystem.domain.model.MoleculeBond;
 import com.edua.beeduasystem.domain.model.MoleculeStructure;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.service.ai.AiSystemPromptService;
+import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -31,16 +35,24 @@ public class MoleculeService {
     private final MoleculePromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
     private final long aiTimeoutSeconds;
+    private final AiSystemPromptService systemPromptService;
 
+    @Autowired
     public MoleculeService(
-            AiClient aiClient,
+            @Qualifier("jsonAiClient") AiClient aiClient,
             MoleculePromptBuilder promptBuilder,
             ObjectMapper objectMapper,
-            @Value("${app.ai.molecule.timeout-seconds:10}") long aiTimeoutSeconds) {
+            @Value("${app.ai.molecule.timeout-seconds:10}") long aiTimeoutSeconds,
+            AiSystemPromptService systemPromptService) {
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
         this.aiTimeoutSeconds = aiTimeoutSeconds;
+        this.systemPromptService = systemPromptService;
+    }
+
+    MoleculeService(AiClient aiClient, MoleculePromptBuilder promptBuilder, ObjectMapper objectMapper, long aiTimeoutSeconds) {
+        this(aiClient, promptBuilder, objectMapper, aiTimeoutSeconds, null);
     }
 
     public MoleculeStructure build(String input) {
@@ -97,7 +109,8 @@ public class MoleculeService {
     private String generateWithTimeout(String input) {
         var executor = Executors.newVirtualThreadPerTaskExecutor();
         try {
-            Future<String> task = executor.submit(() -> aiClient.generate(promptBuilder.build(input)));
+            Future<String> task = executor.submit(() -> aiClient.generate(systemPromptService == null
+                    ? promptBuilder.build(input) : systemPromptService.apply(AiPromptKey.MOLECULE_STRUCTURE, promptBuilder.build(input))));
             try {
                 return task.get(aiTimeoutSeconds, TimeUnit.SECONDS);
             } catch (TimeoutException e) {

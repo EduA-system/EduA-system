@@ -40,8 +40,9 @@ $feUrl     = "http://localhost:$fePort"
 
 $beDir     = Join-Path $rootDir "be"
 $feDir     = Join-Path $rootDir "fe"
+$loadedEnv = @{}
 
-$beMvw     = if ($IsWindows -or ($env:OS -eq "Windows_NT")) { "mvnw.cmd" } else { "./mvnw" }
+$beMvw     = if ($IsWindows -or ($env:OS -eq "Windows_NT")) { ".\mvnw.cmd" } else { "./mvnw" }
 
 # -- Colors ---------------------------------------------------------------
 function Write-Step($msg)   { Write-Host ""
@@ -62,6 +63,7 @@ if (Test-Path $envFile) {
             # Set every key as an env var. DB_URL / DB_USERNAME / DB_PASSWORD
             # are read directly by Spring Boot (application.properties).
             Set-Item "env:$key" $val
+            $loadedEnv[$key] = $val
         }
     }
     if ($env:DB_URL) {
@@ -74,6 +76,20 @@ if (Test-Path $envFile) {
     Write-Host "    Copy .env.example to .env and fill in your secrets." -ForegroundColor Yellow
     Write-Host "    Backend will use default credentials from application.properties." -ForegroundColor Yellow
 }
+
+# This script must never let Flyway silently "repair" the database on
+# startup. application.properties ships spring.flyway.baseline-on-migrate=true
+# and validate-on-migrate=false, which let Flyway auto-baseline an
+# out-of-sync schema history and skip checksum validation instead of failing.
+# Force both off here (overrides .env / application.properties) so any DB
+# drift surfaces as a loud startup error -- do NOT relax this to paper over a
+# failed startup, and do NOT add any db-repair/db-fix logic to this script.
+# Investigate and fix drift by hand against the actual DB, deliberately.
+$loadedEnv["SPRING_FLYWAY_BASELINE_ON_MIGRATE"] = "false"
+$loadedEnv["SPRING_FLYWAY_VALIDATE_ON_MIGRATE"]  = "true"
+Set-Item "env:SPRING_FLYWAY_BASELINE_ON_MIGRATE" "false"
+Set-Item "env:SPRING_FLYWAY_VALIDATE_ON_MIGRATE" "true"
+Write-Info "Flyway auto-repair disabled for this run (baseline-on-migrate=false, validate-on-migrate=true)"
 
 # -- State -----------------------------------------------------------------
 $script:bgJobs      = @()
@@ -383,7 +399,17 @@ try {
 
         $bePsi = New-Object System.Diagnostics.ProcessStartInfo
         $bePsi.FileName               = "cmd.exe"
-        $bePsi.Arguments             = "/c cd /d `"$beDir`" & $beMvw spring-boot:run"
+        # cmd.exe receives an explicit copy of every .env value as well as
+        # ProcessStartInfo.EnvironmentVariables. This avoids a stale parent
+        # APP_AUTH_JWT_SECRET winning when Maven launches the Java child.
+        $cmdEnv = ($loadedEnv.GetEnumerator() | ForEach-Object {
+            'set "' + $_.Key + '=' + $_.Value + '"'
+        }) -join ' & '
+        # spring-boot:run forks the Maven lifecycle to the test-compile phase
+        # (spring-boot-maven-plugin's RunMojo is @Execute(phase=TEST_COMPILE)),
+        # so every dev startup recompiles all of src/test/java. Skip that --
+        # this script is for running the app, not testing it.
+        $bePsi.Arguments             = "/c cd /d `"$beDir`" & $cmdEnv & $beMvw spring-boot:run -Dmaven.test.skip=true"
         $bePsi.WorkingDirectory       = $beDir
         $bePsi.UseShellExecute        = $false
         $bePsi.RedirectStandardOutput = $true
@@ -395,6 +421,11 @@ try {
             if ($kv.Key -notin $bePsi.EnvironmentVariables.Keys) {
                 $bePsi.EnvironmentVariables.Add($kv.Key, $kv.Value.ToString())
             }
+        }
+        # Values explicitly loaded from .env must win over variables inherited
+        # from an existing shell (especially APP_AUTH_JWT_SECRET).
+        foreach ($entry in $loadedEnv.GetEnumerator()) {
+            $bePsi.EnvironmentVariables[$entry.Key] = $entry.Value
         }
 
         $beProc = [System.Diagnostics.Process]::Start($bePsi)

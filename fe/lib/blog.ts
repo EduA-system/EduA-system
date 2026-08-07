@@ -1,7 +1,4 @@
-// Client ID public (giống app/auth). BE gọi qua proxy /api/* (next.config rewrites) → same-origin.
-export const GOOGLE_CLIENT_ID =
-  "98078357098-pknisf1ub7kg5nop658jpeo31clhid2f.apps.googleusercontent.com";
-export const TOKEN_KEY = "edua_access_token";
+// Blog calls the backend through the same-origin /api proxy.
 export const SUBJECTS = ["MATH", "CHEMISTRY", "PHYSICS"] as const;
 export type SubjectValue = (typeof SUBJECTS)[number];
 
@@ -59,31 +56,29 @@ export function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("vi");
 }
 
-export type User = { id: string; email: string; fullName: string | null; role: string; subject: string | null };
-export type Summary = { id: string; title: string; subject: string; authorId: string; authorName: string; createdAt: string; commentCount: number; excerpt: string; thumbnailUrl: string | null };
-export type Comment = { id: string; content: string; authorId: string; authorName: string; createdAt: string };
-export type Detail = { id: string; title: string; content: string; subject: string; authorId: string; authorName: string; createdAt: string; comments: Comment[] };
+export type Summary = { id: string; title: string; subject: string; authorId: string; authorName: string; authorAvatarUrl: string | null; createdAt: string; commentCount: number; excerpt: string; thumbnailUrl: string | null };
+export type Comment = { id: string; content: string; authorId: string; parentCommentId: string | null; authorName: string; authorAvatarUrl: string | null; createdAt: string };
+export type Detail = { id: string; title: string; content: string; thumbnailUrl: string | null; subject: string; authorId: string; authorName: string; authorAvatarUrl: string | null; createdAt: string; comments: Comment[] };
 
 // ---- gọi BE: thêm Bearer + JSON, ném lỗi kèm message từ BE ----
-export async function api<T>(path: string, token: string | null, init: RequestInit = {}): Promise<T> {
+export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export async function api<T>(authFetch: AuthFetch, path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = { ...(init.headers as Record<string, string>) };
   if (init.body) headers["Content-Type"] = "application/json";
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`/api${path}`, { ...init, headers, credentials: "include" });
+  const res = await authFetch(`/api${path}`, { ...init, headers });
   if (res.status === 204) return null as T;
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error((data as { message?: string })?.message ?? res.statusText);
   return data as T;
 }
 
-export async function uploadFile(token: string, file: File): Promise<string> {
+export async function uploadFile(authFetch: AuthFetch, file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await fetch(`/api/uploads`, {
+  const res = await authFetch(`/api/uploads`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
     body: formData,
-    credentials: "include",
   });
   if (!res.ok) {
     const data = await res.json().catch(() => null);
@@ -93,13 +88,25 @@ export async function uploadFile(token: string, file: File): Promise<string> {
   return data.url as string;
 }
 
-export interface GIS {
-  accounts: { id: {
-    initialize: (c: { client_id: string; callback: (r: { credential: string }) => void }) => void;
-    renderButton: (el: HTMLElement, o: { theme: string; size: string }) => void;
-  } };
-}
-
-export function getGoogleIdentity(): GIS | undefined {
-  return (window as Window & { google?: GIS }).google;
+/** Tạo ảnh đại diện WebP nhẹ hơn trước khi upload (cạnh dài tối đa 1280 px). */
+export async function optimizeBlogCover(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || typeof document === "undefined") return file;
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = sourceUrl;
+    await image.decode();
+    const scale = Math.min(1, 1280 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.78));
+    if (!blob) return file;
+    return new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.webp`, { type: "image/webp" });
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
 }

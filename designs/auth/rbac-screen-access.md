@@ -2,17 +2,19 @@
 
 ## Authorization Matrix (từ SRS 1.4.2)
 
-| Screen | Teacher | Mod | Admin | Public |
-|--------|:-------:|:---:|:-----:|:------:|
-| Landing / Login / Help | ✓ | ✓ | ✓ | ✓ |
-| Lesson/Slide/Test (AI) | ✓ | ✓ | ✓ | **✓** |
-| Blog — Xem | ✓ | ✓ | ✓ | ✗ |
-| Blog — Duyệt / Quản lý | ✗ | ✓ | ✓ | ✗ |
-| Teacher Management | ✗ | ✓ (teachers) | ✓ (mods) | ✗ |
-| Moderator List | ✗ | ✗ | ✓ | ✗ |
-| Admin Dashboard / System Prompt / Activity Log | ✗ | ✗ | ✓ | ✗ |
+| Screen | Teacher | Mod | Principal | IT Staff | Public |
+|--------|:-------:|:---:|:---------:|:--------:|:------:|
+| Landing / Login / Help | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Lesson/Slide/Test (AI) | ✓ | ✓ | ✓ | ✗ | **✓** |
+| Blog — Xem | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Blog — Duyệt / Quản lý | ✗ | ✓ | ✗ | ✗ | ✗ |
+| Class Management / Class Hub | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Account Management (`/user-management`) | ✗ | ✓ (teachers) | ✓ (mods + IT Staff) | ✗ | ✗ |
+| System Prompt Management | ✗ | ✗ | ✗ | ✓ | ✗ |
+| Principal Dashboard | ✗ | ✗ | ✓ | ✗ | ✗ |
+| Activity Log | ✗ | ✗ | ✗ | ✓ | ✗ |
 
-> **Ghi chú:** Lesson & Slide (AI) được mở public để thuận tiện test. Các màn chưa có trong code (Admin Dashboard, Virtual Lab, Physics Hub, v.v.) sẽ bổ sung sau.
+> **Ghi chú:** Lesson & Slide (AI) được mở public để thuận tiện test. Các màn chưa có trong code (Principal Dashboard, Virtual Lab, Physics Hub, v.v.) sẽ bổ sung sau.
 
 ## Step 1 — Backend: Mở lesson/slide endpoints public
 
@@ -35,7 +37,7 @@ Các controller này hiện không có `@PreAuthorize` nhưng bị chặn bởi 
 **File mới:** `fe/lib/auth/permissions.ts`
 
 ```typescript
-export type Role = 'TEACHER' | 'MODERATOR' | 'ADMINISTRATOR';
+export type Role = 'TEACHER' | 'MODERATOR' | 'PRINCIPAL' | 'IT_STAFF';
 
 export interface RoutePermission {
   requireAuth: boolean;
@@ -51,9 +53,11 @@ export const routePermissions: Record<string, RoutePermission> = {
   '/lesson-edit':     { requireAuth: false },
   '/slide-create':    { requireAuth: false },
   '/slide-maker':     { requireAuth: false },
-  '/blog':            { requireAuth: true },
-  '/blog/moderation': { requireAuth: true, allowedRoles: ['MODERATOR', 'ADMINISTRATOR'] },
-  '/user-management': { requireAuth: true, allowedRoles: ['MODERATOR', 'ADMINISTRATOR'] },
+  '/create-class':    { requireAuth: true, allowedRoles: ['TEACHER'] },
+  '/blog':            { requireAuth: true, allowedRoles: ['TEACHER', 'MODERATOR'] },
+  '/blog/moderation': { requireAuth: true, allowedRoles: ['MODERATOR'] },
+  '/user-management': { requireAuth: true, allowedRoles: ['MODERATOR', 'PRINCIPAL'] },
+  '/it-staff':        { requireAuth: true, allowedRoles: ['IT_STAFF'] },
 };
 
 export function canAccessRoute(pathname: string, user?: { role: string } | null): boolean { ... }
@@ -76,5 +80,5 @@ export function canAccessRoute(pathname: string, user?: { role: string } | null)
 
 ## Step 5 — Backend: Giữ @PreAuthorize hiện tại
 
-- AdminController, ModeratorController, BlogController (write/delete) → đã có, không đổi
-- Các endpoint blog read → yêu cầu auth (không đổi)
+- PrincipalController, ModeratorController, ItStaffController, BlogController (write/delete) → đã có, không đổi
+- Toàn bộ endpoint Blog → chỉ `TEACHER` hoặc `MODERATOR`

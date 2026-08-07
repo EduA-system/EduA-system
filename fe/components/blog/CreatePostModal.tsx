@@ -1,19 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { api, SUBJECTS, subjectLabel, uploadFile, type Detail, type SubjectValue } from "@/lib/blog";
+import { api, optimizeBlogCover, SUBJECTS, subjectLabel, uploadFile, type AuthFetch, type Detail, type SubjectValue } from "@/lib/blog";
 import { RichEditor } from "./RichEditor";
 
 export function CreatePostModal({
   open,
   onClose,
-  token,
+  authFetch,
   onCreated,
+  onPostUnavailable,
+  post,
 }: {
   open: boolean;
   onClose: () => void;
-  token: string;
+  authFetch: AuthFetch;
   onCreated: () => void;
+  onPostUnavailable?: () => void;
+  post?: Detail | null;
 }) {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState<SubjectValue>(SUBJECTS[0]);
@@ -26,6 +30,12 @@ export function CreatePostModal({
 
   useEffect(() => {
     if (!open) return;
+    queueMicrotask(() => {
+      setTitle(post?.title ?? "");
+      setSubject((post?.subject as SubjectValue | undefined) ?? SUBJECTS[0]);
+      setContent(post?.content ?? "");
+      setCoverImageUrl(post?.thumbnailUrl ?? null);
+    });
     document.body.style.overflow = "hidden";
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -35,7 +45,7 @@ export function CreatePostModal({
       document.body.style.overflow = "";
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, onClose]);
+  }, [open, onClose, post]);
 
   function reset() {
     setTitle("");
@@ -54,8 +64,12 @@ export function CreatePostModal({
     if (!file) return;
     setUploadingCover(true);
     try {
-      setCoverImageUrl(await uploadFile(token, file));
+      setCoverImageUrl(await uploadFile(authFetch, await optimizeBlogCover(file)));
     } catch (err) {
+      if (post && err instanceof Error && err.message.includes("Blog post not found")) {
+        onPostUnavailable?.();
+        return;
+      }
       setError(String(err));
     } finally {
       setUploadingCover(false);
@@ -70,12 +84,9 @@ export function CreatePostModal({
     setSubmitting(true);
     setError("");
     try {
-      const finalContent = coverImageUrl
-        ? `<p><img src="${coverImageUrl}" alt="" /></p>${content}`
-        : content;
-      await api<Detail>("/blog-posts", token, {
-        method: "POST",
-        body: JSON.stringify({ title, content: finalContent, subject }),
+      await api<Detail>(authFetch, post ? `/blog-posts/${post.id}` : "/blog-posts", {
+        method: post ? "PATCH" : "POST",
+        body: JSON.stringify({ title, content, subject, thumbnailUrl: coverImageUrl ?? "" }),
       });
       onCreated();
       handleClose();
@@ -100,7 +111,7 @@ export function CreatePostModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-[0.8px] border-[#eaeae7] px-6 py-4">
-          <h2 className="text-[15px] font-bold text-[#1c1e2e]">Tạo bài viết mới</h2>
+          <h2 className="text-[15px] font-bold text-[#1c1e2e]">{post ? "Sửa bài" : "Tạo bài viết mới"}</h2>
           <button
             type="button"
             onClick={handleClose}
@@ -126,7 +137,8 @@ export function CreatePostModal({
             <select
               value={subject}
               onChange={(e) => setSubject(e.target.value as SubjectValue)}
-              className="mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] focus:outline-none"
+              disabled={Boolean(post)}
+              className="mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
               {SUBJECTS.map((s) => (
                 <option key={s} value={s}>{subjectLabel(s)}</option>
@@ -147,11 +159,16 @@ export function CreatePostModal({
               className="mt-1.5 flex h-24 flex-col items-center justify-center gap-2 rounded-[14px] border-[1.6px] border-dashed border-[#d8d8d5] text-center"
             >
               {coverImageUrl ? (
-                <div className="flex items-center gap-2 text-[12px] text-[#4a4b5e]">
-                  <span>Đã tải ảnh lên</span>
-                  <button type="button" onClick={() => setCoverImageUrl(null)} className="text-[#b45309] underline">
-                    Xoá ảnh
-                  </button>
+                <div className="flex w-full items-center gap-3 px-3 text-left text-[12px] text-[#4a4b5e]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={coverImageUrl} alt="Ảnh đại diện bài viết" className="h-16 w-24 rounded-lg object-cover" />
+                  <div>
+                    <p>Ảnh đại diện đã sẵn sàng.</p>
+                    <div className="mt-1.5 flex gap-3">
+                      <button type="button" onClick={() => fileRef.current?.click()} className="font-semibold text-[#7661b3] underline">Đổi ảnh</button>
+                      <button type="button" onClick={() => setCoverImageUrl(null)} className="font-semibold text-[#b45309] underline">Xóa ảnh</button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="text-[12px] text-[#9b9caf]">
@@ -168,7 +185,7 @@ export function CreatePostModal({
               <input
                 ref={fileRef}
                 type="file"
-                accept=".png,.jpg,.jpeg"
+                accept="image/png,image/jpeg,image/webp"
                 className="hidden"
                 onChange={(e) => {
                   void handleCoverFile(e.target.files?.[0]);
@@ -181,7 +198,7 @@ export function CreatePostModal({
           <div className="mt-4">
             <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Nội dung</span>
             <div className="mt-1.5">
-              <RichEditor token={token} onChange={setContent} />
+              <RichEditor authFetch={authFetch} initialContent={post?.content ?? ""} onChange={setContent} />
             </div>
           </div>
 

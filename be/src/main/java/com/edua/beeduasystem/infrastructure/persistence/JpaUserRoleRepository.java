@@ -123,6 +123,12 @@ public class JpaUserRoleRepository implements UserRoleRepository {
         }
     }
 
+    @Override
+    @Transactional
+    public void deleteByUserId(UUID userId) {
+        jpa.deleteByUserId(userId);
+    }
+
     private Set<UUID> resolveRoleIds(Role role) {
         return roleJpa.findAll().stream()
                 .filter(r -> r.getName().equals(role.name()))

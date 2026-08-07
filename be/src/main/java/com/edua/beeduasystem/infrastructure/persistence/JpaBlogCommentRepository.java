@@ -9,8 +9,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 public class JpaBlogCommentRepository implements BlogCommentRepository {
@@ -28,9 +30,12 @@ public class JpaBlogCommentRepository implements BlogCommentRepository {
         e.setId(comment.id());
         e.setPostId(comment.postId());
         e.setAuthorId(comment.authorId());
+        e.setParentCommentId(comment.parentCommentId());
         e.setContent(comment.content());
         e.setCreatedAt(comment.createdAt() != null ? comment.createdAt() : Instant.now());
         e.setUpdatedAt(comment.updatedAt() != null ? comment.updatedAt() : Instant.now());
+        e.setHiddenAt(comment.hiddenAt());
+        e.setHiddenBy(comment.hiddenBy());
         return toDomain(jpa.save(e));
     }
 
@@ -43,13 +48,25 @@ public class JpaBlogCommentRepository implements BlogCommentRepository {
     @Override
     @Transactional(readOnly = true)
     public List<BlogComment> findByPostId(UUID postId) {
-        return jpa.findByPostIdOrderByCreatedAtAsc(postId).stream().map(JpaBlogCommentRepository::toDomain).toList();
+        return jpa.findByPostIdAndHiddenAtIsNullOrderByCreatedAtAsc(postId).stream().map(JpaBlogCommentRepository::toDomain).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public long countByPostId(UUID postId) {
-        return jpa.countByPostId(postId);
+        return jpa.countByPostIdAndHiddenAtIsNull(postId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, Long> countByPostIds(List<UUID> postIds) {
+        if (postIds.isEmpty()) {
+            return Map.of();
+        }
+        return jpa.countVisibleByPostIdIn(postIds).stream()
+                .collect(Collectors.toMap(
+                        BlogCommentJpaRepository.CommentCountProjection::getPostId,
+                        BlogCommentJpaRepository.CommentCountProjection::getCommentCount));
     }
 
     @Override
@@ -63,8 +80,11 @@ public class JpaBlogCommentRepository implements BlogCommentRepository {
                 e.getId(),
                 e.getPostId(),
                 e.getAuthorId(),
+                e.getParentCommentId(),
                 e.getContent(),
                 e.getCreatedAt(),
-                e.getUpdatedAt());
+                e.getUpdatedAt(),
+                e.getHiddenAt(),
+                e.getHiddenBy());
     }
 }

@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public record LibraryContent(UUID id, UUID ownerId, LibraryContentType type, String title, Subject subject,
                              LibraryContentStatus status, JsonNode payload, String thumbnailUrl,
-                             Instant createdAt, Instant updatedAt, Instant deletedAt) { }
+                             Instant createdAt, Instant updatedAt, Instant submittedAt, Instant deletedAt,
+                             UUID reviewedBy, Instant reviewedAt, String rejectionReason) { }

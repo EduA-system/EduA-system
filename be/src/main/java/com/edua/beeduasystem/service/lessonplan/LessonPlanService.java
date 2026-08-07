@@ -4,18 +4,31 @@ import com.edua.beeduasystem.domain.model.lessonplan.Activity5512;
 import com.edua.beeduasystem.domain.model.lessonplan.LessonPlan5512;
 import com.edua.beeduasystem.domain.model.lessonplan.Materials;
 import com.edua.beeduasystem.domain.model.lessonplan.Objectives;
+import com.edua.beeduasystem.presentation.dto.lessonplan.ActivityEditContent;
+import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionRequest;
+import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionResponse;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateActivityDetailsRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanRequest;
+import com.edua.beeduasystem.presentation.dto.lessonplan.SubActivityEditContent;
+import com.edua.beeduasystem.presentation.dto.lessonplan.TextEditContent;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.service.ai.AiSystemPromptService;
+import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,28 +52,42 @@ public class LessonPlanService {
     private final TextbookCatalogRepository catalogRepository;
     private final AiClient aiClient;
     private final LessonPlan5512PromptBuilder promptBuilder;
+    private final LessonPlanEditPromptBuilder editPromptBuilder;
     private final ObjectMapper objectMapper;
     private final ExecutorService executor;
+    private final AiSystemPromptService systemPromptService;
+    /** Số lần thử tối đa cho mỗi call sinh giáo án (AI + parse). Tối thiểu 1. */
+    private final int maxAttempts;
+    /** Backoff tuyến tính giữa các lần thử (ms) — lần thử i chờ backoff × i. */
+    private final long retryBackoffMs;
 
     public LessonPlanService(TextbookCatalogRepository catalogRepository,
-                             AiClient aiClient,
+                             @Qualifier("jsonAiClient") AiClient aiClient,
                              LessonPlan5512PromptBuilder promptBuilder,
+                             LessonPlanEditPromptBuilder editPromptBuilder,
                              ObjectMapper objectMapper,
-                             @Qualifier("slideSessionExecutor") ExecutorService executor) {
+                             @Qualifier("slideSessionExecutor") ExecutorService executor,
+                             AiSystemPromptService systemPromptService,
+                             @Value("${app.ai.lesson-plan.max-attempts:3}") int maxAttempts,
+                             @Value("${app.ai.lesson-plan.retry-backoff-ms:700}") long retryBackoffMs) {
         this.catalogRepository = catalogRepository;
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
+        this.editPromptBuilder = editPromptBuilder;
         this.objectMapper = objectMapper;
         this.executor = executor;
+        this.systemPromptService = systemPromptService;
+        this.maxAttempts = Math.max(1, maxAttempts);
+        this.retryBackoffMs = Math.max(0, retryBackoffMs);
     }
 
     /** Sinh phần I. MỤC TIÊU cho bài đã chọn. */
     public LessonPlan5512 generateObjectives(GenerateLessonPlanRequest request) {
         String knowledge = loadKnowledge(request);
         String prompt = promptBuilder.buildObjectivesPrompt(knowledge, request.userPrompt());
-        String raw = generate(prompt, "AI không sinh được mục tiêu giáo án.");
-
-        Objectives objectives = parseJson(raw, Objectives.class, "Kết quả AI không đúng định dạng mục tiêu.");
+        Objectives objectives = generateAndParse(AiPromptKey.LESSON_PLAN_OBJECTIVES, prompt,
+                Objectives.class, "AI không sinh được mục tiêu giáo án.",
+                "Kết quả AI không đúng định dạng mục tiêu.");
         return new LessonPlan5512(null, objectives, null, null);
     }
 
@@ -68,9 +95,9 @@ public class LessonPlanService {
     public LessonPlan5512 generateMaterials(GenerateLessonPlanRequest request) {
         String knowledge = loadKnowledge(request);
         String prompt = promptBuilder.buildMaterialsPrompt(knowledge, request.userPrompt());
-        String raw = generate(prompt, "AI không sinh được thiết bị và học liệu.");
-
-        Materials materials = parseJson(raw, Materials.class, "Kết quả AI không đúng định dạng thiết bị và học liệu.");
+        Materials materials = generateAndParse(AiPromptKey.LESSON_PLAN_MATERIALS, prompt,
+                Materials.class, "AI không sinh được thiết bị và học liệu.",
+                "Kết quả AI không đúng định dạng thiết bị và học liệu.");
         return new LessonPlan5512(null, null, materials, null);
     }
 
@@ -78,9 +105,8 @@ public class LessonPlanService {
     public LessonPlan5512 generateActivitiesFrame(GenerateLessonPlanRequest request) {
         String knowledge = loadKnowledge(request);
         String prompt = promptBuilder.buildActivitiesFramePrompt(knowledge, request.userPrompt());
-        String raw = generate(prompt, "AI không sinh được khung tiến trình dạy học.");
-
-        ActivitiesFrame frame = parseJson(raw, ActivitiesFrame.class,
+        ActivitiesFrame frame = generateAndParse(AiPromptKey.LESSON_PLAN_ACTIVITIES_FRAME, prompt,
+                ActivitiesFrame.class, "AI không sinh được khung tiến trình dạy học.",
                 "Kết quả AI không đúng định dạng tiến trình dạy học.");
         return new LessonPlan5512(null, null, null, frame.activities());
     }
@@ -138,19 +164,248 @@ public class LessonPlanService {
     }
 
     /**
+     * AI chọn (bước 1, một call thấy id/heading/kind/content của MỌI phần, để chọn đúng ngay cả
+     * khi có heading trùng/gần trùng) rồi viết lại (bước 2, N call song song, mỗi call chỉ thấy
+     * ĐÚNG MỘT mục đã chọn) một hoặc nhiều phần trong giáo án hiện tại do frontend trích từ
+     * editor. Tách hai bước để bước chọn không phải quyết định cách viết lại nội dung, và bước
+     * viết không còn cách nào chọn nhầm targetId — Java đã biết sẵn target trước khi gọi AI viết,
+     * AI ở bước đó không trả (và không cần trả) targetId nữa.
+     */
+    public List<EditLessonSectionResponse> editSection(EditLessonSectionRequest request) {
+        validateEditSectionRequest(request);
+        Map<String, EditLessonSectionRequest.SectionInput> sectionsById = new LinkedHashMap<>();
+        for (EditLessonSectionRequest.SectionInput section : request.sections()) {
+            sectionsById.put(section.id(), section);
+        }
+
+        List<String> targetIds = selectTargetIds(request, sectionsById.keySet());
+        // Nạp một lần, dùng chung cho mọi call viết bên dưới — cùng một giáo án, cùng một
+        // knowledge_json. Best-effort: thiếu/sai bookId-chapterId-lessonId thì vẫn sửa được,
+        // chỉ là không có ngữ cảnh SGK để bám khi viết mới hoàn toàn một mục còn trống.
+        String knowledge = loadKnowledgeForEdit(request);
+
+        AtomicInteger failures = new AtomicInteger();
+        List<CompletableFuture<EditLessonSectionResponse>> futures = targetIds.stream()
+                .map(targetId -> CompletableFuture
+                        .supplyAsync(() -> writeSection(request.instruction(), sectionsById.get(targetId), knowledge), executor)
+                        .exceptionally(ex -> {
+                            log.warn("Viết lại phần giáo án '{}' thất bại:", targetId, ex);
+                            failures.incrementAndGet();
+                            return null;
+                        }))
+                .toList();
+
+        List<EditLessonSectionResponse> result = futures.stream()
+                .map(CompletableFuture::join)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (failures.get() == targetIds.size()) {
+            throw new LessonPlanGenerationException(
+                    "Không viết lại được phần giáo án nào (AI lỗi mọi phần).", null);
+        }
+        return result;
+    }
+
+    /** Bước 1/2 — một call AI thấy id/heading/kind/content của MỌI phần trong giáo án, chọn (các)
+     * targetId liên quan tới yêu cầu của giáo viên. Gửi cả content (không chỉ heading) để AI phân
+     * biệt được các heading trùng/gần trùng nhau — xem javadoc {@code buildSelectPrompt}. */
+    private List<String> selectTargetIds(EditLessonSectionRequest request, Set<String> sectionIds) {
+        String prompt = editPromptBuilder.buildSelectPrompt(request);
+        EditLessonSectionSelectAiResponse aiResponse = generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION_SELECT,
+                prompt, EditLessonSectionSelectAiResponse.class, "AI không chọn được phần giáo án cần sửa.",
+                "Kết quả AI không đúng định dạng chọn phần giáo án.");
+
+        if (aiResponse == null || aiResponse.targetIds() == null || aiResponse.targetIds().isEmpty()) {
+            throw new LessonPlanGenerationException("AI không đề xuất chỉnh sửa nào.", null);
+        }
+
+        Set<String> seenTargetIds = new HashSet<>();
+        List<String> result = new ArrayList<>(aiResponse.targetIds().size());
+        for (String rawTargetId : aiResponse.targetIds()) {
+            String targetId = isBlank(rawTargetId) ? null : rawTargetId.strip();
+            if (targetId == null || !sectionIds.contains(targetId)) {
+                throw new LessonPlanGenerationException("AI chọn phần giáo án không hợp lệ.", null);
+            }
+            if (!seenTargetIds.add(targetId)) {
+                throw new LessonPlanGenerationException("AI chọn trùng lặp một phần giáo án để sửa.", null);
+            }
+            result.add(targetId);
+        }
+        return result;
+    }
+
+    /** Best-effort: chỉ nạp {@code knowledge_json} khi request có đủ bookId/chapterId/lessonId
+     * VÀ bài học thực sự có dữ liệu số hóa — thiếu/sai thì trả null (log cảnh báo), KHÔNG chặn
+     * edit-section (nhiều mục chỉ cần tinh chỉnh văn phong, không cần tra lại SGK). */
+    private String loadKnowledgeForEdit(EditLessonSectionRequest request) {
+        if (isBlank(request.bookId()) || isBlank(request.chapterId()) || isBlank(request.lessonId())) {
+            return null;
+        }
+        try {
+            return loadKnowledge(request.bookId(), request.chapterId(), request.lessonId());
+        } catch (IllegalArgumentException e) {
+            log.warn("Không nạp được knowledge_json cho edit-section (bookId={}, chapterId={}, lessonId={}): {}",
+                    request.bookId(), request.chapterId(), request.lessonId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /** Bước 2/2 — một call AI hẹp cho ĐÚNG MỘT target đã xác nhận ở bước chọn; chỉ thấy nội dung
+     * của target đó + quy tắc kind tương ứng + (nếu có) kiến thức SGK của bài. AI không trả
+     * targetId, Java tự gắn lại.
+     *
+     * <p>Parse theo ĐÚNG type khớp {@code kind} — AI trả JSON có cấu trúc (không còn một chuỗi
+     * {@code content} tự mã hoá bảng bằng "‖"/"|"/"<br>") — rồi gói nguyên vẹn thành cây JSON
+     * ({@code objectMapper.valueToTree}) để FE tự diễn giải theo `kind` và "làm đẹp" thành nội
+     * dung hiển thị; xem {@code EditLessonSectionResponse}. */
+    private EditLessonSectionResponse writeSection(String instruction, EditLessonSectionRequest.SectionInput target,
+                                                    String knowledge) {
+        String prompt = editPromptBuilder.buildWritePrompt(instruction, target, knowledge);
+        String kind = isBlank(target.kind()) ? "text" : target.kind();
+        Object content = switch (kind) {
+            case "materials" -> generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                    Materials.class, "AI không viết lại được phần giáo án.",
+                    "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+            case "subActivity" -> generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                    SubActivityEditContent.class, "AI không viết lại được phần giáo án.",
+                    "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+            case "activity" -> generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                    ActivityEditContent.class, "AI không viết lại được phần giáo án.",
+                    "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+            default -> generateAndParse(AiPromptKey.LESSON_PLAN_EDIT_SECTION, prompt,
+                    TextEditContent.class, "AI không viết lại được phần giáo án.",
+                    "Kết quả AI không đúng định dạng chỉnh sửa giáo án.");
+        };
+
+        if (content == null || isBlankEditContent(kind, content)) {
+            throw new LessonPlanGenerationException("AI trả về bản sửa rỗng.", null);
+        }
+        return new EditLessonSectionResponse(target.id(), kind, objectMapper.valueToTree(content));
+    }
+
+    /** Mọi field có nội dung đều rỗng — coi như AI không đề xuất gì (giữ hành vi lọc "bản sửa
+     * rỗng" như trước, chỉ đổi cách kiểm tra cho khớp JSON có cấu trúc thay vì 1 chuỗi). */
+    private boolean isBlankEditContent(String kind, Object content) {
+        return switch (kind) {
+            case "materials" -> {
+                Materials materials = (Materials) content;
+                boolean noEquipment = materials.equipment() == null
+                        || materials.equipment().rows() == null || materials.equipment().rows().isEmpty();
+                boolean noWorksheets = materials.worksheets() == null || materials.worksheets().isEmpty();
+                yield noEquipment && noWorksheets;
+            }
+            case "subActivity" -> {
+                SubActivityEditContent sub = (SubActivityEditContent) content;
+                yield isBlankLines(sub.objective()) && isBlankLines(sub.content()) && isBlankLines(sub.product())
+                        && isBlankOrganization(sub.organization());
+            }
+            case "activity" -> {
+                ActivityEditContent activity = (ActivityEditContent) content;
+                yield isBlankLines(activity.objective()) && isBlankLines(activity.content())
+                        && isBlankLines(activity.product()) && isBlankLines(activity.organizationText());
+            }
+            default -> {
+                TextEditContent text = (TextEditContent) content;
+                yield isBlankLines(text.lines());
+            }
+        };
+    }
+
+    private boolean isBlankOrganization(SubActivityEditContent.Organization organization) {
+        return organization == null || (isBlankLines(organization.transfer()) && isBlankLines(organization.perform())
+                && isBlankLines(organization.report()) && isBlankLines(organization.conclude()));
+    }
+
+    private boolean isBlankLines(List<String> lines) {
+        return lines == null || lines.stream().allMatch(this::isBlank);
+    }
+
+    /** Wrapper chỉ để parse JSON {"targetIds":[...]} từ call chọn phần (bước 1). */
+    private record EditLessonSectionSelectAiResponse(List<String> targetIds) {
+    }
+
+    private void validateEditSectionRequest(EditLessonSectionRequest request) {
+        if (request == null || isBlank(request.instruction())) {
+            throw new IllegalArgumentException("Thiếu yêu cầu chỉnh sửa giáo án.");
+        }
+        if (request.sections() == null || request.sections().isEmpty()) {
+            throw new IllegalArgumentException("Không có phần giáo án nào để chỉnh sửa.");
+        }
+        Set<String> ids = new HashSet<>();
+        for (EditLessonSectionRequest.SectionInput section : request.sections()) {
+            if (section == null || isBlank(section.id()) || isBlank(section.heading())) {
+                throw new IllegalArgumentException("Danh sách phần giáo án không hợp lệ.");
+            }
+            if (!ids.add(section.id())) {
+                throw new IllegalArgumentException("Danh sách phần giáo án có id trùng lặp.");
+            }
+        }
+    }
+
+    /**
      * Một call AI điền chi tiết cho một hoạt động; merge giữ identity từ frame, lấy nội dung từ AI.
+     * Hoạt động 2 (có tiểu hoạt động) rẽ sang {@link #detailActivityWithSubActivities} — mỗi tiểu
+     * hoạt động một call riêng, tránh 1 call phải gánh cả N tiểu hoạt động và bị cắt dở giữa chừng.
      *
      * <p>Package-private để {@link GenerateLessonPlanStreamUseCase} tái dùng cho luồng streaming.
      */
     Activity5512 detailOne(Activity5512 frameActivity, String knowledge, String objectivesJson,
                                    String materialsJson, String frameOutlineJson, String userPrompt) {
+        List<Activity5512> frameSubs = frameActivity.subActivities();
+        if (frameSubs != null && !frameSubs.isEmpty()) {
+            return detailActivityWithSubActivities(frameActivity, frameSubs, knowledge,
+                    objectivesJson, materialsJson, frameOutlineJson, userPrompt);
+        }
         String targetJson = toJson(frameActivity);
         String prompt = promptBuilder.buildActivityDetailPrompt(knowledge, objectivesJson,
                 materialsJson, frameOutlineJson, targetJson, frameActivity, userPrompt);
-        String raw = generate(prompt, "AI không sinh được nội dung hoạt động.");
-        Activity5512 detail = parseJson(raw, Activity5512.class,
+        Activity5512 detail = generateAndParse(AiPromptKey.LESSON_PLAN_ACTIVITY_DETAIL, prompt,
+                Activity5512.class, "AI không sinh được nội dung hoạt động.",
                 "Kết quả AI không đúng định dạng hoạt động.");
         return mergeDetail(frameActivity, detail);
+    }
+
+    /**
+     * Hoạt động 2 luôn để trống ở cấp 1 (theo quy ước 5512, không cần gọi AI cho khung chứa) —
+     * mỗi tiểu hoạt động là MỘT call AI riêng, chạy song song trên {@code executor}. Một tiểu
+     * hoạt động lỗi thì giữ skeleton của riêng nó; chỉ khi TẤT CẢ tiểu hoạt động đều lỗi mới coi
+     * Hoạt động 2 là thất bại (ném lỗi để lời gọi ngoài xử lý giống một activity lỗi bình thường).
+     */
+    private Activity5512 detailActivityWithSubActivities(Activity5512 frameActivity,
+            List<Activity5512> frameSubs, String knowledge, String objectivesJson,
+            String materialsJson, String frameOutlineJson, String userPrompt) {
+        String parentJson = toJson(frameActivity);
+        AtomicInteger subFailures = new AtomicInteger();
+        List<CompletableFuture<Activity5512>> futures = frameSubs.stream()
+                .map(sub -> CompletableFuture
+                        .supplyAsync(() -> detailSubActivity(sub, parentJson, knowledge,
+                                objectivesJson, materialsJson, frameOutlineJson, userPrompt), executor)
+                        .exceptionally(ex -> {
+                            log.warn("Soạn chi tiết tiểu hoạt động '{}' (của '{}') thất bại, giữ skeleton:",
+                                    sub.name(), frameActivity.name(), ex);
+                            subFailures.incrementAndGet();
+                            return sub;
+                        }))
+                .toList();
+        List<Activity5512> detailedSubs = futures.stream().map(CompletableFuture::join).toList();
+        if (subFailures.get() == frameSubs.size()) {
+            throw new LessonPlanGenerationException(
+                    "Không soạn được tiểu hoạt động nào của '" + frameActivity.name() + "'.", null);
+        }
+        return new Activity5512(frameActivity.order(), frameActivity.name(), frameActivity.duration(),
+                "", "", "", null, "", detailedSubs);
+    }
+
+    private Activity5512 detailSubActivity(Activity5512 sub, String parentActivityJson, String knowledge,
+            String objectivesJson, String materialsJson, String frameOutlineJson, String userPrompt) {
+        String targetJson = toJson(sub);
+        String prompt = promptBuilder.buildSubActivityDetailPrompt(knowledge, objectivesJson,
+                materialsJson, frameOutlineJson, parentActivityJson, targetJson, userPrompt);
+        Activity5512 detail = generateAndParse(AiPromptKey.LESSON_PLAN_SUB_ACTIVITY_DETAIL, prompt,
+                Activity5512.class, "AI không sinh được nội dung tiểu hoạt động.",
+                "Kết quả AI không đúng định dạng tiểu hoạt động.");
+        return mergeDetail(sub, detail);
     }
 
     /** Giữ order/name/duration của frame; lấy a/b/c/d + organization(Text) từ AI; zip tiểu hoạt động. */
@@ -204,29 +459,68 @@ public class LessonPlanService {
                         "Bài học chưa có nội dung số hóa (knowledge_json) để sinh giáo án."));
     }
 
-    /** Gọi AI, bọc lỗi runtime thành {@link LessonPlanGenerationException} (→ 502). */
-    private String generate(String prompt, String errorMessage) {
+    /**
+     * Gọi AI rồi parse JSON, TỰ THỬ LẠI tối đa {@link #maxAttempts} lần cho CẢ lỗi gọi AI (transient:
+     * mạng/429/5xx) LẪN lỗi parse (AI trả JSON sai schema) — vì đa số đều tự khỏi khi gọi lại (re-roll).
+     * Prompt giữ NGUYÊN qua các lần (không nhồi "bạn vừa lỗi" để tránh làm lệch output). Lỗi input
+     * ({@link IllegalArgumentException} từ {@code loadKnowledge}) xảy ra TRƯỚC hàm này nên không bị thử lại.
+     */
+    private <T> T generateAndParse(AiPromptKey key, String prompt, Class<T> type,
+                                   String aiErrorMessage, String parseErrorMessage) {
+        LessonPlanGenerationException last = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                String raw = aiClient.generate(systemPromptService.apply(key, prompt));
+                return parseJson(raw, type, parseErrorMessage);
+            } catch (LessonPlanGenerationException e) {
+                last = e;
+            } catch (RuntimeException e) {
+                last = new LessonPlanGenerationException(aiErrorMessage, e);
+            }
+            log.warn("Sinh {} thất bại (lần {}/{}): {}", key, attempt, maxAttempts, rootMessage(last));
+            if (attempt < maxAttempts) {
+                sleepBackoff(attempt);
+            }
+        }
+        throw last;
+    }
+
+    /** Backoff tuyến tính giữa các lần thử; giữ interrupt flag và dừng thử lại nếu bị ngắt. */
+    private void sleepBackoff(int attempt) {
+        if (retryBackoffMs <= 0) {
+            return;
+        }
         try {
-            return aiClient.generate(prompt);
-        } catch (RuntimeException e) {
-            throw new LessonPlanGenerationException(errorMessage, e);
+            Thread.sleep(retryBackoffMs * attempt);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new LessonPlanGenerationException("Bị ngắt khi chờ thử lại sinh giáo án.", e);
         }
     }
 
-    /** Parse output AI thành DTO; lỗi định dạng map 502 với thông điệp riêng từng phần. */
+    /** Lấy thông điệp gốc của chuỗi nguyên nhân để log gọn. */
+    private String rootMessage(Throwable error) {
+        Throwable root = error;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        return root.getMessage() != null ? root.getMessage() : root.toString();
+    }
+
+    /**
+     * Parse output AI thành DTO; lỗi định dạng map 502 với thông điệp riêng từng phần.
+     *
+     * <p>{@code repairLatexEscapes} chạy TRƯỚC khi parse, không phải chỉ khi parse thất bại —
+     * vì một backslash LaTeX quên escape không phải lúc nào cũng khiến parse NÉM LỖI. Nếu chữ
+     * cái ngay sau {@code \} trùng escape JSON hợp lệ (vd {@code \text}, {@code \begin} — 't'/'b'
+     * trùng {@code \t}/{@code \b}), Jackson đọc THÀNH CÔNG nhưng sai (tab/backspace + phần còn
+     * lại của tên lệnh) — không có exception nào để rơi vào nhánh sửa nếu chỉ sửa trong catch.
+     */
     private <T> T parseJson(String raw, Class<T> type, String errorMessage) {
-        String json = stripJsonFence(raw);
+        String json = repairLatexEscapes(stripJsonFence(raw));
         try {
             return objectMapper.readValue(json, type);
         } catch (Exception e) {
-            String repaired = repairLatexEscapes(json);
-            if (!repaired.equals(json)) {
-                try {
-                    return objectMapper.readValue(repaired, type);
-                } catch (Exception repairedError) {
-                    e.addSuppressed(repairedError);
-                }
-            }
             log.warn("Parse {} thất bại. Output AI: {}", type.getSimpleName(), raw);
             throw new LessonPlanGenerationException(errorMessage, e);
         }
@@ -251,22 +545,28 @@ public class LessonPlanService {
     }
 
     /**
-     * AI đôi khi trả LaTeX trong JSON với backslash chưa escape, ví dụ {@code \(},
-     * {@code \omega}, {@code \frac}. JSON chuẩn yêu cầu {@code \\(}, {@code \\omega}.
-     * Chỉ sửa bên trong JSON string và ưu tiên các lệnh/delimiter LaTeX hay gặp để không
-     * đụng tới escape JSON hợp lệ như {@code \n} dùng cho xuống dòng.
+     * AI đôi khi trả LaTeX trong JSON với backslash chưa escape, ví dụ {@code \overrightarrow},
+     * {@code \begin{cases}}, {@code \frac}. JSON chuẩn yêu cầu {@code \\overrightarrow} v.v.
+     *
+     * <p>Trước đây dò theo whitelist tên lệnh LaTeX cụ thể (\frac, \sqrt, \omega...) — luôn
+     * thiếu vì LaTeX có hàng trăm lệnh, và thực tế đã bỏ sót {@code \overrightarrow}/{@code
+     * \begin}/{@code \end} khiến parse thất bại.
+     *
+     * <p>KHÔNG dùng toàn bộ 9 ký tự escape hợp lệ của JSON ({@code " \ / b f n r t u}) làm tập
+     * "giữ nguyên", dù về lý thuyết BẤT KỲ {@code \} nào theo sau ký tự khác 9 ký tự đó chắc
+     * chắn không phải escape JSON hợp lệ — vì {@code b/f/r/t/u} lại chính là CHỮ CÁI ĐẦU của rất
+     * nhiều lệnh LaTeX cực phổ biến ({@code \beta \begin \bar}, {@code \frac \forall}, {@code
+     * \right \rightarrow}, {@code \text \theta \times \tan}...). Nếu coi
+     * `t` "hợp lệ" thì {@code \text} bị Jackson đọc thành TAB + "ext" — parse THÀNH CÔNG nhưng
+     * âm thầm phá nội dung, còn nguy hiểm hơn ném lỗi rõ ràng. Chỉ giữ nguyên đúng 3 ký tự AI
+     * thực sự hay dùng có chủ đích trong nội dung giáo án ({@code " \ n}) — mọi {@code \}<chữ/ký
+     * hiệu khác> còn lại (kể cả trùng b/f/r/t/u) đều bị coi là backslash LaTeX quên escape.
      */
     private String repairLatexEscapes(String json) {
         if (json == null || json.indexOf('\\') < 0) {
             return json;
         }
-        String[] latexEscapes = {
-                "\\(", "\\)", "\\[", "\\]",
-                "\\frac", "\\sqrt", "\\text", "\\cos", "\\sin", "\\tan",
-                "\\omega", "\\Omega", "\\varphi", "\\phi", "\\pi", "\\Delta",
-                "\\theta", "\\alpha", "\\beta", "\\gamma", "\\times", "\\cdot",
-                "\\left", "\\right", "\\mathrm", "\\mathbf"
-        };
+        String validJsonEscapeChars = "\"\\n";
 
         StringBuilder out = new StringBuilder(json.length() + 16);
         boolean inString = false;
@@ -278,15 +578,8 @@ public class LessonPlanService {
                 continue;
             }
             if (inString && ch == '\\' && !isEscaped(json, i)) {
-                String remaining = json.substring(i);
-                boolean latex = false;
-                for (String escape : latexEscapes) {
-                    if (remaining.startsWith(escape)) {
-                        latex = true;
-                        break;
-                    }
-                }
-                if (latex) {
+                char next = i + 1 < json.length() ? json.charAt(i + 1) : '\0';
+                if (validJsonEscapeChars.indexOf(next) < 0) {
                     out.append("\\\\");
                     continue;
                 }

@@ -1,6 +1,6 @@
 # Account Management — Flow
 
-> Luồng cấp quyền phân cấp 3 bậc: Administrator → Moderator → Teacher.
+> Luồng cấp quyền phân cấp 3 bậc: Principal → Moderator → Teacher.
 > API spec: [`../API_designs/account-management.md`](../API_designs/account-management.md).
 
 ## 1. Tổng quan
@@ -8,23 +8,23 @@
 Hệ thống có 3 role xếp theo thứ bậc:
 
 ```
-Administrator  ──cấp/thu hồi──▶  Moderator (gắn với 1 subject)
+Principal  ──cấp/thu hồi──▶  Moderator (gắn với 1 subject)
                                     │
                                     └──cấp/thu hồi──▶  Teacher (cùng subject)
 ```
 
-- **Administrator**: cấp/thu hồi Moderator, quản lý toàn hệ thống
+- **Principal**: cấp/thu hồi Moderator, quản lý toàn hệ thống
 - **Moderator (Head of Subject)**: cấp/thu hồi Teacher **trong môn mình phụ trách**
 - **Teacher**: chỉ dùng tính năng, không cấp quyền
 
 ## 2. Luồng cấp quyền
 
-### 2.1 Admin thêm Moderator
+### 2.1 Principal thêm Moderator
 
 ```
-Admin                    Backend                      Database
+Principal                    Backend                      Database
   │                         │                            │
-  │ POST /api/admin/moderators                          │
+  │ POST /api/principal/moderators                          │
   │ { email, subject }      │                            │
   │────────────────────────▶│                            │
   │                         │  Kiểm tra:                 │
@@ -92,18 +92,19 @@ if (moderatorSubject != teacherSubject) → 403 Forbidden
 | Khía cạnh | InterimRoleSeedRunner (cũ) | Account Management (mới) |
 |------------|---------------------------|--------------------------|
 | Tài khoản | Cố định từ env var | Thêm qua API, lưu DB |
-| Vai trò cấp quyền | Không có | Admin → Moderator → Teacher |
+| Vai trò cấp quyền | Không có | Principal → Moderator → Teacher |
 | Audit | Không ai cấp | Có `granted_by`, `granted_at` |
 | Xoá tài khoản | Không có | Soft-delete (DISABLED) |
 | Subject scope | Không kiểm tra | Moderator chỉ quản lý cùng môn |
 
-## 5. Admin seed đầu tiên
+## 5. Principal seed đầu tiên
 
-`AdminSeedRunner` vẫn chạy, tạo tài khoản ADMINISTRATOR đầu tiên từ `APP_AUTH_ADMIN_SEED_EMAIL`:
+`PrincipalSeedRunner` vẫn chạy, tạo tài khoản PRINCIPAL đầu tiên từ `APP_AUTH_PRINCIPAL_SEED_EMAIL`.
+Môi trường cũ vẫn có thể dùng fallback `APP_AUTH_ADMIN_SEED_EMAIL` trong `application.properties`:
 - `granted_by = null` (tự thân)
 - `granted_at = now`
 
-Admin này đăng nhập → dùng API `/api/admin/moderators` để thêm moderator → moderator thêm teacher → không cần `InterimRoleSeedRunner` nữa.
+Principal này đăng nhập → dùng API `/api/principal/moderators` để thêm moderator → moderator thêm teacher → không cần `InterimRoleSeedRunner` nữa.
 
 ## 6. Xoá InterimRoleSeedRunner
 
@@ -120,7 +121,7 @@ cũng được xoá khỏi `application.properties` và `.env.example`.
 1. Flyway V4 migration
 2. Cập nhật domain model + persistence
 3. Thêm repository methods
-4. Service (AdminModeratorService, ModeratorTeacherService)
+4. Service (PrincipalModeratorService, ModeratorTeacherService)
 5. DTO
 6. Controller
 7. Xoá InterimRoleSeedRunner + clean config

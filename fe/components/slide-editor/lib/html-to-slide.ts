@@ -31,16 +31,71 @@ export type ConvertOptions = {
   /** Small decorative icon URLs scattered in the canvas corners (z=0, faint). */
   decoIconUrls?: string[];
   /**
-   * Stamp each step-2 body zone (data-layer="zone") as a bordered rect frame
-   * (transparent fill) so the layout is previewable before content fills in.
-   * Off for the final step-3 conversion (zones carry real content by then).
+   * Materialize each step-2 body zone as an editable editor element. Text
+   * zones receive a short label and illustration zones receive an image
+   * placeholder. Off for the final step-3 conversion, where zones carry AI
+   * generated content instead.
    */
-  includeZoneFrames?: boolean;
+  materializeZonePlaceholders?: boolean;
+  /** Static label rendered in the reserved deck header during step 2. */
+  headerLabel?: string;
 };
 
 let idCounter = 0;
 function uid() {
   return `h2s-${Date.now()}-${++idCounter}`;
+}
+
+type ZoneGeometry = { x: number; y: number; w: number; h: number };
+
+const ZONE_TEXT_PLACEHOLDERS: Record<string, string> = {
+  hero: "Tiêu đề",
+  body: "Nội dung",
+  caption: "Ghi chú",
+  formula: "Công thức",
+};
+
+/** Convert a structural zone into the editable element displayed after step 2. */
+export function createZonePlaceholder(
+  zoneId: string,
+  geometry: ZoneGeometry,
+  zIndex: number,
+  color: string,
+): TextElement | ImageElement {
+  if (zoneId === "aside") {
+    return {
+      id: uid(),
+      type: "image",
+      ...geometry,
+      rotation: 0,
+      zIndex,
+      opacity: 1,
+      locked: false,
+      contentSlot: zoneId,
+      src: PLACEHOLDER_IMAGE,
+      fit: "cover",
+      borderRadius: 0,
+    };
+  }
+
+  return {
+    id: uid(),
+    type: "text",
+    ...geometry,
+    rotation: 0,
+    zIndex,
+    opacity: 1,
+    locked: false,
+    contentSlot: zoneId,
+    text: ZONE_TEXT_PLACEHOLDERS[zoneId] ?? "Nội dung",
+    fontSize: zoneId === "hero" ? 36 : zoneId === "formula" ? 28 : 18,
+    bold: zoneId === "hero" || zoneId === "formula",
+    italic: false,
+    color: color || "#2b2926",
+    align: "left",
+    fontFamily: "Inter, sans-serif",
+    lineHeight: 1.2,
+  };
 }
 
 function paint(cs: CSSStyleDeclaration): string {
@@ -62,6 +117,46 @@ function isLatex(el: HTMLElement): boolean {
   if (el.getAttribute("data-slide-el") === "latex") return true;
   const t = el.textContent ?? "";
   return /\\\(|\\\[|\$\$/.test(t);
+}
+
+/**
+ * Step 3 supplies absolute zones with a finite content budget. Before copying
+ * browser-computed geometry into the editor, reduce generated text just enough
+ * to fit its own zone. Failing loudly is safer than silently clipping a fact.
+ */
+function fitZoneContent(root: HTMLElement, win: Window): string[] {
+  const failures: string[] = [];
+  const minimumFontSize: Record<string, number> = {
+    hero: 22,
+    body: 12,
+    caption: 10,
+    formula: 14,
+    aside: 10,
+  };
+
+  root.querySelectorAll<HTMLElement>('[data-layer="zone"][data-region="body"]').forEach((zone) => {
+    const zoneId = zone.dataset.zone ?? "body";
+    const content = Array.from(zone.querySelectorAll<HTMLElement>(':scope > [data-layer="content"]'))
+      .filter((element) => element.getAttribute("data-slide-el") !== "image" && !element.hasAttribute("data-image-prompt"));
+    for (const element of content) {
+      const min = minimumFontSize[zoneId] ?? 12;
+      let fontSize = parseFloat(win.getComputedStyle(element).fontSize) || min;
+      let attempts = 0;
+      while (
+        attempts < 18 &&
+        (element.scrollHeight > zone.clientHeight - 10 || element.scrollWidth > zone.clientWidth - 10) &&
+        fontSize > min
+      ) {
+        fontSize = Math.max(min, Math.floor(fontSize * 0.92 * 10) / 10);
+        element.style.fontSize = `${fontSize}px`;
+        attempts += 1;
+      }
+      if (element.scrollHeight > zone.clientHeight - 10 || element.scrollWidth > zone.clientWidth - 10) {
+        failures.push(`${zoneId} cannot fit generated content at ${min}px`);
+      }
+    }
+  });
+  return failures;
 }
 
 export async function htmlToSlideElements(
@@ -102,6 +197,9 @@ export async function htmlToSlideElements(
       (doc.querySelector('[data-layer="bg"]') as HTMLElement | null) ??
       (doc.body.firstElementChild as HTMLElement | null);
     if (!root) return { bg: "#ffffff", elements: [], skipped: ["no root <div data-layer=bg>"] };
+
+    const fitFailures = fitZoneContent(root, win);
+    if (fitFailures.length) throw new Error(`Nội dung vượt quá vùng template: ${fitFailures.join(", ")}`);
 
     const rootRect = root.getBoundingClientRect();
     const cs = (el: Element) => win.getComputedStyle(el);
@@ -222,38 +320,26 @@ export async function htmlToSlideElements(
       elements.push(imgEl);
     };
 
-    // Step-2 preview: stamp each body zone as a bordered frame (transparent
-    // fill) so the layout is visible before content fills in. The zone div's
-    // own dashed outline color/width becomes a solid stroke (the editor's
-    // ShapeElement has no dashed style).
-    const pushZoneFrame = (el: HTMLElement) => {
+    // Step 2 turns zones into editable text/image elements instead of keeping
+    // them as a wireframe. Step 3 replaces these placeholders with AI content.
+    const pushZonePlaceholder = (el: HTMLElement) => {
       const g = geom(el);
       if (g.w < 2 || g.h < 2) return;
       const s = cs(el);
-      const ow = parseFloat(s.outlineWidth) || 2;
-      const oc =
-        s.outlineColor && s.outlineColor !== "transparent"
-          ? s.outlineColor
-          : "rgba(15, 23, 42, 0.45)";
-      const brPx = parseFloat(s.borderTopLeftRadius) || 0;
-      const frameEl: ShapeElement = {
-        id: uid(),
-        type: "shape",
-        shape: "rect",
-        x: g.x,
-        y: g.y,
-        w: g.w,
-        h: g.h,
-        rotation: 0,
-        zIndex: z++,
-        opacity: 1,
-        locked: false,
-        fill: "transparent",
-        stroke: oc,
-        strokeW: Math.max(1, Math.round(ow)),
-        borderRadius: Math.round(brPx),
-      };
-      elements.push(frameEl);
+      const placeholder = createZonePlaceholder(el.dataset.zone ?? "body", g, z++, s.color);
+      placeholder.contentSlot = el.dataset.slot ?? `${el.dataset.zone ?? "body"}-1`;
+      elements.push(placeholder);
+    };
+
+    const pushHeaderPlaceholder = (el: HTMLElement, label: string) => {
+      const g = geom(el);
+      if (g.w < 2 || g.h < 2) return;
+      const s = cs(el);
+      elements.push({
+        id: uid(), type: "text", x: g.x + 12, y: g.y + 8, w: Math.max(2, g.w - 24), h: Math.max(2, g.h - 16),
+        rotation: 0, zIndex: z++, opacity: 1, locked: false, contentSlot: "header-1", text: label,
+        fontSize: 14, bold: true, italic: false, color: s.color || "#2b2926", align: "left", fontFamily: "Inter, sans-serif", lineHeight: 1.2,
+      });
     };
 
     // 1) L1 decoration (flat: text numerals + geometric shapes)
@@ -268,11 +354,15 @@ export async function htmlToSlideElements(
       .querySelectorAll<HTMLElement>('[data-layer="struct"][data-region="body"]')
       .forEach((el) => pushShape(el));
 
-    // 2b) Step-2 preview only: bordered zone frames (no content yet)
-    if (opts?.includeZoneFrames) {
+    // 2b) Step-2 only: editable text/image placeholders for each content zone.
+    if (opts?.materializeZonePlaceholders) {
       root
         .querySelectorAll<HTMLElement>('[data-layer="zone"][data-region="body"]')
-        .forEach((el) => pushZoneFrame(el));
+        .forEach((el) => pushZonePlaceholder(el));
+      if (opts.headerLabel) {
+        const header = root.querySelector<HTMLElement>('[data-region="header"]');
+        if (header) pushHeaderPlaceholder(header, opts.headerLabel);
+      }
     }
 
     // 3) Header content label (SUBJECT · TOPIC)

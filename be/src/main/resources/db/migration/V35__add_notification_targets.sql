@@ -1,0 +1,3 @@
+ALTER TABLE notifications
+    ADD COLUMN IF NOT EXISTS target_type VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS target_url VARCHAR(1000);

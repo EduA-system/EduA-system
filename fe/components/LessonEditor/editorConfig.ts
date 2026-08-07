@@ -11,6 +11,9 @@ import type { Extensions } from "@tiptap/react";
 import { ParagraphClass } from "./paragraphClassExtension";
 import { PendingActivity } from "./pendingActivityNode";
 import { PendingSection } from "./pendingSectionNode";
+import { PendingQuestion } from "./pendingQuestionNode";
+import { DiffStateExtension } from "./diffStateExtension";
+import { TableDeleteShortcut } from "./tableDeleteShortcut";
 
 /** Thông tin công thức được bấm vào — đủ để mở popup sửa tại đúng vị trí node. */
 export type MathClickInfo = { pos: number; latex: string; display: boolean };
@@ -45,7 +48,13 @@ export function createEditorExtensions(options: {
     Superscript,
     // Table + TableRow + TableHeader + TableCell.
     TableKit.configure({ table: { resizable: true } }),
-    Image,
+    // Bôi đen cả bảng + Backspace/Delete → xoá cả bảng (như Google Docs).
+    TableDeleteShortcut,
+    // loading="lazy": ảnh trong bài viết/bài nộp thường tải trực tiếp từ R2 không qua CDN
+    // resize — trì hoãn tải ảnh chưa cuộn tới giúp giảm số request đồng thời khi mở trang.
+    Image.configure({
+      HTMLAttributes: { loading: "lazy" },
+    }),
     Mathematics.configure({
       katexOptions: {
         throwOnError: false,
@@ -65,5 +74,10 @@ export function createEditorExtensions(options: {
     PendingActivity,
     // Block "đang soạn" tĩnh cho cả một phần (I/II/III) trong lúc chờ FRAME_READY.
     PendingSection,
+    // Block "đang soạn" (atom, khoá) cho luồng stream đề kiểm tra — 1 node/câu hỏi,
+    // fill xong thì thay bằng HTML thật (xem usePracticeExamStream).
+    PendingQuestion,
+    // Đánh dấu + khoá vùng diff AI đang chờ Chấp nhận/Bỏ (xem AssistantPanel).
+    DiffStateExtension,
   ];
 }

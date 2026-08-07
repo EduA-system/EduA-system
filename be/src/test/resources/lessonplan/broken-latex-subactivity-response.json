@@ -1,0 +1,21 @@
+{
+  "objective": ["Học sinh biết cách lập phương trình đường thẳng đi qua hai điểm trong không gian."],
+  "content": [
+    "Câu 1: Trong không gian Oxyz, cho hai điểm phân biệt $A_1(2; 3; 1)$ và $A_2(5; 1; 4)$. Hãy chỉ ra một vectơ chỉ phương của đường thẳng đi qua hai điểm này.",
+    "Câu 2: Dựa vào điểm $A_1$ và vectơ chỉ phương bạn vừa tìm được, hãy viết phương trình tham số của đường thẳng $A_1 A_2$.",
+    "Câu 3: Viết phương trình chính tắc của đường thẳng $A_1 A_2$."
+  ],
+  "organization": {
+    "transfer": ["Giáo viên giao nhiệm vụ cho học sinh về việc lập phương trình đường thẳng đi qua hai điểm $A_1$ và $A_2$."],
+    "perform": ["Học sinh thực hiện các bước để tìm vectơ chỉ phương và viết các phương trình đường thẳng theo yêu cầu."],
+    "report": ["Học sinh báo cáo kết quả cho nhóm hoặc trước lớp và thảo luận về các phương trình đã lập."],
+    "conclude": ["Giáo viên chốt lại kiến thức bài học và đánh giá những kết quả mà học sinh đã đạt được."]
+  },
+  "product": [
+    "Câu 1: Vectơ chỉ phương của đường thẳng $A_1 A_2$ là $\overrightarrow{A_1 A_2} = (5-2; 1-3; 4-1) = (3; -2; 3)$.",
+    "Câu 2: Phương trình tham số của đường thẳng $A_1 A_2$ là:",
+    "\\[\\begin{cases}x = 2 + 3t \\\\ y = 3 - 2t \\\\ z = 1 + 3t \\end{cases}\\]",
+    "Câu 3: Phương trình chính tắc của đường thẳng $A_1 A_2$ là:",
+    "\\[\\frac{x - 2}{3} = \\frac{y - 3}{-2} = \\frac{z - 1}{3}.\\]"
+  ]
+}

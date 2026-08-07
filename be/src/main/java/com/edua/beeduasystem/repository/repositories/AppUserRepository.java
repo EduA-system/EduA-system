@@ -26,6 +26,9 @@ public interface AppUserRepository {
 
     AppUser save(AppUser user);
 
+    /** Xóa tài khoản (dùng khi hard-delete học sinh chưa từng đăng nhập). */
+    void deleteById(UUID id);
+
     /** Danh sách user theo role (phân trang, join user_roles). */
     Page<AppUser> findAllByRole(Role role, Pageable pageable);
 

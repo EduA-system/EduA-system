@@ -1,40 +1,14 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import localFont from "next/font/local";
+import { Be_Vietnam_Pro } from "next/font/google";
 import { AuthProvider } from "@/lib/auth/AuthContext";
+import { AppRouteGuard } from "@/lib/auth/AppRouteGuard";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 
-const inter = Inter({
+const beVietnamPro = Be_Vietnam_Pro({
   variable: "--font-inter",
   subsets: ["latin", "vietnamese"],
-});
-
-const libertine = localFont({
-  variable: "--font-libertine",
-  display: "swap",
-  src: [
-    {
-      path: "./fonts/SVN-Linux Libertine regular.ttf",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "./fonts/SVN-Linux Libertine Italic.ttf",
-      weight: "400",
-      style: "italic",
-    },
-    {
-      path: "./fonts/SVN-Linux Libertine bold.ttf",
-      weight: "700",
-      style: "normal",
-    },
-    {
-      path: "./fonts/SVN-Linux Libertine bold italic.ttf",
-      weight: "700",
-      style: "italic",
-    },
-  ],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -50,10 +24,10 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${inter.variable} ${libertine.variable} h-full antialiased`}
+      className={`${beVietnamPro.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider><AppRouteGuard>{children}</AppRouteGuard></AuthProvider>
       </body>
     </html>
   );

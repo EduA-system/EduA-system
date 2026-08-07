@@ -17,7 +17,7 @@ export default function HomePage() {
       <HeroSection />
 
       {/* ════ "For Teacher" headline — 3 chem L/R/L ════ */}
-      <div style={{ position: "relative" }}>
+      <div id="intro" style={{ position: "relative" }}>
         <ImgDecor src="/home/chem/Asset 1.svg" width={60} style={{ position:"absolute", left:"2%",  top:"20%", opacity:0.72, animation:"mathBob    4.2s ease-in-out infinite" }} />
         <ImgDecor src="/home/chem/Asset 7.svg" width={58} style={{ position:"absolute", right:"2%", top:"50%", opacity:0.68, animation:"mathFloat  4.8s ease-in-out infinite 0.6s" }} />
         <ImgDecor src="/home/chem/Asset 5.svg" width={62} style={{ position:"absolute", left:"3%",  top:"80%", opacity:0.65, animation:"mathBubble 5s   ease-in-out infinite 1.2s" }} />
@@ -26,12 +26,12 @@ export default function HomePage() {
           style={{ width: FRAME_WIDTH, paddingTop: 32, paddingBottom: 48, textAlign: "center" }}
         >
           <FadeIn>
-            <div style={{ fontSize: 14, lineHeight: "17px", color: COLOR.ink }}>For Teacher</div>
+            <div style={{ fontSize: 14, lineHeight: "17px", color: COLOR.ink }}>Dành cho giáo viên</div>
             <h2
               className={serif.className}
               style={{ marginTop: 8, fontSize: 36, lineHeight: "50px", color: COLOR.ink, fontWeight: 400 }}
             >
-              An AI Toolkit for the Work Teachers Do Every Day.
+              Bộ công cụ AI cho công việc giảng dạy hằng ngày.
             </h2>
           </FadeIn>
         </section>
@@ -143,10 +143,10 @@ export default function HomePage() {
                   className={serif.className}
                   style={{ fontSize: 20, lineHeight: "26px", fontWeight: 700, color: COLOR.inkBlack }}
                 >
-                  Create instructional materials without starting from scratch.
+                  Tạo học liệu mà không phải bắt đầu từ con số không.
                 </div>
                 <p style={{ margin: 0, marginTop: 8, fontSize: 14, lineHeight: "20px", color: COLOR.inkMuted }}>
-                  Generate classroom-ready materials with guided workflows instead of writing long prompts.
+                  Tạo giáo án, slide và mô phỏng theo quy trình hướng dẫn rõ ràng.
                 </p>
               </div>
             </div>
@@ -196,7 +196,8 @@ export default function HomePage() {
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <button
+          <a
+            href="#features"
             style={{
               width: 40, height: 40,
               border: `1px solid ${COLOR.inkMuted}`,
@@ -210,7 +211,7 @@ export default function HomePage() {
             <svg width={24} height={24} viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M15 6 L8 12 L15 18" stroke={COLOR.inkMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </button>
+          </a>
 
           <div style={{ display: "flex", gap: 8, marginLeft: 15, marginRight: 13 }}>
             {Array.from({ length: 18 }, (_, i) => (
@@ -226,7 +227,8 @@ export default function HomePage() {
             ))}
           </div>
 
-          <button
+          <a
+            href="#features"
             style={{
               width: 40, height: 40,
               border: `1px solid ${COLOR.inkMuted}`,
@@ -240,7 +242,7 @@ export default function HomePage() {
             <svg width={24} height={24} viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M9 6 L16 12 L9 18" stroke={COLOR.inkMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </button>
+          </a>
         </div>
       </FadeIn>
 

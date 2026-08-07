@@ -26,6 +26,7 @@ public class R2StorageAdapter implements StorageClient {
                 .bucket(bucket)
                 .key(key)
                 .contentType(contentType)
+                .cacheControl("public, max-age=31536000, immutable")
                 .build();
         s3Client.putObject(request, RequestBody.fromBytes(data));
         return publicUrl + "/" + key;

@@ -9,20 +9,20 @@ type DropdownOption<T extends string | number> = {
 };
 
 const TEXT_STYLES = [
-  { label: "Normal text", value: "P" },
-  { label: "Title", value: "H1" },
-  { label: "Heading", value: "H2" },
-  { label: "Subheading", value: "H3" },
+  { label: "Văn bản thường", value: "P" },
+  { label: "Tiêu đề lớn", value: "H1" },
+  { label: "Tiêu đề", value: "H2" },
+  { label: "Tiêu đề phụ", value: "H3" },
 ] as const;
 type BlockType = (typeof TEXT_STYLES)[number]["value"];
 
 const FONT_SIZES = [11, 12, 13, 14, 16, 18, 24];
 const FONT_FAMILIES = ["Arial", "Inter", "Times New Roman", "Georgia", "Verdana"] as const;
 const ALIGN_OPTIONS = [
-  { value: "left", label: "Align left", icon: AlignLeftIcon },
-  { value: "center", label: "Align center", icon: AlignCenterIcon },
-  { value: "right", label: "Align right", icon: AlignRightIcon },
-  { value: "justify", label: "Justify", icon: AlignJustifyIcon },
+  { value: "left", label: "Căn trái", icon: AlignLeftIcon },
+  { value: "center", label: "Căn giữa", icon: AlignCenterIcon },
+  { value: "right", label: "Căn phải", icon: AlignRightIcon },
+  { value: "justify", label: "Căn đều", icon: AlignJustifyIcon },
 ] as const;
 type AlignValue = (typeof ALIGN_OPTIONS)[number]["value"];
 
@@ -96,9 +96,21 @@ function shallowEqual(a: ToolbarState, b: ToolbarState | null) {
   return (Object.keys(a) as (keyof ToolbarState)[]).every((key) => a[key] === b[key]);
 }
 
-export function EditorTools({ editor }: { editor: Editor | null }) {
+export function EditorTools({
+  editor,
+  showImageUrlTool = true,
+  onImageUpload,
+  imageUploadDisabled = false,
+}: {
+  editor: Editor | null;
+  showImageUrlTool?: boolean;
+  onImageUpload?: () => void;
+  imageUploadDisabled?: boolean;
+}) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const textColorInputRef = useRef<HTMLInputElement>(null);
+  const highlightColorInputRef = useRef<HTMLInputElement>(null);
 
   const state =
     useEditorState({
@@ -174,7 +186,11 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
   const ActiveAlignIcon = activeAlign.icon;
 
   return (
-    <div ref={containerRef} className="flex min-w-0 items-center gap-1.5">
+    <div
+      ref={containerRef}
+      className="flex w-full flex-col gap-1 text-[#4f4943]"
+    >
+      <div className="flex flex-wrap items-center gap-1">
       <ToolButton onClick={() => chain().undo().run()} label="Hoàn tác" disabled={!state.canUndo}>
         <UndoIcon />
       </ToolButton>
@@ -189,7 +205,7 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
         setOpenMenu={setOpenMenu}
         value={state.block}
         options={[...TEXT_STYLES]}
-        widthClass="w-[116px] min-w-[72px] shrink"
+        widthClass="w-[156px] shrink-0"
         onSelect={applyTextStyle}
       />
       <TextDropdown
@@ -199,7 +215,7 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
         setOpenMenu={setOpenMenu}
         value={state.fontFamily}
         options={FONT_FAMILIES.map((font) => ({ label: font, value: font }))}
-        widthClass="w-[150px] min-w-[84px] shrink"
+        widthClass="w-[150px] shrink-0"
         onSelect={applyFontFamily}
       />
       <TextDropdown
@@ -223,23 +239,41 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
       <ToolButton onClick={() => chain().toggleUnderline().run()} label="Gạch chân" active={state.isUnderline}>
         <UnderlineIcon />
       </ToolButton>
-      <span className="hidden items-center gap-1.5 @min-[1180px]:flex">
+      <div className="flex items-center gap-1.5">
         <Divider />
-        <ToolButton onClick={() => chain().setColor(TEXT_COLOR).run()} label="Màu chữ">
+        <ToolButton onClick={() => textColorInputRef.current?.click()} label="Chọn màu chữ">
           <TextColorIcon />
         </ToolButton>
+        <input
+          ref={textColorInputRef}
+          type="color"
+          defaultValue={TEXT_COLOR}
+          aria-label="Chọn màu chữ"
+          className="sr-only"
+          onChange={(event) => chain().setColor(event.target.value).run()}
+        />
         <ToolButton
-          onClick={() => chain().toggleHighlight({ color: HIGHLIGHT_COLOR }).run()}
-          label="Đánh dấu"
+          onClick={() => highlightColorInputRef.current?.click()}
+          label="Chọn màu tô nền"
         >
           <MarkerIcon />
         </ToolButton>
-      </span>
-      <Divider />
+        <input
+          ref={highlightColorInputRef}
+          type="color"
+          defaultValue={HIGHLIGHT_COLOR}
+          aria-label="Chọn màu tô nền"
+          className="sr-only"
+          onChange={(event) => chain().setHighlight({ color: event.target.value }).run()}
+        />
+      </div>
+      </div>
+
+      <div className="relative flex flex-wrap items-center gap-1 border-t border-[#efe8df] pt-1">
       <ToolButton onClick={() => chain().toggleBulletList().run()} label="Danh sách dấu đầu dòng" active={state.isBulletList}>
         <BulletIcon />
       </ToolButton>
-      <div className="relative hidden shrink-0 items-center justify-center @min-[1060px]:flex">
+      <div className="relative shrink-0">
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
@@ -247,10 +281,13 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
           title="Căn lề"
           aria-label="Căn lề"
           aria-expanded={openMenu === "align"}
-          className="flex h-8 shrink-0 items-center justify-center gap-0.5 rounded px-1.5 text-[#4f4943] transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
+          className="group relative flex h-8 shrink-0 items-center justify-center gap-0.5 rounded px-1.5 text-[#4f4943] transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
         >
           <ActiveAlignIcon />
           <ChevronDownIcon />
+          <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            Căn lề
+          </span>
         </button>
         {openMenu === "align" ? (
           <Popup align="center">
@@ -277,82 +314,69 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
       </ToolButton>
       <Divider />
       <div className="relative shrink-0">
-        <button
-          type="button"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => setOpenMenu((current) => (current === "more" ? null : "more"))}
-          title="Thêm công cụ"
-          aria-label="Thêm công cụ"
-          aria-expanded={openMenu === "more"}
-          className="flex size-8 shrink-0 items-center justify-center rounded text-[#4f4943] transition hover:bg-[#f3efe9] hover:text-[#2b2926]"
-        >
-          <MoreIcon />
-        </button>
-        {openMenu === "more" ? (
-          <Popup align="right" widthClass="w-60">
-            <MenuGroup label="Định dạng">
-              <div className="flex items-center gap-1">
-                <IconChoice label="Gạch ngang" active={state.isStrike} onClick={() => chain().toggleStrike().run()}>
-                  <StrikeIcon />
-                </IconChoice>
-                <IconChoice
-                  label="Chỉ số trên"
-                  active={state.isSuperscript}
-                  onClick={() => chain().toggleSuperscript().run()}
-                >
-                  <SuperscriptIcon />
-                </IconChoice>
-                <IconChoice
-                  label="Chỉ số dưới"
-                  active={state.isSubscript}
-                  onClick={() => chain().toggleSubscript().run()}
-                >
-                  <SubscriptIcon />
-                </IconChoice>
-                <IconChoice
-                  label="Giảm thụt lề"
-                  disabled={!state.canLift}
-                  onClick={() => chain().liftListItem("listItem").run()}
-                >
-                  <OutdentIcon />
-                </IconChoice>
-                <IconChoice
-                  label="Tăng thụt lề"
-                  disabled={!state.canSink}
-                  onClick={() => chain().sinkListItem("listItem").run()}
-                >
-                  <IndentIcon />
-                </IconChoice>
-                <IconChoice label="Xóa định dạng" onClick={() => chain().unsetAllMarks().clearNodes().run()}>
-                  <ClearFormatIcon />
-                </IconChoice>
-              </div>
-            </MenuGroup>
-            <MenuGroup label="Chèn">
-              <MenuRow onClick={() => setOpenMenu("table")}>
-                <TableIcon /> Bảng
-              </MenuRow>
-              <MenuRow onClick={() => setOpenMenu("formula")}>
-                <FormulaIcon /> Công thức
-              </MenuRow>
-              <MenuRow onClick={() => setOpenMenu("link")}>
-                <LinkIcon /> Liên kết
-              </MenuRow>
-              {state.isLink ? (
-                <MenuRow onClick={() => chain().unsetLink().run()}>
-                  <UnlinkIcon /> Bỏ liên kết
-                </MenuRow>
-              ) : null}
-              <MenuRow onClick={() => setOpenMenu("symbol")}>
-                <SymbolIcon /> Ký hiệu đặc biệt
-              </MenuRow>
-              <MenuRow onClick={() => setOpenMenu("image")}>
-                <ImageIcon /> Hình ảnh
-              </MenuRow>
-            </MenuGroup>
-          </Popup>
-        ) : null}
-
+        <div className="flex items-center gap-1.5">
+          <IconChoice label="Gạch ngang" active={state.isStrike} onClick={() => chain().toggleStrike().run()}>
+            <StrikeIcon />
+          </IconChoice>
+          <IconChoice
+            label="Chỉ số trên"
+            active={state.isSuperscript}
+            onClick={() => chain().toggleSuperscript().run()}
+          >
+            <SuperscriptIcon />
+          </IconChoice>
+          <IconChoice
+            label="Chỉ số dưới"
+            active={state.isSubscript}
+            onClick={() => chain().toggleSubscript().run()}
+          >
+            <SubscriptIcon />
+          </IconChoice>
+          <IconChoice
+            label="Giảm thụt lề"
+            disabled={!state.canLift}
+            onClick={() => chain().liftListItem("listItem").run()}
+          >
+            <OutdentIcon />
+          </IconChoice>
+          <IconChoice
+            label="Tăng thụt lề"
+            disabled={!state.canSink}
+            onClick={() => chain().sinkListItem("listItem").run()}
+          >
+            <IndentIcon />
+          </IconChoice>
+          <IconChoice label="Xóa định dạng" onClick={() => chain().unsetAllMarks().clearNodes().run()}>
+            <ClearFormatIcon />
+          </IconChoice>
+          <Divider />
+          <IconChoice label="Chèn bảng" onClick={() => setOpenMenu("table")}>
+            <TableIcon />
+          </IconChoice>
+          <IconChoice label="Chèn công thức" onClick={() => setOpenMenu("formula")}>
+            <FormulaIcon />
+          </IconChoice>
+          <IconChoice label="Chèn liên kết" active={state.isLink} onClick={() => setOpenMenu("link")}>
+            <LinkIcon />
+          </IconChoice>
+          {state.isLink ? (
+            <IconChoice label="Bỏ liên kết" onClick={() => chain().unsetLink().run()}>
+              <UnlinkIcon />
+            </IconChoice>
+          ) : null}
+          <IconChoice label="Ký hiệu" onClick={() => setOpenMenu("symbol")}>
+            <SymbolIcon />
+          </IconChoice>
+          {showImageUrlTool ? (
+            <IconChoice label="Chèn ảnh bằng URL" onClick={() => setOpenMenu("image")}>
+              <ImageIcon />
+            </IconChoice>
+          ) : onImageUpload ? (
+            <IconChoice label="Chèn ảnh" onClick={onImageUpload} disabled={imageUploadDisabled}>
+              <ImageIcon />
+            </IconChoice>
+          ) : null}
+        </div>
         {openMenu === "table" ? (
           <Popup align="right" widthClass="w-max">
             <TableGrid
@@ -423,6 +447,7 @@ export function EditorTools({ editor }: { editor: Editor | null }) {
         ) : null}
       </div>
     </div>
+    </div>
   );
 }
 
@@ -458,13 +483,13 @@ function TextDropdown<T extends string | number>({
         onClick={() => setOpenMenu((current) => (current === menuId ? null : menuId))}
         aria-label={label}
         aria-expanded={isOpen}
-        className="flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-transparent bg-transparent px-2 text-left text-[13px] text-[#4f4943] outline-none transition hover:border-[#e8e2d9] hover:bg-white"
+        className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-transparent bg-transparent px-2 text-left text-[13px] text-[#4f4943] outline-none transition hover:border-[#e8e2d9] hover:bg-white"
       >
         <span className="truncate">{selected ? selected.label : (placeholder ?? "")}</span>
         <ChevronDownIcon />
       </button>
       {isOpen ? (
-        <div className="absolute top-9 left-0 z-50 min-w-full overflow-hidden rounded-xl border border-[#e8e2d9] bg-white p-1 shadow-[0_8px_24px_rgba(43,41,38,0.12)]">
+        <div className="absolute left-0 top-full z-[60] mt-1 min-w-full overflow-hidden rounded-lg border border-[#e8e2d9] bg-white p-1 shadow-[0_8px_24px_rgba(43,41,38,0.12)]">
           {options.map((option) => {
             const active = option.value === value;
 
@@ -509,28 +534,6 @@ function Popup({
   );
 }
 
-function MenuGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="px-1 py-1 [&+&]:mt-1 [&+&]:border-t [&+&]:border-[#f0eadf] [&+&]:pt-2">
-      <div className="mb-1 px-1 text-[11px] font-medium tracking-wide text-[#a99f93] uppercase">{label}</div>
-      {children}
-    </div>
-  );
-}
-
-function MenuRow({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onClick}
-      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] text-[#4f4943] transition hover:bg-[#f7f3ee] hover:text-[#2b2926]"
-    >
-      {children}
-    </button>
-  );
-}
-
 function IconChoice({
   children,
   label,
@@ -552,11 +555,14 @@ function IconChoice({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className={`flex size-8 items-center justify-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`group relative flex size-8 items-center justify-center rounded-md transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active ? "bg-[#f3efe9] text-[#2b2926]" : "text-[#6b625a] hover:bg-[#f7f3ee] hover:text-[#2b2926]"
       }`}
     >
       {children}
+      <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+        {label}
+      </span>
     </button>
   );
 }
@@ -723,17 +729,20 @@ function ToolButton({
       title={label}
       aria-label={label}
       aria-pressed={active}
-      className={`flex size-8 shrink-0 items-center justify-center rounded transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`group relative flex size-8 shrink-0 items-center justify-center rounded-md transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active ? "bg-[#f3efe9] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f3efe9] hover:text-[#2b2926]"
       } ${strong ? "text-[14px] font-semibold" : ""}`}
     >
       {children}
+      <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+        {label}
+      </span>
     </button>
   );
 }
 
 function Divider({ className = "" }: { className?: string }) {
-  return <div className={`mx-1.5 h-5 w-px shrink-0 bg-[#e8e2d9] ${className}`} />;
+  return <div className={`mx-1 h-5 w-px shrink-0 bg-[#e8e2d9] ${className}`} />;
 }
 
 function ChevronDownIcon() { return <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
@@ -761,4 +770,3 @@ function LinkIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fil
 function UnlinkIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M9 15l-1.5 1.5a3.5 3.5 0 01-5-5L4 10M15 9l1.5-1.5a3.5 3.5 0 015 5L20 14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M4 4l16 16" stroke="#d97757" strokeWidth="1.7" strokeLinecap="round" /></svg>; }
 function ImageIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><rect x="3.5" y="5" width="17" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" /><circle cx="9" cy="10" r="1.6" stroke="currentColor" strokeWidth="1.4" /><path d="M5 17l4.5-4 3 2.5L16 11l4 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 function SymbolIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M16 19H8l5-7-5-7h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
-function MoreIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>; }

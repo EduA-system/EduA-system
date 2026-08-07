@@ -1,14 +1,20 @@
-import { generateSlideHtmlDesign } from "@/lib/api/slide-design";
-import { slideRoleLabel, type OutlinePart, type SlideItem } from "@/lib/api/slides";
+import { fillSlideContent, generateSlideHtmlDesign, type SlideContentFillResponse, type SlideContentFillSlot } from "@/lib/api/slide-design";
+import { buildMolecule } from "@/lib/api/molecule-build";
+import type { OutlinePart, SlideItem } from "@/lib/api/slides";
 import { htmlToSlideElements } from "@/components/slide-editor/lib/html-to-slide";
 import { pickBackground, pickDecoIcons } from "@/lib/slide-assets/resolve";
 import type { SlideElement } from "@/components/slide-editor/types";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
+import { bodyTopFromSkinHtml, slideToLayoutInput } from "@/lib/slide-layout/adapter";
+import { generateSlideLayout } from "@/lib/slide-layout/engine";
+import { renderSlideLayout } from "@/lib/slide-layout/renderer";
+import { randomRunNonce } from "@/lib/slide-layout/random";
+import { blockText } from "@/lib/slide-layout/metrics";
 import {
   getSlideDesignContext,
   setSlideDesignContext,
-  type SlideDesignContext,
 } from "@/lib/slide-create/design-session";
+import { slidesWithQuizAnswerReveals } from "@/lib/slide-create/quiz-answer-slides";
 
 export type DesignPipelineInput = {
   topic: string;
@@ -17,265 +23,219 @@ export type DesignPipelineInput = {
   parts: OutlinePart[];
 };
 
-export type DesignPipelineCallbacks = {
-  /**
-   * Step 1 (deck skin) finished and was converted once — reusable bg +
-   * decoration. Used to stamp a preview onto all skeleton slides before
-   * per-slide content fills in.
-   */
+export type StepCallbacks = {
   onSkinReady?: (skin: { bg: string; elements: SlideElement[] }) => void;
-  /**
-   * Step 2 done for a slide: bordered zone frames stamped as a layout preview.
-   * Replaced by onSlideReady once step 3 fills the content.
-   */
-  onSlideFrames?: (
-    slideId: string,
-    result: { bg: string; elements: SlideElement[] },
-  ) => void;
-  /** A slide finished steps 2+3 and was converted to editor elements. */
-  onSlideReady: (
-    slideId: string,
-    result: { bg: string; elements: SlideElement[] },
-    title: string,
-  ) => void;
+  onSlideFrames?: (slideId: string, result: { bg: string; elements: SlideElement[] }) => void;
+  onSlideReady?: (slideId: string, result: SlideContentFillResponse, title: string) => void;
   onSlideFailed?: (slideId: string, message: string) => void;
-  onProgress?: (ready: number, total: number) => void;
-  /** Fatal error (step 1 failed / empty) — pipeline stops. */
-  onError?: (message: string) => void;
 };
 
-/**
- * Build the per-slide outline text fed to step 2 + step 3. Beyond title + role,
- * we include the real lesson content bound to this slide at the outline step
- * (cách B) so the design AI fills the slide from the teacher's plan instead of
- * inventing unrelated examples.
- */
+export type StepRunResult = {
+  failedSlideIds: string[];
+};
+
 function slideOutlineText(slide: SlideItem): string {
-  const role = slideRoleLabel(slide);
-  const title = slide.title.trim();
-  const head = role && role !== title ? `${title} (${role})` : title;
-  const sections: string[] = [];
-  const body = slide.content?.trim();
-  if (body) sections.push(`Nội dung hiển thị:\n${body}`);
-  if (slide.requiredFacts?.length) {
-    sections.push(`Dữ kiện bắt buộc:\n${slide.requiredFacts.map((fact) => `- ${fact}`).join("\n")}`);
-  }
-  if (slide.quizItems?.length) {
-    const quizText = slide.quizItems
-      .map((quiz, index) => {
-        const lines = [`${index + 1}. ${quiz.question}`];
-        if (quiz.choices?.length) lines.push(...quiz.choices.map((choice) => `   ${choice}`));
-        if (quiz.answer?.trim()) lines.push(`   Đáp án: ${quiz.answer.trim()}`);
-        if (quiz.explanation?.trim()) lines.push(`   Giải thích: ${quiz.explanation.trim()}`);
-        return lines.join("\n");
-      })
-      .join("\n");
-    sections.push(`Câu hỏi luyện tập / phiếu học tập:\n${quizText}`);
-  }
-  if (slide.visual && slide.visual.type !== "none" && slide.visual.spec.trim()) {
-    sections.push(`Trực quan cần có (${slide.visual.type}):\n${slide.visual.spec.trim()}`);
-  }
-  if (slide.aiNote?.trim()) {
-    sections.push(`AI note:\n${slide.aiNote.trim()}`);
-  }
-  return sections.length ? `${head}\n\n${sections.join("\n\n")}` : head;
+  const sections = slide.contentPlan.blocks.map((block) => `[${block.id}/${block.kind}] ${blockText(block)}`);
+  if (slide.aiNote?.trim()) sections.push(`AI note: ${slide.aiNote.trim()}`);
+  return [`${slide.title} (${slide.pedagogicalRole})`, ...sections].join("\n\n");
 }
 
 function flattenSlides(parts: OutlinePart[]): SlideItem[] {
-  return parts.flatMap((part) => part.slides);
+  return slidesWithQuizAnswerReveals(parts);
 }
 
-/**
- * Max slides whose step2→step3 chains run concurrently. Bounded to avoid
- * AI-provider rate limits (429) and the browser's ~6 conn/host cap on
- * HTTP/1.1. Raise carefully if the provider tier allows more throughput.
- */
+function isTitleSlot(slot: { id: string; sourceBlockId: string }): boolean {
+  return slot.id.endsWith(":title") || slot.sourceBlockId.endsWith(":title");
+}
+
+function paletteFromSkin(skinHtml: string): string[] {
+  const skinWithoutSurfaceMetadata = skinHtml.replace(/data-surface-color=["']#[0-9a-fA-F]{6}["']/gi, "");
+  const colors = skinWithoutSurfaceMetadata.match(/#[0-9a-fA-F]{6}/g) ?? [];
+  const palette = [...new Set(colors.map((color) => color.toLowerCase()))].slice(0, 6);
+  return palette.length ? palette : ["#2b2926", "#ffffff", "#d97757"];
+}
+
+function relativeLuminance(hex: string): number {
+  const weights = [0.2126, 0.7152, 0.0722];
+  return [1, 3, 5]
+    .map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255)
+    .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, channel, index) => sum + channel * weights[index], 0);
+}
+
+function surfaceColorFromSkin(skinHtml: string, palette: string[]): string {
+  const selected = skinHtml.match(/data-surface-color=["'](#[0-9a-fA-F]{6})["']/i)?.[1];
+  if (selected) return selected.toLowerCase();
+  return [...palette].sort((left, right) => relativeLuminance(right) - relativeLuminance(left))[0] ?? "#ffffff";
+}
+
 const SLIDE_CONCURRENCY = 4;
+const CONTENT_SLOT_BATCH_SIZE = 6;
 
-/** Run `worker` over `items` with at most `limit` in flight at once. */
-async function runPool<T>(
-  items: T[],
-  limit: number,
-  worker: (item: T) => Promise<void>,
-): Promise<void> {
+async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
   let next = 0;
-  const runners = Array.from(
-    { length: Math.min(limit, items.length) },
-    async () => {
-      while (next < items.length) {
-        const item = items[next++];
-        await worker(item);
-      }
-    },
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) await worker(items[next++]);
+    }),
   );
-  await Promise.all(runners);
 }
 
-/**
- * Run step 2 (structural) + step 3 (content_fill) + iframe conversion for a
- * single slide, given a ready deck skin. Shared by the full-deck pipeline
- * below and by retrySlideDesign (regenerate one slide from the header retry
- * button) so both paths behave identically.
- */
-async function runSlideDesignSteps(
-  slide: SlideItem,
-  ctx: Pick<SlideDesignContext, "topic" | "subject" | "styleHint" | "skinHtml" | "bgImageUrl" | "decoIconUrls">,
-  cb: Pick<DesignPipelineCallbacks, "onSlideFrames" | "onSlideReady" | "onSlideFailed">,
-): Promise<void> {
-  const { topic, subject, styleHint, skinHtml, bgImageUrl, decoIconUrls } = ctx;
-  const outline = slideOutlineText(slide);
-  try {
-    const step2 = await generateSlideHtmlDesign({
-      topic,
-      outline,
-      subject,
-      styleHint,
-      step: "structural",
-      priorHtml: skinHtml,
-    });
-    // Preview the step-2 layout: stamp bordered zone frames before content.
-    if (cb.onSlideFrames) {
-      try {
-        const frames = await htmlToSlideElements(step2.html, {
-          bgImageUrl,
-          decoIconUrls,
-          includeZoneFrames: true,
-        });
-        cb.onSlideFrames(slide.id, { bg: frames.bg, elements: frames.elements });
-      } catch (e) {
-        logSlideApi("design pipeline: frame preview failed", {
-          slide: slide.id,
-          message: e instanceof Error ? e.message : String(e),
-        });
-      }
-    }
-    const step3 = await generateSlideHtmlDesign({
-      topic,
-      outline,
-      subject,
-      styleHint,
-      step: "content_fill",
-      priorHtml: step2.html,
-    });
-    const { bg, elements, skipped } = await htmlToSlideElements(step3.html, { bgImageUrl, decoIconUrls });
-    if (skipped.length > 0) {
-      logSlideApi("design pipeline: skipped elements", { slide: slide.id, skipped });
-    }
-    if (elements.length === 0) {
-      // AI trả HTTP 200 nhưng HTML rỗng/hỏng (không parse ra được element nào) —
-      // coi như thất bại thay vì âm thầm hiện slide trắng như "ready".
-      throw new Error("AI trả về slide rỗng, không có nội dung nào được tạo.");
-    }
-    cb.onSlideReady(slide.id, { bg, elements }, slide.title);
-  } catch (e) {
-    console.error("[EDUA slide] [API] design pipeline slide failed", slide.id, e);
-    cb.onSlideFailed?.(slide.id, e instanceof Error ? e.message : String(e));
+/** Keeps one AI response small enough to reliably finish its JSON object. */
+async function fillContentInBatches(request: Parameters<typeof fillSlideContent>[0]): Promise<SlideContentFillResponse> {
+  const responses: SlideContentFillResponse[] = [];
+  for (let index = 0; index < request.slots.length; index += CONTENT_SLOT_BATCH_SIZE) {
+    responses.push(await fillSlideContent({
+      ...request,
+      slots: request.slots.slice(index, index + CONTENT_SLOT_BATCH_SIZE),
+    }));
   }
+  return {
+    slots: responses.flatMap((response) => response.slots),
+    latencyMs: responses.reduce((total, response) => total + response.latencyMs, 0),
+    modelUsed: [...new Set(responses.map((response) => response.modelUsed))].join(", "),
+    warning: responses.map((response) => response.warning).find((warning) => warning != null) ?? null,
+  };
 }
 
-/**
- * Regenerate a single slide (header "retry" button) using the deck skin and
- * outline captured by the last runDesignPipeline call. Returns without
- * calling the AI if that context isn't available (e.g. page was reloaded).
- */
-export async function retrySlideDesign(
-  slideId: string,
-  cb: Pick<DesignPipelineCallbacks, "onSlideFrames" | "onSlideReady" | "onSlideFailed">,
-): Promise<void> {
-  const ctx = getSlideDesignContext();
-  if (!ctx) {
-    cb.onSlideFailed?.(slideId, "Không thể tạo lại: đã mất dữ liệu phiên tạo slide (thử tải lại trang vừa tạo deck).");
-    return;
-  }
-  const slide = ctx.slidesById.get(slideId);
-  if (!slide) {
-    cb.onSlideFailed?.(slideId, "Không tìm thấy outline gốc cho slide này để tạo lại.");
-    return;
-  }
-  await runSlideDesignSteps(slide, ctx, cb);
-}
-
-/**
- * Run the 3-step HTML design pipeline for a whole deck:
- *   step1 (bg_deco) once  →  deck skin
- *   per slide: step2 (structural) → step3 (content_fill) → convert → onSlideReady
- *
- * step2→step3 stay sequential within a slide (hard dependency), but slides
- * run in parallel with bounded concurrency (SLIDE_CONCURRENCY) so the deck
- * generates faster; each slide still reveals itself as it completes.
- */
-export async function runDesignPipeline(
+/** Step 1: create the shared deck skin and retain its context for the next steps. */
+export async function runDeckSkinStep(
   input: DesignPipelineInput,
-  cb: DesignPipelineCallbacks,
+  cb: Pick<StepCallbacks, "onSkinReady"> = {},
 ): Promise<void> {
   const { topic, subject, styleHint, parts } = input;
   const slides = flattenSlides(parts);
-  const total = slides.length;
-  let ready = 0;
-
-  // Decorative chrome for the whole deck (stable per topic) so every slide
-  // shares it: one background pattern + a few faint corner icons. Stamped
-  // under all content during conversion.
   const bgImageUrl = pickBackground(topic);
   const decoIconUrls = pickDecoIcons(topic);
+  const step1 = await generateSlideHtmlDesign({ topic, outline: "", subject, styleHint, step: "bg_deco" });
+  if (!step1.html.trim()) throw new Error("Bước 1 (giao diện deck) trả về rỗng.");
 
-  // ── Step 1: deck skin (once) ────────────────────────────────
-  let skinHtml: string;
-  try {
-    const step1 = await generateSlideHtmlDesign({
-      topic,
-      outline: "",
-      subject,
-      styleHint,
-      step: "bg_deco",
-    });
-    if (!step1.html.trim()) {
-      cb.onError?.("Step 1 (deck skin) trả về rỗng.");
-      return;
-    }
-    skinHtml = step1.html;
-  } catch (e) {
-    cb.onError?.(e instanceof Error ? e.message : String(e));
-    return;
-  }
-
-  // Convert the skin once and hand it to the client so it can stamp a
-  // bg + decoration preview onto every still-empty skeleton slide.
-  try {
-    const { bg, elements, skipped } = await htmlToSlideElements(skinHtml, { bgImageUrl, decoIconUrls });
-    if (skipped.length > 0) {
-      logSlideApi("design pipeline: skin skipped elements", { skipped });
-    }
-    cb.onSkinReady?.({ bg, elements });
-  } catch (e) {
-    logSlideApi("design pipeline: skin convert failed", {
-      message: e instanceof Error ? e.message : String(e),
-    });
-  }
-
-  // Snapshot this run so a single slide can be retried later without
-  // redoing step 1 or re-asking the caller for the outline.
   setSlideDesignContext({
     topic,
     subject,
     styleHint,
-    skinHtml,
+    skinHtml: step1.html,
+    skinBg: "#ffffff",
+    bodyTop: bodyTopFromSkinHtml(step1.html),
+    deckSeed: `${topic}:${slides.map((slide) => slide.id).join(",")}`,
+    layoutResultsBySlide: new Map(),
+    contentSlotsBySlide: new Map(),
     bgImageUrl,
     decoIconUrls,
     slidesById: new Map(slides.map((slide) => [slide.id, slide])),
   });
 
-  // ── Steps 2+3 per slide (parallel, bounded) ─────────────────
-  await runPool(slides, SLIDE_CONCURRENCY, async (slide) => {
+  try {
+    const { bg, elements, skipped } = await htmlToSlideElements(step1.html, { bgImageUrl, decoIconUrls });
+    const current = getSlideDesignContext();
+    if (current) current.skinBg = bg;
+    if (skipped.length) logSlideApi("design step 1: skin skipped elements", { skipped });
+    cb.onSkinReady?.({ bg, elements });
+  } catch (error) {
+    logSlideApi("design step 1: skin convert failed", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/** Step 2: generate a constraint-based layout and render editor elements directly. */
+export async function runStructuralStep(
+  cb: Pick<StepCallbacks, "onSlideFrames" | "onSlideFailed"> = {},
+): Promise<StepRunResult> {
+  const ctx = getSlideDesignContext();
+  if (!ctx) throw new Error("Chưa có kết quả Bước 1. Vui lòng chạy Bước 1 trước.");
+
+  const failedSlideIds: string[] = [];
+  const runNonce = randomRunNonce();
+  ctx.layoutResultsBySlide.clear();
+  ctx.contentSlotsBySlide.clear();
+  await runPool([...ctx.slidesById.values()], SLIDE_CONCURRENCY, async (slide) => {
     try {
-      await runSlideDesignSteps(
-        slide,
-        { topic, subject, styleHint, skinHtml, bgImageUrl, decoIconUrls },
-        cb,
-      );
-    } finally {
-      ready += 1;
-      cb.onProgress?.(ready, total);
+      const input = slideToLayoutInput(slide, { deckSeed: ctx.deckSeed, runNonce, bodyTop: ctx.bodyTop });
+      const result = generateSlideLayout(input);
+      // Molecule slots skip the fill-content request entirely (resolved via buildMolecule in Step 3,
+      // reading `layoutResultsBySlide` directly) — keep the fill-content contract untouched.
+      const slots = result.slots
+        .filter((slot): slot is typeof slot & { kind: "text" | "image" } => slot.kind !== "molecule")
+        .map((slot) => ({
+          id: slot.id,
+          kind: slot.kind,
+          zone: slot.zone,
+          sourceBlockId: slot.sourceBlockId,
+          sourcePartId: slot.sourcePartId,
+          sourceText: slot.sourceText,
+          maxChars: slot.maxChars,
+          maxLines: slot.maxLines,
+          hint: slot.contentHint,
+        }));
+      ctx.layoutResultsBySlide.set(slide.id, result);
+      ctx.contentSlotsBySlide.set(slide.id, slots);
+      logSlideApi("design step 2: dynamic layout generated", { slide: slide.id, family: result.family, topology: result.topology, seed: result.seed });
+      const palette = paletteFromSkin(ctx.skinHtml);
+      cb.onSlideFrames?.(slide.id, {
+        bg: ctx.skinBg,
+        elements: renderSlideLayout(result, {
+          palette,
+          surfaceColor: surfaceColorFromSkin(ctx.skinHtml, palette),
+          backgroundColor: ctx.skinBg,
+          headerLabel: [ctx.subject, ctx.topic].filter(Boolean).join(" · "),
+        }),
+      });
+    } catch (error) {
+      failedSlideIds.push(slide.id);
+      cb.onSlideFailed?.(slide.id, error instanceof Error ? error.message : String(error));
     }
   });
+  return { failedSlideIds };
+}
+
+/** Step 3: ask AI for compact slot content, then update the existing editor elements. */
+export async function runContentFillStep(
+  cb: Pick<StepCallbacks, "onSlideReady" | "onSlideFailed"> = {},
+): Promise<StepRunResult> {
+  const ctx = getSlideDesignContext();
+  if (!ctx) throw new Error("Chưa có kết quả Bước 1. Vui lòng chạy Bước 1 trước.");
+
+  const failedSlideIds: string[] = [];
+  await runPool([...ctx.slidesById.values()], SLIDE_CONCURRENCY, async (slide) => {
+    try {
+      const slots = ctx.contentSlotsBySlide.get(slide.id) ?? [];
+      const layoutSlots = ctx.layoutResultsBySlide.get(slide.id)?.slots ?? [];
+      if (!slots.length && !layoutSlots.length) throw new Error("Slide chưa có placeholder từ Bước 2.");
+      const fillableSlots = slots.filter((slot) => !isTitleSlot(slot));
+      const moleculeSlots = layoutSlots.filter((slot) => slot.kind === "molecule" && !isTitleSlot(slot));
+
+      if (!fillableSlots.length && !moleculeSlots.length) {
+        cb.onSlideReady?.(slide.id, { slots: [], latencyMs: 0, modelUsed: "outline-title" }, slide.title);
+        return;
+      }
+
+      const [response, moleculeFills] = await Promise.all([
+        fillableSlots.length
+          ? fillContentInBatches({
+              topic: ctx.topic,
+              outline: slideOutlineText(slide),
+              subject: ctx.subject,
+              styleHint: ctx.styleHint,
+              slots: fillableSlots,
+              palette: paletteFromSkin(ctx.skinHtml),
+            })
+          : Promise.resolve<SlideContentFillResponse>({ slots: [], latencyMs: 0, modelUsed: "outline-title" }),
+        Promise.all(moleculeSlots.map(async (slot): Promise<SlideContentFillSlot> => ({
+          slotId: slot.id,
+          text: null,
+          imagePrompt: null,
+          molecule: await buildMolecule(slot.sourceText),
+        }))),
+      ]);
+
+      const mergedSlots = [...response.slots, ...moleculeFills];
+      if (!mergedSlots.length) throw new Error("AI trả về rỗng, không có nội dung slot.");
+      cb.onSlideReady?.(slide.id, { ...response, slots: mergedSlots }, slide.title);
+    } catch (error) {
+      failedSlideIds.push(slide.id);
+      cb.onSlideFailed?.(slide.id, error instanceof Error ? error.message : String(error));
+    }
+  });
+  return { failedSlideIds };
 }

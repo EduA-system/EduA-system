@@ -1,0 +1,7 @@
+UPDATE roles
+SET name = 'PRINCIPAL'
+WHERE name = 'ADMINISTRATOR';
+
+UPDATE roles
+SET name = 'IT_STAFF'
+WHERE name = 'IT_MANAGEMENT';

@@ -3,11 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
 import { isSlideLockedForGeneration, type Slide } from "./types";
+import { downloadOfflineHtml, exportOfflineHtml } from "@/lib/slide-html-export";
+
+export type DesignStepStatus = "idle" | "running" | "complete" | "error";
+
+export interface DesignStepControls {
+  step1: DesignStepStatus;
+  step2: DesignStepStatus;
+  step3: DesignStepStatus;
+  onRunStep: (step: 1 | 2 | 3) => void;
+}
 
 interface TopBarProps {
   showRightPanel: boolean;
   onToggleRightPanel: () => void;
+  designSteps?: DesignStepControls;
   onRetrySlide?: (slideId: string) => void;
+  onSaveToLibrary?: () => void;
+  savingToLibrary?: boolean;
+  onPresent?: () => void;
 }
 
 function UndoSvg() {
@@ -67,22 +81,22 @@ function SidebarRightIcon() {
   );
 }
 
-function RetrySvg() {
+function PresentIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M13 8A5 5 0 1 1 11.5 4.2M13 2v3h-3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.8" y="2.3" width="12.4" height="9.1" rx="1.4" />
+      <path d="m6.5 5.1 3.2 1.75L6.5 8.6z" fill="currentColor" stroke="none" />
+      <path d="M5.4 13.5h5.2M8 11.4v2.1" />
     </svg>
   );
 }
 
 function Divider() {
   return <div className="mx-1 h-5 w-px shrink-0 bg-[#e8e2d9]" />;
+}
+
+function RetrySvg() {
+  return <SparkIcon />;
 }
 
 function IconButton({
@@ -118,10 +132,14 @@ function ActionButton({
   children,
   onClick,
   variant = "ghost",
+  disabled = false,
+  title,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   variant?: "ghost" | "ai" | "dark";
+  disabled?: boolean;
+  title?: string;
 }) {
   const cls =
     variant === "dark"
@@ -133,7 +151,9 @@ function ActionButton({
   return (
     <button
       onClick={onClick}
-      className={`flex h-8 items-center gap-1.5 rounded-[10px] px-3 text-[12px] font-medium transition-colors ${cls}`}
+      disabled={disabled}
+      title={title}
+      className={`flex h-8 items-center gap-1.5 rounded-[10px] px-3 text-[12px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-35 ${cls}`}
     >
       {children}
     </button>
@@ -186,17 +206,20 @@ function Dropdown({
 function DropdownItem({
   onClick,
   active,
+  disabled = false,
   children,
 }: {
   onClick: () => void;
   active?: boolean;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={`flex w-full items-center px-3 py-1.5 text-left text-[12px] transition-colors ${
-        active ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee]"
+        active ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee] disabled:cursor-wait disabled:opacity-50"
       }`}
     >
       {children}
@@ -211,7 +234,11 @@ function deckTitle(slide: Slide | undefined) {
 export function TopBar({
   showRightPanel,
   onToggleRightPanel,
+  designSteps,
   onRetrySlide,
+  onSaveToLibrary,
+  savingToLibrary = false,
+  onPresent,
 }: TopBarProps) {
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
@@ -224,6 +251,8 @@ export function TopBar({
   const hasLockedSlides = useEditorStore((s) => s.slides.some(isSlideLockedForGeneration));
 
   const [menu, setMenu] = useState<string | null>(null);
+  const [exportingHtml, setExportingHtml] = useState(false);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function exportJSON() {
@@ -267,6 +296,24 @@ export function TopBar({
     reader.readAsText(file);
   }
 
+  async function exportHtml() {
+    if (exportingHtml) return;
+    setExportingHtml(true);
+    setExportNotice(null);
+    try {
+      const state = useEditorStore.getState();
+      const title = deckTitle(state.currentSlide());
+      const result = await exportOfflineHtml(state.slides, title);
+      downloadOfflineHtml(result.html, title);
+      setExportNotice(result.warnings.length ? `Đã xuất HTML; ${result.warnings.length} ảnh được thay bằng placeholder.` : "Đã tải file HTML offline.");
+    } catch {
+      setExportNotice("Không thể tạo file HTML offline. Vui lòng thử lại.");
+    } finally {
+      setExportingHtml(false);
+      setMenu(null);
+    }
+  }
+
   return (
     <header className="flex h-12 shrink-0 items-center gap-1 border-b border-[#e8e2d9] bg-white px-3">
       <button className="flex max-w-[260px] items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-left text-[12px] font-medium text-[#4f4943] hover:bg-[#f7f3ee]">
@@ -287,6 +334,25 @@ export function TopBar({
         </>
       ) : null}
 
+      {designSteps ? (
+        <>
+          <Divider />
+          {([1, 2, 3] as const).map((step) => {
+            const status = designSteps[`step${step}`];
+            const previousComplete = step === 1 || designSteps[`step${step - 1}` as "step1" | "step2"] === "complete";
+            const disabled = status === "complete" || status === "running" || !previousComplete ||
+              Object.values(designSteps).some((value) => value === "running");
+            const label = step === 1 ? "Bước 1: Giao diện" : step === 2 ? "Bước 2: Bố cục mẫu" : "Bước 3: Nội dung";
+            return (
+              <ActionButton key={step} onClick={() => designSteps.onRunStep(step)} disabled={disabled} title={label} variant="ai">
+                {status === "running" ? <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <SparkIcon />}
+                {label}
+              </ActionButton>
+            );
+          })}
+        </>
+      ) : null}
+
       <div className="flex-1" />
 
       <IconButton onClick={undo} disabled={history.past.length === 0 || hasLockedSlides} title="Undo (Ctrl+Z)">
@@ -298,10 +364,16 @@ export function TopBar({
 
       <Divider />
 
-      <ActionButton onClick={() => saveDraft()}>
+      <ActionButton onClick={onSaveToLibrary ?? saveDraft} disabled={savingToLibrary}>
         <SaveIcon />
-        Save
+        {savingToLibrary ? "Đang lưu..." : "Lưu"}
       </ActionButton>
+      {onPresent ? (
+        <ActionButton onClick={onPresent} variant="dark" title="Trình chiếu bộ slide">
+          <PresentIcon />
+          Trình chiếu
+        </ActionButton>
+      ) : null}
       <ActionButton onClick={() => undefined} variant="ai">
         <SparkIcon />
         AI
@@ -320,6 +392,9 @@ export function TopBar({
         onToggle={() => setMenu(menu === "export" ? null : "export")}
         align="right"
       >
+        <DropdownItem onClick={() => void exportHtml()} disabled={exportingHtml}>
+          {exportingHtml ? "Đang đóng gói..." : "Export HTML offline"}
+        </DropdownItem>
         <DropdownItem onClick={() => { exportJSON(); setMenu(null); }}>
           Export JSON
         </DropdownItem>
@@ -345,6 +420,7 @@ export function TopBar({
           e.target.value = "";
         }}
       />
+      {exportNotice ? <p role="status" className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 rounded-lg bg-[#2b2926] px-4 py-2 text-xs text-white shadow-lg">{exportNotice}</p> : null}
     </header>
   );
 }

@@ -775,7 +775,7 @@ export default function MoPhongHubPage() {
   if (selected) return <DetailView preset={selected} onBack={() => setSelected(null)} />;
 
   return (
-    <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
+    <main className="flex h-screen w-full overflow-hidden bg-white">
       <Sidebar activeHref="/mo-phong-vat-ly" />
 
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -1090,7 +1090,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
   };
 
   return (
-    <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
+    <main className="flex h-screen w-full overflow-hidden bg-white">
       <Sidebar activeHref="/mo-phong-vat-ly" />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">

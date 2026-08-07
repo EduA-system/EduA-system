@@ -1,6 +1,9 @@
 package com.edua.beeduasystem.service.slidedesign;
 
+import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideHtmlDesignRequest;
+import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentFillRequest;
+import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentSlotRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.regex.Matcher;
@@ -15,6 +18,11 @@ public class SlideDesignPromptBuilder {
     /** Reads data-body-top="N" emitted by Step 1's header band. */
     private static final Pattern BODY_TOP_ATTR =
             Pattern.compile("data-body-top=\"(\\d+)\"");
+
+    private static final String CONTENT_SLOTS_INSTRUCTION = """
+            You are filling existing presentation placeholders. Return JSON only, never HTML.
+            Use only facts supplied in the outline, allocate distinct content across repeated zones, and keep text Vietnamese.
+            """;
 
     // ----------------------------------------------------------------
     // STEP 1 — Deck skin: Background + Decoration + Header
@@ -57,17 +65,27 @@ public class SlideDesignPromptBuilder {
             <canvas>
             Exactly 960×540 px. The root MUST be a single &lt;div&gt;:
               &lt;div data-layer="bg"
+                   data-surface-color="#[your light surface hex]"
                    style="position:relative; width:960px; height:540px;
                    overflow:hidden; font-family:Inter,sans-serif;
                    background:[your mood's background]"&gt;
                 ...decoration children only...
               &lt;/div&gt;
             data-layer="bg" on the root signals the L0 background layer.
+            data-surface-color MUST be a light, low-saturation 6-digit hex
+            color chosen by you from the mood. It will be rendered at 60%
+            opacity behind body content, so it must keep dark text readable.
             </canvas>
 
             <mood_palette required="true">
             Pick ONE mood (A–E) or invent one following the 3-color ×
             3-typeface principle:
+
+            LIGHT-ONLY POLICY: the root canvas background MUST be a light
+            color (relative luminance suitable for dark text). Do not use
+            navy, black, charcoal, or any dark full-canvas background.
+            Mood B/E may contribute a pale grid or small dark decorations,
+            but must use their light variants as the canvas background.
 
               A. EDITORIAL ACADEMIC — cream #faf7f2 + navy #0b2545 + coral
                  #e63946. Newsreader serif + Inter.
@@ -83,6 +101,9 @@ public class SlideDesignPromptBuilder {
                  Inter.
 
             Use exactly 3 colors total: 1 dominant + 1 accent + 1 neutral.
+            The neutral MUST be the light surface color written to
+            data-surface-color. Even for dark moods, choose a pale neutral
+            such as off-white rather than a second dark color.
             FORBIDDEN: more than 4 colors, pure saturated primaries
             (#ff0000, #00ff00, #ffff00).
             </mood_palette>
@@ -610,10 +631,12 @@ public class SlideDesignPromptBuilder {
                               z-index:65;"&gt;
                     &lt;li&gt;…&lt;/li&gt;
                   &lt;/ul&gt;
-                  Treat data-max-chars / data-max-lines as soft hints:
-                  keep the teacher's real content intact; if it slightly
-                  exceeds the hint, shorten gently rather than dropping
-                  facts. Avoid tiny dense walls of text.
+                  data-max-chars / data-max-lines are a FIT CONTRACT, not
+                  decoration: fit the assigned content inside the zone at
+                  readable type. Condense phrasing and distribute distinct
+                  facts to other matching zones before reducing type below
+                  12px. Never hide, clip, or repeat facts merely to fill a
+                  zone. Avoid tiny dense walls of text.
 
               data-zone="aside"
                 → APPEND ONE IMAGE PLACEHOLDER DIV — NOT a real
@@ -708,7 +731,9 @@ public class SlideDesignPromptBuilder {
             <constraints>
               - Vietnamese text inside the slide. English ONLY for
                 data-image-prompt values and design tokens.
-              - Respect data-max-chars and data-max-lines on each zone.
+              - Respect data-max-chars and data-max-lines on each zone as
+                hard visual limits. Every content child must fit within its
+                parent zone's width and height, including margins.
               - DO NOT add new top-level elements (e.g. don't add a
                 new structural div as sibling of existing zones).
                 Content children live INSIDE their zone.
@@ -738,6 +763,16 @@ public class SlideDesignPromptBuilder {
             </output_format>
             """;
 
+    public static String defaultInstruction(AiPromptKey key) {
+        return switch (key) {
+            case SLIDE_DESIGN_BACKGROUND -> STEP1_BG_DECO_PROMPT;
+            case SLIDE_DESIGN_STRUCTURE -> STEP2_STRUCT_ZONES_PROMPT;
+            case SLIDE_DESIGN_CONTENT_FILL -> STEP3_CONTENT_FILL_PROMPT;
+            case SLIDE_DESIGN_CONTENT_SLOTS -> CONTENT_SLOTS_INSTRUCTION;
+            default -> throw new IllegalArgumentException("Unsupported slide-design prompt key: " + key);
+        };
+    }
+
     public String buildStep1BgDecoPrompt(SlideHtmlDesignRequest req) {
         String subject = (req.subject() == null || req.subject().isBlank())
                 ? "Vật lý"
@@ -753,7 +788,9 @@ public class SlideDesignPromptBuilder {
             user.append("  <teacher_style_hint>").append(styleHint).append("</teacher_style_hint>\n");
         }
         user.append("</request>\n\n");
-        user.append("Pick a mood (A–E or invent one). Emit the L0 root background, ");
+        user.append("Pick a LIGHT mood (A–E or invent one). The L0 root background must be pale and readable with dark text; never use a dark full-canvas background. Emit the L0 root background, ");
+        user.append("choose one light neutral content-surface color and write it as ");
+        user.append("data-surface-color=\"#RRGGBB\" on the root, then emit ");
         user.append("1–3 L1 decoration children, AND the L2 HEADER PLACEHOLDER ");
         user.append("that reserves the deck-level masthead bbox. Render the header ");
         user.append("as a dashed-outline debug placeholder INSET from the canvas ");
@@ -851,6 +888,12 @@ public class SlideDesignPromptBuilder {
         user.append("those legend spans. Do not modify any opening tag, inline ");
         user.append("style, or existing text. Respect each zone's data-max-chars ");
         user.append("and data-max-lines.\n\n");
+        user.append("Use each zone's data-content-hint to decide which part of the outline ");
+        user.append("belongs there. When multiple zones share the same data-zone value (for ");
+        user.append("example comparison columns or process steps), DISTRIBUTE distinct outline ");
+        user.append("parts across them in visual order; never repeat the same content in every ");
+        user.append("zone. Leave a zone empty when the outline has no matching content.\n\n");
+
         user.append("For data-zone=\"aside\" emit a placeholder DIV with ");
         user.append("data-image-prompt (English), NOT a real <img> with src — the ");
         user.append("image pipeline runs separately.\n\n");
@@ -858,6 +901,44 @@ public class SlideDesignPromptBuilder {
         user.append("RIGHT NOW. No preamble. No fence. HTML only.");
 
         return STEP3_CONTENT_FILL_PROMPT + "\n\n" + user;
+    }
+
+    /** Builds the compact JSON-only prompt used to fill existing editor placeholders. */
+    public String buildStep3ContentSlotsPrompt(SlideContentFillRequest req) {
+        String subject = req.subject() == null || req.subject().isBlank() ? "Vật lý" : req.subject().strip();
+        String topic = req.topic() == null ? "" : req.topic().strip();
+        String outline = req.outline() == null ? "" : req.outline().strip();
+        String styleHint = req.styleHint() == null ? "" : req.styleHint().strip();
+        String palette = req.palette() == null || req.palette().isEmpty() ? "#2b2926, #ffffff, #d97757" : String.join(", ", req.palette());
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append(CONTENT_SLOTS_INSTRUCTION).append("\n");
+        prompt.append("SUBJECT: ").append(subject).append("\nTOPIC: ").append(topic).append("\n");
+        if (!styleHint.isEmpty()) prompt.append("STYLE HINT: ").append(styleHint).append("\n");
+        prompt.append("ALLOWED COLORS: ").append(palette).append("\n\n");
+        prompt.append("OUTLINE (Vietnamese source of truth):\n").append(outline.isEmpty() ? "(none)" : outline).append("\n\n");
+        prompt.append("SLOTS (fill each exactly once; use null when no matching source content exists):\n");
+        for (SlideContentSlotRequest slot : req.slots() == null ? java.util.List.<SlideContentSlotRequest>of() : req.slots()) {
+            if (slot == null) continue;
+            prompt.append("- id=").append(slot.id()).append(", kind=").append(slot.kind())
+                    .append(", zone=").append(slot.zone()).append(", maxChars=").append(slot.maxChars())
+                    .append(", maxLines=").append(slot.maxLines()).append(", hint=").append(slot.hint()).append("\n");
+            prompt.append("  sourceBlockId=").append(slot.sourceBlockId())
+                    .append(", sourcePartId=").append(slot.sourcePartId())
+                    .append(", sourceText=").append(slot.sourceText()).append("\n");
+        }
+        prompt.append("\nRules:\n")
+                .append("- Use only facts supplied in the outline; do not invent examples, questions, or activities.\n")
+                .append("- Allocate distinct content across repeated zones in listed order; do not repeat text.\n")
+                .append("- Text must be Vietnamese and MUST fit within maxChars/maxLines for its slot — these are hard limits, not suggestions. Never exceed maxChars. Rewrite concisely (drop secondary detail, keep the single most essential fact) rather than going over the limit or ending mid-sentence.\n")
+                .append("- When a text slot contains 2 or more distinct facts, steps, causes, features, examples, or answers, return 2–4 short lines beginning with `• `; do not write one long paragraph. Keep a single-sentence definition, conclusion, or transition as prose.\n")
+                .append("- For image slots, text must be null and imagePrompt must be a specific English image prompt; do not provide an image URL.\n")
+                .append("- Text style is optional. fontSize must suit the zone, color must be one of ALLOWED COLORS, align is left/center/right.\n")
+                .append("- Return every requested slot and no other slot.\n\n")
+                .append("Required JSON schema:\n")
+                .append("{\"slots\":[{\"slotId\":\"hero-1\",\"text\":\"...\",\"imagePrompt\":null,\"style\":{\"fontSize\":42,\"color\":\"#...\",\"bold\":true,\"italic\":false,\"align\":\"left\"}}]}\n")
+                .append("Output JSON only. No markdown fence or explanation.");
+        return prompt.toString();
     }
 
     /**

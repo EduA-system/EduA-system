@@ -4,6 +4,7 @@ package com.edua.beeduasystem.presentation.dto.blog;
 public record CreateBlogPostRequest(
         String title,
         String content,
-        String subject
+        String subject,
+        String thumbnailUrl
 ) {
 }

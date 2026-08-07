@@ -110,6 +110,12 @@
             <artifactId>jsoup</artifactId>
             <version>1.18.1</version>
         </dependency>
+        <!-- Apache POI: doc file .xlsx cho Add Student Import (UC-36). -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
 
         <!-- ==== Auth: Google OAuth2 (verify id_token) + JWT + rate limit ==== -->
         <dependency>
@@ -202,6 +208,16 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- Integration tests tu tao schema edua_*_it; khong chay cung test/lifecycle mac dinh. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*IntegrationTests.java</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
         </plugins>
     </build>
