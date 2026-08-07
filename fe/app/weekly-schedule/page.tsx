@@ -232,6 +232,9 @@ function WeeklyScheduleScreen() {
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
   // BR-51: Mod luôn thao tác trong phạm vi đúng 1 khối đã chọn.
   const [modGrade, setModGrade] = useState<WeeklyTaskGrade>(10);
+  // Teacher xem lịch của mình mọi khối (BR-51 vẫn cho phép dạy nhiều khối) — filter khối chỉ để lọc hiển
+  // thị, không bắt buộc như Mod, nên mặc định "Tất cả khối" (null).
+  const [teacherGradeFilter, setTeacherGradeFilter] = useState<number | null>(null);
 
   // ── Sửa 1 giáo viên trong 1 tuần (Moderator) ──────────────────────────
   const [formOpen, setFormOpen] = useState(false);
@@ -263,7 +266,7 @@ function WeeklyScheduleScreen() {
       const range = monthRange(viewYear, viewMonth);
       const data = isModerator
         ? await getWeeklySchedule(authFetch, range.from, range.to, modGrade)
-        : await getWeeklySchedule(authFetch);
+        : await getWeeklySchedule(authFetch, range.from, range.to);
       setSchedule(data);
       setError("");
     } catch (e) {
@@ -408,6 +411,15 @@ function WeeklyScheduleScreen() {
     }
   }
 
+  // Task của giáo viên gộp mọi khối họ dạy trong 1 lịch — lọc theo `teacherGradeFilter` để không lẫn lộn
+  // khối 10/11 trong cùng 1 tuần; tuần nào rỗng sau khi lọc thì bỏ hẳn, không hiện dòng trống.
+  const teacherWeeks = schedule.weeks
+    .map((week) => ({
+      ...week,
+      tasks: teacherGradeFilter === null ? week.tasks : week.tasks.filter((t) => t.grade === teacherGradeFilter),
+    }))
+    .filter((week) => week.tasks.length > 0);
+
   return (
     <main className="min-h-screen bg-white text-[#2b2926]">
       <div className="flex min-h-screen">
@@ -425,19 +437,21 @@ function WeeklyScheduleScreen() {
             </div>
           </header>
 
-          {isModerator ? (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <MonthPicker
-                year={viewYear}
-                month={viewMonth}
-                onChange={(y, m) => {
-                  setViewYear(y);
-                  setViewMonth(m);
-                }}
-              />
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <MonthPicker
+              year={viewYear}
+              month={viewMonth}
+              onChange={(y, m) => {
+                setViewYear(y);
+                setViewMonth(m);
+              }}
+            />
+            {isModerator ? (
               <GradeSelect value={modGrade} onChange={(g) => g !== null && setModGrade(g as WeeklyTaskGrade)} />
-            </div>
-          ) : null}
+            ) : (
+              <GradeSelect value={teacherGradeFilter} onChange={setTeacherGradeFilter} includeAll />
+            )}
+          </div>
 
           <Modal
             open={createOpen}
@@ -734,9 +748,9 @@ function WeeklyScheduleScreen() {
                 </tbody>
               </table>
             </div>
-          ) : schedule.weeks.length === 0 ? (
+          ) : teacherWeeks.length === 0 ? (
             <div className="mt-8 rounded-2xl border border-dashed bg-white p-12 text-center text-sm text-[#6b6b6b]">
-              Chưa có nhiệm vụ tuần nào.
+              {teacherGradeFilter !== null ? `Chưa có nhiệm vụ tuần nào cho khối ${teacherGradeFilter}.` : "Chưa có nhiệm vụ tuần nào."}
             </div>
           ) : (
             <div className="mt-6 overflow-x-auto rounded-2xl border bg-white">
@@ -746,7 +760,7 @@ function WeeklyScheduleScreen() {
                   <col />
                 </colgroup>
                 <tbody>
-                  {schedule.weeks.map((week) => {
+                  {teacherWeeks.map((week) => {
                     const currentWeek = isCurrentWeek(week.weekStartDate);
                     return (
                       <tr key={week.weekStartDate} className="border-t border-[#e8e2db] align-top">
