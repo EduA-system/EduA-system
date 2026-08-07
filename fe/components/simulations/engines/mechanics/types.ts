@@ -142,6 +142,8 @@ export type CurveTrackConstraint = {
   appearance?: "rollerCoaster" | "hidden" | "galileiRamp";
   /** Renderer-only: draw track offset from the constraint path along local normal. */
   visualOffset?: number;
+  /** Renderer-only: skip drawing the track entirely (apparatus vẽ riêng). */
+  hidden?: boolean;
 };
 
 /**
@@ -182,7 +184,23 @@ export type VectorAnnotation = {
   color?: string;
   label?: string;
   labelPosition?: "tip" | "outside";
+  labelSize?: number;
   width?: number; // độ dày thân mũi tên (px); vắng → renderer dùng mặc định
+};
+
+/**
+ * Vector hợp lực ĐỘNG cho con lắc đơn — renderer tự tính từ trạng thái thực
+ * (trọng lực + lực căng dây) mỗi frame, khác VectorAnnotation (dx/dy chốt sẵn).
+ */
+export type PendulumResultantAnnotation = {
+  kind: "pendulumResultant";
+  pivot: string;
+  body: string;
+  scale?: number;
+  maxLength?: number;
+  color?: string;
+  label?: string;
+  showMagnitude?: boolean;
 };
 
 /**
@@ -258,7 +276,8 @@ export type Annotation =
   | SpringVectorAnnotation
   | SpringActionReactionAnnotation
   | PhotogateTimerAnnotation
-  | CircularMotionVectorsAnnotation;
+  | CircularMotionVectorsAnnotation
+  | PendulumResultantAnnotation;
 
 /**
  * Một cảnh mô phỏng = vật + lực + ràng buộc. Đây là thứ AI (tầng 2) khai báo;

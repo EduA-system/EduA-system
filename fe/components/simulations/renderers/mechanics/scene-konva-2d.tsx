@@ -742,6 +742,23 @@ export function SceneKonva2D({
           const dy = 3 * mt * mt * (c1.y - p1.y) + 6 * mt * t * (c2.y - c1.y) + 3 * t * t * (p2.y - c2.y);
           addArrowhead(layer, bx, by, Math.atan2(dy, dx), color);
         }
+      } else if (ann.kind === "arc") {
+        const center = toScreen(ann.x, ann.y);
+        const r = ann.radius * scale;
+        const arc = new Konva.Shape({
+          stroke: ann.color ?? "#94a3b8",
+          strokeWidth: ann.strokeWidth ?? 2,
+          listening: false,
+          sceneFunc: (ctx, shape) => {
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, r, (ann.startAngle * Math.PI) / 180, (ann.endAngle * Math.PI) / 180);
+            ctx.strokeShape(shape);
+          },
+        });
+        layer.add(arc);
+      } else if (ann.kind === "velocity") {
+        // Vector vận tốc động — cần đọc vx/vy của body theo từng frame; renderer
+        // này chưa hỗ trợ (ann.body). Bỏ qua để không vỡ dựng annotation khác.
       } else {
         const p = toScreen(ann.x, ann.y);
         const text = new Konva.Text({
@@ -2168,11 +2185,11 @@ export function SceneKonva2D({
         const signLbl = signLabels[b.id];
         if (signLbl) signLbl.position({ x: sp.x - signLbl.width() / 2, y: sp.y - signLbl.height() / 2 });
         const v = readVelocity(state, b.id);
-        bodies.push({ id: b.id, x: wpt.x, y: wpt.y, speed: Math.hypot(v.x, v.y) });
+        bodies.push({ id: b.id, x: wpt.x, y: wpt.y, vx: v.x, vy: v.y, speed: Math.hypot(v.x, v.y) });
       }
       if (readoutTick % 5 === 0) {
         const e = energyOf(work, state);
-        onReadoutRef.current?.({ bodies, energy: { ke: e.ke, pe: e.pe, total: e.ke + e.pe } });
+        onReadoutRef.current?.({ time: simulationSeconds, bodies, energy: { ke: e.ke, pe: e.pe, total: e.ke + e.pe } });
       }
       readoutTick++;
     };

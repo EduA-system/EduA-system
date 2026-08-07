@@ -151,34 +151,6 @@ const SceneKonvaIronFilings = dynamic(
     ).then((m) => m.SceneKonvaIronFilings),
   { ssr: false },
 );
-const SceneKonvaRotation = dynamic(
-  () => import("@/components/simulations/renderers/rotation/scene-konva-rotation").then((m) => m.SceneKonvaRotation),
-  { ssr: false },
-);
-const SceneKonvaMagneticLoop = dynamic(
-  () => import("@/components/simulations/renderers/magnetic-loop/scene-konva-ac-generator").then((m) => m.SceneKonvaAcGenerator),
-  { ssr: false },
-);
-const SceneKonvaMagnetism = dynamic(
-  () => import("@/components/simulations/renderers/magnetism/scene-konva-magnetism").then((m) => m.SceneKonvaMagnetism),
-  { ssr: false },
-);
-const SceneKonvaParallelCurrentSheets = dynamic(
-  () => import("@/components/simulations/renderers/parallel-current-sheets/scene-konva-parallel-current-sheets").then((m) => m.SceneKonvaParallelCurrentSheets),
-  { ssr: false },
-);
-const SceneKonvaElectromagneticInduction = dynamic(
-  () => import("@/components/simulations/renderers/electromagnetic-induction/scene-konva-electromagnetic-induction").then((m) => m.SceneKonvaElectromagneticInduction),
-  { ssr: false },
-);
-const SceneKonvaVariableCurrentInduction = dynamic(
-  () => import("@/components/simulations/renderers/electromagnetic-induction/scene-konva-variable-current-induction").then((m) => m.SceneKonvaVariableCurrentInduction),
-  { ssr: false },
-);
-const SceneKonvaIronFilings = dynamic(
-  () => import("@/components/simulations/renderers/iron-filings/scene-konva-iron-filings").then((m) => m.SceneKonvaIronFilings),
-  { ssr: false },
-);
 // Canvas thuần — điện phổ 2 điện tích điểm (đường sức truy vết RK4 thật).
 const SceneCanvasPointChargeField = dynamic(
   () =>
