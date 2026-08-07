@@ -17,16 +17,57 @@ export const dinhLuat3Newton: Preset = {
   domain: "Cơ học",
   grade: 10,
   desc: "Quan sát một vật gắn lò xo áp lại gần một vật khác khi thả tay sẽ thấy hai vật đẩy nhau",
-  objective: "Lò xo nén tác dụng lên hai vật hai lực cùng độ lớn, ngược chiều và đặt lên hai vật khác nhau.",
+  objective: "Khi xe A tác dụng lên xe B một lực, xe B đồng thời tác dụng trở lại lên xe A một lực cùng độ lớn và ngược chiều.",
   sgkRef: "Vật lí 10 — Định luật III Newton",
   startPaused: true,
+  paramGuide:
+    "Định luật III Newton: khi xe A tác dụng lên xe B một lực, xe B cũng tác dụng trở lại lên xe A một lực cùng độ lớn, ngược chiều. Hãy thay đổi tham số để quan sát cặp lực tương tác và chuyển động của từng xe.",
   params: [
-    { key: "mA", label: "Khối lượng vật A", unit: "kg", min: 0.5, max: 8, step: 0.1, default: 1 },
-    { key: "mB", label: "Khối lượng vật B", unit: "kg", min: 0.5, max: 8, step: 0.1, default: 1 },
-    { key: "k", label: "Độ cứng lò xo", unit: "N/m", min: 10, max: 80, step: 1, default: 40 },
-    { key: "compression", label: "Độ nén ban đầu", unit: "m", min: 0.15, max: 0.6, step: 0.05, default: 0.4 },
+    {
+      key: "mA",
+      label: "Khối lượng xe A",
+      unit: "kg",
+      min: 0.5,
+      max: 8,
+      step: 0.1,
+      default: 1,
+      description: "Xe A càng nặng thì lực từ xe B làm xe A tăng tốc chậm hơn; lực A tác dụng B và B tác dụng A vẫn bằng nhau.",
+    },
+    {
+      key: "mB",
+      label: "Khối lượng xe B",
+      unit: "kg",
+      min: 0.5,
+      max: 8,
+      step: 0.1,
+      default: 1,
+      description: "Xe B càng nặng thì lực từ xe A làm xe B tăng tốc chậm hơn; lực A tác dụng B và B tác dụng A vẫn bằng nhau.",
+    },
+    {
+      key: "k",
+      label: "Độ cứng lò xo",
+      unit: "N/m",
+      min: 10,
+      max: 80,
+      step: 1,
+      default: 40,
+      description: "Lò xo càng cứng thì cặp lực A tác dụng B và B tác dụng A càng lớn, hai xe tách ra nhanh hơn.",
+    },
+    {
+      key: "compression",
+      label: "Độ nén ban đầu",
+      unit: "m",
+      min: 0.15,
+      max: 0.6,
+      step: 0.05,
+      default: 0.4,
+      description: "Lò xo bị nén càng nhiều thì cặp lực tương tác giữa hai xe càng lớn.",
+    },
   ],
-  bodyLabels: { "vat-a": "A", "vat-b": "B" },
+  bodyLabels: { "vat-a": "Xe A", "vat-b": "Xe B" },
+  trackingLabels: { "vat-a": "Xe A (xanh)", "vat-b": "Xe B (cam)" },
+  hideBodyLabelsOnCanvas: true,
+  hideCoordinateLabels: true,
   applyParams: (p) => {
     const { mA, mB, k, compression } = values(p);
     const initialLength = REST_LENGTH - compression;
@@ -50,6 +91,7 @@ export const dinhLuat3Newton: Preset = {
         },
       ],
       view: { minX: -5, maxX: 5, minY: 0, maxY: 2.2 },
+      disableDragging: true,
       // Keep the road and both carts above the shared zoom controls.
       groundPadding: 120,
     };
@@ -73,7 +115,7 @@ export const dinhLuat3Newton: Preset = {
       {
         key: "action-reaction",
         label: "Cặp lực tương tác",
-        description: "Khi nhả lò xo, lực B tác dụng lên A và lực A tác dụng lên B luôn bằng nhau về độ lớn, ngược chiều và cùng xuất hiện.",
+        description: "Khi xe A tác dụng lên xe B một lực, xe B đồng thời tác dụng trở lại lên xe A một lực. Hai lực luôn bằng nhau về độ lớn, ngược chiều và đặt lên hai xe khác nhau.",
         values: (p) => {
           const { force } = values(p);
           return [

@@ -24,11 +24,22 @@ export const doPTBangLucKe: Preset = {
   title: "Đo trọng lượng của vật bằng lực kế",
   domain: "Cơ học",
   grade: 10,
-  desc: "Treo một vật vào lực kế, quan sát lực kế đo được lực bao nhiêu",
-  objective: "Hiểu lực kế đo lực căng dây. Khi vật treo đứng yên, lực căng cân bằng trọng lực nên số chỉ lực kế T = P = mg.",
+  desc: "Treo một vật vào lực kế để quan sát số chỉ lực kế thay đổi theo trọng lượng của vật.",
+  objective: "Lực kế đo lực căng dây T. Khi vật treo đứng yên, lực căng cân bằng trọng lực P = mg nên số chỉ lực kế chính là T = P = mg.",
   sgkRef: "Vật lí 10 — Bài 17",
+  paramGuide:
+    "Sửa khối lượng của vật để quan sát trọng lực P = mg tăng theo khối lượng và số chỉ lực kế T thay đổi tương ứng.",
   params: [
-    { key: "mass", label: "Khối lượng vật", unit: "kg", min: 0.1, max: 5, step: 0.1, default: 1 },
+    {
+      key: "mass",
+      label: "Khối lượng vật",
+      unit: "kg",
+      min: 0.1,
+      max: 5,
+      step: 0.1,
+      default: 1,
+      description: "Khối lượng càng lớn thì trọng lực P = mg càng lớn, nên lực căng dây T mà lực kế đo cũng tăng theo.",
+    },
   ],
   applyParams: (p) => {
     const { mass, weight, hookY } = values(p);
@@ -141,7 +152,7 @@ export const doPTBangLucKe: Preset = {
       {
         key: "weight",
         label: "Trọng lượng của vật",
-        description: "Trọng lực P là lực Trái Đất tác dụng lên vật, hướng thẳng đứng xuống dưới. Với g = 9,8 m/s², độ lớn P = mg.",
+        description: "Trọng lực P = mg là lực Trái Đất tác dụng lên vật, hướng thẳng đứng xuống dưới.",
         atTime: () => 0,
         values: (p) => {
           const { mass, weight } = values(p);
@@ -155,7 +166,7 @@ export const doPTBangLucKe: Preset = {
       {
         key: "reading",
         label: "Số chỉ lực kế",
-        description: "Lực kế mắc nối tiếp với dây nên số chỉ của lực kế là độ lớn lực căng dây T. Khi vật đứng yên, T = P.",
+        description: "Lực kế đo lực căng dây T. Khi vật đứng yên, lực căng cân bằng trọng lực P nên số chỉ là T = P = mg.",
         values: (p) => {
           const { weight } = values(p);
           return [
@@ -168,7 +179,7 @@ export const doPTBangLucKe: Preset = {
       {
         key: "equilibrium",
         label: "Điều kiện cân bằng",
-        description: "Khi vật đứng yên, lực căng dây hướng lên cân bằng với trọng lực hướng xuống: T = P.",
+        description: "Khi vật đứng yên, lực căng dây T hướng lên cân bằng với trọng lực P hướng xuống: T = P = mg.",
         values: (p) => {
           const { weight } = values(p);
           return [

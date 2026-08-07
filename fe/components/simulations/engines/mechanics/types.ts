@@ -231,6 +231,9 @@ export type PhotogateTimerAnnotation = {
   endX: number;
   at: { x: number; y: number };
   color?: string;
+  distance?: number;
+  resultAt?: { x: number; y: number };
+  resultBottom?: number;
 };
 
 /**
@@ -268,6 +271,9 @@ export type Scene = {
   // Hệ số đàn hồi e ∈ [0,1] dùng CHUNG cho mọi va chạm trong cảnh. Mặc định 1
   // (va chạm đàn hồi hoàn toàn — bảo toàn động năng). e = 0: va chạm mềm (dính).
   restitution?: number;
+  // Bật cho scene bảo toàn cơ năng lý tưởng. Kernel sẽ hiệu chỉnh sai số số học
+  // sau bước chiếu ràng buộc để W = Wđ + Wt không trôi theo thời gian.
+  conserveMechanicalEnergy?: boolean;
   // Lớp chú thích hình học (vector lực/vận tốc…). CHỈ để vẽ — kernel bỏ qua
   // hoàn toàn. Vắng (đa số preset) → không vẽ gì, hành vi y hệt trước.
   annotations?: Annotation[];
@@ -286,4 +292,9 @@ export type Scene = {
   disableDragging?: boolean;
   // Khoảng cách từ mặt đất tới đáy canvas (px), dùng khi cần tránh lớp điều khiển nổi.
   groundPadding?: number;
+  // Khoảng đệm theo tỉ lệ chiều cao canvas; ưu tiên hơn groundPadding khi có.
+  groundPaddingRatio?: number;
+  // Dịch toàn bộ scene lên theo tỉ lệ chiều cao mà không làm thay đổi scale.
+  viewShiftYRatio?: number;
+  preferredScale?: number;
 };

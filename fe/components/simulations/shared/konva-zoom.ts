@@ -61,6 +61,10 @@ export function attachZoomPan(
   // Khoá NGAY TRONG LÚC kéo (không đợi thả tay mới chỉnh lại) — tránh giật.
   stage.dragBoundFunc((pos) => clampPos(pos, zoom));
   stage.on("wheel", (e) => {
+    // Ctrl/Command + cuộn là thao tác đổi tỉ lệ của trình duyệt. Không được
+    // đồng thời biến nó thành zoom canvas, nếu không scene sẽ tích luỹ zoom
+    // và các chi tiết nhỏ như bánh xe bị phóng đại sau khi đổi tỉ lệ màn hình.
+    if (e.evt.ctrlKey || e.evt.metaKey) return;
     e.evt.preventDefault();
     const pointer = stage.getPointerPosition();
     const factor = 1.08;

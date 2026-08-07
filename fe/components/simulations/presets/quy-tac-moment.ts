@@ -32,21 +32,23 @@ export const quyTacMoment: Preset = {
   title: "Quy tắc moment bập bênh",
   domain: "Cơ học",
   grade: 10,
-  desc: "Khảo sát tác dụng làm quay của trọng lực ở hai phía trục bập bênh.",
+  desc: "Khảo sát moment lực do trọng lượng hai người trên bập bênh.",
   objective:
-    "Hiểu moment lực M = F.d và điều kiện cân bằng M₁ = M₂. Với mỗi người ngồi trên bập bênh, moment của trọng lực quanh trục là M = m.g.d.",
+    "Hiểu moment lực M = F.d và điều kiện cân bằng M₁ = M₂. Người nặng hơn hoặc ngồi xa trục hơn sẽ tạo moment lớn hơn, nên bập bênh nghiêng về phía đó.",
   sgkRef: "Vật lí 10",
+  paramGuide:
+    "Thử đổi khối lượng và khoảng cách tới trục để thấy: người nào nặng hơn hoặc ngồi xa trục hơn sẽ tạo moment lớn hơn. Khi hai moment bằng nhau thì bập bênh cân bằng.",
   params: [
-    { key: "mLeft", label: "Khối lượng bên trái", unit: "kg", min: 0.1, max: 20, step: 0.1, default: 2 },
-    { key: "dLeft", label: "Khoảng cách bên trái", unit: "m", min: 0.2, max: 3, step: 0.1, default: 1.5 },
-    { key: "mRight", label: "Khối lượng bên phải", unit: "kg", min: 0.1, max: 20, step: 0.1, default: 3 },
-    { key: "dRight", label: "Khoảng cách bên phải", unit: "m", min: 0.2, max: 3, step: 0.1, default: 1 },
-    { key: "g", label: "Gia tốc trọng trường", unit: "m/s²", min: 1.6, max: 20, step: 0.1, default: 9.8 },
+    { key: "mLeft", label: "Khối lượng người bên trái", unit: "kg", min: 60, max: 80, step: 1, default: 70, description: "Người bên trái càng nặng thì trọng lượng P = m.g càng lớn, nên moment bên trái càng tăng." },
+    { key: "dLeft", label: "Khoảng cách người bên trái", unit: "m", min: 0.8, max: 1.8, step: 0.1, default: 1.5, description: "Ngồi càng xa trục thì moment càng lớn, dù khối lượng không đổi." },
+    { key: "mRight", label: "Khối lượng người bên phải", unit: "kg", min: 60, max: 80, step: 1, default: 70, description: "Người bên phải càng nặng thì trọng lượng P = m.g càng lớn, nên moment bên phải càng tăng." },
+    { key: "dRight", label: "Khoảng cách người bên phải", unit: "m", min: 0.8, max: 1.8, step: 0.1, default: 1.5, description: "Ngồi càng xa trục thì moment càng lớn, dù khối lượng không đổi." },
+    { key: "g", label: "Gia tốc trọng trường", unit: "m/s²", min: 1.6, max: 20, step: 0.1, default: 9.8, description: "Dùng để đổi khối lượng thành trọng lượng P = m.g. Trên Trái Đất, g xấp xỉ 9,8 m/s²." },
   ],
   quickPresets: [
-    { label: "Cân bằng", params: { mLeft: 2, dLeft: 1.5, mRight: 3, dRight: 1, g: 9.8 } },
-    { label: "Bên trái hạ", params: { mLeft: 3, dLeft: 1.5, mRight: 2, dRight: 1, g: 9.8 } },
-    { label: "Bên phải hạ", params: { mLeft: 2, dLeft: 1, mRight: 3, dRight: 1.5, g: 9.8 } },
+    { label: "Cân bằng", params: { mLeft: 70, dLeft: 1.5, mRight: 70, dRight: 1.5, g: 9.8 } },
+    { label: "Bên trái hạ", params: { mLeft: 80, dLeft: 1.5, mRight: 60, dRight: 1.2, g: 9.8 } },
+    { label: "Bên phải hạ", params: { mLeft: 60, dLeft: 1.2, mRight: 80, dRight: 1.5, g: 9.8 } },
   ],
   applyParams: (p) => {
     const { mLeft, dLeft, mRight, dRight, g } = values(p);
@@ -89,7 +91,7 @@ export const quyTacMoment: Preset = {
       {
         key: "moment-left",
         label: "Moment bên trái",
-        description: "Moment bên trái quanh trục O bằng trọng lượng nhân với cánh tay đòn: M₁ = P₁.d₁.",
+        description: "Moment bên trái quanh trục O bằng trọng lượng nhân với cánh tay đòn: M₁ = P₁.d₁. Ngồi càng xa trục thì moment càng lớn.",
         values: (p) => {
           const { PLeft, dLeft, MLeft } = values(p);
           return [
@@ -102,7 +104,7 @@ export const quyTacMoment: Preset = {
       {
         key: "moment-right",
         label: "Moment bên phải",
-        description: "Moment bên phải M₂ = P₂.d₂ gây quay theo chiều ngược với moment bên trái.",
+        description: "Moment bên phải M₂ = P₂.d₂ gây quay theo chiều ngược với moment bên trái. Người bên phải nặng hơn hoặc ngồi xa hơn thì M₂ tăng.",
         values: (p) => {
           const { PRight, dRight, MRight } = values(p);
           return [
@@ -115,7 +117,7 @@ export const quyTacMoment: Preset = {
       {
         key: "balance",
         label: "Kết luận",
-        description: "Bập bênh cân bằng khi hai moment ngược chiều có độ lớn bằng nhau: m₁.g.d₁ = m₂.g.d₂.",
+        description: "Bập bênh cân bằng khi hai moment ngược chiều có độ lớn bằng nhau: m₁.g.d₁ = m₂.g.d₂. Tăng khối lượng hoặc tăng khoảng cách đều làm moment lớn hơn.",
         values: (p) => {
           const { MLeft, MRight, net, state } = values(p);
           return [

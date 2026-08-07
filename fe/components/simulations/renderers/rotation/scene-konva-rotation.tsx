@@ -132,7 +132,7 @@ function SceneKonvaDiskRotation({
 
     layer.add(new Konva.Rect({ x: 16, y: 16, width: 220, height: 90, fill: "#111c2f", opacity: 0.94, stroke: "#334155", strokeWidth: 1, cornerRadius: 12, listening: false }));
     const info = new Konva.Text({ x: 30, y: 29, width: 194, fontSize: 12, fill: "#e2e8f0", fontFamily: "monospace", lineHeight: 1.55 });
-    const status = new Konva.Text({ x: 0, y: H - 44, width: W, align: "center", fontSize: 12, fontStyle: "bold", fill: "#fbbf24", fontFamily: "monospace" });
+    const status = new Konva.Text({ x: 16, y: 116, width: 220, align: "left", fontSize: 12, fontStyle: "bold", fill: "#fbbf24", fontFamily: "monospace" });
     layer.add(info, status);
 
     const draw = (state: RotationState) => {
@@ -177,7 +177,7 @@ function SceneKonvaDiskRotation({
       const balanced = Math.abs(torques.net) < 1e-6;
       const direction = balanced ? "Cân bằng" : torques.net > 0 ? "Quay ngược chiều kim đồng hồ" : "Quay theo chiều kim đồng hồ";
       info.text(`M₁ = P₁·d₁ = ${torques.left.toFixed(2)} N·m\nM₂ = P₂·d₂ = ${torques.right.toFixed(2)} N·m\nΣM = ${torques.net.toFixed(2)} N·m\nθ = ${(state.theta * RAD_TO_DEG).toFixed(1)}°   ω = ${state.omega.toFixed(2)} rad/s`);
-      status.text(state.stoppedAtLimit ? "Đĩa đã dừng ở giới hạn hành trình dây" : direction);
+      status.text(state.stoppedAtLimit ? "Đĩa đã dừng" : direction);
       layer.batchDraw();
     };
 

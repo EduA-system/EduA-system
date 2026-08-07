@@ -59,14 +59,52 @@ export const mangCongGalilei: Preset = {
   title: "Máng cong Galilei",
   domain: "Cơ học",
   grade: 10,
-  desc: "Quan sát viên bi lăn theo máng nghiêng",
-  objective: "Quan sát viên bi lăn theo máng nghiêng",
+  desc: "Quan sát viên bi đi xuống một nhánh máng và đi lên nhánh đối diện để tìm hiểu quán tính.",
+  objective: "Thấy rằng nếu không có hao phí, viên bi có xu hướng trở lại độ cao ban đầu; nhánh đối diện càng thoải thì bi phải đi càng xa, dẫn tới ý tưởng về chuyển động theo quán tính.",
   sgkRef: "Vật lí 10",
+  paramGuide:
+    "Thả viên bi từ nhánh trái: trọng lực làm bi đi xuống, tăng tốc ở đáy rồi đi lên nhánh phải. Khi không có hao phí, bi có xu hướng đạt lại độ cao ban đầu; nhánh phải càng thoải thì bi phải đi càng xa. Nếu nhánh phải nằm ngang và không có ma sát, bi sẽ tiếp tục chuyển động theo quán tính.",
   params: [
-    { key: "h", label: "Độ cao ban đầu", unit: "m", min: 0.8, max: 4, step: 0.1, default: 2.6 },
-    { key: "angle", label: "Độ dốc nhánh phải", unit: "°", min: 8, max: 55, step: 1, default: 25 },
-    { key: "loss", label: "Hao phí quy đổi", unit: "N·s/m", min: 0, max: 0.5, step: 0.02, default: 0 },
-    { key: "g", label: "Gia tốc trọng trường", unit: "m/s²", min: 1.6, max: 20, step: 0.1, default: 9.8 },
+    {
+      key: "h",
+      label: "Độ cao ban đầu",
+      unit: "m",
+      min: 0.8,
+      max: 4,
+      step: 0.1,
+      default: 2.6,
+      description: "Thả bi càng cao thì thế năng ban đầu càng lớn, nên bi đạt tốc độ ở đáy máng càng cao.",
+    },
+    {
+      key: "angle",
+      label: "Độ dốc nhánh phải",
+      unit: "°",
+      min: 8,
+      max: 55,
+      step: 1,
+      default: 25,
+      description: "Nhánh phải càng thoải thì viên bi phải đi quãng đường càng dài để tiến gần độ cao ban đầu.",
+    },
+    {
+      key: "loss",
+      label: "Hao phí quy đổi",
+      unit: "N·s/m",
+      min: 0,
+      max: 0.5,
+      step: 0.02,
+      default: 0,
+      description: "Hao phí càng lớn thì cơ năng mất càng nhiều, nên viên bi lên được độ cao thấp hơn ở nhánh phải.",
+    },
+    {
+      key: "g",
+      label: "Gia tốc trọng trường",
+      unit: "m/s²",
+      min: 1.6,
+      max: 20,
+      step: 0.1,
+      default: 9.8,
+      description: "g càng lớn thì trọng lực kéo bi xuống mạnh hơn và tốc độ của bi ở đáy máng càng cao.",
+    },
   ],
   applyParams: (p) => {
     const h = p.h ?? 2.6;
@@ -97,8 +135,11 @@ export const mangCongGalilei: Preset = {
       constraints: [{ kind: "curveTrack", body: "ball", points, friction: 0, appearance: "galileiRamp", visualOffset: ballRadius }],
       view: { minX: -3.9, maxX: Math.max(3.8, rightReach(h, angle) + 0.7), minY: -0.35, maxY: h + 0.75 },
       groundPadding: 72,
+      disableDragging: true,
+      conserveMechanicalEnergy: loss <= 1e-9,
     };
   },
+  trackingLabels: { ball: "Viên bi trên máng cong" },
   analysis: {
     landmarks: [
       {
