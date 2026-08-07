@@ -672,129 +672,149 @@ function WeeklyScheduleScreen() {
               Chưa có nhiệm vụ tuần nào.
             </div>
           ) : (
-            <div className="mt-6 space-y-6">
-              {schedule.weeks.map((week) => (
-                <div key={week.weekStartDate}>
-                  <h2 className="mb-3 text-sm font-semibold text-[#6b6b6b]">Tuần {weekLabel(week.weekStartDate)}</h2>
-                  <div className="space-y-3">
-                    {week.tasks.map((t) => {
-                      const expired = isPastDeadline(t.deadline);
-                      const current = isCurrentWeek(t.weekStartDate);
-                      return (
-                        <article key={t.id} className="rounded-2xl border bg-white p-4">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses[t.reviewStatus]}`}>
-                                  {statusLabels[t.reviewStatus]}
-                                </span>
-                                <span className="rounded-full bg-[#edf4ff] px-2 py-0.5 text-xs font-semibold text-[#2f5f9b]">
-                                  Khối {t.grade}
-                                </span>
-                                <span className="text-xs text-[#6b6b6b]">{subjectLabel(t.subject)}</span>
-                              </div>
-                              <p className="mt-2 text-sm font-medium">{t.scopeDescription}</p>
-                              <p className="mt-0.5 text-xs text-[#6b6b6b]">
-                                {t.chapterName} · {t.lessonName}
-                              </p>
-                              <p className="mt-2 text-xs text-[#6b6b6b]">
-                                Hạn nộp: {formatDateTime(t.deadline)}
-                                {expired ? " (đã quá hạn)" : ""}
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2 text-sm">
-                              {current && !expired && t.reviewStatus === "REJECTED" && t.sourceLibraryContentId ? (
-                                <button
-                                  onClick={() => void handleResubmit(t)}
-                                  disabled={resubmittingId === t.id}
-                                  title="Nộp lại đúng giáo án đã chọn trước đó"
-                                  className="text-[#b85c3b] underline disabled:opacity-50"
-                                >
-                                  {resubmittingId === t.id ? "Đang nộp lại..." : "Nộp lại"}
-                                </button>
-                              ) : current &&
-                                !expired &&
-                                (t.reviewStatus === "NOT_SUBMITTED" || (t.reviewStatus === "REJECTED" && !t.sourceLibraryContentId)) ? (
-                                <button onClick={() => openSubmitPanel(t)} className="text-[#b85c3b] underline">
-                                  Nộp giáo án
-                                </button>
-                              ) : null}
-                              {current && !expired && t.reviewStatus === "SUBMITTED" ? (
-                                <button onClick={() => void handleUnsubmit(t.id, t.scopeDescription)} className="text-red-600 underline">
-                                  Hủy nộp
-                                </button>
-                              ) : null}
-                              {!current ? (
-                                <span
-                                  className="text-xs text-[#8a8178]"
-                                  title="Chỉ có thể nộp/rút giáo án trong tuần đang diễn ra"
-                                >
-                                  {weekHasEnded(t.weekStartDate) ? "Đã qua tuần" : "Chưa tới tuần"}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          {submittingId === t.id ? (
-                            <div className="mt-4 rounded-xl border bg-[#f9f7f4] p-3">
-                              <div className="flex gap-4 text-sm">
-                                <label className="flex items-center gap-1.5">
-                                  <input
-                                    type="radio"
-                                    checked={submitMode === "library"}
-                                    onChange={() => setSubmitMode("library")}
-                                  />
-                                  Chọn từ thư viện
-                                </label>
-                                <label className="flex items-center gap-1.5">
-                                  <input
-                                    type="radio"
-                                    checked={submitMode === "upload"}
-                                    onChange={() => setSubmitMode("upload")}
-                                  />
-                                  Tải tệp lên
-                                </label>
-                              </div>
-                              {submitMode === "library" ? (
-                                <select
-                                  value={selectedLessonPlanId}
-                                  onChange={(e) => setSelectedLessonPlanId(e.target.value)}
-                                  className="mt-3 w-full rounded-xl border p-2 text-sm"
-                                >
-                                  <option value="">Chọn giáo án...</option>
-                                  {ownedLessonPlans.map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                      {c.title}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <input
-                                  type="file"
-                                  onChange={(e) => setUploadFileObj(e.target.files?.[0] ?? null)}
-                                  className="mt-3 w-full text-sm"
-                                />
-                              )}
-                              <div className="mt-3 flex justify-end gap-2">
-                                <button onClick={() => setSubmittingId(null)} className="rounded-xl px-4 py-2 text-sm">
-                                  Hủy
-                                </button>
-                                <button
-                                  onClick={() => void handleSubmitTask(t.id)}
-                                  disabled={submitting || (submitMode === "library" ? !selectedLessonPlanId : !uploadFileObj)}
-                                  className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
-                                >
-                                  {submitting ? "Đang nộp..." : "Nộp"}
-                                </button>
-                              </div>
-                            </div>
+            <div className="mt-6 overflow-x-auto rounded-2xl border bg-white">
+              <table className="w-full min-w-[520px] table-fixed border-collapse text-sm">
+                <colgroup>
+                  <col className="w-32" />
+                  <col />
+                </colgroup>
+                <tbody>
+                  {schedule.weeks.map((week) => {
+                    const currentWeek = isCurrentWeek(week.weekStartDate);
+                    return (
+                      <tr key={week.weekStartDate} className="border-t border-[#e8e2db] align-top">
+                        <td className="border-r border-[#e8e2db] p-3">
+                          <p className="text-sm font-medium">{weekLabel(week.weekStartDate)}</p>
+                          {currentWeek ? (
+                            <span className="mt-1 inline-block rounded-full bg-[#e8724a]/10 px-2 py-0.5 text-[11px] font-medium text-[#b85c3b]">
+                              Đang diễn ra
+                            </span>
                           ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                        </td>
+                        <td className="p-3">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {week.tasks.map((t) => {
+                              const expired = isPastDeadline(t.deadline);
+                              const current = isCurrentWeek(t.weekStartDate);
+                              return (
+                                <article key={t.id} className="rounded-2xl border bg-white p-4">
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses[t.reviewStatus]}`}>
+                                          {statusLabels[t.reviewStatus]}
+                                        </span>
+                                        <span className="rounded-full bg-[#edf4ff] px-2 py-0.5 text-xs font-semibold text-[#2f5f9b]">
+                                          Khối {t.grade}
+                                        </span>
+                                        <span className="text-xs text-[#6b6b6b]">{subjectLabel(t.subject)}</span>
+                                      </div>
+                                      <p className="mt-2 text-sm font-medium">{t.scopeDescription}</p>
+                                      <p className="mt-0.5 text-xs text-[#6b6b6b]">
+                                        {t.chapterName} · {t.lessonName}
+                                      </p>
+                                      <p className="mt-2 text-xs text-[#6b6b6b]">
+                                        Hạn nộp: {formatDateTime(t.deadline)}
+                                        {expired ? " (đã quá hạn)" : ""}
+                                      </p>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-2 text-sm">
+                                      {current && !expired && t.reviewStatus === "REJECTED" && t.sourceLibraryContentId ? (
+                                        <button
+                                          onClick={() => void handleResubmit(t)}
+                                          disabled={resubmittingId === t.id}
+                                          title="Nộp lại đúng giáo án đã chọn trước đó"
+                                          className="text-[#b85c3b] underline disabled:opacity-50"
+                                        >
+                                          {resubmittingId === t.id ? "Đang nộp lại..." : "Nộp lại"}
+                                        </button>
+                                      ) : current &&
+                                        !expired &&
+                                        (t.reviewStatus === "NOT_SUBMITTED" || (t.reviewStatus === "REJECTED" && !t.sourceLibraryContentId)) ? (
+                                        <button onClick={() => openSubmitPanel(t)} className="text-[#b85c3b] underline">
+                                          Nộp giáo án
+                                        </button>
+                                      ) : null}
+                                      {current && !expired && t.reviewStatus === "SUBMITTED" ? (
+                                        <button onClick={() => void handleUnsubmit(t.id, t.scopeDescription)} className="text-red-600 underline">
+                                          Hủy nộp
+                                        </button>
+                                      ) : null}
+                                      {!current ? (
+                                        <span
+                                          className="text-xs text-[#8a8178]"
+                                          title="Chỉ có thể nộp/rút giáo án trong tuần đang diễn ra"
+                                        >
+                                          {weekHasEnded(t.weekStartDate) ? "Đã qua tuần" : "Chưa tới tuần"}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </div>
+
+                                  {submittingId === t.id ? (
+                                    <div className="mt-4 rounded-xl border bg-[#f9f7f4] p-3">
+                                      <div className="flex gap-4 text-sm">
+                                        <label className="flex items-center gap-1.5">
+                                          <input
+                                            type="radio"
+                                            checked={submitMode === "library"}
+                                            onChange={() => setSubmitMode("library")}
+                                          />
+                                          Chọn từ thư viện
+                                        </label>
+                                        <label className="flex items-center gap-1.5">
+                                          <input
+                                            type="radio"
+                                            checked={submitMode === "upload"}
+                                            onChange={() => setSubmitMode("upload")}
+                                          />
+                                          Tải tệp lên
+                                        </label>
+                                      </div>
+                                      {submitMode === "library" ? (
+                                        <select
+                                          value={selectedLessonPlanId}
+                                          onChange={(e) => setSelectedLessonPlanId(e.target.value)}
+                                          className="mt-3 w-full rounded-xl border p-2 text-sm"
+                                        >
+                                          <option value="">Chọn giáo án...</option>
+                                          {ownedLessonPlans.map((c) => (
+                                            <option key={c.id} value={c.id}>
+                                              {c.title}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      ) : (
+                                        <input
+                                          type="file"
+                                          onChange={(e) => setUploadFileObj(e.target.files?.[0] ?? null)}
+                                          className="mt-3 w-full text-sm"
+                                        />
+                                      )}
+                                      <div className="mt-3 flex justify-end gap-2">
+                                        <button onClick={() => setSubmittingId(null)} className="rounded-xl px-4 py-2 text-sm">
+                                          Hủy
+                                        </button>
+                                        <button
+                                          onClick={() => void handleSubmitTask(t.id)}
+                                          disabled={submitting || (submitMode === "library" ? !selectedLessonPlanId : !uploadFileObj)}
+                                          className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
+                                        >
+                                          {submitting ? "Đang nộp..." : "Nộp"}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : null}
+                                </article>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
