@@ -31,6 +31,15 @@ import type { WaveScene } from "@/components/simulations/engines/wave/types";
 import type { StringWaveScene } from "@/components/simulations/engines/string-wave/types";
 import type { WaveFieldScene } from "@/components/simulations/engines/wave-field/types";
 import type { PointChargeFieldScene } from "@/components/simulations/engines/point-charge-field/types";
+import type { RotationScene } from "@/components/simulations/engines/rotation/types";
+import type { MagneticLoopScene } from "@/components/simulations/engines/magnetic-loop/types";
+import type { MagneticScene } from "@/components/simulations/engines/magnetism/types";
+import type { ParallelCurrentSheetsScene } from "@/components/simulations/engines/parallel-current-sheets/types";
+import type { IronFilingsScene } from "@/components/simulations/engines/iron-filings/types";
+import type {
+  ElectromagneticInductionScene,
+  VariableCurrentInductionScene,
+} from "@/components/simulations/engines/electromagnetic-induction/types";
 
 // Konva chạm DOM → chỉ tải phía client.
 const SceneKonva2D = dynamic(
@@ -50,6 +59,34 @@ const SceneCanvasWaveField = dynamic(
   () => import("@/components/simulations/renderers/wave-field/scene-canvas-wave-field").then((m) => m.SceneCanvasWaveField),
   { ssr: false },
 );
+const SceneKonvaRotation = dynamic(
+  () => import("@/components/simulations/renderers/rotation/scene-konva-rotation").then((m) => m.SceneKonvaRotation),
+  { ssr: false },
+);
+const SceneKonvaMagneticLoop = dynamic(
+  () => import("@/components/simulations/renderers/magnetic-loop/scene-konva-ac-generator").then((m) => m.SceneKonvaAcGenerator),
+  { ssr: false },
+);
+const SceneKonvaMagnetism = dynamic(
+  () => import("@/components/simulations/renderers/magnetism/scene-konva-magnetism").then((m) => m.SceneKonvaMagnetism),
+  { ssr: false },
+);
+const SceneKonvaParallelCurrentSheets = dynamic(
+  () => import("@/components/simulations/renderers/parallel-current-sheets/scene-konva-parallel-current-sheets").then((m) => m.SceneKonvaParallelCurrentSheets),
+  { ssr: false },
+);
+const SceneKonvaElectromagneticInduction = dynamic(
+  () => import("@/components/simulations/renderers/electromagnetic-induction/scene-konva-electromagnetic-induction").then((m) => m.SceneKonvaElectromagneticInduction),
+  { ssr: false },
+);
+const SceneKonvaVariableCurrentInduction = dynamic(
+  () => import("@/components/simulations/renderers/electromagnetic-induction/scene-konva-variable-current-induction").then((m) => m.SceneKonvaVariableCurrentInduction),
+  { ssr: false },
+);
+const SceneKonvaIronFilings = dynamic(
+  () => import("@/components/simulations/renderers/iron-filings/scene-konva-iron-filings").then((m) => m.SceneKonvaIronFilings),
+  { ssr: false },
+);
 // Canvas thuần — điện phổ 2 điện tích điểm (đường sức truy vết RK4 thật).
 const SceneCanvasPointChargeField = dynamic(
   () =>
@@ -62,12 +99,23 @@ const SceneCanvasPointChargeField = dynamic(
 /* ─────────────────────────── Dữ liệu catalog ─────────────────────────── */
 
 const DOMAINS: Domain[] = ["Cơ học", "Dao động & Sóng", "Quang học", "Điện & Từ", "Nhiệt & Khí", "Hạt nhân"];
+// Các mô phỏng đã được rà lại sau đợt cập nhật nội dung và trực quan hoá.
+const REVIEWED_SIMULATION_IDS = new Set([
+  "ong-newton",
+  "nem-ngang",
+  "nem-xien",
+  "tong-hop-hai-luc-cung-phuong",
+  "phan-tich-luc",
+  "mang-cong-galilei",
+  "dinh-luat-2-newton",
+  "dinh-luat-3-newton",
+  "do-p-t-bang-luc-ke",
+]);
 
 // Lĩnh vực chưa có kernel → hiển thị thẻ disabled để giữ bản đồ chương trình đầy đủ.
 type Placeholder = { id: string; title: string; domain: Domain; grade: 10 | 11 | 12; desc: string };
 const PLACEHOLDERS: Placeholder[] = [
   { id: "ohm", title: "Định luật Ohm", domain: "Điện & Từ", grade: 11, desc: "Mạch điện cơ bản, khảo sát quan hệ U – I – R." },
-  { id: "induction", title: "Cảm ứng điện từ", domain: "Điện & Từ", grade: 12, desc: "Nam châm chuyển động qua cuộn dây sinh dòng cảm ứng." },
   { id: "boyle", title: "Định luật Boyle", domain: "Nhiệt & Khí", grade: 12, desc: "Nén khí đẳng nhiệt, quan sát quan hệ p – V." },
   { id: "decay", title: "Phóng xạ & chu kỳ bán rã", domain: "Hạt nhân", grade: 12, desc: "Mô phỏng phân rã ngẫu nhiên theo thời gian." },
 ];
@@ -76,21 +124,124 @@ const PLACEHOLDERS: Placeholder[] = [
 
 function Thumb({ id }: { id: string }) {
   const common = "h-full w-full";
-  const frame = (children: ReactNode) => (
+  const frame = (children: ReactNode, background = "#0f172a") => (
     <svg viewBox="0 0 200 120" className={common}>
-      <rect width="200" height="120" fill="#0f172a" />
+      <rect width="200" height="120" fill={background} />
       {children}
     </svg>
   );
 
   switch (id) {
-    case "dinh-luat-2-newton":
+    case "dinh-luat-3-newton":
       return frame(
         <>
           <line x1="20" y1="90" x2="180" y2="90" stroke="#475569" strokeWidth="2" />
-          <rect x="58" y="66" width="30" height="24" rx="3" fill="#f472b6" />
-          <path d="M96 78 h44" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" />
-          <path d="M132 70 l12 8 l-12 8" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="48" y="64" width="30" height="22" rx="3" fill="#60a5fa" />
+          <rect x="122" y="64" width="30" height="22" rx="3" fill="#f59e0b" />
+          <path d="M78 75 h7 l4 -7 l5 14 l5 -14 l5 14 l5 -7 h13" fill="none" stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M58 48 h-23" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M39 44 l-8 4 l8 4" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M142 48 h23" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M161 44 l8 4 l-8 4" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="58" y="105" fontSize="11" fontWeight="700" fill="#cbd5e1">A</text>
+          <text x="132" y="105" fontSize="11" fontWeight="700" fill="#cbd5e1">B</text>
+        </>,
+      );
+    case "do-p-t-bang-luc-ke":
+      return frame(
+        <>
+          <line x1="54" y1="18" x2="146" y2="18" stroke="#475569" strokeWidth="3" />
+          <rect x="78" y="24" width="44" height="28" rx="6" fill="#1e293b" stroke="#94a3b8" strokeWidth="2" />
+          <path d="M86 42 A14 14 0 0 1 114 42" fill="none" stroke="#38bdf8" strokeWidth="2" />
+          <path d="M100 42 L110 34" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="100" y1="52" x2="100" y2="78" stroke="#cbd5e1" strokeWidth="2" />
+          <rect x="84" y="78" width="32" height="22" rx="3" fill="#f472b6" />
+          <path d="M128 78 v24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M121 94 l7 10 l7 -10" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="134" y="96" fontSize="11" fontWeight="700" fill="#34d399">P</text>
+          <path d="M72 78 v-24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M65 62 l7 -10 l7 10" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="58" y="58" fontSize="11" fontWeight="700" fill="#60a5fa">T</text>
+        </>,
+      );
+    case "quy-tac-moment":
+      return frame(
+        <>
+          <g transform="rotate(-6 100 58)">
+            <line x1="28" y1="58" x2="172" y2="58" stroke="#cbd5e1" strokeWidth="6" strokeLinecap="round" />
+            <rect x="42" y="34" width="22" height="22" rx="4" fill="#60a5fa" />
+            <rect x="134" y="34" width="30" height="30" rx="4" fill="#f472b6" />
+          </g>
+          <circle cx="100" cy="58" r="8" fill="#fbbf24" />
+          <path d="M100 66 L84 102 H116 Z" fill="#475569" />
+          <path d="M52 62 H100 M100 54 H150" stroke="#64748b" strokeWidth="2" strokeDasharray="5 4" />
+          <text x="70" y="53" fontSize="10" fill="#93c5fd">d₁</text>
+          <text x="124" y="51" fontSize="10" fill="#f9a8d4">d₂</text>
+          <text x="66" y="116" fontSize="11" fontWeight="700" fill="#fbbf24">M = m·g·d</text>
+        </>,
+      );
+    case "quy-tac-moment-dia-tron":
+      return frame(
+        <>
+          <circle cx="100" cy="57" r="36" fill="#0c4a6e" opacity="0.45" stroke="#38bdf8" strokeWidth="3" />
+          <circle cx="100" cy="57" r="27" fill="none" stroke="#38bdf8" strokeWidth="2" />
+          <circle cx="100" cy="57" r="18" fill="none" stroke="#38bdf8" strokeWidth="2" />
+          <path d="M64 57 H136 M100 21 V93 M74 31 L126 83 M126 31 L74 83" stroke="#7dd3fc" strokeWidth="1.5" opacity="0.8" />
+          <circle cx="100" cy="57" r="6" fill="#e2e8f0" stroke="#334155" strokeWidth="2" />
+          <path d="M73 57 V84 M127 57 V73" stroke="#e2e8f0" strokeWidth="2" />
+          <rect x="61" y="84" width="24" height="20" rx="3" fill="#60a5fa" />
+          <rect x="115" y="73" width="24" height="20" rx="3" fill="#f472b6" />
+          <path d="M56 100 v12 M144 88 v12" stroke="#93c5fd" strokeWidth="2" />
+          <path d="M50 107 l6 8 l6 -8 M138 95 l6 8 l6 -8" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="50" y="45" fontSize="10" fontWeight="700" fill="#93c5fd">d₁</text>
+          <text x="130" y="45" fontSize="10" fontWeight="700" fill="#f9a8d4">d₂</text>
+          <text x="61" y="117" fontSize="10" fontWeight="700" fill="#fbbf24">M₁ = M₂</text>
+        </>,
+      );
+    case "dinh-luat-2-newton":
+      return frame(
+        <>
+          {/* Máng trượt, xe và tấm chắn sáng. */}
+          <rect x="18" y="72" width="156" height="10" rx="2" fill="#334155" stroke="#cbd5e1" strokeWidth="1.5" />
+          <rect x="24" y="74" width="145" height="2" fill="#dbeafe" />
+          <rect x="60" y="55" width="31" height="17" rx="3" fill="#60a5fa" stroke="#1e3a8a" strokeWidth="1.5" />
+          <circle cx="67" cy="74" r="5" fill="#111827" stroke="#cbd5e1" strokeWidth="1.5" />
+          <circle cx="84" cy="74" r="5" fill="#111827" stroke="#cbd5e1" strokeWidth="1.5" />
+          <path d="M71 55 V35" stroke="#cbd5e1" strokeWidth="2" />
+          <rect x="71" y="34" width="8" height="14" rx="1" fill="#e2e8f0" />
+
+          {/* Hai cổng quang điện. */}
+          <path d="M82 72 V32 M103 72 V32" stroke="#64748b" strokeWidth="3" />
+          <rect x="77" y="29" width="10" height="7" rx="2" fill="#2563eb" />
+          <rect x="98" y="29" width="10" height="7" rx="2" fill="#2563eb" />
+          <path d="M82 43 H103" stroke="#7dd3fc" strokeWidth="1.5" strokeDasharray="3 3" />
+          <text x="84" y="52" fontSize="8" fontWeight="700" fill="#7dd3fc">0,5 m</text>
+
+          {/* Dây, ròng rọc và quả nặng. */}
+          <path d="M91 63 H168 V101" fill="none" stroke="#cbd5e1" strokeWidth="1.8" />
+          <circle cx="168" cy="63" r="9" fill="#1e293b" stroke="#cbd5e1" strokeWidth="2" />
+          <circle cx="168" cy="63" r="3" fill="#cbd5e1" />
+          <rect x="160" y="96" width="16" height="17" rx="2" fill="#f59e0b" />
+
+          {/* Bộ đo thời gian. */}
+          <rect x="89" y="91" width="48" height="24" rx="4" fill="#111827" stroke="#94a3b8" strokeWidth="1.5" />
+          <rect x="95" y="98" width="21" height="9" rx="1" fill="#0f3d2e" stroke="#34d399" strokeWidth="1" />
+          <text x="98" y="105" fontSize="7" fontFamily="monospace" fill="#86efac">0.000</text>
+        </>,
+      );
+    case "tong-hop-hai-luc-cung-phuong":
+      return frame(
+        <>
+          <line x1="20" y1="92" x2="180" y2="92" stroke="#475569" strokeWidth="2" />
+          <rect x="86" y="54" width="28" height="24" rx="3" fill="#f472b6" />
+          {/* F₁ sang trái (xanh) */}
+          <path d="M84 66 H36" fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" />
+          <path d="M45 60 l-9 6 l9 6" fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="30" y="52" fontSize="11" fontWeight="700" fill="#60a5fa">F₁</text>
+          {/* F₂ sang phải (cam), dài hơn → hợp lực sang phải */}
+          <path d="M116 66 H172" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
+          <path d="M163 60 l9 6 l-9 6" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="160" y="52" fontSize="11" fontWeight="700" fill="#f59e0b">F₂</text>
         </>,
       );
     case "nem-xien":
@@ -101,13 +252,88 @@ function Thumb({ id }: { id: string }) {
           <line x1="20" y1="100" x2="180" y2="100" stroke="#475569" strokeWidth="2" />
         </>,
       );
-    case "roi-tu-do":
+    case "mang-cong-galilei":
       return frame(
         <>
-          <line x1="100" y1="20" x2="100" y2="92" stroke="#a78bfa" strokeWidth="2" strokeDasharray="4 4" />
-          <circle cx="100" cy="30" r="6" fill="#f472b6" />
-          <path d="M94 70 L100 84 L106 70" fill="none" stroke="#34d399" strokeWidth="2" />
-          <line x1="40" y1="100" x2="160" y2="100" stroke="#475569" strokeWidth="2" />
+          <path d="M28 28 C52 80 76 96 100 96 C128 96 150 72 172 30" fill="none" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" />
+          <path d="M28 28 C52 80 76 96 100 96 C128 96 150 72 172 30" fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="34" cy="34" r="7" fill="#f472b6" />
+          <path d="M42 44 Q70 83 98 94" fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 4" />
+          <text x="126" y="54" fontSize="11" fontWeight="700" fill="#cbd5e1">h</text>
+          <path d="M158 34 V92" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 3" />
+        </>,
+      );
+    case "dinh-luat-hooke":
+      return frame(
+        <>
+          <line x1="60" y1="14" x2="140" y2="14" stroke="#475569" strokeWidth="3" />
+          {/* Lò xo zig-zag từ giá treo xuống quả cân */}
+          <path d="M100 14 l-7 6 l14 7 l-14 7 l14 7 l-14 7 l7 6" fill="none" stroke="#a78bfa" strokeWidth="2" />
+          <rect x="86" y="66" width="28" height="22" rx="3" fill="#f472b6" />
+          {/* Mũi tên độ giãn Δℓ */}
+          <path d="M150 20 V64" stroke="#34d399" strokeWidth="1.5" strokeDasharray="3 3" />
+          <text x="154" y="46" fontSize="11" fontWeight="700" fill="#34d399">Δℓ</text>
+        </>,
+      );
+    case "luc-huong-tam":
+      return frame(
+        <>
+          {/* Quỹ đạo tròn */}
+          <circle cx="100" cy="60" r="42" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
+          <circle cx="100" cy="60" r="4" fill="#94a3b8" />
+          {/* Dây + vật */}
+          <line x1="100" y1="60" x2="142" y2="60" stroke="#94a3b8" strokeWidth="2" />
+          <circle cx="142" cy="60" r="8" fill="#f472b6" />
+          {/* Lực hướng tâm (vào tâm) + vận tốc (tiếp tuyến) */}
+          <path d="M138 60 H112" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M120 55 l-8 5 l8 5" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M142 56 V26" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M137 34 l5 -8 l5 8" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="150" y="40" fontSize="10" fontWeight="700" fill="#60a5fa">v</text>
+        </>,
+      );
+    case "dong-nang-the-nang":
+      return frame(
+        <>
+          {/* Ray: dốc cong xuống rồi chạy ngang (chạy một lần) */}
+          <path d="M26 26 C44 92 66 98 92 98 L176 98" fill="none" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" />
+          <path d="M26 26 C44 92 66 98 92 98 L176 98" fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Xe hình hộp ở đỉnh dốc */}
+          <rect x="24" y="24" width="15" height="12" rx="2" fill="#f472b6" transform="rotate(-42 31 30)" />
+          {/* Nhãn năng lượng: đỉnh = Wt, chân dốc = Wđ */}
+          <text x="30" y="18" fontSize="11" fontWeight="700" fill="#34d399">Wt</text>
+          <text x="120" y="90" fontSize="11" fontWeight="700" fill="#fbbf24">Wđ</text>
+        </>,
+      );
+    case "nem-ngang":
+      return frame(
+        <>
+          <line x1="24" y1="100" x2="180" y2="100" stroke="#475569" strokeWidth="2" />
+          <line x1="34" y1="24" x2="34" y2="100" stroke="#64748b" strokeWidth="3" />
+          <line x1="34" y1="24" x2="78" y2="24" stroke="#64748b" strokeWidth="3" />
+          <path d="M78 24 Q118 32 160 96" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeDasharray="4 4" />
+          <line x1="52" y1="24" x2="52" y2="96" stroke="#60a5fa" strokeWidth="2" strokeDasharray="4 4" />
+          <circle cx="78" cy="24" r="6" fill="#f472b6" />
+          <circle cx="52" cy="24" r="6" fill="#60a5fa" />
+          <path d="M88 24 h28" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M108 17 l10 7 l-10 7" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="160" cy="96" r="6" fill="#f472b6" />
+          <circle cx="52" cy="96" r="6" fill="#60a5fa" />
+        </>,
+      );
+    case "ong-newton":
+      return frame(
+        <>
+          <rect x="18" y="10" width="76" height="98" rx="16" fill="#111827" stroke="#94a3b8" strokeWidth="2" />
+          <rect x="106" y="10" width="76" height="98" rx="16" fill="#111827" stroke="#7dd3fc" strokeWidth="2" />
+          <line x1="22" y1="18" x2="90" y2="18" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+          <line x1="110" y1="18" x2="178" y2="18" stroke="#7dd3fc" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="43" cy="79" r="7" fill="#94a3b8" stroke="#e2e8f0" strokeWidth="1.5" />
+          <image href="/simulations/newton/feather.png" x="57" y="38" width="30" height="30" transform="rotate(-48 72 53)" />
+          <circle cx="131" cy="72" r="7" fill="#94a3b8" stroke="#e2e8f0" strokeWidth="1.5" />
+          <image href="/simulations/newton/feather.png" x="145" y="57" width="30" height="30" transform="rotate(-48 160 72)" />
+          <line x1="22" y1="100" x2="90" y2="100" stroke="#64748b" strokeWidth="4" />
+          <line x1="110" y1="100" x2="178" y2="100" stroke="#64748b" strokeWidth="4" />
         </>,
       );
     case "con-lac-don":
@@ -117,6 +343,19 @@ function Thumb({ id }: { id: string }) {
           <circle cx="148" cy="86" r="9" fill="#f472b6" />
           <line x1="60" y1="12" x2="140" y2="12" stroke="#475569" strokeWidth="3" />
           <path d="M100 24 A 64 64 0 0 1 148 86" fill="none" stroke="#a78bfa" strokeWidth="1.5" strokeDasharray="3 3" />
+        </>,
+      );
+    case "bao-toan-co-nang-con-lac":
+      return frame(
+        <>
+          <line x1="60" y1="12" x2="140" y2="12" stroke="#475569" strokeWidth="3" />
+          {/* Hai vị trí con lắc: biên (Wt max) và thấp nhất (Wđ max) */}
+          <line x1="100" y1="12" x2="150" y2="84" stroke="#94a3b8" strokeWidth="1.5" opacity="0.5" />
+          <circle cx="150" cy="84" r="8" fill="#34d399" opacity="0.55" />
+          <line x1="100" y1="12" x2="100" y2="100" stroke="#94a3b8" strokeWidth="2" />
+          <circle cx="100" cy="100" r="9" fill="#fbbf24" />
+          <text x="120" y="72" fontSize="11" fontWeight="700" fill="#34d399">Wt</text>
+          <text x="66" y="98" fontSize="11" fontWeight="700" fill="#fbbf24">Wđ</text>
         </>,
       );
     case "con-lac-lo-xo":
@@ -145,11 +384,21 @@ function Thumb({ id }: { id: string }) {
       return frame(
         <path d="M20 60 Q35 20 50 60 T80 60 T110 60 T140 60 T170 60" fill="none" stroke="#a78bfa" strokeWidth="2" />,
       );
-    case "mat-nghieng-ma-sat":
+    case "phan-tich-luc":
       return frame(
         <>
-          <path d="M30 100 L170 100 L170 50 Z" fill="#1e293b" stroke="#475569" strokeWidth="2" />
-          <rect x="120" y="58" width="22" height="16" rx="2" fill="#f472b6" transform="rotate(-20 131 66)" />
+          <path d="M28 98 L174 98 L174 42 Z" fill="#1e293b" stroke="#475569" strokeWidth="2" />
+          <line x1="36" y1="94" x2="166" y2="45" stroke="#86efac" strokeWidth="4" strokeLinecap="round" />
+          <rect x="110" y="54" width="28" height="18" rx="3" fill="#86efac" stroke="#14532d" strokeWidth="1.5" transform="rotate(-21 124 63)" />
+          <path d="M124 63 v36" stroke="#f8fafc" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M117 90 l7 10 l7 -10" fill="none" stroke="#f8fafc" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="132" y="98" fontSize="11" fontWeight="700" fill="#f8fafc">P</text>
+          <path d="M124 63 l-17 31" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M105 83 l2 12 l10 -7" fill="none" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="88" y="93" fontSize="11" fontWeight="700" fill="#fbbf24">P1</text>
+          <path d="M124 63 l34 13" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M147 68 l12 8 l-14 2" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="160" y="81" fontSize="11" fontWeight="700" fill="#60a5fa">P2</text>
         </>,
       );
     case "giao-thoa-song-nuoc":
@@ -303,6 +552,118 @@ function Thumb({ id }: { id: string }) {
           <path d="M97 56 L101 60 L97 64" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </>,
       );
+    case "tuong-tac-nam-cham-va-kim-nam-cham":
+      return frame(
+        <>
+          <circle cx="132" cy="59" r="31" fill="#f8fafc" stroke="#94a3b8" strokeWidth="2" />
+          <path d="M105 59 L132 53 L159 59 L132 65 Z" fill="#dc2626" stroke="#991b1b" strokeWidth="1" />
+          <path d="M105 59 L132 53 L132 65 Z" fill="#2563eb" stroke="#1d4ed8" strokeWidth="1" />
+          <circle cx="132" cy="59" r="4" fill="#f8fafc" stroke="#475569" strokeWidth="1.5" />
+          <text x="148" y="51" fontSize="10" fontWeight="bold" fill="#dc2626">N</text>
+          <text x="108" y="72" fontSize="10" fontWeight="bold" fill="#60a5fa">S</text>
+          <rect x="22" y="45" width="60" height="28" rx="4" fill="#2563eb" stroke="#1e3a8a" strokeWidth="2" />
+          <path d="M22 45h30v28H22z" fill="#dc2626" />
+          <text x="34" y="63" fontSize="13" fontWeight="bold" fill="#fff">N</text>
+          <text x="64" y="63" fontSize="13" fontWeight="bold" fill="#fff">S</text>
+          <path d="M88 54 C98 43 105 43 113 48" fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="3 3" />
+        </>,
+      );
+    case "tuong-tac-hai-tam-kim-loai-mang-dong-dien":
+      return frame(
+        <>
+          <rect x="35" y="18" width="130" height="10" rx="2" fill="#b77945" />
+          {[65, 135].map((x, index) => (
+            <g key={x}>
+              <rect x={x - 16} y="25" width="32" height="13" rx="2" fill="#cbd5e1" stroke="#64748b" strokeWidth="1.5" />
+              <circle cx={x - 11} cy="31" r="2.5" fill="#f8fafc" stroke="#334155" />
+              <circle cx={x + 11} cy="31" r="2.5" fill="#f8fafc" stroke="#334155" />
+              <rect x={x - 11} y="38" width="22" height="48" rx="2" fill="#b9c3cc" stroke="#475569" strokeWidth="1.5" />
+              <path d={index === 0 ? "M" + x + " 76V48" : "M" + x + " 48V76"} stroke={index === 0 ? "#e11d48" : "#2563eb"} strokeWidth="3" />
+              <path d={index === 0 ? "M" + (x - 4) + " 53 L" + x + " 47 L" + (x + 4) + " 53" : "M" + (x - 4) + " 71 L" + x + " 77 L" + (x + 4) + " 71"} fill="none" stroke={index === 0 ? "#e11d48" : "#2563eb"} strokeWidth="2" />
+              <rect x={x - 16} y="84" width="32" height="10" rx="2" fill="#cbd5e1" stroke="#64748b" strokeWidth="1.5" />
+            </g>
+          ))}
+          <path d="M91 63 h18" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
+          <path d="M105 59 l6 4 l-6 4" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </>,
+      );
+
+    case "tu-pho":
+      return frame(
+        <>
+          <rect x="18" y="16" width="164" height="88" rx="6" fill="#17233a" />
+          <g stroke="#94a3b8" strokeWidth="1" opacity=".8">
+            <path d="M35 60 Q72 24 104 60 Q136 96 170 60" fill="none" />
+            <path d="M30 45 Q75 12 108 55 Q142 94 174 44" fill="none" />
+            <path d="M30 76 Q75 108 108 65 Q142 26 174 76" fill="none" />
+            <path d="M42 32 Q78 15 110 55 Q135 82 160 31" fill="none" />
+            <path d="M42 88 Q78 105 110 65 Q135 38 160 89" fill="none" />
+          </g>
+          <rect x="62" y="50" width="76" height="20" rx="3" fill="#dc2626" stroke="#7f1d1d" strokeWidth="1.5" />
+          <rect x="100" y="50" width="38" height="20" rx="3" fill="#2563eb" />
+          <text x="72" y="64" fontSize="10" fontWeight="bold" fill="#fff">N</text>
+          <text x="122" y="64" fontSize="10" fontWeight="bold" fill="#fff">S</text>
+        </>,
+      );
+    case "bien-thien-dong-dien-bang-bien-tro-khoa-k":
+      return frame(
+        <>
+          <path d="M18 30H62M18 30V95H72M138 30H181V95H132" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
+          <path d="M62 30H78M122 30H138M72 95H86M116 95H132" fill="none" stroke="#38bdf8" strokeWidth="2.4" strokeLinecap="round" />
+          <rect x="23" y="43" width="34" height="30" rx="5" fill="#111827" stroke="#94a3b8" strokeWidth="1.5" />
+          <path d="M29 62A11 11 0 0 1 51 62" fill="none" stroke="#94a3b8" strokeWidth="1.5" />
+          <line x1="40" y1="62" x2="47" y2="52" stroke="#fb7185" strokeWidth="2" strokeLinecap="round" />
+          <text x="32" y="70" fontSize="7" fontWeight="700" fill="#e2e8f0">G</text>
+          <rect x="78" y="20" width="44" height="36" rx="5" fill="#78350f" stroke="#f59e0b" strokeWidth="1.5" />
+          {[84, 90, 96, 104, 110, 116].map((x) => <ellipse key={x} cx={x} cy="38" rx="5" ry="13" fill="none" stroke="#fbbf24" strokeWidth="1.4" />)}
+          <rect x="85" y="84" width="32" height="22" rx="4" fill="#1e293b" stroke="#94a3b8" strokeWidth="1.5" />
+          <rect x="89" y="89" width="24" height="8" rx="2" fill="#14532d" />
+          <text x="91" y="96" fontSize="6" fontFamily="monospace" fill="#86efac">6.0 V</text>
+          <path d="M84 70C90 58 110 58 116 70M81 76C90 62 110 62 119 76" fill="none" stroke="#38bdf8" strokeWidth="1.2" opacity=".75" />
+          <path d="M116 70l4 1l-3 3" fill="none" stroke="#38bdf8" strokeWidth="1.2" />
+          <circle cx="151" cy="30" r="3.5" fill="#94a3b8" />
+          <circle cx="174" cy="30" r="3.5" fill="#94a3b8" />
+          <line x1="151" y1="30" x2="171" y2="21" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+          <text x="157" y="18" fontSize="8" fontWeight="700" fill="#fbbf24">K</text>
+          <rect x="139" y="76" width="39" height="19" rx="4" fill="#451a03" stroke="#f59e0b" strokeWidth="1.5" />
+          <path d="M145 86h27" stroke="#fb923c" strokeWidth="4" strokeLinecap="round" />
+          <path d="M159 72v19" stroke="#e2e8f0" strokeWidth="2" strokeLinecap="round" />
+          <path d="M155 76l4-5l4 5" fill="none" stroke="#e2e8f0" strokeWidth="1.5" />
+        </>,
+      );
+    case "cam-ung-dien-tu":
+      return frame(
+        <>
+          <path d="M42 77 C25 60 28 34 58 31 C78 29 83 43 92 48" fill="none" stroke="#60a5fa" strokeWidth="2.5" />
+          <path d="M42 82 C27 92 46 104 87 86" fill="none" stroke="#f87171" strokeWidth="2.5" />
+          <rect x="28" y="55" width="52" height="33" rx="4" fill="#a56a38" stroke="#d4a574" strokeWidth="1.5" />
+          {[36,42,48,54,60,66,72].map((x)=><ellipse key={x} cx={x} cy="71" rx="5" ry="14" fill="none" stroke="#fbbf24" strokeWidth="1.4" />)}
+          <path d="M52 25 A27 27 0 0 1 106 25" fill="none" stroke="#cbd5e1" strokeWidth="3" />
+          <line x1="79" y1="25" x2="94" y2="9" stroke="#ef4444" strokeWidth="2.5" />
+          <circle cx="79" cy="25" r="3.5" fill="#e2e8f0" />
+          <rect x="112" y="57" width="60" height="27" rx="3" fill="#2563eb" stroke="#1e3a8a" strokeWidth="1.5" />
+          <rect x="112" y="57" width="30" height="27" rx="3" fill="#dc2626" />
+          <text x="123" y="75" fontSize="12" fontWeight="bold" fill="#fff">N</text>
+          <text x="153" y="75" fontSize="12" fontWeight="bold" fill="#fff">S</text>
+          <path d="M105 70 h-14" stroke="#34d399" strokeWidth="2" strokeDasharray="3 2" />
+          <path d="M96 66 l-6 4 l6 4" fill="none" stroke="#34d399" strokeWidth="2" />
+        </>,
+      );
+    case "khung-day-quay-trong-tu-truong":
+      return frame(
+        <>
+          {[27, 49, 71, 93].map((y) => (
+            <g key={y}><line x1="12" y1={y} x2="188" y2={y} stroke="#38bdf8" strokeWidth="1.4" opacity=".62" /><path d={`M181 ${y - 4} l7 4 l-7 4`} fill="none" stroke="#38bdf8" strokeWidth="1.4" /></g>
+          ))}
+          <path d="M70 26 L62 91 L136 78 L145 17 Z" fill="none" stroke="#f87171" strokeWidth="4" strokeLinejoin="round" />
+          <path d="M66 59 l-22 22" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+          <path d="M45 73 l-3 11 l11-3" fill="none" stroke="#fbbf24" strokeWidth="3" />
+          <path d="M140 48 l22-22" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+          <path d="M153 28 l11-4 l-4 11" fill="none" stroke="#fbbf24" strokeWidth="3" />
+          <text x="55" y="57" fontSize="13" fontWeight="700" fill="#e2e8f0">M</text>
+          <text x="171" y="20" fontSize="14" fontWeight="700" fill="#7dd3fc">B</text>
+        </>,
+      );
     default: {
       const icons: Record<string, string> = {
         ohm: "M30 60h30l10-25 20 50 10-25h70",
@@ -397,7 +758,8 @@ export default function MoPhongHubPage() {
   const total = presets.length + placeholders.length;
 
   const countInDomain = (d: Domain) =>
-    PRESETS.filter((s) => s.domain === d).length + PLACEHOLDERS.filter((s) => s.domain === d).length;
+    PRESETS.filter((s) => s.domain === d).length +
+    PLACEHOLDERS.filter((s) => s.domain === d).length;
 
   const filtered = domainFilter.size < DOMAINS.length;
 
@@ -463,8 +825,17 @@ export default function MoPhongHubPage() {
                 className="group overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-white text-left shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[#d97757] hover:shadow-md"
               >
                 <div className="aspect-[5/3] w-full overflow-hidden bg-[#0f172a] p-2.5">
-                  <div className="h-full w-full overflow-hidden rounded-[10px]">
+                  <div className="relative h-full w-full overflow-hidden rounded-[10px]">
                     <Thumb id={sim.id} />
+                    {REVIEWED_SIMULATION_IDS.has(sim.id) && (
+                      <span
+                        className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm"
+                        title="Đã kiểm tra"
+                      >
+                        <CheckCircle2 className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                        <span className="sr-only">Đã kiểm tra</span>
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-1.5 p-5">
@@ -635,7 +1006,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
   const [params, setParams] = useState<Record<string, number>>(baseParams);
   const [tab, setTab] = useState<"params" | "analysis" | "ai">("params");
   const [edited, setEdited] = useState(false);
-  const [running, setRunning] = useState(true);
+  const [running, setRunning] = useState(() => !preset.startPaused);
   const [resetSignal, setResetSignal] = useState(0);
   const [speed, setSpeed] = useState(1);
 
@@ -679,6 +1050,10 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
     const bl = preset.bodyLabels;
     return typeof bl === "function" ? bl(params) : bl;
   }, [preset, params]);
+  const trackingLabels = useMemo(() => {
+    if (preset.kind !== undefined && preset.kind !== "mechanics") return undefined;
+    return preset.trackingLabels ?? bodyLabels;
+  }, [preset, bodyLabels]);
   const bodySigns = useMemo(() => {
     if (preset.kind !== undefined && preset.kind !== "mechanics") return undefined;
     const bs = preset.bodySigns;
@@ -691,7 +1066,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
     setEdited(false);
     setAiState("idle");
     setAiPrompt("");
-    setRunning(true);
+    setRunning(!preset.startPaused);
     setSpeed(1);
     setActiveMark(null);
     setPrevMark(null);
@@ -802,6 +1177,44 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                       markEdited();
                     }}
                   />
+                ) : preset.kind === "electromagnetic-induction" ? (
+                  <SceneKonvaElectromagneticInduction scene={scene as ElectromagneticInductionScene} running={running} resetSignal={resetSignal} onRunningChange={setRunning} speed={speed} />
+                ) : preset.kind === "variable-current-induction" ? (
+                  <SceneKonvaVariableCurrentInduction scene={scene as VariableCurrentInductionScene} running={running} resetSignal={resetSignal} onRunningChange={setRunning} speed={speed} />
+                ) : preset.kind === "iron-filings" ? (
+                  <SceneKonvaIronFilings scene={scene as IronFilingsScene} running={running} resetSignal={resetSignal} onRunningChange={setRunning} speed={speed} />
+                ) : preset.kind === "parallel-current-sheets" ? (
+                  <SceneKonvaParallelCurrentSheets scene={scene as ParallelCurrentSheetsScene} running={running} resetSignal={resetSignal} onRunningChange={setRunning} speed={speed} />
+                ) : preset.kind === "magnetism" ? (
+                  <SceneKonvaMagnetism
+                    scene={scene as MagneticScene}
+                    running={running}
+                    resetSignal={resetSignal}
+                    onRunningChange={setRunning}
+                    speed={speed}
+                  />
+                ) : preset.kind === "magnetic-loop" ? (
+                  <SceneKonvaMagneticLoop
+                    scene={scene as MagneticLoopScene}
+                    running={running}
+                    resetSignal={resetSignal}
+                    onRunningChange={setRunning}
+                    seekSeconds={activeMark?.seconds}
+                    seekToken={seekToken}
+                    markLabel={activeMark?.label}
+                    speed={speed}
+                  />
+                ) : preset.kind === "rotation" ? (
+                  <SceneKonvaRotation
+                    scene={scene as RotationScene}
+                    running={running}
+                    resetSignal={resetSignal}
+                    onRunningChange={setRunning}
+                    seekSeconds={activeMark?.seconds}
+                    seekToken={seekToken}
+                    markLabel={activeMark?.label}
+                    speed={speed}
+                  />
                 ) : (
                   <SceneKonva2D
                     scene={scene as Scene}
@@ -814,11 +1227,18 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                     markLabel={activeMark?.label}
                     ghostSeconds={prevMark?.seconds ?? null}
                     ghostLabel={prevMark?.label}
-                    bodyLabels={bodyLabels}
+                    bodyLabels={
+                      (preset.kind === undefined || preset.kind === "mechanics") && preset.hideBodyLabelsOnCanvas
+                        ? undefined
+                        : bodyLabels
+                    }
                     bodySigns={bodySigns}
                     annotations={annotations}
                     bodyColors={preset.kind === undefined || preset.kind === "mechanics" ? preset.bodyColors : undefined}
+                    bodyTrails={preset.kind === undefined || preset.kind === "mechanics" ? preset.bodyTrails : undefined}
                     minimalOverlay={preset.kind === undefined || preset.kind === "mechanics" ? preset.minimalOverlay : undefined}
+                    hideCoordinateLabels={preset.kind === undefined || preset.kind === "mechanics" ? preset.hideCoordinateLabels : undefined}
+                    hideFixedSupportDecoration={preset.kind === undefined || preset.kind === "mechanics" ? preset.hideFixedSupportDecoration : undefined}
                     speed={speed}
                   />
                 )}
@@ -848,7 +1268,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                       setActiveMark(null);
                       setPrevMark(null);
                       setResetSignal((n) => n + 1);
-                      setRunning(true);
+                      setRunning(!preset.startPaused);
                     }}
                     title="Đặt lại"
                     className="flex h-8 w-8 items-center justify-center rounded-[9px] text-[#4f4943] transition-colors duration-150 ease-out hover:bg-[#f7f3ee]"
@@ -897,7 +1317,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                   <tbody>
                     {readout.bodies.map((b) => (
                       <tr key={b.id} className="border-t border-[#f0ece5]">
-                        <td className="py-1 text-left text-[#4f4943]">{b.id}</td>
+                        <td className="py-1 text-left text-[#4f4943]">{trackingLabels?.[b.id] ?? b.id}</td>
                         <td className="py-1 text-right tabular-nums text-[#2b2926]">{b.x.toFixed(2)}</td>
                         <td className="py-1 text-right tabular-nums text-[#2b2926]">{b.y.toFixed(2)}</td>
                         <td className="py-1 text-right tabular-nums text-[#2b2926]">{b.speed.toFixed(2)}</td>
@@ -943,7 +1363,7 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
               {tab === "params" && (
                 <div className="space-y-4">
                   <p className="rounded-[10px] bg-[#faf9f7] p-3 text-xs leading-relaxed text-[#6b6b6b]">
-                    Rủi ro <b>bằng 0</b>: chỉ kéo slider, sim do dev build phản hồi tức thì. Dành cho mọi giáo viên.
+                    {preset.paramGuide ?? "Sửa tham số để quan sát mô phỏng thay đổi theo từng đại lượng đầu vào."}
                   </p>
                   {preset.kind === "wave" && <WaveLegend />}
                   {preset.kind === "string-wave" && <StringWaveLegend mode={(scene as StringWaveScene).mode} />}
@@ -975,10 +1395,27 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
                       schema={preset.params}
                       values={params}
                       onChange={(key, value) => {
-                        setParams((prev) => ({ ...prev, [key]: value }));
+                        setParams((prev) => (Object.is(prev[key], value) ? prev : { ...prev, [key]: value }));
                         markEdited();
                       }}
                     />
+                  )}
+                  {preset.paramCalculations && (
+                    <div className="rounded-[12px] border border-[#e8e2d9] bg-[#faf9f7] p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6b6b6b]">Kết quả tính toán</p>
+                      <div className="space-y-3">
+                        {preset.paramCalculations(params).map((calculation) => (
+                          <div key={calculation.label} className="rounded-[10px] bg-white p-3 shadow-sm">
+                            <p className="text-xs font-semibold text-[#2b2926]">{calculation.label}</p>
+                            <p className="mt-1 font-mono text-xs text-[#6b6b6b]">{calculation.formula}</p>
+                            <p className="mt-1 font-mono text-[11px] leading-relaxed text-[#8a8178]">{calculation.substitution}</p>
+                            <p className="mt-1.5 text-sm font-semibold text-[#c96545]">
+                              = {calculation.value} {calculation.unit}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
@@ -1075,3 +1512,4 @@ function DetailView({ preset, onBack }: { preset: Preset; onBack: () => void }) 
     </main>
   );
 }
+

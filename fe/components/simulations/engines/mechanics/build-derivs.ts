@@ -11,7 +11,7 @@
 import { rk4, type StateVec } from "./ode";
 import { netForces, type Vec2 } from "./forces";
 import { projectConstraints, type PointState } from "./constraints";
-import { resolveCollisions } from "./collisions";
+import { resolveCollisions, type StickyPair } from "./collisions";
 import type { Scene } from "./types";
 
 /** Một cảnh đã biên dịch thành hệ ODE có thể tích phân từng bước. */
@@ -35,6 +35,7 @@ export function buildKernel(scene: Scene): SceneKernel {
   const dynamic = scene.bodies.filter((b) => !b.fixed);
   // Có vật nào tham gia va chạm không? (quyết định pha 3 có chạy hay không)
   const hasCollidable = scene.bodies.some((b) => b.radius != null);
+  const stickyPairs = new Map<string, StickyPair>();
 
   // Vị trí bất biến của các vật cố định + khối lượng nghịch của mọi vật.
   const fixedPos: Record<string, Vec2> = {};
@@ -62,6 +63,47 @@ export function buildKernel(scene: Scene): SceneKernel {
     fixedPos[id] ?? { x: s[kX(id)]!, y: s[kY(id)]! };
   const velOf = (id: string, s: StateVec): Vec2 =>
     fixedPos[id] ? { x: 0, y: 0 } : { x: s[kVX(id)]!, y: s[kVY(id)]! };
+
+  const pointsOf = (s: StateVec): Record<string, PointState> => {
+    const pts: Record<string, PointState> = {};
+    for (const b of scene.bodies) {
+      const p = posOf(b.id, s);
+      const v = velOf(b.id, s);
+      pts[b.id] = { x: p.x, y: p.y, vx: v.x, vy: v.y };
+    }
+    return pts;
+  };
+
+  const gravity = scene.forces.find((f) => f.kind === "gravity");
+  const gravityG = gravity?.kind === "gravity" ? gravity.g ?? 9.8 : 0;
+  const kineticEnergyOfPoints = (pts: Record<string, PointState>): number => {
+    let ke = 0;
+    for (const b of dynamic) {
+      const p = pts[b.id]!;
+      ke += 0.5 * b.mass * (p.vx * p.vx + p.vy * p.vy);
+    }
+    return ke;
+  };
+  const potentialEnergyOfPoints = (pts: Record<string, PointState>): number => {
+    let pe = 0;
+    for (const b of dynamic) {
+      pe += b.mass * gravityG * pts[b.id]!.y;
+    }
+    for (const f of scene.forces) {
+      if (f.kind !== "spring") continue;
+      const pa = pts[f.a], pb = pts[f.b];
+      if (!pa || !pb) continue;
+      const ext = Math.hypot(pb.x - pa.x, pb.y - pa.y) - f.restLength;
+      if (f.compressionOnly && ext >= 0) continue;
+      pe += 0.5 * f.k * ext * ext;
+    }
+    return pe;
+  };
+  const mechanicalEnergyOfPoints = (pts: Record<string, PointState>): number =>
+    kineticEnergyOfPoints(pts) + potentialEnergyOfPoints(pts);
+  const targetMechanicalEnergy = scene.conserveMechanicalEnergy
+    ? mechanicalEnergyOfPoints(pointsOf(initialState))
+    : null;
 
   // Pha 1 — LỰC: cộng hợp lực rồi áp định luật II Newton a = F/m.
   const derivs = (s: StateVec): StateVec => {
@@ -91,7 +133,25 @@ export function buildKernel(scene: Scene): SceneKernel {
       pts[b.id] = { x: p.x, y: p.y, vx: v.x, vy: v.y };
     }
     projectConstraints(scene, pts, invMass);
-    if (hasCollidable) resolveCollisions(scene, pts, invMass);
+    if (hasCollidable) resolveCollisions(scene, pts, invMass, stickyPairs);
+    if (targetMechanicalEnergy != null) {
+      const targetKinetic = Math.max(0, targetMechanicalEnergy - potentialEnergyOfPoints(pts));
+      const currentKinetic = kineticEnergyOfPoints(pts);
+      if (targetKinetic <= 1e-10) {
+        for (const b of dynamic) {
+          const p = pts[b.id]!;
+          p.vx = 0;
+          p.vy = 0;
+        }
+      } else if (currentKinetic > 1e-10) {
+        const velocityScale = Math.sqrt(targetKinetic / currentKinetic);
+        for (const b of dynamic) {
+          const p = pts[b.id]!;
+          p.vx *= velocityScale;
+          p.vy *= velocityScale;
+        }
+      }
+    }
     // Ghi kết quả trở lại StateVec — chỉ vật động (fixed vẫn đứng yên).
     const out: StateVec = { ...s };
     for (const b of dynamic) {
