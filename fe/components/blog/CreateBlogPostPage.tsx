@@ -8,7 +8,14 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { api, optimizeBlogCover, SUBJECTS, subjectLabel, uploadFile, type Detail, type SubjectValue } from "@/lib/blog";
 import { RichEditor } from "./RichEditor";
 
-const DRAFT_STORAGE_KEY = "edua:blog-create-draft";
+// Legacy key from before drafts were scoped per account; only used to purge stale data.
+const LEGACY_DRAFT_STORAGE_KEY = "edua:blog-create-draft";
+
+// Scoped per account so a draft typed by one user on a shared browser is never
+// restored into another account signing in on the same device.
+function draftStorageKey(userId: string): string {
+  return `edua:blog-create-draft:${userId}`;
+}
 
 type BlogDraft = {
   title: string;
@@ -17,9 +24,9 @@ type BlogDraft = {
   coverImageUrl: string | null;
 };
 
-function readStoredDraft(): BlogDraft | null {
+function readStoredDraft(userId: string): BlogDraft | null {
   if (typeof window === "undefined") return null;
-  const saved = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+  const saved = window.localStorage.getItem(draftStorageKey(userId));
   if (!saved) return null;
   try {
     const draft = JSON.parse(saved) as Partial<BlogDraft>;
@@ -30,15 +37,41 @@ function readStoredDraft(): BlogDraft | null {
       coverImageUrl: draft.coverImageUrl ?? null,
     };
   } catch {
-    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    window.localStorage.removeItem(draftStorageKey(userId));
     return null;
   }
 }
 
 export function CreateBlogPostPage() {
+  const { status, user } = useAuth();
+
+  // One-time cleanup of the old unscoped key so a pre-fix draft can't leak
+  // into whichever account loads on this device next.
+  useEffect(() => {
+    window.localStorage.removeItem(LEGACY_DRAFT_STORAGE_KEY);
+  }, []);
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen bg-white">
+        <Sidebar activeHref="/blog" />
+        <main className="min-w-0 flex-1 px-6 py-8">
+          <div className="mx-auto max-w-[1104px] p-8 text-sm text-[#77798c]">Đang kiểm tra phiên đăng nhập...</div>
+        </main>
+      </div>
+    );
+  }
+
+  // Keyed by account id so switching accounts on the same device fully remounts the
+  // form instead of reusing state (and any restored draft) left over from the previous user.
+  return <CreateBlogPostForm key={user?.id ?? "anonymous"} />;
+}
+
+function CreateBlogPostForm() {
   const router = useRouter();
-  const { authFetch } = useAuth();
-  const [storedDraft] = useState(readStoredDraft);
+  const { authFetch, user } = useAuth();
+  const userId = user?.id ?? null;
+  const [storedDraft] = useState(() => (userId ? readStoredDraft(userId) : null));
   const [title, setTitle] = useState(() => storedDraft?.title ?? "");
   const [subject, setSubject] = useState<SubjectValue>(() => storedDraft?.subject ?? SUBJECTS[0]);
   const [content, setContent] = useState(() => storedDraft?.content ?? "");
@@ -51,13 +84,14 @@ export function CreateBlogPostPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!userId) return;
     const saveTimer = window.setTimeout(() => {
       if (!title.trim() && !content.trim() && !coverImageUrl) return;
       const draft: BlogDraft = { title, subject, content, coverImageUrl };
-      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      window.localStorage.setItem(draftStorageKey(userId), JSON.stringify(draft));
     }, 500);
     return () => window.clearTimeout(saveTimer);
-  }, [title, subject, content, coverImageUrl]);
+  }, [userId, title, subject, content, coverImageUrl]);
 
   async function handleCoverFile(file: File | undefined) {
     if (!file) return;
@@ -88,7 +122,7 @@ export function CreateBlogPostPage() {
         method: "POST",
         body: JSON.stringify({ title, content, subject, thumbnailUrl: coverImageUrl }),
       });
-      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      if (userId) window.localStorage.removeItem(draftStorageKey(userId));
       router.push("/blog?toast=created");
     } catch (err) {
       setError(String(err));
@@ -98,7 +132,7 @@ export function CreateBlogPostPage() {
   }
 
   function discardDraft() {
-    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    if (userId) window.localStorage.removeItem(draftStorageKey(userId));
     setTitle("");
     setSubject(SUBJECTS[0]);
     setContent("");
