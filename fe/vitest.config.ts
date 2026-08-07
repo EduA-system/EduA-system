@@ -21,6 +21,8 @@ export default defineConfig({
       "components/LessonEditor/pendingActivityNode.test.ts",
       "components/LessonEditor/lessonSections.test.ts",
       "components/LessonEditor/editContentToLines.test.ts",
+      "components/LessonEditor/LessonEditor.test.ts",
+      "components/LessonEditor/splitAtDelimiters.test.ts",
     ],
   },
 });

@@ -19,11 +19,11 @@ describe("editDataToBodyText — kind text", () => {
 });
 
 describe("editDataToBodyText — kind activity", () => {
-  it("field 1 dòng: nhãn đậm và nội dung chung 1 dòng", () => {
+  it("field 1 câu: nhãn đậm và nội dung chung 1 dòng", () => {
     const edit: EditLessonSectionEdit = {
       targetId: "sec-1",
       kind: "activity",
-      data: { objective: "Hiểu khái niệm X.", content: "Làm bài Y.", product: "Kết quả Z.", organizationText: "GV hướng dẫn." },
+      data: { objective: ["Hiểu khái niệm X."], content: ["Làm bài Y."], product: ["Kết quả Z."], organizationText: ["GV hướng dẫn."] },
     };
     expect(editDataToBodyText(edit)).toBe(
       "**a) Mục tiêu:** Hiểu khái niệm X.\n" +
@@ -33,11 +33,11 @@ describe("editDataToBodyText — kind activity", () => {
     );
   });
 
-  it("field nhiều dòng: nhãn đứng riêng, mỗi dòng sau tách dòng riêng", () => {
+  it("field nhiều câu (mảng nhiều phần tử): nhãn đứng riêng, mỗi câu tách dòng riêng", () => {
     const edit: EditLessonSectionEdit = {
       targetId: "sec-1",
       kind: "activity",
-      data: { objective: "", content: "Câu 1\nCâu 2", product: "", organizationText: "" },
+      data: { objective: [], content: ["Câu 1", "Câu 2"], product: [], organizationText: [] },
     };
     expect(editDataToBodyText(edit)).toBe("**b) Nội dung:**\nCâu 1\nCâu 2");
   });
@@ -46,7 +46,7 @@ describe("editDataToBodyText — kind activity", () => {
     const edit: EditLessonSectionEdit = {
       targetId: "sec-1",
       kind: "activity",
-      data: { objective: "  ", content: "Nội dung", product: "", organizationText: "" },
+      data: { objective: ["  "], content: ["Nội dung"], product: [], organizationText: [] },
     };
     expect(editDataToBodyText(edit)).toBe("**b) Nội dung:** Nội dung");
   });
@@ -58,10 +58,10 @@ describe("editDataToBodyText — kind subActivity", () => {
       targetId: "sec-1",
       kind: "subActivity",
       data: {
-        objective: "Mục tiêu tiểu hoạt động",
-        content: "",
-        organization: { transfer: "Giao việc", perform: "Làm việc", report: "", conclude: "Chốt kiến thức" },
-        product: "Kết quả HS đạt được",
+        objective: ["Mục tiêu tiểu hoạt động"],
+        content: [],
+        organization: { transfer: ["Giao việc"], perform: ["Làm việc"], report: [], conclude: ["Chốt kiến thức"] },
+        product: ["Kết quả HS đạt được"],
       },
     };
     expect(editDataToBodyText(edit)).toBe(
@@ -71,19 +71,72 @@ describe("editDataToBodyText — kind subActivity", () => {
     );
   });
 
+  it("bước có nhiều câu (mảng nhiều phần tử) nối bằng khoảng trắng trong cùng một bước", () => {
+    const edit: EditLessonSectionEdit = {
+      targetId: "sec-1",
+      kind: "subActivity",
+      data: {
+        objective: [],
+        content: [],
+        organization: { transfer: ["Câu 1.", "Câu 2."], perform: [], report: [], conclude: [] },
+        product: [],
+      },
+    };
+    expect(editDataToBodyText(edit)).toBe(
+      "‖ Hoạt động của GV và HS ‖ Sản phẩm dự kiến ‖\n" +
+        "| **Giao nhiệm vụ học tập:** Câu 1. Câu 2. |  |",
+    );
+  });
+
   it("thiếu objective/content thì bỏ hẳn 2 dòng đó, chỉ còn bảng", () => {
     const edit: EditLessonSectionEdit = {
       targetId: "sec-1",
       kind: "subActivity",
       data: {
-        objective: "",
-        content: "",
-        organization: { transfer: "", perform: "", report: "", conclude: "" },
-        product: "",
+        objective: [],
+        content: [],
+        organization: { transfer: [], perform: [], report: [], conclude: [] },
+        product: [],
       },
     };
     expect(editDataToBodyText(edit)).toBe(
       "‖ Hoạt động của GV và HS ‖ Sản phẩm dự kiến ‖\n|  |  |",
+    );
+  });
+
+  /**
+   * Tái hiện lỗi thật gặp trên live ("Hoạt động 2: Phương trình tham số của đường thẳng"): dù
+   * prompt yêu cầu "mỗi phần tử mảng là MỘT dòng, KHÔNG dùng \n", AI vẫn nhét một "\n" THẬT nằm
+   * lẫn TRONG một phần tử `product` (gộp câu dẫn + công thức khối thành 1 chuỗi có xuống dòng).
+   * Trước khi sửa, `\n` nhúng đó phá đôi dòng bảng thành 2 dòng vật lý — hàng bảng không còn
+   * bắt đầu/kết thúc bằng "|" trên CÙNG một dòng, rơi về hiển thị text thô (thấy cả "|"/"<br>"
+   * là ký tự sống thay vì bảng thật). `normalizeLines` giờ tách "\n" nhúng trong từng phần tử
+   * trước khi build hàng, nên kết quả vẫn PHẢI là đúng MỘT dòng vật lý duy nhất.
+   */
+  it("tự tách \\n nhúng bên trong một phần tử mảng — không để vỡ hàng bảng thành nhiều dòng", () => {
+    const edit: EditLessonSectionEdit = {
+      targetId: "sec-1",
+      kind: "subActivity",
+      data: {
+        objective: [],
+        content: [],
+        organization: { transfer: [], perform: [], report: [], conclude: [] },
+        product: [
+          "1. Phương trình tham số của đường thẳng là:\n\\[\\begin{cases}x = 1 + 2t\\end{cases}\\]",
+          "2. Phương trình tham số của đường thẳng Δ là:\n$$\\begin{cases}x = t\\end{cases}$$ (với t ∈ R).",
+        ],
+      },
+    };
+    const result = editDataToBodyText(edit);
+    const rows = result.split("\n");
+    const dataRow = rows.find((line) => line.startsWith("|"));
+    expect(dataRow).toBeDefined();
+    // Toàn bộ nội dung product phải nằm gọn trên CÙNG một dòng vật lý (kết thúc bằng "|"), không
+    // bị "\n" nhúng cắt thành 2+ dòng.
+    expect(dataRow!.endsWith("|")).toBe(true);
+    expect(dataRow).toContain(
+      "1. Phương trình tham số của đường thẳng là:<br>\\[\\begin{cases}x = 1 + 2t\\end{cases}\\]" +
+        "<br>2. Phương trình tham số của đường thẳng Δ là:<br>$$\\begin{cases}x = t\\end{cases}$$ (với t ∈ R).",
     );
   });
 });

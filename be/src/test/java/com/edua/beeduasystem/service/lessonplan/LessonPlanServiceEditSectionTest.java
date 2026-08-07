@@ -199,6 +199,34 @@ class LessonPlanServiceEditSectionTest {
         assertEquals("sec-2", response.get(0).targetId());
     }
 
+    /**
+     * Tái hiện lỗi thật gặp trên môi trường live (libraryId 516c884b..., tiểu hoạt động "Lập
+     * phương trình đường thẳng đi qua hai điểm") bằng đúng byte response AI đã trả — lấy trực
+     * tiếp từ log capture thật (test resource, không gõ tay để tránh escape sai): AI quên
+     * escape "\overrightarrow" trong JSON, khiến "Không viết lại được phần giáo án nào (AI lỗi
+     * mọi phần)". `parseJson` giờ chạy `repairLatexEscapes` TRƯỚC khi parse (không chỉ trong
+     * catch) nên phải tự vá được, không cần AI trả JSON hợp lệ ngay từ đầu.
+     */
+    @Test
+    void editSectionRepairsRealCapturedUnescapedLatexWriteResponse() throws java.io.IOException {
+        stubPromptApply();
+        String brokenResponse;
+        try (var in = getClass().getResourceAsStream("/lessonplan/broken-latex-subactivity-response.json")) {
+            brokenResponse = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        EditLessonSectionRequest request = new EditLessonSectionRequest(
+                "phương trình đường thẳng đi qua hai điểm (5 phút)",
+                List.of(new SectionInput("sec-1", "Hoạt động 4: Lập phương trình đường thẳng đi qua hai điểm (5 phút)",
+                        "Mục tiêu: ...\n‖ Hoạt động của GV và HS ‖ Sản phẩm dự kiến ‖\n| a | b |", "subActivity")));
+        stubAiResponses("{\"targetIds\":[\"sec-1\"]}", java.util.Map.of("sec-1", brokenResponse));
+
+        List<EditLessonSectionResponse> response = service().editSection(request);
+
+        assertEquals(1, response.size());
+        assertEquals("sec-1", response.get(0).targetId());
+        assertEquals("subActivity", response.get(0).kind());
+    }
+
     @Test
     void editSectionThrowsWhenAllWritesFail() {
         stubPromptApply();

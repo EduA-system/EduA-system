@@ -211,4 +211,51 @@ class LessonPlanServiceActivityDetailTest {
 
         assertEquals("$$U = 220\\,\\text{V}$$", result.product());
     }
+
+    /**
+     * Tái hiện lỗi thật gặp trên môi trường live (edit-section, tiểu hoạt động toán 12 "Lập
+     * phương trình đường thẳng đi qua hai điểm"): AI trả một lệnh LaTeX vector chưa escape
+     * trong JSON, khiến toàn bộ target lỗi "Không viết lại được phần giáo án nào (AI lỗi mọi
+     * phần)". Bản {@code repairLatexEscapes} cũ dò theo whitelist tên lệnh LaTeX cụ thể (\frac,
+     * \sqrt, \omega...) — không có lệnh này trong danh sách nên không tự vá được. Bản mới dò
+     * theo "ký tự ngay sau \ có phải 1 trong 3 escape JSON hay dùng có chủ đích không" — tự vá
+     * được MỌI lệnh LaTeX, kể cả lệnh chưa từng liệt kê trước đó.
+     */
+    @Test
+    void detailOneRepairsUnescapedVectorArrowCommandNotInOldWhitelist() {
+        stubSystemPrompt();
+        Activity5512 frame = new Activity5512(1, "Hoạt động 1: Khởi động/Xác định vấn đề", "5 phút",
+                null, null, null, null, null, List.of());
+        when(aiClient.generate(anyString())).thenReturn("""
+                {"objective":"obj","content":"content","product":"$\\overrightarrow{AB} = (1,2,3)$",
+                 "organization":null,"organizationText":"to-chuc","subActivities":[]}
+                """);
+
+        Activity5512 result = service().detailOne(frame, "{}", "{}", "{}", "{}", null);
+
+        assertEquals("$\\overrightarrow{AB} = (1,2,3)$", result.product());
+    }
+
+    /**
+     * Chốt lại lý do KHÔNG thể coi cả 9 ký tự escape hợp lệ của JSON làm tập "giữ nguyên": lệnh
+     * LaTeX phổ biến bắt đầu bằng chính chữ cái ngay sau escape "\t" (tab) của JSON. Nếu
+     * repairLatexEscapes coi ký tự đó là an toàn thì chuỗi sẽ bị Jackson đọc thành TAB + phần
+     * còn lại của tên lệnh — PARSE THÀNH CÔNG nhưng âm thầm phá nội dung, còn tệ hơn ném lỗi rõ
+     * ràng. Test này khoá lại hành vi đúng: lệnh LaTeX đó PHẢI được vá escape, không được để
+     * Jackson tự diễn giải phần đầu của nó thành ký tự điều khiển.
+     */
+    @Test
+    void detailOneRepairsUnescapedTextCommandInsteadOfMisreadingItsFirstLetterAsTabEscape() {
+        stubSystemPrompt();
+        Activity5512 frame = new Activity5512(1, "Hoạt động 1: Khởi động/Xác định vấn đề", "5 phút",
+                null, null, null, null, null, List.of());
+        when(aiClient.generate(anyString())).thenReturn("""
+                {"objective":"obj","content":"content","product":"$\\text{V} = 220$",
+                 "organization":null,"organizationText":"to-chuc","subActivities":[]}
+                """);
+
+        Activity5512 result = service().detailOne(frame, "{}", "{}", "{}", "{}", null);
+
+        assertEquals("$\\text{V} = 220$", result.product());
+    }
 }

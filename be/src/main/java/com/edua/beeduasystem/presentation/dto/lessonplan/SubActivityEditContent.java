@@ -1,21 +1,36 @@
 package com.edua.beeduasystem.presentation.dto.lessonplan;
 
-import com.edua.beeduasystem.domain.model.lessonplan.Activity5512;
+import java.util.List;
 
 /**
  * Bản sửa do AI đề xuất cho một mục {@code kind: "subActivity"} (tiểu hoạt động của Hoạt động
- * 2 — bảng tổ chức/sản phẩm 2 cột). Tái dùng {@link Activity5512.Organization} — cùng shape mà
- * luồng SINH giáo án gốc đã dùng ổn định — thay vì tự mã hoá bảng bằng ký tự "‖"/"|"/"<br>"
- * trong một chuỗi (xem lịch sử: cách cũ chỉ đúng ~1/3 lần với model gpt-4o-mini).
+ * 2 — bảng tổ chức/sản phẩm 2 cột).
  *
- * <p>{@code objective}/{@code content} là đoạn "Mục tiêu"/"Nội dung" đứng TRƯỚC bảng (rỗng nếu
- * không có). {@code organization} là 4 bước cột "Hoạt động của GV và HS". {@code product} là
+ * <p>Field nhiều câu ({@code content}/{@code product}/từng bước {@code organization}) là MẢNG
+ * từng câu, KHÔNG phải một chuỗi nối bằng {@code "\n"} — tránh lặp lại đúng lỗi từng gặp ở
+ * {@code TextEditContent}: khi phải tự giữ kỷ luật xuống dòng thật bên trong MỘT chuỗi dài,
+ * model dễ copy nhầm quy ước {@code <br>}/{@code ‖}/{@code |} từ khối "PHẦN GIÁO ÁN CẦN SỬA" (dữ
+ * liệu CŨ gửi kèm làm ngữ cảnh, vẫn ở định dạng pipe-text) thay vì tách câu bằng field mảng —
+ * xem lịch sử sửa lỗi live "Không viết lại được phần giáo án nào" → JSON parse OK nhưng field
+ * "product" chứa literal "<br>"/"\n" hiện ra thành chữ thô thay vì được diễn giải.
+ *
+ * <p>{@code objective}/{@code content} là đoạn "Mục tiêu"/"Nội dung" đứng TRƯỚC bảng (mảng rỗng
+ * nếu không có). {@code organization} là 4 bước cột "Hoạt động của GV và HS". {@code product} là
  * nội dung cột "Sản phẩm dự kiến".
  */
 public record SubActivityEditContent(
-        String objective,
-        String content,
-        Activity5512.Organization organization,
-        String product
+        List<String> objective,
+        List<String> content,
+        Organization organization,
+        List<String> product
 ) {
+    /** d) Tổ chức thực hiện — 4 bước chuẩn CV 5512, mỗi bước là MẢNG câu (không phải 1 chuỗi) vì
+     * cùng lý do trên. */
+    public record Organization(
+            List<String> transfer,
+            List<String> perform,
+            List<String> report,
+            List<String> conclude
+    ) {
+    }
 }

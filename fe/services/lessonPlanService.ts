@@ -3,7 +3,6 @@ import type {
   EquipmentAndMaterials,
   EquipmentTable,
   Objectives,
-  Organization,
   Worksheet,
 } from "@/data/lessonPlan5512Mock";
 
@@ -268,21 +267,29 @@ export interface TextEditData {
 }
 
 /** kind = "activity" — Hoạt động cấp 1 (HĐ1/3/4), dùng `organizationText` (văn ngắn). Khớp
- * `ActivityEditContent` (BE). */
+ * `ActivityEditContent` (BE). Mỗi field là MẢNG từng câu (không phải 1 chuỗi nối "\n") — cùng lý
+ * do với `TextEditData.lines`: tránh AI phải tự giữ kỷ luật xuống dòng thật/copy nhầm quy ước
+ * "‖"/"|"/"<br>" từ nội dung cũ gửi kèm làm ngữ cảnh. */
 export interface ActivityEditData {
-  objective: string;
-  content: string;
-  product: string;
-  organizationText: string;
+  objective: string[];
+  content: string[];
+  product: string[];
+  organizationText: string[];
 }
 
 /** kind = "subActivity" — tiểu hoạt động của Hoạt động 2, dùng `organization` (4 bước). Khớp
- * `SubActivityEditContent` (BE), tái dùng `Organization` đã có ở `lessonPlan5512Mock.ts`. */
+ * `SubActivityEditContent` (BE). Mỗi field/bước là MẢNG từng câu — cùng lý do với
+ * `ActivityEditData`. */
 export interface SubActivityEditData {
-  objective: string;
-  content: string;
-  organization: Organization;
-  product: string;
+  objective: string[];
+  content: string[];
+  organization: {
+    transfer: string[];
+    perform: string[];
+    report: string[];
+    conclude: string[];
+  };
+  product: string[];
 }
 
 /** kind = "materials" — khớp domain `Materials` (BE), tái dùng `EquipmentTable`/`Worksheet` đã

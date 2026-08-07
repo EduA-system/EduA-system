@@ -62,7 +62,7 @@ public class LessonPlanService {
     private final long retryBackoffMs;
 
     public LessonPlanService(TextbookCatalogRepository catalogRepository,
-                             AiClient aiClient,
+                             @Qualifier("jsonAiClient") AiClient aiClient,
                              LessonPlan5512PromptBuilder promptBuilder,
                              LessonPlanEditPromptBuilder editPromptBuilder,
                              ObjectMapper objectMapper,
@@ -297,24 +297,28 @@ public class LessonPlanService {
             }
             case "subActivity" -> {
                 SubActivityEditContent sub = (SubActivityEditContent) content;
-                yield isBlank(sub.objective()) && isBlank(sub.content()) && isBlank(sub.product())
+                yield isBlankLines(sub.objective()) && isBlankLines(sub.content()) && isBlankLines(sub.product())
                         && isBlankOrganization(sub.organization());
             }
             case "activity" -> {
                 ActivityEditContent activity = (ActivityEditContent) content;
-                yield isBlank(activity.objective()) && isBlank(activity.content())
-                        && isBlank(activity.product()) && isBlank(activity.organizationText());
+                yield isBlankLines(activity.objective()) && isBlankLines(activity.content())
+                        && isBlankLines(activity.product()) && isBlankLines(activity.organizationText());
             }
             default -> {
                 TextEditContent text = (TextEditContent) content;
-                yield text.lines() == null || text.lines().stream().allMatch(this::isBlank);
+                yield isBlankLines(text.lines());
             }
         };
     }
 
-    private boolean isBlankOrganization(Activity5512.Organization organization) {
-        return organization == null || (isBlank(organization.transfer()) && isBlank(organization.perform())
-                && isBlank(organization.report()) && isBlank(organization.conclude()));
+    private boolean isBlankOrganization(SubActivityEditContent.Organization organization) {
+        return organization == null || (isBlankLines(organization.transfer()) && isBlankLines(organization.perform())
+                && isBlankLines(organization.report()) && isBlankLines(organization.conclude()));
+    }
+
+    private boolean isBlankLines(List<String> lines) {
+        return lines == null || lines.stream().allMatch(this::isBlank);
     }
 
     /** Wrapper chỉ để parse JSON {"targetIds":[...]} từ call chọn phần (bước 1). */
@@ -503,20 +507,20 @@ public class LessonPlanService {
         return root.getMessage() != null ? root.getMessage() : root.toString();
     }
 
-    /** Parse output AI thành DTO; lỗi định dạng map 502 với thông điệp riêng từng phần. */
+    /**
+     * Parse output AI thành DTO; lỗi định dạng map 502 với thông điệp riêng từng phần.
+     *
+     * <p>{@code repairLatexEscapes} chạy TRƯỚC khi parse, không phải chỉ khi parse thất bại —
+     * vì một backslash LaTeX quên escape không phải lúc nào cũng khiến parse NÉM LỖI. Nếu chữ
+     * cái ngay sau {@code \} trùng escape JSON hợp lệ (vd {@code \text}, {@code \begin} — 't'/'b'
+     * trùng {@code \t}/{@code \b}), Jackson đọc THÀNH CÔNG nhưng sai (tab/backspace + phần còn
+     * lại của tên lệnh) — không có exception nào để rơi vào nhánh sửa nếu chỉ sửa trong catch.
+     */
     private <T> T parseJson(String raw, Class<T> type, String errorMessage) {
-        String json = stripJsonFence(raw);
+        String json = repairLatexEscapes(stripJsonFence(raw));
         try {
             return objectMapper.readValue(json, type);
         } catch (Exception e) {
-            String repaired = repairLatexEscapes(json);
-            if (!repaired.equals(json)) {
-                try {
-                    return objectMapper.readValue(repaired, type);
-                } catch (Exception repairedError) {
-                    e.addSuppressed(repairedError);
-                }
-            }
             log.warn("Parse {} thất bại. Output AI: {}", type.getSimpleName(), raw);
             throw new LessonPlanGenerationException(errorMessage, e);
         }
@@ -541,26 +545,28 @@ public class LessonPlanService {
     }
 
     /**
-     * AI đôi khi trả LaTeX trong JSON với backslash chưa escape, ví dụ {@code \(},
-     * {@code \omega}, {@code \frac}. JSON chuẩn yêu cầu {@code \\(}, {@code \\omega}.
-     * Chỉ sửa bên trong JSON string và ưu tiên các lệnh/delimiter LaTeX hay gặp để không
-     * đụng tới escape JSON hợp lệ như {@code \n} dùng cho xuống dòng.
+     * AI đôi khi trả LaTeX trong JSON với backslash chưa escape, ví dụ {@code \overrightarrow},
+     * {@code \begin{cases}}, {@code \frac}. JSON chuẩn yêu cầu {@code \\overrightarrow} v.v.
+     *
+     * <p>Trước đây dò theo whitelist tên lệnh LaTeX cụ thể (\frac, \sqrt, \omega...) — luôn
+     * thiếu vì LaTeX có hàng trăm lệnh, và thực tế đã bỏ sót {@code \overrightarrow}/{@code
+     * \begin}/{@code \end} khiến parse thất bại.
+     *
+     * <p>KHÔNG dùng toàn bộ 9 ký tự escape hợp lệ của JSON ({@code " \ / b f n r t u}) làm tập
+     * "giữ nguyên", dù về lý thuyết BẤT KỲ {@code \} nào theo sau ký tự khác 9 ký tự đó chắc
+     * chắn không phải escape JSON hợp lệ — vì {@code b/f/r/t/u} lại chính là CHỮ CÁI ĐẦU của rất
+     * nhiều lệnh LaTeX cực phổ biến ({@code \beta \begin \bar}, {@code \frac \forall}, {@code
+     * \right \rightarrow}, {@code \text \theta \times \tan}...). Nếu coi
+     * `t` "hợp lệ" thì {@code \text} bị Jackson đọc thành TAB + "ext" — parse THÀNH CÔNG nhưng
+     * âm thầm phá nội dung, còn nguy hiểm hơn ném lỗi rõ ràng. Chỉ giữ nguyên đúng 3 ký tự AI
+     * thực sự hay dùng có chủ đích trong nội dung giáo án ({@code " \ n}) — mọi {@code \}<chữ/ký
+     * hiệu khác> còn lại (kể cả trùng b/f/r/t/u) đều bị coi là backslash LaTeX quên escape.
      */
     private String repairLatexEscapes(String json) {
         if (json == null || json.indexOf('\\') < 0) {
             return json;
         }
-        String[] latexEscapes = {
-                "\\(", "\\)", "\\[", "\\]",
-                "\\frac", "\\sqrt", "\\text", "\\cos", "\\sin", "\\tan",
-                "\\omega", "\\Omega", "\\varphi", "\\phi", "\\pi", "\\Delta",
-                "\\theta", "\\alpha", "\\beta", "\\gamma", "\\times", "\\cdot",
-                "\\left", "\\right", "\\mathrm", "\\mathbf",
-                // Lệnh spacing ngắn — hay gặp trước đơn vị (vd "220\,\text{V}", xem ví dụ công
-                // thức trong LessonPlan5512PromptBuilder) nhưng AI hay quên tự escape vì chỉ có
-                // 1 ký tự, khác các lệnh chữ ở trên.
-                "\\,", "\\;", "\\!", "\\quad", "\\qquad"
-        };
+        String validJsonEscapeChars = "\"\\n";
 
         StringBuilder out = new StringBuilder(json.length() + 16);
         boolean inString = false;
@@ -572,15 +578,8 @@ public class LessonPlanService {
                 continue;
             }
             if (inString && ch == '\\' && !isEscaped(json, i)) {
-                String remaining = json.substring(i);
-                boolean latex = false;
-                for (String escape : latexEscapes) {
-                    if (remaining.startsWith(escape)) {
-                        latex = true;
-                        break;
-                    }
-                }
-                if (latex) {
+                char next = i + 1 < json.length() ? json.charAt(i + 1) : '\0';
+                if (validJsonEscapeChars.indexOf(next) < 0) {
                     out.append("\\\\");
                     continue;
                 }

@@ -20,23 +20,37 @@ function buildRow(delim: string, cells: string[]): string {
   return `${delim} ${escaped.join(` ${delim} `)} ${delim}`;
 }
 
-/** Nối nhiều đoạn (mỗi đoạn có thể tự nhiều dòng) thành nội dung MỘT ô bảng — mỗi dòng con
- * cách nhau bằng `<br>`, khớp quy ước `tableNodeToPipeText` dùng khi mã hoá ngược từ TipTap. */
-function joinCellLines(...parts: (string | null | undefined)[]): string {
-  const lines = parts
-    .flatMap((part) => (part ?? "").split("\n"))
+/**
+ * Chuẩn hoá `string[]` AI trả về thành các dòng THẬT SỰ tách rời — KHÔNG tin tưởng mảng đã
+ * "sạch sẵn" theo đúng 1-phần-tử-1-dòng như prompt yêu cầu. Đã gặp lỗi thật: dù prompt nói rõ
+ * "mỗi phần tử mảng là một dòng", model đôi khi vẫn nhét một `\n` THẬT nằm lẫn TRONG một phần
+ * tử (vd gộp câu dẫn + công thức khối thành 1 chuỗi có xuống dòng, theo thói quen viết văn bản
+ * thường) — phá vỡ bất biến "một hàng bảng = đúng một dòng vật lý" của `isTableRowLine`, khiến
+ * cả hàng rơi về hiển thị text thô thay vì bảng thật. Tách lại `\n` trong TỪNG phần tử ở đây,
+ * ngay cửa vào duy nhất đọc field mảng, để không phải vá rải rác nhiều nơi.
+ */
+function normalizeLines(values: string[] | null | undefined): string[] {
+  return (values ?? [])
+    .flatMap((v) => (v ?? "").split("\n"))
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+/** Nối nhiều đoạn thành nội dung MỘT ô bảng — mỗi dòng con cách nhau bằng `<br>`, khớp quy ước
+ * `tableNodeToPipeText` dùng khi mã hoá ngược từ TipTap. Nhận cả `string[]` (field kind
+ * subActivity/activity, chuẩn hoá qua `normalizeLines`) lẫn `string` đơn (field kind materials —
+ * vẫn giữ nguyên dạng chuỗi domain `Materials`). */
+function joinCellLines(...parts: (string[] | string | null | undefined)[]): string {
+  const lines = parts.flatMap((part) => normalizeLines(Array.isArray(part) ? part : [part ?? ""]));
   return lines.join(CELL_LINEBREAK);
 }
 
-/** Nhãn đậm + nội dung — khớp `labeledField` (LessonEditor.tsx): giá trị 1 dòng thì nhãn và
- * nội dung chung 1 dòng text; nhiều dòng thì nhãn đứng riêng, mỗi dòng sau tách dòng riêng. */
-function labeledLines(label: string, value: string | null | undefined): string[] {
-  const trimmed = (value ?? "").trim();
-  if (!trimmed) return [];
-  const lines = trimmed.split("\n").map((line) => line.trim()).filter(Boolean);
-  if (lines.length <= 1) return [`**${label}** ${lines[0] ?? ""}`];
+/** Nhãn đậm + nội dung — khớp `labeledField` (LessonEditor.tsx): 1 dòng thì nhãn và nội dung
+ * chung 1 dòng text; nhiều dòng thì nhãn đứng riêng, mỗi dòng sau tách dòng riêng. */
+function labeledLines(label: string, values: string[] | null | undefined): string[] {
+  const lines = normalizeLines(values);
+  if (lines.length === 0) return [];
+  if (lines.length === 1) return [`**${label}** ${lines[0]}`];
   return [`**${label}**`, ...lines];
 }
 
@@ -54,18 +68,21 @@ function activityEditToLines(data: ActivityEditData): string {
 }
 
 /** Nội dung ô "Hoạt động của GV và HS" — 4 bước, bước nào rỗng thì bỏ qua, nối bằng `<br>`
- * NGAY TRONG một ô (khớp `organizationStepsHtml`/`tableNodeToPipeText`). */
+ * NGAY TRONG một ô (khớp `organizationStepsHtml`/`tableNodeToPipeText`). Mỗi bước là mảng câu —
+ * nối các câu của CÙNG một bước bằng khoảng trắng (vẫn một ý/nhãn duy nhất), khác với việc nối
+ * NHIỀU BƯỚC KHÁC NHAU bằng `<br>` (làm ở `joinCellLines` bên dưới). */
 function organizationCellText(organization: SubActivityEditData["organization"]): string {
-  const steps: [string, string | null | undefined][] = [
+  const steps: [string, string[] | null | undefined][] = [
     ["Giao nhiệm vụ học tập:", organization?.transfer],
     ["Thực hiện nhiệm vụ:", organization?.perform],
     ["Báo cáo, thảo luận:", organization?.report],
     ["Kết luận, nhận định:", organization?.conclude],
   ];
   const parts = steps
-    .filter(([, value]) => value && value.trim())
-    .map(([label, value]) => `**${label}** ${(value ?? "").trim()}`);
-  return joinCellLines(...parts);
+    .map(([label, values]) => [label, normalizeLines(values)] as const)
+    .filter(([, lines]) => lines.length > 0)
+    .map(([label, lines]) => `**${label}** ${lines.join(" ")}`);
+  return joinCellLines(parts);
 }
 
 function subActivityEditToLines(data: SubActivityEditData): string {
