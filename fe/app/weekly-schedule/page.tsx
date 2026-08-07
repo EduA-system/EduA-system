@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen, Check } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Modal } from "@/components/ui/Modal";
@@ -10,7 +11,7 @@ import { Dropdown } from "@/components/ui/Dropdown";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { hasAnyRole } from "@/lib/auth/permissions";
-import { subjectLabel, uploadFile } from "@/lib/blog";
+import { subjectLabel } from "@/lib/blog";
 import { listLibrary, type LibraryContent } from "@/lib/library";
 import { useTextbookPicker } from "@/lib/textbook-picker";
 import {
@@ -117,6 +118,12 @@ function buildMonthSchedule(weeks: WeeklyTaskSchedule["weeks"], year: number, mo
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("vi");
+}
+
+function formatShortDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
 }
 
 /** Nhãn 1 tuần lịch thực: khoảng ngày Thứ 2 → Chủ Nhật, vd "06/08 - 09/08" cho tuần bị cắt đầu tháng. */
@@ -243,12 +250,11 @@ function WeeklyScheduleScreen() {
   const [createSaving, setCreateSaving] = useState(false);
   const createPicker = useTextbookPicker(user?.subject ?? undefined, modGrade, createOpen);
 
-  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  // ── Nộp giáo án (Teacher) — chỉ từ thư viện cá nhân, chọn qua popup dạng thẻ (không còn tải tệp lên) ──
+  const [submittingTask, setSubmittingTask] = useState<WeeklyTaskSummary | null>(null);
   const [resubmittingId, setResubmittingId] = useState<string | null>(null);
-  const [submitMode, setSubmitMode] = useState<"library" | "upload">("library");
   const [ownedLessonPlans, setOwnedLessonPlans] = useState<LibraryContent[]>([]);
   const [selectedLessonPlanId, setSelectedLessonPlanId] = useState("");
-  const [uploadFileObj, setUploadFileObj] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
@@ -352,28 +358,20 @@ function WeeklyScheduleScreen() {
   }
 
   function openSubmitPanel(t: WeeklyTaskSummary) {
-    setSubmittingId(t.id);
-    setSubmitMode("library");
+    setSubmittingTask(t);
     setSelectedLessonPlanId("");
-    setUploadFileObj(null);
     listLibrary(authFetch, new URLSearchParams({ type: "LESSON_PLAN", size: "100" }))
       .then((data) => setOwnedLessonPlans(data.items))
       .catch(() => setOwnedLessonPlans([]));
   }
 
-  async function handleSubmitTask(taskId: string) {
+  async function handleSubmitTask() {
+    if (!submittingTask || !selectedLessonPlanId) return;
     setSubmitting(true);
     try {
-      if (submitMode === "library") {
-        if (!selectedLessonPlanId) return;
-        await submitWeeklyTask(authFetch, taskId, { libraryContentId: selectedLessonPlanId });
-      } else {
-        if (!uploadFileObj) return;
-        const url = await uploadFile(authFetch, uploadFileObj);
-        await submitWeeklyTask(authFetch, taskId, { documentUrl: url, documentName: uploadFileObj.name });
-      }
+      await submitWeeklyTask(authFetch, submittingTask.id, { libraryContentId: selectedLessonPlanId });
       setMsg("Đã nộp giáo án.");
-      setSubmittingId(null);
+      setSubmittingTask(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không thể nộp giáo án.");
@@ -598,6 +596,75 @@ function WeeklyScheduleScreen() {
             </div>
           </Modal>
 
+          <Modal
+            open={submittingTask !== null}
+            onClose={() => setSubmittingTask(null)}
+            title="Chọn giáo án để nộp"
+            description={
+              submittingTask
+                ? `Nộp cho "${submittingTask.scopeDescription}" · Khối ${submittingTask.grade} — chọn 1 giáo án trong thư viện của bạn.`
+                : undefined
+            }
+            maxWidthClassName="max-w-4xl"
+          >
+            {ownedLessonPlans.length === 0 ? (
+              <p className="rounded-xl border border-dashed p-6 text-center text-sm text-[#8a8178]">
+                Chưa có giáo án nào trong thư viện của bạn.
+              </p>
+            ) : (
+              <div className="grid gap-3 p-1 sm:grid-cols-2">
+                {ownedLessonPlans.map((c) => {
+                  const isSelected = selectedLessonPlanId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setSelectedLessonPlanId(c.id)}
+                      className={`relative rounded-2xl border p-3 text-left transition ${
+                        isSelected ? "border-[#e8724a] bg-[#fff7f2] ring-2 ring-[#e8724a]/30" : "border-[#e4ddd4] bg-white hover:border-[#e8724a]/50"
+                      }`}
+                    >
+                      <span
+                        aria-hidden
+                        className={`absolute right-3 top-3 z-10 flex size-5 items-center justify-center rounded-full border-2 ${
+                          isSelected ? "border-[#e8724a] bg-[#e8724a] text-white" : "border-[#d8d1c9] bg-white"
+                        }`}
+                      >
+                        {isSelected ? <Check className="size-3" strokeWidth={3} /> : null}
+                      </span>
+                      <div className="aspect-[16/9] overflow-hidden rounded-xl bg-gradient-to-br from-amber-100 via-orange-50 to-stone-100">
+                        {c.thumbnailUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={c.thumbnailUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-[#c9a98a]">
+                            <BookOpen className="size-8" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="mt-2 line-clamp-2 text-sm font-semibold text-[#2b2926]">{c.title}</p>
+                      <p className="mt-1 text-xs text-[#8a8178]">
+                        {c.grade ? `Khối ${c.grade} · ` : ""}Cập nhật {formatShortDate(c.updatedAt)}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="mt-4 flex justify-end gap-2 border-t border-[#f0ece5] pt-4">
+              <button onClick={() => setSubmittingTask(null)} className="rounded-xl px-4 py-2 text-sm hover:bg-[#f5f1ec]">
+                Hủy
+              </button>
+              <button
+                onClick={() => void handleSubmitTask()}
+                disabled={submitting || !selectedLessonPlanId}
+                className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white transition hover:bg-[#d9633b] disabled:opacity-50"
+              >
+                {submitting ? "Đang nộp..." : "Nộp"}
+              </button>
+            </div>
+          </Modal>
+
           {msg ? <p className="mt-4 text-sm text-emerald-700">{msg}</p> : null}
           {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
 
@@ -750,61 +817,6 @@ function WeeklyScheduleScreen() {
                                       ) : null}
                                     </div>
                                   </div>
-
-                                  {submittingId === t.id ? (
-                                    <div className="mt-4 rounded-xl border bg-[#f9f7f4] p-3">
-                                      <div className="flex gap-4 text-sm">
-                                        <label className="flex items-center gap-1.5">
-                                          <input
-                                            type="radio"
-                                            checked={submitMode === "library"}
-                                            onChange={() => setSubmitMode("library")}
-                                          />
-                                          Chọn từ thư viện
-                                        </label>
-                                        <label className="flex items-center gap-1.5">
-                                          <input
-                                            type="radio"
-                                            checked={submitMode === "upload"}
-                                            onChange={() => setSubmitMode("upload")}
-                                          />
-                                          Tải tệp lên
-                                        </label>
-                                      </div>
-                                      {submitMode === "library" ? (
-                                        <select
-                                          value={selectedLessonPlanId}
-                                          onChange={(e) => setSelectedLessonPlanId(e.target.value)}
-                                          className="mt-3 w-full rounded-xl border p-2 text-sm"
-                                        >
-                                          <option value="">Chọn giáo án...</option>
-                                          {ownedLessonPlans.map((c) => (
-                                            <option key={c.id} value={c.id}>
-                                              {c.title}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      ) : (
-                                        <input
-                                          type="file"
-                                          onChange={(e) => setUploadFileObj(e.target.files?.[0] ?? null)}
-                                          className="mt-3 w-full text-sm"
-                                        />
-                                      )}
-                                      <div className="mt-3 flex justify-end gap-2">
-                                        <button onClick={() => setSubmittingId(null)} className="rounded-xl px-4 py-2 text-sm">
-                                          Hủy
-                                        </button>
-                                        <button
-                                          onClick={() => void handleSubmitTask(t.id)}
-                                          disabled={submitting || (submitMode === "library" ? !selectedLessonPlanId : !uploadFileObj)}
-                                          className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white disabled:opacity-50"
-                                        >
-                                          {submitting ? "Đang nộp..." : "Nộp"}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ) : null}
                                 </article>
                               );
                             })}
