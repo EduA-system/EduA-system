@@ -34,6 +34,27 @@ const STATUS_LABELS: Record<string, string> = {
 
 const PAGE_SIZE = 20;
 
+// Khớp AppUserFieldValidator.MAX_EMAIL_LENGTH ở backend (be/.../service/auth/AppUserFieldValidator.java).
+const EMAIL_MAX_LENGTH = 320;
+// Cú pháp email chung — cố tình không khoá theo domain gmail.com cụ thể, vì backend cũng không giới hạn
+// domain (Google Workspace của trường có thể dùng domain riêng, không chỉ @gmail.com).
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Validate client-side trước khi gọi API — trả về message lỗi tiếng Việt, hoặc null nếu hợp lệ. */
+function emailError(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return "Vui lòng nhập email.";
+  if (/\s/.test(trimmed)) return "Email không được chứa khoảng trắng.";
+  if (trimmed.length > EMAIL_MAX_LENGTH) return `Email không được vượt quá ${EMAIL_MAX_LENGTH} ký tự.`;
+  if (!EMAIL_PATTERN.test(trimmed)) return "Email không đúng định dạng (vd: ten@truong.edu.vn).";
+  return null;
+}
+
+function EmailFieldError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return <p className="mt-1 text-xs font-medium text-[#c2483c]">{message}</p>;
+}
+
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 type AccountItem = {
@@ -184,10 +205,15 @@ function UserManagementContent() {
   // ── Moderator accounts (Principal only) ──────────────────────────────
   const [moderatorData, setModeratorData] = useState<PageResponse<SubjectAccountItem> | null>(null);
   const [moderatorEmail, setModeratorEmail] = useState("");
+  const [moderatorEmailTouched, setModeratorEmailTouched] = useState(false);
   const [moderatorFullName, setModeratorFullName] = useState("");
   const [moderatorSubject, setModeratorSubject] = useState<string>("CHEMISTRY");
   const [replacementTarget, setReplacementTarget] = useState<SubjectAccountItem | null>(null);
   const [replacementEmail, setReplacementEmail] = useState("");
+  const [replacementEmailTouched, setReplacementEmailTouched] = useState(false);
+  // Lỗi riêng của modal "Thay Moderator" — không dùng chung `msg` ở đầu trang vì modal là overlay che
+  // hết trang, `msg` render phía sau overlay sẽ vô hình, người dùng bấm xong tưởng không có gì xảy ra.
+  const [replacementError, setReplacementError] = useState("");
   const [disablePrevious, setDisablePrevious] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
 
@@ -206,6 +232,7 @@ function UserManagementContent() {
   // ── Teacher accounts (Moderator only) ────────────────────────────────
   const [teacherData, setTeacherData] = useState<PageResponse<SubjectAccountItem> | null>(null);
   const [teacherEmail, setTeacherEmail] = useState("");
+  const [teacherEmailTouched, setTeacherEmailTouched] = useState(false);
   const [teacherFullName, setTeacherFullName] = useState("");
   const [teacherGrades, setTeacherGrades] = useState<number[]>([10, 11, 12]);
 
@@ -223,6 +250,7 @@ function UserManagementContent() {
   // ── IT Staff accounts (Principal only) ───────────────────────────────
   const [itStaffData, setItStaffData] = useState<PageResponse<AccountItem> | null>(null);
   const [itStaffEmail, setItStaffEmail] = useState("");
+  const [itStaffEmailTouched, setItStaffEmailTouched] = useState(false);
   const [itStaffFullName, setItStaffFullName] = useState("");
 
   const loadItStaff = useCallback(
@@ -245,13 +273,15 @@ function UserManagementContent() {
   }, [isPrincipal, isModerator]);
 
   async function addModerator() {
-    if (!moderatorEmail.trim()) return;
+    setModeratorEmailTouched(true);
+    if (emailError(moderatorEmail)) return;
     try {
       await api(authFetch, "/principal/moderators", {
         method: "POST",
         body: JSON.stringify({ email: moderatorEmail, subject: moderatorSubject, fullName: moderatorFullName || null }),
       });
       setModeratorEmail("");
+      setModeratorEmailTouched(false);
       setModeratorFullName("");
       setMsg("Đã thêm Moderator.");
       await loadModerators(moderatorData?.page ?? 0);
@@ -280,6 +310,8 @@ function UserManagementContent() {
   function openReplacement(item: SubjectAccountItem) {
     setReplacementTarget(item);
     setReplacementEmail("");
+    setReplacementEmailTouched(false);
+    setReplacementError("");
     setDisablePrevious(false);
   }
 
@@ -289,7 +321,9 @@ function UserManagementContent() {
   }
 
   async function replaceModerator() {
-    if (!replacementTarget || !replacementEmail.trim()) return;
+    setReplacementEmailTouched(true);
+    if (!replacementTarget || emailError(replacementEmail)) return;
+    setReplacementError("");
     setIsReplacing(true);
     try {
       await api(authFetch, `/principal/moderators/${replacementTarget.id}/replacement`, {
@@ -300,20 +334,23 @@ function UserManagementContent() {
       setMsg("Đã thay Moderator.");
       await loadModerators(moderatorData?.page ?? 0);
     } catch (e) {
-      setMsg(String(e));
+      // Lỗi hiện ngay trong modal (không dùng `msg` ngoài trang — modal là overlay che hết, `msg` sẽ vô hình).
+      setReplacementError(String(e));
     } finally {
       setIsReplacing(false);
     }
   }
 
   async function addTeacher() {
-    if (!teacherEmail.trim() || !user?.subject || teacherGrades.length === 0) return;
+    setTeacherEmailTouched(true);
+    if (emailError(teacherEmail) || !user?.subject || teacherGrades.length === 0) return;
     try {
       await api(authFetch, "/moderator/teachers", {
         method: "POST",
         body: JSON.stringify({ email: teacherEmail, subject: user.subject, fullName: teacherFullName || null, grades: teacherGrades }),
       });
       setTeacherEmail("");
+      setTeacherEmailTouched(false);
       setTeacherFullName("");
       setTeacherGrades([10, 11, 12]);
       setMsg("Đã thêm Teacher.");
@@ -341,13 +378,15 @@ function UserManagementContent() {
   }
 
   async function addItStaff() {
-    if (!itStaffEmail.trim()) return;
+    setItStaffEmailTouched(true);
+    if (emailError(itStaffEmail)) return;
     try {
       await api(authFetch, "/principal/it-staff", {
         method: "POST",
         body: JSON.stringify({ email: itStaffEmail, fullName: itStaffFullName || null }),
       });
       setItStaffEmail("");
+      setItStaffEmailTouched(false);
       setItStaffFullName("");
       setMsg("Đã cấp quyền IT Staff.");
       await loadItStaff(itStaffData?.page ?? 0);
@@ -470,13 +509,21 @@ function UserManagementContent() {
 
                 <div className="mt-6 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
                   <h2 className="font-medium">Thêm Moderator</h2>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <input
-                      value={moderatorEmail}
-                      onChange={(e) => setModeratorEmail(e.target.value)}
-                      placeholder="Email"
-                      className="min-w-48 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
-                    />
+                  <div className="mt-3 flex flex-wrap items-start gap-2">
+                    <div className="min-w-48 flex-1">
+                      <input
+                        value={moderatorEmail}
+                        onChange={(e) => setModeratorEmail(e.target.value)}
+                        onBlur={() => setModeratorEmailTouched(true)}
+                        placeholder="Email"
+                        type="email"
+                        required
+                        maxLength={EMAIL_MAX_LENGTH}
+                        aria-invalid={moderatorEmailTouched && !!emailError(moderatorEmail)}
+                        className="w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                      />
+                      <EmailFieldError message={moderatorEmailTouched ? emailError(moderatorEmail) : null} />
+                    </div>
                     <input
                       value={moderatorFullName}
                       onChange={(e) => setModeratorFullName(e.target.value)}
@@ -496,7 +543,11 @@ function UserManagementContent() {
                         </option>
                       ))}
                     </select>
-                    <button onClick={addModerator} className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e]">
+                    <button
+                      onClick={addModerator}
+                      disabled={!!emailError(moderatorEmail)}
+                      className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
                       Thêm
                     </button>
                   </div>
@@ -567,13 +618,21 @@ function UserManagementContent() {
 
                 <div className="mt-6 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
                   <h2 className="font-medium">Thêm Teacher</h2>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <input
-                      value={teacherEmail}
-                      onChange={(e) => setTeacherEmail(e.target.value)}
-                      placeholder="Email"
-                      className="min-w-48 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
-                    />
+                  <div className="mt-3 flex flex-wrap items-start gap-2">
+                    <div className="min-w-48 flex-1">
+                      <input
+                        value={teacherEmail}
+                        onChange={(e) => setTeacherEmail(e.target.value)}
+                        onBlur={() => setTeacherEmailTouched(true)}
+                        placeholder="Email"
+                        type="email"
+                        required
+                        maxLength={EMAIL_MAX_LENGTH}
+                        aria-invalid={teacherEmailTouched && !!emailError(teacherEmail)}
+                        className="w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                      />
+                      <EmailFieldError message={teacherEmailTouched ? emailError(teacherEmail) : null} />
+                    </div>
                     <input
                       value={teacherFullName}
                       onChange={(e) => setTeacherFullName(e.target.value)}
@@ -584,7 +643,11 @@ function UserManagementContent() {
                       Môn: {SUBJECT_LABELS[user?.subject ?? ""] ?? user?.subject ?? "—"}
                     </span>
                     <GradeCheckboxes value={teacherGrades} onChange={setTeacherGrades} />
-                    <button disabled={teacherGrades.length === 0} onClick={addTeacher} className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e] disabled:cursor-not-allowed disabled:opacity-50">
+                    <button
+                      disabled={teacherGrades.length === 0 || !!emailError(teacherEmail)}
+                      onClick={addTeacher}
+                      className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
                       Thêm
                     </button>
                   </div>
@@ -656,21 +719,32 @@ function UserManagementContent() {
 
                 <div className="mt-6 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
                   <h2 className="font-medium">Cấp quyền IT Staff</h2>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <input
-                      value={itStaffEmail}
-                      onChange={(e) => setItStaffEmail(e.target.value)}
-                      placeholder="Email"
-                      type="email"
-                      className="min-w-48 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
-                    />
+                  <div className="mt-3 flex flex-wrap items-start gap-2">
+                    <div className="min-w-48 flex-1">
+                      <input
+                        value={itStaffEmail}
+                        onChange={(e) => setItStaffEmail(e.target.value)}
+                        onBlur={() => setItStaffEmailTouched(true)}
+                        placeholder="Email"
+                        type="email"
+                        required
+                        maxLength={EMAIL_MAX_LENGTH}
+                        aria-invalid={itStaffEmailTouched && !!emailError(itStaffEmail)}
+                        className="w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                      />
+                      <EmailFieldError message={itStaffEmailTouched ? emailError(itStaffEmail) : null} />
+                    </div>
                     <input
                       value={itStaffFullName}
                       onChange={(e) => setItStaffFullName(e.target.value)}
                       placeholder="Họ tên (không bắt buộc)"
                       className="min-w-40 flex-1 rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
                     />
-                    <button onClick={addItStaff} className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e]">
+                    <button
+                      onClick={addItStaff}
+                      disabled={!!emailError(itStaffEmail)}
+                      className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
                       Cấp quyền
                     </button>
                   </div>
@@ -737,16 +811,24 @@ function UserManagementContent() {
             <input
               id="replacement-email"
               type="email"
+              required
+              maxLength={EMAIL_MAX_LENGTH}
               value={replacementEmail}
               onChange={(e) => setReplacementEmail(e.target.value)}
+              onBlur={() => setReplacementEmailTouched(true)}
               placeholder="Email"
+              aria-invalid={replacementEmailTouched && !!emailError(replacementEmail)}
               className="mt-1 w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
               autoFocus
             />
+            <EmailFieldError message={replacementEmailTouched ? emailError(replacementEmail) : null} />
             <label className="mt-4 flex items-center gap-2 text-sm">
               <input type="checkbox" checked={disablePrevious} onChange={(e) => setDisablePrevious(e.target.checked)} />
               Vô hiệu hoá tài khoản Moderator cũ sau khi chuyển thành Teacher
             </label>
+            {replacementError && (
+              <p className="mt-4 rounded-lg border border-[#f3c6bd] bg-[#fdeceb] px-3 py-2 text-sm text-[#c2483c]">{replacementError}</p>
+            )}
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={closeReplacement} disabled={isReplacing} className="rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm">
                 Huỷ
@@ -754,7 +836,7 @@ function UserManagementContent() {
               <button
                 type="button"
                 onClick={replaceModerator}
-                disabled={isReplacing || !replacementEmail.trim()}
+                disabled={isReplacing || !!emailError(replacementEmail)}
                 className="rounded-lg bg-[#1f1f1f] px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isReplacing ? "Đang thay..." : "Xác nhận thay"}

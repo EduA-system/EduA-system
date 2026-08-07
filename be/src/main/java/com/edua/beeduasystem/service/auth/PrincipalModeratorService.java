@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -216,9 +218,26 @@ public class PrincipalModeratorService {
         userRoleRepository.replaceRole(userId, role, grantedBy, grantedAt);
     }
 
+    // Nhãn tiếng Việt cho các role không đủ điều kiện làm Moderator — dùng để báo lỗi đúng lý do thay vì
+    // message "khác môn" gây hiểu lầm khi tài khoản đó thực ra là Học sinh/Hiệu trưởng/IT Staff (subject = null).
+    private static final Map<Role, String> INELIGIBLE_ROLE_LABELS = Map.of(
+            Role.STUDENT, "Học sinh",
+            Role.PRINCIPAL, "Hiệu trưởng",
+            Role.IT_STAFF, "IT Staff");
+
     private AppUser prepareExistingReplacement(AppUser user, Subject subject) {
         if (user.subject() != subject) {
-            throw new ForbiddenOperationException("Moderator thay thế phải thuộc cùng môn " + subject.name() + ".");
+            Set<Role> roles = userRoleRepository.findRolesByUserId(user.id());
+            boolean isTeacherOrModerator = roles.stream().anyMatch(r -> r == Role.TEACHER || r == Role.MODERATOR);
+            if (!isTeacherOrModerator) {
+                String roleLabel = Role.orderedByPriority(roles).stream()
+                        .map(INELIGIBLE_ROLE_LABELS::get)
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElse("vai trò khác");
+                throw new ForbiddenOperationException("Tài khoản này là " + roleLabel + ", không thể trở thành Moderator.");
+            }
+            throw new ForbiddenOperationException("Giáo viên/Moderator thay thế phải thuộc cùng môn " + subject.name() + ".");
         }
         if (user.status() != UserStatus.DISABLED
                 && userRoleRepository.findRolesByUserId(user.id()).contains(Role.MODERATOR)) {
