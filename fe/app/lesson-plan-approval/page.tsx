@@ -1,9 +1,12 @@
 "use client";
 
+import { AlertCircle, BookOpen, CalendarClock, CheckCircle2, Eye, Filter, Inbox, Library, Loader2, UserRound, X, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { RichView } from "@/components/blog/RichView";
 import { GradeSelect } from "@/components/ui/GradeSelect";
 import { Dropdown } from "@/components/ui/Dropdown";
+import { resolveWeeklyTaskLessonDocument } from "@/components/weeklytask/WeeklyTaskDocumentViewer";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { subjectLabel } from "@/lib/blog";
@@ -16,6 +19,7 @@ import {
   type WeeklyTaskDetail,
   type WeeklyTaskSummary,
 } from "@/lib/weekly-task";
+import type { TiptapNode } from "@/lib/tiptap-to-text";
 
 function formatDateTime(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString("vi") : "-";
@@ -54,6 +58,7 @@ function LessonPlanApprovalScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<WeeklyTaskDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [preview, setPreview] = useState<{ title: string; document: TiptapNode | string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,20 +134,48 @@ function LessonPlanApprovalScreen() {
     }
   }
 
+  function openSubmittedLessonPreview(detail: WeeklyTaskDetail) {
+    const document = resolveWeeklyTaskLessonDocument(detail.sourceLibraryContentPayload);
+    if (!document) {
+      setError("Nhiệm vụ này không có nội dung giáo án để hiển thị.");
+      return;
+    }
+    setPreview({
+      title: detail.sourceLibraryContentTitle ?? "Giáo án đã nộp",
+      document,
+    });
+  }
+
   return (
-    <main className="min-h-screen bg-white text-[#2b2926]">
+    <main className="min-h-screen bg-[#f7f5f2] text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/lesson-plan-approval" />
-        <section className="min-w-0 flex-1 p-5 sm:p-8">
-          <header>
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#e8724a]">Management</p>
-            <h1 className="mt-1 text-3xl font-semibold">Duyệt giáo án tuần</h1>
-            <p className="mt-2 text-sm text-[#6b6b6b]">Giáo án giáo viên đã nộp cho nhiệm vụ tuần, chờ duyệt.</p>
+        <section className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-10">
+          <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[#e4ddd4] pb-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-[#d97757]">Management</p>
+              <h1 className="mt-1 text-[30px] font-semibold leading-tight">Duyệt giáo án tuần</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b6b6b]">
+                Kiểm tra giáo án giáo viên đã nộp theo khối, chương và bài trước khi duyệt vào lịch tuần.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-[#e4ddd4] bg-white px-4 py-3 shadow-sm">
+              <Inbox className="size-4 text-[#d97757]" />
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-[#8a8178]">Chờ duyệt</p>
+                <p className="text-lg font-semibold leading-none">{items.length}</p>
+              </div>
+            </div>
           </header>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-[#e4ddd4] bg-white px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-medium text-[#4f4943]">
+              <Filter className="size-4 text-[#d97757]" />
+              Bộ lọc
+            </div>
+            <div className="h-6 w-px bg-[#e8e2d9]" />
             <GradeSelect value={gradeFilter} onChange={handleGradeChange} includeAll />
-            <div className="w-48">
+            <div className="w-full sm:w-56">
               <Dropdown
                 placeholder="Chọn chương..."
                 value={picker.chapterCode || null}
@@ -151,7 +184,7 @@ function LessonPlanApprovalScreen() {
                 disabled={!picker.bookCode}
               />
             </div>
-            <div className="w-48">
+            <div className="w-full sm:w-56">
               <Dropdown
                 placeholder="Chọn bài..."
                 value={picker.lessonCode || null}
@@ -161,90 +194,138 @@ function LessonPlanApprovalScreen() {
               />
             </div>
             {picker.chapterCode || picker.lessonCode ? (
-              <button type="button" onClick={picker.reset} className="text-sm text-[#b85c3b] underline">
+              <button type="button" onClick={picker.reset} className="rounded-lg px-3 py-2 text-sm font-medium text-[#b85c3b] hover:bg-[#fff4ed]">
                 Xóa bộ lọc chương/bài
               </button>
             ) : null}
           </div>
 
-          {msg ? <p className="mt-4 text-sm text-emerald-700">{msg}</p> : null}
-          {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+          {msg ? (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <CheckCircle2 className="size-4 shrink-0" />
+              {msg}
+            </div>
+          ) : null}
+          {error ? (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <AlertCircle className="size-4 shrink-0" />
+              {error}
+            </div>
+          ) : null}
 
           {loading ? (
             <div className="mt-6 space-y-3">
               {[1, 2, 3].map((x) => (
-                <div key={x} className="h-20 animate-pulse rounded-2xl bg-[#e8e2db]" />
+                <div key={x} className="h-28 animate-pulse rounded-xl border border-[#e4ddd4] bg-white" />
               ))}
             </div>
           ) : items.length === 0 ? (
-            <div className="mt-8 rounded-2xl border border-dashed bg-white p-12 text-center text-sm text-[#6b6b6b]">
-              Không có giáo án nào chờ duyệt.
+            <div className="mt-8 flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-[#d8d1c9] bg-white px-6 text-center shadow-sm">
+              <Inbox className="size-10 text-[#c8beb4]" />
+              <h2 className="mt-4 text-lg font-semibold">Không có giáo án nào chờ duyệt</h2>
+              <p className="mt-2 max-w-md text-sm leading-6 text-[#6b6b6b]">Khi giáo viên nộp giáo án cho nhiệm vụ tuần, danh sách sẽ xuất hiện tại đây.</p>
             </div>
           ) : (
-            <div className="mt-6 space-y-3">
+            <div className="mt-6 space-y-4">
               {items.map((t) => (
-                <article key={t.id} className="rounded-2xl border bg-white p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+                <article key={t.id} className="overflow-hidden rounded-xl border border-[#e4ddd4] bg-white shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-4 p-5">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold">{t.teacherName ?? "Giáo viên"}</p>
-                        <span className="rounded-full bg-[#edf4ff] px-2 py-0.5 text-xs font-semibold text-[#2f5f9b]">
+                        <span className="inline-flex items-center gap-1.5 text-sm font-semibold">
+                          <UserRound className="size-4 text-[#8a8178]" />
+                          {t.teacherName ?? "Giáo viên"}
+                        </span>
+                        <span className="rounded-full bg-[#edf4ff] px-2.5 py-1 text-xs font-semibold text-[#2f5f9b]">
                           Khối {t.grade}
                         </span>
+                        <span className="rounded-full bg-[#f5f1ec] px-2.5 py-1 text-xs font-medium text-[#6b6259]">
+                          {subjectLabel(t.subject)}
+                        </span>
                       </div>
-                      <p className="mt-1 text-sm">{t.scopeDescription}</p>
-                      <p className="mt-0.5 text-xs text-[#6b6b6b]">
+                      <h2 className="mt-3 text-base font-semibold leading-6">{t.scopeDescription}</h2>
+                      <p className="mt-1 flex items-center gap-1.5 text-sm text-[#6b6b6b]">
+                        <BookOpen className="size-4 shrink-0 text-[#a69b90]" />
                         {t.chapterName} · {t.lessonName}
                       </p>
-                      <p className="mt-2 text-xs text-[#6b6b6b]">
-                        {subjectLabel(t.subject)} · Tuần {weekLabel(t.weekStartDate)} · Nộp lúc {formatDateTime(t.submittedAt)}
-                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#6b6b6b]">
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#faf9f7] px-2.5 py-1.5">
+                          <CalendarClock className="size-3.5 text-[#a69b90]" />
+                          Tuần {weekLabel(t.weekStartDate)}
+                        </span>
+                        <span className="inline-flex items-center rounded-lg bg-[#faf9f7] px-2.5 py-1.5">
+                          Nộp lúc {formatDateTime(t.submittedAt)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex shrink-0 gap-3 text-sm">
-                      <button onClick={() => void handleExpand(t.id)} className="text-[#b85c3b] underline">
+                    <div className="flex shrink-0 flex-wrap gap-2 text-sm">
+                      <button
+                        type="button"
+                        onClick={() => void handleExpand(t.id)}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d8d1c9] bg-white px-3 font-medium text-[#4f4943] transition hover:bg-[#f5f1ec]"
+                      >
+                        <Eye className="size-4" />
                         {expandedId === t.id ? "Ẩn chi tiết" : "Xem chi tiết"}
                       </button>
-                      <button onClick={() => void handleApprove(t.id)} className="text-emerald-700 underline">
+                      <button
+                        type="button"
+                        onClick={() => void handleApprove(t.id)}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 font-medium text-white transition hover:bg-emerald-700"
+                      >
+                        <CheckCircle2 className="size-4" />
                         Duyệt
                       </button>
-                      <button onClick={() => void handleReject(t.id)} className="text-red-600 underline">
+                      <button
+                        type="button"
+                        onClick={() => void handleReject(t.id)}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 font-medium text-red-700 transition hover:bg-red-100"
+                      >
+                        <XCircle className="size-4" />
                         Từ chối
                       </button>
                     </div>
                   </div>
 
                   {expandedId === t.id ? (
-                    <div className="mt-4 rounded-xl border bg-[#f9f7f4] p-3 text-sm">
+                    <div className="border-t border-[#eee7df] bg-[#fbfaf8] px-5 py-4 text-sm">
                       {detailLoading || !detail ? (
-                        <p className="text-[#6b6b6b]">Đang tải chi tiết...</p>
+                        <p className="flex items-center gap-2 text-[#6b6b6b]">
+                          <Loader2 className="size-4 animate-spin" />
+                          Đang tải chi tiết...
+                        </p>
                       ) : (
-                        <>
-                          <p>
+                        <div className="space-y-3">
+                          <p className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[#4f4943]">
+                            <CalendarClock className="size-4 text-[#a69b90]" />
                             <span className="text-[#6b6b6b]">Hạn nộp:</span> {formatDateTime(detail.deadline)}
                           </p>
                           {detail.sourceDocumentUrl ? (
-                            <p className="mt-1">
+                            <p>
                               <a
                                 href={detail.sourceDocumentUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-[#b85c3b] underline"
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#e8724a] px-3 py-2 text-xs font-medium text-white transition hover:bg-[#d9633b]"
                               >
+                                <Library className="size-3.5" />
                                 Xem tài liệu đã tải lên{detail.sourceDocumentName ? ` (${detail.sourceDocumentName})` : ""}
                               </a>
                             </p>
                           ) : detail.sourceLibraryContentId ? (
-                            <div className="mt-3">
+                            <div className="space-y-2">
                               <p className="text-[#6b6b6b]">Nguồn: {detail.sourceLibraryContentTitle ?? "Giáo án trong thư viện của giáo viên"}.</p>
                               {detail.sourceLibraryContentPayload ? (
-                                <details className="mt-2 rounded-lg border bg-white p-2">
-                                  <summary className="cursor-pointer font-medium text-[#b85c3b]">Xem bản giáo án đã nộp</summary>
-                                  <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap text-xs text-[#3f3b36]">{JSON.stringify(detail.sourceLibraryContentPayload, null, 2)}</pre>
-                                </details>
+                                <button
+                                  type="button"
+                                  onClick={() => openSubmittedLessonPreview(detail)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#e8724a] px-3 py-2 text-xs font-medium text-white transition hover:bg-[#d9633b]"
+                                >
+                                  <Library className="size-3.5" /> Mở tài nguyên
+                                </button>
                               ) : null}
                             </div>
                           ) : null}
-                        </>
+                        </div>
                       )}
                     </div>
                   ) : null}
@@ -252,6 +333,43 @@ function LessonPlanApprovalScreen() {
               ))}
             </div>
           )}
+
+          {preview ? (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="approval-preview-title"
+              onMouseDown={() => setPreview(null)}
+            >
+              <div
+                className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-[#f7f5f2] shadow-2xl"
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e4ddd4] bg-white px-5 py-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#d97757]">Xem giáo án đã nộp</p>
+                    <h2 id="approval-preview-title" className="truncate text-base font-semibold">
+                      {preview.title}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPreview(null)}
+                    aria-label="Đóng"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-lg text-[#6b6259] transition hover:bg-[#f5f1ec]"
+                  >
+                    <X className="size-5" />
+                  </button>
+                </header>
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+                  <article className="mx-auto max-w-[860px] bg-white px-8 py-10 shadow-[0_1px_2px_rgba(43,41,38,0.06),0_8px_28px_rgba(43,41,38,0.08)] sm:px-12 lg:px-16">
+                    <RichView html={preview.document} variant="document" />
+                  </article>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </main>
