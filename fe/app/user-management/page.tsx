@@ -296,7 +296,7 @@ function UserManagementContent() {
       setModeratorEmail("");
       setModeratorEmailTouched(false);
       setModeratorFullName("");
-      setMsg("Đã thêm Moderator.");
+      setMsg("Đã thêm Người Kiểm Duyệt.");
       await loadModerators(moderatorData?.page ?? 0);
     } catch (e) {
       setMsg(String(e));
@@ -366,7 +366,7 @@ function UserManagementContent() {
       setTeacherEmailTouched(false);
       setTeacherFullName("");
       setTeacherGrades([10, 11, 12]);
-      setMsg("Đã thêm Teacher.");
+      setMsg("Đã thêm Giáo Viên.");
       await loadTeachers(teacherData?.page ?? 0);
     } catch (e) {
       setMsg(String(e));
@@ -474,8 +474,8 @@ function UserManagementContent() {
               <h1 className="font-libertine mt-3 text-4xl leading-none sm:text-5xl">Quản lý tài khoản</h1>
               <p className="mt-4 text-sm leading-6 text-[#6b6b6b]">
                 {isPrincipal
-                  ? "Cấp và thu hồi quyền truy cập cho Moderator từng môn và cho nhân viên IT Staff."
-                  : "Cấp và thu hồi quyền truy cập cho Teacher trong môn bạn phụ trách."}
+                  ? "Cấp và thu hồi quyền truy cập cho Người Kiểm Duyệt từng môn và cho nhân viên IT Staff."
+                  : "Cấp và thu hồi quyền truy cập cho Giáo Viên trong môn bạn phụ trách."}
               </p>
             </div>
 
@@ -521,7 +521,7 @@ function UserManagementContent() {
                 </div>
 
                 <div className="mt-6 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
-                  <h2 className="font-medium">Thêm Moderator</h2>
+                  <h2 className="font-medium">Thêm Nguời Kiểm Duyệt</h2>
                   <div className="mt-3 flex flex-wrap items-start gap-2">
                     <div className="min-w-48 flex-1">
                       <input
@@ -630,7 +630,7 @@ function UserManagementContent() {
                 </div>
 
                 <div className="mt-6 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
-                  <h2 className="font-medium">Thêm Teacher</h2>
+                  <h2 className="font-medium">Thêm Giáo Viên </h2>
                   <div className="mt-3 flex flex-wrap items-start gap-2">
                     <div className="min-w-48 flex-1">
                       <input
