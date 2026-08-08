@@ -9,13 +9,13 @@ import type { Node as PMNode } from "@tiptap/pm/model";
  * vai trò dòng theo "dòng đầu tiên = tiêu đề" thì một chunk chỉ chứa dòng dữ liệu bị cắt rời
  * sẽ nhận nhầm dòng đầu của NÓ làm tiêu đề.
  */
-const HEADER_DELIM = "‖";
-const DATA_DELIM = "|";
+export const HEADER_DELIM = "‖";
+export const DATA_DELIM = "|";
 
 /** Nối nhiều đoạn văn TRONG CÙNG một ô (vd 4 bước tổ chức của bảng tiểu hoạt động) mà vẫn
  * giữ cả hàng trên một dòng vật lý — bắt buộc để `diffLines` coi cả hàng là một đơn vị
  * thêm/bớt/giữ nguyên duy nhất. */
-const CELL_LINEBREAK = "<br>";
+export const CELL_LINEBREAK = "<br>";
 
 /** Ranh giới giữa hai bảng liên tiếp không có văn bản xen giữa (vd bảng thiết bị rồi tới
  * nhiều phiếu học tập) — không có dòng này thì không có cách nào biết bảng nào kết thúc ở
@@ -38,7 +38,10 @@ export function isTableRowLine(line: string): boolean {
   return isHeaderLine(line) || isDataLine(line);
 }
 
-function escapeDelim(value: string, delim: string) {
+/** Escape ký tự phân cách (`‖`/`|`) THẬT trong nội dung ô — dùng khi TỰ build dòng bảng từ dữ
+ * liệu có cấu trúc (vd `editContentToLines.ts` build dòng từ JSON AI trả về), không chỉ khi
+ * mã hoá node `table` có sẵn. */
+export function escapeDelim(value: string, delim: string) {
   return value.split(delim).join(`\\${delim}`);
 }
 

@@ -4,6 +4,7 @@ import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionRequest.SectionInput;
 import com.edua.beeduasystem.presentation.dto.lessonplan.EditLessonSectionResponse;
+import com.edua.beeduasystem.presentation.dto.lessonplan.TextEditContent;
 import com.edua.beeduasystem.repository.gateways.AiClient;
 import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
 import com.edua.beeduasystem.service.ai.AiSystemPromptService;
@@ -18,9 +19,11 @@ import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,10 +33,18 @@ class LessonPlanServiceEditSectionTest {
     @Mock private AiClient aiClient;
     @Mock private AiSystemPromptService systemPromptService;
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
     private LessonPlanService service() {
         return new LessonPlanService(
                 catalogRepository, aiClient, new LessonPlan5512PromptBuilder(), new LessonPlanEditPromptBuilder(),
-                new ObjectMapper(), Executors.newVirtualThreadPerTaskExecutor(), systemPromptService, 1, 0L);
+                mapper, Executors.newVirtualThreadPerTaskExecutor(), systemPromptService, 1, 0L);
+    }
+
+    /** kind "text" (dùng trong `request()`) trả JSON {"lines": [...]} — tiện đọc lại thành danh
+     * sách dòng để assert, thay vì đào JsonNode thủ công trong từng test. */
+    private List<String> linesOf(EditLessonSectionResponse response) {
+        return mapper.convertValue(response.data(), TextEditContent.class).lines();
     }
 
     private EditLessonSectionRequest request() {
@@ -46,37 +57,187 @@ class LessonPlanServiceEditSectionTest {
         );
     }
 
+    /** Áp dụng cho cả 2 key (LESSON_PLAN_EDIT_SECTION_SELECT lẫn LESSON_PLAN_EDIT_SECTION) — trả
+     * nguyên văn prompt đã build, không có tuỳ biến IT Staff trong test. */
     private void stubPromptApply() {
-        when(systemPromptService.apply(eq(AiPromptKey.LESSON_PLAN_EDIT_SECTION), anyString()))
+        when(systemPromptService.apply(any(AiPromptKey.class), anyString()))
                 .thenAnswer(invocation -> invocation.getArgument(1));
     }
 
+    /** Định tuyến response AI theo NỘI DUNG prompt thay vì theo thứ tự gọi — bắt buộc vì các call
+     * viết (bước 2) chạy SONG SONG nên thứ tự gọi thật sự không xác định được trước.
+     * `selectResponse` được trả cho call bước 1 (nhận diện qua marker liệt kê danh sách phần);
+     * `writeResponsesById` ánh xạ id -> response JSON cho call bước 2 (nhận diện qua dòng
+     * "id: <id>" duy nhất có trong prompt viết của đúng target đó). */
+    private void stubAiResponses(String selectResponse, java.util.Map<String, String> writeResponsesById) {
+        when(aiClient.generate(anyString())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(0);
+            if (prompt.contains("===DANH SÁCH PHẦN GIÁO ÁN")) {
+                return selectResponse;
+            }
+            for (var entry : writeResponsesById.entrySet()) {
+                if (prompt.contains("id: " + entry.getKey())) {
+                    return entry.getValue();
+                }
+            }
+            throw new IllegalStateException("Prompt viết không khớp id nào đã stub:\n" + prompt);
+        });
+    }
+
+    // ---- Luồng thành công --------------------------------------------------------------
+
     @Test
-    void editSectionReturnsValidAiProposal() {
+    void editSectionSelectsAndWritesSingleSection() {
         stubPromptApply();
-        when(aiClient.generate(anyString()))
-                .thenReturn("{\"targetId\":\"sec-1\",\"content\":\"**1. Kiến thức**\\n- Nêu được ý chính.\"}");
+        stubAiResponses(
+                "{\"targetIds\":[\"sec-1\"]}",
+                java.util.Map.of("sec-1", "{\"lines\":[\"**1. Kiến thức**\",\"- Nêu được ý chính.\"]}"));
 
-        EditLessonSectionResponse response = service().editSection(request());
+        List<EditLessonSectionResponse> response = service().editSection(request());
 
-        assertEquals("sec-1", response.targetId());
-        assertEquals("**1. Kiến thức**\n- Nêu được ý chính.", response.content());
+        assertEquals(1, response.size());
+        assertEquals("sec-1", response.get(0).targetId());
+        assertEquals("text", response.get(0).kind());
+        assertEquals(List.of("**1. Kiến thức**", "- Nêu được ý chính."), linesOf(response.get(0)));
     }
 
     @Test
-    void editSectionRejectsUnknownTargetId() {
+    void editSectionSelectsAndWritesMultipleSectionsInParallel() {
         stubPromptApply();
-        when(aiClient.generate(anyString()))
-                .thenReturn("{\"targetId\":\"sec-x\",\"content\":\"Nội dung\"}");
+        stubAiResponses(
+                "{\"targetIds\":[\"sec-1\",\"sec-2\"]}",
+                java.util.Map.of(
+                        "sec-1", "{\"lines\":[\"A\"]}",
+                        "sec-2", "{\"lines\":[\"B\"]}"));
+
+        List<EditLessonSectionResponse> response = service().editSection(request());
+
+        assertEquals(2, response.size());
+        assertEquals("sec-1", response.get(0).targetId());
+        assertEquals(List.of("A"), linesOf(response.get(0)));
+        assertEquals("sec-2", response.get(1).targetId());
+        assertEquals(List.of("B"), linesOf(response.get(1)));
+    }
+
+    // ---- Bước chọn (select) trả dữ liệu không hợp lệ ------------------------------------
+
+    @Test
+    void editSectionRejectsUnknownTargetIdFromSelectStep() {
+        stubPromptApply();
+        stubAiResponses("{\"targetIds\":[\"sec-x\"]}", java.util.Map.of());
+
+        assertThrows(LessonPlanGenerationException.class, () -> service().editSection(request()));
+        // Chọn thất bại phải chặn TRƯỚC khi có bất kỳ call viết nào — chỉ đúng 1 call (bước chọn).
+        verify(aiClient, times(1)).generate(anyString());
+    }
+
+    @Test
+    void editSectionRejectsDuplicateTargetIdFromSelectStep() {
+        stubPromptApply();
+        stubAiResponses("{\"targetIds\":[\"sec-1\",\"sec-1\"]}", java.util.Map.of());
 
         assertThrows(LessonPlanGenerationException.class, () -> service().editSection(request()));
     }
 
     @Test
-    void editSectionRejectsMalformedJson() {
+    void editSectionRejectsEmptyTargetIdsList() {
         stubPromptApply();
-        when(aiClient.generate(anyString())).thenReturn("khong phai json");
+        stubAiResponses("{\"targetIds\":[]}", java.util.Map.of());
 
         assertThrows(LessonPlanGenerationException.class, () -> service().editSection(request()));
+    }
+
+    @Test
+    void editSectionRejectsMalformedSelectJson() {
+        stubPromptApply();
+        stubAiResponses("khong phai json", java.util.Map.of());
+
+        assertThrows(LessonPlanGenerationException.class, () -> service().editSection(request()));
+    }
+
+    // ---- Bước viết (write) lỗi từng phần -------------------------------------------------
+
+    @Test
+    void editSectionRejectsMalformedWriteJson() {
+        stubPromptApply();
+        stubAiResponses(
+                "{\"targetIds\":[\"sec-1\"]}",
+                java.util.Map.of("sec-1", "khong phai json"));
+
+        // Chỉ có 1 target và target đó lỗi -> toàn bộ request thất bại (giống hành vi cũ).
+        assertThrows(LessonPlanGenerationException.class, () -> service().editSection(request()));
+    }
+
+    @Test
+    void editSectionTreatsBlankWriteContentAsFailureForThatTargetOnly() {
+        stubPromptApply();
+        stubAiResponses(
+                "{\"targetIds\":[\"sec-1\",\"sec-2\"]}",
+                java.util.Map.of(
+                        "sec-1", "{\"lines\":[]}",
+                        "sec-2", "{\"lines\":[\"B\"]}"));
+
+        List<EditLessonSectionResponse> response = service().editSection(request());
+
+        assertEquals(1, response.size());
+        assertEquals("sec-2", response.get(0).targetId());
+        assertEquals(List.of("B"), linesOf(response.get(0)));
+    }
+
+    @Test
+    void editSectionTeratesPartialWriteFailureAndReturnsSurvivingResult() {
+        stubPromptApply();
+        stubAiResponses(
+                "{\"targetIds\":[\"sec-1\",\"sec-2\"]}",
+                java.util.Map.of(
+                        "sec-1", "not json",
+                        "sec-2", "{\"lines\":[\"B\"]}"));
+
+        List<EditLessonSectionResponse> response = service().editSection(request());
+
+        assertEquals(1, response.size());
+        assertEquals("sec-2", response.get(0).targetId());
+    }
+
+    /**
+     * Tái hiện lỗi thật gặp trên môi trường live (libraryId 516c884b..., tiểu hoạt động "Lập
+     * phương trình đường thẳng đi qua hai điểm") bằng đúng byte response AI đã trả — lấy trực
+     * tiếp từ log capture thật (test resource, không gõ tay để tránh escape sai): AI quên
+     * escape "\overrightarrow" trong JSON, khiến "Không viết lại được phần giáo án nào (AI lỗi
+     * mọi phần)". `parseJson` giờ chạy `repairLatexEscapes` TRƯỚC khi parse (không chỉ trong
+     * catch) nên phải tự vá được, không cần AI trả JSON hợp lệ ngay từ đầu.
+     */
+    @Test
+    void editSectionRepairsRealCapturedUnescapedLatexWriteResponse() throws java.io.IOException {
+        stubPromptApply();
+        String brokenResponse;
+        try (var in = getClass().getResourceAsStream("/lessonplan/broken-latex-subactivity-response.json")) {
+            brokenResponse = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        EditLessonSectionRequest request = new EditLessonSectionRequest(
+                "phương trình đường thẳng đi qua hai điểm (5 phút)",
+                List.of(new SectionInput("sec-1", "Hoạt động 4: Lập phương trình đường thẳng đi qua hai điểm (5 phút)",
+                        "Mục tiêu: ...\n‖ Hoạt động của GV và HS ‖ Sản phẩm dự kiến ‖\n| a | b |", "subActivity")));
+        stubAiResponses("{\"targetIds\":[\"sec-1\"]}", java.util.Map.of("sec-1", brokenResponse));
+
+        List<EditLessonSectionResponse> response = service().editSection(request);
+
+        assertEquals(1, response.size());
+        assertEquals("sec-1", response.get(0).targetId());
+        assertEquals("subActivity", response.get(0).kind());
+    }
+
+    @Test
+    void editSectionThrowsWhenAllWritesFail() {
+        stubPromptApply();
+        stubAiResponses(
+                "{\"targetIds\":[\"sec-1\",\"sec-2\"]}",
+                java.util.Map.of(
+                        "sec-1", "not json",
+                        "sec-2", "{\"lines\":[]}"));
+
+        LessonPlanGenerationException ex = assertThrows(LessonPlanGenerationException.class,
+                () -> service().editSection(request()));
+        assertTrue(ex.getMessage().contains("Không viết lại được phần giáo án nào"));
     }
 }

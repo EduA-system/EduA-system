@@ -228,11 +228,8 @@ body::-webkit-scrollbar {
   line-height: 1.6;
 }
 
-.lesson-document-editor section {
-  margin-top: 42px;
-}
-
 .lesson-document-editor h2 {
+  margin-top: 42px;
   font-size: 22px;
   line-height: 1.35;
   font-weight: 600;

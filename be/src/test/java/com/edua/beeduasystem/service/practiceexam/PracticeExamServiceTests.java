@@ -3,15 +3,19 @@ package com.edua.beeduasystem.service.practiceexam;
 import com.edua.beeduasystem.domain.model.practiceexam.PracticeExam;
 import com.edua.beeduasystem.presentation.dto.practiceexam.PracticeExamRequest;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.repository.gateways.PracticeExamEvent;
+import com.edua.beeduasystem.repository.gateways.PracticeExamStreamPort;
 import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -54,6 +58,48 @@ class PracticeExamServiceTests {
         assertThat(question.answer().get("value")).isEqualTo("$\\frac{\\Delta v}{\\Delta t}$");
     }
 
+    @Test
+    void generateStreamingPublishesPlanReadyThenBatchesThenDone() {
+        TextbookCatalogRepository catalogRepository = mock(TextbookCatalogRepository.class);
+        when(catalogRepository.findLessonKnowledge("book-1", "chapter-1", "lesson-1"))
+                .thenReturn(Optional.of("{\"summary\":\"Knowledge\",\"learningObjectives\":[\"Objective\"]}"));
+        TrackingAiClient aiClient = new TrackingAiClient(20);
+        PracticeExamService service = new PracticeExamService(catalogRepository, aiClient, new ObjectMapper(),
+                3, 10, 10, 30);
+        RecordingStreamPort stream = new RecordingStreamPort();
+
+        service.generateStreaming(request(), "session-1", stream);
+
+        assertThat(stream.planReady).hasSize(1);
+        assertThat(stream.planReady.get(0).stubs()).extracting(PracticeExamEvent.QuestionStub::order)
+                .containsExactlyElementsOf(IntStream.rangeClosed(1, 22).boxed().toList());
+        assertThat(stream.failed).isEmpty();
+        assertThat(stream.batchFailed).isEmpty();
+        int deliveredOrders = stream.batchReady.stream().mapToInt(event -> event.questions().size()).sum();
+        assertThat(deliveredOrders).isEqualTo(22);
+        assertThat(stream.done).hasSize(1);
+    }
+
+    @Test
+    void generateStreamingReportsBatchFailedButStillCompletesOtherBatches() {
+        TextbookCatalogRepository catalogRepository = mock(TextbookCatalogRepository.class);
+        when(catalogRepository.findLessonKnowledge("book-1", "chapter-1", "lesson-1"))
+                .thenReturn(Optional.of("{\"summary\":\"Knowledge\",\"learningObjectives\":[\"Objective\"]}"));
+        PracticeExamService service = new PracticeExamService(catalogRepository, new PartiallyFailingAiClient(), new ObjectMapper(),
+                3, 10, 10, 30);
+        RecordingStreamPort stream = new RecordingStreamPort();
+
+        service.generateStreaming(request(), "session-2", stream);
+
+        assertThat(stream.failed).isEmpty();
+        assertThat(stream.batchFailed).isNotEmpty();
+        assertThat(stream.batchFailed.stream().flatMap(event -> event.orders().stream()).toList())
+                .containsExactlyInAnyOrderElementsOf(List.of(21, 22));
+        int deliveredOrders = stream.batchReady.stream().mapToInt(event -> event.questions().size()).sum();
+        assertThat(deliveredOrders).isEqualTo(20);
+        assertThat(stream.done).hasSize(1);
+    }
+
     private static PracticeExamRequest request() {
         return new PracticeExamRequest("De kiem tra", "PHYSICS", 10, 90, "HARD",
                 22, 1000, false,
@@ -64,7 +110,7 @@ class PracticeExamServiceTests {
                         new PracticeExamRequest.QuestionType("ESSAY", 2, 200, null)
                 ),
                 new PracticeExamRequest.KnowledgeScope("book-1",
-                        List.of(new PracticeExamRequest.LessonRef("chapter-1", "lesson-1"))));
+                        List.of(new PracticeExamRequest.LessonRef("chapter-1", "lesson-1"))), null);
     }
 
     private static PracticeExamRequest singleShortAnswerRequest() {
@@ -72,7 +118,7 @@ class PracticeExamServiceTests {
                 1, 1000, false,
                 List.of(new PracticeExamRequest.QuestionType("SHORT_ANSWER", 1, 1000, null)),
                 new PracticeExamRequest.KnowledgeScope("book-1",
-                        List.of(new PracticeExamRequest.LessonRef("chapter-1", "lesson-1"))));
+                        List.of(new PracticeExamRequest.LessonRef("chapter-1", "lesson-1"))), null);
     }
 
     private static final class MalformedLatexAiClient implements AiClient {
@@ -137,7 +183,7 @@ class PracticeExamServiceTests {
             throw new UnsupportedOperationException();
         }
 
-        private String batchJson(String type, int count, int batchScore) {
+        private static String batchJson(String type, int count, int batchScore) {
             StringBuilder json = new StringBuilder("[");
             for (int index = 0; index < count; index++) {
                 if (index > 0) json.append(',');
@@ -155,14 +201,71 @@ class PracticeExamServiceTests {
             return json.append(']').toString();
         }
 
-        private String options(String type) {
+        private static String options(String type) {
             if (!"MULTIPLE_CHOICE".equals(type) && !"TRUE_FALSE".equals(type)) return "null";
             return "[{\"key\":\"A\",\"content\":\"A\"},{\"key\":\"B\",\"content\":\"B\"},{\"key\":\"C\",\"content\":\"C\"},{\"key\":\"D\",\"content\":\"D\"}]";
         }
 
-        private String rubric(String type, int score) {
+        private static String rubric(String type, int score) {
             if (!"ESSAY".equals(type)) return "null";
             return "[{\"criterion\":\"Rubric\",\"scoreCentiPoints\":" + score + "}]";
+        }
+    }
+
+    /** Như {@link TrackingAiClient} nhưng luôn lỗi cho loại ESSAY — dùng để test BATCH_FAILED. */
+    private static final class PartiallyFailingAiClient implements AiClient {
+        private static final Pattern COUNT = Pattern.compile("Tạo CHÍNH XÁC (\\d+) câu loại ([A-Z_]+), tổng (\\d+) centi điểm");
+
+        @Override
+        public String generate(String prompt) {
+            Matcher matcher = COUNT.matcher(prompt);
+            if (!matcher.find()) throw new IllegalArgumentException("Prompt missing batch instruction");
+            String type = matcher.group(2);
+            if ("ESSAY".equals(type)) throw new IllegalStateException("AI provider lỗi giả lập cho ESSAY");
+            int count = Integer.parseInt(matcher.group(1));
+            int score = Integer.parseInt(matcher.group(3));
+            return TrackingAiClient.batchJson(type, count, score);
+        }
+
+        @Override
+        public String generate(String prompt, byte[] image, String mimeType) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /** Fake port ghi lại mọi sự kiện streaming để assert trong test — dùng list thread-safe vì
+     * các batch chạy song song trên nhiều virtual thread. */
+    private static final class RecordingStreamPort implements PracticeExamStreamPort {
+        final List<PracticeExamEvent.PlanReady> planReady = new java.util.concurrent.CopyOnWriteArrayList<>();
+        final List<PracticeExamEvent.BatchReady> batchReady = new java.util.concurrent.CopyOnWriteArrayList<>();
+        final List<PracticeExamEvent.BatchFailed> batchFailed = new java.util.concurrent.CopyOnWriteArrayList<>();
+        final List<PracticeExamEvent.Done> done = new java.util.concurrent.CopyOnWriteArrayList<>();
+        final List<PracticeExamEvent.Error> failed = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        @Override
+        public void publishPlanReady(String sessionId, String title, String instructions, int durationMinutes,
+                                     int totalScoreCentiPoints, List<PracticeExamEvent.QuestionStub> stubs) {
+            planReady.add(new PracticeExamEvent.PlanReady(sessionId, title, instructions, durationMinutes, totalScoreCentiPoints, stubs));
+        }
+
+        @Override
+        public void publishBatchReady(String sessionId, List<PracticeExam.Question> questions) {
+            batchReady.add(new PracticeExamEvent.BatchReady(sessionId, questions));
+        }
+
+        @Override
+        public void publishBatchFailed(String sessionId, List<Integer> orders, String reason) {
+            batchFailed.add(new PracticeExamEvent.BatchFailed(sessionId, orders, reason));
+        }
+
+        @Override
+        public void publishDone(String sessionId) {
+            done.add(new PracticeExamEvent.Done(sessionId));
+        }
+
+        @Override
+        public void publishFailed(String sessionId, String message) {
+            failed.add(new PracticeExamEvent.Error(sessionId, message));
         }
     }
 

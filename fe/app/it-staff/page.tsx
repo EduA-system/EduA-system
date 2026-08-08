@@ -29,7 +29,7 @@ const groups: readonly PromptGroup[] = [
     title: "Giáo án",
     subtitle: "Sinh mục tiêu, học liệu và hoạt động dạy học.",
     accent: "#d97757",
-    keys: ["LESSON_PLAN_OBJECTIVES", "LESSON_PLAN_MATERIALS", "LESSON_PLAN_ACTIVITIES_FRAME", "LESSON_PLAN_ACTIVITY_DETAIL"],
+    keys: ["LESSON_PLAN_OBJECTIVES", "LESSON_PLAN_MATERIALS", "LESSON_PLAN_ACTIVITIES_FRAME", "LESSON_PLAN_ACTIVITY_DETAIL", "LESSON_PLAN_SUB_ACTIVITY_DETAIL"],
   },
   {
     title: "Dàn ý slide",
@@ -56,6 +56,7 @@ const labels: Record<string, string> = {
   LESSON_PLAN_MATERIALS: "Thiết bị và học liệu",
   LESSON_PLAN_ACTIVITIES_FRAME: "Khung hoạt động",
   LESSON_PLAN_ACTIVITY_DETAIL: "Chi tiết hoạt động",
+  LESSON_PLAN_SUB_ACTIVITY_DETAIL: "Chi tiết tiểu hoạt động",
   SLIDE_OUTLINE_DECK_BLUEPRINT: "Deck blueprint",
   SLIDE_OUTLINE_CONTENT_MAP: "Content map",
   SLIDE_OUTLINE_STRUCTURE: "Cấu trúc dàn ý",

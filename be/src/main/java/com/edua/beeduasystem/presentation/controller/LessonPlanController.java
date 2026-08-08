@@ -9,6 +9,7 @@ import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanStrea
 import com.edua.beeduasystem.service.lessonplan.GenerateLessonPlanStreamUseCase;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/lesson-plans")
@@ -114,20 +117,21 @@ public class LessonPlanController {
 
     @PostMapping("/edit-section")
     @Operation(
-            summary = "Chỉnh sửa một phần giáo án bằng AI",
-            description = "Đồng bộ: frontend gửi các phần đã trích từ editor hiện tại cùng yêu cầu của giáo viên. "
-                    + "AI tự chọn đúng một phần cần sửa và trả bản viết lại để giáo viên xem trước trước khi áp dụng.",
+            summary = "Chỉnh sửa một hoặc nhiều phần giáo án bằng AI",
+            description = "Đồng bộ: frontend gửi các phần đã trích từ editor hiện tại cùng yêu cầu của "
+                    + "giáo viên. AI tự chọn một hoặc nhiều phần thực sự liên quan tới yêu cầu và trả bản "
+                    + "viết lại cho TỪNG phần, để giáo viên xem trước và chấp nhận/bỏ TỪNG PHẦN riêng biệt.",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Bản sửa đề xuất cho một phần giáo án",
-                            content = @Content(schema = @Schema(implementation = EditLessonSectionResponse.class))
+                            description = "Danh sách bản sửa đề xuất, mỗi phần tử ứng với một phần giáo án",
+                            content = @Content(array = @ArraySchema(schema = @Schema(implementation = EditLessonSectionResponse.class)))
                     ),
                     @ApiResponse(responseCode = "400", description = "Thiếu yêu cầu hoặc danh sách phần giáo án không hợp lệ"),
-                    @ApiResponse(responseCode = "502", description = "AI lỗi, trả JSON sai định dạng hoặc chọn phần không hợp lệ")
+                    @ApiResponse(responseCode = "502", description = "AI lỗi, trả JSON sai định dạng, không đề xuất gì, chọn phần không hợp lệ, hoặc trùng phần")
             }
     )
-    public EditLessonSectionResponse editSection(@RequestBody EditLessonSectionRequest request) {
+    public List<EditLessonSectionResponse> editSection(@RequestBody EditLessonSectionRequest request) {
         return lessonPlanService.editSection(request);
     }
 

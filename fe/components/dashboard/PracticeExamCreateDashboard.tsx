@@ -14,8 +14,8 @@ import {
   type CatalogLesson,
 } from "@/services/lessonPlanService";
 import {
-  generatePracticeExam,
-  storePracticeExam,
+  startPracticeExamStream,
+  storePracticeExamSession,
   type PracticeExamRequest,
   type PracticeQuestionType,
 } from "@/services/practiceExamService";
@@ -38,12 +38,6 @@ const TIMES: Record<TypeKey, number[]> = {
   TRUE_FALSE: [2, 3, 4],
   SHORT_ANSWER: [1.5, 2.5, 4],
   ESSAY: [4, 6, 9],
-};
-const BATCH_SIZES: Record<TypeKey, number> = {
-  MULTIPLE_CHOICE: 5,
-  TRUE_FALSE: 2,
-  SHORT_ANSWER: 3,
-  ESSAY: 1,
 };
 const SUBJECT_LABELS: Record<PracticeExamRequest["subject"], string> = {
   PHYSICS: "Vật lí",
@@ -103,8 +97,6 @@ export function PracticeExamCreateDashboard() {
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [generationProgress, setGenerationProgress] = useState(0);
-  const [generationMessage, setGenerationMessage] = useState("");
   const [openStep, setOpenStep] = useState<Step>(1);
   const [maxUnlockedStep, setMaxUnlockedStep] = useState<Step>(1);
   const durationMinutes = Number(duration);
@@ -112,10 +104,6 @@ export function PracticeExamCreateDashboard() {
     duration === "15" || duration === "45" ? duration : "custom";
   const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
   const totalQuestions = Object.values(counts).reduce((a, b) => a + b, 0);
-  const estimatedBatchCount = TYPES.reduce(
-    (sum, type) => sum + Math.ceil(counts[type] / BATCH_SIZES[type]),
-    0,
-  );
   useEffect(() => {
     let stale = false;
     void fetchTextbookNames(subject)
@@ -164,27 +152,6 @@ export function PracticeExamCreateDashboard() {
       .then((items) => setLessonsByChapter(Object.fromEntries(items)))
       .catch(() => setError("Không tải được bài học."));
   }, [bookCode, selectedChapters]);
-  useEffect(() => {
-    if (!loading) return;
-    const started = Date.now();
-    const timer = window.setInterval(() => {
-      const elapsed = Date.now() - started;
-      if (elapsed < 8_000) {
-        setGenerationProgress(22);
-        setGenerationMessage("Đang gửi cấu hình đề tới AI...");
-      } else if (elapsed < 45_000) {
-        setGenerationProgress(Math.min(68, 30 + Math.floor(elapsed / 2_000)));
-        setGenerationMessage(`AI đang tạo khoảng ${estimatedBatchCount} nhóm câu của đề...`);
-      } else if (elapsed < 90_000) {
-        setGenerationProgress(Math.min(86, 62 + Math.floor(elapsed / 4_000)));
-        setGenerationMessage("Đang chờ các nhóm câu dài hoàn thành...");
-      } else {
-        setGenerationProgress(92);
-        setGenerationMessage("Đang kiểm tra đáp án và thang điểm...");
-      }
-    }, 1_200);
-    return () => window.clearInterval(timer);
-  }, [loading, estimatedBatchCount]);
   const index = difficulty === "EASY" ? 0 : difficulty === "HARD" ? 2 : 1;
   const estimated = TYPES.reduce(
     (sum, type) => sum + counts[type] * TIMES[type][index],
@@ -252,8 +219,6 @@ export function PracticeExamCreateDashboard() {
   }
   async function generate() {
     if (!canGenerate || !bookCode) return;
-    setGenerationProgress(8);
-    setGenerationMessage("Đang chuẩn bị dữ liệu SGK...");
     setLoading(true);
     setError(null);
     try {
@@ -281,16 +246,21 @@ export function PracticeExamCreateDashboard() {
           }),
         },
       };
-      sessionStorage.setItem("edua-practice-exam-draft", JSON.stringify({ subject, grade: String(grade), duration: durationMinutes, difficulty }));
-      setGenerationProgress(12);
-      setGenerationMessage(`AI đang tạo khoảng ${estimatedBatchCount} nhóm câu...`);
-      storePracticeExam(await generatePracticeExam(request, authFetch));
-      setGenerationProgress(100);
-      setGenerationMessage("Đang mở trình chỉnh sửa đề...");
+      // Luồng streaming: chỉ kickoff (BE trả 202 ngay), rồi sang /exam-edit-new mở STOMP
+      // và fill dần. Không chờ AI ở đây nữa → không còn request đồng bộ dài/timeout.
+      const sessionId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `exam-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      await startPracticeExamStream({ sessionId, request }, authFetch);
+      storePracticeExamSession({
+        sessionId,
+        request,
+        display: { subject, grade: String(grade), duration: durationMinutes, difficulty },
+      });
       router.push("/exam-edit-new");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tạo đề.");
-    } finally {
       setLoading(false);
     }
   }
@@ -684,29 +654,18 @@ export function PracticeExamCreateDashboard() {
                           {currentBook ? `✓ ${currentBook.name}` : "! Chưa chọn sách"}
                         </li>
                       </ul>
-                      {loading && (
-                        <div className="mt-5 rounded-lg border border-[#ead8b2] bg-[#fffaf0] p-3">
-                          <div className="h-2 overflow-hidden rounded-full bg-[#f0e0cf]">
-                            <div
-                              className="h-full rounded-full bg-[#d97757] transition-[width] duration-700"
-                              style={{ width: `${generationProgress}%` }}
-                            />
-                          </div>
-                          <p className="mt-2 text-xs font-medium text-[#805f20]">
-                            {generationMessage || "AI đang tạo đề..."}
-                          </p>
-                          <p className="mt-1 text-[11px] leading-4 text-[#8b8178]">
-                            Biểu mẫu đã được khóa cho đến khi đề tạo xong.
-                          </p>
-                        </div>
-                      )}
                       <button
                         disabled={!canGenerate || loading}
                         onClick={() => void generate()}
                         className="mt-6 w-full rounded-lg bg-[#d97757] px-4 py-3 text-sm font-semibold text-white disabled:bg-[#d9d2cb]"
                       >
-                        {loading ? "AI đang tạo đề..." : "Tạo đề bằng AI →"}
+                        {loading ? "Đang khởi tạo..." : "Tạo đề bằng AI →"}
                       </button>
+                      {loading && (
+                        <p className="mt-2 text-center text-[11px] text-[#8b8178]">
+                          Bạn sẽ được chuyển sang trình soạn đề để xem AI soạn từng câu.
+                        </p>
+                      )}
                     </aside>
                   </div>
                 ) : (

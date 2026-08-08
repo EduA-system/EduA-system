@@ -58,7 +58,13 @@ export function netForces(scene: Scene, r: Readers): Record<string, Vec2> {
         const vb = r.vel(force.b);
         const relRate = (vb.x - va.x) * ux + (vb.y - va.y) * uy;
         const ext = L - force.restLength; // ext > 0: giãn, ext < 0: nén
-        const mag = force.k * ext + force.damping * relRate;
+        const rawMagnitude = force.k * ext + force.damping * relRate;
+        // Lò xo chỉ-nén (bumper) chỉ tồn tại khi ĐANG nén (ext < 0) — khớp với
+        // cổng thế năng compressionOnly ở build-derivs.ts (ext >= 0 → PE = 0).
+        // Nếu chỉ chặn theo dấu rawMagnitude (bỏ điều kiện ext < 0), thành phần
+        // damping có thể vẫn cho lực nén dù ext >= 0 (đã hết chạm), lệch khỏi
+        // model thế năng và bơm/rút năng lượng sai khi bật conserveMechanicalEnergy.
+        const mag = force.compressionOnly ? (ext < 0 ? Math.min(0, rawMagnitude) : 0) : rawMagnitude;
         // mag > 0 (giãn) → kéo a về phía b (+u) và b về phía a (−u).
         add(force.a, mag * ux, mag * uy);
         add(force.b, -mag * ux, -mag * uy);

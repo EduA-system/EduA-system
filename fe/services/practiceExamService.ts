@@ -34,8 +34,89 @@ async function request<T>(path: string, payload: unknown, fetcher: RequestFetche
 }
 
 export function validatePracticeExam(config: PracticeExamRequest, fetcher?: RequestFetcher) { return request<PracticeExamValidation>("/api/practice-exams/validate-configuration", config, fetcher); }
-export function generatePracticeExam(config: PracticeExamRequest, fetcher?: RequestFetcher) { return request<PracticeExam>("/api/practice-exams/generate", config, fetcher); }
 
-const SESSION_KEY = "edua:practiceExamDraft";
-export function storePracticeExam(exam: PracticeExam) { sessionStorage.setItem(SESSION_KEY, JSON.stringify(exam)); }
-export function readPracticeExam(): PracticeExam | null { try { const value = sessionStorage.getItem(SESSION_KEY); return value ? JSON.parse(value) as PracticeExam : null; } catch { return null; } }
+export type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+// ---- Streaming (POST /api/practice-exams/generate-stream) ----------------
+// Kickoff async: BE trả 202 ngay rồi đẩy tiến trình qua STOMP
+// (/topic/practice-exam/{sessionId}). FE không đọc body — chỉ kiểm 2xx.
+export async function startPracticeExamStream(
+  session: { sessionId: string; request: PracticeExamRequest },
+  authFetch: AuthFetch,
+): Promise<void> {
+  const res = await authFetch("/api/practice-exams/generate-stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(session),
+  });
+  if (!res.ok) {
+    let message = `Khởi tạo tạo đề thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+}
+
+// ---- Sinh lại 1 câu (POST /api/practice-exams/regenerate-question) -------
+export async function regenerateQuestion(
+  req: { request: PracticeExamRequest; order: number; type: PracticeQuestionType; scoreCentiPoints: number },
+  accessToken: string,
+): Promise<PracticeExam["questions"][number]> {
+  const res = await fetch("/api/practice-exams/regenerate-question", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let message = `Sinh lại câu hỏi thất bại (HTTP ${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      // body không phải JSON — giữ message mặc định.
+    }
+    throw new Error(message);
+  }
+  return res.json() as Promise<PracticeExam["questions"][number]>;
+}
+
+// ---- Bàn giao phiên giữa /exam-create-new và /exam-edit-new --------------
+// Luồng streaming: /exam-create-new chỉ kickoff rồi truyền NGỮ CẢNH PHIÊN
+// (sessionId + request + display) qua sessionStorage; /exam-edit-new dùng
+// sessionId để mở STOMP và fill dần.
+const EXAM_SESSION_KEY = "edua:practiceExamSession";
+
+export type PracticeExamDisplayMetadata = {
+  subject: string;
+  grade: string;
+  duration: number;
+  difficulty: string;
+};
+
+export type PracticeExamSession = {
+  sessionId: string;
+  request: PracticeExamRequest;
+  display: PracticeExamDisplayMetadata;
+};
+
+export function storePracticeExamSession(session: PracticeExamSession): void {
+  sessionStorage.setItem(EXAM_SESSION_KEY, JSON.stringify(session));
+}
+
+export function readPracticeExamSession(): PracticeExamSession | null {
+  try {
+    const raw = sessionStorage.getItem(EXAM_SESSION_KEY);
+    return raw ? (JSON.parse(raw) as PracticeExamSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Xoá phiên sau khi đã tiêu thụ (tránh mở lại stream khi reload/quay lại). */
+export function clearPracticeExamSession(): void {
+  sessionStorage.removeItem(EXAM_SESSION_KEY);
+}

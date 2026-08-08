@@ -118,7 +118,11 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
     }
 
     if (element.type === "image") {
-      return { ...element, ...(fill.imagePrompt != null ? { imagePrompt: fill.imagePrompt } : {}) };
+      return {
+        ...element,
+        ...(fill.imagePrompt != null ? { imagePrompt: fill.imagePrompt } : {}),
+        ...(fill.imageUrl ? { src: fill.imageUrl } : {}),
+      };
     }
 
     if (element.type === "simulation") {

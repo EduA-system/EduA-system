@@ -9,6 +9,30 @@ import { TABLE_BREAK_LINE, buildTableDiffHtml, isTableRowLine, type TableDiffLin
 
 export type SectionDiffChunk = { state: "unchanged" | DiffState; text: string };
 
+export type PendingSectionDiff = { id: string; heading: string };
+
+/**
+ * Quét toàn bộ tài liệu tìm các mục đang có node dán `diffState` (đề xuất AI chưa được
+ * Chấp nhận/Bỏ) — nguồn DUY NHẤT cho danh sách "đang chờ duyệt" của AssistantPanel, thay vì
+ * một state cục bộ ghi tay ở từng nơi gọi (dễ lệch khỏi tài liệu thật: Ctrl+Z hồi sinh một
+ * diff đã Chấp nhận/Bỏ, hoặc một edit khác trong cùng batch lỗi giữa chừng khiến các diff
+ * chèn trước đó không được ghi nhận). Trả về theo đúng thứ tự xuất hiện trong tài liệu vì
+ * `extractEditableSections` đã duyệt top-down.
+ */
+export function scanPendingDiffs(editor: Editor | null): PendingSectionDiff[] {
+  if (!editor || editor.isDestroyed) return [];
+  const pending: PendingSectionDiff[] = [];
+  for (const section of extractEditableSections(editor)) {
+    if (section.bodyFrom >= section.to) continue;
+    let hasDiff = false;
+    editor.state.doc.nodesBetween(section.bodyFrom, section.to, (node) => {
+      if (node.attrs.diffState) hasDiff = true;
+    });
+    if (hasDiff) pending.push({ id: section.id, heading: section.heading });
+  }
+  return pending;
+}
+
 /** So sánh nội dung cũ/mới theo dòng (giống git diff) — khớp quy ước backend trả nội
  * dung "mỗi đoạn/bullet/công thức 1 dòng" (xem LessonPlanEditPromptBuilder). */
 export function diffSectionLines(oldText: string, newText: string): SectionDiffChunk[] {
@@ -90,17 +114,19 @@ export function insertSectionDiff(editor: Editor, section: EditableLessonSection
 }
 
 /**
- * Chấp nhận hoặc bỏ diff đang chờ duyệt của 1 mục, xác định lại vị trí mục theo tiêu đề
+ * Chấp nhận hoặc bỏ diff đang chờ duyệt của 1 mục, xác định lại vị trí mục theo `id`
  * tại thời điểm gọi (không dùng offset đã lưu trước đó — tài liệu có thể đã đổi kích
- * thước từ lúc chèn diff tới lúc bấm Chấp nhận/Bỏ).
+ * thước từ lúc chèn diff tới lúc bấm Chấp nhận/Bỏ, kể cả do 1 diff khác đang chờ duyệt
+ * song song vừa được xử lý). Khoá theo `id` thay vì tiêu đề để không đụng độ khi nhiều
+ * diff cùng chờ duyệt.
  */
 export function resolveSectionDiff(
   editor: Editor,
-  headingLabel: string,
+  sectionId: string,
   resolution: "accept" | "discard",
 ): boolean {
   if (editor.isDestroyed) return false;
-  const target = extractEditableSections(editor).find((section) => section.heading === headingLabel);
+  const target = extractEditableSections(editor).find((section) => section.id === sectionId);
   if (!target || target.bodyFrom >= target.to) return false;
 
   const dropState: DiffState = resolution === "accept" ? "removed" : "added";

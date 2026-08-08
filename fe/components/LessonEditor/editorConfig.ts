@@ -11,6 +11,7 @@ import type { Extensions } from "@tiptap/react";
 import { ParagraphClass } from "./paragraphClassExtension";
 import { PendingActivity } from "./pendingActivityNode";
 import { PendingSection } from "./pendingSectionNode";
+import { PendingQuestion } from "./pendingQuestionNode";
 import { DiffStateExtension } from "./diffStateExtension";
 import { TableDeleteShortcut } from "./tableDeleteShortcut";
 
@@ -73,6 +74,9 @@ export function createEditorExtensions(options: {
     PendingActivity,
     // Block "đang soạn" tĩnh cho cả một phần (I/II/III) trong lúc chờ FRAME_READY.
     PendingSection,
+    // Block "đang soạn" (atom, khoá) cho luồng stream đề kiểm tra — 1 node/câu hỏi,
+    // fill xong thì thay bằng HTML thật (xem usePracticeExamStream).
+    PendingQuestion,
     // Đánh dấu + khoá vùng diff AI đang chờ Chấp nhận/Bỏ (xem AssistantPanel).
     DiffStateExtension,
   ];

@@ -9,6 +9,7 @@ import type {
 } from "@/data/lessonPlan5512Mock";
 import type { LessonPlanDisplayMetadata } from "@/services/lessonPlanService";
 import { TABLE_BREAK_LINE, isTableRowLine, pipeTextToTableHtml } from "./tableText";
+import splitAtDelimiters, { type DelimiterSpec } from "./splitAtDelimiters";
 
 function escapeHtml(value: string | null | undefined) {
   if (!value) return "";
@@ -64,13 +65,74 @@ function answerKeyHtml(lines: string[]) {
   return `<p class="mc-answer-row">${answers}</p>`;
 }
 
+/** Cặp dấu công thức KHỐI theo đúng quy ước dự án yêu cầu AI dùng (xem
+ * `LessonPlanEditPromptBuilder`/`LessonPlan5512PromptBuilder`: "\[...\]" hoặc "$$...$$"). Công
+ * thức TRONG DÒNG ("$...$"/"\(...\)") vẫn do `inlineRichText` xử lý riêng, không đưa vào đây —
+ * `splitAtDelimiters` chỉ lo tách phần KHỐI (cần trở thành `<div>` riêng, không lồng được trong
+ * `<p>`). */
+const BLOCK_MATH_DELIMITERS: DelimiterSpec[] = [
+  { left: "\\[", right: "\\]", display: true },
+  { left: "$$", right: "$$", display: true },
+];
+
+/**
+ * AI đôi khi viết hẳn một môi trường LaTeX ("\begin{cases}...\end{cases}" — hệ phương trình,
+ * ma trận...) mà KHÔNG bọc trong "\[...\]"/"$$...$$" nào cả — không có delimiter thì
+ * `splitAtDelimiters` không có gì để tách, cả khối rơi thẳng ra thành chữ thô. Khác với việc
+ * nhận diện "đoạn này có phải công thức không" (mơ hồ, luôn cần delimiter để chắc chắn), token
+ * "\begin{" là CHỈ CÓ TRONG LaTeX — không có câu văn tiếng Việt bình thường nào chứa chuỗi này —
+ * nên tự động bọc lại hoàn toàn an toàn, không lo nhận nhầm. Bỏ qua nếu 2 ký tự ngay trước/sau
+ * đã là "\[" hoặc "$$" sẵn (tránh bọc đôi khi môi trường đã được AI bọc đúng).
+ */
+function wrapBareLatexEnvironments(line: string): string {
+  return line.replace(/\\begin\{([a-zA-Z*]+)\}[\s\S]*?\\end\{\1\}/g, (match, _env: string, offset: number, full: string) => {
+    const before = full.slice(Math.max(0, offset - 2), offset);
+    const after = full.slice(offset + match.length, offset + match.length + 2);
+    const alreadyWrapped = before === "\\[" || before === "$$" || after === "\\]" || after === "$$";
+    return alreadyWrapped ? match : `\\[${match}\\]`;
+  });
+}
+
+/**
+ * AI đôi khi mở đúng "\[" nhưng quên "\\" ở dấu đóng, chỉ còn "]" trơn — đã gặp thật: "Câu 2"
+ * trong cùng một response viết đúng "\\[...\\]" nhưng "Câu 3" lại thiếu "\\" ở cuối, không ổn
+ * định dù prompt đã nhắc rõ. `splitAtDelimiters` đòi khớp delimiter CHÍNH XÁC nên cần vá trước.
+ * Chỉ vá dấu "]" ĐẦU TIÊN sau một "\[" chưa đóng (không đụng "]" đứng lẻ, vd trích dẫn "[1]"
+ * thường không có "\[" đứng trước); bỏ qua nếu "]" đó đã có "\\" ngay trước (đúng cú pháp sẵn,
+ * tránh nhân đôi backslash).
+ */
+function repairUnescapedBlockMathClose(line: string): string {
+  // [\s\S] thay vì "." + flag "s" (dotAll) — flag "s" cần target ES2018+, dự án đang ES2017.
+  return line.replace(/\\\[([\s\S]*?)\]/g, (fullMatch, inner: string) =>
+    inner.endsWith("\\") ? fullMatch : `\\[${inner}\\]`,
+  );
+}
+
+/**
+ * Dựng HTML cho một dòng có thể lẫn công thức khối với văn bản thường. Dùng `splitAtDelimiters`
+ * (vendor từ KaTeX — xem `splitAtDelimiters.ts`, thuật toán do KaTeX team tự dùng cho tính năng
+ * "auto-render" của họ, đã test qua hàng loạt trường hợp thật) để tách đúng ranh giới công thức
+ * dù có chữ đứng TRƯỚC/SAU dấu mở/đóng trên cùng dòng — đã gặp lỗi thật: AI viết đúng cú pháp
+ * "$$...$$" nhưng thêm chú thích ngay sau (vd "$$...$$ (với t ∈ R)."); quy ước regex cũ (tự viết
+ * tay, buộc CẢ DÒNG khớp `^delimiter...delimiter$`) nên vỡ hoàn toàn trong trường hợp này. Đoạn
+ * text không phải công thức vẫn qua `inlineRichText` như cũ (bullet/mc-option/công thức trong
+ * dòng không đổi).
+ */
 function richParagraph(line: string) {
-  const blockMath = line.match(/^\\\[(.+)\\\]$/);
-  if (blockMath) return blockMathHtml(blockMath[1]);
-  const dollarBlockMath = line.match(/^\$\$(.+)\$\$$/);
-  if (dollarBlockMath) return blockMathHtml(dollarBlockMath[1]);
-  const className = isMultipleChoiceOption(line) ? ' class="mc-option"' : "";
-  return `<p${className}>${inlineRichText(line)}</p>`;
+  const normalized = repairUnescapedBlockMathClose(wrapBareLatexEnvironments(line));
+  const segments = splitAtDelimiters(normalized, BLOCK_MATH_DELIMITERS);
+  const hasBlockMath = segments.some((segment) => segment.type === "math");
+  if (!hasBlockMath) {
+    const className = isMultipleChoiceOption(line) ? ' class="mc-option"' : "";
+    return `<p${className}>${inlineRichText(line)}</p>`;
+  }
+  return segments
+    .map((segment) => {
+      if (segment.type === "math") return blockMathHtml(segment.data);
+      const trimmed = segment.data.trim();
+      return trimmed ? `<p>${inlineRichText(trimmed)}</p>` : "";
+    })
+    .join("");
 }
 
 /** <ul> từ danh sách chuỗi; rỗng → chuỗi rỗng. */

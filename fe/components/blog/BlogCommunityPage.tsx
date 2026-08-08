@@ -127,6 +127,39 @@ function BlogDetailSkeleton() {
   );
 }
 
+function textExcerptFromHtml(html: string) {
+  if (typeof document !== "undefined") {
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    return (template.content.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 160);
+  }
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
+}
+
+function firstImageFromHtml(html: string) {
+  if (typeof document !== "undefined") {
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    return template.content.querySelector("img")?.getAttribute("src") ?? null;
+  }
+  return html.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ?? null;
+}
+
+function summaryFromDetail(post: Detail): Summary {
+  return {
+    id: post.id,
+    title: post.title,
+    subject: post.subject,
+    authorId: post.authorId,
+    authorName: post.authorName,
+    authorAvatarUrl: post.authorAvatarUrl,
+    createdAt: post.createdAt,
+    commentCount: post.comments.length,
+    excerpt: textExcerptFromHtml(post.content),
+    thumbnailUrl: post.thumbnailUrl ?? firstImageFromHtml(post.content),
+  };
+}
+
 export function BlogCommunityPage({ postId }: { postId?: string }) {
   const { user, status, authFetch } = useAuth();
   const router = useRouter();
@@ -569,11 +602,14 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
             authFetch={authFetch}
             post={detail}
             onPostUnavailable={handleModeratorRemoved}
-            onCreated={() => {
+            onCreated={(savedPost) => {
               setEditOpen(false);
+              setDetail(savedPost);
+              setPosts((currentPosts) => currentPosts.map((post) => (
+                post.id === savedPost.id ? summaryFromDetail(savedPost) : post
+              )));
               if (postId) router.replace(`/blog/${postId}`);
               showSuccess("Đã cập nhật bài viết thành công.");
-              void loadDetail(detail.id);
               void loadPosts(activeSubjectFilter);
             }}
           />

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -38,7 +39,7 @@ public class MoleculeService {
 
     @Autowired
     public MoleculeService(
-            AiClient aiClient,
+            @Qualifier("jsonAiClient") AiClient aiClient,
             MoleculePromptBuilder promptBuilder,
             ObjectMapper objectMapper,
             @Value("${app.ai.molecule.timeout-seconds:10}") long aiTimeoutSeconds,

@@ -4,7 +4,7 @@
 // Đưa vào một danh sách ParamDef + giá trị hiện tại; mỗi lần kéo slider gọi onChange.
 // Đồng bộ 2 chiều: nếu `values` đổi từ bên ngoài (reset / AI sửa) → panel tự refresh.
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { Pane } from "tweakpane";
 
 export type ParamDef = {
@@ -14,6 +14,7 @@ export type ParamDef = {
   max: number;
   step?: number;
   unit?: string;
+  description?: string;
 };
 
 // Tweakpane mặc định theme tối, lệch tông với giao diện sáng EDUA. Set trực
@@ -66,6 +67,7 @@ export function ParamPanel({
   // Giá trị mà Tweakpane đọc/ghi trực tiếp (object thường, không phải React state).
   const objRef = useRef<Record<string, number>>({ ...values });
   const paneRef = useRef<Pane | null>(null);
+  const syncingRef = useRef(false);
   // Giữ onChange mới nhất qua ref để effect tạo Pane không phụ thuộc nó.
   const onChangeRef = useRef(onChange);
   useEffect(() => {
@@ -87,7 +89,17 @@ export function ParamPanel({
         max: p.max,
         step: p.step,
       });
-      binding.on("change", (ev) => onChangeRef.current(p.key, ev.value as number));
+      if (p.description) {
+        binding.element.classList.add("eduatp-param-with-description");
+        const description = document.createElement("p");
+        description.className = "eduatp-param-description";
+        description.textContent = p.description;
+        binding.element.appendChild(description);
+      }
+      binding.on("change", (ev) => {
+        if (syncingRef.current) return;
+        onChangeRef.current(p.key, ev.value as number);
+      });
     }
     return () => {
       pane.dispose();
@@ -108,7 +120,14 @@ export function ParamPanel({
         changed = true;
       }
     }
-    if (changed) paneRef.current?.refresh();
+    if (changed) {
+      syncingRef.current = true;
+      try {
+        paneRef.current?.refresh();
+      } finally {
+        syncingRef.current = false;
+      }
+    }
   }, [values]);
 
   return (
@@ -117,8 +136,42 @@ export function ParamPanel({
           CSS), nên không phóng to được bằng inline style var. Selector 2 lớp ở
           đây có độ ưu tiên cao hơn rule gốc của Tweakpane nên luôn thắng, bất
           kể thứ tự nạp stylesheet. */}
-      <style>{`.eduatp-panel .tp-rotv { font-size: 13px; }`}</style>
+      <style>{`
+        .eduatp-panel .tp-rotv { font-size: 13px; }
+        .eduatp-panel .eduatp-param-with-description { flex-wrap: wrap; }
+        .eduatp-panel .eduatp-param-description {
+          box-sizing: border-box;
+          flex: 0 0 100%;
+          margin: 5px 4px 8px;
+          color: #8a8178;
+          font-size: 11px;
+          line-height: 1.45;
+        }
+      `}</style>
       <div ref={containerRef} />
     </div>
   );
+}
+
+/** Compatibility wrapper for the legacy standalone simulation controls. */
+export function ParamRangeField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+  onChange: (value: number) => void;
+}) {
+  const schema = useMemo<ParamDef[]>(() => [{ key: "value", label, min, max, step, unit }], [label, min, max, step, unit]);
+  const values = useMemo(() => ({ value }), [value]);
+  return <ParamPanel schema={schema} values={values} onChange={(_, next) => onChange(next)} />;
 }
