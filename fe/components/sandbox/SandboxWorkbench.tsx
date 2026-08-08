@@ -40,6 +40,7 @@ const DEPENDENCIES = {
 /** Bỏ StrictMode của template: app thật không dùng, và StrictMode gọi effect
  *  hai lần nên renderer Konva (imperative) sẽ dựng stage hai lần. */
 const INDEX_TSX = `import { createRoot } from "react-dom/client";
+import "./tailwind.css";
 import "./styles.css";
 import App from "./App";
 
@@ -47,110 +48,26 @@ createRoot(document.getElementById("root")!).render(<App />);
 `;
 
 /**
- * Shim Tailwind cho sandbox.
- *
- * App thật dùng Tailwind v4 qua PostCSS; dự án Sandpack thì không có. Thiếu
- * nó thì `h-full` vô nghĩa → `useContainerSize` đọc clientHeight = 0 →
- * SceneKonva2D thoát sớm và KHÔNG dựng stage → canvas trắng.
- *
- * Chỉ định nghĩa 87 class mà `renderers/` và `shared/` thật sự dùng (đã quét
- * từ mã nguồn), thay vì kéo cả Tailwind hay script CDN — nhẹ hơn và không bị
- * trình chặn quảng cáo cắt mất.
+ * Khung HTML của dự án Sandpack. Ghi đè bản của template chỉ để đổi ngôn ngữ
+ * và tiêu đề — Tailwind KHÔNG nạp qua CDN ở đây, xem lib/sandbox/app-css.ts.
  */
+const INDEX_HTML = `<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thí nghiệm</title>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+`;
+
+/** Reset tối thiểu; mọi utility đến từ CSS Tailwind của app (xem app-css.ts). */
 const STYLES_CSS = `* { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-
-/* layout — nhóm quyết định canvas có kích thước hay không */
-.relative { position: relative; }
-.absolute { position: absolute; }
-.inset-0 { inset: 0; }
-.inset-x-0 { left: 0; right: 0; }
-.bottom-3 { bottom: .75rem; }
-.left-3 { left: .75rem; }
-.h-full { height: 100%; }
-.w-full { width: 100%; }
-.min-w-0 { min-width: 0; }
-.h-3 { height: .75rem; } .w-3 { width: .75rem; }
-.h-4 { height: 1rem; }  .w-4 { width: 1rem; }
-.h-8 { height: 2rem; }  .w-8 { width: 2rem; }
-.w-11 { width: 2.75rem; }
-.overflow-hidden { overflow: hidden; }
-.flex { display: flex; }
-.flex-wrap { flex-wrap: wrap; }
-.grid { display: grid; }
-.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.items-center { align-items: center; }
-.items-start { align-items: flex-start; }
-.justify-center { justify-content: center; }
-.justify-between { justify-content: space-between; }
-.gap-0\\.5 { gap: .125rem; }
-.gap-2 { gap: .5rem; }
-.gap-2\\.5 { gap: .625rem; }
-.gap-3 { gap: .75rem; }
-.space-y-0\\.5 > * + * { margin-top: .125rem; }
-.space-y-3 > * + * { margin-top: .75rem; }
-.space-y-5 > * + * { margin-top: 1.25rem; }
-.ml-1 { margin-left: .25rem; }
-.mt-0\\.5 { margin-top: .125rem; }
-.mt-3 { margin-top: .75rem; }
-.px-1 { padding-left: .25rem; padding-right: .25rem; }
-.px-3 { padding-left: .75rem; padding-right: .75rem; }
-.py-1 { padding-top: .25rem; padding-bottom: .25rem; }
-.py-2 { padding-top: .5rem; padding-bottom: .5rem; }
-.pt-0\\.5 { padding-top: .125rem; }
-
-/* nền và viền */
-.bg-\\[\\#06111b\\] { background: #06111b; }
-.bg-\\[\\#080d14\\] { background: #080d14; }
-.bg-\\[\\#0f172a\\] { background: #0f172a; }
-.bg-\\[\\#0f172a\\]\\/90 { background: rgba(15,23,42,.9); }
-.bg-\\[\\#f7faf9\\] { background: #f7faf9; }
-.bg-\\[\\#faf9f7\\] { background: #faf9f7; }
-.bg-black\\/50 { background: rgba(0,0,0,.5); }
-.bg-slate-900 { background: #0f172a; }
-.border { border-width: 1px; border-style: solid; }
-.border-white\\/10 { border-color: rgba(255,255,255,.1); }
-.rounded-lg { border-radius: .5rem; }
-.rounded-\\[8px\\] { border-radius: 8px; }
-.rounded-\\[10px\\] { border-radius: 10px; }
-.shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); }
-.backdrop-blur { backdrop-filter: blur(8px); }
-
-/* chữ */
-.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.font-normal { font-weight: 400; }
-.font-semibold { font-weight: 600; }
-.text-center { text-align: center; }
-.uppercase { text-transform: uppercase; }
-.tracking-wide { letter-spacing: .025em; }
-.leading-none { line-height: 1; }
-.leading-snug { line-height: 1.375; }
-.leading-relaxed { line-height: 1.625; }
-.text-\\[10px\\] { font-size: 10px; }
-.text-\\[10\\.5px\\] { font-size: 10.5px; }
-.text-\\[11px\\] { font-size: 11px; }
-.text-\\[13px\\] { font-size: 13px; }
-.text-\\[14px\\] { font-size: 14px; }
-.text-\\[\\#171717\\] { color: #171717; }
-.text-\\[\\#6b6b6b\\] { color: #6b6b6b; }
-.text-\\[\\#8a8178\\] { color: #8a8178; }
-.text-\\[\\#c96545\\] { color: #c96545; }
-.text-emerald-400 { color: #34d399; }
-.text-slate-200 { color: #e2e8f0; }
-.text-slate-300 { color: #cbd5e1; }
-.text-slate-400 { color: #94a3b8; }
-
-/* tương tác */
-.pointer-events-none { pointer-events: none; }
-.pointer-events-auto { pointer-events: auto; }
-.select-none { user-select: none; }
-.touch-none { touch-action: none; }
-.transition-colors { transition-property: color, background-color, border-color; }
-.duration-150 { transition-duration: .15s; }
-.ease-out { transition-timing-function: cubic-bezier(0,0,.2,1); }
-.hover\\:bg-white\\/10:hover { background: rgba(255,255,255,.1); }
-.hover\\:text-white:hover { color: #fff; }
 `;
 
 const WORKSPACE_HEIGHT = "calc(100vh - 116px)";
@@ -158,9 +75,12 @@ const WORKSPACE_HEIGHT = "calc(100vh - 116px)";
 export function SandboxWorkbench({
   experiments,
   unsupported,
+  tailwindCss,
 }: {
   experiments: WorkbenchExperiment[];
   unsupported: { id: string; title: string; kind: string }[];
+  /** CSS Tailwind app đã biên dịch; null nếu chưa tìm thấy (xem app-css.ts). */
+  tailwindCss: string | null;
 }) {
   const [activeId, setActiveId] = useState(experiments[0]?.id ?? "");
   const [showEditor, setShowEditor] = useState(false);
@@ -183,6 +103,10 @@ export function SandboxWorkbench({
     ),
     "/index.tsx": { code: INDEX_TSX, hidden: true },
     "/styles.css": { code: STYLES_CSS, hidden: true },
+    "/public/index.html": { code: INDEX_HTML, hidden: true },
+    // Tailwind của app. Nếu chưa tìm được file CSS đã build thì để rỗng —
+    // thí nghiệm vẫn chạy, chỉ mất bố cục; xem cảnh báo ở thanh trên.
+    "/tailwind.css": { code: tailwindCss ?? "", hidden: true },
   };
 
   return (
@@ -215,6 +139,14 @@ export function SandboxWorkbench({
             className="hidden shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 xl:inline"
           >
             {unsupported.length} preset chưa hỗ trợ
+          </span>
+        )}
+        {!tailwindCss && (
+          <span
+            title="Không tìm thấy CSS đã build trong .next — chạy npm run dev hoặc npm run build rồi tải lại trang. Thiếu nó thì bố cục thí nghiệm sẽ vỡ."
+            className="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-700"
+          >
+            Thiếu CSS
           </span>
         )}
 

@@ -18,10 +18,16 @@ import {
   loadReactExperiments,
   loadUnsupportedPresets,
 } from "@/lib/sandbox/react-experiments";
+import { loadAppTailwindCss } from "@/lib/sandbox/app-css";
+
+// Đọc CSS đã build của app lúc CHẠY, không phải lúc prerender: khi `next build`
+// dựng sẵn trang này thì file CSS chưa được phát sinh xong (xem app-css.ts).
+export const dynamic = "force-dynamic";
 
 export default function SandboxPage() {
   const experiments = loadReactExperiments();
   const unsupported = loadUnsupportedPresets();
+  const tailwindCss = loadAppTailwindCss();
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-white">
@@ -53,7 +59,11 @@ export default function SandboxPage() {
           </span>
         </div>
 
-        <SandboxClient experiments={experiments} unsupported={unsupported} />
+        <SandboxClient
+          experiments={experiments}
+          unsupported={unsupported}
+          tailwindCss={tailwindCss}
+        />
       </div>
     </main>
   );

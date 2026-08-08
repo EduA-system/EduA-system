@@ -29,11 +29,17 @@ const SandboxWorkbench = dynamic(
 export function SandboxClient({
   experiments,
   unsupported,
+  tailwindCss,
 }: {
   experiments: WorkbenchExperiment[];
   unsupported: { id: string; title: string; kind: string }[];
+  tailwindCss: string | null;
 }) {
   return (
-    <SandboxWorkbench experiments={experiments} unsupported={unsupported} />
+    <SandboxWorkbench
+      experiments={experiments}
+      unsupported={unsupported}
+      tailwindCss={tailwindCss}
+    />
   );
 }
