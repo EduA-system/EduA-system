@@ -15,7 +15,7 @@ export function CreatePostModal({
   open: boolean;
   onClose: () => void;
   authFetch: AuthFetch;
-  onCreated: () => void;
+  onCreated: (savedPost: Detail) => void;
   onPostUnavailable?: () => void;
   post?: Detail | null;
 }) {
@@ -84,11 +84,11 @@ export function CreatePostModal({
     setSubmitting(true);
     setError("");
     try {
-      await api<Detail>(authFetch, post ? `/blog-posts/${post.id}` : "/blog-posts", {
+      const savedPost = await api<Detail>(authFetch, post ? `/blog-posts/${post.id}` : "/blog-posts", {
         method: post ? "PATCH" : "POST",
         body: JSON.stringify({ title, content, subject, thumbnailUrl: coverImageUrl ?? "" }),
       });
-      onCreated();
+      onCreated(savedPost);
       handleClose();
     } catch (err) {
       setError(String(err));
