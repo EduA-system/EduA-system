@@ -259,6 +259,9 @@ function WeeklyScheduleScreen() {
   const [ownedLessonPlans, setOwnedLessonPlans] = useState<LibraryContent[]>([]);
   const [selectedLessonPlanId, setSelectedLessonPlanId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Popup mặc định chỉ lọc đúng Khối/Môn/Chương được giao; bật cờ này khi GV chủ động mở rộng vì
+  // giáo án cũ (tạo trước khi có lọc theo chương) chưa có metadata nên không khớp filter.
+  const [showAllLessonPlans, setShowAllLessonPlans] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -360,12 +363,29 @@ function WeeklyScheduleScreen() {
     }
   }
 
+  function loadOwnedLessonPlans(t: WeeklyTaskSummary, all: boolean) {
+    const params = all
+      ? new URLSearchParams({ type: "LESSON_PLAN", size: "100" })
+      : new URLSearchParams({
+          type: "LESSON_PLAN",
+          subject: t.subject,
+          grade: String(t.grade),
+          textbookCode: t.textbookCode,
+          chapterCode: t.chapterCode,
+          size: "100",
+        });
+    listLibrary(authFetch, params)
+      .then((data) => setOwnedLessonPlans(data.items))
+      .catch(() => setOwnedLessonPlans([]));
+  }
+
   function openSubmitPanel(t: WeeklyTaskSummary) {
     setSubmittingTask(t);
     setSelectedLessonPlanId("");
-    listLibrary(authFetch, new URLSearchParams({ type: "LESSON_PLAN", size: "100" }))
-      .then((data) => setOwnedLessonPlans(data.items))
-      .catch(() => setOwnedLessonPlans([]));
+    setShowAllLessonPlans(false);
+    // Lọc tự động theo đúng Khối + Môn + Chương Mod đã giao (BR-53/BR-51) — giáo viên chỉ cần bấm
+    // "Nộp giáo án" là thấy ngay các giáo án phù hợp, không phải tự lọc giữa toàn bộ thư viện.
+    loadOwnedLessonPlans(t, false);
   }
 
   async function handleSubmitTask() {
@@ -616,15 +636,33 @@ function WeeklyScheduleScreen() {
             title="Chọn giáo án để nộp"
             description={
               submittingTask
-                ? `Nộp cho "${submittingTask.scopeDescription}" · Khối ${submittingTask.grade} — chọn 1 giáo án trong thư viện của bạn.`
+                ? showAllLessonPlans
+                  ? `Nộp cho "${submittingTask.scopeDescription}" · Khối ${submittingTask.grade} — chọn 1 giáo án trong thư viện của bạn.`
+                  : `Nộp cho "${submittingTask.scopeDescription}" · Khối ${submittingTask.grade} — chỉ hiện giáo án thuộc "${submittingTask.chapterName}".`
                 : undefined
             }
             maxWidthClassName="max-w-4xl"
           >
             {ownedLessonPlans.length === 0 ? (
-              <p className="rounded-xl border border-dashed p-6 text-center text-sm text-[#8a8178]">
-                Chưa có giáo án nào trong thư viện của bạn.
-              </p>
+              <div className="rounded-xl border border-dashed p-6 text-center text-sm text-[#8a8178]">
+                <p>
+                  {showAllLessonPlans
+                    ? "Chưa có giáo án nào trong thư viện của bạn."
+                    : "Không có giáo án nào thuộc chương này trong thư viện của bạn."}
+                </p>
+                {!showAllLessonPlans && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAllLessonPlans(true);
+                      if (submittingTask) loadOwnedLessonPlans(submittingTask, true);
+                    }}
+                    className="mt-2 text-[#e8724a] underline"
+                  >
+                    Xem tất cả giáo án của tôi
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="grid gap-3 p-1 sm:grid-cols-2">
                 {ownedLessonPlans.map((c) => {

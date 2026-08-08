@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record LibraryContent(UUID id, UUID ownerId, LibraryContentType type, String title, Subject subject,
-                             Integer grade, LibraryContentStatus status, JsonNode payload, String thumbnailUrl,
+                             Integer grade, String textbookCode, String chapterCode, LibraryContentStatus status,
+                             JsonNode payload, String thumbnailUrl,
                              Instant createdAt, Instant updatedAt, Instant submittedAt, Instant deletedAt,
                              UUID reviewedBy, Instant reviewedAt, String rejectionReason) { }

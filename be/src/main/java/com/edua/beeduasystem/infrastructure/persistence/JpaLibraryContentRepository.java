@@ -20,6 +20,7 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
     @Override @Transactional public LibraryContent save(LibraryContent c) {
         LibraryContentEntity e = jpa.findById(c.id()).orElseGet(LibraryContentEntity::new);
         e.setId(c.id()); e.setOwnerId(c.ownerId()); e.setType(c.type()); e.setTitle(c.title()); e.setSubject(c.subject()); e.setGrade(c.grade());
+        e.setTextbookCode(c.textbookCode()); e.setChapterCode(c.chapterCode());
         e.setStatus(c.status()); e.setPayload(c.payload()); e.setThumbnailUrl(c.thumbnailUrl()); e.setCreatedAt(c.createdAt()); e.setUpdatedAt(c.updatedAt()); e.setSubmittedAt(c.submittedAt()); e.setDeletedAt(c.deletedAt());
         e.setReviewedBy(c.reviewedBy()); e.setReviewedAt(c.reviewedAt()); e.setRejectionReason(c.rejectionReason());
         return toDomain(jpa.save(e));
@@ -27,9 +28,12 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
     @Override @Transactional(readOnly = true) public Optional<LibraryContent> findActiveById(UUID id) {
         return jpa.findById(id).filter(e -> e.getDeletedAt() == null).map(JpaLibraryContentRepository::toDomain);
     }
-    @Override @Transactional(readOnly = true) public SearchResult search(UUID ownerId, LibraryContentType type, Subject subject, String q, int page, int size, boolean titleAscending) {
+    @Override @Transactional(readOnly = true) public SearchResult search(UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, boolean titleAscending) {
         Specification<LibraryContentEntity> spec = (root, cq, cb) -> { List<Predicate> ps = new ArrayList<>(); ps.add(cb.equal(root.get("ownerId"), ownerId)); ps.add(cb.isNull(root.get("deletedAt")));
             if (type != null) ps.add(cb.equal(root.get("type"), type)); if (subject != null) ps.add(cb.equal(root.get("subject"), subject));
+            if (grade != null) ps.add(cb.equal(root.get("grade"), grade));
+            if (textbookCode != null) ps.add(cb.equal(root.get("textbookCode"), textbookCode));
+            if (chapterCode != null) ps.add(cb.equal(root.get("chapterCode"), chapterCode));
             if (q != null && !q.isBlank()) ps.add(cb.like(cb.lower(root.get("title")), "%" + q.trim().toLowerCase() + "%")); return cb.and(ps.toArray(Predicate[]::new)); };
         Sort sort = titleAscending ? Sort.by("title").ascending() : Sort.by("updatedAt").descending();
         Page<LibraryContentEntity> result = jpa.findAll(spec, PageRequest.of(Math.max(0,page), Math.min(Math.max(1,size),100), sort));
@@ -49,5 +53,5 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
         Page<LibraryContentEntity> result = jpa.findAll(spec, PageRequest.of(Math.max(0,page), Math.min(Math.max(1,size),100), Sort.by("submittedAt").ascending()));
         return new SearchResult(result.getContent().stream().map(JpaLibraryContentRepository::toDomain).toList(), result.getTotalElements());
     }
-    private static LibraryContent toDomain(LibraryContentEntity e) { return new LibraryContent(e.getId(),e.getOwnerId(),e.getType(),e.getTitle(),e.getSubject(),e.getGrade(),e.getStatus(),e.getPayload(),e.getThumbnailUrl(),e.getCreatedAt(),e.getUpdatedAt(),e.getSubmittedAt(),e.getDeletedAt(),e.getReviewedBy(),e.getReviewedAt(),e.getRejectionReason()); }
+    private static LibraryContent toDomain(LibraryContentEntity e) { return new LibraryContent(e.getId(),e.getOwnerId(),e.getType(),e.getTitle(),e.getSubject(),e.getGrade(),e.getTextbookCode(),e.getChapterCode(),e.getStatus(),e.getPayload(),e.getThumbnailUrl(),e.getCreatedAt(),e.getUpdatedAt(),e.getSubmittedAt(),e.getDeletedAt(),e.getReviewedBy(),e.getReviewedAt(),e.getRejectionReason()); }
 }

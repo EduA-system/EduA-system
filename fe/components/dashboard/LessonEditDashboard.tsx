@@ -48,6 +48,8 @@ export function LessonEditDashboard() {
   const libraryContentIdRef = useRef<string | null>(null);
   const librarySubjectRef = useRef<LibrarySubject | undefined>(undefined);
   const libraryGradeRef = useRef<number | undefined>(undefined);
+  const libraryTextbookCodeRef = useRef<string | undefined>(undefined);
+  const libraryChapterCodeRef = useRef<string | undefined>(undefined);
   const savingRef = useRef(false);
   const revisionRef = useRef(0);
   // Công thức AI sinh ra (hoặc chèn qua toolbar) là node atom — bấm vào sẽ mở
@@ -102,6 +104,8 @@ export function LessonEditDashboard() {
         libraryContentIdRef.current = content.id;
         librarySubjectRef.current = content.subject ?? undefined;
         libraryGradeRef.current = content.grade ?? undefined;
+        libraryTextbookCodeRef.current = content.textbookCode ?? undefined;
+        libraryChapterCodeRef.current = content.chapterCode ?? undefined;
         editor.commands.setContent(document);
         revisionRef.current = 0;
         setIsDirty(false);
@@ -140,6 +144,11 @@ export function LessonEditDashboard() {
       const title = editor.state.doc.firstChild?.textContent.trim() || session?.display?.title || "Giáo án mới";
       const subject = (session?.display?.subjectCode as LibrarySubject | undefined) ?? librarySubjectRef.current;
       const grade = parseLessonGrade(session?.display?.grade) ?? libraryGradeRef.current;
+      // Chương giao qua Mod (/weekly-schedule) so khớp đúng cặp (Sách, Chương) này để lọc tự động
+      // trong popup "Chọn giáo án để nộp" — giữ nguyên giá trị cũ khi lưu lại không kèm session mới
+      // (vd sửa nội dung rồi bấm Lưu) thay vì để trống.
+      const textbookCode = session?.bookId ?? libraryTextbookCodeRef.current;
+      const chapterCode = session?.chapterId ?? libraryChapterCodeRef.current;
       const revisionAtSave = revisionRef.current;
       const payload = {
         format: "tiptap-json",
@@ -158,19 +167,23 @@ export function LessonEditDashboard() {
 
       try {
         if (libraryContentIdRef.current) {
-          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, grade, payload, thumbnailUrl });
+          await updateLibraryContent(authFetch, libraryContentIdRef.current, { title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl });
         } else {
           const created = await createLibraryContent(authFetch, {
             type: "LESSON_PLAN",
             title,
             subject,
             grade,
+            textbookCode,
+            chapterCode,
             payload,
             thumbnailUrl,
           });
           libraryContentIdRef.current = created.id;
           librarySubjectRef.current = created.subject ?? undefined;
           libraryGradeRef.current = created.grade ?? undefined;
+          libraryTextbookCodeRef.current = created.textbookCode ?? undefined;
+          libraryChapterCodeRef.current = created.chapterCode ?? undefined;
         }
         setSaveStatus("saved");
         if (revisionRef.current === revisionAtSave) setIsDirty(false);
