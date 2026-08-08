@@ -134,7 +134,7 @@ export function Sidebar({
     >
       <div className={isCollapsed ? "flex h-full w-full flex-col overflow-hidden" : "flex h-full w-[256px] flex-col"}>
         <div className={`relative flex shrink-0 px-2 ${isCollapsed ? "h-[88px] flex-col items-center justify-center gap-2" : "h-[56px] items-center justify-between"}`}>
-          <div className="flex items-center gap-2.5">
+          <Link href="/dashboard" className="flex items-center gap-2.5 rounded-lg transition hover:opacity-80">
             <div className="flex size-8 items-center justify-center rounded-[9px] bg-[#1f1f1f] text-white">
               <DashboardIcon name="spark" />
             </div>
@@ -142,7 +142,7 @@ export function Sidebar({
               <div className="text-sm font-semibold leading-none tracking-[-0.01em] text-[#1f1f1f]">EDUA</div>
               <div className="mt-1 text-[9px] uppercase leading-none tracking-[0.12em] text-[#6b6b6b]">AI for Educators</div>
             </div>
-          </div>
+          </Link>
           <button
             type="button"
             onClick={toggleCollapsed}
