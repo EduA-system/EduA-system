@@ -24,7 +24,11 @@ export type WorkbenchExperiment = {
   id: string;
   title: string;
   domain: string;
+  grade: number | null;
+  desc: string;
   kind: string;
+  /** Chạy qua renderer theo `kind`, hay component tự dựng cả giao diện. */
+  mode: "renderer" | "self-contained";
   files: Record<string, string>;
   focusPath: string;
   fileCount: number;
@@ -70,32 +74,19 @@ html, body, #root { height: 100%; margin: 0; }
 body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 `;
 
-const WORKSPACE_HEIGHT = "calc(100vh - 116px)";
+/** Trừ thanh tiêu đề của trang (56px) và thanh công cụ ở đây (52px). */
+const WORKSPACE_HEIGHT = "calc(100vh - 108px)";
 
 export function SandboxWorkbench({
-  experiments,
-  unsupported,
+  experiment,
   tailwindCss,
 }: {
-  experiments: WorkbenchExperiment[];
-  unsupported: { id: string; title: string; kind: string }[];
+  experiment: WorkbenchExperiment;
   /** CSS Tailwind app đã biên dịch; null nếu chưa tìm thấy (xem app-css.ts). */
   tailwindCss: string | null;
 }) {
-  const [activeId, setActiveId] = useState(experiments[0]?.id ?? "");
   const [showEditor, setShowEditor] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
-
-  const experiment =
-    experiments.find((e) => e.id === activeId) ?? experiments[0];
-
-  if (!experiment) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-[13px] text-[#6b6b6b]">
-        Không tìm thấy preset nào trong components/simulations/presets.
-      </div>
-    );
-  }
 
   const files: Record<string, { code: string; hidden?: boolean }> = {
     ...Object.fromEntries(
@@ -111,20 +102,15 @@ export function SandboxWorkbench({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex h-[60px] shrink-0 items-center gap-2 border-b border-[#e8e2d9] bg-white px-4">
-        <select
-          value={experiment.id}
-          onChange={(e) => setActiveId(e.target.value)}
-          className="max-w-[420px] shrink-0 rounded-[10px] border border-[#e8e2d9] px-3 py-1.5 text-[13px] font-medium text-[#171717] outline-none focus:border-[#e8724a]"
+      <div className="flex h-[52px] shrink-0 items-center gap-2 border-b border-[#e8e2d9] bg-white px-4">
+        <span
+          title={
+            experiment.mode === "self-contained"
+              ? "Component tự dựng toàn bộ giao diện"
+              : "Chạy qua renderer theo kind"
+          }
+          className="shrink-0 rounded-full bg-[#f5f1ec] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]"
         >
-          {experiments.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.title} — {e.domain}
-            </option>
-          ))}
-        </select>
-
-        <span className="shrink-0 rounded-full bg-[#f5f1ec] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]">
           {experiment.kind}
         </span>
         <span
@@ -133,14 +119,6 @@ export function SandboxWorkbench({
         >
           {experiment.fileCount} file thật + 1 file vỏ
         </span>
-        {unsupported.length > 0 && (
-          <span
-            title={unsupported.map((u) => `${u.title} (${u.kind})`).join("\n")}
-            className="hidden shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 xl:inline"
-          >
-            {unsupported.length} preset chưa hỗ trợ
-          </span>
-        )}
         {!tailwindCss && (
           <span
             title="Không tìm thấy CSS đã build trong .next — chạy npm run dev hoặc npm run build rồi tải lại trang. Thiếu nó thì bố cục thí nghiệm sẽ vỡ."
@@ -172,8 +150,6 @@ export function SandboxWorkbench({
         </button>
       </div>
 
-      {/* `key` buộc Sandpack dựng lại khi đổi thí nghiệm — nếu không, file đã
-          bị sửa trong editor sẽ đè lên mã của thí nghiệm mới. */}
       <div className="min-h-0 flex-1">
         <SandpackProvider
           key={experiment.id}

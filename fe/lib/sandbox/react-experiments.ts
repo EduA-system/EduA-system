@@ -81,11 +81,8 @@ const SELF_CONTAINED_BY_KIND: Record<string, SelfContained> = {
   "cork-pop": { file: "cork-pop/CorkPopDetailView.tsx", component: "CorkPopDetailView", needsPreset: true },
 };
 
-export type ReactExperiment = {
-  id: string;
-  title: string;
-  domain: string;
-  kind: string;
+/** Một thí nghiệm kèm mã nguồn — metadata (ExperimentSummary) + file. */
+export type ReactExperiment = ExperimentSummary & {
   /** File mô phỏng thật, đường dẫn đã theo Sandpack. */
   files: SandboxFileMap;
   /**
@@ -98,10 +95,36 @@ export type ReactExperiment = {
   fileCount: number;
 };
 
-/** Đọc một trường chuỗi ở cấp cao nhất của object preset. */
+/**
+ * Vị trí bắt đầu object preset (`export const xyz: Preset = {`).
+ *
+ * Mọi trường phải đọc TỪ ĐÂY trở đi, không phải từ đầu file: nhiều preset khai
+ * báo hằng số và hàm dựng cảnh phía trên, trong đó có cả `id` của từng vật.
+ * `mat-nghieng-ma-sat.ts` có `id: "vat"` ở dòng 130, còn id thật ở dòng 231.
+ */
+function presetObjectOffset(code: string): number {
+  const match = code.match(/export\s+const\s+[A-Za-z0-9_$]+\s*[:=]/);
+  return match?.index ?? 0;
+}
+
+/**
+ * Đọc một trường chuỗi của object preset.
+ *
+ * KHÔNG neo đầu dòng: vài preset viết dồn nhiều trường trên một dòng, ví dụ
+ * `presets/tu-pho.ts` có ` id:"tu-pho", kind:"iron-filings", domain:"Điện & Từ"`.
+ * Neo `^\s*` sẽ bỏ sót và trả về null.
+ */
 function readTopLevelString(code: string, field: string): string | null {
-  const match = code.match(new RegExp(`^\\s*${field}:\\s*"([^"]*)"`, "m"));
+  const body = code.slice(presetObjectOffset(code));
+  const match = body.match(new RegExp(`\\b${field}:\\s*"([^"]*)"`));
   return match ? match[1]! : null;
+}
+
+/** Như readTopLevelString nhưng cho trường số (grade). */
+function readTopLevelNumber(code: string, field: string): number | null {
+  const body = code.slice(presetObjectOffset(code));
+  const match = body.match(new RegExp(`\\b${field}:\\s*(\\d+)`));
+  return match ? Number(match[1]) : null;
 }
 
 /**
@@ -129,7 +152,10 @@ const NON_ENGINE_KINDS = new Set([
  * vì mặc định về "mechanics") để họ chưa hỗ trợ hiện ra thay vì vỡ ngầm.
  */
 function readKind(code: string): string {
-  for (const match of code.matchAll(/kind:\s*"([a-zA-Z-]+)"/g)) {
+  // Chỉ dò trong object preset — hằng số và hàm dựng cảnh phía trên cũng chứa
+  // `kind` (của lực, ràng buộc…), xem presetObjectOffset.
+  const body = code.slice(presetObjectOffset(code));
+  for (const match of body.matchAll(/kind:\s*"([a-zA-Z-]+)"/g)) {
     const value = match[1]!;
     if (!NON_ENGINE_KINDS.has(value)) return value;
   }
@@ -324,104 +350,154 @@ function btn(active: boolean): React.CSSProperties {
 }
 `;
 }
+/** Đích render của một preset: renderer theo `kind`, hay component tự dựng. */
+type Target =
+  | { mode: "renderer"; renderer: { file: string; component: string } }
+  | { mode: "self-contained"; target: SelfContained };
 
-let cache: ReactExperiment[] | null = null;
+/**
+ * Chọn đích GIỐNG trang thật: ưu tiên `preset.id`, rồi tới `kind`, cuối cùng
+ * mới tới renderer theo `kind`. Xem DetailView trong app/mo-phong-vat-ly.
+ * Trả null nếu không có gì chạy được (vỏ rỗng không map, hoặc kind lạ).
+ */
+function resolveTarget(code: string, presetId: string, kind: string): Target | null {
+  const selfContained = SELF_CONTAINED_BY_ID[presetId] ?? SELF_CONTAINED_BY_KIND[kind];
+  if (selfContained) return { mode: "self-contained", target: selfContained };
+  if (isShellPreset(code)) return null;
+  const renderer = RENDERER_BY_KIND[kind];
+  return renderer ? { mode: "renderer", renderer } : null;
+}
 
-/** Danh mục thí nghiệm chạy được, dựng từ preset có thật trên nhánh hiện tại. */
-export function loadReactExperiments(): ReactExperiment[] {
-  if (cache) return cache;
+/** Metadata một thí nghiệm — đủ để dựng thẻ trong thư viện, KHÔNG kèm mã nguồn. */
+export type ExperimentSummary = {
+  id: string;
+  title: string;
+  domain: string;
+  grade: number | null;
+  desc: string;
+  kind: string;
+  mode: "renderer" | "self-contained";
+};
 
-  const experiments: ReactExperiment[] = [];
+type ScannedPreset = {
+  fileName: string;
+  relPath: string;
+  code: string;
+  summary: ExperimentSummary;
+  target: Target;
+};
 
+let scanCache: ScannedPreset[] | null = null;
+
+/**
+ * Quét thư mục preset một lần. CHỈ đọc file preset (vài KB mỗi cái) — việc gom
+ * cây phụ thuộc (hàng trăm KB) để dành cho getExperiment, nên trang danh sách
+ * không phải trả giá cho cả 60 thí nghiệm.
+ */
+function scanPresets(): ScannedPreset[] {
+  if (scanCache) return scanCache;
+
+  const out: ScannedPreset[] = [];
   for (const name of readdirSync(PRESET_DIR).sort()) {
     if (!name.endsWith(".ts")) continue;
     if (name.endsWith(".test.ts") || name === "types.ts" || name === "index.ts") continue;
 
     const relPath = "presets/" + name;
     const code = readFileSync(resolve(PRESET_DIR, name), "utf8");
-    const presetExport = readPresetExportName(relPath);
-    if (!presetExport) continue;
+    if (!readPresetExportName(relPath)) continue;
 
     const kind = readKind(code);
     const presetId = readTopLevelString(code, "id") ?? "";
-    const presetPath = SIM_PREFIX + "/" + relPath;
-    // Import phải BỎ đuôi — webpack/CRA không resolve specifier có đuôi file.
-    const presetImportPath = presetPath.replace(/\.tsx?$/, "");
-    const title = readTopLevelString(code, "title") ?? name;
-    const domain = readTopLevelString(code, "domain") ?? "—";
-    const id = name.replace(/\.ts$/, "");
+    const target = resolveTarget(code, presetId, kind);
+    if (!target) continue;
 
-    // Điều phối GIỐNG trang thật: ưu tiên preset.id, rồi tới kind, cuối cùng
-    // mới tới renderer theo kind. Xem DetailView trong app/mo-phong-vat-ly.
-    const selfContained =
-      SELF_CONTAINED_BY_ID[presetId] ?? SELF_CONTAINED_BY_KIND[kind];
-
-    if (selfContained) {
-      const files = collectSimulationFiles([relPath, selfContained.file]);
-      const componentPath =
-        SIM_PREFIX + "/" + selfContained.file.replace(/\.tsx$/, "");
-      files["/App.tsx"] = buildSelfContainedApp(
-        selfContained,
-        componentPath,
-        presetImportPath,
-        presetExport,
-      );
-      experiments.push({
-        id,
-        title,
-        domain,
-        kind: selfContained.needsPreset ? kind : "giao diện riêng",
-        files,
-        // Mở thẳng file component — nơi chứa toàn bộ logic của thí nghiệm này,
-        // vì preset của nó chỉ là vỏ giữ metadata.
-        focusPath: componentPath + ".tsx",
-        fileCount: countRealFiles(files),
-      });
-      continue;
-    }
-
-    // Vỏ rỗng mà không map được component nào → không có gì để chạy.
-    if (isShellPreset(code)) continue;
-
-    const renderer = RENDERER_BY_KIND[kind];
-    if (!renderer) continue;
-
-    const files = collectSimulationFiles([
+    out.push({
+      fileName: name,
       relPath,
-      renderer.file,
-      "shared/param-panel.tsx",
-    ]);
-    files["/App.tsx"] = buildAppSource(
-      presetImportPath,
-      presetExport,
-      SIM_PREFIX + "/" + renderer.file.replace(/\.tsx$/, ""),
-      renderer.component,
-      kind,
-    );
-
-    experiments.push({
-      id,
-      title,
-      domain,
-      kind,
-      files,
-      focusPath: presetPath,
-      fileCount: countRealFiles(files),
+      code,
+      target,
+      summary: {
+        id: name.replace(/\.ts$/, ""),
+        title: readTopLevelString(code, "title") ?? name,
+        domain: readTopLevelString(code, "domain") ?? "—",
+        grade: readTopLevelNumber(code, "grade"),
+        desc: readTopLevelString(code, "desc") ?? "",
+        // Thí nghiệm tự dựng giao diện thì `kind` của preset không nói lên
+        // cách chạy — ghi rõ để thẻ trong thư viện không gây hiểu nhầm.
+        kind: target.mode === "self-contained" && !target.target.needsPreset
+          ? "giao diện riêng"
+          : kind,
+        mode: target.mode,
+      },
     });
   }
 
-  cache = experiments;
-  return experiments;
+  scanCache = out;
+  return out;
+}
+
+/** Metadata mọi thí nghiệm chạy được — cho trang thư viện. */
+export function listExperiments(): ExperimentSummary[] {
+  return scanPresets().map((p) => p.summary);
+}
+
+/** Một thí nghiệm kèm TOÀN BỘ mã nguồn để nạp vào Sandpack. */
+export function getExperiment(id: string): ReactExperiment | null {
+  const found = scanPresets().find((p) => p.summary.id === id);
+  if (!found) return null;
+
+  const presetExport = readPresetExportName(found.relPath)!;
+  const presetPath = SIM_PREFIX + "/" + found.relPath;
+  // Import phải BỎ đuôi — webpack/CRA không resolve specifier có đuôi file.
+  const presetImportPath = presetPath.replace(/\.tsx?$/, "");
+
+  if (found.target.mode === "self-contained") {
+    const sc = found.target.target;
+    const files = collectSimulationFiles([found.relPath, sc.file]);
+    const componentPath = SIM_PREFIX + "/" + sc.file.replace(/\.tsx$/, "");
+    files["/App.tsx"] = buildSelfContainedApp(
+      sc,
+      componentPath,
+      presetImportPath,
+      presetExport,
+    );
+    return {
+      ...found.summary,
+      files,
+      // Mở thẳng file component — nơi chứa toàn bộ logic của thí nghiệm này,
+      // vì preset của nó chỉ là vỏ giữ metadata.
+      focusPath: componentPath + ".tsx",
+      fileCount: countRealFiles(files),
+    };
+  }
+
+  const renderer = found.target.renderer;
+  const files = collectSimulationFiles([
+    found.relPath,
+    renderer.file,
+    "shared/param-panel.tsx",
+  ]);
+  files["/App.tsx"] = buildAppSource(
+    presetImportPath,
+    presetExport,
+    SIM_PREFIX + "/" + renderer.file.replace(/\.tsx$/, ""),
+    renderer.component,
+    readKind(found.code),
+  );
+  return {
+    ...found.summary,
+    files,
+    focusPath: presetPath,
+    fileCount: countRealFiles(files),
+  };
 }
 
 /**
- * Preset có mặt trong repo nhưng sandbox chưa chạy được — hoặc vì họ engine
- * chưa map renderer, hoặc vì là vỏ rỗng không map được component nào.
- * Suy ra từ CHÍNH kết quả của loadReactExperiments() để hai danh sách không
- * thể lệch nhau khi thêm ánh xạ mới.
+ * Preset có trong repo nhưng sandbox chưa chạy được. Suy ra từ CHÍNH kết quả
+ * quét, nên hai danh sách không thể lệch nhau khi thêm ánh xạ mới.
  */
 export function loadUnsupportedPresets(): { id: string; title: string; kind: string }[] {
-  const supported = new Set(loadReactExperiments().map((e) => e.id));
+  const supported = new Set(scanPresets().map((p) => p.summary.id));
   const out: { id: string; title: string; kind: string }[] = [];
 
   for (const name of readdirSync(PRESET_DIR).sort()) {

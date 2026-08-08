@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Ranh giới client cho /sandbox.
+ * Ranh giới client cho /sandbox/<id>.
  *
  * Cần lớp bọc riêng này vì `dynamic(..., { ssr: false })` CHỈ dùng được bên
  * trong Client Component (xem next/dist/docs/01-app/02-guides/lazy-loading.md).
- * Trang `/sandbox` là Server Component để đọc file mô phỏng từ đĩa, nên nó
- * không tự gọi `dynamic` được.
+ * Trang chi tiết là Server Component để đọc mã mô phỏng từ đĩa, nên nó không
+ * tự gọi `dynamic` được.
  *
  * Sandpack đụng tới window/iframe ngay khi mount → phải tắt prerender.
  */
@@ -27,19 +27,13 @@ const SandboxWorkbench = dynamic(
 );
 
 export function SandboxClient({
-  experiments,
-  unsupported,
+  experiment,
   tailwindCss,
 }: {
-  experiments: WorkbenchExperiment[];
-  unsupported: { id: string; title: string; kind: string }[];
+  experiment: WorkbenchExperiment;
   tailwindCss: string | null;
 }) {
   return (
-    <SandboxWorkbench
-      experiments={experiments}
-      unsupported={unsupported}
-      tailwindCss={tailwindCss}
-    />
+    <SandboxWorkbench experiment={experiment} tailwindCss={tailwindCss} />
   );
 }
