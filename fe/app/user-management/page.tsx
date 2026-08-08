@@ -11,6 +11,7 @@ import {
   UserMinus,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardIcon } from "@/components/ui/DashboardIcon";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -124,6 +125,18 @@ function StatusBadge({ status }: { status: string }) {
     >
       {STATUS_LABELS[status] ?? status}
     </span>
+  );
+}
+
+/** Tên tài khoản trong danh sách — chỉ dẫn tới hồ sơ read-only khi còn active (backend cũng chặn xem
+ * tài khoản DISABLED, ẩn link luôn ở đây để tránh dẫn tới trang báo lỗi vô nghĩa). */
+function AccountName({ item }: { item: AccountItem }) {
+  const label = item.fullName ?? item.email;
+  if (item.status === "DISABLED") return <>{label}</>;
+  return (
+    <Link href={`/user-profile/${item.id}`} className="underline decoration-transparent transition hover:decoration-current">
+      {label}
+    </Link>
   );
 }
 
@@ -563,7 +576,7 @@ function UserManagementContent() {
                         <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
                           <div>
                             <div className="flex items-center gap-2 font-medium text-[#1f1f1f]">
-                              {item.fullName ?? item.email}
+                              <AccountName item={item} />
                               <StatusBadge status={item.status} />
                             </div>
                             <div className="mt-1 text-xs text-[#8a8178]">
@@ -663,7 +676,7 @@ function UserManagementContent() {
                         <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
                           <div>
                             <div className="flex items-center gap-2 font-medium text-[#1f1f1f]">
-                              {item.fullName ?? item.email}
+                              <AccountName item={item} />
                               <StatusBadge status={item.status} />
                             </div>
                             <div className="mt-1 text-xs text-[#8a8178]">
@@ -760,7 +773,7 @@ function UserManagementContent() {
                         <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
                           <div>
                             <div className="flex items-center gap-2 font-medium text-[#1f1f1f]">
-                              {item.fullName ?? item.email}
+                              <AccountName item={item} />
                               <StatusBadge status={item.status} />
                             </div>
                             <div className="mt-1 text-xs text-[#8a8178]">{item.email}</div>

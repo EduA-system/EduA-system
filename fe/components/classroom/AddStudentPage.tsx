@@ -468,7 +468,16 @@ export function AddStudentPage() {
                               <tr key={member.id} className="border-b border-[#f2efe9] last:border-0">
                                 <td className="px-4 py-3">
                                   <div className="font-medium text-[#1f1f1f]">
-                                    {member.studentName || member.studentEmail || "—"}
+                                    {member.membershipStatus === "ENROLLED" ? (
+                                      <Link
+                                        href={`/user-profile/${member.studentId}`}
+                                        className="underline decoration-transparent transition hover:decoration-current"
+                                      >
+                                        {member.studentName || member.studentEmail || "—"}
+                                      </Link>
+                                    ) : (
+                                      member.studentName || member.studentEmail || "—"
+                                    )}
                                   </div>
                                   {member.studentName && (
                                     <div className="text-[12px] text-[#8a837b]">{member.studentEmail}</div>
