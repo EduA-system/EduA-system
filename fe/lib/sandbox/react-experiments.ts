@@ -36,6 +36,51 @@ const RENDERER_BY_KIND: Record<string, { file: string; component: string }> = {
   "variable-current-induction": { file: "renderers/electromagnetic-induction/scene-konva-variable-current-induction.tsx", component: "SceneKonvaVariableCurrentInduction" },
 };
 
+/**
+ * Thí nghiệm TỰ DỰNG GIAO DIỆN — không chạy qua renderer theo `kind` mà là
+ * một component trọn màn hình. Preset của chúng là vỏ rỗng (`params: []`),
+ * chỉ giữ metadata.
+ *
+ * `needsPreset` phản ánh hai chữ ký props có thật trong trang gốc:
+ *   true  → <X preset={preset} onBack={...} />
+ *   false → <X onBack={...} />          (trang gốc bọc thêm LegacyExperimentLayout)
+ */
+type SelfContained = { file: string; component: string; needsPreset: boolean };
+
+/** Điều phối theo `preset.id` — 9 thí nghiệm chỉ nhận `onBack`. */
+const SELF_CONTAINED_BY_ID: Record<string, SelfContained> = {
+  "nut-bac-bat-noi-nang-thanh-cong": { file: "thermodynamics/cork-experiment.tsx", component: "CorkExperiment", needsPreset: false },
+  "becquerel-uranium-lam-den-kinh-anh": { file: "radiography/becquerel-experiment.tsx", component: "BecquerelExperiment", needsPreset: false },
+  "tac-dung-tu-cua-dong-dien-chuong-dien": { file: "circuit/electric-bell-experiment.tsx", component: "ElectricBellExperiment", needsPreset: false },
+  "tac-dung-nhiet-dong-dien-day-sat-dot-giay": { file: "circuit/thermal-wire-experiment.tsx", component: "ThermalWireExperiment", needsPreset: false },
+  "dac-trung-va-dien-tro-bong-den-day-toc": { file: "circuit/va-characteristic-experiment.tsx", component: "VaCharacteristicExperiment", needsPreset: false },
+  "do-suat-dien-dong-e-cua-pin": { file: "circuit/emf-measurement-experiment.tsx", component: "EmfMeasurementExperiment", needsPreset: false },
+  "do-nhiet-dung-rieng-c-cua-nuoc": { file: "circuit/water-calorimetry-experiment.tsx", component: "WaterCalorimetryExperiment", needsPreset: false },
+  "do-nhiet-nong-chay-rieng-lambda-cua-nuoc-da": { file: "circuit/ice-fusion-experiment.tsx", component: "IceFusionExperiment", needsPreset: false },
+  "do-nhiet-hoa-hoi-rieng-l-cua-nuoc": { file: "circuit/water-vaporization-experiment.tsx", component: "WaterVaporizationExperiment", needsPreset: false },
+};
+
+/** Điều phối theo `kind` — nhận cả `preset` lẫn `onBack`. */
+const SELF_CONTAINED_BY_KIND: Record<string, SelfContained> = {
+  brownian: { file: "brownian/BrownianDetailView.tsx", component: "BrownianDetailView", needsPreset: true },
+  "heating-curve": { file: "heating-curve/HeatingCurveDetailView.tsx", component: "HeatingCurveDetailView", needsPreset: true },
+  "pendulum-resonance": { file: "pendulum-resonance/PendulumResonanceDetailView.tsx", component: "PendulumResonanceDetailView", needsPreset: true },
+  "heat-transfer": { file: "heat-transfer/HeatTransferDetailView.tsx", component: "HeatTransferDetailView", needsPreset: true },
+  "isothermal-boyle": { file: "isothermal-boyle/IsothermalBoyleDetailView.tsx", component: "IsothermalBoyleDetailView", needsPreset: true },
+  "isobaric-process": { file: "isobaric-process/IsobaricProcessDetailView.tsx", component: "IsobaricProcessDetailView", needsPreset: true },
+  "hooke-law": { file: "hooke-law/HookeLawExperiment.tsx", component: "HookeLawExperiment", needsPreset: true },
+  "cloud-chamber": { file: "cloud-chamber/BlackettCloudChamberExperiment.tsx", component: "BlackettCloudChamberExperiment", needsPreset: true },
+  "magnetic-deflection": { file: "magnetic-deflection/MagneticDeflectionExperiment.tsx", component: "MagneticDeflectionExperiment", needsPreset: true },
+  "coulomb-torsion-balance": { file: "coulomb-torsion-balance/CoulombTorsionBalanceExperiment.tsx", component: "CoulombTorsionBalanceExperiment", needsPreset: true },
+  "oscilloscope-frequency": { file: "oscilloscope-frequency/OscilloscopeFrequencyExperiment.tsx", component: "OscilloscopeFrequencyExperiment", needsPreset: true },
+  "water-surface-wave": { file: "water-surface-wave/WaterSurfaceWaveExperiment.tsx", component: "WaterSurfaceWaveExperiment", needsPreset: true },
+  "rutherford-nitrogen": { file: "rutherford-nitrogen/RutherfordNitrogenExperiment.tsx", component: "RutherfordNitrogenExperiment", needsPreset: true },
+  "rutherford-scattering": { file: "rutherford-scattering/RutherfordScatteringExperiment.tsx", component: "RutherfordScatteringExperiment", needsPreset: true },
+  // `cork-pop` không nằm trong PRESETS index nên app không hiển thị, nhưng
+  // component vẫn đầy đủ — sandbox nhận thêm được thí nghiệm này.
+  "cork-pop": { file: "cork-pop/CorkPopDetailView.tsx", component: "CorkPopDetailView", needsPreset: true },
+};
+
 export type ReactExperiment = {
   id: string;
   title: string;
@@ -43,8 +88,12 @@ export type ReactExperiment = {
   kind: string;
   /** File mô phỏng thật, đường dẫn đã theo Sandpack. */
   files: SandboxFileMap;
-  /** Đường dẫn preset trong Sandpack — để mở sẵn trong editor. */
-  presetPath: string;
+  /**
+   * File mở sẵn trong editor — nơi chứa phần đáng đọc nhất của thí nghiệm:
+   * preset (nếu chạy qua renderer theo kind), hoặc chính component (nếu thí
+   * nghiệm tự dựng giao diện, vì preset khi đó chỉ là vỏ giữ metadata).
+   */
+  focusPath: string;
   /** Số file thật phải kéo theo (hiển thị cho người dùng biết chi phí). */
   fileCount: number;
 };
@@ -109,6 +158,52 @@ function isShellPreset(code: string): boolean {
  * render sẽ tạo object mới → useEffect của renderer chạy lại → dựng lại stage
  * → vòng lặp vô hạn ("Maximum update depth exceeded").
  */
+/**
+ * `/App.tsx` cho thí nghiệm tự dựng giao diện.
+ *
+ * Component đã tự lo canvas, bảng tham số và thanh công cụ, nên vỏ ở đây chỉ
+ * còn việc cấp `preset` (khi cần) và một `onBack` không làm gì — trong sandbox
+ * không có thư viện để quay về.
+ */
+/**
+ * Đếm số file MÃ NGUỒN THẬT đọc từ repo — bỏ `/App.tsx` (vỏ sinh ra) và các
+ * shim (hạ tầng thay thế), để con số hiện lên UI đúng nghĩa "file thật".
+ */
+function countRealFiles(files: SandboxFileMap): number {
+  return Object.keys(files).filter(
+    (path) => path !== "/App.tsx" && !path.includes("__shims__"),
+  ).length;
+}
+
+function buildSelfContainedApp(
+  target: SelfContained,
+  componentPath: string,
+  presetPath: string,
+  presetExport: string,
+): string {
+  const presetImport = target.needsPreset
+    ? `import { ${presetExport} } from "${presetPath}";\n`
+    : "";
+  const presetProp = target.needsPreset
+    ? ` preset={${presetExport} as any}`
+    : "";
+
+  return `import { ${target.component} } from "${componentPath}";
+${presetImport}
+/**
+ * Vỏ chạy thử — thí nghiệm này tự dựng toàn bộ giao diện, nên đây chỉ là chỗ
+ * gắn props. Mọi file khác là FILE THẬT đọc từ repo, không sửa.
+ */
+export default function App() {
+  return (
+    <div style={{ height: "100vh", display: "flex", overflow: "hidden", background: "#f5f1ec" }}>
+      <${target.component}${presetProp} onBack={() => {}} />
+    </div>
+  );
+}
+`;
+}
+
 function buildAppSource(
   presetPath: string,
   presetExport: string,
@@ -244,27 +339,60 @@ export function loadReactExperiments(): ReactExperiment[] {
 
     const relPath = "presets/" + name;
     const code = readFileSync(resolve(PRESET_DIR, name), "utf8");
-    if (isShellPreset(code)) continue;
-    const kind = readKind(code);
-    const renderer = RENDERER_BY_KIND[kind];
-    // Họ chưa map renderer (brownian, heating-curve, cloud-chamber…) dùng
-    // component tự chứa riêng, không khớp hợp đồng scene/running — bỏ qua,
-    // hiển thị riêng ở danh sách "chưa hỗ trợ" thay vì vỡ âm thầm.
-    if (!renderer) continue;
-
     const presetExport = readPresetExportName(relPath);
     if (!presetExport) continue;
+
+    const kind = readKind(code);
+    const presetId = readTopLevelString(code, "id") ?? "";
+    const presetPath = SIM_PREFIX + "/" + relPath;
+    // Import phải BỎ đuôi — webpack/CRA không resolve specifier có đuôi file.
+    const presetImportPath = presetPath.replace(/\.tsx?$/, "");
+    const title = readTopLevelString(code, "title") ?? name;
+    const domain = readTopLevelString(code, "domain") ?? "—";
+    const id = name.replace(/\.ts$/, "");
+
+    // Điều phối GIỐNG trang thật: ưu tiên preset.id, rồi tới kind, cuối cùng
+    // mới tới renderer theo kind. Xem DetailView trong app/mo-phong-vat-ly.
+    const selfContained =
+      SELF_CONTAINED_BY_ID[presetId] ?? SELF_CONTAINED_BY_KIND[kind];
+
+    if (selfContained) {
+      const files = collectSimulationFiles([relPath, selfContained.file]);
+      const componentPath =
+        SIM_PREFIX + "/" + selfContained.file.replace(/\.tsx$/, "");
+      files["/App.tsx"] = buildSelfContainedApp(
+        selfContained,
+        componentPath,
+        presetImportPath,
+        presetExport,
+      );
+      experiments.push({
+        id,
+        title,
+        domain,
+        kind: selfContained.needsPreset ? kind : "giao diện riêng",
+        files,
+        // Mở thẳng file component — nơi chứa toàn bộ logic của thí nghiệm này,
+        // vì preset của nó chỉ là vỏ giữ metadata.
+        focusPath: componentPath + ".tsx",
+        fileCount: countRealFiles(files),
+      });
+      continue;
+    }
+
+    // Vỏ rỗng mà không map được component nào → không có gì để chạy.
+    if (isShellPreset(code)) continue;
+
+    const renderer = RENDERER_BY_KIND[kind];
+    if (!renderer) continue;
 
     const files = collectSimulationFiles([
       relPath,
       renderer.file,
       "shared/param-panel.tsx",
     ]);
-
-    const presetPath = SIM_PREFIX + "/" + relPath;
     files["/App.tsx"] = buildAppSource(
-      // Import phải BỎ đuôi .ts — webpack/CRA không resolve specifier có đuôi.
-      presetPath.replace(/\.tsx?$/, ""),
+      presetImportPath,
       presetExport,
       SIM_PREFIX + "/" + renderer.file.replace(/\.tsx$/, ""),
       renderer.component,
@@ -272,13 +400,13 @@ export function loadReactExperiments(): ReactExperiment[] {
     );
 
     experiments.push({
-      id: name.replace(/\.ts$/, ""),
-      title: readTopLevelString(code, "title") ?? name,
-      domain: readTopLevelString(code, "domain") ?? "—",
+      id,
+      title,
+      domain,
       kind,
       files,
-      presetPath,
-      fileCount: Object.keys(files).length - 1, // trừ /App.tsx
+      focusPath: presetPath,
+      fileCount: countRealFiles(files),
     });
   }
 
@@ -286,22 +414,27 @@ export function loadReactExperiments(): ReactExperiment[] {
   return experiments;
 }
 
-/** Preset có mặt nhưng chưa chạy được vì họ engine chưa map renderer. */
+/**
+ * Preset có mặt trong repo nhưng sandbox chưa chạy được — hoặc vì họ engine
+ * chưa map renderer, hoặc vì là vỏ rỗng không map được component nào.
+ * Suy ra từ CHÍNH kết quả của loadReactExperiments() để hai danh sách không
+ * thể lệch nhau khi thêm ánh xạ mới.
+ */
 export function loadUnsupportedPresets(): { id: string; title: string; kind: string }[] {
+  const supported = new Set(loadReactExperiments().map((e) => e.id));
   const out: { id: string; title: string; kind: string }[] = [];
+
   for (const name of readdirSync(PRESET_DIR).sort()) {
     if (!name.endsWith(".ts")) continue;
     if (name.endsWith(".test.ts") || name === "types.ts" || name === "index.ts") continue;
+    const id = name.replace(/\.ts$/, "");
+    if (supported.has(id)) continue;
+
     const code = readFileSync(resolve(PRESET_DIR, name), "utf8");
-    const shell = isShellPreset(code);
-    const kind = readKind(code);
-    if (!shell && RENDERER_BY_KIND[kind]) continue;
     out.push({
-      id: name.replace(/\.ts$/, ""),
+      id,
       title: readTopLevelString(code, "title") ?? name,
-      // Vỏ rỗng không khai báo kind (becquerel, nút bấc) — ghi rõ lý do bỏ
-      // qua thay vì hiện "mechanics" gây hiểu nhầm.
-      kind: shell && !RENDERER_BY_KIND[kind] ? kind : shell ? "giao diện riêng" : kind,
+      kind: readKind(code),
     });
   }
   return out;

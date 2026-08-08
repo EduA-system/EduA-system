@@ -26,7 +26,7 @@ export type WorkbenchExperiment = {
   domain: string;
   kind: string;
   files: Record<string, string>;
-  presetPath: string;
+  focusPath: string;
   fileCount: number;
 };
 
@@ -250,8 +250,8 @@ export function SandboxWorkbench({
           theme="dark"
           customSetup={{ dependencies: DEPENDENCIES }}
           options={{
-            activeFile: experiment.presetPath,
-            visibleFiles: [experiment.presetPath, "/App.tsx"],
+            activeFile: experiment.focusPath,
+            visibleFiles: [experiment.focusPath, "/App.tsx"],
             recompileMode: "delayed",
             recompileDelay: 700,
           }}
