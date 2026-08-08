@@ -6,8 +6,10 @@
  * - Render bằng renderer riêng, nhận kết quả từ engine vật lý tương ứng.
  * - Thư viện = các PRESET đã kiểm duyệt (components/simulations/presets/).
  * - Luồng: Thư viện (browse + filter) → chọn sim → tham số / sửa bằng AI.
- * - Tầng AI là MOCK (giả độ trễ + diff + kiểm tra thị giác) minh hoạ mô hình an toàn:
- *   bản gốc bất khả xâm phạm, luôn revert được.
+ * - Tầng AI gọi POST /api/physics-simulations/ai-edit: AI chỉ được đề xuất patch
+ *   số cho các tham số đã có (Record<string, number>), backend validate theo
+ *   đúng min/max của preset trước khi trả về — bản gốc bất khả xâm phạm, luôn
+ *   revert được (xem revertAll).
  */
 
 import { useMemo, useState, type ReactNode } from "react";
@@ -22,6 +24,9 @@ import {
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { editPhysicsSimulation } from "@/lib/api/physics-simulations";
+import { createLibraryContent } from "@/lib/library";
 import { ParamPanel } from "@/components/simulations/shared/param-panel";
 import {
   LandmarksPanel,
@@ -4191,8 +4196,15 @@ function GenericDetailView({
   const [resetSignal, setResetSignal] = useState(0);
   const [speed, setSpeed] = useState(1);
 
+  const { authFetch } = useAuth();
   const [aiState, setAiState] = useState<AiState>("idle");
   const [aiPrompt, setAiPrompt] = useState("");
+  const [aiPatch, setAiPatch] = useState<Record<string, number> | null>(null);
+  const [aiExplanation, setAiExplanation] = useState("");
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiInfo, setAiInfo] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [readout, setReadout] = useState<SceneReadout | null>(null); // tracking từ kernel
   const [velocityHistory, setVelocityHistory] = useState<VelocityPoint[]>([]);
 
@@ -4329,6 +4341,9 @@ function GenericDetailView({
     setEdited(false);
     setAiState("idle");
     setAiPrompt("");
+    setAiPatch(null);
+    setAiError(null);
+    setAiInfo(null);
     setRunning(!preset.startPaused);
     setSpeed(1);
     setActiveMark(null);
@@ -4336,15 +4351,91 @@ function GenericDetailView({
     setResetSignal((n) => n + 1);
   };
 
-  const runAi = (prompt: string) => {
+  const aiDiffRows = useMemo(() => {
+    if (!aiPatch) return [];
+    return preset.params
+      .filter((p) => aiPatch[p.key] !== undefined)
+      .map((p) => ({
+        key: p.key,
+        label: p.label,
+        unit: p.unit,
+        oldValue: params[p.key],
+        newValue: aiPatch[p.key],
+      }));
+  }, [aiPatch, params, preset.params]);
+
+  const runAi = async (prompt: string) => {
     setAiPrompt(prompt);
+    setAiError(null);
+    setAiInfo(null);
     setAiState("thinking");
-    setTimeout(() => setAiState("review"), 1400);
+    try {
+      const paramSchema = preset.params.map(
+        ({ key, label, min, max, step, unit, description }) => ({
+          key,
+          label,
+          min,
+          max,
+          step,
+          unit,
+          description,
+        }),
+      );
+      const res = await editPhysicsSimulation(authFetch, {
+        instruction: prompt,
+        presetTitle: preset.title,
+        paramSchema,
+        currentValues: params,
+      });
+      if (Object.keys(res.params).length === 0) {
+        setAiInfo(
+          res.explanation ||
+            "AI không đề xuất thay đổi tham số nào cho yêu cầu này.",
+        );
+        setAiState("idle");
+        return;
+      }
+      setAiPatch(res.params);
+      setAiExplanation(res.explanation);
+      setAiState("review");
+    } catch (err) {
+      setAiError(
+        err instanceof Error ? err.message : "Không thể kết nối AI. Vui lòng thử lại.",
+      );
+      setAiState("idle");
+    }
   };
   const applyAi = () => {
-    // Mock: AI áp dụng cú sửa → đánh dấu "đã chỉnh sửa" (bản gốc vẫn revert được).
+    if (!aiPatch) return;
+    setParams((prev) => ({ ...prev, ...aiPatch }));
     markEdited();
     setAiState("idle");
+    setAiPatch(null);
+    setAiPrompt("");
+  };
+  const cancelAi = () => {
+    setAiState("idle");
+    setAiPatch(null);
+  };
+
+  const saveDraft = async () => {
+    setSavingDraft(true);
+    setSaveMessage(null);
+    try {
+      await createLibraryContent(authFetch, {
+        type: "SIMULATION",
+        title: preset.title,
+        subject: "PHYSICS",
+        payload: { presetId: preset.id, params },
+      });
+      setSaveMessage("Đã lưu bản nháp vào thư viện.");
+    } catch (err) {
+      setSaveMessage(
+        err instanceof Error ? err.message : "Không thể lưu vào thư viện.",
+      );
+    } finally {
+      setSavingDraft(false);
+    }
   };
 
   return (
@@ -4383,6 +4474,16 @@ function GenericDetailView({
               <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} />
               Khôi phục bản gốc
             </button>
+          )}
+          <button
+            onClick={() => void saveDraft()}
+            disabled={savingDraft}
+            className="flex items-center gap-1.5 rounded-[10px] bg-[#171717] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors duration-150 ease-out hover:bg-[#2b2b2b] disabled:opacity-40"
+          >
+            {savingDraft ? "Đang lưu…" : "Lưu vào thư viện"}
+          </button>
+          {saveMessage && (
+            <span className="text-[12px] text-[#6b6b6b]">{saveMessage}</span>
           )}
         </div>
 
@@ -4819,20 +4920,21 @@ function GenericDetailView({
                 />
               )}
 
-              {/* TẦNG 3 — sửa bằng AI (mock, có lưới an toàn) */}
+              {/* TẦNG 3 — sửa bằng AI (có lưới an toàn: AI chỉ được đề xuất giá
+                  trị tham số trong đúng min/max của preset, backend validate
+                  lại trước khi trả về; bản gốc luôn khôi phục được). */}
               {tab === "ai" && (
                 <div className="space-y-4">
                   <p className="rounded-[10px] bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
-                    <b>Power user.</b> AI sửa code{" "}
-                    <i>trên nền bản gốc đã đúng</i>. Có kiểm tra thị giác
-                    trước/sau và luôn khôi phục được. (Đây là bản mô phỏng luồng
-                    — chưa nối AI thật.)
+                    <b>Power user.</b> AI chỉ chỉnh giá trị tham số{" "}
+                    <i>trên nền bản gốc đã đúng</i>, luôn nằm trong giới hạn cho
+                    phép và luôn khôi phục được.
                   </p>
 
                   <div className="flex flex-wrap gap-2">
                     {[
-                      "Thêm vật thứ hai",
-                      "Vẽ vector vận tốc theo thời gian thực",
+                      "Tăng vận tốc ban đầu lên gấp đôi",
+                      "Giảm ma sát để vật trượt xa hơn",
                       "Đổi nền sang lưới toạ độ",
                     ].map((ex) => (
                       <button
@@ -4854,19 +4956,28 @@ function GenericDetailView({
                   />
                   <button
                     disabled={!aiPrompt.trim() || aiState === "thinking"}
-                    onClick={() => runAi(aiPrompt)}
+                    onClick={() => void runAi(aiPrompt)}
                     className="w-full rounded-[12px] bg-[#e8724a] py-2.5 text-sm font-semibold text-white transition-colors duration-150 ease-out hover:bg-[#d96a42] disabled:opacity-40"
                   >
                     {aiState === "thinking" ? "AI đang sửa…" : "Gửi cho AI"}
                   </button>
 
+                  {aiError && (
+                    <p className="rounded-[10px] bg-red-50 p-3 text-xs text-red-700">
+                      {aiError}
+                    </p>
+                  )}
+                  {aiInfo && (
+                    <p className="rounded-[10px] bg-slate-50 p-3 text-xs text-slate-600">
+                      {aiInfo}
+                    </p>
+                  )}
+
                   {aiState === "thinking" && (
                     <div className="space-y-2 rounded-[12px] border border-[#e8e2d9] p-4 text-xs text-[#6b6b6b]">
-                      <p className="animate-pulse">↳ Đọc code bản gốc…</p>
-                      <p className="animate-pulse">↳ Sinh thay đổi (diff)…</p>
-                      <p className="animate-pulse">
-                        ↳ Render & chụp ảnh kiểm tra thị giác…
-                      </p>
+                      <p className="animate-pulse">↳ Đọc yêu cầu…</p>
+                      <p className="animate-pulse">↳ Tính toán tham số mới…</p>
+                      <p className="animate-pulse">↳ Kiểm tra giới hạn cho phép…</p>
                     </div>
                   )}
 
@@ -4875,21 +4986,29 @@ function GenericDetailView({
                       <p className="text-xs font-semibold text-[#4f4943]">
                         Đề xuất thay đổi
                       </p>
-                      <pre className="overflow-x-auto rounded-[10px] bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-200">
-                        {`  // + vẽ vector vận tốc tại vị trí vật
-+ if (showVector) {
-+   ctx.strokeStyle = "#34d399";
-+   drawArrow(bx, by, vx, vy);
-+ }`}
-                      </pre>
-                      <div className="flex items-center gap-2 rounded-[10px] bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-                        <CheckCircle2
-                          className="h-3.5 w-3.5 shrink-0"
-                          strokeWidth={2}
-                        />
-                        Kiểm tra thị giác: không phát hiện vật ra khung / đè
-                        nhau / sai tỉ lệ
+                      <div className="space-y-1.5 rounded-[10px] bg-slate-50 p-3 text-xs">
+                        {aiDiffRows.map((row) => (
+                          <div
+                            key={row.key}
+                            className="flex items-center justify-between gap-2"
+                          >
+                            <span className="text-[#6b6b6b]">{row.label}</span>
+                            <span className="font-medium text-[#171717]">
+                              {row.oldValue} → {row.newValue}
+                              {row.unit ? ` ${row.unit}` : ""}
+                            </span>
+                          </div>
+                        ))}
                       </div>
+                      {aiExplanation && (
+                        <div className="flex items-start gap-2 rounded-[10px] bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                          <CheckCircle2
+                            className="h-3.5 w-3.5 shrink-0 mt-0.5"
+                            strokeWidth={2}
+                          />
+                          {aiExplanation}
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <button
                           onClick={applyAi}
@@ -4898,7 +5017,7 @@ function GenericDetailView({
                           Áp dụng
                         </button>
                         <button
-                          onClick={() => setAiState("idle")}
+                          onClick={cancelAi}
                           className="rounded-[10px] border border-[#e8e2d9] px-4 py-2 text-sm font-medium text-[#4f4943] transition-colors duration-150 ease-out hover:bg-[#f7f3ee]"
                         >
                           Huỷ

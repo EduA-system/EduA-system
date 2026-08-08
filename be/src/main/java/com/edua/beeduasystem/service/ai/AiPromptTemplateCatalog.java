@@ -4,6 +4,7 @@ import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.edua.beeduasystem.service.lessonplan.LessonPlan5512PromptBuilder;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanEditPromptBuilder;
 import com.edua.beeduasystem.service.molecule.MoleculePromptBuilder;
+import com.edua.beeduasystem.service.physicssimulation.PhysicsSimulationPromptBuilder;
 import com.edua.beeduasystem.service.slidedesign.SlideDesignPromptBuilder;
 import com.edua.beeduasystem.service.slides.SlidePromptBuilder;
 import org.springframework.stereotype.Component;
@@ -32,6 +33,7 @@ public class AiPromptTemplateCatalog {
                  SLIDE_DESIGN_CONTENT_FILL,
                  SLIDE_DESIGN_CONTENT_SLOTS -> SlideDesignPromptBuilder.defaultInstruction(key);
             case MOLECULE_STRUCTURE -> MoleculePromptBuilder.defaultInstruction();
+            case PHYSICS_SIMULATION_EDIT -> PhysicsSimulationPromptBuilder.defaultInstruction();
         };
     }
 
