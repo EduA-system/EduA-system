@@ -161,7 +161,7 @@ export default function AtomModel3D({ atomicNumber, protons, neutrons, electronC
 
   return <Canvas key={`atom-${atomicNumber}-${mode}`} shadows camera={{ position: [0, cameraDistance * 0.7, cameraDistance * 0.7], fov: 52 }} dpr={[1, 2]} gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.9 }} style={{ width: '100%', height: '100%' }}>
     <color attach="background" args={['#fffdfb']} /><ambientLight intensity={0.6} /><directionalLight position={[7, 10, 8]} intensity={1.3} /><pointLight position={[-6, 4, -5]} intensity={0.7} color="#d97757" />
-    <OrbitControls enablePan={false} minDistance={3} maxDistance={cameraDistance * 2.2} autoRotate={!paused} autoRotateSpeed={0.35} />
+    <OrbitControls enablePan={false} enableZoom={false} autoRotate={!paused} autoRotateSpeed={0.35} />
     <Suspense fallback={null}><Environment preset="warehouse" /></Suspense>
     <LayerScene protons={protons} neutrons={neutrons} shells={shells} mode={mode} activeShell={activeShell} activeSubshell={activeSubshell} paused={paused} />
   </Canvas>;
