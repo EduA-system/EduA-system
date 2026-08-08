@@ -47,6 +47,25 @@ describe("applyContentSlots", () => {
     expect(result[2]).toEqual(shape);
   });
 
+  it("swaps the placeholder for a real generated image URL when one is provided", () => {
+    const hero = text("hero-1");
+    const image: Extract<SlideElement, { type: "image" }> = {
+      id: "aside-1", type: "image", contentSlot: "aside-1", x: 400, y: 0, w: 200, h: 200,
+      rotation: 0, zIndex: 2, opacity: 1, locked: false, src: "placeholder", fit: "cover", borderRadius: 0,
+    };
+    const result = applyContentSlots([hero, image], {
+      slots: [
+        { slotId: "hero-1", text: "Định luật II Newton", imagePrompt: null },
+        { slotId: "aside-1", text: null, imagePrompt: "free body diagram", imageUrl: "https://r2.example.com/slide-images/fake.png" },
+      ], latencyMs: 10, modelUsed: "test",
+    });
+    expect(result[1]).toMatchObject({
+      type: "image",
+      src: "https://r2.example.com/slide-images/fake.png",
+      imagePrompt: "free body diagram",
+    });
+  });
+
   it("keeps the outline title when no AI fill is requested for it", () => {
     const title = text("slot:s1:title", { text: "Bài học: Lực" });
     expect(applyContentSlots([title], { slots: [], latencyMs: 0, modelUsed: "test" })[0]).toMatchObject({ text: "Bài học: Lực" });

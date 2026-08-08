@@ -57,7 +57,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private static boolean isAiEndpoint(String uri) {
-        return uri.contains("/generate") || uri.contains("/ai-edit");
+        // /slide-design/fill-content now triggers paid OpenAI Images calls
+        // (real illustration generation), so it needs the stricter AI bucket too.
+        return uri.contains("/generate") || uri.contains("/ai-edit") || uri.contains("/slide-design/fill-content");
     }
 
     private static Bucket newBucket(int perMinute) {

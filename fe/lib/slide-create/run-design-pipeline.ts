@@ -167,6 +167,8 @@ export async function runStructuralStep(
           maxChars: slot.maxChars,
           maxLines: slot.maxLines,
           hint: slot.contentHint,
+          width: slot.rect.w,
+          height: slot.rect.h,
         }));
       ctx.layoutResultsBySlide.set(slide.id, result);
       ctx.contentSlotsBySlide.set(slide.id, slots);
@@ -225,6 +227,7 @@ export async function runContentFillStep(
           slotId: slot.id,
           text: null,
           imagePrompt: null,
+          imageUrl: null,
           molecule: await buildMolecule(slot.sourceText),
         }))),
       ]);

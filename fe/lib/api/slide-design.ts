@@ -36,6 +36,8 @@ export type SlideContentFillSlot = {
   slotId: string;
   text: string | null;
   imagePrompt: string | null;
+  /** Real generated illustration URL (OpenAI Images → R2), null/absent when not yet/failed to generate. */
+  imageUrl?: string | null;
   style?: SlideContentStyle | null;
   /** Frontend-only: set locally by runContentFillStep for molecule slots, never sent to/from the backend. */
   molecule?: Molecule;
@@ -67,6 +69,10 @@ export type SlideContentSlot = {
   maxChars: number;
   maxLines: number;
   hint: string;
+  /** Slot's actual box size in px (from the layout engine) — lets the BE pick a matching
+   * OpenAI image size (landscape/portrait/square) instead of always generating a square. */
+  width?: number;
+  height?: number;
 };
 
 export async function generateSlideHtmlDesign(

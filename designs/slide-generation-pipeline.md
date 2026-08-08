@@ -362,18 +362,29 @@ Trả về `{ bg, elems, skipped }`.
 
 Pipeline hiện ở mức **R&D một slide** (route test). Cần bổ sung để thành production:
 
-1. **Pipeline ảnh thật:** quét `data-image-prompt`, gọi sinh ảnh (OpenAI image) →
-   fallback search → upload R2 → thay box placeholder bằng URL. Hiện convert chỉ
-   tạo box xám + log prompt vào `skipped`.
-2. **Render LaTeX thành element:** hiện `html-to-slide` skip latex; cần convert
+1. **Render LaTeX thành element:** hiện `html-to-slide` skip latex; cần convert
    `\( … \)` thành element `latex` của editor.
-3. **Validator deterministic + retry:** thêm Rule zone-caps (đếm char/line so với
+2. **Validator deterministic + retry:** thêm Rule zone-caps (đếm char/line so với
    `data-max-chars/lines`), overlap check, bbox-trong-canvas → feedback số cụ thể
    để retry đúng bước bị lỗi (xem `research/slide-quy-tac-lop-validator.md`).
-4. **Đo render thật để shrink-to-fit:** dùng headless browser đo overflow, ép
+3. **Đo render thật để shrink-to-fit:** dùng headless browser đo overflow, ép
    retry rút gọn nếu vượt ngưỡng (chỉ shrink ≤ ~1.5×, **không** cho scroll slide).
-5. **Mở rộng từ 1 slide → cả deck:** sinh outline nhiều slide (tái dùng bước
+4. **Mở rộng từ 1 slide → cả deck:** sinh outline nhiều slide (tái dùng bước
    outline của pipeline cũ), cache **skin Step 1 ở mức deck**, chạy Step 2+3 song
    song từng slide, lưu `SlideDeckRecord` + stream tiến trình.
-6. **Bỏ debug overlay ở chế độ production:** hiện giữ outline gạch đứt làm tham
+5. **Bỏ debug overlay ở chế độ production:** hiện giữ outline gạch đứt làm tham
    chiếu; bản giao cho GV cần ẩn hẳn.
+
+> **Đã làm (trước là mục 1 "Pipeline ảnh thật"):** `FillSlideContentUseCase`
+> (BE) giờ gọi OpenAI Images API (`ImageGenerationClient`/`OpenAiImageAdapter`,
+> model `gpt-image-1` mặc định qua `app.ai.openai.image-model` — dòng
+> `dall-e-*` đã bị OpenAI gỡ khỏi API, không set `response_format` được nữa)
+> cho mỗi slot
+> `kind="image"`, upload PNG lên R2 (`StorageClient`, prefix `slide-images/`)
+> và trả `imageUrl` trong `SlideContentFillSlotResponse`. Chạy song song qua
+> `slideSessionExecutor` (virtual threads) khi có nhiều slot ảnh trong 1 slide.
+> Lỗi sinh/upload ảnh chỉ log + rơi về `imageUrl=null` (giữ placeholder xám ở
+> FE), không chặn cả slide. FE (`apply-content-slots.ts`) set `src` từ
+> `imageUrl` nếu có, fallback `PLACEHOLDER_IMAGE` nếu không. Chưa có: fallback
+> search ảnh có sẵn khi OpenAI lỗi, cache ảnh theo prompt trùng lặp, retry
+> riêng cho ảnh lỗi.

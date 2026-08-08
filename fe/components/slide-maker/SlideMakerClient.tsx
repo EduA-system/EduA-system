@@ -163,7 +163,7 @@ export function SlideMakerClient() {
       ? user.subject
       : "PHYSICS";
 
-  const saveDeck = useCallback(async (metadata?: { title: string; subject: LibrarySubject }) => {
+  const saveDeck = useCallback(async (metadata?: { title: string; subject: LibrarySubject }, auto = false) => {
     if (saving) return;
     setSaving(true);
     setMessage(null);
@@ -184,7 +184,7 @@ export function SlideMakerClient() {
         loadedLibraryIdRef.current = created.id;
         setLibraryId(created.id);
         router.replace(`/slide-maker?libraryId=${created.id}`);
-        setMessage("Đã lưu bộ slide vào thư viện cá nhân.");
+        setMessage(auto ? "Đã tự động lưu bộ slide vào thư viện cá nhân." : "Đã lưu bộ slide vào thư viện cá nhân.");
       }
     } catch (error: unknown) {
       setMessage(error instanceof Error ? error.message : "Không thể lưu bộ slide.");
@@ -192,6 +192,18 @@ export function SlideMakerClient() {
       setSaving(false);
     }
   }, [authFetch, router, savedLibraryId, saving]);
+
+  // Bước 3 (điền nội dung) xong lần đầu thì tự lưu bản nháp vào thư viện cá nhân,
+  // giống hành vi auto-save của giáo án — chỉ chạy một lần cho phiên generate hiện tại
+  // và bỏ qua nếu deck đã được lưu/mở từ thư viện.
+  const autoSavedRef = useRef(false);
+  useEffect(() => {
+    if (!generating || savedLibraryId || autoSavedRef.current) return;
+    if (steps.step3 !== "complete" && steps.step3 !== "error") return;
+    autoSavedRef.current = true;
+    const timer = window.setTimeout(() => void saveDeck({ title: suggestedTitle(), subject: initialSubject }, true), 0);
+    return () => window.clearTimeout(timer);
+  }, [generating, initialSubject, saveDeck, savedLibraryId, steps.step3, suggestedTitle]);
 
   const openSaveDialog = useCallback(() => {
     if (savedLibraryId) {

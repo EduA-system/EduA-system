@@ -9,5 +9,8 @@ public record SlideContentSlotRequest(
         String sourceText,
         int maxChars,
         int maxLines,
-        String hint
+        String hint,
+        /** Slot's actual box size in px from the FE layout engine, null if not sent (older FE build). */
+        Integer width,
+        Integer height
 ) {}

@@ -6,6 +6,8 @@ import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentFillSlotRe
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentSlotRequest;
 import com.edua.beeduasystem.presentation.dto.slidedesign.SlideContentStyleResponse;
 import com.edua.beeduasystem.repository.gateways.AiClient;
+import com.edua.beeduasystem.repository.gateways.ImageGenerationClient;
+import com.edua.beeduasystem.repository.gateways.StorageClient;
 import com.edua.beeduasystem.service.ai.AiSystemPromptService;
 import com.edua.beeduasystem.domain.model.ai.AiPromptKey;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +24,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 @Slf4j
 @Service
@@ -32,6 +37,9 @@ public class FillSlideContentUseCase {
     private final ObjectMapper objectMapper;
     private final String modelLabel;
     private final AiSystemPromptService systemPromptService;
+    private final ImageGenerationClient imageGenerationClient;
+    private final StorageClient storageClient;
+    private final ExecutorService imageExecutor;
 
     @Autowired
     public FillSlideContentUseCase(
@@ -39,18 +47,25 @@ public class FillSlideContentUseCase {
             SlideDesignPromptBuilder promptBuilder,
             ObjectMapper objectMapper,
             AiSystemPromptService systemPromptService,
+            ImageGenerationClient imageGenerationClient,
+            StorageClient storageClient,
+            @Qualifier("slideSessionExecutor") ExecutorService imageExecutor,
             @Value("${app.ai.openai.default-model:gpt-4o-mini}") String openaiModel,
             @Value("${app.ai.deepseek.default-model:deepseek-chat}") String deepseekModel) {
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
         this.systemPromptService = systemPromptService;
+        this.imageGenerationClient = imageGenerationClient;
+        this.storageClient = storageClient;
+        this.imageExecutor = imageExecutor;
         this.modelLabel = openaiModel + " → " + deepseekModel;
     }
 
     FillSlideContentUseCase(AiClient aiClient, SlideDesignPromptBuilder promptBuilder, ObjectMapper objectMapper,
+                            ImageGenerationClient imageGenerationClient, StorageClient storageClient, ExecutorService imageExecutor,
                             String openaiModel, String deepseekModel) {
-        this(aiClient, promptBuilder, objectMapper, null, openaiModel, deepseekModel);
+        this(aiClient, promptBuilder, objectMapper, null, imageGenerationClient, storageClient, imageExecutor, openaiModel, deepseekModel);
     }
 
     public SlideContentFillResponse execute(SlideContentFillRequest req) {
@@ -85,18 +100,57 @@ public class FillSlideContentUseCase {
         }
 
         List<SlideContentFillSlotResponse> result = new ArrayList<>();
+        Map<Integer, CompletableFuture<String>> imageUrlFutures = new HashMap<>();
         for (SlideContentSlotRequest requestedSlot : requested) {
             RawSlot filled = byId.get(requestedSlot.id());
             if ("image".equalsIgnoreCase(requestedSlot.kind())) {
-                result.add(new SlideContentFillSlotResponse(
-                        requestedSlot.id(), null, cleanPrompt(filled == null ? null : filled.imagePrompt()), null));
+                String imagePrompt = cleanPrompt(filled == null ? null : filled.imagePrompt());
+                int index = result.size();
+                result.add(new SlideContentFillSlotResponse(requestedSlot.id(), null, imagePrompt, null, null));
+                if (imagePrompt != null) {
+                    String size = resolveImageSize(requestedSlot.width(), requestedSlot.height());
+                    imageUrlFutures.put(index, CompletableFuture.supplyAsync(
+                            () -> tryGenerateImageUrl(requestedSlot.id(), imagePrompt, size), imageExecutor));
+                }
                 continue;
             }
             result.add(new SlideContentFillSlotResponse(
                     requestedSlot.id(), cleanText(filled == null ? null : filled.text(), requestedSlot.maxChars(), requestedSlot.maxLines()), null,
-                    cleanStyle(filled == null ? null : filled.style(), requestedSlot.zone(), palette)));
+                    cleanStyle(filled == null ? null : filled.style(), requestedSlot.zone(), palette), null));
         }
+        imageUrlFutures.forEach((index, future) -> {
+            String imageUrl = future.join();
+            if (imageUrl == null) return;
+            SlideContentFillSlotResponse slot = result.get(index);
+            result.set(index, new SlideContentFillSlotResponse(
+                    slot.slotId(), slot.text(), slot.imagePrompt(), slot.style(), imageUrl));
+        });
         return new SlideContentFillResponse(result, latencyMs, modelLabel, null);
+    }
+
+    /** Sinh ảnh thật + upload R2; mọi lỗi (API, storage) chỉ log và trả null — không chặn slide. */
+    private String tryGenerateImageUrl(String slotId, String prompt, String size) {
+        try {
+            byte[] png = imageGenerationClient.generatePng(prompt, size);
+            String key = "slide-images/" + UUID.randomUUID() + ".png";
+            return storageClient.store(key, png, "image/png");
+        } catch (Exception error) {
+            log.warn("slide-design.image-gen failed slotId={} error={}", slotId, error.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Map bbox thật của slot (từ layout engine FE) sang 1 trong 3 size cố định mà OpenAI
+     * Images API chấp nhận, chọn theo tỉ lệ khung gần nhất — tránh ép mọi ảnh về vuông rồi bị
+     * crop/méo khi hiển thị trong khung chữ nhật. Ngưỡng 1.15 chừa biên cho khung gần-vuông.
+     */
+    private static String resolveImageSize(Integer width, Integer height) {
+        if (width == null || height == null || width <= 0 || height <= 0) return "1024x1024";
+        double ratio = (double) width / height;
+        if (ratio >= 1.15) return "1536x1024";
+        if (ratio <= 1 / 1.15) return "1024x1536";
+        return "1024x1024";
     }
 
     private String generateCompleteJson(String prompt, int requestedSlotCount) {
