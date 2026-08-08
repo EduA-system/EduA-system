@@ -45,6 +45,9 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/user-management": { requireAuth: true, allowedRoles: ["MODERATOR", "PRINCIPAL"] },
   "/it-staff": { requireAuth: true, allowedRoles: ["IT_STAFF"] },
   "/it-staff/activity-log": { requireAuth: true, allowedRoles: ["IT_STAFF"] },
+  // Bàn chạy thử mô phỏng: bundle và chạy hoàn toàn phía client, không gọi
+  // API nào của EDUA nên không cần phiên đăng nhập.
+  "/sandbox":         { requireAuth: false },
 };
 
 export function hasAnyRole(
