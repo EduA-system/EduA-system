@@ -122,6 +122,34 @@ public class NotificationService {
                 saved.targetType(), saved.targetUrl()));
     }
 
+    /** Gửi thông báo nghiệp vụ tới toàn bộ user active theo role + subject. */
+    @Transactional
+    public void notifyRoleSubject(Role recipientRole, Subject subject, UUID senderId, String rawTitle, String rawContent,
+                                  String targetType, String targetUrl) {
+        if (subject == null) {
+            return;
+        }
+        String title = requireText(rawTitle, TITLE_MAX_LENGTH, "Tiêu đề");
+        String content = requireText(rawContent, CONTENT_MAX_LENGTH, "Nội dung");
+        Instant now = Instant.now();
+        List<UUID> recipientIds = userRepository
+                .findAllByRoleAndSubject(recipientRole, subject, Pageable.unpaged())
+                .getContent().stream()
+                .map(AppUser::id)
+                .toList();
+        if (recipientIds.isEmpty()) {
+            return;
+        }
+
+        Notification saved = notificationRepository.createWithRecipients(
+                new Notification(UUID.randomUUID(), senderId, subject, title, content, now, targetType, targetUrl),
+                recipientIds);
+        NotificationEvent event = new NotificationEvent(
+                saved.id(), saved.title(), saved.content(), saved.subject(), displayName(senderId), saved.createdAt(),
+                saved.targetType(), saved.targetUrl());
+        recipientIds.forEach(recipientId -> streamPort.publishNew(recipientId, event));
+    }
+
     /** Danh sách notification của user hiện tại, mới nhất trước. */
     @Transactional(readOnly = true)
     public NotificationViews.Page<NotificationViews.NotificationSummary> listMine(boolean unreadOnly, Pageable pageable) {

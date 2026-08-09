@@ -13,6 +13,7 @@ import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 /**
@@ -74,8 +75,13 @@ public class HubContentService {
     }
 
     private HubViews.ContentDetail toDetail(LibraryContent c) {
-        var comments = commentRepository.findByLibraryContentId(c.id()).stream()
-                .map(cm -> new HubViews.CommentView(cm.id(), cm.content(), cm.authorId(), ownerName(cm.authorId()), cm.createdAt(), cm.updatedAt()))
+        var storedComments = commentRepository.findByLibraryContentId(c.id());
+        var visibleCommentIds = storedComments.stream().map(cm -> cm.id()).collect(Collectors.toSet());
+        storedComments = storedComments.stream()
+                .filter(cm -> cm.parentCommentId() == null || visibleCommentIds.contains(cm.parentCommentId()))
+                .toList();
+        var comments = storedComments.stream()
+                .map(cm -> new HubViews.CommentView(cm.id(), cm.content(), cm.authorId(), cm.parentCommentId(), ownerName(cm.authorId()), cm.createdAt(), cm.updatedAt()))
                 .toList();
         return new HubViews.ContentDetail(c.id(), c.type(), c.title(), c.subject(), c.ownerId(), ownerName(c.ownerId()),
                 c.payload(), c.thumbnailUrl(), c.reviewedAt(), comments);

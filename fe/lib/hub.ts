@@ -2,7 +2,7 @@ import type { LibraryContent, LibrarySubject, LibraryType } from "@/lib/library"
 
 export type HubContentStatus = "PRIVATE" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
-export type HubComment = { id: string; content: string; authorId: string; authorName: string | null; createdAt: string; updatedAt: string };
+export type HubComment = { id: string; content: string; authorId: string; parentCommentId: string | null; authorName: string | null; createdAt: string; updatedAt: string };
 
 export type HubContentSummary = {
   id: string;
@@ -53,11 +53,11 @@ export function customizeHubContent(authFetch: AuthFetch, id: string) {
   return authFetch(`/api/hub/contents/${id}/customize`, { method: "POST" }).then(unpack<LibraryContent>);
 }
 
-export function createHubComment(authFetch: AuthFetch, contentId: string, content: string) {
+export function createHubComment(authFetch: AuthFetch, contentId: string, content: string, parentCommentId?: string | null) {
   return authFetch(`/api/hub/contents/${contentId}/comments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, parentCommentId: parentCommentId ?? null }),
   }).then(unpack<HubComment>);
 }
 
@@ -74,20 +74,17 @@ export async function deleteHubComment(authFetch: AuthFetch, commentId: string) 
   if (!res.ok) throw new Error("Không thể xóa bình luận.");
 }
 
-export async function reportHubContent(authFetch: AuthFetch, contentId: string, reason: string) {
-  const res = await authFetch(`/api/hub/contents/${contentId}/reports`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ reason }),
-  });
-  if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(body?.message ?? "Không thể gửi báo cáo.");
-  }
+export async function hideHubComment(authFetch: AuthFetch, commentId: string) {
+  const res = await authFetch(`/api/hub/comments/${commentId}/hide`, { method: "POST" });
+  if (!res.ok) throw new Error("Không thể ẩn bình luận.");
 }
 
 export function listModerationQueue(authFetch: AuthFetch, params: URLSearchParams) {
   return authFetch(`/api/library/contents/moderation-queue?${params}`).then(unpack<HubPage<LibraryContent>>);
+}
+
+export function getModerationContent(authFetch: AuthFetch, id: string) {
+  return authFetch(`/api/library/contents/moderation-queue/${id}`).then(unpack<LibraryContent>);
 }
 
 export function approveContent(authFetch: AuthFetch, id: string) {

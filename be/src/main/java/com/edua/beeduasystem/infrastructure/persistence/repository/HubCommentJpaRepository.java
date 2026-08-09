@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface HubCommentJpaRepository extends JpaRepository<HubCommentEntity, UUID> {
 
-    List<HubCommentEntity> findByLibraryContentIdOrderByCreatedAtAsc(UUID libraryContentId);
+    List<HubCommentEntity> findByLibraryContentIdAndHiddenAtIsNullOrderByCreatedAtAsc(UUID libraryContentId);
 
-    long countByLibraryContentId(UUID libraryContentId);
+    long countByLibraryContentIdAndHiddenAtIsNull(UUID libraryContentId);
 }

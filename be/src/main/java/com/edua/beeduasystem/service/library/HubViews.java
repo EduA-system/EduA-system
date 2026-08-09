@@ -51,6 +51,7 @@ public final class HubViews {
             UUID id,
             String content,
             UUID authorId,
+            UUID parentCommentId,
             String authorName,
             Instant createdAt,
             Instant updatedAt
