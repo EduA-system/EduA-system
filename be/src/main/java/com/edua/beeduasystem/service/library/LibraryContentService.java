@@ -4,11 +4,13 @@ import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
 import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
+import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.library.*;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
+import com.edua.beeduasystem.service.notification.NotificationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.springframework.stereotype.Service;
@@ -20,7 +22,8 @@ public class LibraryContentService {
     private final LibraryContentRepository repository;
     private final CurrentUserProvider currentUser;
     private final ActivityLogService activityLogService;
-    public LibraryContentService(LibraryContentRepository repository, CurrentUserProvider currentUser, ActivityLogService activityLogService) { this.repository = repository; this.currentUser = currentUser; this.activityLogService = activityLogService; }
+    private final NotificationService notificationService;
+    public LibraryContentService(LibraryContentRepository repository, CurrentUserProvider currentUser, ActivityLogService activityLogService, NotificationService notificationService) { this.repository = repository; this.currentUser = currentUser; this.activityLogService = activityLogService; this.notificationService = notificationService; }
     public LibraryViews.Page list(String rawType, String rawSubject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, String sort) {
         return toPage(repository.search(currentUser.requireUserId(), parseType(rawType), parseSubject(rawSubject), grade, cleanCode(textbookCode), cleanCode(chapterCode), q, page, size, "title".equalsIgnoreCase(sort)), page, size);
     }
@@ -38,7 +41,12 @@ public class LibraryContentService {
     public LibraryViews.Detail submit(UUID id) {
         LibraryContent c = requireOwner(id);
         if (c.status() != LibraryContentStatus.PRIVATE && c.status() != LibraryContentStatus.REJECTED) throw new IllegalArgumentException("Only private or rejected content can be submitted for review.");
-        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.SUBMITTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),Instant.now(),null,null,null,null)));
+        LibraryContent saved = repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.SUBMITTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),Instant.now(),null,null,null,null));
+        notificationService.notifyRoleSubject(Role.MODERATOR, c.subject(), c.ownerId(),
+                "Có giáo án mới chờ duyệt lên Community Hub",
+                "Giáo án \"" + c.title() + "\" đã được gửi lên hàng chờ duyệt Community Hub.",
+                "HUB_MODERATION", "/hub-moderation");
+        return toDetail(saved);
     }
     public LibraryViews.Detail unsubmit(UUID id) {
         LibraryContent c = requireOwner(id);
@@ -52,6 +60,10 @@ public class LibraryContentService {
         LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.APPROVED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),null)));
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
                 ActivityLogAction.APPROVE_LIBRARY_CONTENT, "LIBRARY_CONTENT", c.id(), null);
+        notificationService.notifyRecipient(c.ownerId(), moderatorId, c.subject(),
+                "Chúc mừng! Bài đăng đã lên Community Hub",
+                "Nội dung \"" + c.title() + "\" đã được duyệt và hiển thị trên Community Hub.",
+                "HUB_CONTENT", "/community-hub");
         return detail;
     }
     /** Moderator từ chối content SUBMITTED cùng subject với mình, bắt buộc lý do. */
@@ -62,6 +74,10 @@ public class LibraryContentService {
         LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.REJECTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),rawReason.trim())));
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
                 ActivityLogAction.REJECT_LIBRARY_CONTENT, "LIBRARY_CONTENT", c.id(), rawReason.trim());
+        notificationService.notifyRecipient(c.ownerId(), moderatorId, c.subject(),
+                "Nội dung gửi lên Community Hub bị từ chối",
+                "Nội dung \"" + c.title() + "\" bị từ chối. Lý do: " + rawReason.trim(),
+                "HUB_CONTENT_REJECTION", "/library");
         return detail;
     }
     /** Hàng đợi kiểm duyệt: content SUBMITTED cùng subject với Moderator hiện tại. */
@@ -69,6 +85,10 @@ public class LibraryContentService {
         Subject moderatorSubject = currentUser.require().subject();
         if (moderatorSubject == null) throw new ForbiddenOperationException("Moderator must have a subject to review content.");
         return toPage(repository.searchByStatusAndSubject(LibraryContentStatus.SUBMITTED, moderatorSubject, page, size), page, size);
+    }
+    /** Chi tiết content đang chờ duyệt: Moderator chỉ xem được submission cùng subject. */
+    public LibraryViews.Detail getModerationDetail(UUID id) {
+        return toDetail(requireSubmittedInModeratorSubject(id));
     }
     private LibraryContent requireSubmittedInModeratorSubject(UUID id) {
         LibraryContent c = repository.findActiveById(id).orElseThrow(() -> new ResourceNotFoundException("Library content not found."));

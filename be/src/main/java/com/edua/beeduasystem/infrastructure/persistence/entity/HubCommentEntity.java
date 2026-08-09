@@ -27,6 +27,9 @@ public class HubCommentEntity {
     @Column(name = "author_id", nullable = false)
     private UUID authorId;
 
+    @Column(name = "parent_comment_id")
+    private UUID parentCommentId;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
@@ -35,4 +38,10 @@ public class HubCommentEntity {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "hidden_at")
+    private Instant hiddenAt;
+
+    @Column(name = "hidden_by")
+    private UUID hiddenBy;
 }

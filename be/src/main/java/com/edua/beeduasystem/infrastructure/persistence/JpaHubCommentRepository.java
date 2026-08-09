@@ -28,9 +28,12 @@ public class JpaHubCommentRepository implements HubCommentRepository {
         e.setId(comment.id());
         e.setLibraryContentId(comment.libraryContentId());
         e.setAuthorId(comment.authorId());
+        e.setParentCommentId(comment.parentCommentId());
         e.setContent(comment.content());
         e.setCreatedAt(comment.createdAt() != null ? comment.createdAt() : Instant.now());
         e.setUpdatedAt(comment.updatedAt() != null ? comment.updatedAt() : Instant.now());
+        e.setHiddenAt(comment.hiddenAt());
+        e.setHiddenBy(comment.hiddenBy());
         return toDomain(jpa.save(e));
     }
 
@@ -43,14 +46,14 @@ public class JpaHubCommentRepository implements HubCommentRepository {
     @Override
     @Transactional(readOnly = true)
     public List<HubComment> findByLibraryContentId(UUID libraryContentId) {
-        return jpa.findByLibraryContentIdOrderByCreatedAtAsc(libraryContentId).stream()
+        return jpa.findByLibraryContentIdAndHiddenAtIsNullOrderByCreatedAtAsc(libraryContentId).stream()
                 .map(JpaHubCommentRepository::toDomain).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public long countByLibraryContentId(UUID libraryContentId) {
-        return jpa.countByLibraryContentId(libraryContentId);
+        return jpa.countByLibraryContentIdAndHiddenAtIsNull(libraryContentId);
     }
 
     @Override
@@ -64,8 +67,11 @@ public class JpaHubCommentRepository implements HubCommentRepository {
                 e.getId(),
                 e.getLibraryContentId(),
                 e.getAuthorId(),
+                e.getParentCommentId(),
                 e.getContent(),
                 e.getCreatedAt(),
-                e.getUpdatedAt());
+                e.getUpdatedAt(),
+                e.getHiddenAt(),
+                e.getHiddenBy());
     }
 }

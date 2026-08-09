@@ -554,7 +554,18 @@ export function PeriodicTable({
       )}
 
       {/* ── Table (fills remaining space) ─────────────────────── */}
-      <div ref={tableWrapRef} className="pt-fade-up min-h-0 min-w-0 flex-1 overflow-auto" style={{ animationDelay: '180ms' }}>
+      {/*
+        tableWrapRef measures the available space for cell sizing. It must NOT
+        be the scrolling element itself: if it were, showing/hiding its own
+        scrollbar would change its own clientWidth/clientHeight, which would
+        recompute `cell`, which would change content size, which would
+        show/hide the scrollbar again — an infinite resize/flicker loop that
+        only surfaces at pixel widths landing exactly on that boundary (e.g.
+        100% browser zoom). The inner div owns the actual scrolling instead,
+        so its scrollbar never feeds back into the measurement.
+      */}
+      <div ref={tableWrapRef} className="pt-fade-up min-h-0 min-w-0 flex-1 overflow-hidden" style={{ animationDelay: '180ms' }}>
+        <div className="h-full w-full overflow-auto">
         <div style={{ width: tableW }} className="mx-auto flex shrink-0 flex-col" >
 
           {/* Group numbers 1–18 */}
@@ -652,6 +663,7 @@ export function PeriodicTable({
             })}
           </div>
 
+        </div>
         </div>
       </div>
     </div>

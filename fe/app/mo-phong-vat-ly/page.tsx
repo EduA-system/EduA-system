@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { editPhysicsSimulation } from "@/lib/api/physics-simulations";
 import { createLibraryContent } from "@/lib/library";
@@ -262,6 +263,14 @@ function DomainChip({
 /* ─────────────────────────── Trang chính ─────────────────────────── */
 
 export default function MoPhongHubPage() {
+  return (
+    <RouteGuard pathname="/mo-phong-vat-ly">
+      <MoPhongHubPageInner />
+    </RouteGuard>
+  );
+}
+
+function MoPhongHubPageInner() {
   const [selected, setSelected] = useState<Preset | null>(null);
   const [domainFilter, setDomainFilter] = useState<Set<Domain>>(
     new Set(DOMAINS),

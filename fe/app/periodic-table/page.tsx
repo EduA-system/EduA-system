@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { RouteGuard } from '@/lib/auth/RouteGuard';
 import { ELEMENTS, applyFilters } from '@/components/periodic-table/data';
 import { ElementDetailPanel } from '@/components/periodic-table/element-detail-panel';
 import { FilterPanel } from '@/components/periodic-table/filter-panel';
@@ -78,6 +79,7 @@ export default function PeriodicTablePage() {
   const activeFilters = hasFilters(filters);
 
   return (
+    <RouteGuard pathname="/periodic-table">
     <main className="flex h-screen w-full overflow-hidden bg-white text-[#1f1f1f]">
       <Sidebar activeHref="/periodic-table" responsive mobileOpen={mobileSidebarOpen} />
 
@@ -123,5 +125,6 @@ export default function PeriodicTablePage() {
         <ElementDetailPanel element={selectedElement} onClose={() => setSelectedElement(null)} />
       </section>
     </main>
+    </RouteGuard>
   );
 }

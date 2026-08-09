@@ -12,8 +12,8 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/login":           { requireAuth: false },
   "/dashboard":       { requireAuth: true },
   "/help":            { requireAuth: false },
-  "/lesson-create":   { requireAuth: true },
-  "/lesson-edit":     { requireAuth: true },
+  "/lesson-create":   { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
+  "/lesson-edit":     { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
   "/create-class":    { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/add-student":     { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/class-detail":    { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
@@ -26,18 +26,20 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/class-detail/settings": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/list-class":      { requireAuth: true },
   "/detail-resource": { requireAuth: true },
-  "/slide-create":    { requireAuth: true },
-  "/slide-maker":     { requireAuth: true },
+  "/slide-create":    { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
+  "/slide-maker":     { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
   "/exam-create-new": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/exam-edit-new":   { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/molecules":       { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
+  "/mo-phong-vat-ly": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
+  "/periodic-table":  { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
   "/library":         { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/user-profile":    { requireAuth: true },
   "/blog":            { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/blog/create":     { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/notifications":   { requireAuth: true },
   "/blog-moderator":  { requireAuth: true, allowedRoles: ["MODERATOR"] },
-  "/community-hub":   { requireAuth: false },
+  "/community-hub":   { requireAuth: false, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
   "/hub-moderation":  { requireAuth: true, allowedRoles: ["MODERATOR"] },
   "/weekly-schedule": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/weekly-task-document": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
@@ -65,8 +67,13 @@ export function canAccessRoute(
 ): boolean {
   const permission = routePermissions[pathname];
   if (!permission) return Boolean(user);
+  // A role allowlist still applies to signed-in users even on a route that
+  // doesn't require auth (e.g. Community Hub is public, but IT_STAFF is
+  // excluded once logged in). Anonymous visitors fall back to requireAuth.
+  if (permission.allowedRoles) {
+    if (!user) return !permission.requireAuth;
+    return hasAnyRole(user, permission.allowedRoles);
+  }
   if (!permission.requireAuth) return true;
-  if (!user) return false;
-  if (!permission.allowedRoles) return true;
-  return hasAnyRole(user, permission.allowedRoles);
+  return Boolean(user);
 }

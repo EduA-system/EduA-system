@@ -65,16 +65,6 @@ const contentMeta: Record<LibraryType, { label: string; icon: typeof BookOpen; c
 
 type PendingAction = { content: LibraryContent; kind: "submit" | "unsubmit" | "delete" };
 
-/**
- * 4 trạng thái vòng đời giáo án theo đúng yêu cầu: AI tạo xong/nằm trong lib cá nhân → Nháp; lúc gửi cho
- * Mod → Chờ duyệt; lúc được duyệt → Đã duyệt; bị từ chối → Từ chối.
- *
- * "Gửi cho mod" có 2 kênh độc lập trong hệ thống (cố tình tách biệt — xem comment gốc trong
- * `WeeklyTaskService.java`): (1) `LibraryContent.status` — nút giấy máy bay "Gửi duyệt lên Hub cộng đồng"
- * trên chính trang này; (2) `WeeklyTaskReviewStatus` — nộp giáo án này làm nguồn cho 1 Weekly Task ở trang
- * `/weekly-schedule`. Card ở đây ưu tiên hiện trạng thái Weekly Task nếu có (đó là kênh "gửi cho mod" phổ
- * biến hơn với giáo án — nộp giáo án tuần), rồi mới rơi về trạng thái Hub-publish.
- */
 function statusMeta(status: "PRIVATE" | "SUBMITTED" | "APPROVED" | "REJECTED", source: "hub" | "weeklyTask") {
   if (status === "SUBMITTED") {
     return {
@@ -104,6 +94,16 @@ function statusMeta(status: "PRIVATE" | "SUBMITTED" | "APPROVED" | "REJECTED", s
     };
   }
   return { label: "Nháp", className: "bg-slate-50 text-slate-600 border border-slate-200", icon: Lock, title: "Riêng tư, chưa gửi duyệt" };
+}
+
+function weeklyTaskStatusMeta(status: "SUBMITTED" | "APPROVED" | "REJECTED" | undefined) {
+  if (status) return statusMeta(status, "weeklyTask");
+  return {
+    label: "Chưa nộp",
+    className: "bg-slate-50 text-slate-600 border border-slate-200",
+    icon: Clock,
+    title: "Giáo án này chưa được nộp làm giáo án tuần",
+  };
 }
 
 function formatUpdatedAt(value: string) {
@@ -305,7 +305,9 @@ function LibraryScreen() {
               const meta = contentMeta[content.type];
               const Icon = meta.icon;
               const weeklyTaskStatus = content.type === "LESSON_PLAN" ? weeklyTaskStatusByContentId.get(content.id) : undefined;
-              const status = weeklyTaskStatus ? statusMeta(weeklyTaskStatus, "weeklyTask") : statusMeta(content.status, "hub");
+              const hubStatus = statusMeta(content.status, "hub");
+              const weeklyStatus = content.type === "LESSON_PLAN" ? weeklyTaskStatusMeta(weeklyTaskStatus) : null;
+              const WeeklyStatusIcon = weeklyStatus?.icon;
               const grade = gradeLabel(content.grade);
               return <article key={content.id} className="group relative min-w-0 rounded-[26px] border border-[#dfe7eb] bg-white shadow-[0_8px_24px_rgba(43,41,38,0.10)] transition duration-200 hover:-translate-y-1 hover:border-[#cbdde4] hover:shadow-[0_14px_30px_rgba(43,41,38,0.16)]">
                 <div className="flex h-full flex-col overflow-visible rounded-[26px] bg-[#f8fbfc] p-3">
@@ -315,14 +317,30 @@ function LibraryScreen() {
                       <p className="min-w-0 truncate text-sm font-bold text-[#363a43]">{meta.label} {subjectLabel(content.subject)}</p>
                       {grade && <span className="shrink-0 rounded-full bg-[#edf4ff] px-2 py-1 text-[10px] font-semibold text-[#2f5f9b]">{grade}</span>}
                     </div>
-                    <span title={status.title} className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-semibold ${status.className}`}><status.icon className="size-3.5" />{status.label}</span>
+                    <span title={hubStatus.title} className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-semibold ${hubStatus.className}`}><hubStatus.icon className="size-3.5" />Hub: {hubStatus.label}</span>
                     {content.status !== "APPROVED" && <div className="group/approval relative"><button type="button" aria-label={content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"} onClick={() => requestAction(content, content.status === "SUBMITTED" ? "unsubmit" : "submit")} className="flex size-9 items-center justify-center rounded-xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900">{content.status === "SUBMITTED" ? <Undo2 className="size-4" /> : <Send className="size-4" />}</button><span role="tooltip" className="pointer-events-none absolute right-0 top-11 z-20 w-max max-w-48 rounded-lg bg-[#292d3b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition group-hover/approval:opacity-100">{content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"}</span></div>}
                   </div>
                   <Link href={open(content)} aria-label={`Mở ${content.title}`} className={`relative block aspect-[16/7] overflow-hidden rounded-2xl border border-[#d7e6eb] bg-gradient-to-br ${meta.color}`}>
                     {content.thumbnailUrl ? <img src={content.thumbnailUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" /> : <div className="flex h-full flex-col items-center justify-center gap-4 text-[#275c68]"><span className="flex size-20 items-center justify-center rounded-[28px] bg-white/60 shadow-sm"><Icon aria-hidden className="size-10" /></span><span className="text-xs font-bold uppercase tracking-[0.2em]">{meta.label}</span></div>}
                   </Link>
                   <div className="px-2 pb-1 pt-2"><Link href={open(content)} className="line-clamp-1 text-base font-bold leading-5 text-[#30343d] transition hover:text-sky-700 hover:underline">{content.title}</Link>{content.status === "REJECTED" && content.rejectionReason && <p className="mt-1 line-clamp-1 text-xs text-rose-700">{content.rejectionReason}</p>}</div>
-                  <div className="mt-auto flex items-center gap-2 rounded-2xl bg-white p-2 shadow-[0_2px_8px_rgba(43,41,38,0.08)]"><div className="min-w-0 flex-1 px-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Cập nhật</p><p className="truncate text-xs font-medium text-stone-600">{formatUpdatedAt(content.updatedAt)}</p></div><Link href={open(content)} className="inline-flex items-center justify-center rounded-xl border border-[#1f2431] bg-[#292d3b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#141825]">Mở</Link><div className="relative"><button type="button" aria-label={`Thao tác với ${content.title}`} aria-expanded={menuId === content.id} onClick={() => setMenuId(menuId === content.id ? null : content.id)} className="flex size-11 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"><MoreHorizontal className="size-5" /></button>{menuId === content.id && <div className="absolute bottom-12 right-0 z-10 w-36 rounded-xl border border-stone-200 bg-white p-1 shadow-lg"><button type="button" onClick={() => openRename(content)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-stone-100"><Pencil className="size-3.5" />Đổi tên</button><button type="button" onClick={() => requestAction(content, "delete")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50"><Trash2 className="size-3.5" />Xóa</button></div>}</div></div>
+                  <div className="mt-auto flex items-center gap-2 rounded-2xl bg-white p-2 shadow-[0_2px_8px_rgba(43,41,38,0.08)]">
+                    <div className="min-w-0 flex-1 px-2">
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Cập nhật</p>
+                          <p className="truncate text-xs font-medium text-stone-600">{formatUpdatedAt(content.updatedAt)}</p>
+                        </div>
+                        {weeklyStatus && WeeklyStatusIcon && (
+                          <span title={weeklyStatus.title} className={`mb-px inline-flex w-fit shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-semibold ${weeklyStatus.className}`}>
+                            <WeeklyStatusIcon className="size-3.5" />
+                            Tuần: {weeklyStatus.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Link href={open(content)} className="inline-flex items-center justify-center rounded-xl border border-[#1f2431] bg-[#292d3b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#141825]">Mở</Link><div className="relative"><button type="button" aria-label={`Thao tác với ${content.title}`} aria-expanded={menuId === content.id} onClick={() => setMenuId(menuId === content.id ? null : content.id)} className="flex size-11 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"><MoreHorizontal className="size-5" /></button>{menuId === content.id && <div className="absolute bottom-12 right-0 z-10 w-36 rounded-xl border border-stone-200 bg-white p-1 shadow-lg"><button type="button" onClick={() => openRename(content)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-stone-100"><Pencil className="size-3.5" />Đổi tên</button><button type="button" onClick={() => requestAction(content, "delete")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50"><Trash2 className="size-3.5" />Xóa</button></div>}</div>
+                  </div>
                 </div>
               </article>;
             })}</div>}
@@ -330,7 +348,38 @@ function LibraryScreen() {
       </div>
 
       {rename && <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="rename-title"><div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"><div className="flex items-start justify-between gap-4"><div><h2 id="rename-title" className="font-semibold">Đổi tên nội dung</h2><p className="mt-1 text-sm text-stone-500">Tên mới sẽ hiển thị trong thư viện.</p></div><button type="button" aria-label="Đóng" onClick={() => setRename(null)} className="rounded-lg p-1 text-stone-500 hover:bg-stone-100"><X className="size-5" /></button></div><input autoFocus value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveRename(); }} className="mt-4 w-full rounded-xl border border-stone-300 px-3 py-2.5 outline-none focus:border-[#e8724a]" /><div className="mt-5 flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setRename(null)} className="rounded-xl px-4 py-2 text-sm font-medium hover:bg-stone-100">Hủy</button><button type="button" disabled={saving || !name.trim()} onClick={() => void saveRename()} className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{saving ? "Đang lưu..." : "Lưu"}</button></div></div></div>}
-      {pendingAction && <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="action-title"><div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"><div className="flex items-start gap-3"><div className={`rounded-full p-2 ${pendingAction.kind === "delete" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-800"}`}>{pendingAction.kind === "delete" ? <Trash2 className="size-5" /> : <CheckCircle2 className="size-5" />}</div><div><h2 id="action-title" className="font-semibold">{pendingAction.kind === "delete" ? "Xóa nội dung?" : pendingAction.kind === "unsubmit" ? "Thu hồi nội dung?" : "Gửi duyệt nội dung?"}</h2><p className="mt-1 text-sm leading-5 text-stone-600">{pendingAction.kind === "delete" ? `“${pendingAction.content.title}” sẽ bị xóa vĩnh viễn.` : pendingAction.kind === "unsubmit" ? `“${pendingAction.content.title}” sẽ được gỡ khỏi hàng chờ duyệt.` : `“${pendingAction.content.title}” sẽ được gửi lên Hub cộng đồng để duyệt.`}</p></div></div><div className="mt-5 flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setPendingAction(null)} className="rounded-xl px-4 py-2 text-sm font-medium hover:bg-stone-100">Hủy</button><button type="button" disabled={saving} onClick={() => void performAction()} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 ${pendingAction.kind === "delete" ? "bg-red-700 hover:bg-red-800" : "bg-[#e8724a] hover:bg-[#cf603d]"}`}>{saving ? "Đang xử lý..." : pendingAction.kind === "delete" ? "Xóa nội dung" : pendingAction.kind === "unsubmit" ? "Thu hồi" : "Gửi duyệt"}</button></div></div></div>}
+      {pendingAction && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#171513]/45 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="action-title">
+          <div className="w-full max-w-[430px] overflow-hidden rounded-[22px] border border-white/70 bg-white shadow-[0_24px_70px_rgba(43,41,38,0.24)]">
+            <div className="flex items-start gap-4 px-6 pb-5 pt-6">
+              <div className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${pendingAction.kind === "delete" ? "bg-rose-50 text-rose-700" : pendingAction.kind === "unsubmit" ? "bg-sky-50 text-sky-700" : "bg-[#fff4df] text-[#d36a31]"}`}>
+                {pendingAction.kind === "delete" ? <Trash2 className="size-5" /> : pendingAction.kind === "unsubmit" ? <Undo2 className="size-5" /> : <Send className="size-5" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 id="action-title" className="text-lg font-bold tracking-[-0.02em] text-[#30343d]">
+                  {pendingAction.kind === "delete" ? "Xóa nội dung?" : pendingAction.kind === "unsubmit" ? "Thu hồi khỏi hàng chờ?" : "Gửi duyệt lên Hub?"}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-stone-600">
+                  {pendingAction.kind === "delete"
+                    ? "Nội dung này sẽ bị xóa khỏi thư viện cá nhân của bạn."
+                    : pendingAction.kind === "unsubmit"
+                      ? "Nội dung sẽ được gỡ khỏi hàng chờ kiểm duyệt Community Hub."
+                      : "Nội dung sẽ được gửi tới Moderator đúng môn để kiểm duyệt trước khi hiển thị công khai."}
+                </p>
+                <p className="mt-3 line-clamp-2 rounded-xl bg-stone-50 px-3 py-2 text-sm font-semibold text-[#30343d]">
+                  {pendingAction.content.title}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-stone-100 bg-[#fbfaf8] px-6 py-4">
+              <button type="button" disabled={saving} onClick={() => setPendingAction(null)} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-stone-600 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60">Hủy</button>
+              <button type="button" disabled={saving} onClick={() => void performAction()} className={`inline-flex min-w-28 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${pendingAction.kind === "delete" ? "bg-rose-700 hover:bg-rose-800" : pendingAction.kind === "unsubmit" ? "bg-sky-700 hover:bg-sky-800" : "bg-[#e8724a] hover:bg-[#cf603d]"}`}>
+                {saving ? "Đang xử lý..." : pendingAction.kind === "delete" ? "Xóa" : pendingAction.kind === "unsubmit" ? "Thu hồi" : "Gửi duyệt"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

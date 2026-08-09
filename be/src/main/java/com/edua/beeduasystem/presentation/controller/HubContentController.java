@@ -48,7 +48,7 @@ public class HubContentController {
     }
 
     @PostMapping("/contents/{id}/customize")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     public LibraryViews.Detail customize(@PathVariable UUID id) {
         return contentService.customize(id);
     }
@@ -57,7 +57,7 @@ public class HubContentController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     public HubViews.CommentView createComment(@PathVariable UUID id, @RequestBody CreateHubCommentRequest request) {
-        return commentService.create(id, request.content());
+        return commentService.create(id, request.content(), request.parentCommentId());
     }
 
     @PatchMapping("/comments/{commentId}")
@@ -71,6 +71,13 @@ public class HubContentController {
     @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     public void deleteComment(@PathVariable UUID commentId) {
         commentService.delete(commentId);
+    }
+
+    @PostMapping("/comments/{commentId}/hide")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
+    public void hideComment(@PathVariable UUID commentId) {
+        commentService.hideByContentOwner(commentId);
     }
 
     @PostMapping("/contents/{id}/reports")
