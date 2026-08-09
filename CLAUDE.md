@@ -26,15 +26,19 @@ For Iter3 work, keep the docs synchronized with the code. The canonical status f
 ├── WBS_CHECKLIST.md            Canonical code-vs-WBS status (Iter1–3)
 ├── UNIT_TEST_CHECKLIST.md      Test coverage plan
 ├── TEST_FUNCTION_INVENTORY.md  Per-function test inventory
-├── scripts/start.ps1           Full-stack launcher with DB resolution
+├── resource/                   Source docs (SRS, SDS, lesson-plan templates, sample .docx/.pdf)
+├── sach_giao_khoa_vat_ly/      Physics textbook PDFs used as import/reference input
+├── scripts/                    start.ps1 (full-stack launcher), start-fedora.sh, fetch-slide-assets.mjs
 ├── docker-compose.yml          Local PostgreSQL fallback
 ├── .github/workflows/ci.yml    Frontend CI
 └── .husky/pre-commit           Frontend checks before commit
 ```
 
+`images/` and `outputs/` are scratch artifacts (pasted screenshots, workbook backups) — not build inputs; don't treat them as source.
+
 There is no root build orchestration beyond Husky setup. Work from `fe/` or `be/` for app-specific commands.
 
-`AGENTS.md` (root) and `fe/AGENTS.md` also exist for other agent tools. The root `AGENTS.md` has drifted: it names `ITER3_CODE_CHECKLIST.md` (renamed to `WBS_CHECKLIST.md`), says no frontend test runner is configured (Vitest is), and says backend tests are named `*Tests.java` only (both `*Test.java` and `*Tests.java` are in use). Where the two disagree, this file is current.
+`AGENTS.md` (root) and `fe/AGENTS.md` also exist for other agent tools; `fe/CLAUDE.md` is a small frontend-scoped file that `@`-imports `fe/AGENTS.md` and repeats the Next.js 16 warning plus `fe/` commands and conventions. The root `AGENTS.md` has drifted: it names `ITER3_CODE_CHECKLIST.md` (renamed to `WBS_CHECKLIST.md`), says no frontend test runner is configured (Vitest is), and says backend tests are named `*Tests.java` only (both `*Test.java` and `*Tests.java` are in use). Where these disagree, this file is current.
 
 ## Common Commands
 
@@ -144,7 +148,7 @@ Rules:
 ### Backend Architecture
 
 - The backend is feature-oriented inside the service layer: current areas are `activitylog`, `ai`, `auth`, `blog`, `classroom`, `lessonplan`, `library`, `molecule`, `notification`, `physicssimulation`, `practiceexam`, `slidedesign`, `slides`, `textbook`, `upload`, and `weeklytask`.
-- Persistence is PostgreSQL + Flyway, `be/src/main/resources/db/migration/` (currently through `V39`). Coverage spans textbook catalog, auth, roles/user roles, account-management audit, blog (comments/replies/thumbnails/soft-hide), library content, classroom membership, weekly tasks/submissions/grades, notification targets, and user profile fields. Migrations are append-only: never edit an applied `V*` file — the shared Supabase DB runs with checksum validation on.
+- Persistence is PostgreSQL + Flyway, `be/src/main/resources/db/migration/` (currently through `V41`). Coverage spans textbook catalog, auth, roles/user roles, account-management audit, blog (comments/replies/thumbnails/soft-hide), community-hub comments (reports/replies/soft-hide), library content, classroom membership and resources, weekly tasks/submissions/grades, activity logs, AI system prompts, notification targets, and user profile fields. Migrations are append-only: never edit an applied `V*` file — the shared Supabase DB runs with checksum validation on.
 - Authentication is stateless JWT. Google sign-in starts in the frontend, then backend auth endpoints issue/refresh tokens. Request auth is enforced by `JwtAuthenticationFilter`, and role checks are done with method security.
 - WebSocket streaming is part of the main architecture, not a side feature. Spring exposes a raw STOMP endpoint at `/ws`; JWT is validated on STOMP `CONNECT` via `StompAuthChannelInterceptor`; lesson-plan, outline, and notification flows publish progress/events through stream port interfaces (`LessonPlanStreamPort`, `OutlineStreamPort`, `NotificationStreamPort`) and STOMP adapters.
 - AI access is abstracted behind `repository/gateways/AiClient`. `infrastructure/ai/config/AiClientConfig.java` wires a `FallbackAiClient` that tries the OpenAI adapter first (vision-capable) and falls back to DeepSeek; a separate `jsonAiClient` bean forces OpenAI's `json_object` response format for prompts that always request JSON (not safe for HTML-generating prompts).
