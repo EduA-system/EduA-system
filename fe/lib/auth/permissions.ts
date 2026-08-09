@@ -39,7 +39,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/blog/create":     { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/notifications":   { requireAuth: true },
   "/blog-moderator":  { requireAuth: true, allowedRoles: ["MODERATOR"] },
-  "/community-hub":   { requireAuth: false },
+  "/community-hub":   { requireAuth: false, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
   "/hub-moderation":  { requireAuth: true, allowedRoles: ["MODERATOR"] },
   "/weekly-schedule": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/weekly-task-document": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
@@ -64,8 +64,13 @@ export function canAccessRoute(
 ): boolean {
   const permission = routePermissions[pathname];
   if (!permission) return Boolean(user);
+  // A role allowlist still applies to signed-in users even on a route that
+  // doesn't require auth (e.g. Community Hub is public, but IT_STAFF is
+  // excluded once logged in). Anonymous visitors fall back to requireAuth.
+  if (permission.allowedRoles) {
+    if (!user) return !permission.requireAuth;
+    return hasAnyRole(user, permission.allowedRoles);
+  }
   if (!permission.requireAuth) return true;
-  if (!user) return false;
-  if (!permission.allowedRoles) return true;
-  return hasAnyRole(user, permission.allowedRoles);
+  return Boolean(user);
 }
