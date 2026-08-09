@@ -690,6 +690,14 @@ export function LeftPanel({
     if (currentSlideLocked) return;
     addElement(makeByType("simulation", { molecule }));
   }
+
+  function addPeriodicSimulation(symbols: string[], focus: string, mode: "element" | "table" = "table") {
+    if (currentSlideLocked) return;
+    addElement(makeByType("simulation", {
+      kind: mode === "element" && symbols.length === 1 ? "periodic-element" : "periodic-table",
+      periodic: { mode, elementSymbols: symbols, focus },
+    }));
+  }
   return (
     <div className="flex shrink-0 border-r border-[#e8e2d9] bg-white">
       <input ref={fileRef} type="file" accept="image/*,.svg" onChange={onFile} className="hidden" />
@@ -873,6 +881,25 @@ export function LeftPanel({
 
           {visibleTab === "simulation" && (
             <div className="p-3">
+              <div className="mb-1 text-[10px] font-bold uppercase tracking-[1px] text-[#2b2926]">Bảng tuần hoàn</div>
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => addPeriodicSimulation(["Na", "Cl"], "Natri và Clo", "table")}
+                  className="flex flex-col items-center gap-1 rounded-[10px] border border-[#e8e2d9] bg-white px-2 py-3 text-center transition-colors hover:border-[#d97757] hover:bg-[#fbfaf8]"
+                >
+                  <span className="text-xl font-bold text-[#2b2926]">PT</span>
+                  <span className="truncate text-[11px] font-medium text-[#2b2926]">Na / Cl</span>
+                  <span className="text-[10px] text-[#8a8178]">nguyên tố</span>
+                </button>
+                <button
+                  onClick={() => addPeriodicSimulation(["F", "Cl", "Br", "I", "At", "Ts"], "Nhóm halogen", "table")}
+                  className="flex flex-col items-center gap-1 rounded-[10px] border border-[#e8e2d9] bg-white px-2 py-3 text-center transition-colors hover:border-[#d97757] hover:bg-[#fbfaf8]"
+                >
+                  <span className="text-xl font-bold text-[#2b2926]">PT</span>
+                  <span className="truncate text-[11px] font-medium text-[#2b2926]">Halogen</span>
+                  <span className="text-[10px] text-[#8a8178]">nhóm 17</span>
+                </button>
+              </div>
               <div className="mb-1 text-[10px] font-bold uppercase tracking-[1px] text-[#2b2926]">Mô phỏng phân tử</div>
               <p className="mb-3 text-[10px] text-[#8a8178]">Chèn mô hình 3D — có thể nhấn để tương tác khi trình chiếu.</p>
               <div className="grid grid-cols-2 gap-2">

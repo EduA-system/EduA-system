@@ -114,7 +114,7 @@ function elemLabel(el: SlideElement): string {
   if (el.type === "shape") return el.shape === "ellipse" ? "Ellipse" : "Rectangle";
   if (el.type === "line") return "Line";
   if (el.type === "arrow") return "Arrow";
-  if (el.type === "simulation") return el.molecule.name;
+  if (el.type === "simulation") return el.kind === "molecule" ? el.molecule.name : (el.periodic.focus || el.periodic.elementSymbols.join(", "));
   return el.type;
 }
 

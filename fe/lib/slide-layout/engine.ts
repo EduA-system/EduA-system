@@ -17,6 +17,8 @@ type Candidate = Pick<SlideLayoutResult, "topology" | "structures" | "slots" | "
 
 const fontByToken: Record<string, number> = {
   "text-hero": 30,
+  "text-section-hero": 56,
+  "text-section-body": 20,
   "text-body": 16,
   "text-caption": 12,
   "text-formula": 24,
@@ -27,14 +29,15 @@ const fontByToken: Record<string, number> = {
 const MIN_VISUAL_WIDTH_RATIO = 0.35;
 const MIN_VISUAL_HEIGHT_RATIO = 0.45;
 
-/** `visual` (image) and `molecule` (3D model) both occupy an aside-sized media slot. */
+/** Visual blocks occupy an aside-sized media slot. */
 function isVisualLikeKind(kind: ContentBlock["kind"]): boolean {
-  return kind === "visual" || kind === "molecule";
+  return kind === "visual" || kind === "molecule" || kind === "periodic";
 }
 
 function slotKindFor(kind: ContentBlock["kind"]): LayoutSlot["kind"] {
   if (kind === "visual") return "image";
   if (kind === "molecule") return "molecule";
+  if (kind === "periodic") return "periodic";
   return "text";
 }
 
@@ -214,11 +217,21 @@ function buildCandidate(input: SlideLayoutInput, seed: number, index: number): C
   let topology = "stack";
 
   if (input.slideType === "intro" || input.slideType === "section") {
-    topology = horizontal ? "hero-left" : "hero-centered";
-    slots[0].rect = horizontal ? { x: bounds.x + 24, y: bounds.y + 70, w: Math.round(bounds.w * 0.66), h: 130 } : { x: bounds.x + 90, y: bounds.y + 100, w: bounds.w - 180, h: 130 };
-    const contentRect = { x: slots[0].rect.x, y: slots[0].rect.y + 150, w: slots[0].rect.w, h: Math.max(80, bounds.y + bounds.h - slots[0].rect.y - 150) };
-    const generic = genericSlots(contentBlocks, contentRect, true);
-    slots.push(...generic.slots); structures.push(...generic.structures);
+    topology = "section-opener-centered";
+    const heroRect = { x: bounds.x + 90, y: bounds.y + 130, w: bounds.w - 180, h: 150 };
+    slots[0].rect = heroRect;
+    slots[0].defaultStyleToken = "text-section-hero";
+    const contentTop = heroRect.y + heroRect.h + 18;
+    const contentRect = { x: bounds.x + 180, y: contentTop, w: bounds.w - 360, h: Math.max(72, bounds.y + bounds.h - contentTop - 36) };
+    const contentCells = grid(contentRect, Math.max(1, contentBlocks.length), 1, 10);
+    slots.push(...contentBlocks.map((block, index) => makeSlot(
+      block,
+      inset(contentCells[index], 8),
+      isVisualLikeKind(block.kind) ? "aside" : block.kind === "formula" ? "formula" : "body",
+      blockText(block),
+      undefined,
+      "text-section-body",
+    )));
   } else if (input.slideType === "text-image" || input.slideType === "experiment" || contentBlocks.some((block) => isVisualLikeKind(block.kind))) {
     topology = horizontal ? "split-left" : "split-right";
     const [left, right] = splitHorizontal(body, ratio, 20);
@@ -288,17 +301,17 @@ function buildCandidate(input: SlideLayoutInput, seed: number, index: number): C
   const requiredIds = new Set(input.blocks.filter((block) => block.required).map((block) => block.id));
   const represented = new Set(slots.map((slot) => slot.sourceBlockId));
   const visualsAreProminent = slots
-    .filter((slot) => slot.kind === "image" || slot.kind === "molecule")
+    .filter((slot) => slot.kind === "image" || slot.kind === "molecule" || slot.kind === "periodic")
     .every((slot) => slot.rect.w >= body.w * MIN_VISUAL_WIDTH_RATIO && slot.rect.h >= body.h * MIN_VISUAL_HEIGHT_RATIO);
   const valid = [...requiredIds].every((id) => represented.has(id))
-    && slots.every((slot) => inside(slot.rect, bounds) && slot.rect.w >= (slot.kind === "image" || slot.kind === "molecule" ? 120 : 42) && slot.rect.h >= 24)
+    && slots.every((slot) => inside(slot.rect, bounds) && slot.rect.w >= (slot.kind === "image" || slot.kind === "molecule" || slot.kind === "periodic" ? 120 : 42) && slot.rect.h >= 24)
     && visualsAreProminent
     && structures.every((item) => inside(item.rect, bounds));
   const area = slots.reduce((sum, slot) => sum + slot.rect.w * slot.rect.h, 0);
   const coverage = Math.min(100, (area / (bounds.w * bounds.h)) * 100);
   const near = slots.filter(slotNearCapacity).length;
   const semantic = input.slideType === "experiment"
-    ? slots.some((slot) => (slot.kind === "image" || slot.kind === "molecule") && slot.rect.w >= body.w * 0.3) ? 100 : 35
+    ? slots.some((slot) => (slot.kind === "image" || slot.kind === "molecule" || slot.kind === "periodic") && slot.rect.w >= body.w * 0.3) ? 100 : 35
     : 92;
   const score = {
     readability: Math.max(0, 100 - near * 12),

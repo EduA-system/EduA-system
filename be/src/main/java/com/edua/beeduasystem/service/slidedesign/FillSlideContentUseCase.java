@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
@@ -33,22 +32,12 @@ import java.util.concurrent.ExecutorService;
 public class FillSlideContentUseCase {
     private static final int MAX_JSON_ATTEMPTS = 2;
 
-    /**
-     * Ảnh minh hoạ không được chứa chữ: model sinh ảnh viết sai chính tả tiếng Việt gần như
-     * chắc chắn, và slide đã có text thật ở các slot khác nên chữ trong ảnh chỉ gây nhiễu +
-     * trùng lặp. Luật này nối vào prompt CHỈ khi gọi Images API — {@code imagePrompt} trả về
-     * FE vẫn là prompt gốc của AI (FE hiển thị/lưu lại prompt đó).
-     */
-    static final String NO_TEXT_IN_IMAGE_RULE = " Strictly no text in the image: no words, letters,"
-            + " numbers, labels, captions, titles, annotations, legends, axis ticks, watermarks or"
-            + " signatures anywhere. Convey everything through shapes, arrows, and color alone.";
     private final AiClient aiClient;
     private final SlideDesignPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
     private final String modelLabel;
     private final AiSystemPromptService systemPromptService;
-    private final ImageGenerationClient imageGenerationClient;
-    private final StorageClient storageClient;
+    private final SlideImageGenerator imageGenerator;
     private final ExecutorService imageExecutor;
 
     @Autowired
@@ -57,8 +46,7 @@ public class FillSlideContentUseCase {
             SlideDesignPromptBuilder promptBuilder,
             ObjectMapper objectMapper,
             AiSystemPromptService systemPromptService,
-            ImageGenerationClient imageGenerationClient,
-            StorageClient storageClient,
+            SlideImageGenerator imageGenerator,
             @Qualifier("slideSessionExecutor") ExecutorService imageExecutor,
             @Value("${app.ai.openai.default-model:gpt-4o-mini}") String openaiModel,
             @Value("${app.ai.deepseek.default-model:deepseek-chat}") String deepseekModel) {
@@ -66,8 +54,7 @@ public class FillSlideContentUseCase {
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
         this.systemPromptService = systemPromptService;
-        this.imageGenerationClient = imageGenerationClient;
-        this.storageClient = storageClient;
+        this.imageGenerator = imageGenerator;
         this.imageExecutor = imageExecutor;
         this.modelLabel = openaiModel + " → " + deepseekModel;
     }
@@ -75,7 +62,8 @@ public class FillSlideContentUseCase {
     FillSlideContentUseCase(AiClient aiClient, SlideDesignPromptBuilder promptBuilder, ObjectMapper objectMapper,
                             ImageGenerationClient imageGenerationClient, StorageClient storageClient, ExecutorService imageExecutor,
                             String openaiModel, String deepseekModel) {
-        this(aiClient, promptBuilder, objectMapper, null, imageGenerationClient, storageClient, imageExecutor, openaiModel, deepseekModel);
+        this(aiClient, promptBuilder, objectMapper, null,
+                new SlideImageGenerator(imageGenerationClient, storageClient), imageExecutor, openaiModel, deepseekModel);
     }
 
     public SlideContentFillResponse execute(SlideContentFillRequest req) {
@@ -110,11 +98,11 @@ public class FillSlideContentUseCase {
         }
 
         List<SlideContentFillSlotResponse> result = new ArrayList<>();
-        Map<Integer, CompletableFuture<String>> imageUrlFutures = new HashMap<>();
+        Map<Integer, CompletableFuture<ImageGenerationResult>> imageUrlFutures = new HashMap<>();
         for (SlideContentSlotRequest requestedSlot : requested) {
             RawSlot filled = byId.get(requestedSlot.id());
             if ("image".equalsIgnoreCase(requestedSlot.kind())) {
-                String imagePrompt = cleanPrompt(filled == null ? null : filled.imagePrompt());
+                String imagePrompt = imagePromptFor(requestedSlot, filled);
                 int index = result.size();
                 result.add(new SlideContentFillSlotResponse(requestedSlot.id(), null, imagePrompt, null, null));
                 if (imagePrompt != null) {
@@ -128,39 +116,37 @@ public class FillSlideContentUseCase {
                     requestedSlot.id(), cleanText(filled == null ? null : filled.text(), requestedSlot.maxChars(), requestedSlot.maxLines()), null,
                     cleanStyle(filled == null ? null : filled.style(), requestedSlot.zone(), palette), null));
         }
+        List<String> imageWarnings = new ArrayList<>();
         imageUrlFutures.forEach((index, future) -> {
-            String imageUrl = future.join();
+            ImageGenerationResult imageResult = future.join();
+            if (imageResult.warning() != null) imageWarnings.add(imageResult.warning());
+            String imageUrl = imageResult.url();
             if (imageUrl == null) return;
             SlideContentFillSlotResponse slot = result.get(index);
             result.set(index, new SlideContentFillSlotResponse(
                     slot.slotId(), slot.text(), slot.imagePrompt(), slot.style(), imageUrl));
         });
-        return new SlideContentFillResponse(result, latencyMs, modelLabel, null);
-    }
-
-    /** Sinh ảnh thật + upload R2; mọi lỗi (API, storage) chỉ log và trả null — không chặn slide. */
-    private String tryGenerateImageUrl(String slotId, String prompt, String size) {
-        try {
-            byte[] png = imageGenerationClient.generatePng(prompt + NO_TEXT_IN_IMAGE_RULE, size);
-            String key = "slide-images/" + UUID.randomUUID() + ".png";
-            return storageClient.store(key, png, "image/png");
-        } catch (Exception error) {
-            log.warn("slide-design.image-gen failed slotId={} error={}", slotId, error.getMessage());
-            return null;
-        }
+        String warning = imageWarnings.isEmpty() ? null : String.join("; ", imageWarnings);
+        return new SlideContentFillResponse(result, latencyMs, modelLabel, warning);
     }
 
     /**
-     * Map bbox thật của slot (từ layout engine FE) sang 1 trong 3 size cố định mà OpenAI
-     * Images API chấp nhận, chọn theo tỉ lệ khung gần nhất — tránh ép mọi ảnh về vuông rồi bị
-     * crop/méo khi hiển thị trong khung chữ nhật. Ngưỡng 1.15 chừa biên cho khung gần-vuông.
+     * Sinh ảnh thật + upload R2; mọi lỗi (API, storage) chỉ log và trả null — không chặn slide.
+     * Slot hỏng giữ nguyên placeholder kèm {@code imagePrompt}, và giáo viên bấm "tạo lại ảnh"
+     * trong slide editor để thử lại riêng ảnh đó ({@link GenerateSlideImageUseCase}).
      */
+    private ImageGenerationResult tryGenerateImageUrl(String slotId, String prompt, String size) {
+        try {
+            return new ImageGenerationResult(imageGenerator.generateAndStore(prompt, size), null);
+        } catch (Exception error) {
+            log.warn("slide-design.image-gen failed slotId={} error={}", slotId, error.getMessage());
+            return new ImageGenerationResult(null,
+                    "image-gen failed slotId=" + slotId + ": " + SlideImageGenerator.sanitizeError(error.getMessage()));
+        }
+    }
+
     private static String resolveImageSize(Integer width, Integer height) {
-        if (width == null || height == null || width <= 0 || height <= 0) return "1024x1024";
-        double ratio = (double) width / height;
-        if (ratio >= 1.15) return "1536x1024";
-        if (ratio <= 1 / 1.15) return "1024x1536";
-        return "1024x1024";
+        return SlideImageGenerator.resolveImageSize(width, height);
     }
 
     private String generateCompleteJson(String prompt, int requestedSlotCount) {
@@ -206,6 +192,12 @@ public class FillSlideContentUseCase {
         return value.length() > 600 ? value.substring(0, 600).strip() : value;
     }
 
+    private static String imagePromptFor(SlideContentSlotRequest requestedSlot, RawSlot filled) {
+        String aiPrompt = cleanPrompt(filled == null ? null : filled.imagePrompt());
+        if (aiPrompt != null) return aiPrompt;
+        return cleanPrompt(requestedSlot.sourceText());
+    }
+
     private static SlideContentStyleResponse cleanStyle(RawStyle style, String zone, Set<String> palette) {
         if (style == null) return null;
         Integer fontSize = style.fontSize();
@@ -235,4 +227,5 @@ public class FillSlideContentUseCase {
     private record RawResponse(List<RawSlot> slots) {}
     private record RawSlot(String slotId, String text, String imagePrompt, RawStyle style) {}
     private record RawStyle(Integer fontSize, String color, Boolean bold, Boolean italic, String align) {}
+    private record ImageGenerationResult(String url, String warning) {}
 }

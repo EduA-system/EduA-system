@@ -11,6 +11,7 @@ import com.edua.beeduasystem.domain.exception.MoleculeBuildException;
 import com.edua.beeduasystem.domain.exception.PhysicsSimulationEditException;
 import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.exception.SlideImageGenerationException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
 import com.edua.beeduasystem.service.slides.SlideAiResponseException;
 import org.springframework.http.HttpStatus;
@@ -53,6 +54,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MoleculeBuildException.class)
     public ResponseEntity<ErrorResponse> handleMoleculeBuild(MoleculeBuildException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(SlideImageGenerationException.class)
+    public ResponseEntity<ErrorResponse> handleSlideImageGeneration(SlideImageGenerationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
     }
 

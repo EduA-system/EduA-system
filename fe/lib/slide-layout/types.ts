@@ -48,6 +48,16 @@ export type MoleculeContentBlock = BaseContentBlock & {
   chemicalRequest: string;
 };
 
+export type PeriodicContentBlock = BaseContentBlock & {
+  kind: "periodic";
+  role: "visual";
+  semanticType: "periodic-element" | "periodic-table";
+  periodicRequest: string;
+  mode?: "element" | "table";
+  elementSymbols?: string[];
+  focus?: string;
+};
+
 export type ComparisonContentBlock = BaseContentBlock & {
   kind: "comparison";
   role: "body";
@@ -95,6 +105,7 @@ export type ContentBlock =
   | TextContentBlock
   | VisualContentBlock
   | MoleculeContentBlock
+  | PeriodicContentBlock
   | ComparisonContentBlock
   | TableContentBlock
   | SequenceContentBlock
@@ -143,7 +154,7 @@ export type LayoutSlot = {
   sourcePartId?: string;
   sourceText: string;
   zone: LayoutZone;
-  kind: "text" | "image" | "molecule";
+  kind: "text" | "image" | "molecule" | "periodic";
   rect: Rect;
   maxChars: number;
   maxLines: number;

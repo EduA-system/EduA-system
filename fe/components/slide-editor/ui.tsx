@@ -6,11 +6,13 @@ import type { ReactNode } from "react";
 
 export function ToolBtn({
   active = false,
+  disabled = false,
   onClick,
   title,
   children,
 }: {
   active?: boolean;
+  disabled?: boolean;
   onClick: () => void;
   title?: string;
   children: ReactNode;
@@ -18,10 +20,11 @@ export function ToolBtn({
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       title={title}
       className={`flex h-8 min-w-8 items-center justify-center rounded-[10px] px-1.5 text-[13px] transition-colors ${
         active ? "bg-[#f6eadf] text-[#2b2926]" : "text-[#4f4943] hover:bg-[#f7f3ee]"
-      }`}
+      } ${disabled ? "cursor-not-allowed opacity-50 hover:bg-transparent" : ""}`}
     >
       {children}
     </button>

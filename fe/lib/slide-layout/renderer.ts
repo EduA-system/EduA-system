@@ -1,5 +1,5 @@
 import { PLACEHOLDER_IMAGE } from "@/components/slide-editor/lib/be-mapper";
-import { makeSimulation } from "@/components/slide-editor/lib/factory";
+import { makePeriodicSimulation, makeSimulation } from "@/components/slide-editor/lib/factory";
 import type { ImageElement, LineElement, ShapeElement, SimulationElement, SlideElement, TextElement } from "@/components/slide-editor/types";
 import { MOLECULE_CATALOG } from "@/components/molecules/catalog";
 import { blendSurface, contrastingTextColor } from "./contrast";
@@ -68,13 +68,13 @@ function structureElements(structure: LayoutStructure, palette: string[], surfac
 function textStyle(slot: LayoutSlot): Pick<TextElement, "fontSize" | "bold" | "italic" | "color" | "align" | "fontFamily" | "lineHeight"> {
   const token = slot.defaultStyleToken;
   return {
-    fontSize: token === "text-hero" ? 30 : token === "text-formula" ? 24 : token === "text-caption" ? 12 : token === "text-cell" ? 11 : 16,
-    bold: token === "text-hero" || token === "text-formula" || token === "text-caption",
+    fontSize: token === "text-section-hero" ? 56 : token === "text-section-body" ? 20 : token === "text-hero" ? 30 : token === "text-formula" ? 24 : token === "text-caption" ? 12 : token === "text-cell" ? 11 : 16,
+    bold: token === "text-section-hero" || token === "text-hero" || token === "text-formula" || token === "text-caption",
     italic: false,
     color: "#2b2926",
-    align: slot.zone === "formula" ? "center" : "left",
-    fontFamily: token === "text-formula" ? "Newsreader, serif" : "Inter, sans-serif",
-    lineHeight: 1.2,
+    align: token === "text-section-hero" || token === "text-section-body" || slot.zone === "formula" ? "center" : "left",
+    fontFamily: token === "text-section-hero" || token === "text-formula" ? "Newsreader, serif" : "Inter, sans-serif",
+    lineHeight: token === "text-section-hero" ? 1.05 : 1.2,
   };
 }
 
@@ -93,6 +93,12 @@ function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string,
   if (slot.kind === "molecule") {
     // Placeholder molecule; Step 3 (runContentFillStep) replaces it with the AI-built structure for `slot.sourceText`.
     return makeSimulation(MOLECULE_CATALOG[0], { ...base(`layout:${slot.id}`, slot.rect, slot.zIndex), contentSlot: slot.id });
+  }
+  if (slot.kind === "periodic") {
+    return makePeriodicSimulation(
+      { mode: "table", elementSymbols: ["H"], focus: slot.sourceText },
+      { ...base(`layout:${slot.id}`, slot.rect, slot.zIndex), contentSlot: slot.id },
+    );
   }
   return {
     ...base(`layout:${slot.id}`, slot.rect, slot.zIndex),

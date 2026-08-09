@@ -3,6 +3,7 @@ package com.edua.beeduasystem.service.slides;
 import com.edua.beeduasystem.domain.model.lesson.LessonContext;
 import com.edua.beeduasystem.domain.model.slide.ContentPlan;
 import com.edua.beeduasystem.presentation.dto.slides.InlineLessonPlanDto;
+import com.edua.beeduasystem.presentation.dto.slides.SlideItemDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -52,6 +53,24 @@ class SlideContentPlanParsingTests {
     }
 
     @Test
+    void parsesChemistryMoleculeAndPeriodicBlocks() throws Exception {
+        var root = MAPPER.readTree("""
+                {"blocks":[
+                  {"id":"m","kind":"molecule","role":"visual","semanticType":"molecule-3d","priority":"secondary","required":true,"chemicalRequest":"H2O"},
+                  {"id":"pt","kind":"periodic","role":"visual","semanticType":"periodic-table","priority":"secondary","required":true,"periodicRequest":"Na va Cl trong bang tuan hoan","mode":"table","elementSymbols":["Na","Cl"],"focus":"lien ket ion"}
+                ],"relationships":[]}
+                """);
+
+        ContentPlan plan = GenerateSlideOutlineUseCase.parseContentPlan("concept", "fixed", root.path("blocks"), root.path("relationships"));
+
+        assertEquals(2, plan.blocks().size());
+        assertInstanceOf(ContentPlan.MoleculeBlock.class, plan.blocks().get(0));
+        ContentPlan.PeriodicBlock periodic = assertInstanceOf(ContentPlan.PeriodicBlock.class, plan.blocks().get(1));
+        assertEquals(List.of("Na", "Cl"), periodic.elementSymbols());
+        assertEquals("table", periodic.mode());
+    }
+
+    @Test
     void rejectsDuplicateIdsInvalidReferencesAndCellCounts() throws Exception {
         var missing = MAPPER.readTree("{}");
         assertThrows(IllegalArgumentException.class, () -> GenerateSlideOutlineUseCase.parseContentPlan("concept", "fixed", missing.path("blocks"), missing.path("relationships")));
@@ -92,6 +111,36 @@ class SlideContentPlanParsingTests {
         assertFalse(detail.contains("width"));
         assertTrue(structure.contains("\"contentPlan\""));
         assertTrue(detail.contains("\"contentPlan\""));
+    }
+
+    @Test
+    void promptsRequireSectionOpenersToHaveIntroText() {
+        SlidePromptBuilder builder = new SlidePromptBuilder();
+        LessonContext lesson = new LessonContext("id", "Newton", 10, "", List.of(), List.of(), List.of(), List.of(), List.of());
+        InlineLessonPlanDto plan = new InlineLessonPlanDto("Newton", 10, 45, List.of(), List.of(), List.of(), "", "");
+        SlideItemDto section = new SlideItemDto("p1-section", "Part 1", "explain", null, null,
+                new ContentPlan("section", "hidden", List.of(), List.of()));
+
+        String skeleton = builder.partSkeletonPrompt(lesson, plan, null, "Physics", "p1", "Part 1", List.of("c1"), 4, "p1: Part 1");
+        String partDetail = builder.expandPartPrompt(lesson, plan, "{}", "p1", "Part 1", "Physics");
+        String slideDetail = builder.expandSlidePrompt(lesson, plan, "{}", "p1", "Part 1", section, "Physics", "p1: Part 1");
+
+        assertTrue(skeleton.contains("Section opener rule"));
+        assertTrue(partDetail.contains("If slideType is `section`"));
+        assertTrue(slideDetail.contains("If slideType is `section`"));
+    }
+
+    @Test
+    void chemistryPromptsExposeMoleculeAndPeriodicBlocksForEnumSubject() {
+        SlidePromptBuilder builder = new SlidePromptBuilder();
+        LessonContext lesson = new LessonContext("id", "Bang tuan hoan", 10, "", List.of(), List.of(), List.of(), List.of(), List.of());
+        InlineLessonPlanDto plan = new InlineLessonPlanDto("Bang tuan hoan", 10, 45, List.of("Hieu"), List.of(), List.of(), "", "");
+        String detail = builder.expandPartPrompt(lesson, plan, "{}", "p1", "Phan 1", "CHEMISTRY");
+
+        assertTrue(detail.contains("giáo viên môn Hoá học"));
+        assertTrue(detail.contains("- molecule:"));
+        assertTrue(detail.contains("- periodic:"));
+        assertTrue(detail.contains("Tuyệt đối không dùng cho môn khác"));
     }
 
     @Test

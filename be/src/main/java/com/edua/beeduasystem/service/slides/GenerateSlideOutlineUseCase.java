@@ -1054,6 +1054,10 @@ public class GenerateSlideOutlineUseCase {
                     requiredText(node, "description"), requiredText(node, "requirement"), textOrNull(node, "preferredAspectRatio"), textOrNull(node, "illustratesBlockId"));
             case "molecule" -> new ContentPlan.MoleculeBlock(id, kind, role, semanticType, priority, required, groupId,
                     requiredText(node, "chemicalRequest"));
+            case "periodic" -> new ContentPlan.PeriodicBlock(id, kind, role, semanticType, priority, required, groupId,
+                    requiredText(node, "periodicRequest"), textOrNull(node, "mode"),
+                    node.path("elementSymbols").isMissingNode() ? List.of() : stringList(node.path("elementSymbols")),
+                    textOrNull(node, "focus"));
             case "comparison" -> {
                 List<ContentPlan.Label> items = labels(node.path("items"));
                 List<ContentPlan.Label> criteria = labels(node.path("criteria"));

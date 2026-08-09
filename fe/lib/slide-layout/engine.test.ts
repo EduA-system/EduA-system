@@ -96,6 +96,24 @@ describe("dynamic slide layout engine", () => {
     expect(body!.rect.w / result.contentBounds.w).toBeGreaterThanOrEqual(0.3);
   });
 
+  it("maps periodic content to a prominent simulation slot", () => {
+    const base = fixture("concept");
+    const layout = generateSlideLayout({
+      ...base,
+      blocks: [
+        base.blocks[0],
+        text("body", "Quan sát vị trí nguyên tố"),
+        { id: "periodic", kind: "periodic", role: "visual", semanticType: "periodic-table", priority: "primary", required: true, periodicRequest: "Na, Cl trong bảng tuần hoàn", mode: "table", elementSymbols: ["Na", "Cl"] },
+      ],
+    });
+    const periodic = layout.slots.find((slot) => slot.kind === "periodic");
+    const elements = renderSlideLayout(layout, { palette: ["#222222"], headerLabel: "Hóa học" });
+
+    expect(periodic).toMatchObject({ sourceBlockId: "periodic", zone: "aside" });
+    expect(periodic!.rect.w / layout.contentBounds.w).toBeGreaterThanOrEqual(0.35);
+    expect(elements.find((element) => element.contentSlot === periodic!.id)).toMatchObject({ type: "simulation", kind: "periodic-table" });
+  });
+
   it("adds a prominent illustration to sparse explanatory slides", () => {
     const result = generateSlideLayout(fixture("concept"));
     const image = result.slots.find((slot) => slot.kind === "image");
@@ -126,6 +144,21 @@ describe("dynamic slide layout engine", () => {
     expect(surfaces.every((element) => element.opacity === 0.6)).toBe(true);
     const intro = renderSlideLayout(generateSlideLayout(fixture("intro")), { palette: ["#222222"], headerLabel: "Hóa học" });
     expect(intro.some((element) => element.contentSlot === "header-1")).toBe(false);
+  });
+
+  it("renders intro and section slides as centered opener slides", () => {
+    for (const slideType of ["intro", "section"] as const) {
+      const layout = generateSlideLayout(fixture(slideType));
+      const elements = renderSlideLayout(layout, { palette: ["#222222"], headerLabel: "Hoa hoc" });
+      const title = elements.find((element) => element.contentSlot === "slot:title");
+      const body = elements.find((element) => element.contentSlot === "slot:body");
+
+      expect(layout.topology).toBe("section-opener-centered");
+      expect(title).toMatchObject({ type: "text", fontSize: 56, align: "center", bold: true });
+      expect(body).toMatchObject({ type: "text", fontSize: 20, align: "center" });
+      expect(title!.x + title!.w / 2).toBeCloseTo(480, 0);
+      expect(body!.y).toBeGreaterThan(title!.y + title!.h);
+    }
   });
 
   it("uses compact default typography for generated content", () => {

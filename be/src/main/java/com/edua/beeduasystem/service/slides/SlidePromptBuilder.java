@@ -126,6 +126,8 @@ public class SlidePromptBuilder {
                 practice khi có câu hỏi/bài tập cho học sinh làm, recap khi tổng kết ý phần. Chỉ dùng explain cho slide thuần diễn giải khái niệm.
                 slideType: intro|section|concept|text-image|experiment|comparison|table|process|formula|exercise|quiz|summary.
                 headerMode: hidden cho intro/section, fixed cho các loại khác.
+                Section opener rule: the first slide of this part must be slideType `section`, headerMode `hidden`,
+                title exactly the part title, and brief one short sentence introducing what students will learn next.
                 Trả JSON thuần, không markdown:
                 {"lessonTitle":"%s","parts":[{"id":"%s","title":"%s","sourceChunkIds":%s,"slides":[
                   {"id":"%ss1","title":"...","pedagogicalRole":"derive","brief":"...","contentPlan":{"slideType":"concept","headerMode":"fixed"}},
@@ -187,8 +189,14 @@ public class SlidePromptBuilder {
 
     /** Persona trung lập môn học cho prompt outline. */
     private static String teacherPersona(String subject) {
-        String s = subject == null ? "" : subject.trim();
+        String s = displaySubject(subject);
         return s.isEmpty() ? "giáo viên THPT Việt Nam" : "giáo viên môn " + s + " THPT Việt Nam";
+    }
+
+    private static String displaySubject(String subject) {
+        String s = subject == null ? "" : subject.trim();
+        if (s.equalsIgnoreCase("CHEMISTRY") || s.equalsIgnoreCase("HOA_HOC") || s.equalsIgnoreCase("HOA HOC")) return "Hoá học";
+        return s;
     }
 
     /** Phase 1 produces semantic slide classification only. */
@@ -279,6 +287,9 @@ public class SlidePromptBuilder {
                 - visual: thêm `description`, `requirement` (required|optional), có thể có `preferredAspectRatio`.
                 - molecule: CHỈ dùng khi môn học nêu trên là Hoá học và nội dung slide cần mô hình phân tử 3D trực quan;
                   thêm `chemicalRequest` (tên hoặc công thức hoá học, vd "etanol" hoặc "C2H5OH"). Tuyệt đối không dùng cho môn khác.
+                - periodic: CHỈ dùng khi môn học nêu trên là Hoá học và nội dung slide cần nguyên tố, nhóm/chu kỳ,
+                  bảng tuần hoàn hoặc cấu hình electron; thêm `periodicRequest`, có thể thêm `mode` (element|table),
+                  `elementSymbols` (vd ["Na","Cl"]) và `focus`. Tuyệt đối không dùng cho môn khác.
                 - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]` đúng kích thước,
                   `preferredPresentation` (auto|table|panels).
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
@@ -301,6 +312,8 @@ public class SlidePromptBuilder {
                 Không trả tọa độ, kích thước, font, màu, tỷ lệ cột hoặc quyết định trình bày.
 
                 Trả JSON thuần:
+                If slideType is `section`: return exactly one text block with role `body`, semanticType `description`,
+                priority `primary`, required true, and one short Vietnamese sentence under the title; use no visual/table/quiz/formula blocks and keep relationships [].
                 {"slides":[{"id":"p1s1","durationMinutes":3,"aiNote":"","contentPlan":{"blocks":[
                   {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung"}
                 ],"relationships":[]}}]}
@@ -356,6 +369,9 @@ public class SlidePromptBuilder {
                 - visual: thêm `description`, `requirement` (required|optional), có thể có `preferredAspectRatio`.
                 - molecule: CHỈ dùng khi môn học nêu trên là Hoá học và nội dung slide cần mô hình phân tử 3D trực quan;
                   thêm `chemicalRequest` (tên hoặc công thức hoá học, vd "etanol" hoặc "C2H5OH"). Tuyệt đối không dùng cho môn khác.
+                - periodic: CHỈ dùng khi môn học nêu trên là Hoá học và nội dung slide cần nguyên tố, nhóm/chu kỳ,
+                  bảng tuần hoàn hoặc cấu hình electron; thêm `periodicRequest`, có thể thêm `mode` (element|table),
+                  `elementSymbols` (vd ["Na","Cl"]) và `focus`. Tuyệt đối không dùng cho môn khác.
                 - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]` đúng kích thước,
                   `preferredPresentation` (auto|table|panels).
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
@@ -383,13 +399,15 @@ public class SlidePromptBuilder {
                 tiếng Việt. Giữ tên riêng/thuật ngữ hoá học tiếng Anh khi cần (vd polyethylene, PVC), nhưng phần diễn giải phải tiếng Việt.
 
                 GIỚI HẠN ĐỘ DÀI (bắt buộc, slide sẽ bị từ chối nếu vượt quá — hãy chắt lọc ý chính thay vì nhồi hết nội dung nguồn):
-                - Slide có block visual hoặc molecule: tổng ký tự các block text khác tối đa 60.
+                - Slide có block visual, molecule hoặc periodic: tổng ký tự các block text khác tối đa 60.
                 - Slide slideType=comparison: tổng ký tự (nhãn item, nhãn criteria, toàn bộ values) tối đa 130.
                 - Slide slideType=table: tổng ký tự (cột, toàn bộ ô) tối đa 150; mỗi ô tối đa 40 ký tự.
                 - Các slide còn lại (không visual, không phải comparison/table): tổng ký tự các block text tối đa 100.
                 - Tối đa 6 gạch đầu dòng trong một block text.
                 - Tối đa 2 block quiz (câu hỏi trắc nghiệm) trong một slide.
 
+                If slideType is `section`: return exactly one text block with role `body`, semanticType `description`,
+                priority `primary`, required true, and one short Vietnamese sentence under the title; use no visual/table/quiz/formula blocks and keep relationships [].
                 {"slide":{"id":"%s","durationMinutes":3,"aiNote":"","contentPlan":{"blocks":[
                   {"id":"b1","kind":"text","role":"body","semanticType":"explanation","priority":"primary","required":true,"text":"Nội dung"}
                 ],"relationships":[]}}}

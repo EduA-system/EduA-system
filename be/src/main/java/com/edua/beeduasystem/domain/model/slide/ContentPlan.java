@@ -49,7 +49,7 @@ public record ContentPlan(
         }
     }
 
-    public sealed interface Block permits TextBlock, VisualBlock, MoleculeBlock, ComparisonBlock, TableBlock, SequenceBlock, FormulaBlock, QuizBlock {
+    public sealed interface Block permits TextBlock, VisualBlock, MoleculeBlock, PeriodicBlock, ComparisonBlock, TableBlock, SequenceBlock, FormulaBlock, QuizBlock {
         String id();
         String kind();
         String role();
@@ -69,6 +69,13 @@ public record ContentPlan(
     // Hoá học only (enforced by the outline prompt): a 3D molecule model to build via MoleculeService.
     public record MoleculeBlock(String id, String kind, String role, String semanticType, String priority,
                                 boolean required, String groupId, String chemicalRequest) implements Block {}
+
+    // Chemistry only (enforced by the outline prompt): periodic-table or element data resolved locally by the frontend.
+    public record PeriodicBlock(String id, String kind, String role, String semanticType, String priority,
+                                boolean required, String groupId, String periodicRequest, String mode,
+                                List<String> elementSymbols, String focus) implements Block {
+        public PeriodicBlock { elementSymbols = elementSymbols == null ? List.of() : List.copyOf(elementSymbols); }
+    }
 
     public record ComparisonBlock(String id, String kind, String role, String semanticType, String priority,
                                   boolean required, String groupId, List<Label> items, List<Label> criteria,

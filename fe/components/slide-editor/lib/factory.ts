@@ -6,7 +6,9 @@ import type {
   ImageElement,
   PolyElement,
   DrawElement,
-  SimulationElement,
+  MoleculeSimulationElement,
+  PeriodicSimulationElement,
+  PeriodicSimulationPayload,
   SlideElement,
   ElementPatch,
 } from "../types";
@@ -126,8 +128,8 @@ export function makePoly(overrides?: Partial<PolyElement>): PolyElement {
 // thước vuông vừa đủ cho viewer 3D.
 export function makeSimulation(
   molecule: Molecule,
-  overrides?: Partial<SimulationElement>
-): SimulationElement {
+  overrides?: Partial<MoleculeSimulationElement>
+): MoleculeSimulationElement {
   return {
     id: "",
     type: "simulation",
@@ -135,6 +137,28 @@ export function makeSimulation(
     molecule,
     mode: "ball-and-stick",
     rotating: true,
+    x: CANVAS_W / 2 - 140,
+    y: CANVAS_H / 2 - 140,
+    w: 280,
+    h: 280,
+    rotation: 0,
+    zIndex: 0,
+    opacity: 1,
+    locked: false,
+    ...overrides,
+  };
+}
+
+export function makePeriodicSimulation(
+  periodic: PeriodicSimulationPayload,
+  overrides?: Partial<PeriodicSimulationElement>
+): PeriodicSimulationElement {
+  const symbols = periodic.elementSymbols.length ? periodic.elementSymbols : ["H"];
+  return {
+    id: "",
+    type: "simulation",
+    kind: periodic.mode === "element" && symbols.length === 1 ? "periodic-element" : "periodic-table",
+    periodic: { ...periodic, elementSymbols: symbols },
     x: CANVAS_W / 2 - 140,
     y: CANVAS_H / 2 - 140,
     w: 280,
@@ -198,6 +222,9 @@ export function makeByType(type: AddType, extra?: ElementPatch): SlideElement {
     case "poly":
       return apply(makePoly());
     case "simulation":
-      return apply(makeSimulation(extra?.molecule ?? MOLECULE_CATALOG[0]));
+      if (extra?.kind === "periodic-element" || extra?.kind === "periodic-table") {
+        return apply(makePeriodicSimulation(extra.periodic ?? { mode: "table", elementSymbols: ["H"], focus: "Bảng tuần hoàn" }));
+      }
+      return apply(makeSimulation((extra as Partial<MoleculeSimulationElement> | undefined)?.molecule ?? MOLECULE_CATALOG[0]));
   }
 }

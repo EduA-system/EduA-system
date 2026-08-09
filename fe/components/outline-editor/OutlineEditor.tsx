@@ -102,8 +102,8 @@ export function OutlineEditor({
   confirming = false,
   expandingPartIds = [],
   expandingSlideIds = [],
-  failedPartMessages = {},
-  failedSlideMessages = {},
+  failedPartMessages: rawFailedPartMessages = {},
+  failedSlideMessages: rawFailedSlideMessages = {},
   onRetrySlide,
 }: {
   lessonTitle: string;
@@ -128,8 +128,23 @@ export function OutlineEditor({
 
   const totalSlides = parts.reduce((sum, p) => sum + (p.slides?.length ?? 0), 0);
   const expanding = expandingPartIds.length > 0 || expandingSlideIds.length > 0;
-  const failedPartIds = new Set(Object.keys(failedPartMessages));
-  const failedSlideIds = new Set(Object.keys(failedSlideMessages));
+  const currentPartIds = new Set(parts.map((part) => part.id));
+  const currentSlideKeys = new Set(
+    parts.flatMap((part) => (part.slides ?? []).map((slide) => `${part.id}:${slide.id}`)),
+  );
+  const activeFailedPartMessages = Object.fromEntries(
+    Object.entries(rawFailedPartMessages).filter(([partId]) => currentPartIds.has(partId)),
+  );
+  const activeFailedSlideMessages = Object.fromEntries(
+    Object.entries(rawFailedSlideMessages).filter(([key]) => currentSlideKeys.has(key)),
+  );
+  const failedPartMessages = activeFailedPartMessages;
+  const failedSlideMessages = activeFailedSlideMessages;
+  const failedPartIds = new Set(Object.keys(activeFailedPartMessages));
+  const failedSlideIds = new Set(Object.keys(activeFailedSlideMessages));
+  const failedPartCount = failedPartIds.size;
+  const failedSlideCount = failedSlideIds.size;
+  const hasBlockingFailures = failedPartCount > 0 || failedSlideCount > 0;
   const expandingSlideSet = new Set(expandingSlideIds);
   const invalidSlides = parts.flatMap((part) =>
     failedPartIds.has(part.id)
@@ -245,7 +260,7 @@ export function OutlineEditor({
           {parts.map((part, partIndex) => {
             const partSlideKeys = (part.slides ?? []).map((slide) => `${part.id}:${slide.id}`);
             const partExpanding = expandingPartIds.includes(part.id) || partSlideKeys.some((key) => expandingSlideSet.has(key));
-            const failureMessage = failedPartMessages[part.id];
+            const failureMessage = activeFailedPartMessages[part.id];
             const partHasFailedSlide = partSlideKeys.some((key) => failedSlideIds.has(key));
             return (
               <section
@@ -315,7 +330,7 @@ export function OutlineEditor({
                     const label = slideRoleLabel(slide);
                     const tone = slideRoleTone(slide);
                     const slideExpanding = expandingSlideSet.has(key);
-                    const slideFailure = failedSlideMessages[key];
+                    const slideFailure = activeFailedSlideMessages[key];
                     const validationErrors = !failureMessage && !slideExpanding ? validateContentPlan(slide.contentPlan) : [];
                     const invalid = !slideFailure && validationErrors.length > 0;
                     const retryMessage = slideFailure || (invalid ? validationErrors.join("\n") : undefined);
@@ -455,7 +470,7 @@ export function OutlineEditor({
           <button
             type="button"
             onClick={() => onConfirm(parts)}
-            disabled={totalSlides === 0 || confirming || expanding || Object.keys(failedPartMessages).length > 0 || Object.keys(failedSlideMessages).length > 0 || invalidSlides.length > 0}
+            disabled={totalSlides === 0 || confirming || expanding || hasBlockingFailures || invalidSlides.length > 0}
             className="flex h-[44px] w-full items-center justify-center rounded-xl bg-[#1c1b2e] text-sm font-medium text-[#f9f8f3] transition enabled:hover:bg-[#2a2940] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {confirming

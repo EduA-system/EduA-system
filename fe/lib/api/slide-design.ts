@@ -1,4 +1,5 @@
 import type { Molecule } from "@/components/molecules/types";
+import type { PeriodicSimulationPayload } from "@/components/slide-editor/types";
 import { BACKEND_HTTP_URL } from "@/lib/backend-url";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 
@@ -41,6 +42,8 @@ export type SlideContentFillSlot = {
   style?: SlideContentStyle | null;
   /** Frontend-only: set locally by runContentFillStep for molecule slots, never sent to/from the backend. */
   molecule?: Molecule;
+  /** Frontend-only: set locally by runContentFillStep for periodic slots, never sent to/from the backend. */
+  periodic?: PeriodicSimulationPayload;
 };
 
 export type SlideContentFillResponse = {
@@ -101,6 +104,43 @@ export async function generateSlideHtmlDesign(
     latencyMs: data.latencyMs,
     warning: data.warning ?? null,
   });
+  return data;
+}
+
+export type SlideImageGenerateRequest = {
+  /** Mô tả ảnh — chính là `imagePrompt` mà bước 3 đã gắn vào element placeholder. */
+  prompt: string;
+  /** Kích thước khung ảnh trên canvas (px) để BE chọn tỉ lệ ảnh khớp khung. */
+  width?: number;
+  height?: number;
+};
+
+export type SlideImageGenerateResponse = {
+  imageUrl: string;
+};
+
+/**
+ * Sinh lại một ảnh minh hoạ lẻ cho slot bị lỗi ở bước 3, gọi từ nút "tạo lại ảnh" trong
+ * slide editor. Khác `fillSlideContent`: không chạm tới text/slot khác nên không tốn call AI
+ * text nào, và lỗi trả về 502 thay vì bị nuốt thành ảnh rỗng.
+ */
+export async function generateSlideImage(req: SlideImageGenerateRequest): Promise<SlideImageGenerateResponse> {
+  logSlideApi("POST /api/slide-design/generate-image", {
+    promptChars: req.prompt.length,
+    width: req.width ?? null,
+    height: req.height ?? null,
+  });
+  const res = await fetch(`${BE}/api/slide-design/generate-image`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`POST /api/slide-design/generate-image ${res.status}: ${detail || res.statusText}`);
+  }
+  const data = (await res.json()) as SlideImageGenerateResponse;
+  logSlideApi("generate-image OK", { imageUrl: data.imageUrl });
   return data;
 }
 

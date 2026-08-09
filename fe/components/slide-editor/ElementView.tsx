@@ -2,6 +2,9 @@ import { useState, type CSSProperties, type MouseEventHandler, type ReactElement
 import dynamic from "next/dynamic";
 import type { SlideElement, SimulationElement, LineMarker, DashStyle } from "./types";
 import { isGradientCss } from "./lib/gradient";
+import { ELEMENTS } from "@/components/periodic-table/data";
+import { CATEGORY_COLORS } from "@/components/periodic-table/types";
+import type { Element as PeriodicElement } from "@/components/periodic-table/types";
 
 const MoleculeViewer = dynamic(
   () => import("@/components/molecules/MoleculeViewer").then((m) => m.MoleculeViewer),
@@ -14,6 +17,79 @@ const MoleculeViewer = dynamic(
     ),
   }
 );
+
+function elementsForSimulation(el: SimulationElement): PeriodicElement[] {
+  if (el.kind === "molecule") return [];
+  const requested = new Set(el.periodic.elementSymbols);
+  return ELEMENTS.filter((element) => requested.has(element.symbol));
+}
+
+function PeriodicElementCard({ element }: { element: PeriodicElement }) {
+  const colors = CATEGORY_COLORS[element.category];
+  return (
+    <div className="flex h-full w-full flex-col justify-between rounded-2xl border p-4 text-[#26231f]" style={{ background: colors.bg, borderColor: colors.border }}>
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-sm font-semibold">{element.atomicNumber}</span>
+        <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold">{colors.label}</span>
+      </div>
+      <div className="text-center">
+        <div className="font-serif text-6xl font-bold leading-none">{element.symbol}</div>
+        <div className="mt-2 text-sm font-semibold">{element.nameVi || element.name}</div>
+        <div className="text-xs opacity-75">{element.name}</div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-[11px]">
+        <span>Chu kỳ {element.period}</span>
+        <span>Nhóm {element.group ?? "-"}</span>
+        <span className="col-span-2 truncate">e: {element.electronConfig}</span>
+      </div>
+    </div>
+  );
+}
+
+function PeriodicMiniTable({ highlighted, focus }: { highlighted: PeriodicElement[]; focus?: string }) {
+  const highlightedNumbers = new Set(highlighted.map((element) => element.atomicNumber));
+  return (
+    <div className="flex h-full w-full flex-col rounded-2xl border border-[#d8d1c9] bg-[#fbfaf8] p-3 text-[#2b2926]">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="truncate text-xs font-bold">{focus || "Bảng tuần hoàn"}</span>
+        <span className="shrink-0 text-[10px] text-[#8a8178]">{highlighted.length} nguyên tố</span>
+      </div>
+      <div className="grid flex-1 grid-cols-[repeat(18,minmax(0,1fr))] grid-rows-[repeat(10,minmax(0,1fr))] gap-[2px]">
+        {ELEMENTS.map((element) => {
+          const active = highlightedNumbers.has(element.atomicNumber);
+          const colors = CATEGORY_COLORS[element.category];
+          return (
+            <div
+              key={element.symbol}
+              className="flex min-h-0 min-w-0 items-center justify-center rounded-[3px] border text-[8px] font-bold"
+              style={{
+                gridColumn: element.gridCol,
+                gridRow: element.gridRow,
+                background: active ? colors.bg : "#ffffff",
+                borderColor: active ? colors.border : "#e8e2d9",
+                color: active ? colors.text : "#b7aea5",
+                opacity: active ? 1 : 0.48,
+              }}
+              title={`${element.atomicNumber}. ${element.nameVi || element.name}`}
+            >
+              {element.symbol}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-2 truncate text-[10px] text-[#6c6259]">
+        {highlighted.map((element) => element.symbol).join(", ")}
+      </div>
+    </div>
+  );
+}
+
+function PeriodicVisual({ el }: { el: SimulationElement }) {
+  if (el.kind === "molecule") return null;
+  const elements = elementsForSimulation(el);
+  if (el.kind === "periodic-element" && elements[0]) return <PeriodicElementCard element={elements[0]} />;
+  return <PeriodicMiniTable highlighted={elements} focus={el.periodic.focus} />;
+}
 
 function SimulationBlock({
   el,
@@ -33,7 +109,22 @@ function SimulationBlock({
   onContextMenu?: MouseEventHandler;
 }) {
   const [activated, setActivated] = useState(false);
-  const showLiveViewer = Boolean(previewLive || (interactive && activated));
+  const showLiveViewer = el.kind === "molecule" && Boolean(previewLive || (interactive && activated));
+  const showPeriodicViewer = el.kind !== "molecule" && Boolean(previewLive || (interactive && activated));
+
+  if (showPeriodicViewer) {
+    return (
+      <div
+        onMouseDown={previewLive ? onMouseDown : undefined}
+        onDoubleClick={previewLive ? onDoubleClick : undefined}
+        onContextMenu={previewLive ? onContextMenu : undefined}
+        style={{ ...style, cursor: previewLive ? style.cursor : "auto" }}
+        className="overflow-hidden rounded-2xl bg-white"
+      >
+        <PeriodicVisual el={el} />
+      </div>
+    );
+  }
 
   if (showLiveViewer) {
     return (
@@ -62,8 +153,8 @@ function SimulationBlock({
       className="flex select-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-700 text-white"
     >
       <span className="text-3xl" aria-hidden>🧪</span>
-      <span className="px-2 text-center text-sm font-semibold">{el.molecule.name}</span>
-      <span className="text-xs text-white/70">{el.molecule.formula}</span>
+      <span className="px-2 text-center text-sm font-semibold">{el.kind === "molecule" ? el.molecule.name : (el.periodic.focus || "Bảng tuần hoàn")}</span>
+      <span className="text-xs text-white/70">{el.kind === "molecule" ? el.molecule.formula : el.periodic.elementSymbols.join(", ")}</span>
       {interactive && <span className="mt-1 text-[11px] text-white/80">▶ Nhấn để mô phỏng</span>}
     </div>
   );

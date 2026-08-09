@@ -1,5 +1,6 @@
 import { fillSlideContent, generateSlideHtmlDesign, type SlideContentFillResponse, type SlideContentFillSlot } from "@/lib/api/slide-design";
 import { buildMolecule } from "@/lib/api/molecule-build";
+import { resolvePeriodicPayload } from "@/lib/periodic-table/resolve-periodic";
 import type { OutlinePart, SlideItem } from "@/lib/api/slides";
 import { htmlToSlideElements } from "@/components/slide-editor/lib/html-to-slide";
 import { pickBackground, pickDecoIcons } from "@/lib/slide-assets/resolve";
@@ -71,6 +72,7 @@ function surfaceColorFromSkin(skinHtml: string, palette: string[]): string {
 
 const SLIDE_CONCURRENCY = 4;
 const CONTENT_SLOT_BATCH_SIZE = 6;
+const MAX_GENERATED_IMAGES_PER_DECK = 10;
 
 async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
   let next = 0;
@@ -156,7 +158,7 @@ export async function runStructuralStep(
       // Molecule slots skip the fill-content request entirely (resolved via buildMolecule in Step 3,
       // reading `layoutResultsBySlide` directly) — keep the fill-content contract untouched.
       const slots = result.slots
-        .filter((slot): slot is typeof slot & { kind: "text" | "image" } => slot.kind !== "molecule")
+        .filter((slot): slot is typeof slot & { kind: "text" | "image" } => slot.kind === "text" || slot.kind === "image")
         .map((slot) => ({
           id: slot.id,
           kind: slot.kind,
@@ -199,20 +201,31 @@ export async function runContentFillStep(
   if (!ctx) throw new Error("Chưa có kết quả Bước 1. Vui lòng chạy Bước 1 trước.");
 
   const failedSlideIds: string[] = [];
+  const imageGenerationSlotKeys = new Set<string>();
+  for (const slide of ctx.slidesById.values()) {
+    const slots = ctx.contentSlotsBySlide.get(slide.id) ?? [];
+    for (const slot of slots) {
+      if (imageGenerationSlotKeys.size >= MAX_GENERATED_IMAGES_PER_DECK) break;
+      if (slot.kind === "image" && !isTitleSlot(slot)) imageGenerationSlotKeys.add(`${slide.id}:${slot.id}`);
+    }
+    if (imageGenerationSlotKeys.size >= MAX_GENERATED_IMAGES_PER_DECK) break;
+  }
   await runPool([...ctx.slidesById.values()], SLIDE_CONCURRENCY, async (slide) => {
     try {
       const slots = ctx.contentSlotsBySlide.get(slide.id) ?? [];
       const layoutSlots = ctx.layoutResultsBySlide.get(slide.id)?.slots ?? [];
       if (!slots.length && !layoutSlots.length) throw new Error("Slide chưa có placeholder từ Bước 2.");
-      const fillableSlots = slots.filter((slot) => !isTitleSlot(slot));
+      const fillableSlots = slots.filter((slot) =>
+        !isTitleSlot(slot) && (slot.kind !== "image" || imageGenerationSlotKeys.has(`${slide.id}:${slot.id}`)));
       const moleculeSlots = layoutSlots.filter((slot) => slot.kind === "molecule" && !isTitleSlot(slot));
+      const periodicSlots = layoutSlots.filter((slot) => slot.kind === "periodic" && !isTitleSlot(slot));
 
-      if (!fillableSlots.length && !moleculeSlots.length) {
+      if (!fillableSlots.length && !moleculeSlots.length && !periodicSlots.length) {
         cb.onSlideReady?.(slide.id, { slots: [], latencyMs: 0, modelUsed: "outline-title" }, slide.title);
         return;
       }
 
-      const [response, moleculeFills] = await Promise.all([
+      const [response, moleculeFills, periodicFills] = await Promise.all([
         fillableSlots.length
           ? fillContentInBatches({
               topic: ctx.topic,
@@ -230,9 +243,20 @@ export async function runContentFillStep(
           imageUrl: null,
           molecule: await buildMolecule(slot.sourceText),
         }))),
+        Promise.all(periodicSlots.map(async (slot): Promise<SlideContentFillSlot | null> => {
+          const periodic = resolvePeriodicPayload(slot.sourceText);
+          if (!periodic) return null;
+          return {
+            slotId: slot.id,
+            text: null,
+            imagePrompt: null,
+            imageUrl: null,
+            periodic,
+          };
+        })),
       ]);
 
-      const mergedSlots = [...response.slots, ...moleculeFills];
+      const mergedSlots = [...response.slots, ...moleculeFills, ...periodicFills.filter((slot): slot is SlideContentFillSlot => slot != null)];
       if (!mergedSlots.length) throw new Error("AI trả về rỗng, không có nội dung slot.");
       cb.onSlideReady?.(slide.id, { ...response, slots: mergedSlots }, slide.title);
     } catch (error) {

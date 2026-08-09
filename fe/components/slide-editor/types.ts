@@ -151,13 +151,27 @@ export interface DrawElement extends ElementBase {
 
 // Element nhúng một mô phỏng tương tác (click-to-simulate khi trình chiếu).
 // `kind` là literal đơn cho MVP — mở rộng thành union khi thêm periodic-table/physics.
-export interface SimulationElement extends ElementBase {
+export type PeriodicSimulationPayload = {
+  mode: "element" | "table";
+  elementSymbols: string[];
+  focus?: string;
+};
+
+export interface MoleculeSimulationElement extends ElementBase {
   type: "simulation";
   kind: "molecule";
   molecule: Molecule;
   mode: RenderMode;
   rotating: boolean;
 }
+
+export interface PeriodicSimulationElement extends ElementBase {
+  type: "simulation";
+  kind: "periodic-element" | "periodic-table";
+  periodic: PeriodicSimulationPayload;
+}
+
+export type SimulationElement = MoleculeSimulationElement | PeriodicSimulationElement;
 
 export type SlideElement =
   | TextElement
@@ -171,15 +185,18 @@ export type SlideElement =
 // Patch dùng cho update: intersection (đã bỏ `type` để tránh literal xung đột →
 // never) cho phép vá field riêng của từng loại. Partial<SlideElement> chỉ cho
 // phép field chung nên không dùng được. Không dùng để vá `type`.
-export type ElementPatch = Partial<
+type BaseElementPatch = Partial<
   Omit<TextElement, "type"> &
     Omit<ShapeElement, "type"> &
     Omit<ImageElement, "type"> &
     Omit<LineElement, "type"> &
     Omit<PolyElement, "type"> &
-    Omit<DrawElement, "type"> &
-    Omit<SimulationElement, "type">
+    Omit<DrawElement, "type">
 >;
+
+export type ElementPatch =
+  | (BaseElementPatch & Partial<Omit<MoleculeSimulationElement, "type">>)
+  | (BaseElementPatch & Partial<Omit<PeriodicSimulationElement, "type">>);
 
 export type AlignDir = "left" | "right" | "top" | "bottom" | "cx" | "cy";
 

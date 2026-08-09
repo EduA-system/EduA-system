@@ -108,7 +108,7 @@ class FillSlideContentUseCaseTests {
                 """);
         byte[] fakePng = {1, 2, 3};
         when(imageGenerationClient.generatePng(
-                eq("free body diagram of a cart" + FillSlideContentUseCase.NO_TEXT_IN_IMAGE_RULE), anyString()))
+                eq("free body diagram of a cart" + SlideImageGenerator.NO_TEXT_IN_IMAGE_RULE), anyString()))
                 .thenReturn(fakePng);
         when(storageClient.store(anyString(), any(byte[].class), anyString())).thenReturn("https://r2.example.com/slide-images/fake.png");
 
@@ -134,6 +134,25 @@ class FillSlideContentUseCaseTests {
         assertTrue(sentPrompt.getValue().startsWith("free body diagram of a cart"));
         assertTrue(sentPrompt.getValue().contains("Strictly no text in the image"));
         assertEquals("free body diagram of a cart", result.slots().get(1).imagePrompt());
+    }
+
+    @Test
+    void fallsBackToSlotSourceTextWhenAiOmitsImagePrompt() {
+        when(aiClient.generate(anyString())).thenReturn("""
+                {"slots":[{"slotId":"hero-1","text":"Ná»™i dung"},{"slotId":"aside-1","imagePrompt":null}]}
+                """);
+        byte[] fakePng = {1, 2, 3};
+        String sourceText = "educational illustration of ammonia gas and ammonium salt";
+        when(imageGenerationClient.generatePng(
+                eq(sourceText + SlideImageGenerator.NO_TEXT_IN_IMAGE_RULE), anyString()))
+                .thenReturn(fakePng);
+        when(storageClient.store(anyString(), any(byte[].class), anyString())).thenReturn("https://r2.example.com/slide-images/fallback.png");
+
+        var result = useCase.execute(requestWithImageSourceText(sourceText));
+
+        var imageSlot = result.slots().get(1);
+        assertEquals(sourceText, imageSlot.imagePrompt());
+        assertEquals("https://r2.example.com/slide-images/fallback.png", imageSlot.imageUrl());
     }
 
     @Test
@@ -206,6 +225,17 @@ class FillSlideContentUseCaseTests {
                 List.of(
                         new SlideContentSlotRequest("hero-1", "text", "hero", "title", null, "Định luật II Newton", 90, 3, "slide title", null, null),
                         new SlideContentSlotRequest("aside-1", "image", "aside", "visual", null, "Sơ đồ lực", 70, 2, "illustration", width, height)
+                ),
+                List.of("#2b2926", "#d97757")
+        );
+    }
+
+    private static SlideContentFillRequest requestWithImageSourceText(String sourceText) {
+        return new SlideContentFillRequest(
+                "Ammonia", "Ná»™i dung nguá»“n", null, "HoÃ¡ há»c",
+                List.of(
+                        new SlideContentSlotRequest("hero-1", "text", "hero", "title", null, "Ammonia", 90, 3, "slide title", null, null),
+                        new SlideContentSlotRequest("aside-1", "image", "aside", "visual", null, sourceText, 70, 2, "illustration", null, null)
                 ),
                 List.of("#2b2926", "#d97757")
         );

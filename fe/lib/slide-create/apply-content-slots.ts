@@ -80,7 +80,9 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
       : element.type === "image"
         ? Boolean(fill?.imagePrompt?.trim() || element.imagePrompt?.trim())
         : element.type === "simulation"
-          ? Boolean(fill?.molecule)
+          ? element.kind === "molecule"
+            ? Boolean(fill?.molecule)
+            : Boolean(fill?.periodic)
           : false;
   })) throw new Error("AI không điền nội dung cho slide.");
 
@@ -126,7 +128,14 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
     }
 
     if (element.type === "simulation") {
-      return fill.molecule ? { ...element, molecule: fill.molecule } : element;
+      if (element.kind === "molecule") return fill.molecule ? { ...element, molecule: fill.molecule } : element;
+      if (!fill.periodic) return element;
+      const kind: "periodic-element" | "periodic-table" = fill.periodic.mode === "element" && fill.periodic.elementSymbols.length === 1 ? "periodic-element" : "periodic-table";
+      return {
+        ...element,
+        kind,
+        periodic: fill.periodic,
+      };
     }
 
     return element;

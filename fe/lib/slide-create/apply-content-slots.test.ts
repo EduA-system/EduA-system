@@ -66,6 +66,38 @@ describe("applyContentSlots", () => {
     });
   });
 
+  it("patches periodic simulation payloads into periodic placeholders", () => {
+    const title = text("slot:s1:title");
+    const periodic: Extract<SlideElement, { type: "simulation" }> = {
+      id: "periodic",
+      type: "simulation",
+      kind: "periodic-table",
+      contentSlot: "slot:periodic",
+      periodic: { mode: "table", elementSymbols: ["H"], focus: "Placeholder" },
+      x: 400,
+      y: 0,
+      w: 240,
+      h: 220,
+      rotation: 0,
+      zIndex: 2,
+      opacity: 1,
+      locked: false,
+    };
+    const result = applyContentSlots([title, periodic], {
+      slots: [
+        { slotId: "slot:periodic", text: null, imagePrompt: null, periodic: { mode: "table", elementSymbols: ["Na", "Cl"], focus: "Natri và Clo" } },
+      ],
+      latencyMs: 0,
+      modelUsed: "local-periodic",
+    });
+
+    expect(result[1]).toMatchObject({
+      type: "simulation",
+      kind: "periodic-table",
+      periodic: { elementSymbols: ["Na", "Cl"], focus: "Natri và Clo" },
+    });
+  });
+
   it("keeps the outline title when no AI fill is requested for it", () => {
     const title = text("slot:s1:title", { text: "Bài học: Lực" });
     expect(applyContentSlots([title], { slots: [], latencyMs: 0, modelUsed: "test" })[0]).toMatchObject({ text: "Bài học: Lực" });

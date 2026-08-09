@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
+import { generateSlideImage } from "@/lib/api/slide-design";
+import { PLACEHOLDER_IMAGE } from "./lib/be-mapper";
 import {
   isSlideLockedForGeneration,
   type AlignDir,
@@ -284,9 +287,75 @@ function ShapeControls({ el, upd }: { el: Extract<SlideElement, { type: "shape" 
   );
 }
 
+function RegenerateImageIcon() {
+  return <IconSvg><path d="M20 12a8 8 0 1 1-2.3-5.6" /><path d="M20 4v5h-5" /></IconSvg>;
+}
+
+function SpinnerIcon() {
+  return (
+    <span className="animate-spin">
+      <IconSvg><path d="M12 3a9 9 0 1 0 9 9" /></IconSvg>
+    </span>
+  );
+}
+
+/**
+ * Bước 3 không chặn slide khi Images API lỗi — slot hỏng giữ placeholder kèm `imagePrompt`.
+ * Nút này là đường thử lại đúng ảnh đó ngay trong editor, không phải chạy lại cả bước 3.
+ * Chỉ hiện với ảnh do AI sinh (có `imagePrompt`); ảnh giáo viên tự upload không có nút này.
+ */
+function RegenerateImageButton({ el, upd }: { el: Extract<SlideElement, { type: "image" }>; upd: Upd }) {
+  const [status, setStatus] = useState<"idle" | "pending" | "error">("idle");
+  const prompt = el.imagePrompt?.trim() ?? "";
+  if (!prompt) return null;
+
+  const missing = !el.src.trim() || el.src === PLACEHOLDER_IMAGE;
+  const title = status === "pending"
+    ? "Đang tạo ảnh…"
+    : status === "error"
+      ? "Tạo ảnh thất bại — bấm để thử lại"
+      : missing
+        ? "Ảnh chưa tạo được — bấm để tạo lại"
+        : "Tạo lại ảnh";
+
+  async function regenerate() {
+    if (status === "pending") return;
+    setStatus("pending");
+    try {
+      const { imageUrl } = await generateSlideImage({
+        prompt,
+        width: Math.round(el.w),
+        height: Math.round(el.h),
+      });
+      upd({ src: imageUrl });
+      setStatus("idle");
+    } catch (error) {
+      console.error("[EDUA slide] tạo lại ảnh thất bại", error);
+      setStatus("error");
+    }
+  }
+
+  return (
+    <>
+      <ToolBtn
+        active={missing && status !== "pending"}
+        disabled={status === "pending"}
+        onClick={regenerate}
+        title={title}
+      >
+        <span className={status === "error" ? "text-[#c0392b]" : undefined}>
+          {status === "pending" ? <SpinnerIcon /> : <RegenerateImageIcon />}
+        </span>
+      </ToolBtn>
+      <Sep />
+    </>
+  );
+}
+
 function ImageControls({ el, upd }: { el: Extract<SlideElement, { type: "image" }>; upd: Upd }) {
   return (
     <>
+      <RegenerateImageButton el={el} upd={upd} />
       <ToolBtn active={el.fit === "cover"} onClick={() => upd({ fit: "cover" })} title="Cover">
         <CropCoverIcon />
       </ToolBtn>

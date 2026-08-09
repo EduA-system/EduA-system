@@ -2,6 +2,8 @@
 
 Status: implemented.
 
+2026-08-09 update: the same Chemistry-only slide-generation path also supports periodic-table visualizations. Backend `ContentPlan` now accepts `kind: "periodic"` with `periodicRequest`, optional `mode`, `elementSymbols`, and `focus`. Frontend Step 2 lays it out as a visual-like `periodic` slot; Step 3 resolves it locally from committed periodic-table data instead of calling `/api/slide-design/fill-content` or a heavy AI endpoint. The resulting slide editor element uses `SimulationElement.kind: "periodic-element" | "periodic-table"` and renders compact element/table views in editor, presentation, and offline HTML export.
+
 ## Context
 
 The Slide Editor already lets a teacher manually insert a 3D molecule element (`SimulationElement`, `kind: "molecule"`), but only by picking from a hardcoded 8-molecule list (`MOLECULE_CATALOG`) — a chemistry lesson about, say, benzene or acetic acid currently has no way to get a matching 3D model into its slides. Separately, a real AI molecule-structure generator already exists and works (`MoleculeService`/`MoleculePromptBuilder`, `POST /api/molecules/build`), but it only runs on the standalone `/molecules` explorer page, disconnected from slide generation.

@@ -131,6 +131,8 @@ export function validateContentPlan(plan: SlideContentPlan): string[] {
     ids.add(block.id);
     if (block.kind === "text" && !block.text.trim()) errors.push(`Block ${block.id} chưa có nội dung.`);
     if (block.kind === "visual" && !block.description.trim()) errors.push(`Block ${block.id} chưa mô tả trực quan.`);
+    if (block.kind === "molecule" && !block.chemicalRequest.trim()) errors.push(`Block ${block.id} chưa có yêu cầu phân tử.`);
+    if (block.kind === "periodic" && !block.periodicRequest.trim() && !(block.elementSymbols?.length)) errors.push(`Block ${block.id} chưa có yêu cầu bảng tuần hoàn.`);
     if (block.kind === "sequence" && (!block.steps.length || block.steps.some((step) => !step.id || !step.text.trim()))) errors.push(`Quy trình ${block.id} có bước không hợp lệ.`);
     if (block.kind === "comparison") {
       if (block.items.length < 2 || block.criteria.length === 0) errors.push(`So sánh ${block.id} cần ít nhất 2 đối tượng và 1 tiêu chí.`);
