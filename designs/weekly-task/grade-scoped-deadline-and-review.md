@@ -141,28 +141,29 @@ yêu cầu).
    cả khối) hay bắt buộc `grade` ngay từ backend? Đề xuất giữ optional ở API, FE luôn truyền vì UX bắt Mod
    chọn khối trước.
 
-## 8. UI refinement (2026-08-06) — chỉ thao tác được trong tuần đang diễn ra, ẩn tuần đã qua
+## 8. UI refinement (2026-08-06, updated 2026-08-09) — lịch Mod mở tuần tương lai, khóa tuần đã qua
 
-> Nguồn: phản hồi người dùng ngày 2026-08-06, sau khi xem lưới lịch tuần thực tế (Khối 10, tháng 8/2026)
-> hiện dòng đầu tiên là `27/07 - 02/08` dù hôm nay đã là `06/08` — tuần đó đã kết thúc, không còn lý do
-> hiển thị. Đồng thời, Mod/Teacher có thể thao tác (giao bài / nộp giáo án) trên bất kỳ tuần nào miễn còn
-> trước hạn nộp (BR-52), kể cả tuần tương lai chưa diễn ra — không đúng ý muốn chỉ giao/nộp trong tuần
-> đang diễn ra.
+> Nguồn: phản hồi người dùng ngày 2026-08-09 sau khi rà lại nghiệp vụ: Moderator cần giao bài được cho
+> tuần tương lai để chuẩn bị lịch trước; các ô tuần đã kết thúc vẫn phải khóa vì backend cũng chặn theo
+> deadline. Teacher vẫn chỉ nộp/rút trong tuần đang diễn ra trên UI. Cùng ngày, người dùng chốt lại cách
+> hiểu nghiệp vụ: tuần hiển thị trên `/weekly-schedule` là **lịch nộp giáo án**; lịch dạy thực tế của bài
+> đó là **tuần liền sau**.
 
 Thay đổi (FE-only, `fe/app/weekly-schedule/page.tsx`):
 
-- **Ẩn tuần đã kết thúc**: lưới lịch Mod (`buildMonthSchedule`) lọc bỏ mọi tuần có Chủ Nhật đã qua
-  (`weekHasEnded`) trước khi render — tuần `27/07 - 02/08` không còn xuất hiện khi xem tháng 8/2026 sau
-  ngày 02/08.
-- **Khoá thao tác ngoài tuần đang diễn ra** (`isCurrentWeek`, so `weekStartDate` với Thứ Hai của tuần chứa
-  hôm nay):
-  - Mod: nút "Ấn để thêm bài thứ nhất/hai" chỉ hoạt động ở tuần đang diễn ra; các tuần tương lai (vẫn hiển
-    thị, để Mod xem trước) hiện ô khoá ("Đã khoá") thay vì nút bấm được.
-  - Teacher: "Nộp giáo án"/"Hủy nộp" chỉ hiện ở tuần đang diễn ra; tuần tương lai/quá khứ hiện nhãn khoá
-    thay thế ("Chưa tới tuần"/"Đã qua tuần").
+- **Hiện đủ tuần trong tháng cho Moderator**: lưới lịch Mod không lọc bỏ tuần đã kết thúc nữa; các tuần quá
+  khứ hiện ô readonly "Đã qua hạn" khi còn slot trống.
+- **Mở giao bài cho tuần hiện tại và tương lai** (`canAssignWeek`): ô trống hiện nút "Ấn để thêm bài thứ
+  nhất/hai" khi tuần chưa kết thúc, bao gồm tuần tương lai.
+- **Hiển thị lịch dạy thực tế trong ngoặc**: các nhãn tuần, modal giao/sửa, và card task hiển thị tuần đang
+  xem là "Lịch nộp", kèm `(lịch dạy thực tế: <tuần nộp + 7 ngày>)` để tránh nhầm với tuần dạy.
+- **Modal sửa task không cho đổi giáo viên/tuần**: form sửa dùng lại layout giống modal giao bài, nhưng bỏ
+  chọn giáo viên và chọn thời gian vì hai giá trị này đã được lấy từ task đang sửa; API update vẫn gửi giá
+  trị cũ để giữ nguyên assignment.
+- **Teacher vẫn khóa theo tuần hiện tại trên UI**: "Nộp giáo án"/"Hủy nộp" chỉ hiện ở tuần đang diễn ra;
+  tuần tương lai/quá khứ hiện nhãn thay thế ("Chưa tới tuần"/"Đã qua tuần").
 - **Không đổi backend**: `requireWeekNotEnded` (Mod tạo/sửa) và `requireBeforeDeadline` (Teacher nộp/rút)
-  ở `WeeklyTaskService` giữ nguyên — rule "chỉ tuần đang diễn ra" hiện chỉ là UI gating, chưa phải rule
-  server-side. Nếu cần chặn cứng ở API (vd. Mod gọi thẳng `POST /api/weekly-tasks/bulk` cho tuần tương
+  ở `WeeklyTaskService` giữ nguyên. Nếu cần chặn cứng ở API (vd. Mod gọi thẳng `POST /api/weekly-tasks/bulk` cho tuần tương
   lai), cần bổ sung riêng — chưa làm trong đợt này.
 
 ### Library status badge (2026-08-06) — hiện trạng thái Weekly Task trên `/library`
