@@ -86,9 +86,11 @@ export default function SandboxLibraryPage() {
                   >
                     <div className="aspect-[5/3] w-full overflow-hidden bg-[#0f172a] p-2.5">
                       <div className="relative h-full w-full overflow-hidden rounded-[10px]">
-                        {/* Ảnh thu nhỏ dùng chung với /mo-phong-vat-ly. Preset
-                            chưa có nhánh SVG sẽ rơi vào nhánh mặc định. */}
-                        <Thumb id={sim.id} />
+                        {/* Ảnh thu nhỏ dùng chung với /mo-phong-vat-ly. Phải
+                            truyền `presetId` chứ không phải tên file: 13 preset
+                            có hai giá trị này khác nhau (vd `brownian.ts` khai
+                            `brownian-pollen`), và Thumb khoá theo preset.id. */}
+                        <Thumb id={sim.presetId} />
                       </div>
                     </div>
                     <div className="space-y-1.5 p-5">

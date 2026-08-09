@@ -370,7 +370,14 @@ function resolveTarget(code: string, presetId: string, kind: string): Target | n
 
 /** Metadata một thí nghiệm — đủ để dựng thẻ trong thư viện, KHÔNG kèm mã nguồn. */
 export type ExperimentSummary = {
+  /** Tên file preset, dùng làm URL `/sandbox/<id>`. */
   id: string;
+  /**
+   * `id` preset TỰ khai báo — khác tên file ở 13 preset (vd `brownian.ts` khai
+   * `brownian-pollen`). Ảnh thu nhỏ khoá theo giá trị này, nên phải truyền nó
+   * cho <Thumb>, không phải tên file.
+   */
+  presetId: string;
   title: string;
   domain: string;
   grade: number | null;
@@ -418,6 +425,7 @@ function scanPresets(): ScannedPreset[] {
       target,
       summary: {
         id: name.replace(/\.ts$/, ""),
+        presetId: presetId || name.replace(/\.ts$/, ""),
         title: readTopLevelString(code, "title") ?? name,
         domain: readTopLevelString(code, "domain") ?? "—",
         grade: readTopLevelNumber(code, "grade"),

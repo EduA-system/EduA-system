@@ -22,6 +22,7 @@ import {
 
 export type WorkbenchExperiment = {
   id: string;
+  presetId: string;
   title: string;
   domain: string;
   grade: number | null;

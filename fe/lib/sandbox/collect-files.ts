@@ -124,6 +124,55 @@ export default function Image({
 `,
 };
 
+/**
+ * Ảnh tĩnh mà renderer nạp bằng đường dẫn tuyệt đối từ `fe/public/`.
+ *
+ * Trong app, `/simulations/newton/feather.png` được Next phục vụ từ thư mục
+ * public. Iframe của Sandpack có origin khác nên đường dẫn đó trỏ vào hư vô,
+ * ảnh hỏng, và `drawImage` ném lỗi làm chết cả thí nghiệm.
+ *
+ * Cách xử lý: nhúng thẳng thành data URI lúc phát sinh file. `trigger` giữ cho
+ * ảnh chỉ đi kèm khi thí nghiệm thật sự dùng — base64 phình ~33% nên không
+ * đáng gửi 300 KB cho 37 preset cơ học vốn không có lông vũ nào.
+ */
+const IMAGE_ASSETS: {
+  urlPath: string;
+  filePath: string;
+  mime: string;
+  /** Có dấu hiệu nào cho thấy ảnh sẽ thật sự được tải không. */
+  trigger: (sources: string[]) => boolean;
+}[] = [
+  {
+    urlPath: "/simulations/newton/feather.png",
+    filePath: "public/simulations/newton/feather.png",
+    mime: "image/png",
+    // scene-konva-2d chỉ tải ảnh khi có vật `visual.shape === "feather"`.
+    trigger: (sources) => sources.some((code) => code.includes('shape: "feather"')),
+  },
+  {
+    urlPath: "/simulations/bapbenh/man.png",
+    filePath: "public/simulations/bapbenh/man.png",
+    mime: "image/png",
+    // scene-konva-seesaw tải VÔ ĐIỀU KIỆN, nên chỉ cần nó có mặt.
+    trigger: (sources) => sources.some((code) => code.includes("personAsset")),
+  },
+];
+
+const assetCache = new Map<string, string | null>();
+
+/** Đọc ảnh từ `fe/public/` thành data URI; null nếu không có file. */
+function assetDataUri(filePath: string, mime: string): string | null {
+  const cached = assetCache.get(filePath);
+  if (cached !== undefined) return cached;
+
+  const full = resolve(process.cwd(), filePath);
+  const value = existsSync(full)
+    ? `data:${mime};base64,${readFileSync(full).toString("base64")}`
+    : null;
+  assetCache.set(filePath, value);
+  return value;
+}
+
 const EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
 
 /** Đổi một specifier tương đối thành file thật trên đĩa. */
@@ -208,6 +257,19 @@ export function collectSimulationFiles(entries: string[]): SandboxFileMap {
 
   // Chỉ kèm shim khi thật sự có file cần — thí nghiệm scene-based không đụng tới.
   if (needsShims) Object.assign(out, SHIM_FILES);
+
+  // Nhúng ảnh tĩnh sau cùng, khi đã biết trọn bộ file của thí nghiệm.
+  const sources = Object.values(out);
+  for (const asset of IMAGE_ASSETS) {
+    if (!sources.some((code) => code.includes(asset.urlPath))) continue;
+    if (!asset.trigger(sources)) continue;
+    const dataUri = assetDataUri(asset.filePath, asset.mime);
+    if (!dataUri) continue;
+    for (const path of Object.keys(out)) {
+      if (!out[path]!.includes(asset.urlPath)) continue;
+      out[path] = out[path]!.split(asset.urlPath).join(dataUri);
+    }
+  }
 
   return out;
 }
