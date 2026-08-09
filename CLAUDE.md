@@ -22,6 +22,10 @@ For Iter3 work, keep the docs synchronized with the code. The canonical status f
 ├── designs/                    Architecture, API, slide, prompt, and editor design docs
 ├── requirements/               Requirement specs
 ├── sprints/                    Sprint planning notes
+├── plans/                      Working implementation plans
+├── WBS_CHECKLIST.md            Canonical code-vs-WBS status (Iter1–3)
+├── UNIT_TEST_CHECKLIST.md      Test coverage plan
+├── TEST_FUNCTION_INVENTORY.md  Per-function test inventory
 ├── scripts/start.ps1           Full-stack launcher with DB resolution
 ├── docker-compose.yml          Local PostgreSQL fallback
 ├── .github/workflows/ci.yml    Frontend CI
@@ -29,6 +33,8 @@ For Iter3 work, keep the docs synchronized with the code. The canonical status f
 ```
 
 There is no root build orchestration beyond Husky setup. Work from `fe/` or `be/` for app-specific commands.
+
+`AGENTS.md` (root) and `fe/AGENTS.md` also exist for other agent tools. The root `AGENTS.md` has drifted: it names `ITER3_CODE_CHECKLIST.md` (renamed to `WBS_CHECKLIST.md`), says no frontend test runner is configured (Vitest is), and says backend tests are named `*Tests.java` only (both `*Test.java` and `*Tests.java` are in use). Where the two disagree, this file is current.
 
 ## Common Commands
 
@@ -45,9 +51,11 @@ npm run dev
 npm run lint
 npm run typecheck
 npm run build
-npm test                        # runs Vitest (slide-editor/lib, lib/api, lib/slide-create, lib/slide-layout, simulations)
+npm test                        # Vitest; see the include list in fe/vitest.config.ts
 npm test -- lib/slide-layout/engine.test.ts
 npm run test:watch
+npm run audit:periodic-table    # node scripts/audit-periodic-table.mjs
+npm run sync:periodic-table     # node scripts/sync-periodic-table-data.mjs
 
 # Backend from be/
 ./mvnw spring-boot:run
@@ -75,14 +83,16 @@ This is Next.js 16, which has breaking changes compared with older remembered pa
 
 ### Frontend Architecture
 
-- `fe/app/` uses the App Router. `app/page.tsx` re-exports the landing page, and feature routes live in route folders covering lesson planning (`lesson-create`, `lesson-edit`, `lesson-plan-approval`), slides (`slide-create`, `slide-maker`, `slide-present`, `slide-layout-gallery`), classroom/exam workflows (`class-detail`, `create-class`, `list-class`, `add-student`, `exam-create-new`, `exam-edit-new`, `weekly-schedule`), content/community (`blog`, `community-hub`, `hub-moderation`, `library`, `detail-resource`, `molecules`, `periodic-table`, `mo-phong-vat-ly`), account/admin (`dashboard`, `user-profile`, `user-management`, `it-staff`, `login`, `auth-debug`), and `notifications`, `help`.
+- `fe/app/` uses the App Router. `app/page.tsx` re-exports the landing page. Routes group into lesson planning (`lesson-create`, `lesson-edit`, `lesson-plan-approval`), slides (`slide-create`, `slide-maker`, `slide-present`, `slide-layout-gallery`), classroom/exam/weekly-task workflows (`class-detail`, `create-class`, `list-class`, `add-student`, `class-resource-*`, `exam-*-new`, `weekly-schedule`, `weekly-task-document`), content/community (`blog`, `blog-moderator`, `community-hub`, `hub-moderation`, `library`, `detail-resource`, `molecules`, `periodic-table`, `mo-phong-vat-ly`), and account/admin (`dashboard`, `user-profile`, `user-management`, `it-staff`, `login`, `auth-debug`). The route set grows often — read `fe/app/` rather than trusting a list.
+- `/sandbox` (and `/sandbox/[id]`) is a developer-facing library that compiles simulation source in-browser with Sandpack. Its file-collection and CSS-injection helpers are in `fe/lib/sandbox/`.
 - `fe/components/` is organized by product area rather than by primitive type: `LessonEditor`, `lesson-plan`, `outline-editor`, `slide-editor`, `slide-maker`, `slide-presentation`, `blog`, `classroom`, `dashboard`, `hub`, `molecules`, `periodic-table`, `simulations`, `layout`, and shared `ui` components.
 - Most frontend API calls go through same-origin `/api/*`, which Next rewrites to the backend via `fe/next.config.ts`. This avoids CORS for standard REST calls.
 - Slide generation/design clients are a separate path: `fe/lib/api/slides.ts` and `fe/lib/api/slide-design.ts` call the backend directly via `NEXT_PUBLIC_API_URL` instead of the Next rewrite.
 - Real-time generation flows use raw STOMP over WebSocket, not SockJS. Frontend clients in `fe/lib/ws/` connect to `NEXT_PUBLIC_WS_URL` (default `ws://localhost:8080`) and pass the JWT in the STOMP `CONNECT` headers.
 - Rich lesson and blog editing is built on TipTap. The lesson editor extends TipTap with custom nodes/extensions in `fe/components/LessonEditor/` for streaming-generated pending sections and activities.
 - Slide editing and rendering logic is concentrated under `fe/components/slide-editor/`, with conversion helpers for backend HTML/design output under `fe/components/slide-editor/lib/`.
-- Physics simulations live under `fe/components/simulations/`. The Vitest setup runs in a Node environment and also covers `fe/components/slide-editor/lib/`, `fe/lib/api/`, `fe/lib/slide-create/`, `fe/lib/slide-layout/`, and slide deck/HTML export helpers in `fe/lib/`.
+- Physics simulations live under `fe/components/simulations/`, one folder per experiment plus shared `presets/`, `renderers/`, and `engines/`; `HUONG_DAN_THEM_THI_NGHIEM.md` there documents how to add a new experiment.
+- Vitest runs in a Node environment (no DOM/React), so only pure-TS logic is testable: simulation kernels, `components/slide-editor/lib/`, several `components/LessonEditor/` helpers, `lib/api/`, `lib/slide-create/`, `lib/slide-layout/`, and the practice-exam-math / slide-deck-library / slide-html-export helpers. `fe/vitest.config.ts` lists the exact includes — add new test files there or they will not run.
 - Lightweight client state uses Zustand stores such as `fe/stores/slide-editor-store.ts`.
 
 ### Frontend Conventions
@@ -133,8 +143,8 @@ Rules:
 
 ### Backend Architecture
 
-- The backend is feature-oriented inside the service layer: current areas include `activitylog`, `ai`, `auth`, `blog`, `classroom`, `exam`, `lessonplan`, `library`, `molecule`, `notification`, `practiceexam`, `slides`, `slidedesign`, `textbook`, `upload`, and `weeklytask`.
-- Persistence is PostgreSQL + Flyway. Migrations currently cover textbook catalog, auth, blog, roles/user roles, audit history, library content, and textbook cleanup/profile updates.
+- The backend is feature-oriented inside the service layer: current areas are `activitylog`, `ai`, `auth`, `blog`, `classroom`, `lessonplan`, `library`, `molecule`, `notification`, `physicssimulation`, `practiceexam`, `slidedesign`, `slides`, `textbook`, `upload`, and `weeklytask`.
+- Persistence is PostgreSQL + Flyway, `be/src/main/resources/db/migration/` (currently through `V39`). Coverage spans textbook catalog, auth, roles/user roles, account-management audit, blog (comments/replies/thumbnails/soft-hide), library content, classroom membership, weekly tasks/submissions/grades, notification targets, and user profile fields. Migrations are append-only: never edit an applied `V*` file — the shared Supabase DB runs with checksum validation on.
 - Authentication is stateless JWT. Google sign-in starts in the frontend, then backend auth endpoints issue/refresh tokens. Request auth is enforced by `JwtAuthenticationFilter`, and role checks are done with method security.
 - WebSocket streaming is part of the main architecture, not a side feature. Spring exposes a raw STOMP endpoint at `/ws`; JWT is validated on STOMP `CONNECT` via `StompAuthChannelInterceptor`; lesson-plan, outline, and notification flows publish progress/events through stream port interfaces (`LessonPlanStreamPort`, `OutlineStreamPort`, `NotificationStreamPort`) and STOMP adapters.
 - AI access is abstracted behind `repository/gateways/AiClient`. `infrastructure/ai/config/AiClientConfig.java` wires a `FallbackAiClient` that tries the OpenAI adapter first (vision-capable) and falls back to DeepSeek; a separate `jsonAiClient` bean forces OpenAI's `json_object` response format for prompts that always request JSON (not safe for HTML-generating prompts).
