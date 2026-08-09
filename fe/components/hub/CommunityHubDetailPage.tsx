@@ -121,7 +121,8 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
   }, [authFetch, contentId]);
 
   useEffect(() => {
-    void load();
+    const timer = setTimeout(() => void load(), 0);
+    return () => clearTimeout(timer);
   }, [load]);
 
   useEffect(() => {

@@ -196,7 +196,8 @@ export default function HubModerationPage() {
   }, [authFetch, isModerator, status, user]);
 
   useEffect(() => {
-    void load();
+    const timer = setTimeout(() => void load(), 0);
+    return () => clearTimeout(timer);
   }, [load]);
 
   useEffect(() => {
@@ -208,21 +209,24 @@ export default function HubModerationPage() {
   useEffect(() => {
     if (!selectedId) return;
     let cancelled = false;
-    setDetailLoading(true);
-    setRejectOpen(false);
-    setRejectReason("");
-    void getModerationContent(authFetch, selectedId)
-      .then((content) => {
-        if (!cancelled) setDetail(content);
-      })
-      .catch((cause) => {
-        if (!cancelled) setToast({ kind: "error", message: cause instanceof Error ? cause.message : "Không thể mở nội dung duyệt." });
-      })
-      .finally(() => {
-        if (!cancelled) setDetailLoading(false);
-      });
+    const timer = setTimeout(() => {
+      setDetailLoading(true);
+      setRejectOpen(false);
+      setRejectReason("");
+      void getModerationContent(authFetch, selectedId)
+        .then((content) => {
+          if (!cancelled) setDetail(content);
+        })
+        .catch((cause) => {
+          if (!cancelled) setToast({ kind: "error", message: cause instanceof Error ? cause.message : "Không thể mở nội dung duyệt." });
+        })
+        .finally(() => {
+          if (!cancelled) setDetailLoading(false);
+        });
+    }, 0);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [authFetch, selectedId]);
 
