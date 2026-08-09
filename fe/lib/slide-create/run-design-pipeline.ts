@@ -72,7 +72,7 @@ function surfaceColorFromSkin(skinHtml: string, palette: string[]): string {
 
 const SLIDE_CONCURRENCY = 4;
 const CONTENT_SLOT_BATCH_SIZE = 6;
-const MAX_GENERATED_IMAGES_PER_DECK = 10;
+const MAX_GENERATED_IMAGES_PER_DECK = 15;
 
 async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
   let next = 0;
