@@ -32,6 +32,16 @@ import java.util.concurrent.ExecutorService;
 @Service
 public class FillSlideContentUseCase {
     private static final int MAX_JSON_ATTEMPTS = 2;
+
+    /**
+     * Ảnh minh hoạ không được chứa chữ: model sinh ảnh viết sai chính tả tiếng Việt gần như
+     * chắc chắn, và slide đã có text thật ở các slot khác nên chữ trong ảnh chỉ gây nhiễu +
+     * trùng lặp. Luật này nối vào prompt CHỈ khi gọi Images API — {@code imagePrompt} trả về
+     * FE vẫn là prompt gốc của AI (FE hiển thị/lưu lại prompt đó).
+     */
+    static final String NO_TEXT_IN_IMAGE_RULE = " Strictly no text in the image: no words, letters,"
+            + " numbers, labels, captions, titles, annotations, legends, axis ticks, watermarks or"
+            + " signatures anywhere. Convey everything through shapes, arrows, and color alone.";
     private final AiClient aiClient;
     private final SlideDesignPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
@@ -131,7 +141,7 @@ public class FillSlideContentUseCase {
     /** Sinh ảnh thật + upload R2; mọi lỗi (API, storage) chỉ log và trả null — không chặn slide. */
     private String tryGenerateImageUrl(String slotId, String prompt, String size) {
         try {
-            byte[] png = imageGenerationClient.generatePng(prompt, size);
+            byte[] png = imageGenerationClient.generatePng(prompt + NO_TEXT_IN_IMAGE_RULE, size);
             String key = "slide-images/" + UUID.randomUUID() + ".png";
             return storageClient.store(key, png, "image/png");
         } catch (Exception error) {

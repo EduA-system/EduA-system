@@ -49,7 +49,7 @@ type LessonGroup = {
   tasks: WeeklyTaskSummary[];
 };
 
-/** Mỗi ô lịch tuần = 1 bài (BR-53) — nhóm theo lessonCode (không phải text tiêu đề), sắp theo thứ tự tạo. */
+/** Mỗi ô lịch nộp giáo án = 1 bài (BR-53) — nhóm theo lessonCode (không phải text tiêu đề), sắp theo thứ tự tạo. */
 function groupByLesson(tasks: WeeklyTaskSummary[]): LessonGroup[] {
   const map = new Map<string, LessonGroup>();
   for (const t of tasks) {
@@ -248,7 +248,7 @@ function WeeklyScheduleScreen() {
   // thị, không bắt buộc như Mod, nên mặc định "Tất cả khối" (null).
   const [teacherGradeFilter, setTeacherGradeFilter] = useState<number | null>(null);
 
-  // ── Sửa 1 giáo viên trong 1 tuần (Moderator) ──────────────────────────
+  // ── Sửa 1 giáo viên trong 1 lịch nộp giáo án (Moderator) ──────────────
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formTeacherId, setFormTeacherId] = useState("");
@@ -258,7 +258,7 @@ function WeeklyScheduleScreen() {
   const [saving, setSaving] = useState(false);
   const editPicker = useTextbookPicker(user?.subject ?? undefined, formGrade, formOpen);
 
-  // ── Giao 1 bài cho cả khối (Moderator) — mỗi ô lịch tuần = 1 bài (BR-53) ─
+  // ── Giao 1 bài cho cả khối (Moderator) — mỗi ô lịch nộp giáo án = 1 bài (BR-53) ─
   const [createOpen, setCreateOpen] = useState(false);
   const [createWeekStart, setCreateWeekStart] = useState("");
   const [createTitle, setCreateTitle] = useState("");
@@ -285,7 +285,7 @@ function WeeklyScheduleScreen() {
       setSchedule(data);
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể tải lịch tuần.");
+      setError(e instanceof Error ? e.message : "Không thể tải lịch nộp giáo án.");
     } finally {
       setLoading(false);
     }
@@ -452,11 +452,11 @@ function WeeklyScheduleScreen() {
           <header className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-[#e8724a]">Content</p>
-              <h1 className="mt-1 text-3xl font-semibold">Lịch tuần</h1>
+              <h1 className="mt-1 text-3xl font-semibold">Lịch nộp giáo án</h1>
               <p className="mt-2 text-sm text-[#6b6b6b]">
                 {isModerator
-                  ? "Lịch giáo án tuần theo khối, áp dụng cho giáo viên dạy khối đó cùng môn."
-                  : "Nhiệm vụ giáo án tuần được giao cho bạn."}
+                  ? "Lịch nộp giáo án theo khối, áp dụng cho giáo viên dạy khối đó cùng môn."
+                  : "Lịch nộp giáo án được giao cho bạn."}
               </p>
             </div>
           </header>
@@ -562,7 +562,7 @@ function WeeklyScheduleScreen() {
           <Modal
             open={formOpen}
             onClose={() => setFormOpen(false)}
-            title="Sửa nhiệm vụ tuần"
+            title="Sửa lịch nộp giáo án"
             description={`Khối ${formGrade} - tạo nhiệm vụ khối khác thì tạo lịch mới.`}
             maxWidthClassName="max-w-5xl"
           >
@@ -809,7 +809,9 @@ function WeeklyScheduleScreen() {
             </div>
           ) : teacherWeeks.length === 0 ? (
             <div className="mt-8 rounded-2xl border border-dashed bg-white p-12 text-center text-sm text-[#6b6b6b]">
-              {teacherGradeFilter !== null ? `Chưa có nhiệm vụ tuần nào cho khối ${teacherGradeFilter}.` : "Chưa có nhiệm vụ tuần nào."}
+              {teacherGradeFilter !== null
+                ? `Chưa có lịch nộp giáo án nào cho khối ${teacherGradeFilter}.`
+                : "Chưa có lịch nộp giáo án nào."}
             </div>
           ) : (
             <div className="mt-6 overflow-x-auto rounded-2xl border bg-white">

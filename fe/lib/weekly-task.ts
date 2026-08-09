@@ -70,7 +70,7 @@ type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Respo
 async function unpack<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(body?.message ?? "Không thể xử lý yêu cầu nhiệm vụ tuần.");
+    throw new Error(body?.message ?? "Không thể xử lý yêu cầu lịch nộp giáo án.");
   }
   return res.json() as Promise<T>;
 }

@@ -81,7 +81,10 @@ function statusMeta(status: "PRIVATE" | "SUBMITTED" | "APPROVED" | "REJECTED", s
       label: "Chờ duyệt",
       className: "bg-amber-50 text-amber-700 border border-amber-200",
       icon: Clock,
-      title: source === "weeklyTask" ? "Đã nộp cho Moderator trong Lịch tuần, đang chờ duyệt" : "Đã gửi lên Hub cộng đồng, đang chờ duyệt",
+      title:
+        source === "weeklyTask"
+          ? "Đã nộp cho Moderator trong Lịch nộp giáo án, đang chờ duyệt"
+          : "Đã gửi lên Hub cộng đồng, đang chờ duyệt",
     };
   }
   if (status === "APPROVED") {

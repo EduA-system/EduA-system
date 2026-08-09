@@ -385,6 +385,16 @@ Pipeline hiện ở mức **R&D một slide** (route test). Cần bổ sung đ�
 > `slideSessionExecutor` (virtual threads) khi có nhiều slot ảnh trong 1 slide.
 > Lỗi sinh/upload ảnh chỉ log + rơi về `imageUrl=null` (giữ placeholder xám ở
 > FE), không chặn cả slide. FE (`apply-content-slots.ts`) set `src` từ
-> `imageUrl` nếu có, fallback `PLACEHOLDER_IMAGE` nếu không. Chưa có: fallback
-> search ảnh có sẵn khi OpenAI lỗi, cache ảnh theo prompt trùng lặp, retry
-> riêng cho ảnh lỗi.
+> `imageUrl` nếu có, fallback `PLACEHOLDER_IMAGE` nếu không.
+>
+> **Luật "ảnh không chứa chữ":** `FillSlideContentUseCase.NO_TEXT_IN_IMAGE_RULE`
+> được nối vào prompt *chỉ khi* gọi Images API (nhãn/chú thích do model vẽ luôn
+> sai chính tả tiếng Việt và trùng với text thật ở các slot khác);
+> `imagePrompt` trả về FE vẫn là prompt gốc. Bản JSON prompt của Bước 3
+> (`SlideDesignPromptBuilder.buildStep3ContentSlotsPrompt`) cũng dặn AI đừng mô
+> tả cảnh có nhãn/chú thích/ký hiệu chữ số. Lưu ý prompt HTML
+> `STEP3_CONTENT_FILL_PROMPT` chưa được đồng bộ luật này — `data-image-prompt`
+> ở nhánh đó hiện không đi tới Images API.
+>
+> Chưa có: fallback search ảnh có sẵn khi OpenAI lỗi, cache ảnh theo prompt
+> trùng lặp, retry riêng cho ảnh lỗi.

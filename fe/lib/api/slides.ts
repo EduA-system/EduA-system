@@ -195,7 +195,7 @@ export async function retryOutlinePart(authFetch: AuthFetch, request: {
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(`Không thể thử lại phần đề cương: ${detail || res.statusText}`);
+    throw new Error(`Không thể thử lại phần trong outline: ${detail || res.statusText}`);
   }
 }
 
@@ -210,5 +210,5 @@ export async function retryOutlineSessionSlide(authFetch: AuthFetch, sessionId: 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, partId, slideId }),
   });
-  if (!res.ok) throw new Error(`Không thể thử lại slide đề cương: ${await res.text().catch(() => res.statusText)}`);
+  if (!res.ok) throw new Error(`Không thể thử lại slide trong outline: ${await res.text().catch(() => res.statusText)}`);
 }

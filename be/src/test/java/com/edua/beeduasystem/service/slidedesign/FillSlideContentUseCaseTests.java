@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -106,7 +107,9 @@ class FillSlideContentUseCaseTests {
                 {"slots":[{"slotId":"hero-1","text":"Nội dung"},{"slotId":"aside-1","imagePrompt":"free body diagram of a cart"}]}
                 """);
         byte[] fakePng = {1, 2, 3};
-        when(imageGenerationClient.generatePng(eq("free body diagram of a cart"), anyString())).thenReturn(fakePng);
+        when(imageGenerationClient.generatePng(
+                eq("free body diagram of a cart" + FillSlideContentUseCase.NO_TEXT_IN_IMAGE_RULE), anyString()))
+                .thenReturn(fakePng);
         when(storageClient.store(anyString(), any(byte[].class), anyString())).thenReturn("https://r2.example.com/slide-images/fake.png");
 
         var result = useCase.execute(request());
@@ -114,6 +117,23 @@ class FillSlideContentUseCaseTests {
         var imageSlot = result.slots().get(1);
         assertEquals("free body diagram of a cart", imageSlot.imagePrompt());
         assertEquals("https://r2.example.com/slide-images/fake.png", imageSlot.imageUrl());
+    }
+
+    @Test
+    void appendsNoTextRuleToTheImageApiPromptButKeepsTheReturnedPromptClean() {
+        when(aiClient.generate(anyString())).thenReturn("""
+                {"slots":[{"slotId":"hero-1","text":"Nội dung"},{"slotId":"aside-1","imagePrompt":"free body diagram of a cart"}]}
+                """);
+        when(imageGenerationClient.generatePng(anyString(), anyString())).thenReturn(new byte[]{1});
+        when(storageClient.store(anyString(), any(byte[].class), anyString())).thenReturn("https://r2.example.com/slide-images/fake.png");
+
+        var result = useCase.execute(request());
+
+        var sentPrompt = ArgumentCaptor.forClass(String.class);
+        verify(imageGenerationClient).generatePng(sentPrompt.capture(), anyString());
+        assertTrue(sentPrompt.getValue().startsWith("free body diagram of a cart"));
+        assertTrue(sentPrompt.getValue().contains("Strictly no text in the image"));
+        assertEquals("free body diagram of a cart", result.slots().get(1).imagePrompt());
     }
 
     @Test

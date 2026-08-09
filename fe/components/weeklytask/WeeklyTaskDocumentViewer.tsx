@@ -68,7 +68,7 @@ export function WeeklyTaskDocumentViewer() {
   }, [authFetch, missingParams, taskId]);
 
   const stale = viewer.key !== taskId;
-  const displayError = missingParams ? "Thiếu thông tin nhiệm vụ tuần." : stale ? "" : viewer.error;
+  const displayError = missingParams ? "Thiếu thông tin lịch nộp giáo án." : stale ? "" : viewer.error;
   const loading = !missingParams && stale;
 
   return (

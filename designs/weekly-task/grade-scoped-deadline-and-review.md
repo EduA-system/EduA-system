@@ -3,7 +3,7 @@
 > Trạng thái: **Coded** (2026-08-06) trên nền Weekly Task đã "Coded" trước đó (xem `WBS_CHECKLIST.md`
 > dòng UC-80/81/83/84/85 và UC-86/87/88/89). Migration `V37` (khối) + `V38` (Chương/Bài, BR-53 — thêm sau
 > khi review UI thực tế, xem mục 2c) đã áp dụng. Nguồn: yêu cầu người dùng ngày 2026-08-06 — Mod giao lịch
-> theo khối, hạn nộp mặc định/khoá cứng theo tuần, màn duyệt filter theo khối/chương/bài, mỗi ô lịch tuần
+> theo khối, hạn nộp mặc định/khoá cứng theo tuần, màn duyệt filter theo khối/chương/bài, mỗi ô lịch nộp giáo án
 > = 1 bài chọn từ danh mục SGK (không phải mô tả tự do).
 >
 > **Thay thế `deadline-rule.md`**: file đó đề xuất BR-50 (hạn nộp = Chủ Nhật tuần **liền trước** tuần
@@ -60,10 +60,10 @@ trước.
 Việc này khoá cứng — không có phương án (b) "mặc định + cho sửa" như `deadline-rule.md` từng cân nhắc:
 Mod không có input hạn nộp trong form tạo/sửa nữa, chỉ hiển thị đọc.
 
-### 2c. BR-53 (đã code, thêm sau khi review UI 2026-08-06) — Mỗi ô lịch tuần = 1 Bài chọn từ danh mục SGK
+### 2c. BR-53 (đã code, thêm sau khi review UI 2026-08-06) — Mỗi ô lịch nộp giáo án = 1 Bài chọn từ danh mục SGK
 
 > Ban đầu Mod nhập Chương/Bài dưới dạng mô tả tự do trong 1 textarea, và 1 modal có thể tạo nhiều bài cùng
-> lúc ("+ Thêm bài"). Sau khi xem UI thực tế, đổi lại: mỗi ô trong lưới lịch tuần (đúng 2 ô/tuần, xem mục
+> lúc ("+ Thêm bài"). Sau khi xem UI thực tế, đổi lại: mỗi ô trong lưới lịch nộp giáo án (đúng 2 ô/tuần, xem mục
 > 4/5) tương ứng đúng 1 Bài — Mod nhập 1 "Tiêu đề" tự do (`scopeDescription`, không còn là mô tả
 > chương/bài) + chọn Chương và Bài qua 2 dropdown liên động, lấy từ danh mục SGK đã có sẵn trong hệ thống
 > (`TextbookCatalogRepository`, `GET /api/textbooks/...` — dùng lại nguyên xi client `fetchTextbookNames`
@@ -71,7 +71,7 @@ Mod không có input hạn nộp trong form tạo/sửa nữa, chỉ hiển th�
 > `UserDashboard.tsx`/`PracticeExamCreateDashboard.tsx`). Sách giáo khoa (`textbookCode`) tự resolve từ
 > (subject, khối đã chọn) — thường ra đúng 1 cuốn; nếu nhiều tập thì lộ thêm dropdown chọn sách.
 >
-> Tối đa **2 bài/tuần** cho 1 (subject, grade) — khớp đúng "2 ô lịch tuần". Không được trùng `lessonCode`
+> Tối đa **2 bài/tuần** cho 1 (subject, grade) — khớp đúng "2 ô lịch nộp giáo án". Không được trùng `lessonCode`
 > trong cùng tuần. `chapterName`/`lessonName` do **server tự resolve** tại thời điểm tạo/sửa (tra
 > `TextbookCatalogRepository.listChapters`/`listLessons`, không tin dữ liệu client gửi lên) — denormalize
 > giống pattern `sourceLibraryContentTitle` đã dùng cho nguồn nộp.
@@ -181,7 +181,7 @@ Thay đổi (FE-only, `fe/app/weekly-schedule/page.tsx`):
 - FE `fe/app/library/page.tsx`: Teacher load thêm `GET /api/weekly-tasks` (khoảng ngày rộng, 1 năm
   trước → 1 năm sau, để không bỏ sót task ngoài cửa sổ mặc định -4/+8 tuần của API) một lần lúc mount,
   dựng `Map<sourceLibraryContentId, reviewStatus>`. Card `LESSON_PLAN` nào có trong map thì hiện badge
-  theo `reviewStatus` đó (kèm icon, tooltip nói rõ "đã nộp cho Moderator trong Lịch tuần") thay vì
+  theo `reviewStatus` đó (kèm icon, tooltip nói rõ "đã nộp cho Moderator trong Lịch nộp giáo án") thay vì
   `LibraryContent.status`; card nào không có (chưa từng nộp task tuần) vẫn hiện `LibraryContent.status`
   như cũ (mặc định "Nháp"). Nút "Gửi duyệt lên Hub cộng đồng" (giấy máy bay) không đổi — vẫn thao tác
   trên `LibraryContent.status` gốc, độc lập với badge hiển thị.

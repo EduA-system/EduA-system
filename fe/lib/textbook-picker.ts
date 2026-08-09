@@ -11,7 +11,7 @@ import {
 } from "@/services/lessonPlanService";
 
 /**
- * Chọn Chương → Bài (BR-53) scoped theo (subject, khối) đã biết trước — dùng cho form giao lịch tuần
+ * Chọn Chương → Bài (BR-53) scoped theo (subject, khối) đã biết trước — dùng cho form giao lịch nộp giáo án
  * (`/weekly-schedule`) và filter màn duyệt (`/lesson-plan-approval`). Tự resolve sách giáo khoa đúng khối
  * (thường chỉ có 1 cuốn/khối/môn; nếu nhiều tập thì lộ thêm dropdown chọn sách).
  */

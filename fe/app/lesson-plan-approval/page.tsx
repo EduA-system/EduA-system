@@ -182,7 +182,7 @@ function LessonPlanApprovalScreen() {
               <p className="text-xs font-semibold uppercase tracking-widest text-[#d97757]">Management</p>
               <h1 className="mt-1 text-[30px] font-semibold leading-tight">Duyệt giáo án tuần</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b6b6b]">
-                Kiểm tra giáo án giáo viên đã nộp theo khối, chương và bài trước khi duyệt vào lịch tuần.
+                Kiểm tra giáo án giáo viên đã nộp theo khối, chương và bài trước khi duyệt trong lịch nộp giáo án.
               </p>
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-[#e4ddd4] bg-white px-4 py-3 shadow-sm">
@@ -249,7 +249,9 @@ function LessonPlanApprovalScreen() {
             <div className="mt-8 flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-[#d8d1c9] bg-white px-6 text-center shadow-sm">
               <Inbox className="size-10 text-[#c8beb4]" />
               <h2 className="mt-4 text-lg font-semibold">Không có giáo án nào chờ duyệt</h2>
-              <p className="mt-2 max-w-md text-sm leading-6 text-[#6b6b6b]">Khi giáo viên nộp giáo án cho nhiệm vụ tuần, danh sách sẽ xuất hiện tại đây.</p>
+              <p className="mt-2 max-w-md text-sm leading-6 text-[#6b6b6b]">
+                Khi giáo viên nộp giáo án trong lịch nộp giáo án, danh sách sẽ xuất hiện tại đây.
+              </p>
             </div>
           ) : (
             <div className="mt-6 space-y-4">

@@ -54,7 +54,7 @@ function OutlineSkeleton() {
     { slides: 4 },
   ];
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6" aria-busy="true" aria-label="Đang tạo khung đề cương slide">
+    <div className="mx-auto max-w-4xl px-4 py-6" aria-busy="true" aria-label="Đang tạo outline cho slide">
       <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-[#efeef7]">
         <div
           className="h-full rounded-full bg-[#8200db] transition-[width] duration-300 ease-out"
@@ -114,7 +114,7 @@ function OutlineSkeleton() {
       </div>
       <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-[#9998be]">
         <span className="size-2.5 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
-        AI đang tạo khung đề cương slide… {Math.round(progress)}%
+        AI đang tạo outline cho slide… {Math.round(progress)}%
       </p>
     </div>
   );
@@ -150,6 +150,15 @@ export default function SlideOutlinePage() {
   const [failedPartMessages, setFailedPartMessages] = useState<Record<string, string>>({});
   const [failedSlideMessages, setFailedSlideMessages] = useState<Record<string, string>>({});
   const [confirming, setConfirming] = useState(false);
+  const totalSlides = parts.reduce((sum, part) => sum + (part.slides?.length ?? 0), 0);
+  const headerStatus =
+    status === "outlining"
+      ? "AI đang dựng outline"
+      : status === "ready"
+        ? "Sẵn sàng chỉnh sửa"
+        : status === "error"
+          ? "Cần quay lại"
+          : "Đang tải";
 
   const disconnectRef = useRef<(() => void) | null>(null);
   const outlineRequestRef = useRef<ReturnType<typeof generateOutline> | null>(null);
@@ -408,14 +417,30 @@ export default function SlideOutlinePage() {
     <main className="flex h-screen w-full overflow-hidden bg-[#f9f8f3] text-[#1a1a2e]">
       <Sidebar activeHref="/slide-create" />
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-[rgba(26,26,46,0.07)] px-8 py-4">
-          <nav className="flex items-center gap-2 text-[12px] text-[#9998be]">
-            <Link href="/slide-create" className="hover:text-[#1a1a2e]">
-              Tạo Slide
-            </Link>
-            <span>/</span>
-            <span className="font-medium text-[#1a1a2e]">Đề cương</span>
-          </nav>
+        <header className="border-b border-[rgba(26,26,46,0.07)] bg-white/45 px-5 py-4 sm:px-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <nav className="flex items-center gap-2 text-[12px] text-[#9998be]">
+                <Link href="/slide-create" className="hover:text-[#1a1a2e]">
+                  Tạo Slide
+                </Link>
+                <span>/</span>
+                <span className="font-medium text-[#1a1a2e]">Outline slide</span>
+              </nav>
+              <h1 className="mt-2 text-2xl font-semibold text-[#1a1a2e]">Outline slide</h1>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-[#5c5b6e]">
+                Kiểm tra cấu trúc bài giảng trước khi sinh slide hoàn chỉnh. Sửa tên phần hoặc slide trực tiếp, kéo thả phần để đổi thứ tự, mở Chi tiết để chỉnh nội dung từng slide, rồi bấm Tạo slides khi outline đã đúng.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs sm:flex sm:items-center">
+              <span className="rounded-lg bg-white px-3 py-2 font-medium text-[#5c5b6e] shadow-sm">
+                {headerStatus}
+              </span>
+              <span className="rounded-lg bg-[#faf5ff] px-3 py-2 font-medium text-[#8200db] shadow-sm">
+                {parts.length} phần · {totalSlides} slides
+              </span>
+            </div>
+          </div>
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">

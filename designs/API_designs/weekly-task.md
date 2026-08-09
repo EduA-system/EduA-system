@@ -41,8 +41,8 @@
   chương/bài).
 - **Tối đa 2 bài/tuần cho 1 (subject, grade)** (BR-53): `bulkCreate`/`create`/`update` đều chặn nếu tổng
   số `lessonCode` phân biệt trong tuần đó vượt 2, hoặc trùng `lessonCode` với bài đã có — khớp đúng "2 ô
-  lịch tuần" ở FE.
-- **`bulkCreate` nhận danh sách nhưng UI hiện tại luôn gửi 1 phần tử**: mỗi ô lịch tuần ở FE = 1 lần gọi
+  lịch nộp giáo án" ở FE.
+- **`bulkCreate` nhận danh sách nhưng UI hiện tại luôn gửi 1 phần tử**: mỗi ô lịch nộp giáo án ở FE = 1 lần gọi
   `POST .../bulk` với `lessons` chỉ có 1 lesson — giữ dạng mảng ở API để linh hoạt, không phải vì UI cần
   tạo nhiều bài cùng lúc nữa (khác thiết kế ban đầu).
 
@@ -156,7 +156,7 @@ FE sắp thứ tự "bài thứ nhất/hai" trong 1 tuần (ổn định theo th
 
 ## Chi tiết endpoint
 
-### 1. `GET /api/weekly-tasks` — Xem lịch tuần (UC-80)
+### 1. `GET /api/weekly-tasks` — Xem lịch nộp giáo án (UC-80)
 
 ```http
 → 200  WeeklyTaskScheduleDto
