@@ -48,7 +48,7 @@ public class HubContentController {
     }
 
     @PostMapping("/contents/{id}/customize")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     public LibraryViews.Detail customize(@PathVariable UUID id) {
         return contentService.customize(id);
     }

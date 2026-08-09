@@ -7,6 +7,7 @@ import { Avatar } from "@/components/blog/Avatar";
 import { RichView } from "@/components/blog/RichView";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { hasAnyRole } from "@/lib/auth/permissions";
 import { subjectBadgeClasses, subjectLabel } from "@/lib/blog";
 import {
   createHubComment,
@@ -97,6 +98,7 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
   const wordCount = useMemo(() => countWords(comment), [comment]);
   const editWordCount = useMemo(() => countWords(editCommentText), [editCommentText]);
   const currentUserName = user?.fullName || user?.email || "Bạn";
+  const canSaveToLibrary = hasAnyRole(user, ["TEACHER", "MODERATOR"]);
   const commentsForDisplay = useMemo(() => {
     if (!detail) return [];
     const roots = detail.comments.filter((item) => !item.parentCommentId);
@@ -232,10 +234,12 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
                       <h1 className="mt-3 text-3xl font-bold tracking-[-0.04em] text-[#30343d]">{detail.title}</h1>
                       <p className="mt-2 text-sm text-stone-500">Chia sẻ bởi {detail.ownerName ?? "Ẩn danh"}{detail.reviewedAt ? ` · Duyệt lúc ${formatDateTime(detail.reviewedAt)}` : ""}</p>
                     </div>
-                    <button type="button" disabled={savingCopy} onClick={() => void handleCustomize()} className="inline-flex items-center gap-2 rounded-xl bg-[#e8724a] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#cf603d] disabled:cursor-not-allowed disabled:opacity-60">
-                      {savingCopy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                      Lưu vào thư viện
-                    </button>
+                    {canSaveToLibrary && (
+                      <button type="button" disabled={savingCopy} onClick={() => void handleCustomize()} className="inline-flex items-center gap-2 rounded-xl bg-[#e8724a] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#cf603d] disabled:cursor-not-allowed disabled:opacity-60">
+                        {savingCopy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                        Lưu vào thư viện
+                      </button>
+                    )}
                   </div>
                 </header>
 
