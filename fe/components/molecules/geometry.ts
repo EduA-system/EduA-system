@@ -18,5 +18,22 @@ export function buildGeometry(molecule: Molecule): PositionedMolecule {
       bonds.push({ from: index, to: atoms.length - 1, order: 1 });
     }
   });
-  return { atoms, bonds };
+  return { atoms: centerOnOrigin(atoms), bonds };
+}
+
+/**
+ * Vị trí mặc định ở trên xếp nguyên tử zig-zag quanh trục x với y = ±0.35, nên phân tử có số
+ * nguyên tử lẻ (CH₄, H₂O) nằm hẳn dưới gốc toạ độ và hiển thị lệch xuống đáy khung. Dời cả khối
+ * theo tâm bounding box để camera luôn nhìn vào giữa phân tử, kể cả khi hydro sinh thêm không đối xứng.
+ */
+function centerOnOrigin(atoms: Required<MoleculeAtom>[]): Required<MoleculeAtom>[] {
+  if (!atoms.length) return atoms;
+  const center = ([0, 1, 2] as const).map((axis) => {
+    const values = atoms.map((atom) => atom.position[axis]);
+    return (Math.min(...values) + Math.max(...values)) / 2;
+  });
+  return atoms.map((atom) => ({
+    ...atom,
+    position: [atom.position[0] - center[0], atom.position[1] - center[1], atom.position[2] - center[2]] as [number, number, number],
+  }));
 }

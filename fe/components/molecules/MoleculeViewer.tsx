@@ -26,5 +26,8 @@ function Scene({ molecule, mode, rotating }: { molecule: Molecule; mode: RenderM
 }
 
 export function MoleculeViewer({ molecule, mode, rotating }: { molecule: Molecule; mode: RenderMode; rotating: boolean }) {
-  return <div className="h-full min-h-[180px] w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700"><Canvas camera={{ position: [0, 0, 7], fov: 45 }}><ambientLight intensity={1.5} /><directionalLight position={[5, 5, 5]} intensity={2} /><Scene molecule={molecule} mode={mode} rotating={rotating} /><OrbitControls enablePan enableZoom /></Canvas></div>;
+  // Không đặt min-height: slot molecule trên slide thường thấp hơn 180px, canvas bị tràn xuống dưới
+  // và bị cha overflow-hidden cắt đáy, làm phân tử trông lệch xuống. Cả hai nơi dùng viewer đều đã
+  // có chiều cao xác định.
+  return <div className="h-full w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700"><Canvas camera={{ position: [0, 0, 7], fov: 45 }}><ambientLight intensity={1.5} /><directionalLight position={[5, 5, 5]} intensity={2} /><Scene molecule={molecule} mode={mode} rotating={rotating} /><OrbitControls enablePan enableZoom /></Canvas></div>;
 }

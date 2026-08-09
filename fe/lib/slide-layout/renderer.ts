@@ -3,7 +3,7 @@ import { makePeriodicSimulation, makeSimulation } from "@/components/slide-edito
 import type { ImageElement, LineElement, ShapeElement, SimulationElement, SlideElement, TextElement } from "@/components/slide-editor/types";
 import { MOLECULE_CATALOG } from "@/components/molecules/catalog";
 import { blendSurface, contrastingTextColor } from "./contrast";
-import type { LayoutSlot, LayoutStructure, SlideLayoutResult } from "./types";
+import type { LayoutSlot, LayoutStructure, Rect, SlideLayoutResult } from "./types";
 
 export type RenderLayoutOptions = {
   palette: string[];
@@ -65,6 +65,21 @@ function structureElements(structure: LayoutStructure, palette: string[], surfac
   return elements;
 }
 
+/**
+ * Ô vuông lớn nhất canh giữa rect gốc. Camera của viewer 3D có fov đối xứng nên khung chữ nhật
+ * chỉ thêm nền trống hai bên và làm phân tử trông lệch; rect trong `LayoutSlot` giữ nguyên để
+ * không đổi kết quả chấm điểm bố cục ở engine.
+ */
+function squareRect(rect: Rect): Rect {
+  const side = Math.min(rect.w, rect.h);
+  return {
+    x: rect.x + Math.round((rect.w - side) / 2),
+    y: rect.y + Math.round((rect.h - side) / 2),
+    w: side,
+    h: side,
+  };
+}
+
 function textStyle(slot: LayoutSlot): Pick<TextElement, "fontSize" | "bold" | "italic" | "color" | "align" | "fontFamily" | "lineHeight"> {
   const token = slot.defaultStyleToken;
   return {
@@ -92,7 +107,7 @@ function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string,
   }
   if (slot.kind === "molecule") {
     // Placeholder molecule; Step 3 (runContentFillStep) replaces it with the AI-built structure for `slot.sourceText`.
-    return makeSimulation(MOLECULE_CATALOG[0], { ...base(`layout:${slot.id}`, slot.rect, slot.zIndex), contentSlot: slot.id });
+    return makeSimulation(MOLECULE_CATALOG[0], { ...base(`layout:${slot.id}`, squareRect(slot.rect), slot.zIndex), contentSlot: slot.id });
   }
   if (slot.kind === "periodic") {
     return makePeriodicSimulation(
