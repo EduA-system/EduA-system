@@ -1,5 +1,6 @@
 import type { Molecule } from "@/components/molecules/types";
 import { BACKEND_HTTP_URL } from "@/lib/backend-url";
+import { getMoleculeAiBuildDiagnostics, logMoleculeAiBuildResponse } from "@/lib/api/molecule-ai-debug";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 
 const BE = BACKEND_HTTP_URL;
@@ -20,9 +21,27 @@ export async function buildMolecule(input: string): Promise<Molecule> {
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(`POST /api/molecules/build ${res.status}: ${detail || res.statusText}`);
+    const aiResult = {
+      input,
+      ok: res.ok,
+      status: res.status,
+      statusText: res.statusText,
+      body: detail,
+    };
+    logMoleculeAiBuildResponse(aiResult);
+    throw new Error(getMoleculeAiBuildDiagnostics(aiResult).userMessage);
   }
   const data = (await res.json()) as MoleculeBuildResponse;
+  const aiResult = {
+    input,
+    ok: res.ok,
+    status: res.status,
+    statusText: res.statusText,
+    body: data,
+  };
+  logMoleculeAiBuildResponse(aiResult);
+  const diagnostics = getMoleculeAiBuildDiagnostics(aiResult);
+  if (!diagnostics.success) throw new Error(diagnostics.userMessage);
   logSlideApi("molecules/build OK", { name: data.name, atoms: data.atoms.length, bonds: data.bonds.length });
   return { ...data, formula: "AI tạo" };
 }

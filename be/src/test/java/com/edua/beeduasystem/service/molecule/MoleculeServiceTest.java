@@ -58,6 +58,15 @@ class MoleculeServiceTest {
     }
 
     @Test
+    void rejectsNonChemicalRequestWithUserFacingMessage() {
+        when(aiClient.generate(anyString())).thenReturn("{\"errorCode\":\"not_a_chemical_request\",\"message\":\"Không nhận ra đây là tên hoặc công thức hoá học.\"}");
+
+        MoleculeBuildException error = assertThrows(MoleculeBuildException.class, () -> service.build("abcc"));
+
+        assertEquals("Không nhận ra \"abcc\" là tên hoặc công thức hoá học. Hãy nhập tên chất cụ thể như etanol hoặc công thức như C2H4.", error.getMessage());
+    }
+
+    @Test
     void rejectsUnsupportedElement() {
         when(aiClient.generate(anyString())).thenReturn("{\"name\":\"Salt\",\"atoms\":[{\"element\":\"Na\"}],\"bonds\":[]}");
         assertThrows(MoleculeBuildException.class, () -> service.build("muối"));

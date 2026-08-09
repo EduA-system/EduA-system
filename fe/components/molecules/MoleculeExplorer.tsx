@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { getMoleculeAiBuildDiagnostics, logMoleculeAiBuildResponse } from "@/lib/api/molecule-ai-debug";
 import { createLibraryContent, getLibraryContent } from "@/lib/library";
 import { getClassResourceLibraryContent } from "@/lib/classroom";
 import { findMolecules, MOLECULE_CATALOG } from "./catalog";
@@ -62,7 +63,16 @@ export function MoleculeExplorer() {
     try {
       const response = await fetch("/api/molecules/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input: aiInput }) });
       const body = await response.json() as Molecule & { message?: string };
-      if (!response.ok || !body?.name || !Array.isArray(body.atoms) || !Array.isArray(body.bonds)) throw new Error(body?.message ?? "Không thể tạo cấu trúc.");
+      const aiResult = {
+        input: aiInput,
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        body,
+      };
+      logMoleculeAiBuildResponse(aiResult);
+      const diagnostics = getMoleculeAiBuildDiagnostics(aiResult);
+      if (!diagnostics.success) throw new Error(diagnostics.userMessage);
       setMolecule({ ...body, formula: "AI tạo" });
     } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể tạo cấu trúc."); } finally { setLoading(false); }
   }

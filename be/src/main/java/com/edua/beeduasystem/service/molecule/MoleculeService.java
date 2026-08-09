@@ -62,7 +62,7 @@ public class MoleculeService {
         RawStructure raw;
         try {
             raw = objectMapper.readValue(extractJson(generateWithTimeout(input)), RawStructure.class);
-            return validate(raw);
+            return validate(input.strip(), raw);
         } catch (MoleculeBuildException e) {
             throw e;
         } catch (Exception e) {
@@ -127,8 +127,14 @@ public class MoleculeService {
         }
     }
 
-    private MoleculeStructure validate(RawStructure raw) {
-        if (raw == null || raw.name == null || raw.name.isBlank() || raw.atoms == null || raw.atoms.isEmpty() || raw.bonds == null) {
+    private MoleculeStructure validate(String input, RawStructure raw) {
+        if (raw == null) {
+            throw new MoleculeBuildException("AI trả về thiếu tên, nguyên tử hoặc liên kết.");
+        }
+        if (raw.errorCode != null || raw.message != null && (raw.name == null || raw.name.isBlank())) {
+            throw new MoleculeBuildException(toUserFacingAiError(input, raw));
+        }
+        if (raw.name == null || raw.name.isBlank() || raw.atoms == null || raw.atoms.isEmpty() || raw.bonds == null) {
             throw new MoleculeBuildException("AI trả về thiếu tên, nguyên tử hoặc liên kết.");
         }
         List<MoleculeAtom> atoms = new ArrayList<>();
@@ -165,6 +171,18 @@ public class MoleculeService {
         return new MoleculeStructure(raw.name.strip(), List.copyOf(atoms), List.copyOf(bonds));
     }
 
+    private static String toUserFacingAiError(String input, RawStructure raw) {
+        String code = raw.errorCode == null ? "" : raw.errorCode.strip();
+        if ("not_a_chemical_request".equals(code)) {
+            return "Không nhận ra \"" + input + "\" là tên hoặc công thức hoá học. Hãy nhập tên chất cụ thể như etanol hoặc công thức như C2H4.";
+        }
+        if ("ambiguous_chemical_request".equals(code)) {
+            return "Yêu cầu \"" + input + "\" chưa đủ cụ thể để xác định một phân tử đơn lẻ. Hãy nhập tên/công thức cụ thể hơn, ví dụ C2H4 hoặc PVC repeat unit.";
+        }
+        if (raw.message != null && !raw.message.isBlank()) return raw.message.strip();
+        return "Chưa tạo được mô hình phân tử cho \"" + input + "\". Hãy thử nhập tên hoặc công thức hoá học cụ thể hơn.";
+    }
+
     private static String extractJson(String response) {
         if (response == null) throw new MoleculeBuildException("AI không trả về dữ liệu.");
         String text = response.strip().replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "");
@@ -180,7 +198,7 @@ public class MoleculeService {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record RawStructure(String name, List<RawAtom> atoms, List<RawBond> bonds) { }
+    private record RawStructure(String name, List<RawAtom> atoms, List<RawBond> bonds, String errorCode, String message) { }
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record RawAtom(String element) { }
     @JsonIgnoreProperties(ignoreUnknown = true)
