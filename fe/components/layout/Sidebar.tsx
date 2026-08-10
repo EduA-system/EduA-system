@@ -7,6 +7,7 @@ import { navGroups } from "../dashboard/data";
 import { DashboardIcon } from "../ui/DashboardIcon";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { canAccessRoute, hasAnyRole } from "@/lib/auth/permissions";
+import { canAccessSubjectScope } from "@/lib/auth/subject-access";
 import { getUnreadCount } from "@/lib/notifications";
 import { connectNotificationsStream } from "@/lib/ws/notifications-client";
 
@@ -97,7 +98,9 @@ export function Sidebar({
     .map((group) => ({
       ...group,
       items: group.items.filter((item) =>
-        (!item.requiredRole || hasAnyRole(user, item.requiredRole)) && canAccessRoute(item.href, user),
+        (!item.requiredRole || hasAnyRole(user, item.requiredRole)) &&
+        canAccessSubjectScope(user, item.requiredSubjects) &&
+        canAccessRoute(item.href, user),
       ),
     }))
     .filter((group) => group.items.length > 0);

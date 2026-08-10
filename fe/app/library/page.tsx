@@ -22,6 +22,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { hasAnyRole } from "@/lib/auth/permissions";
+import { getSubjectRestriction, SUBJECT_LABELS } from "@/lib/auth/subject-access";
 import {
   deleteLibraryContent,
   getLibraryContent,
@@ -140,11 +141,12 @@ function extractGradeFromPayload(payload: unknown): number | undefined {
 
 function LibraryScreen() {
   const { authFetch, user } = useAuth();
+  const subjectRestriction = getSubjectRestriction(user);
   const [type, setType] = useState<LibraryType>("LESSON_PLAN");
   const [items, setItems] = useState<LibraryContent[]>([]);
   const [total, setTotal] = useState(0);
   const [q, setQ] = useState("");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(() => subjectRestriction ?? "");
   const [sort, setSort] = useState("updatedAt");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -157,6 +159,11 @@ function LibraryScreen() {
   // Giáo án đang là nguồn 1 Weekly Task (đã nộp qua "chọn từ thư viện") → contentId -> reviewStatus mới
   // nhất. Chỉ Teacher mới có Weekly Task của riêng mình (Moderator không nộp task).
   const [weeklyTaskStatusByContentId, setWeeklyTaskStatusByContentId] = useState<Map<string, "SUBMITTED" | "APPROVED" | "REJECTED">>(new Map());
+
+  useEffect(() => {
+    if (!subjectRestriction) return;
+    queueMicrotask(() => setSubject(subjectRestriction));
+  }, [subjectRestriction]);
 
   useEffect(() => {
     if (!hasAnyRole(user, ["TEACHER"])) return;
@@ -188,7 +195,8 @@ function LibraryScreen() {
     try {
       const params = new URLSearchParams({ type, sort, size: "50" });
       if (q) params.set("q", q);
-      if (subject) params.set("subject", subject);
+      const effectiveSubject = subjectRestriction ?? subject;
+      if (effectiveSubject) params.set("subject", effectiveSubject);
       const data = await listLibrary(authFetch, params);
       setItems(data.items);
       setTotal(data.total);
@@ -198,7 +206,7 @@ function LibraryScreen() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, q, sort, subject, type]);
+  }, [authFetch, q, sort, subject, subjectRestriction, type]);
 
   useEffect(() => {
     const timer = setTimeout(() => void load(), 200);
@@ -293,7 +301,13 @@ function LibraryScreen() {
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <input aria-label="Tìm theo tiêu đề" value={q} onChange={(event) => setQ(event.target.value)} placeholder="Tìm theo tiêu đề..." className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-[#e8724a] sm:w-56" />
-            <select aria-label="Lọc theo môn" value={subject} onChange={(event) => setSubject(event.target.value)} className="rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="">Tất cả môn</option><option value="MATH">Toán</option><option value="CHEMISTRY">Hóa học</option><option value="PHYSICS">Vật lý</option></select>
+            {subjectRestriction ? (
+              <div className="rounded-xl border border-stone-300 bg-[#f1ede7] px-3 py-2.5 text-sm text-[#4b453f]">
+                {SUBJECT_LABELS[subjectRestriction]}
+              </div>
+            ) : (
+              <select aria-label="Lọc theo môn" value={subject} onChange={(event) => setSubject(event.target.value)} className="rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="">Tất cả môn</option><option value="MATH">Toán</option><option value="CHEMISTRY">Hóa học</option><option value="PHYSICS">Vật lý</option></select>
+            )}
             <select aria-label="Sắp xếp nội dung" value={sort} onChange={(event) => setSort(event.target.value)} className="rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="updatedAt">Mới cập nhật</option><option value="title">Tên A–Z</option></select>
             {!loading && <p className="text-sm text-stone-500">Hiển thị {items.length} / {total} nội dung</p>}
           </div>

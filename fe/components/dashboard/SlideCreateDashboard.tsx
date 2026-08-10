@@ -8,11 +8,12 @@ import { DashboardIcon } from "../ui/DashboardIcon";
 import { RichView } from "../blog/RichView";
 import { STYLE_OPTIONS } from "./slideData";
 import { writeSlideCreateSession } from "@/lib/slide-create/session";
-import { getLibraryContent, listLibrary, type LibraryContent } from "@/lib/library";
+import { getLibraryContent, listLibrary, type LibraryContent, type LibrarySubject } from "@/lib/library";
 import { getTiptapDocument, tiptapToStructuredText, type TiptapNode } from "@/lib/tiptap-to-text";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { canUseSubject, getSubjectRestriction } from "@/lib/auth/subject-access";
 
-type LessonCard = { id: string; title: string; description: string; subject: string; grade: string; updatedAt: string };
+type LessonCard = { id: string; title: string; description: string; subject: string; subjectCode: LibrarySubject | null; grade: string; updatedAt: string };
 const subjectLabel: Record<string, string> = { PHYSICS: "Vật lý", CHEMISTRY: "Hóa học", MATH: "Toán học" };
 
 /** Same "Bài giảng" thumbnail treatment as the personal-library card (`fe/app/library/page.tsx`). */
@@ -26,7 +27,8 @@ const DEFAULT_STYLE_HINT = STYLE_OPTIONS[0];
 
 export function SlideCreateDashboard() {
   const router = useRouter();
-  const { authFetch, status: authStatus } = useAuth();
+  const { authFetch, status: authStatus, user } = useAuth();
+  const subjectRestriction = getSubjectRestriction(user);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [items, setItems] = useState<LibraryContent[]>([]);
@@ -45,12 +47,14 @@ export function SlideCreateDashboard() {
     if (authStatus !== "authenticated") { setLoading(false); setLibraryError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."); return; }
     setLoading(true); setLibraryError("");
     try {
-      const page = await listLibrary(authFetch, new URLSearchParams({ type: "LESSON_PLAN", size: "100", sort: "updatedAt" }));
+      const params = new URLSearchParams({ type: "LESSON_PLAN", size: "100", sort: "updatedAt" });
+      if (subjectRestriction) params.set("subject", subjectRestriction);
+      const page = await listLibrary(authFetch, params);
       setItems(page.items);
       setSelectedId((id) => id && page.items.some((item) => item.id === id) ? id : (page.items[0]?.id ?? ""));
     } catch (error) { setLibraryError(error instanceof Error ? error.message : "Không thể tải thư viện giáo án."); }
     finally { setLoading(false); }
-  }, [authFetch, authStatus]);
+  }, [authFetch, authStatus, subjectRestriction]);
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       void loadLibrary();
@@ -60,7 +64,7 @@ export function SlideCreateDashboard() {
 
   const lessons = useMemo<LessonCard[]>(() => items.map((item) => ({
     id: item.id, title: item.title, description: "Giáo án đã lưu trong thư viện", subject: item.subject ? subjectLabel[item.subject] ?? item.subject : "Chưa phân môn",
-    grade: "Giáo án", updatedAt: item.updatedAt,
+    subjectCode: item.subject, grade: "Giáo án", updatedAt: item.updatedAt,
   })), [items]);
   const visible = useMemo<LessonCard[]>(() => {
     return lessons.filter((lesson) => {
@@ -68,10 +72,15 @@ export function SlideCreateDashboard() {
         query.trim() === "" ||
         lesson.title.toLowerCase().includes(query.toLowerCase()) ||
         lesson.description.toLowerCase().includes(query.toLowerCase());
-      const matchesFilter = filter === "all" || lesson.subject === filter;
+      const matchesFilter = filter === "all" || lesson.subjectCode === filter;
       return matchesQuery && matchesFilter;
     });
   }, [lessons, query, filter]);
+
+  useEffect(() => {
+    if (!subjectRestriction) return;
+    queueMicrotask(() => setFilter(subjectRestriction));
+  }, [subjectRestriction]);
 
   const previewLesson =
     lessons.find((lesson) => lesson.id === previewId) ?? null;
@@ -98,6 +107,10 @@ export function SlideCreateDashboard() {
   const closePreview = useCallback(() => setPreviewId(null), []);
 
   async function createSlideFromDetail(lesson: LessonCard, detail: LibraryContent) {
+    if (!canUseSubject(user, detail.subject)) {
+      setPreviewError("Tài khoản này chỉ được tạo slide từ giáo án đúng môn được phân công.");
+      return;
+    }
     setCreating(true);
     try {
       const lessonContent = tiptapToStructuredText(getTiptapDocument(detail.payload));
@@ -166,7 +179,7 @@ export function SlideCreateDashboard() {
                   className="h-full w-full bg-transparent text-[12px] text-[#1a1a2e] placeholder:text-[rgba(26,26,46,0.5)] focus:outline-none"
                 />
               </div>
-              <FilterSelect value={filter} onChange={setFilter} />
+              <FilterSelect value={filter} onChange={setFilter} lockedSubject={subjectRestriction} />
             </div>
 
             {/* Cards */}
@@ -223,21 +236,34 @@ function SearchIcon() {
 function FilterSelect({
   value,
   onChange,
+  lockedSubject,
 }: {
   value: string;
   onChange: (value: string) => void;
+  lockedSubject: LibrarySubject | null;
 }) {
+  const options = lockedSubject
+    ? [[lockedSubject, subjectLabel[lockedSubject] ?? lockedSubject]]
+    : [
+        ["all", "Tất cả môn"],
+        ["PHYSICS", "Vật lý"],
+        ["CHEMISTRY", "Hóa học"],
+        ["MATH", "Toán học"],
+      ];
+
   return (
     <div className="relative h-[38px] w-[150px]">
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        disabled={Boolean(lockedSubject)}
         className="h-full w-full cursor-pointer appearance-none rounded-xl border border-[rgba(26,26,46,0.09)] bg-white pl-[15px] pr-8 text-[12px] font-medium text-[#1a1a2e] focus:outline-none"
       >
-        <option value="all">Tất cả môn</option>
-        <option value="Vật lý">Vật lý</option>
-        <option value="Hóa học">Hóa học</option>
-        <option value="Toán học">Toán học</option>
+        {options.map(([optionValue, label]) => (
+          <option key={optionValue} value={optionValue}>
+            {label}
+          </option>
+        ))}
       </select>
       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#aeacb8]">
         <DashboardIcon name="chevronDown" className="size-3" />

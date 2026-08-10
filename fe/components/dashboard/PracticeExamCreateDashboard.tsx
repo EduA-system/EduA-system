@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { isClassSubject } from "@/lib/classroom";
+import { canUseSubject, getSubjectRestriction } from "@/lib/auth/subject-access";
 import {
   fetchChapterLessons,
   fetchTextbookChapters,
@@ -66,8 +66,9 @@ type Step = 1 | 2 | 3;
 export function PracticeExamCreateDashboard() {
   const router = useRouter();
   const { authFetch, user } = useAuth();
+  const subjectRestriction = getSubjectRestriction(user);
   const [subject, setSubject] = useState<PracticeExamRequest["subject"]>(() =>
-    isClassSubject(user?.subject) ? user.subject : "PHYSICS",
+    subjectRestriction ?? "PHYSICS",
   );
   const [grade, setGrade] = useState(10);
   const [duration, setDuration] = useState("15");
@@ -170,6 +171,7 @@ export function PracticeExamCreateDashboard() {
     (type) => (counts[type] === 0) === (scores[type] === 0),
   );
   const canGenerate =
+    canUseSubject(user, subject) &&
     hasValidDuration &&
     totalScore === 1000 &&
     totalQuestions > 0 &&
@@ -181,9 +183,19 @@ export function PracticeExamCreateDashboard() {
     () => books.find((book) => book.id === bookCode),
     [books, bookCode],
   );
-  const subjectLocked = isClassSubject(user?.subject);
+  const subjectLocked = Boolean(subjectRestriction);
   const step1Valid = hasValidDuration;
   const step2Valid = Boolean(bookCode) && selectedLessons.length > 0;
+  useEffect(() => {
+    if (!subjectRestriction || subject === subjectRestriction) return;
+    queueMicrotask(() => {
+      setSubject(subjectRestriction);
+      setBookCode("");
+      setSelectedChapters([]);
+      setLessonsByChapter({});
+      setSelectedLessons([]);
+    });
+  }, [subjectRestriction, subject]);
   function goToStep(step: Step) {
     setOpenStep(step);
   }
@@ -219,12 +231,16 @@ export function PracticeExamCreateDashboard() {
   }
   async function generate() {
     if (!canGenerate || !bookCode) return;
+    // Lấy lại môn ngay tại thời điểm submit thay vì tin vào state: effect đồng bộ
+    // `subject` theo `subjectRestriction` chạy sau render, nên vẫn có cửa sổ mà state
+    // còn giữ môn cũ. Với educator đã gán môn thì chỉ môn đó mới được phép gửi đi.
+    const effectiveSubject = subjectRestriction ?? subject;
     setLoading(true);
     setError(null);
     try {
       const request: PracticeExamRequest = {
         title: `Kiểm tra ${durationMinutes} phút`,
-        subject,
+        subject: effectiveSubject,
         grade,
         durationMinutes,
         difficulty,
@@ -256,7 +272,7 @@ export function PracticeExamCreateDashboard() {
       storePracticeExamSession({
         sessionId,
         request,
-        display: { subject, grade: String(grade), duration: durationMinutes, difficulty },
+        display: { subject: effectiveSubject, grade: String(grade), duration: durationMinutes, difficulty },
       });
       router.push("/exam-edit-new");
     } catch (reason) {

@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
 import { generateOutline, retryOutlineSessionSlide, startOutlineSession, type OutlinePart } from "@/lib/api/slides";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { connectOutlineStream, type OutlineEvent } from "@/lib/ws/outline-client";
 import { logSlideApi } from "@/lib/ws/slide-debug-log";
 import {
@@ -138,6 +139,14 @@ function loadOutlineBoot(): OutlineBoot {
 }
 
 export default function SlideOutlinePage() {
+  return (
+    <RouteGuard pathname="/slide-create/outline" denyHref="/slide-create" denyLabel="Về trang tạo slide">
+      <SlideOutlineScreen />
+    </RouteGuard>
+  );
+}
+
+function SlideOutlineScreen() {
   const router = useRouter();
   const { accessToken, authFetch, status: authStatus } = useAuth();
   const [boot] = useState(loadOutlineBoot);

@@ -8,6 +8,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: [
+      "lib/auth/**/*.test.ts",
       "components/simulations/**/*.test.ts",
       "components/slide-editor/lib/**/*.test.ts",
       "lib/slide-create/**/*.test.ts",

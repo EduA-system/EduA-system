@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthContext";
-import { canAccessRoute, routePermissions } from "./permissions";
+import { canAccessRoute, getRoutePermission } from "./permissions";
+import { isSubjectUnassigned } from "./subject-access";
 
 interface RouteGuardProps {
   pathname: string;
@@ -23,7 +24,7 @@ export function RouteGuard({
   const { user, status } = useAuth();
   const router = useRouter();
 
-  const requiresAuth = routePermissions[pathname]?.requireAuth ?? true;
+  const requiresAuth = getRoutePermission(pathname)?.requireAuth ?? true;
   const loginHref = `/login?next=${encodeURIComponent(pathname)}`;
 
   useEffect(() => {
@@ -59,11 +60,18 @@ export function RouteGuard({
       );
     }
 
+    const blockedForMissingSubject =
+      getRoutePermission(pathname)?.requiresAssignedSubject && isSubjectUnassigned(user);
+
     return (
       <div className="mx-auto max-w-md p-8">
-        <h1 className="mb-2 text-xl font-semibold">Từ chối truy cập</h1>
+        <h1 className="mb-2 text-xl font-semibold">
+          {blockedForMissingSubject ? "Tài khoản chưa được gán môn" : "Từ chối truy cập"}
+        </h1>
         <p className="text-sm text-gray-600">
-          Tài khoản {user.email} ({user.role}) không có quyền truy cập trang này.
+          {blockedForMissingSubject
+            ? `Tài khoản ${user.email} chưa được gán môn học nên chưa thể tạo hoặc chỉnh sửa nội dung. Liên hệ Moderator hoặc Ban giám hiệu để được phân môn.`
+            : `Tài khoản ${user.email} (${user.role}) không có quyền truy cập trang này.`}
         </p>
         <Link className="mt-4 inline-block rounded bg-black px-4 py-2 text-sm text-white" href={denyHref}>
           {denyLabel}

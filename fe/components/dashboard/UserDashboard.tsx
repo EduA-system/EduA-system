@@ -18,6 +18,7 @@ import {
   type CatalogLesson,
 } from "@/services/lessonPlanService";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { canUseSubject, getSubjectRestriction, subjectOptionsForUser, type SubjectCode } from "@/lib/auth/subject-access";
 
 const SUBJECT_OPTIONS = [
   { value: "PHYSICS", label: "Vật lí" },
@@ -27,14 +28,15 @@ const SUBJECT_OPTIONS = [
 
 export function UserDashboard() {
   const router = useRouter();
-  const { authFetch } = useAuth();
+  const { authFetch, user } = useAuth();
+  const subjectRestriction = getSubjectRestriction(user);
 
   const [books, setBooks] = useState<CatalogBookName[]>([]);
   const [chapters, setChapters] = useState<CatalogChapterSummary[]>([]);
   const [lessons, setLessons] = useState<CatalogLesson[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
 
-  const [subjectCode, setSubjectCode] = useState("PHYSICS");
+  const [subjectCode, setSubjectCode] = useState<SubjectCode>(() => subjectRestriction ?? "PHYSICS");
   const [bookId, setBookId] = useState<string | null>(null);
   const [chapterId, setChapterId] = useState<string | null>(null);
   const [lessonId, setLessonId] = useState<string | null>(null);
@@ -42,6 +44,22 @@ export function UserDashboard() {
 
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const subjectOptions = useMemo(() => subjectOptionsForUser(user, SUBJECT_OPTIONS), [user]);
+  const subjectAllowed = canUseSubject(user, subjectCode);
+
+  useEffect(() => {
+    if (!subjectRestriction || subjectCode === subjectRestriction) return;
+    queueMicrotask(() => {
+      setSubjectCode(subjectRestriction);
+      setBookId(null);
+      setChapterId(null);
+      setLessonId(null);
+      setBooks([]);
+      setChapters([]);
+      setLessons([]);
+      setCatalogError(null);
+    });
+  }, [subjectRestriction, subjectCode]);
 
   useEffect(() => {
     let active = true;
@@ -121,10 +139,11 @@ export function UserDashboard() {
     label: lesson.name,
   }));
 
-  const canGenerate = Boolean(bookId && chapterId && lessonId) && !generating;
+  const canGenerate = subjectAllowed && Boolean(bookId && chapterId && lessonId) && !generating;
 
   function handleSubjectChange(value: string) {
-    setSubjectCode(value);
+    if (!canUseSubject(user, value)) return;
+    setSubjectCode(value as SubjectCode);
     setBookId(null);
     setChapterId(null);
     setLessonId(null);
@@ -172,7 +191,7 @@ export function UserDashboard() {
         display: {
           title: selectedLesson?.name ?? "…………………………………..",
           subject: selectedBook?.subjectName ?? selectedSubject.label,
-          subjectCode: subjectCode as "MATH" | "CHEMISTRY" | "PHYSICS",
+          subjectCode,
           grade: selectedBook ? `lớp: ${selectedBook.grade}` : "lớp: ………",
           duration: "Thời gian thực hiện: (số tiết)",
         },
@@ -234,12 +253,18 @@ export function UserDashboard() {
               )}
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <Dropdown
-                    placeholder="Môn học"
-                    value={subjectCode}
-                    options={SUBJECT_OPTIONS}
-                    onChange={handleSubjectChange}
-                  />
+                  {subjectRestriction ? (
+                    <div className="flex h-[34px] items-center rounded-lg border border-[#d8d1c9] bg-[#f3efe9] px-3 text-[12px] font-medium text-[#4b453f]">
+                      {selectedSubject.label}
+                    </div>
+                  ) : (
+                    <Dropdown
+                      placeholder="Môn học"
+                      value={subjectCode}
+                      options={subjectOptions}
+                      onChange={handleSubjectChange}
+                    />
+                  )}
                   <span className="text-[#d8d1c9]">›</span>
                   <Dropdown
                     placeholder="Lớp"

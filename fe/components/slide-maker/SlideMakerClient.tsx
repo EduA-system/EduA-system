@@ -19,6 +19,7 @@ import { applyContentSlots } from "@/lib/slide-create/apply-content-slots";
 import { mergeStep2LayoutElements } from "@/lib/slide-create/merge-step2-layout";
 import type { SlideContentFillResponse } from "@/lib/api/slide-design";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { getSubjectRestriction, SUBJECT_LABELS } from "@/lib/auth/subject-access";
 import {
   createLibraryContent,
   getLibraryContent,
@@ -51,6 +52,7 @@ export function SlideMakerClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { authFetch, user } = useAuth();
+  const subjectRestriction = getSubjectRestriction(user);
   const generating = searchParams.get("generating") === "1";
   const requestedLibraryId = searchParams.get("libraryId");
   const activeRef = useRef<ActiveGeneration | null>(generating ? readActiveGeneration() : null);
@@ -174,8 +176,8 @@ export function SlideMakerClient() {
   }, []);
 
   const initialSubject: LibrarySubject =
-    user?.subject === "MATH" || user?.subject === "CHEMISTRY" || user?.subject === "PHYSICS"
-      ? user.subject
+    subjectRestriction
+      ? subjectRestriction
       : "PHYSICS";
 
   const saveDeck = useCallback(async (metadata?: { title: string; subject: LibrarySubject }, auto = false) => {
@@ -234,8 +236,10 @@ export function SlideMakerClient() {
     const title = deckTitle.trim();
     if (!title) return;
     setSaveDialogOpen(false);
-    void saveDeck({ title, subject: deckSubject });
-  }, [deckSubject, deckTitle, saveDeck]);
+    // Educator đã gán môn thì môn đó thắng state của dialog — dropdown tuy đã khóa,
+    // nhưng `deckSubject` vẫn khởi tạo bằng "PHYSICS" trước khi user mở dialog.
+    void saveDeck({ title, subject: subjectRestriction ?? deckSubject });
+  }, [deckSubject, deckTitle, saveDeck, subjectRestriction]);
 
   // Trình chiếu là một lớp phủ ngay trên trình soạn thảo (không điều hướng, không tải lại
   // trang), nên thoát bằng Esc là quay lại đúng trạng thái editor đang mở.
@@ -349,15 +353,21 @@ export function SlideMakerClient() {
             </label>
             <label className="mt-4 block text-sm font-medium text-[#4f4943]">
               Môn học
-              <select
-                value={deckSubject}
-                onChange={(event) => setDeckSubject(event.target.value as LibrarySubject)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-[#d8d1c9] bg-white px-3 text-sm outline-none focus:border-[#d97757]"
-              >
-                <option value="MATH">Toán</option>
-                <option value="CHEMISTRY">Hóa học</option>
-                <option value="PHYSICS">Vật lý</option>
-              </select>
+              {subjectRestriction ? (
+                <div className="mt-1.5 flex h-10 items-center rounded-lg border border-[#d8d1c9] bg-[#f3efe9] px-3 text-sm text-[#4f4943]">
+                  {SUBJECT_LABELS[subjectRestriction]}
+                </div>
+              ) : (
+                <select
+                  value={deckSubject}
+                  onChange={(event) => setDeckSubject(event.target.value as LibrarySubject)}
+                  className="mt-1.5 h-10 w-full rounded-lg border border-[#d8d1c9] bg-white px-3 text-sm outline-none focus:border-[#d97757]"
+                >
+                  <option value="MATH">Toán</option>
+                  <option value="CHEMISTRY">Hóa học</option>
+                  <option value="PHYSICS">Vật lý</option>
+                </select>
+              )}
             </label>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={() => setSaveDialogOpen(false)} className="rounded-lg px-3 py-2 text-sm text-[#4f4943] hover:bg-[#f7f3ee]">Hủy</button>

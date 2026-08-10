@@ -1,3 +1,5 @@
+import type { SubjectCode } from "../../lib/auth/subject-access";
+
 export type Role = "TEACHER" | "MODERATOR" | "PRINCIPAL" | "IT_STAFF" | "STUDENT";
 
 export type NavItem = {
@@ -8,6 +10,7 @@ export type NavItem = {
   expanded?: boolean;
   child?: boolean;
   requiredRole?: Role[];
+  requiredSubjects?: SubjectCode[];
 };
 
 export type NavGroup = {
@@ -31,18 +34,18 @@ export const navGroups: NavGroup[] = [
       { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["STUDENT"] },
       { label: "Lịch nộp giáo án", icon: "book", href: "/weekly-schedule", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "T\u1ea1o b\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-create", active: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
-      { label: "T\u1ea1o slide", icon: "slides", href: "/slide-create", requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
+      { label: "T\u1ea1o b\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-create", active: true, requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "T\u1ea1o slide", icon: "slides", href: "/slide-create", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "T\u1ea1o b\u00e0i ki\u1ec3m tra", icon: "check", href: "/exam-create-new", requiredRole: ["TEACHER", "MODERATOR"] },
     ],
   },
   {
     label: "M\u00f4 ph\u1ecfng & kh\u00e1m ph\u00e1",
     items: [
-      { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/homepage", expanded: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
-      { label: "V\u1eadt l\u00fd", icon: "physics", href: "/mo-phong-vat-ly", child: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
-      { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/periodic-table", child: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
-      { label: "C\u1ea5u t\u1ea1o ch\u1ea5t", icon: "atom", href: "/molecules", child: true, requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/homepage", expanded: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"], requiredSubjects: ["PHYSICS", "CHEMISTRY"] },
+      { label: "V\u1eadt l\u00fd", icon: "physics", href: "/mo-phong-vat-ly", child: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"], requiredSubjects: ["PHYSICS"] },
+      { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/periodic-table", child: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"], requiredSubjects: ["CHEMISTRY"] },
+      { label: "C\u1ea5u t\u1ea1o ch\u1ea5t", icon: "atom", href: "/molecules", child: true, requiredRole: ["TEACHER", "MODERATOR"], requiredSubjects: ["CHEMISTRY"] },
     ],
   },
   {

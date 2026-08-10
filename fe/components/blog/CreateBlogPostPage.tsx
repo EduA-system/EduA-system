@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { getSubjectRestriction } from "@/lib/auth/subject-access";
 import { api, optimizeBlogCover, SUBJECTS, subjectLabel, uploadFile, type Detail, type SubjectValue } from "@/lib/blog";
 import { RichEditor } from "./RichEditor";
 
@@ -70,10 +71,11 @@ export function CreateBlogPostPage() {
 function CreateBlogPostForm() {
   const router = useRouter();
   const { authFetch, user } = useAuth();
+  const subjectRestriction = getSubjectRestriction(user);
   const userId = user?.id ?? null;
   const [storedDraft] = useState(() => (userId ? readStoredDraft(userId) : null));
   const [title, setTitle] = useState(() => storedDraft?.title ?? "");
-  const [subject, setSubject] = useState<SubjectValue>(() => storedDraft?.subject ?? SUBJECTS[0]);
+  const [subject, setSubject] = useState<SubjectValue>(() => subjectRestriction ?? storedDraft?.subject ?? SUBJECTS[0]);
   const [content, setContent] = useState(() => storedDraft?.content ?? "");
   const [initialEditorContent, setInitialEditorContent] = useState(() => storedDraft?.content ?? "");
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(() => storedDraft?.coverImageUrl ?? null);
@@ -82,6 +84,11 @@ function CreateBlogPostForm() {
   const [error, setError] = useState("");
   const [draftRestored, setDraftRestored] = useState(() => Boolean(storedDraft));
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!subjectRestriction || subject === subjectRestriction) return;
+    queueMicrotask(() => setSubject(subjectRestriction));
+  }, [subjectRestriction, subject]);
 
   useEffect(() => {
     if (!userId) return;
@@ -118,9 +125,12 @@ function CreateBlogPostForm() {
     setSubmitting(true);
     setError("");
     try {
+      // Bản nháp trong localStorage có thể mang môn cũ (lưu trước khi tài khoản được
+      // đổi/gán môn), nên chốt lại theo chuyên môn hiện tại ngay lúc gửi.
+      const effectiveSubject = subjectRestriction ?? subject;
       await api<Detail>(authFetch, "/blog-posts", {
         method: "POST",
-        body: JSON.stringify({ title, content, subject, thumbnailUrl: coverImageUrl }),
+        body: JSON.stringify({ title, content, subject: effectiveSubject, thumbnailUrl: coverImageUrl }),
       });
       if (userId) window.localStorage.removeItem(draftStorageKey(userId));
       router.push("/blog?toast=created");
@@ -134,7 +144,7 @@ function CreateBlogPostForm() {
   function discardDraft() {
     if (userId) window.localStorage.removeItem(draftStorageKey(userId));
     setTitle("");
-    setSubject(SUBJECTS[0]);
+    setSubject(subjectRestriction ?? SUBJECTS[0]);
     setContent("");
     setInitialEditorContent("");
     setCoverImageUrl(null);
@@ -171,9 +181,15 @@ function CreateBlogPostForm() {
 
                 <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Chủ đề</span>
-              <select value={subject} onChange={(event) => setSubject(event.target.value as SubjectValue)} className="mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] focus:outline-none">
-                {SUBJECTS.map((item) => <option key={item} value={item}>{subjectLabel(item)}</option>)}
-              </select>
+              {subjectRestriction ? (
+                <div className="mt-1.5 flex h-11 items-center rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e]">
+                  {subjectLabel(subjectRestriction)}
+                </div>
+              ) : (
+                <select value={subject} onChange={(event) => setSubject(event.target.value as SubjectValue)} className="mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] focus:outline-none">
+                  {SUBJECTS.map((item) => <option key={item} value={item}>{subjectLabel(item)}</option>)}
+                </select>
+              )}
                 </label>
               </div>
 
