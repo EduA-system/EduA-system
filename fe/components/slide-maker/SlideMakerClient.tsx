@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SlideEditor } from "@/components/slide-editor/SlideEditor";
+import { SlidePresentationOverlay } from "@/components/slide-presentation/SlidePresentationOverlay";
 import type { DesignStepControls, DesignStepStatus } from "@/components/slide-editor/TopBar";
 import { skeletonSlidesFromParts } from "@/components/slide-editor/lib/be-mapper";
 import type { Slide } from "@/components/slide-editor/types";
@@ -65,6 +66,7 @@ export function SlideMakerClient() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [deckTitle, setDeckTitle] = useState("");
   const [deckSubject, setDeckSubject] = useState<LibrarySubject>("PHYSICS");
+  const [presentSlides, setPresentSlides] = useState<Slide[] | null>(null);
   const replaceSlides = useEditorStore((s) => s.replaceSlides);
 
   useEffect(() => {
@@ -235,14 +237,15 @@ export function SlideMakerClient() {
     void saveDeck({ title, subject: deckSubject });
   }, [deckSubject, deckTitle, saveDeck]);
 
+  // Trình chiếu là một lớp phủ ngay trên trình soạn thảo (không điều hướng, không tải lại
+  // trang), nên thoát bằng Esc là quay lại đúng trạng thái editor đang mở.
   const openPresentation = useCallback(() => {
-    saveSlides(useEditorStore.getState().slides);
-    const params = new URLSearchParams();
-    if (savedLibraryId) params.set("libraryId", savedLibraryId);
-    else if (generating) params.set("generating", "1");
-    const query = params.toString();
-    router.push(`/slide-present${query ? `?${query}` : ""}`);
-  }, [generating, router, savedLibraryId]);
+    const deck = useEditorStore.getState().slides;
+    saveSlides(deck);
+    setPresentSlides(deck);
+  }, []);
+
+  const closePresentation = useCallback(() => setPresentSlides(null), []);
 
   const finishStep = useCallback((step: 1 | 2 | 3, failedSlideIds: string[] = []) => {
     const key = `step${step}` as keyof StepStates;
@@ -363,6 +366,7 @@ export function SlideMakerClient() {
           </div>
         </div>
       ) : null}
+      {presentSlides ? <SlidePresentationOverlay slides={presentSlides} onExit={closePresentation} /> : null}
     </main>
   );
 }
