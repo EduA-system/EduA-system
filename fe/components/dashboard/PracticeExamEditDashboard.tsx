@@ -21,6 +21,7 @@ import {
   type PracticeExam,
 } from "@/services/practiceExamService";
 import { examHtml, examLoadingSkeletonHtml, type Metadata } from "@/lib/practice-exam-html";
+import { exportDocumentPdf, openExportedPdf } from "@/lib/document-export";
 
 function draftMetadata(): Metadata {
   const fallback: Metadata = { subject: "Vật lí", grade: "10", duration: 15, difficulty: "MEDIUM" };
@@ -45,6 +46,7 @@ export function PracticeExamEditDashboard() {
   const [savedExam, setSavedExam] = useState<PracticeExam | null>(null);
   const [streamedExam, setStreamedExam] = useState<PracticeExam | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [extensions] = useState(() =>
     createEditorExtensions({ onMathClick: setMathClick }),
   );
@@ -103,6 +105,28 @@ export function PracticeExamEditDashboard() {
     } finally { setSaving(false); }
   }
 
+  async function exportPdf() {
+    if (!editor) { setNotice("Chưa có đề để xuất PDF."); return; }
+    const title = editor.state.doc.firstChild?.textContent.trim() || savedExam?.title || streamedExam?.title || "Đề kiểm tra";
+    setExportingPdf(true);
+    setNotice(null);
+    try {
+      const result = await exportDocumentPdf(authFetch, {
+        type: "TEST",
+        title,
+        documentHtml: editor.getHTML(),
+        marginLeft: margins.left,
+        marginRight: margins.right,
+      });
+      openExportedPdf(result);
+      setNotice("Đã xuất PDF bài kiểm tra.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Không thể xuất PDF bài kiểm tra.");
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   return (
     <main className="relative h-screen overflow-hidden bg-white text-[#2b2926]">
       <div className="flex h-full">
@@ -129,14 +153,11 @@ export function PracticeExamEditDashboard() {
               {readOnlyClassResource && <div className="flex min-w-0 flex-1 justify-center text-xs font-medium text-[#6b6b6b]">Chế độ chỉ xem</div>}
               {!readOnlyClassResource && <button
                 type="button"
-                onClick={() =>
-                  setNotice(
-                    "Tính năng xuất PDF/Word sẽ được tích hợp sau khi API lưu đề hoàn thiện.",
-                  )
-                }
+                onClick={() => void exportPdf()}
+                disabled={exportingPdf}
                 className="shrink-0 rounded-lg bg-[#d97757] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#c96545]"
               >
-                Xuất đề
+                {exportingPdf ? "Đang xuất..." : "Xuất đề"}
               </button>}
             </div>
             {/* Không đặt overflow-x-auto — EditorTools.tsx đã tự flex-wrap khi hẹp nên không cần

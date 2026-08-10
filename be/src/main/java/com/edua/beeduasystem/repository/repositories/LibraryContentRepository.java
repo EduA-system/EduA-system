@@ -16,5 +16,7 @@ public interface LibraryContentRepository {
     SearchResult searchApproved(LibraryContentType type, Subject subject, String q, int page, int size);
     /** Hàng đợi kiểm duyệt: nội dung theo một status + subject cụ thể (Moderator chỉ thấy đúng môn mình). */
     SearchResult searchByStatusAndSubject(LibraryContentStatus status, Subject subject, int page, int size);
+    /** Thống kê Mod: tổng số nội dung theo status, cùng subject — dùng cho donut Duyệt/Từ chối (Hub). */
+    long countByStatusAndSubject(LibraryContentStatus status, Subject subject);
     record SearchResult(List<LibraryContent> items, long total) { }
 }

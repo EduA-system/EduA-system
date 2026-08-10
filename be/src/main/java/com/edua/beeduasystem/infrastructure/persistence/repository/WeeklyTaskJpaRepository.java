@@ -27,4 +27,18 @@ public interface WeeklyTaskJpaRepository extends JpaRepository<WeeklyTaskEntity,
     Page<WeeklyTaskEntity> searchModerationQueue(@Param("subject") Subject subject, @Param("status") WeeklyTaskReviewStatus status,
                                                   @Param("grade") Integer grade, @Param("chapterCode") String chapterCode,
                                                   @Param("lessonCode") String lessonCode, Pageable pageable);
+
+    /** Thống kê Mod: raw teacherId + count, map sang {@code TeacherOverdueAggregate} ở tầng adapter. */
+    @Query("""
+            SELECT e.teacherId, COUNT(e) FROM WeeklyTaskEntity e
+            WHERE e.subject = :subject
+              AND e.weekStartDate BETWEEN :fromWeek AND :toWeek
+              AND e.reviewStatus = com.edua.beeduasystem.domain.model.weeklytask.WeeklyTaskReviewStatus.NOT_SUBMITTED
+              AND e.deadline < CURRENT_TIMESTAMP
+            GROUP BY e.teacherId
+            """)
+    List<Object[]> countOverdueByTeacherRaw(@Param("subject") Subject subject, @Param("fromWeek") LocalDate fromWeek,
+                                             @Param("toWeek") LocalDate toWeek);
+
+    long countBySubjectAndReviewStatus(Subject subject, WeeklyTaskReviewStatus reviewStatus);
 }

@@ -26,8 +26,8 @@ import { scanPendingDiffs } from "../LessonEditor/sectionDiff";
 import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
-import { openLessonPlanPrintDialog } from "@/lib/lesson-plan-pdf-export";
 import { createLessonThumbnail } from "@/lib/library-thumbnail";
+import { exportDocumentPdf, openExportedPdf } from "@/lib/document-export";
 
 function parseLessonGrade(value: string | undefined): number | undefined {
   const match = value?.match(/\b(10|11|12)\b/);
@@ -54,6 +54,7 @@ export function LessonEditDashboard() {
   const [lessonSource, setLessonSource] = useState<LessonSource | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   // Còn đề xuất AI (đang hiện diff đỏ/xanh trong tài liệu) chưa Chấp nhận/Bỏ — chặn "Lưu" khi
   // true, tránh lưu một bản giáo án dở dang có cả nội dung cũ/mới lẫn lộn mà sau khi mở lại
@@ -240,14 +241,28 @@ export function LessonEditDashboard() {
     [authFetch, editor, lessonSession],
   );
 
-  const exportPdf = useCallback(() => {
+  const exportPdf = useCallback(async () => {
     if (!editor) return;
     const title = editor.state.doc.firstChild?.textContent.trim() || "Giáo án";
-    if (!openLessonPlanPrintDialog(title, editor.getHTML())) {
+    setExportingPdf(true);
+    setSaveStatus("idle");
+    setSaveError(null);
+    try {
+      const result = await exportDocumentPdf(authFetch, {
+        type: "LESSON_PLAN",
+        title,
+        documentHtml: editor.getHTML(),
+        marginLeft: margins.left,
+        marginRight: margins.right,
+      });
+      openExportedPdf(result);
+    } catch (error) {
       setSaveStatus("error");
-      setSaveError("Trình duyệt đã chặn cửa sổ in. Hãy cho phép popup rồi thử lại.");
+      setSaveError(error instanceof Error ? error.message : "Không thể xuất PDF.");
+    } finally {
+      setExportingPdf(false);
     }
-  }, [editor]);
+  }, [authFetch, editor, margins.left, margins.right]);
 
   // Khi AI đã hoàn thành toàn bộ activity, lưu bản giáo án đầu tiên vào thư viện.
   useLessonPlanStream(editor, (session) => {
@@ -283,7 +298,11 @@ export function LessonEditDashboard() {
                 >
                   <SaveIcon />
                 </HeaderActionButton>
-                <HeaderActionButton onClick={exportPdf} label="Xuất PDF">
+                <HeaderActionButton
+                  onClick={() => void exportPdf()}
+                  disabled={exportingPdf}
+                  label={exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                >
                   <PrintIcon />
                 </HeaderActionButton>
                 <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>

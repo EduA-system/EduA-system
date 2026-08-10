@@ -27,6 +27,7 @@ const iconFiles: Record<string, string> = {
   settings: "settings.svg",
   slides: "slide.svg",
   spark: "logo-spark.svg",
+  stats: "stats.svg",
   upload: "upload.svg",
 };
 

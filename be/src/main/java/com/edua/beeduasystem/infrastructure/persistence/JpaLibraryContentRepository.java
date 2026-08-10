@@ -53,5 +53,8 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
         Page<LibraryContentEntity> result = jpa.findAll(spec, PageRequest.of(Math.max(0,page), Math.min(Math.max(1,size),100), Sort.by("submittedAt").ascending()));
         return new SearchResult(result.getContent().stream().map(JpaLibraryContentRepository::toDomain).toList(), result.getTotalElements());
     }
+    @Override @Transactional(readOnly = true) public long countByStatusAndSubject(LibraryContentStatus status, Subject subject) {
+        return jpa.countByStatusAndSubjectAndDeletedAtIsNull(status, subject);
+    }
     private static LibraryContent toDomain(LibraryContentEntity e) { return new LibraryContent(e.getId(),e.getOwnerId(),e.getType(),e.getTitle(),e.getSubject(),e.getGrade(),e.getTextbookCode(),e.getChapterCode(),e.getStatus(),e.getPayload(),e.getThumbnailUrl(),e.getCreatedAt(),e.getUpdatedAt(),e.getSubmittedAt(),e.getDeletedAt(),e.getReviewedBy(),e.getReviewedAt(),e.getRejectionReason()); }
 }

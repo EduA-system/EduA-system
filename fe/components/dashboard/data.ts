@@ -58,6 +58,7 @@ export const navGroups: NavGroup[] = [
       { label: "Blog Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/blog-moderator", requiredRole: ["MODERATOR"] },
       { label: "Hub Ki\u1ec3m duy\u1ec7t", icon: "community", href: "/hub-moderation", requiredRole: ["MODERATOR"] },
       { label: "Duy\u1ec7t gi\u00e1o \u00e1n tu\u1ea7n", icon: "check", href: "/lesson-plan-approval", requiredRole: ["MODERATOR"] },
+      { label: "Th\u1ed1ng k\u00ea", icon: "stats", href: "/statistics", requiredRole: ["MODERATOR"] },
       { label: "Qu\u1ea3n l\u00fd t\u00e0i kho\u1ea3n", icon: "settings", href: "/user-management", requiredRole: ["MODERATOR", "PRINCIPAL"] },
       { label: "C\u1ea5u h\u00ecnh AI", icon: "settings", href: "/it-staff", requiredRole: ["IT_STAFF"] },
       { label: "Nh\u1eadt k\u00fd ho\u1ea1t \u0111\u1ed9ng", icon: "settings", href: "/it-staff/activity-log", requiredRole: ["IT_STAFF"] },
