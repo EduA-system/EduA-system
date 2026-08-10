@@ -114,6 +114,54 @@ describe("dynamic slide layout engine", () => {
     expect(elements.find((element) => element.contentSlot === periodic!.id)).toMatchObject({ type: "simulation", kind: "periodic-table" });
   });
 
+  it("gives a physics experiment the whole slide below the title", () => {
+    const base = fixture("experiment");
+    const layout = generateSlideLayout({
+      ...base,
+      blocks: [
+        base.blocks[0],
+        text("body", "Tàu lượn có cả động năng và thế năng."),
+        { id: "physics", kind: "physics", role: "visual", semanticType: "physics-experiment", priority: "primary", required: true, physicsRequest: "bảo toàn cơ năng con lắc" },
+      ],
+    });
+    const stage = layout.slots.find((slot) => slot.kind === "physics");
+    const title = layout.slots.find((slot) => slot.sourceBlockId === "title");
+
+    expect(layout.topology).toBe("physics-stage");
+    // Tràn sát mép trái/phải/đáy canvas, không nằm trong lề `contentBounds`.
+    expect(stage).toMatchObject({ sourceBlockId: "physics", zone: "aside", rect: { x: 0, w: 960 } });
+    expect(stage!.rect.y + stage!.rect.h).toBe(540);
+    expect(stage!.rect.y).toBeGreaterThanOrEqual(title!.rect.y + title!.rect.h);
+    // Khung ngang, không bị `balancedImageRect` ép về gần vuông như slot ảnh.
+    expect(stage!.rect.w / stage!.rect.h).toBeGreaterThan(1.5);
+    // Chữ đi kèm bị bỏ để mô phỏng chiếm trọn phần thân.
+    expect(layout.slots.some((slot) => slot.sourceBlockId === "body")).toBe(false);
+  });
+
+  it("renders the physics stage as a full-bleed sandbox placeholder", () => {
+    const base = fixture("experiment");
+    const layout = generateSlideLayout({
+      ...base,
+      blocks: [
+        base.blocks[0],
+        { id: "physics", kind: "physics", role: "visual", semanticType: "physics-experiment", priority: "primary", required: true, physicsRequest: "con lắc đơn" },
+      ],
+    });
+    const stage = layout.slots.find((slot) => slot.kind === "physics")!;
+    const element = renderSlideLayout(layout, { palette: ["#222222"], headerLabel: "Vật lý" })
+      .find((item) => item.contentSlot === stage.id);
+
+    expect(element).toMatchObject({
+      type: "simulation",
+      kind: "sandbox",
+      experimentId: "",
+      title: "con lắc đơn",
+      x: 0,
+      w: 960,
+    });
+    expect(element!.y + element!.h).toBe(540);
+  });
+
   it("adds a prominent illustration to sparse explanatory slides", () => {
     const result = generateSlideLayout(fixture("concept"));
     const image = result.slots.find((slot) => slot.kind === "image");

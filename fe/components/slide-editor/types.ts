@@ -150,7 +150,7 @@ export interface DrawElement extends ElementBase {
 }
 
 // Element nhúng một mô phỏng tương tác (click-to-simulate khi trình chiếu).
-// `kind` là literal đơn cho MVP — mở rộng thành union khi thêm periodic-table/physics.
+// Ba họ: phân tử 3D, bảng tuần hoàn, và thí nghiệm vật lý chạy qua Sandpack.
 export type PeriodicSimulationPayload = {
   mode: "element" | "table";
   elementSymbols: string[];
@@ -171,7 +171,32 @@ export interface PeriodicSimulationElement extends ElementBase {
   periodic: PeriodicSimulationPayload;
 }
 
-export type SimulationElement = MoleculeSimulationElement | PeriodicSimulationElement;
+/**
+ * Thí nghiệm vật lý từ `components/simulations/`, chạy bằng Sandpack.
+ *
+ * CHỈ lưu định danh, không lưu mã nguồn: file thật đọc từ đĩa qua
+ * `/api/sandbox-experiment` lúc kích hoạt. Nhờ vậy deck không phình theo cây
+ * phụ thuộc của thí nghiệm, và sửa `components/simulations/` là slide đã lưu
+ * cũng chạy theo bản mới thay vì đóng băng tại thời điểm lưu.
+ */
+export interface SandboxSimulationElement extends ElementBase {
+  type: "simulation";
+  kind: "sandbox";
+  /** Tên file preset (không đuôi) — khớp `ExperimentSummary.id`, dùng để gọi API. */
+  experimentId: string;
+  /**
+   * `id` mà preset TỰ khai báo — khác tên file ở 13 preset (vd `brownian.ts`
+   * khai `brownian-pollen`). Ảnh thu nhỏ khoá theo giá trị này.
+   */
+  presetId: string;
+  /** Denormalize để poster hiện tên mà không phải gọi API. */
+  title: string;
+}
+
+export type SimulationElement =
+  | MoleculeSimulationElement
+  | PeriodicSimulationElement
+  | SandboxSimulationElement;
 
 export type SlideElement =
   | TextElement
@@ -196,7 +221,8 @@ type BaseElementPatch = Partial<
 
 export type ElementPatch =
   | (BaseElementPatch & Partial<Omit<MoleculeSimulationElement, "type">>)
-  | (BaseElementPatch & Partial<Omit<PeriodicSimulationElement, "type">>);
+  | (BaseElementPatch & Partial<Omit<PeriodicSimulationElement, "type">>)
+  | (BaseElementPatch & Partial<Omit<SandboxSimulationElement, "type">>);
 
 export type AlignDir = "left" | "right" | "top" | "bottom" | "cx" | "cy";
 

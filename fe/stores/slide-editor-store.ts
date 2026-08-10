@@ -24,6 +24,12 @@ interface EditorState {
   selectedIds: string[];
   clipboard: SlideElement[];
   history: { past: Snapshot[]; future: Snapshot[] };
+  /**
+   * Id các element sandbox đang chạy thật trong editor. Trạng thái RUNTIME:
+   * cố ý nằm ngoài `slides` nên không vào snapshot history và không được
+   * serialize khi lưu deck — mở lại slide luôn bắt đầu ở poster tĩnh.
+   */
+  activeSandboxIds: string[];
 
   currentSlide: () => Slide | undefined;
 
@@ -57,6 +63,7 @@ interface EditorState {
   ungroupSelected: () => void;
   setSlideBackground: (bg: string) => void;
   toggleLock: (ids: string[]) => void;
+  toggleSandboxActive: (id: string) => void;
   copySelected: () => void;
   cutSelected: () => void;
   paste: () => void;
@@ -159,6 +166,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedIds: [],
   clipboard: [],
   history: { past: [], future: [] },
+  activeSandboxIds: [],
 
   currentSlide: () => {
     const { slides, currentSlideId } = get();
@@ -578,6 +586,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         })),
       };
     }),
+
+  // Không chặn theo slide bị khoá: chạy thử chỉ xem, không sửa nội dung slide.
+  toggleSandboxActive: (id) =>
+    set((state) => ({
+      activeSandboxIds: state.activeSandboxIds.includes(id)
+        ? state.activeSandboxIds.filter((active) => active !== id)
+        : [...state.activeSandboxIds, id],
+    })),
 
   copySelected: () =>
     set((state) => {

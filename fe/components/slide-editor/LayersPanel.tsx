@@ -114,7 +114,11 @@ function elemLabel(el: SlideElement): string {
   if (el.type === "shape") return el.shape === "ellipse" ? "Ellipse" : "Rectangle";
   if (el.type === "line") return "Line";
   if (el.type === "arrow") return "Arrow";
-  if (el.type === "simulation") return el.kind === "molecule" ? el.molecule.name : (el.periodic.focus || el.periodic.elementSymbols.join(", "));
+  if (el.type === "simulation") {
+    if (el.kind === "molecule") return el.molecule.name;
+    if (el.kind === "sandbox") return el.title;
+    return el.periodic.focus || el.periodic.elementSymbols.join(", ");
+  }
   return el.type;
 }
 
@@ -354,10 +358,13 @@ export function PropertiesContent() {
   const sendBackward = useEditorStore((s) => s.sendBackward);
   const bringToFront = useEditorStore((s) => s.bringToFront);
   const sendToBack = useEditorStore((s) => s.sendToBack);
+  const toggleSandboxActive = useEditorStore((s) => s.toggleSandboxActive);
+  const activeSandboxIds = useEditorStore((s) => s.activeSandboxIds);
   const [lockRatio, setLockRatio] = useState(false);
 
   const elements = slide?.elements ?? [];
   const selected = selectedIds.length === 1 ? elements.find((el) => el.id === selectedIds[0]) : null;
+  const sandboxRunning = selected ? activeSandboxIds.includes(selected.id) : false;
   const slideLocked = isSlideLockedForGeneration(slide);
   const panelDisabled = slideLocked || !selected;
   const ratio = selected && selected.w > 0 && selected.h > 0 ? selected.w / selected.h : 1;
@@ -391,6 +398,29 @@ export function PropertiesContent() {
         </div>
       ) : (
         <div className="space-y-4">
+          {selected.type === "simulation" && selected.kind === "sandbox" && (
+            <section>
+              <SectionTitle>Thí nghiệm vật lý</SectionTitle>
+              <div className="mb-1.5 truncate text-[11px] text-[#6b625a]" title={selected.title}>{selected.title}</div>
+              <button
+                type="button"
+                onClick={() => toggleSandboxActive(selected.id)}
+                disabled={!selected.experimentId}
+                className={`w-full rounded-[7px] border px-3 py-2 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  sandboxRunning
+                    ? "border-[#d97757] bg-[#f6eadf] text-[#d97757]"
+                    : "border-[#e8e2d9] bg-white text-[#4f4943] hover:bg-[#fbfaf8]"
+                }`}
+              >
+                {!selected.experimentId ? "Chưa gán thí nghiệm" : sandboxRunning ? "Dừng chạy thử" : "Chạy thử"}
+              </button>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-[#b8aea5]">
+                Mô phỏng được biên dịch trong trình duyệt nên cần vài giây và phải có mạng.
+                Khi trình chiếu, người xem bấm vào slide để chạy.
+              </p>
+            </section>
+          )}
+
           <section>
             <SectionTitle>Thứ tự lớp</SectionTitle>
             <div className="grid grid-cols-2 gap-1.5">

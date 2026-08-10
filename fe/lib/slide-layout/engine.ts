@@ -29,16 +29,33 @@ const fontByToken: Record<string, number> = {
 const MIN_VISUAL_WIDTH_RATIO = 0.35;
 const MIN_VISUAL_HEIGHT_RATIO = 0.45;
 
+/** Khoảng hở giữa đáy tiêu đề và mép trên sân khấu mô phỏng. */
+const PHYSICS_STAGE_GAP = 14;
+
 /** Visual blocks occupy an aside-sized media slot. */
 function isVisualLikeKind(kind: ContentBlock["kind"]): boolean {
-  return kind === "visual" || kind === "molecule" || kind === "periodic";
+  return kind === "visual" || kind === "molecule" || kind === "periodic" || kind === "physics";
 }
 
 function slotKindFor(kind: ContentBlock["kind"]): LayoutSlot["kind"] {
   if (kind === "visual") return "image";
   if (kind === "molecule") return "molecule";
   if (kind === "periodic") return "periodic";
+  if (kind === "physics") return "physics";
   return "text";
+}
+
+/** Slot chiếm chỗ như một khối hình, không phải một dòng chữ. */
+function isVisualLikeSlot(kind: LayoutSlot["kind"]): boolean {
+  return kind === "image" || kind === "molecule" || kind === "periodic" || kind === "physics";
+}
+
+/**
+ * Slot mô phỏng được phép tràn ra ngoài `contentBounds` — nó là sân khấu chiếm
+ * trọn bề ngang canvas, không phải một khối nội dung nằm trong lề slide.
+ */
+function slotMayBleed(kind: LayoutSlot["kind"]): boolean {
+  return kind === "physics";
 }
 
 /** Keep illustration crops useful: neither a banner nor a thin portrait strip. */
@@ -63,7 +80,10 @@ function makeSlot(
   sourcePartId?: string,
   token = zone === "hero" ? "text-hero" : zone === "formula" ? "text-formula" : zone === "caption" ? "text-caption" : "text-body",
 ): LayoutSlot {
-  const fittedRect = isVisualLikeKind(block.kind) ? balancedImageRect(rect) : rect;
+  // Mô phỏng KHÔNG qua `balancedImageRect`: nó không phải khung cắt ảnh mà là
+  // một giao diện ngang (cảnh bên trái, bảng tham số bên phải), ép về gần vuông
+  // là bóp mất chỗ của cảnh.
+  const fittedRect = isVisualLikeKind(block.kind) && block.kind !== "physics" ? balancedImageRect(rect) : rect;
   const limits = capacity(fittedRect, fontByToken[token] ?? 18);
   return {
     id: `slot:${block.id}${sourcePartId ? `:${sourcePartId}` : ""}`,
@@ -215,8 +235,35 @@ function buildCandidate(input: SlideLayoutInput, seed: number, index: number): C
   const horizontal = random() >= 0.5;
   const ratio = 0.42 + random() * 0.16;
   let topology = "stack";
+  /** Block bị bỏ khỏi bố cục có chủ đích — không tính vào ràng buộc `required`. */
+  const omitted = new Set<string>();
 
-  if (input.slideType === "intro" || input.slideType === "section") {
+  const physics = contentBlocks.find((block) => block.kind === "physics");
+
+  if (physics) {
+    /**
+     * Slide có thí nghiệm tương tác dành trọn phần thân cho mô phỏng: tiêu đề ở
+     * trên, mô phỏng tràn sát mép trái/phải/đáy canvas.
+     *
+     * Không xếp nó như một ảnh minh hoạ cạnh cột chữ: mỗi experiment trong
+     * `components/simulations/` là một giao diện ngang tự đủ (cảnh + bảng tham
+     * số + mô tả), vốn dựng cho cả màn hình ở `/mo-phong-vat-ly`. Nhồi vào nửa
+     * slide thì bảng tham số nuốt hết chỗ của cảnh.
+     *
+     * Chữ đi kèm bị bỏ vì lý do tương tự — thí nghiệm đã tự mang tiêu đề và
+     * đoạn giải thích bên trong. Prompt outline cũng đã dặn AI đừng sinh thêm;
+     * chỗ này chỉ là chốt chặn khi AI vẫn sinh.
+     */
+    topology = "physics-stage";
+    for (const block of contentBlocks) if (block !== physics) omitted.add(block.id);
+    const stageTop = titleRect.y + titleRect.h + PHYSICS_STAGE_GAP;
+    slots.push(makeSlot(physics, {
+      x: 0,
+      y: stageTop,
+      w: input.canvas.width,
+      h: input.canvas.height - stageTop,
+    }, "aside"));
+  } else if (input.slideType === "intro" || input.slideType === "section") {
     topology = "section-opener-centered";
     const heroRect = { x: bounds.x + 90, y: bounds.y + 130, w: bounds.w - 180, h: 150 };
     slots[0].rect = heroRect;
@@ -298,20 +345,20 @@ function buildCandidate(input: SlideLayoutInput, seed: number, index: number): C
     slots.push(...generic.slots); structures.push(...generic.structures);
   }
 
-  const requiredIds = new Set(input.blocks.filter((block) => block.required).map((block) => block.id));
+  const requiredIds = new Set(input.blocks.filter((block) => block.required && !omitted.has(block.id)).map((block) => block.id));
   const represented = new Set(slots.map((slot) => slot.sourceBlockId));
   const visualsAreProminent = slots
-    .filter((slot) => slot.kind === "image" || slot.kind === "molecule" || slot.kind === "periodic")
+    .filter((slot) => isVisualLikeSlot(slot.kind))
     .every((slot) => slot.rect.w >= body.w * MIN_VISUAL_WIDTH_RATIO && slot.rect.h >= body.h * MIN_VISUAL_HEIGHT_RATIO);
   const valid = [...requiredIds].every((id) => represented.has(id))
-    && slots.every((slot) => inside(slot.rect, bounds) && slot.rect.w >= (slot.kind === "image" || slot.kind === "molecule" || slot.kind === "periodic" ? 120 : 42) && slot.rect.h >= 24)
+    && slots.every((slot) => (slotMayBleed(slot.kind) || inside(slot.rect, bounds)) && slot.rect.w >= (isVisualLikeSlot(slot.kind) ? 120 : 42) && slot.rect.h >= 24)
     && visualsAreProminent
     && structures.every((item) => inside(item.rect, bounds));
   const area = slots.reduce((sum, slot) => sum + slot.rect.w * slot.rect.h, 0);
   const coverage = Math.min(100, (area / (bounds.w * bounds.h)) * 100);
   const near = slots.filter(slotNearCapacity).length;
   const semantic = input.slideType === "experiment"
-    ? slots.some((slot) => (slot.kind === "image" || slot.kind === "molecule" || slot.kind === "periodic") && slot.rect.w >= body.w * 0.3) ? 100 : 35
+    ? slots.some((slot) => isVisualLikeSlot(slot.kind) && slot.rect.w >= body.w * 0.3) ? 100 : 35
     : 92;
   const score = {
     readability: Math.max(0, 100 - near * 12),

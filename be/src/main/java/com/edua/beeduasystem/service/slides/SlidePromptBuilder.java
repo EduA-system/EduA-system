@@ -290,6 +290,12 @@ public class SlidePromptBuilder {
                 - periodic: CHỈ dùng khi môn học nêu trên là Hoá học và nội dung slide cần nguyên tố, nhóm/chu kỳ,
                   bảng tuần hoàn hoặc cấu hình electron; thêm `periodicRequest`, có thể thêm `mode` (element|table),
                   `elementSymbols` (vd ["Na","Cl"]) và `focus`. Tuyệt đối không dùng cho môn khác.
+                - physics: CHỈ dùng khi môn học nêu trên là Vật lý và nội dung slide cần minh hoạ một thí nghiệm
+                  hoặc hiện tượng bằng mô phỏng tương tác; thêm `physicsRequest` là tên thí nghiệm/hiện tượng ngắn gọn
+                  bằng tiếng Việt (vd "con lắc đơn", "giao thoa sóng nước", "định luật Hooke"). Không mô tả dài dòng,
+                  không nêu thông số. Tuyệt đối không dùng cho môn khác.
+                  Slide có block physics thì block đó phải là block DUY NHẤT của slide: mô phỏng chiếm trọn slide và
+                  đã tự mang tiêu đề, mô tả, bảng tham số bên trong, nên mọi block text kèm theo đều thừa và sẽ bị bỏ.
                 - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]` đúng kích thước,
                   `preferredPresentation` (auto|table|panels).
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
@@ -372,6 +378,12 @@ public class SlidePromptBuilder {
                 - periodic: CHỈ dùng khi môn học nêu trên là Hoá học và nội dung slide cần nguyên tố, nhóm/chu kỳ,
                   bảng tuần hoàn hoặc cấu hình electron; thêm `periodicRequest`, có thể thêm `mode` (element|table),
                   `elementSymbols` (vd ["Na","Cl"]) và `focus`. Tuyệt đối không dùng cho môn khác.
+                - physics: CHỈ dùng khi môn học nêu trên là Vật lý và nội dung slide cần minh hoạ một thí nghiệm
+                  hoặc hiện tượng bằng mô phỏng tương tác; thêm `physicsRequest` là tên thí nghiệm/hiện tượng ngắn gọn
+                  bằng tiếng Việt (vd "con lắc đơn", "giao thoa sóng nước", "định luật Hooke"). Không mô tả dài dòng,
+                  không nêu thông số. Tuyệt đối không dùng cho môn khác.
+                  Slide có block physics thì block đó phải là block DUY NHẤT của slide: mô phỏng chiếm trọn slide và
+                  đã tự mang tiêu đề, mô tả, bảng tham số bên trong, nên mọi block text kèm theo đều thừa và sẽ bị bỏ.
                 - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]` đúng kích thước,
                   `preferredPresentation` (auto|table|panels).
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
@@ -400,6 +412,7 @@ public class SlidePromptBuilder {
 
                 GIỚI HẠN ĐỘ DÀI (bắt buộc, slide sẽ bị từ chối nếu vượt quá — hãy chắt lọc ý chính thay vì nhồi hết nội dung nguồn):
                 - Slide có block visual, molecule hoặc periodic: tổng ký tự các block text khác tối đa 60.
+                - Slide có block physics: không kèm block nào khác (mô phỏng chiếm trọn slide).
                 - Slide slideType=comparison: tổng ký tự (nhãn item, nhãn criteria, toàn bộ values) tối đa 130.
                 - Slide slideType=table: tổng ký tự (cột, toàn bộ ô) tối đa 150; mỗi ô tối đa 40 ký tự.
                 - Các slide còn lại (không visual, không phải comparison/table): tổng ký tự các block text tối đa 100.

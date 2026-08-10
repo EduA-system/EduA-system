@@ -82,7 +82,14 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
         : element.type === "simulation"
           ? element.kind === "molecule"
             ? Boolean(fill?.molecule)
-            : Boolean(fill?.periodic)
+            : element.kind === "sandbox"
+              // Mô phỏng luôn tính là có nội dung, kể cả khi Bước 3 không khớp
+              // được preset nào: slide vẫn giữ poster "Chưa gán được thí nghiệm"
+              // để giáo viên tự chọn trong editor. Slide mô phỏng không còn
+              // block nào khác (xem topology `physics-stage`), nên đánh hỏng nó
+              // là mất luôn cả tiêu đề.
+              ? true
+              : Boolean(fill?.periodic)
           : false;
   })) throw new Error("AI không điền nội dung cho slide.");
 
@@ -129,6 +136,11 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
 
     if (element.type === "simulation") {
       if (element.kind === "molecule") return fill.molecule ? { ...element, molecule: fill.molecule } : element;
+      if (element.kind === "sandbox") {
+        return fill.sandbox
+          ? { ...element, experimentId: fill.sandbox.experimentId, presetId: fill.sandbox.presetId, title: fill.sandbox.title }
+          : element;
+      }
       if (!fill.periodic) return element;
       const kind: "periodic-element" | "periodic-table" = fill.periodic.mode === "element" && fill.periodic.elementSymbols.length === 1 ? "periodic-element" : "periodic-table";
       return {

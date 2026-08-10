@@ -2,6 +2,7 @@ import { useState, type CSSProperties, type MouseEventHandler, type ReactElement
 import dynamic from "next/dynamic";
 import type { SlideElement, SimulationElement, LineMarker, DashStyle } from "./types";
 import { isGradientCss } from "./lib/gradient";
+import { sandboxViewZoom } from "./lib/sandbox-scale";
 import { ELEMENTS } from "@/components/periodic-table/data";
 import { CATEGORY_COLORS } from "@/components/periodic-table/types";
 import type { Element as PeriodicElement } from "@/components/periodic-table/types";
@@ -18,8 +19,29 @@ const MoleculeViewer = dynamic(
   }
 );
 
+// Sandpack đụng window/iframe ngay khi mount → phải tắt prerender, giống lý do
+// ở components/sandbox/SandboxClient.tsx.
+const SandboxSimulationView = dynamic(
+  () => import("./SandboxSimulationView").then((m) => m.SandboxSimulationView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center text-xs text-white/70">
+        Đang nạp thí nghiệm…
+      </div>
+    ),
+  }
+);
+
+// Ảnh thu nhỏ thí nghiệm: hàm thuần nhưng file dài hơn 3400 dòng SVG, nên nạp
+// tách chunk để editor không phải cõng nó khi deck không có element sandbox.
+const Thumb = dynamic(
+  () => import("@/components/simulations/shared/simulation-thumb").then((m) => m.Thumb),
+  { ssr: false, loading: () => null }
+);
+
 function elementsForSimulation(el: SimulationElement): PeriodicElement[] {
-  if (el.kind === "molecule") return [];
+  if (el.kind !== "periodic-element" && el.kind !== "periodic-table") return [];
   const requested = new Set(el.periodic.elementSymbols);
   return ELEMENTS.filter((element) => requested.has(element.symbol));
 }
@@ -85,16 +107,27 @@ function PeriodicMiniTable({ highlighted, focus }: { highlighted: PeriodicElemen
 }
 
 function PeriodicVisual({ el }: { el: SimulationElement }) {
-  if (el.kind === "molecule") return null;
+  if (el.kind !== "periodic-element" && el.kind !== "periodic-table") return null;
   const elements = elementsForSimulation(el);
   if (el.kind === "periodic-element" && elements[0]) return <PeriodicElementCard element={elements[0]} />;
   return <PeriodicMiniTable highlighted={elements} focus={el.periodic.focus} />;
+}
+
+/** Nhãn hiện trên poster khi mô phỏng chưa được kích hoạt. */
+function simulationPosterLabels(el: SimulationElement): { title: string; subtitle: string } {
+  if (el.kind === "molecule") return { title: el.molecule.name, subtitle: el.molecule.formula };
+  if (el.kind === "sandbox") return { title: el.title, subtitle: "Thí nghiệm vật lý" };
+  return {
+    title: el.periodic.focus || "Bảng tuần hoàn",
+    subtitle: el.periodic.elementSymbols.join(", "),
+  };
 }
 
 function SimulationBlock({
   el,
   interactive,
   previewLive,
+  sandboxActive,
   style,
   onMouseDown,
   onDoubleClick,
@@ -103,14 +136,56 @@ function SimulationBlock({
   el: SimulationElement;
   interactive?: boolean;
   previewLive?: boolean;
+  /** Người dùng đã bấm "Chạy thử" cho element này trong editor. */
+  sandboxActive?: boolean;
   style: CSSProperties;
   onMouseDown?: MouseEventHandler;
   onDoubleClick?: MouseEventHandler;
   onContextMenu?: MouseEventHandler;
 }) {
   const [activated, setActivated] = useState(false);
+  const isPeriodic = el.kind === "periodic-element" || el.kind === "periodic-table";
   const showLiveViewer = el.kind === "molecule" && Boolean(previewLive || (interactive && activated));
-  const showPeriodicViewer = el.kind !== "molecule" && Boolean(previewLive || (interactive && activated));
+  const showPeriodicViewer = isPeriodic && Boolean(previewLive || (interactive && activated));
+  /**
+   * Sandbox KHÔNG bao giờ tự chạy theo `previewLive` như molecule/periodic.
+   * Hai loại kia render tại chỗ và rẻ; sandbox thì bung một iframe bundler tải
+   * từ codesandbox.io, nên mở deck có ba slide sandbox sẽ là ba iframe cùng
+   * lúc. Luôn đòi một hành động rõ ràng: bấm khi trình chiếu, hoặc nút
+   * "Chạy thử" trong editor.
+   */
+  // `experimentId` rỗng = placeholder từ Bước 2 mà Bước 3 không phân giải được
+  // preset nào. Không cho kích hoạt: gọi API với id rỗng sẽ nhận về danh mục
+  // chứ không phải một thí nghiệm.
+  const sandboxResolved = el.kind === "sandbox" && el.experimentId.length > 0;
+  const showSandboxViewer = sandboxResolved && Boolean(sandboxActive || (interactive && activated));
+
+  if (showSandboxViewer && el.kind === "sandbox") {
+    // Khung slide thấp hơn nhiều so với cửa sổ mà giao diện thí nghiệm được
+    // dựng cho, nên cấp cho iframe một viewport logic lớn hơn rồi thu tỉ lệ về
+    // đúng khung: diện tích giữ nguyên, nội dung nhỏ lại và hết cuộn.
+    const zoom = sandboxViewZoom(el.w, el.h);
+    return (
+      <div
+        onMouseDown={previewLive ? onMouseDown : undefined}
+        onDoubleClick={previewLive ? onDoubleClick : undefined}
+        onContextMenu={previewLive ? onContextMenu : undefined}
+        style={{ ...style, cursor: previewLive ? style.cursor : "auto" }}
+        className="overflow-hidden rounded-2xl bg-slate-900"
+      >
+        <div
+          style={{
+            width: `${100 / zoom}%`,
+            height: `${100 / zoom}%`,
+            transform: `scale(${zoom})`,
+            transformOrigin: "top left",
+          }}
+        >
+          <SandboxSimulationView key={el.experimentId} experimentId={el.experimentId} />
+        </div>
+      </div>
+    );
+  }
 
   if (showPeriodicViewer) {
     return (
@@ -142,20 +217,40 @@ function SimulationBlock({
     );
   }
 
+  const labels = simulationPosterLabels(el);
   return (
     <div
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      onClick={interactive ? () => setActivated(true) : undefined}
+      onClick={interactive && (el.kind !== "sandbox" || sandboxResolved) ? () => setActivated(true) : undefined}
       role={interactive ? "button" : undefined}
       style={{ ...style, cursor: interactive ? "pointer" : style.cursor }}
-      className="flex select-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-700 text-white"
+      className="relative flex select-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-700 text-white"
     >
-      <span className="text-3xl" aria-hidden>🧪</span>
-      <span className="px-2 text-center text-sm font-semibold">{el.kind === "molecule" ? el.molecule.name : (el.periodic.focus || "Bảng tuần hoàn")}</span>
-      <span className="text-xs text-white/70">{el.kind === "molecule" ? el.molecule.formula : el.periodic.elementSymbols.join(", ")}</span>
-      {interactive && <span className="mt-1 text-[11px] text-white/80">▶ Nhấn để mô phỏng</span>}
+      {el.kind === "sandbox" ? (
+        <>
+          {/* Ảnh thu nhỏ khoá theo `presetId` (id preset tự khai), KHÔNG phải
+              tên file — 13 preset có hai giá trị này khác nhau. */}
+          <div className="absolute inset-0 opacity-70">
+            <Thumb id={el.presetId} />
+          </div>
+          <div className="relative flex flex-col items-center gap-1 bg-slate-950/60 px-3 py-2 text-center">
+            <span className="text-sm font-semibold">{labels.title}</span>
+            <span className="text-xs text-white/70">
+              {sandboxResolved ? labels.subtitle : "Chưa gán được thí nghiệm"}
+            </span>
+            {interactive && sandboxResolved && <span className="text-[11px] text-white/80">▶ Nhấn để mô phỏng</span>}
+          </div>
+        </>
+      ) : (
+        <>
+          <span className="text-3xl" aria-hidden>🧪</span>
+          <span className="px-2 text-center text-sm font-semibold">{labels.title}</span>
+          <span className="text-xs text-white/70">{labels.subtitle}</span>
+          {interactive && <span className="mt-1 text-[11px] text-white/80">▶ Nhấn để mô phỏng</span>}
+        </>
+      )}
     </div>
   );
 }
@@ -167,6 +262,8 @@ interface ElementViewProps {
   interactive?: boolean;
   /** Render live simulations in the main editor canvas while keeping thumbnails lightweight. */
   simulationPreview?: boolean;
+  /** Element sandbox này đã được bấm "Chạy thử" trong editor. */
+  sandboxActive?: boolean;
   onMouseDown?: MouseEventHandler;
   onDoubleClick?: MouseEventHandler;
   onContextMenu?: MouseEventHandler;
@@ -238,6 +335,7 @@ export function ElementView({
   hideText,
   interactive,
   simulationPreview,
+  sandboxActive,
   onMouseDown,
   onDoubleClick,
   onContextMenu,
@@ -555,6 +653,7 @@ export function ElementView({
         el={el}
         interactive={interactive}
         previewLive={simulationPreview}
+        sandboxActive={sandboxActive}
         style={base}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}

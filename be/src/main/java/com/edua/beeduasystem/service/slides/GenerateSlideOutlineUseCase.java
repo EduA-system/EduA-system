@@ -1058,6 +1058,8 @@ public class GenerateSlideOutlineUseCase {
                     requiredText(node, "periodicRequest"), textOrNull(node, "mode"),
                     node.path("elementSymbols").isMissingNode() ? List.of() : stringList(node.path("elementSymbols")),
                     textOrNull(node, "focus"));
+            case "physics" -> new ContentPlan.PhysicsBlock(id, kind, role, semanticType, priority, required, groupId,
+                    requiredText(node, "physicsRequest"));
             case "comparison" -> {
                 List<ContentPlan.Label> items = labels(node.path("items"));
                 List<ContentPlan.Label> criteria = labels(node.path("criteria"));

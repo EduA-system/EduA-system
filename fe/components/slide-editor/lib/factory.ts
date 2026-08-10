@@ -9,6 +9,7 @@ import type {
   MoleculeSimulationElement,
   PeriodicSimulationElement,
   PeriodicSimulationPayload,
+  SandboxSimulationElement,
   SlideElement,
   ElementPatch,
 } from "../types";
@@ -171,6 +172,35 @@ export function makePeriodicSimulation(
   };
 }
 
+/**
+ * Thí nghiệm vật lý chạy qua Sandpack.
+ *
+ * Khung rộng hơn hẳn 280×280 của molecule: thí nghiệm dựng cảnh cạnh một bảng
+ * tham số bên phải, ép vào khung vuông là bảng đó chiếm hết chỗ của cảnh.
+ */
+export function makeSandboxSimulation(
+  experiment: { id: string; presetId: string; title: string },
+  overrides?: Partial<SandboxSimulationElement>
+): SandboxSimulationElement {
+  return {
+    id: "",
+    type: "simulation",
+    kind: "sandbox",
+    experimentId: experiment.id,
+    presetId: experiment.presetId,
+    title: experiment.title,
+    x: CANVAS_W / 2 - 320,
+    y: CANVAS_H / 2 - 180,
+    w: 640,
+    h: 360,
+    rotation: 0,
+    zIndex: 0,
+    opacity: 1,
+    locked: false,
+    ...overrides,
+  };
+}
+
 // Nét vẽ tay — luôn phủ toàn canvas; points cập nhật khi vẽ.
 export function makeDraw(overrides?: Partial<DrawElement>): DrawElement {
   return {
@@ -222,6 +252,14 @@ export function makeByType(type: AddType, extra?: ElementPatch): SlideElement {
     case "poly":
       return apply(makePoly());
     case "simulation":
+      if (extra?.kind === "sandbox") {
+        const sandbox = extra as Partial<SandboxSimulationElement>;
+        return apply(makeSandboxSimulation({
+          id: sandbox.experimentId ?? "",
+          presetId: sandbox.presetId ?? "",
+          title: sandbox.title ?? "Thí nghiệm",
+        }));
+      }
       if (extra?.kind === "periodic-element" || extra?.kind === "periodic-table") {
         return apply(makePeriodicSimulation(extra.periodic ?? { mode: "table", elementSymbols: ["H"], focus: "Bảng tuần hoàn" }));
       }

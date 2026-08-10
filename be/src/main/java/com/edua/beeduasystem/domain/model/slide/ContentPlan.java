@@ -49,7 +49,7 @@ public record ContentPlan(
         }
     }
 
-    public sealed interface Block permits TextBlock, VisualBlock, MoleculeBlock, PeriodicBlock, ComparisonBlock, TableBlock, SequenceBlock, FormulaBlock, QuizBlock {
+    public sealed interface Block permits TextBlock, VisualBlock, MoleculeBlock, PeriodicBlock, PhysicsBlock, ComparisonBlock, TableBlock, SequenceBlock, FormulaBlock, QuizBlock {
         String id();
         String kind();
         String role();
@@ -76,6 +76,11 @@ public record ContentPlan(
                                 List<String> elementSymbols, String focus) implements Block {
         public PeriodicBlock { elementSymbols = elementSymbols == null ? List.of() : List.copyOf(elementSymbols); }
     }
+
+    // Vật lý only (enforced by the outline prompt): an interactive experiment whose
+    // preset the frontend resolves against components/simulations/presets.
+    public record PhysicsBlock(String id, String kind, String role, String semanticType, String priority,
+                               boolean required, String groupId, String physicsRequest) implements Block {}
 
     public record ComparisonBlock(String id, String kind, String role, String semanticType, String priority,
                                   boolean required, String groupId, List<Label> items, List<Label> criteria,

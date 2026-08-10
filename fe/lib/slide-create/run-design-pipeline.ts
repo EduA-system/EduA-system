@@ -1,6 +1,8 @@
 import { fillSlideContent, generateSlideHtmlDesign, type SlideContentFillResponse, type SlideContentFillSlot } from "@/lib/api/slide-design";
 import { buildMolecule } from "@/lib/api/molecule-build";
 import { resolvePeriodicPayload } from "@/lib/periodic-table/resolve-periodic";
+import { resolvePhysicsPreset } from "@/lib/slide-layout/resolve-physics-preset";
+import { listSandboxExperiments } from "@/lib/api/sandbox-experiments";
 import type { OutlinePart, SlideItem } from "@/lib/api/slides";
 import { htmlToSlideElements } from "@/components/slide-editor/lib/html-to-slide";
 import { pickBackground, pickDecoIcons } from "@/lib/slide-assets/resolve";
@@ -219,13 +221,18 @@ export async function runContentFillStep(
         !isTitleSlot(slot) && (slot.kind !== "image" || imageGenerationSlotKeys.has(`${slide.id}:${slot.id}`)));
       const moleculeSlots = layoutSlots.filter((slot) => slot.kind === "molecule" && !isTitleSlot(slot));
       const periodicSlots = layoutSlots.filter((slot) => slot.kind === "periodic" && !isTitleSlot(slot));
+      const physicsSlots = layoutSlots.filter((slot) => slot.kind === "physics" && !isTitleSlot(slot));
 
-      if (!fillableSlots.length && !moleculeSlots.length && !periodicSlots.length) {
+      if (!fillableSlots.length && !moleculeSlots.length && !periodicSlots.length && !physicsSlots.length) {
         cb.onSlideReady?.(slide.id, { slots: [], latencyMs: 0, modelUsed: "outline-title" }, slide.title);
         return;
       }
 
-      const [response, moleculeFills, periodicFills] = await Promise.all([
+      // Danh mục thí nghiệm nạp một lần cho cả lượt chạy (client tự cache),
+      // rồi truyền vào hàm thuần resolvePhysicsPreset.
+      const physicsCatalogue = physicsSlots.length ? await listSandboxExperiments() : [];
+
+      const [response, moleculeFills, periodicFills, physicsFills] = await Promise.all([
         fillableSlots.length
           ? fillContentInBatches({
               topic: ctx.topic,
@@ -254,10 +261,31 @@ export async function runContentFillStep(
             periodic,
           };
         })),
+        Promise.all(physicsSlots.map(async (slot): Promise<SlideContentFillSlot | null> => {
+          // Không khớp được thì BỎ slot, không đoán bừa: chèn nhầm thí nghiệm
+          // vào bài giảng tệ hơn hẳn so với để trống.
+          const preset = resolvePhysicsPreset(slot.sourceText, physicsCatalogue);
+          if (!preset) return null;
+          return {
+            slotId: slot.id,
+            text: null,
+            imagePrompt: null,
+            imageUrl: null,
+            sandbox: { experimentId: preset.id, presetId: preset.presetId, title: preset.title },
+          };
+        })),
       ]);
 
-      const mergedSlots = [...response.slots, ...moleculeFills, ...periodicFills.filter((slot): slot is SlideContentFillSlot => slot != null)];
-      if (!mergedSlots.length) throw new Error("AI trả về rỗng, không có nội dung slot.");
+      const mergedSlots = [
+        ...response.slots,
+        ...moleculeFills,
+        ...periodicFills.filter((slot): slot is SlideContentFillSlot => slot != null),
+        ...physicsFills.filter((slot): slot is SlideContentFillSlot => slot != null),
+      ];
+      // Rỗng chỉ là lỗi khi slide có slot cần AI điền chữ. Molecule/periodic/
+      // physics phân giải cục bộ và được phép không khớp — slide mô phỏng khi đó
+      // vẫn giữ placeholder của Bước 2 thay vì bị đánh hỏng.
+      if (!mergedSlots.length && fillableSlots.length) throw new Error("AI trả về rỗng, không có nội dung slot.");
       cb.onSlideReady?.(slide.id, { ...response, slots: mergedSlots }, slide.title);
     } catch (error) {
       failedSlideIds.push(slide.id);

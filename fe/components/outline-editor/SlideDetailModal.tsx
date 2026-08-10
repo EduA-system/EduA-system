@@ -40,6 +40,7 @@ function makeBlock(kind: ContentBlock["kind"], id = `block-${Date.now()}`): Cont
     case "visual": return { ...base, kind, role: "visual", semanticType: "image", description: "", requirement: "required" };
     case "molecule": return { ...base, kind, role: "visual", semanticType: "molecule-3d", chemicalRequest: "" };
     case "periodic": return { ...base, kind, role: "visual", semanticType: "periodic-table", periodicRequest: "", mode: "table", elementSymbols: [] };
+    case "physics": return { ...base, kind, role: "visual", semanticType: "physics-experiment", physicsRequest: "" };
     case "comparison": return { ...base, kind, role: "body", semanticType: "comparison", items: ids(`${id}-item`, ["A", "B"]), criteria: ids(`${id}-criterion`, ["Tiêu chí"]), values: [["", ""]], preferredPresentation: "auto" };
     case "table": return { ...base, kind, role: "body", semanticType: "data-table", columns: ids(`${id}-column`, ["Cột 1", "Cột 2"]), rows: [{ id: `${id}-row-1`, cells: ["", ""] }] };
     case "sequence": return { ...base, kind, role: "body", semanticType: "process", steps: [{ id: `${id}-step-1`, text: "" }] };
@@ -60,6 +61,7 @@ function blockKindLabel(block: ContentBlock): string {
     case "visual": return "Hình ảnh minh họa";
     case "molecule": return "Mô hình phân tử 3D";
     case "periodic": return "Bảng tuần hoàn / nguyên tố";
+    case "physics": return "Thí nghiệm vật lý";
     case "comparison": return "Bảng so sánh";
     case "table": return "Bảng dữ liệu";
     case "sequence": return "Các bước / quy trình";
@@ -114,6 +116,7 @@ export function BlockFields({ block, onChange, fieldClass = inputClass }: { bloc
     <input className={fieldClass} value={block.periodicRequest} onChange={(event) => onChange({ ...block, periodicRequest: event.target.value })} placeholder="Nguyên tố, nhóm, chu kỳ hoặc cấu hình electron" />
     <input className={fieldClass} value={block.elementSymbols?.join(", ") ?? ""} onChange={(event) => onChange({ ...block, elementSymbols: event.target.value.split(",").map((value) => value.trim()).filter(Boolean) })} placeholder="Kí hiệu, vd Na, Cl" />
   </div>;
+  if (block.kind === "physics") return <input className={fieldClass} value={block.physicsRequest} onChange={(event) => onChange({ ...block, physicsRequest: event.target.value })} placeholder="Tên thí nghiệm, vd &quot;con lắc đơn&quot; hoặc &quot;giao thoa sóng nước&quot;" />;
   return <div className="grid gap-2"><AutoTextarea className={fieldClass} value={block.question} onChange={(event) => onChange({ ...block, question: event.target.value })} placeholder="Câu hỏi" /><AutoTextarea className={fieldClass} value={block.choices?.join("\n") ?? ""} onChange={(event) => onChange({ ...block, choices: event.target.value.split("\n").map((value) => value.trim()).filter(Boolean) })} placeholder="Mỗi dòng một lựa chọn" /><input className={fieldClass} value={block.answer ?? ""} onChange={(event) => onChange({ ...block, answer: event.target.value || undefined })} placeholder="Đáp án" /><AutoTextarea className={fieldClass} value={block.explanation ?? ""} onChange={(event) => onChange({ ...block, explanation: event.target.value || undefined })} placeholder="Giải thích" /></div>;
 }
 

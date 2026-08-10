@@ -71,6 +71,61 @@ class SlideContentPlanParsingTests {
     }
 
     @Test
+    void parsesPhysicsExperimentBlocks() throws Exception {
+        var root = MAPPER.readTree("""
+                {"blocks":[
+                  {"id":"ph","kind":"physics","role":"visual","semanticType":"physics-experiment","priority":"secondary","required":true,"physicsRequest":"con lac don"}
+                ],"relationships":[]}
+                """);
+
+        ContentPlan plan = GenerateSlideOutlineUseCase.parseContentPlan("experiment", "fixed", root.path("blocks"), root.path("relationships"));
+
+        assertEquals(1, plan.blocks().size());
+        ContentPlan.PhysicsBlock physics = assertInstanceOf(ContentPlan.PhysicsBlock.class, plan.blocks().get(0));
+        assertEquals("con lac don", physics.physicsRequest());
+        assertTrue(MAPPER.writeValueAsString(plan).contains("\"kind\":\"physics\""));
+    }
+
+    @Test
+    void rejectsPhysicsBlockWithoutRequest() throws Exception {
+        var root = MAPPER.readTree("""
+                {"blocks":[
+                  {"id":"ph","kind":"physics","role":"visual","semanticType":"physics-experiment","priority":"secondary","required":true}
+                ],"relationships":[]}
+                """);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> GenerateSlideOutlineUseCase.parseContentPlan("experiment", "fixed", root.path("blocks"), root.path("relationships")));
+    }
+
+    @Test
+    void physicsPromptsExposePhysicsBlocksAlongsideChemistryOnes() {
+        SlidePromptBuilder builder = new SlidePromptBuilder();
+        LessonContext lesson = new LessonContext("id", "Con lac don", 10, "", List.of(), List.of(), List.of(), List.of(), List.of());
+        InlineLessonPlanDto plan = new InlineLessonPlanDto("Con lac don", 10, 45, List.of("Hieu"), List.of(), List.of(), "", "");
+        SlideItemDto slide = new SlideItemDto("p1s1", "Con lac don", "explain", null, null,
+                new ContentPlan("experiment", "fixed", List.of(), List.of()));
+
+        // Cả hai bản prompt song song phải mô tả kind `physics`; sửa thiếu một
+        // bản là lỗi ngầm chỉ hiện ở một nhánh sinh slide.
+        String partDetail = builder.expandPartPrompt(lesson, plan, "{}", "p1", "Phan 1", "PHYSICS");
+        String slideDetail = builder.expandSlidePrompt(lesson, plan, "{}", "p1", "Phan 1", slide, "PHYSICS", "p1: Phan 1");
+
+        for (String prompt : List.of(partDetail, slideDetail)) {
+            assertTrue(prompt.contains("- physics:"));
+            assertTrue(prompt.contains("physicsRequest"));
+            // Mô phỏng chiếm trọn slide (topology `physics-stage` ở frontend), nên
+            // block text kèm theo sẽ bị bố cục bỏ — prompt phải nói rõ đừng sinh.
+            assertTrue(prompt.contains("block DUY NHẤT của slide"));
+        }
+        // Chỉ expandSlidePrompt mang khối GIỚI HẠN ĐỘ DÀI; expandPartPrompt
+        // không có khối này từ trước, nên đừng đòi nó ở cả hai bản.
+        assertTrue(slideDetail.contains("visual, molecule hoặc periodic"));
+        assertTrue(slideDetail.contains("Slide có block physics: không kèm block nào khác"));
+        assertFalse(partDetail.contains("GIỚI HẠN ĐỘ DÀI"));
+    }
+
+    @Test
     void rejectsDuplicateIdsInvalidReferencesAndCellCounts() throws Exception {
         var missing = MAPPER.readTree("{}");
         assertThrows(IllegalArgumentException.class, () -> GenerateSlideOutlineUseCase.parseContentPlan("concept", "fixed", missing.path("blocks"), missing.path("relationships")));

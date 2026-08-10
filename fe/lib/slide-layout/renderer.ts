@@ -1,5 +1,5 @@
 import { PLACEHOLDER_IMAGE } from "@/components/slide-editor/lib/be-mapper";
-import { makePeriodicSimulation, makeSimulation } from "@/components/slide-editor/lib/factory";
+import { makePeriodicSimulation, makeSandboxSimulation, makeSimulation } from "@/components/slide-editor/lib/factory";
 import type { ImageElement, LineElement, ShapeElement, SimulationElement, SlideElement, TextElement } from "@/components/slide-editor/types";
 import { MOLECULE_CATALOG } from "@/components/molecules/catalog";
 import { blendSurface, contrastingTextColor } from "./contrast";
@@ -112,6 +112,14 @@ function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string,
   if (slot.kind === "periodic") {
     return makePeriodicSimulation(
       { mode: "table", elementSymbols: ["H"], focus: slot.sourceText },
+      { ...base(`layout:${slot.id}`, slot.rect, slot.zIndex), contentSlot: slot.id },
+    );
+  }
+  if (slot.kind === "physics") {
+    // Placeholder rỗng; Bước 3 (runContentFillStep) phân giải `slot.sourceText`
+    // sang một preset thật rồi thay vào đây.
+    return makeSandboxSimulation(
+      { id: "", presetId: "", title: slot.sourceText },
       { ...base(`layout:${slot.id}`, slot.rect, slot.zIndex), contentSlot: slot.id },
     );
   }

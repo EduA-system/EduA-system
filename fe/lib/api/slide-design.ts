@@ -44,6 +44,8 @@ export type SlideContentFillSlot = {
   molecule?: Molecule;
   /** Frontend-only: set locally by runContentFillStep for periodic slots, never sent to/from the backend. */
   periodic?: PeriodicSimulationPayload;
+  /** Frontend-only: preset thí nghiệm vật lý mà runContentFillStep phân giải được, không đi qua backend. */
+  sandbox?: { experimentId: string; presetId: string; title: string };
 };
 
 export type SlideContentFillResponse = {

@@ -19,6 +19,7 @@ import {
   SandpackPreview,
   SandpackConsole,
 } from "@codesandbox/sandpack-react";
+import { SANDPACK_DEPENDENCIES, buildSandpackFiles } from "@/lib/sandbox/sandpack-project";
 
 export type WorkbenchExperiment = {
   id: string;
@@ -35,46 +36,6 @@ export type WorkbenchExperiment = {
   fileCount: number;
 };
 
-/** Khớp phiên bản với fe/package.json để hành vi trong sandbox không lệch app. */
-const DEPENDENCIES = {
-  konva: "^10.3.0",
-  tweakpane: "^4.0.5",
-  "lucide-react": "^1.23.0",
-};
-
-/** Bỏ StrictMode của template: app thật không dùng, và StrictMode gọi effect
- *  hai lần nên renderer Konva (imperative) sẽ dựng stage hai lần. */
-const INDEX_TSX = `import { createRoot } from "react-dom/client";
-import "./tailwind.css";
-import "./styles.css";
-import App from "./App";
-
-createRoot(document.getElementById("root")!).render(<App />);
-`;
-
-/**
- * Khung HTML của dự án Sandpack. Ghi đè bản của template chỉ để đổi ngôn ngữ
- * và tiêu đề — Tailwind KHÔNG nạp qua CDN ở đây, xem lib/sandbox/app-css.ts.
- */
-const INDEX_HTML = `<!DOCTYPE html>
-<html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Thí nghiệm</title>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>
-`;
-
-/** Reset tối thiểu; mọi utility đến từ CSS Tailwind của app (xem app-css.ts). */
-const STYLES_CSS = `* { box-sizing: border-box; }
-html, body, #root { height: 100%; margin: 0; }
-body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-`;
-
 /** Trừ thanh tiêu đề của trang (56px) và thanh công cụ ở đây (52px). */
 const WORKSPACE_HEIGHT = "calc(100vh - 108px)";
 
@@ -89,17 +50,8 @@ export function SandboxWorkbench({
   const [showEditor, setShowEditor] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
 
-  const files: Record<string, { code: string; hidden?: boolean }> = {
-    ...Object.fromEntries(
-      Object.entries(experiment.files).map(([path, code]) => [path, { code }]),
-    ),
-    "/index.tsx": { code: INDEX_TSX, hidden: true },
-    "/styles.css": { code: STYLES_CSS, hidden: true },
-    "/public/index.html": { code: INDEX_HTML, hidden: true },
-    // Tailwind của app. Nếu chưa tìm được file CSS đã build thì để rỗng —
-    // thí nghiệm vẫn chạy, chỉ mất bố cục; xem cảnh báo ở thanh trên.
-    "/tailwind.css": { code: tailwindCss ?? "", hidden: true },
-  };
+  // Thiếu CSS thì thí nghiệm vẫn chạy, chỉ mất bố cục; xem cảnh báo ở thanh trên.
+  const files = buildSandpackFiles(experiment.files, tailwindCss);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -157,7 +109,7 @@ export function SandboxWorkbench({
           template="react-ts"
           files={files}
           theme="dark"
-          customSetup={{ dependencies: DEPENDENCIES }}
+          customSetup={{ dependencies: SANDPACK_DEPENDENCIES }}
           options={{
             activeFile: experiment.focusPath,
             visibleFiles: [experiment.focusPath, "/App.tsx"],

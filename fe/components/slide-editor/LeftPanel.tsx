@@ -11,6 +11,15 @@ import type { ActiveTool } from "./Canvas";
 import { MOLECULE_CATALOG } from "@/components/molecules/catalog";
 import type { Molecule } from "@/components/molecules/types";
 import { LayersContent, LayersIcon, PropertiesContent, PropertiesIcon } from "./LayersPanel";
+import { listSandboxExperiments } from "@/lib/api/sandbox-experiments";
+import type { ExperimentSummary } from "@/lib/sandbox/react-experiments";
+import dynamic from "next/dynamic";
+
+// Hơn 3400 dòng SVG — tách chunk để chỉ tải khi mở tab Mô phỏng.
+const SimulationThumb = dynamic(
+  () => import("@/components/simulations/shared/simulation-thumb").then((m) => m.Thumb),
+  { ssr: false, loading: () => null },
+);
 
 export type LeftPanelTab = null | "shapes" | "text" | "upload" | "tools" | "bg" | "simulation" | "layers" | "properties";
 
@@ -478,6 +487,12 @@ export function LeftPanel({
   const [allShapesSectionId, setAllShapesSectionId] = useState<string | null>(null);
   const [remoteIcons, setRemoteIcons] = useState<string[]>([]);
   const [remoteState, setRemoteState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [experiments, setExperiments] = useState<ExperimentSummary[]>([]);
+  // "idle" nghĩa là đang chờ kết quả: cờ "loading" riêng sẽ phải set đồng bộ
+  // trong effect, thứ mà react-hooks/set-state-in-effect cấm.
+  const [experimentsState, setExperimentsState] = useState<"idle" | "ready" | "error">("idle");
+  const [experimentsRetry, setExperimentsRetry] = useState(0);
+  const experimentsRequested = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const addElement = useEditorStore((s) => s.addElement);
   const slideBg = useEditorStore((s) => s.slides.find((sl) => sl.id === s.currentSlideId)?.bg ?? "#ffffff");
@@ -501,6 +516,34 @@ export function LeftPanel({
       }))
       .filter((section) => section.items.length > 0);
   }, [trimmedQuery]);
+
+  // Danh mục thí nghiệm nạp lười khi mở tab: là dữ liệu quét từ đĩa, không cần
+  // trả giá cho nó ở mọi lần mở editor. `listSandboxExperiments` tự cache nên
+  // đóng/mở tab lại không bắn thêm request.
+  useEffect(() => {
+    if (visibleTab !== "simulation" || experimentsRequested.current) return;
+    experimentsRequested.current = true;
+    let cancelled = false;
+    listSandboxExperiments()
+      .then((list) => {
+        if (cancelled) return;
+        setExperiments(list);
+        setExperimentsState("ready");
+      })
+      .catch(() => { if (!cancelled) setExperimentsState("error"); });
+    return () => { cancelled = true; };
+  }, [visibleTab, experimentsRetry]);
+
+  const experimentsByDomain = useMemo(() => {
+    // Giữ thứ tự xuất hiện để không phải chép cứng danh sách lĩnh vực.
+    const grouped = new Map<string, ExperimentSummary[]>();
+    for (const experiment of experiments) {
+      const list = grouped.get(experiment.domain) ?? [];
+      list.push(experiment);
+      grouped.set(experiment.domain, list);
+    }
+    return [...grouped.entries()];
+  }, [experiments]);
 
   useEffect(() => {
     const q = trimmedQuery;
@@ -696,6 +739,16 @@ export function LeftPanel({
     addElement(makeByType("simulation", {
       kind: mode === "element" && symbols.length === 1 ? "periodic-element" : "periodic-table",
       periodic: { mode, elementSymbols: symbols, focus },
+    }));
+  }
+
+  function addSandboxSimulation(experiment: ExperimentSummary) {
+    if (currentSlideLocked) return;
+    addElement(makeByType("simulation", {
+      kind: "sandbox",
+      experimentId: experiment.id,
+      presetId: experiment.presetId,
+      title: experiment.title,
     }));
   }
   return (
@@ -916,6 +969,50 @@ export function LeftPanel({
                   </button>
                 ))}
               </div>
+
+              <div className="mb-1 mt-4 text-[10px] font-bold uppercase tracking-[1px] text-[#2b2926]">Thí nghiệm vật lý</div>
+              <p className="mb-3 text-[10px] text-[#8a8178]">
+                Chạy mã nguồn thật của mô phỏng. Cần mạng và vài giây biên dịch khi kích hoạt.
+              </p>
+              {experimentsState === "idle" && <p className="text-[10px] text-[#8a8178]">Đang tải danh sách…</p>}
+              {experimentsState === "error" && (
+                <button
+                  onClick={() => {
+                    experimentsRequested.current = false;
+                    setExperimentsState("idle");
+                    setExperimentsRetry((value) => value + 1);
+                  }}
+                  className="text-[10px] font-medium text-[#d97757] underline"
+                >
+                  Không tải được danh sách — thử lại
+                </button>
+              )}
+              {experimentsByDomain.map(([domain, list]) => (
+                <div key={domain} className="mb-3">
+                  <div className="mb-1.5 text-[10px] font-semibold text-[#8a8178]">{domain}</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {list.map((experiment) => (
+                      <button
+                        key={experiment.id}
+                        onClick={() => addSandboxSimulation(experiment)}
+                        title={experiment.desc || experiment.title}
+                        className="overflow-hidden rounded-[10px] border border-[#e8e2d9] bg-white text-left transition-colors hover:border-[#d97757] hover:bg-[#fbfaf8]"
+                      >
+                        {/* Ảnh thu nhỏ khoá theo `presetId`, KHÔNG phải tên file. */}
+                        <div className="aspect-[5/3] w-full bg-[#0f172a]">
+                          <SimulationThumb id={experiment.presetId} />
+                        </div>
+                        <div className="px-2 py-1.5">
+                          <div className="truncate text-[11px] font-medium text-[#2b2926]">{experiment.title}</div>
+                          {experiment.grade !== null && (
+                            <div className="text-[10px] text-[#8a8178]">Lớp {experiment.grade}</div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

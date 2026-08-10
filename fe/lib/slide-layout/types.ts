@@ -58,6 +58,14 @@ export type PeriodicContentBlock = BaseContentBlock & {
   focus?: string;
 };
 
+export type PhysicsContentBlock = BaseContentBlock & {
+  kind: "physics";
+  role: "visual";
+  semanticType: "physics-experiment";
+  /** Tên thí nghiệm/hiện tượng do AI nêu; frontend tự phân giải sang preset. */
+  physicsRequest: string;
+};
+
 export type ComparisonContentBlock = BaseContentBlock & {
   kind: "comparison";
   role: "body";
@@ -106,6 +114,7 @@ export type ContentBlock =
   | VisualContentBlock
   | MoleculeContentBlock
   | PeriodicContentBlock
+  | PhysicsContentBlock
   | ComparisonContentBlock
   | TableContentBlock
   | SequenceContentBlock
@@ -154,7 +163,7 @@ export type LayoutSlot = {
   sourcePartId?: string;
   sourceText: string;
   zone: LayoutZone;
-  kind: "text" | "image" | "molecule" | "periodic";
+  kind: "text" | "image" | "molecule" | "periodic" | "physics";
   rect: Rect;
   maxChars: number;
   maxLines: number;

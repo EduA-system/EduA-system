@@ -6,6 +6,7 @@ export function blockText(block: ContentBlock): string {
     case "visual": return block.description;
     case "molecule": return block.chemicalRequest;
     case "periodic": return [block.periodicRequest, ...(block.elementSymbols ?? []), block.focus ?? ""].join(" ");
+    case "physics": return block.physicsRequest;
     case "comparison": return [
       ...block.items.map((item) => item.label),
       ...block.criteria.map((item) => item.label),

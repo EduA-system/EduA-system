@@ -66,6 +66,7 @@ export function Canvas({
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const select = useEditorStore((s) => s.select);
   const toggleSelect = useEditorStore((s) => s.toggleSelect);
+  const activeSandboxIds = useEditorStore((s) => s.activeSandboxIds);
 
   const areaRef = useRef<HTMLDivElement>(null);
   const canvasInnerRef = useRef<HTMLDivElement>(null);
@@ -573,6 +574,7 @@ export function Canvas({
               el={el}
               hideText={editingId === el.id}
               simulationPreview
+              sandboxActive={activeSandboxIds.includes(el.id)}
               onMouseDown={(e) => handleElementMouseDown(e, el)}
               onDoubleClick={() => handleDoubleClick(el)}
               onContextMenu={(e) => openCtxMenu(e, el)}

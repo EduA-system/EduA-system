@@ -50,6 +50,11 @@ function elementHtml(element: SlideElement, imageSources: Map<string, string>): 
     return `<svg style="${baseStyle(element)}overflow:visible" viewBox="${escapeHtml(element.svgViewBox || "0 0 100 100")}" preserveAspectRatio="none"><path d="${escapeHtml(element.svgPath)}" fill="${escapeHtml(fill)}" stroke="${escapeHtml(element.stroke === "transparent" ? "none" : element.stroke)}" stroke-width="${element.strokeW}" stroke-dasharray="${dash(element.dashStyle) ?? ""}" stroke-linecap="${element.strokeLinecap ?? "butt"}" stroke-linejoin="${element.strokeLinejoin ?? "miter"}"/></svg>`;
   }
   if (element.type === "simulation") {
+    if (element.kind === "sandbox") {
+      // Thí nghiệm vật lý cần Sandpack (bundler chạy trong iframe) — bản export
+      // tĩnh không có runtime đó, nên chỉ còn poster ghi tên thí nghiệm.
+      return `<div style="${baseStyle(element)}box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:16px;background:linear-gradient(135deg,#0f172a,#334155);color:#fff;text-align:center;padding:8px;overflow:hidden"><span style="font-size:28px">🔬</span><span style="font-size:13px;font-weight:600">${escapeHtml(element.title)}</span><span style="font-size:11px;opacity:.7">Thí nghiệm vật lý</span></div>`;
+    }
     if (element.kind !== "molecule") {
       return `<div style="${baseStyle(element)}box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:16px;background:#fbfaf8;border:1px solid #d8d1c9;color:#2b2926;text-align:center;padding:8px;overflow:hidden"><span style="font-size:28px;font-weight:700">PT</span><span style="font-size:13px;font-weight:600">${escapeHtml(element.periodic.focus || "Bảng tuần hoàn")}</span><span style="font-size:11px;opacity:.7">${escapeHtml(element.periodic.elementSymbols.join(", "))}</span></div>`;
     }
