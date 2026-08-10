@@ -12,6 +12,7 @@ import com.edua.beeduasystem.domain.exception.PhysicsSimulationEditException;
 import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.exception.SlideImageGenerationException;
+import com.edua.beeduasystem.service.documentexport.DocumentExportException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
 import com.edua.beeduasystem.service.slides.SlideAiResponseException;
 import org.springframework.http.HttpStatus;
@@ -84,6 +85,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(PracticeExamGenerationException.class)
     public ResponseEntity<ErrorResponse> handlePracticeExamGeneration(PracticeExamGenerationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DocumentExportException.class)
+    public ResponseEntity<ErrorResponse> handleDocumentExport(DocumentExportException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(ex.getMessage()));
     }
 

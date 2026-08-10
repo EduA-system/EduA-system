@@ -10,9 +10,9 @@ Chỉ dùng cho backend API. Không gồm FE.
 
 ## Danh sách chức năng core đại diện cho tài liệu test
 
-Mục này chốt bộ sheet/tab đại diện khi tài liệu Unit Test cần tối thiểu 10 chức năng. Vì bạn muốn bỏ nhóm AI, bộ dưới đây chỉ chọn các chức năng non-AI: CRUD, role/permission, read/list, và moderation.
+Mục này chốt bộ sheet/tab đại diện khi tài liệu Unit Test cần đủ 30 chức năng. Vì bạn muốn bỏ nhóm AI, bộ dưới đây chỉ chọn các chức năng non-AI: CRUD, role/permission, read/list, moderation, Class Hub, Community Hub, và Weekly Schedule.
 
-Khuyến nghị dùng bộ **12 chức năng core non-AI** dưới đây làm đại diện chính. Nếu chỉ cần 10 sheet/tab, lấy 10 dòng đầu và giữ 2 dòng cuối làm dự phòng.
+Khuyến nghị dùng bộ **30 chức năng core non-AI** dưới đây làm đại diện chính.
 
 | Priority | Sheet/Tab | Nhóm nghiệp vụ | LOCS priority | Lý do chọn làm core representative |
 | -------- | --------- | -------------- | ------------- | ---------------------------------- |
@@ -28,6 +28,24 @@ Khuyến nghị dùng bộ **12 chức năng core non-AI** dưới đây làm đ
 | 10 | `updateBlogPost` | Blog CRUD | Medium-High | Update bài owner-only, có optional fields và preserve dữ liệu cũ. |
 | 11 | `deleteBlogPost` | Blog CRUD | Medium | Soft delete bài viết, kiểm tra ownership và trạng thái `PUBLISHED`. |
 | 12 | `removeBlogPostByModerator` | Blog moderation | Medium-High | Gỡ bài theo môn của moderator, bắt buộc reason và lưu audit. |
+| 13 | `listClasses` | Class Management read/list | Medium | Teacher xem danh sách lớp mình sở hữu, có filter/search/status và phân trang. |
+| 14 | `createClass` | Class Management CRUD | High | Teacher tạo lớp mới, validate name/subject/grade và gán owner mặc định. |
+| 15 | `getClassDetail` | Class Hub read/detail | High | Teacher owner hoặc Student đã enrolled xem Class Hub, kiểm tra quyền truy cập. |
+| 16 | `updateClass` | Class Management CRUD | Medium-High | Teacher owner sửa thông tin lớp khi lớp còn `ACTIVE`, chặn user không phải owner. |
+| 17 | `updateClassStatus` | Class Management workflow | Medium-High | Teacher owner chuyển `ACTIVE/INACTIVE`, kiểm tra soft-delete/read-only rule. |
+| 18 | `addClassMember` | Class membership | High | Teacher owner thêm Student bằng email, kiểm tra role STUDENT, duplicate và lớp active. |
+| 19 | `listHubContents` | Community Hub read/list | Medium | Guest/all users xem feed content `APPROVED`, có filter type/subject/q và phân trang. |
+| 20 | `getHubContentDetail` | Community Hub read/detail | Medium | Xem chi tiết content approved kèm comment, hỗ trợ guest preview. |
+| 21 | `customizeHubContent` | Community Hub reuse | Medium-High | Teacher/Moderator copy content approved về thư viện cá nhân, kiểm tra quyền authenticated. |
+| 22 | `createHubComment` | Community Hub comment | Medium | User đăng nhập bình luận trên content approved, có sanitize và parent comment. |
+| 23 | `reportHubContent` | Community Hub report | Medium | User đăng nhập báo cáo content vi phạm, bắt buộc reason và lưu report. |
+| 24 | `hideHubComment` | Community Hub moderation | Medium-High | Owner nội dung hoặc Moderator ẩn comment, kiểm tra quyền và cascade reply nếu có. |
+| 25 | `listWeeklyTasks` | Weekly Schedule read/list | High | Teacher xem task của mình, Moderator xem task cùng subject/grade trong khoảng ngày. |
+| 26 | `bulkCreateWeeklyTasks` | Weekly Schedule assignment | High | Moderator giao bài theo tuần cho toàn bộ Teacher active cùng subject/grade, giới hạn 2 bài/tuần. |
+| 27 | `updateWeeklyTask` | Weekly Schedule assignment | Medium-High | Moderator sửa task còn hạn, validate chapter/lesson và chặn khác subject. |
+| 28 | `submitWeeklyTask` | Weekly Schedule submission | High | Teacher được giao nộp giáo án từ library hoặc upload, bắt buộc đúng 1 nguồn. |
+| 29 | `listWeeklyTaskModerationQueue` | Weekly Schedule moderation | High | Moderator xem hàng đợi `SUBMITTED` cùng subject, có filter grade/chapter/lesson. |
+| 30 | `approveWeeklyTask` / `rejectWeeklyTask` | Weekly Schedule review | High | Moderator cùng subject duyệt hoặc từ chối bài nộp, validate trạng thái và reason khi reject. |
 
 Các sheet non-AI bổ sung nên làm nếu muốn mở rộng coverage:
 

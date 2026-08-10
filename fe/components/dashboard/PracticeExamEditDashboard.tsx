@@ -21,6 +21,7 @@ import {
   type PracticeExam,
 } from "@/services/practiceExamService";
 import { examHtml, examLoadingSkeletonHtml, type Metadata } from "@/lib/practice-exam-html";
+import { exportDocumentPdf, openExportedPdf } from "@/lib/document-export";
 
 function draftMetadata(): Metadata {
   const fallback: Metadata = { subject: "Vật lí", grade: "10", duration: 15, difficulty: "MEDIUM" };
@@ -45,6 +46,8 @@ export function PracticeExamEditDashboard() {
   const [savedExam, setSavedExam] = useState<PracticeExam | null>(null);
   const [streamedExam, setStreamedExam] = useState<PracticeExam | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [documentReady, setDocumentReady] = useState(() => !(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("libraryId")));
   const [extensions] = useState(() =>
     createEditorExtensions({ onMathClick: setMathClick }),
   );
@@ -63,7 +66,13 @@ export function PracticeExamEditDashboard() {
 
   useEffect(() => {
     const contentId = searchParams.get("libraryId");
-    if ((!contentId && !readOnlyClassResource) || !editor) return;
+    // Hoãn sang microtask: setState đồng bộ trong thân effect gây cascading render
+    // (react-hooks/set-state-in-effect), cùng cách đã dùng ở các màn khác.
+    if ((!contentId && !readOnlyClassResource) || !editor) {
+      if (editor) queueMicrotask(() => setDocumentReady(true));
+      return;
+    }
+    queueMicrotask(() => setDocumentReady(false));
     const contentRequest = readOnlyClassResource
       ? getClassResourceLibraryContent(authFetch, classId!, resourceId!)
       : contentId ? getLibraryContent(authFetch, contentId) : null;
@@ -81,7 +90,11 @@ export function PracticeExamEditDashboard() {
       }));
       setNotice("Đang mở bài kiểm tra đã lưu từ thư viện.");
       if (readOnlyClassResource) editor.setEditable(false);
-    }).catch(() => setNotice("Không thể mở bài kiểm tra đã lưu."));
+      setDocumentReady(true);
+    }).catch(() => {
+      setNotice("Không thể mở bài kiểm tra đã lưu.");
+      setDocumentReady(false);
+    });
   }, [authFetch, classId, editor, readOnlyClassResource, resourceId, searchParams]);
 
   async function saveDraft() {
@@ -101,6 +114,29 @@ export function PracticeExamEditDashboard() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Không thể lưu đề vào thư viện.");
     } finally { setSaving(false); }
+  }
+
+  async function exportPdf() {
+    if (!editor) { setNotice("Chưa có đề để xuất PDF."); return; }
+    if (!documentReady) { setNotice("Đề kiểm tra đang tải, vui lòng đợi trong giây lát rồi xuất PDF."); return; }
+    const title = editor.state.doc.firstChild?.textContent.trim() || savedExam?.title || streamedExam?.title || "Đề kiểm tra";
+    setExportingPdf(true);
+    setNotice(null);
+    try {
+      const result = await exportDocumentPdf(authFetch, {
+        type: "TEST",
+        title,
+        documentHtml: editor.getHTML(),
+        marginLeft: margins.left,
+        marginRight: margins.right,
+      });
+      openExportedPdf(result);
+      setNotice("Đã xuất PDF bài kiểm tra.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Không thể xuất PDF bài kiểm tra.");
+    } finally {
+      setExportingPdf(false);
+    }
   }
 
   return (
@@ -129,14 +165,11 @@ export function PracticeExamEditDashboard() {
               {readOnlyClassResource && <div className="flex min-w-0 flex-1 justify-center text-xs font-medium text-[#6b6b6b]">Chế độ chỉ xem</div>}
               {!readOnlyClassResource && <button
                 type="button"
-                onClick={() =>
-                  setNotice(
-                    "Tính năng xuất PDF/Word sẽ được tích hợp sau khi API lưu đề hoàn thiện.",
-                  )
-                }
+                onClick={() => void exportPdf()}
+                disabled={exportingPdf || !documentReady}
                 className="shrink-0 rounded-lg bg-[#d97757] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#c96545]"
               >
-                Xuất đề
+                {!documentReady ? "Đang tải..." : exportingPdf ? "Đang xuất..." : "Xuất đề"}
               </button>}
             </div>
             {/* Không đặt overflow-x-auto — EditorTools.tsx đã tự flex-wrap khi hẹp nên không cần
