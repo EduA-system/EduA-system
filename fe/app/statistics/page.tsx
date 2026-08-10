@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, UsersRound } from "lucide-react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
@@ -14,10 +14,44 @@ import {
   type OverdueByTeacher,
   type ReviewStatusCounts,
 } from "@/lib/moderator-statistics";
+import {
+  getAccountsByRole,
+  getAiContentTrend,
+  getCommunityHubReview,
+  getContentBySubject,
+  getWeeklyTaskStatus,
+  type AccountsByRole,
+  type AiContentTrend,
+  type CommunityHubReview,
+  type ContentBySubject,
+  type Subject,
+  type WeeklyTaskStatus,
+} from "@/lib/principal-statistics";
 
 const APPROVED_COLOR = "#5a7a4a";
 const REJECTED_COLOR = "#c2483c";
 const BAR_COLOR = "#d97757";
+const TYPE_COLORS = {
+  lessonPlan: "#3f6f8f",
+  slide: "#d97757",
+  test: "#7f6aa3",
+  simulation: "#5a7a4a",
+} as const;
+const PENDING_COLOR = "#d8a340";
+const INACTIVE_COLOR = "#a8a29e";
+
+const SUBJECT_LABELS: Record<Subject, string> = {
+  MATH: "Toán",
+  PHYSICS: "Lý",
+  CHEMISTRY: "Hóa",
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  TEACHER: "Teacher",
+  MODERATOR: "Moderator",
+  IT_STAFF: "IT Support",
+  STUDENT: "Student",
+};
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
@@ -127,7 +161,7 @@ function ReviewDonut({ title, counts }: { title: string; counts: ReviewStatusCou
 
 type FilterMode = "WEEK" | "QUARTER";
 
-function StatisticsScreen() {
+function ModeratorStatisticsScreen() {
   const { authFetch } = useAuth();
 
   // 3 ô số liệu + 2 donut: luôn phản ánh tuần/quý hiện tại, độc lập với filter của bar chart bên dưới.
@@ -331,6 +365,262 @@ function StatisticsScreen() {
       </div>
     </main>
   );
+}
+
+function totalContent(data: AiContentTrend | ContentBySubject | null): number {
+  if (!data) return 0;
+  return data.items.reduce((sum, item) => sum + item.lessonPlan + item.slide + item.test + item.simulation, 0);
+}
+
+function PrincipalReviewDonut({ review }: { review: CommunityHubReview | null }) {
+  const total = review ? review.pending + review.approved + review.rejected : 0;
+  const data = review
+    ? [
+        { name: "Chờ duyệt", value: review.pending, fill: PENDING_COLOR },
+        { name: "Đã đăng", value: review.approved, fill: APPROVED_COLOR },
+        { name: "Từ chối", value: review.rejected, fill: REJECTED_COLOR },
+      ]
+    : [];
+
+  return (
+    <div className="rounded-lg border border-[#d8d1c9] bg-[#fbfaf8] p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+      <h2 className="text-sm font-semibold text-[#2b2926]">Kiểm duyệt Community Hub</h2>
+      {review === null ? (
+        <div className="flex h-[280px] items-center justify-center text-sm text-[#8a8178]">Đang tải...</div>
+      ) : total === 0 ? (
+        <div className="flex h-[280px] items-center justify-center text-sm text-[#8a8178]">Chưa có dữ liệu.</div>
+      ) : (
+        <ResponsiveContainer width="100%" height={280}>
+          <PieChart>
+            <Pie data={data} dataKey="value" nameKey="name" innerRadius={72} outerRadius={104} paddingAngle={2} stroke="none">
+              {data.map((item) => (
+                <Cell key={item.name} fill={item.fill} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value, name) => {
+                const num = typeof value === "number" ? value : Number(value);
+                return [`${num} (${Math.round((num / total) * 100)}%)`, String(name)];
+              }}
+            />
+            <Legend verticalAlign="bottom" height={28} formatter={(value: string) => <span className="text-xs text-[#4f4943]">{value}</span>} />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+function PrincipalStatisticsScreen() {
+  const { authFetch } = useAuth();
+  const [trend, setTrend] = useState<AiContentTrend | null>(null);
+  const [bySubject, setBySubject] = useState<ContentBySubject | null>(null);
+  const [weeklyStatus, setWeeklyStatus] = useState<WeeklyTaskStatus | null>(null);
+  const [hubReview, setHubReview] = useState<CommunityHubReview | null>(null);
+  const [accounts, setAccounts] = useState<AccountsByRole | null>(null);
+  const [weeklySubject, setWeeklySubject] = useState<Subject | "">("");
+  const [accountSubject, setAccountSubject] = useState<Subject | "">("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getAiContentTrend(authFetch, 6), getContentBySubject(authFetch), getCommunityHubReview(authFetch)])
+      .then(([nextTrend, nextBySubject, nextHubReview]) => {
+        if (cancelled) return;
+        setTrend(nextTrend);
+        setBySubject(nextBySubject);
+        setHubReview(nextHubReview);
+      })
+      .catch((e: Error) => !cancelled && setError(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getWeeklyTaskStatus(authFetch, undefined, undefined, weeklySubject)
+      .then((data) => {
+        if (!cancelled) setWeeklyStatus(data);
+      })
+      .catch((e: Error) => !cancelled && setError(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, weeklySubject]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAccountsByRole(authFetch, accountSubject)
+      .then((data) => {
+        if (!cancelled) setAccounts(data);
+      })
+      .catch((e: Error) => !cancelled && setError(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [accountSubject, authFetch]);
+
+  const trendData = useMemo(
+    () =>
+      trend?.items.map((item) => ({
+        ...item,
+        label: `${item.month.slice(5)}/${item.month.slice(2, 4)}`,
+      })) ?? [],
+    [trend],
+  );
+  const subjectData = useMemo(() => bySubject?.items.map((item) => ({ ...item, label: SUBJECT_LABELS[item.subject] })) ?? [], [bySubject]);
+  const weeklyData = useMemo(
+    () =>
+      weeklyStatus?.items.map((item) => ({
+        ...item,
+        label: weekLabel(item.weekStartDate),
+      })) ?? [],
+    [weeklyStatus],
+  );
+  const accountData = useMemo(() => accounts?.items.map((item) => ({ ...item, label: ROLE_LABELS[item.role] ?? item.role })) ?? [], [accounts]);
+  const activeAccounts = accounts?.items.reduce((sum, item) => sum + item.active, 0);
+
+  return (
+    <main className="min-h-screen bg-[#f7f5f2] text-[#2b2926]">
+      <div className="flex min-h-screen">
+        <Sidebar activeHref="/statistics" />
+        <section className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-10">
+          <header className="border-b border-[#e4ddd4] pb-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#d97757]">Quản trị</p>
+            <h1 className="mt-1 text-[30px] font-semibold leading-tight">Thống kê toàn trường</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b6b6b]">
+              Theo dõi xu hướng tạo học liệu, tiến độ Weekly Task, kiểm duyệt Community Hub và tình trạng tài khoản.
+            </p>
+          </header>
+
+          {error && <div className="mt-4 rounded-lg border border-[#f0c9c4] bg-[#fdeceb] px-4 py-3 text-sm text-[#c2483c]">{error}</div>}
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <Metric icon={<CalendarClock className="size-4" aria-hidden />} label="Nội dung AI (6 tháng)" value={trend ? String(totalContent(trend)) : "…"} />
+            <Metric icon={<CheckCircle2 className="size-4" aria-hidden />} label="Hub đã đăng" value={hubReview ? String(hubReview.approved) : "…"} />
+            <Metric icon={<UsersRound className="size-4" aria-hidden />} label="Tài khoản active" value={activeAccounts !== undefined ? String(activeAccounts) : "…"} />
+          </div>
+
+          <div className="mt-4 rounded-lg border border-[#d8d1c9] bg-[#fbfaf8] p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+            <h2 className="text-sm font-semibold text-[#2b2926]">Nội dung sinh bằng AI theo thời gian</h2>
+            {trend === null ? (
+              <div className="flex h-[320px] items-center justify-center text-sm text-[#8a8178]">Đang tải...</div>
+            ) : totalContent(trend) === 0 ? (
+              <div className="flex h-[320px] items-center justify-center text-sm text-[#8a8178]">Chưa có dữ liệu.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <AreaChart data={trendData} margin={{ left: 8, right: 16, top: 16, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8e2d9" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: "#4f4943", fontSize: 12 }} axisLine={{ stroke: "#c3c2b7" }} />
+                  <YAxis allowDecimals={false} tick={{ fill: "#8a8178", fontSize: 12 }} axisLine={{ stroke: "#c3c2b7" }} />
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={28} formatter={(value: string) => <span className="text-xs text-[#4f4943]">{value}</span>} />
+                  <Area type="monotone" dataKey="lessonPlan" stackId="1" name="Lesson Plan" stroke={TYPE_COLORS.lessonPlan} fill={TYPE_COLORS.lessonPlan} fillOpacity={0.72} />
+                  <Area type="monotone" dataKey="slide" stackId="1" name="Slide" stroke={TYPE_COLORS.slide} fill={TYPE_COLORS.slide} fillOpacity={0.72} />
+                  <Area type="monotone" dataKey="test" stackId="1" name="Test" stroke={TYPE_COLORS.test} fill={TYPE_COLORS.test} fillOpacity={0.72} />
+                  <Area type="monotone" dataKey="simulation" stackId="1" name="Simulation" stroke={TYPE_COLORS.simulation} fill={TYPE_COLORS.simulation} fillOpacity={0.72} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          <div className="mt-4 grid gap-3 xl:grid-cols-2">
+            <div className="rounded-lg border border-[#d8d1c9] bg-[#fbfaf8] p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+              <h2 className="text-sm font-semibold text-[#2b2926]">Nội dung sinh theo môn</h2>
+              {bySubject === null ? (
+                <div className="flex h-[300px] items-center justify-center text-sm text-[#8a8178]">Đang tải...</div>
+              ) : totalContent(bySubject) === 0 ? (
+                <div className="flex h-[300px] items-center justify-center text-sm text-[#8a8178]">Chưa có dữ liệu.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={subjectData} margin={{ left: 8, right: 16, top: 16, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e8e2d9" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: "#4f4943", fontSize: 12 }} axisLine={{ stroke: "#c3c2b7" }} />
+                    <YAxis allowDecimals={false} tick={{ fill: "#8a8178", fontSize: 12 }} axisLine={{ stroke: "#c3c2b7" }} />
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={28} formatter={(value: string) => <span className="text-xs text-[#4f4943]">{value}</span>} />
+                    <Bar dataKey="lessonPlan" name="Lesson Plan" fill={TYPE_COLORS.lessonPlan} radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    <Bar dataKey="slide" name="Slide" fill={TYPE_COLORS.slide} radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    <Bar dataKey="test" name="Test" fill={TYPE_COLORS.test} radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    <Bar dataKey="simulation" name="Simulation" fill={TYPE_COLORS.simulation} radius={[4, 4, 0, 0]} maxBarSize={28} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            <PrincipalReviewDonut review={hubReview} />
+          </div>
+
+          <div className="mt-4 grid gap-3 xl:grid-cols-2">
+            <div className="rounded-lg border border-[#d8d1c9] bg-[#fbfaf8] p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-[#2b2926]">Trạng thái duyệt Weekly Task</h2>
+                <select value={weeklySubject} onChange={(e) => setWeeklySubject(e.target.value as Subject | "")} className="rounded-md border border-[#d8d1c9] bg-white px-2 py-1 text-sm">
+                  <option value="">Tất cả môn</option>
+                  <option value="MATH">Toán</option>
+                  <option value="PHYSICS">Lý</option>
+                  <option value="CHEMISTRY">Hóa</option>
+                </select>
+              </div>
+              {weeklyStatus === null ? (
+                <div className="flex h-[320px] items-center justify-center text-sm text-[#8a8178]">Đang tải...</div>
+              ) : weeklyData.length === 0 ? (
+                <div className="flex h-[320px] items-center justify-center text-sm text-[#8a8178]">Chưa có dữ liệu.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={weeklyData} margin={{ left: 8, right: 16, top: 16, bottom: 46 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e8e2d9" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: "#4f4943", fontSize: 11 }} axisLine={{ stroke: "#c3c2b7" }} interval={1} angle={-25} textAnchor="end" height={58} />
+                    <YAxis allowDecimals={false} tick={{ fill: "#8a8178", fontSize: 12 }} axisLine={{ stroke: "#c3c2b7" }} />
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={28} formatter={(value: string) => <span className="text-xs text-[#4f4943]">{value}</span>} />
+                    <Bar dataKey="notSubmitted" name="Chưa nộp" stackId="status" fill={REJECTED_COLOR} />
+                    <Bar dataKey="submitted" name="Đã nộp" stackId="status" fill={PENDING_COLOR} />
+                    <Bar dataKey="approved" name="Đã duyệt" stackId="status" fill={APPROVED_COLOR} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-[#d8d1c9] bg-[#fbfaf8] p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-[#2b2926]">Quản lý tài khoản</h2>
+                <select value={accountSubject} onChange={(e) => setAccountSubject(e.target.value as Subject | "")} className="rounded-md border border-[#d8d1c9] bg-white px-2 py-1 text-sm">
+                  <option value="">Tất cả môn</option>
+                  <option value="MATH">Toán</option>
+                  <option value="PHYSICS">Lý</option>
+                  <option value="CHEMISTRY">Hóa</option>
+                </select>
+              </div>
+              {accounts === null ? (
+                <div className="flex h-[320px] items-center justify-center text-sm text-[#8a8178]">Đang tải...</div>
+              ) : accountData.length === 0 ? (
+                <div className="flex h-[320px] items-center justify-center text-sm text-[#8a8178]">Chưa có dữ liệu.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={accountData} layout="vertical" margin={{ left: 24, right: 16, top: 16, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e8e2d9" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#8a8178", fontSize: 12 }} axisLine={{ stroke: "#c3c2b7" }} />
+                    <YAxis type="category" dataKey="label" width={82} tick={{ fill: "#4f4943", fontSize: 12 }} axisLine={{ stroke: "#c3c2b7" }} />
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={28} formatter={(value: string) => <span className="text-xs text-[#4f4943]">{value}</span>} />
+                    <Bar dataKey="active" name="Active" stackId="account" fill={APPROVED_COLOR} radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="inactive" name="Inactive" stackId="account" fill={INACTIVE_COLOR} radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function StatisticsScreen() {
+  const { user } = useAuth();
+  const roles = user?.roles?.length ? user.roles : user?.role ? [user.role] : [];
+  return roles.includes("PRINCIPAL") ? <PrincipalStatisticsScreen /> : <ModeratorStatisticsScreen />;
 }
 
 export default function Page() {

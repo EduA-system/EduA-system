@@ -65,6 +65,12 @@ public class JpaWeeklyTaskRepository implements WeeklyTaskRepository {
         return jpa.countBySubjectAndReviewStatus(subject, status);
     }
 
+    @Override @Transactional(readOnly = true) public List<WeeklyStatusAggregate> countByWeekAndReviewStatus(LocalDate fromWeek, LocalDate toWeek, Subject subject) {
+        return jpa.countByWeekAndReviewStatusRaw(fromWeek, toWeek, subject).stream()
+                .map(row -> new WeeklyStatusAggregate((LocalDate) row[0], (WeeklyTaskReviewStatus) row[1], ((Number) row[2]).longValue()))
+                .toList();
+    }
+
     private static WeeklyTask toDomain(WeeklyTaskEntity e) {
         return new WeeklyTask(e.getId(), e.getModeratorId(), e.getSubject(), e.getGrade(), e.getTeacherId(), e.getWeekStartDate(),
                 e.getScopeDescription(), e.getTextbookCode(), e.getChapterCode(), e.getChapterName(), e.getLessonCode(), e.getLessonName(),

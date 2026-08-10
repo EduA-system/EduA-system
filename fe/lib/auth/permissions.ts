@@ -44,7 +44,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   "/weekly-schedule": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/weekly-task-document": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/lesson-plan-approval": { requireAuth: true, allowedRoles: ["MODERATOR"] },
-  "/statistics": { requireAuth: true, allowedRoles: ["MODERATOR"] },
+  "/statistics": { requireAuth: true, allowedRoles: ["MODERATOR", "PRINCIPAL"] },
   "/user-management": { requireAuth: true, allowedRoles: ["MODERATOR", "PRINCIPAL"] },
   "/it-staff": { requireAuth: true, allowedRoles: ["IT_STAFF"] },
   "/it-staff/activity-log": { requireAuth: true, allowedRoles: ["IT_STAFF"] },

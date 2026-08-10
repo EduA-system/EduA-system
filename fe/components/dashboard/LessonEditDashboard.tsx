@@ -55,6 +55,7 @@ export function LessonEditDashboard() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [documentReady, setDocumentReady] = useState(!libraryId);
   const [isDirty, setIsDirty] = useState(false);
   // Còn đề xuất AI (đang hiện diff đỏ/xanh trong tài liệu) chưa Chấp nhận/Bỏ — chặn "Lưu" khi
   // true, tránh lưu một bản giáo án dở dang có cả nội dung cũ/mới lẫn lộn mà sau khi mở lại
@@ -119,6 +120,7 @@ export function LessonEditDashboard() {
     if (!libraryId || !editor) return;
 
     let cancelled = false;
+    setDocumentReady(false);
     editor.setEditable(false);
 
     void getLibraryContent(authFetch, libraryId)
@@ -142,12 +144,14 @@ export function LessonEditDashboard() {
         revisionRef.current = 0;
         setIsDirty(false);
         editor.setEditable(true);
+        setDocumentReady(true);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
         setSaveStatus("error");
         setSaveError(error instanceof Error ? error.message : "Không thể mở giáo án đã lưu.");
         editor.setEditable(true);
+        setDocumentReady(false);
       });
 
     return () => {
@@ -243,6 +247,11 @@ export function LessonEditDashboard() {
 
   const exportPdf = useCallback(async () => {
     if (!editor) return;
+    if (!documentReady) {
+      setSaveStatus("error");
+      setSaveError("Giáo án đang tải, vui lòng đợi trong giây lát rồi xuất PDF.");
+      return;
+    }
     const title = editor.state.doc.firstChild?.textContent.trim() || "Giáo án";
     setExportingPdf(true);
     setSaveStatus("idle");
@@ -262,7 +271,7 @@ export function LessonEditDashboard() {
     } finally {
       setExportingPdf(false);
     }
-  }, [authFetch, editor, margins.left, margins.right]);
+  }, [authFetch, documentReady, editor, margins.left, margins.right]);
 
   // Khi AI đã hoàn thành toàn bộ activity, lưu bản giáo án đầu tiên vào thư viện.
   useLessonPlanStream(editor, (session) => {
@@ -285,29 +294,33 @@ export function LessonEditDashboard() {
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
             <div className="@container flex min-h-12 items-center justify-between gap-3 px-3 py-1.5">
               <div className="flex min-w-0 shrink-0 items-center gap-1.5">
-                <HeaderActionButton
-                  onClick={() => void saveLesson()}
-                  disabled={hasPendingAiDiff}
-                  label={
-                    saveStatus === "saving"
-                      ? "Đang lưu..."
-                      : hasPendingAiDiff
-                        ? "Còn đề xuất AI chưa duyệt"
-                        : "Lưu"
-                  }
-                >
-                  <SaveIcon />
-                </HeaderActionButton>
+                {!libraryId && (
+                  <HeaderActionButton
+                    onClick={() => void saveLesson()}
+                    disabled={hasPendingAiDiff}
+                    label={
+                      saveStatus === "saving"
+                        ? "Đang lưu..."
+                        : hasPendingAiDiff
+                          ? "Còn đề xuất AI chưa duyệt"
+                          : "Lưu"
+                    }
+                  >
+                    <SaveIcon />
+                  </HeaderActionButton>
+                )}
                 <HeaderActionButton
                   onClick={() => void exportPdf()}
-                  disabled={exportingPdf}
-                  label={exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                  disabled={exportingPdf || !documentReady}
+                  label={!documentReady ? "Đang tải giáo án..." : exportingPdf ? "Đang xuất..." : "Xuất PDF"}
                 >
                   <PrintIcon />
                 </HeaderActionButton>
-                <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>
-                  <CreateLessonIcon />
-                </HeaderActionButton>
+                {!libraryId && (
+                  <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>
+                    <CreateLessonIcon />
+                  </HeaderActionButton>
+                )}
               </div>
 
               {/* Trước đây chỉ có icon lấp lánh trơ trọi + `aria-label` tiếng Anh — không có

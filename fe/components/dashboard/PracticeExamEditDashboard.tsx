@@ -47,6 +47,7 @@ export function PracticeExamEditDashboard() {
   const [streamedExam, setStreamedExam] = useState<PracticeExam | null>(null);
   const [saving, setSaving] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [documentReady, setDocumentReady] = useState(() => !(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("libraryId")));
   const [extensions] = useState(() =>
     createEditorExtensions({ onMathClick: setMathClick }),
   );
@@ -65,7 +66,11 @@ export function PracticeExamEditDashboard() {
 
   useEffect(() => {
     const contentId = searchParams.get("libraryId");
-    if ((!contentId && !readOnlyClassResource) || !editor) return;
+    if ((!contentId && !readOnlyClassResource) || !editor) {
+      if (editor) setDocumentReady(true);
+      return;
+    }
+    setDocumentReady(false);
     const contentRequest = readOnlyClassResource
       ? getClassResourceLibraryContent(authFetch, classId!, resourceId!)
       : contentId ? getLibraryContent(authFetch, contentId) : null;
@@ -83,7 +88,11 @@ export function PracticeExamEditDashboard() {
       }));
       setNotice("Đang mở bài kiểm tra đã lưu từ thư viện.");
       if (readOnlyClassResource) editor.setEditable(false);
-    }).catch(() => setNotice("Không thể mở bài kiểm tra đã lưu."));
+      setDocumentReady(true);
+    }).catch(() => {
+      setNotice("Không thể mở bài kiểm tra đã lưu.");
+      setDocumentReady(false);
+    });
   }, [authFetch, classId, editor, readOnlyClassResource, resourceId, searchParams]);
 
   async function saveDraft() {
@@ -107,6 +116,7 @@ export function PracticeExamEditDashboard() {
 
   async function exportPdf() {
     if (!editor) { setNotice("Chưa có đề để xuất PDF."); return; }
+    if (!documentReady) { setNotice("Đề kiểm tra đang tải, vui lòng đợi trong giây lát rồi xuất PDF."); return; }
     const title = editor.state.doc.firstChild?.textContent.trim() || savedExam?.title || streamedExam?.title || "Đề kiểm tra";
     setExportingPdf(true);
     setNotice(null);
@@ -154,10 +164,10 @@ export function PracticeExamEditDashboard() {
               {!readOnlyClassResource && <button
                 type="button"
                 onClick={() => void exportPdf()}
-                disabled={exportingPdf}
+                disabled={exportingPdf || !documentReady}
                 className="shrink-0 rounded-lg bg-[#d97757] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#c96545]"
               >
-                {exportingPdf ? "Đang xuất..." : "Xuất đề"}
+                {!documentReady ? "Đang tải..." : exportingPdf ? "Đang xuất..." : "Xuất đề"}
               </button>}
             </div>
             {/* Không đặt overflow-x-auto — EditorTools.tsx đã tự flex-wrap khi hẹp nên không cần

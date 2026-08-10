@@ -40,5 +40,8 @@ public interface WeeklyTaskRepository {
     /** Thống kê Mod: tổng số task theo reviewStatus, cùng subject — dùng cho donut Duyệt/Từ chối. */
     long countBySubjectAndReviewStatus(Subject subject, WeeklyTaskReviewStatus status);
 
+    List<WeeklyStatusAggregate> countByWeekAndReviewStatus(LocalDate fromWeek, LocalDate toWeek, Subject subject);
+
     record TeacherOverdueAggregate(UUID teacherId, long overdueCount) { }
+    record WeeklyStatusAggregate(LocalDate weekStartDate, WeeklyTaskReviewStatus status, long count) { }
 }

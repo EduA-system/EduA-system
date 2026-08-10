@@ -41,4 +41,15 @@ public interface WeeklyTaskJpaRepository extends JpaRepository<WeeklyTaskEntity,
                                              @Param("toWeek") LocalDate toWeek);
 
     long countBySubjectAndReviewStatus(Subject subject, WeeklyTaskReviewStatus reviewStatus);
+
+    @Query("""
+            SELECT e.weekStartDate, e.reviewStatus, COUNT(e) FROM WeeklyTaskEntity e
+            WHERE e.weekStartDate BETWEEN :fromWeek AND :toWeek
+              AND (:subject IS NULL OR e.subject = :subject)
+            GROUP BY e.weekStartDate, e.reviewStatus
+            ORDER BY e.weekStartDate ASC
+            """)
+    List<Object[]> countByWeekAndReviewStatusRaw(@Param("fromWeek") LocalDate fromWeek,
+                                                 @Param("toWeek") LocalDate toWeek,
+                                                 @Param("subject") Subject subject);
 }

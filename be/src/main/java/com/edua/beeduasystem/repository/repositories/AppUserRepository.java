@@ -37,4 +37,8 @@ public interface AppUserRepository {
 
     /** Kiểm tra có user active với role + subject đã cho không (dùng cho ràng buộc 1 moderator/subject). */
     boolean existsActiveByRoleAndSubject(Role role, Subject subject);
+
+    List<RoleStatusAggregate> countActiveInactiveByRole(Subject subject);
+
+    record RoleStatusAggregate(Role role, boolean active, long count) { }
 }

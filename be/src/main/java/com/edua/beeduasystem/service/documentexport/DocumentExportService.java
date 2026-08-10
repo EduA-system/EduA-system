@@ -12,13 +12,39 @@ import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class DocumentExportService {
 
     private static final String PDF_CONTENT_TYPE = "application/pdf";
+    private static final Pattern FRACTION_PATTERN = Pattern.compile("\\\\frac\\s*\\{([^{}]+)}\\s*\\{([^{}]+)}");
+    private static final Pattern SQRT_PATTERN = Pattern.compile("\\\\sqrt\\s*\\{([^{}]+)}");
+    private static final Pattern SUPERSCRIPT_GROUP_PATTERN = Pattern.compile("\\^\\{([^{}]+)}");
+    private static final Pattern SUBSCRIPT_GROUP_PATTERN = Pattern.compile("_\\{([^{}]+)}");
+    private static final Pattern SUPERSCRIPT_CHAR_PATTERN = Pattern.compile("\\^([A-Za-z0-9+\\-=()])");
+    private static final Pattern SUBSCRIPT_CHAR_PATTERN = Pattern.compile("_([A-Za-z0-9+\\-=()])");
+    private static final Map<String, String> LATEX_SYMBOLS = latexSymbols();
+    private static final Map<Character, Character> SUPERSCRIPT_CHARS = Map.ofEntries(
+            Map.entry('0', '⁰'), Map.entry('1', '¹'), Map.entry('2', '²'), Map.entry('3', '³'), Map.entry('4', '⁴'),
+            Map.entry('5', '⁵'), Map.entry('6', '⁶'), Map.entry('7', '⁷'), Map.entry('8', '⁸'), Map.entry('9', '⁹'),
+            Map.entry('+', '⁺'), Map.entry('-', '⁻'), Map.entry('=', '⁼'), Map.entry('(', '⁽'), Map.entry(')', '⁾'),
+            Map.entry('n', 'ⁿ'), Map.entry('i', 'ⁱ')
+    );
+    private static final Map<Character, Character> SUBSCRIPT_CHARS = Map.ofEntries(
+            Map.entry('0', '₀'), Map.entry('1', '₁'), Map.entry('2', '₂'), Map.entry('3', '₃'), Map.entry('4', '₄'),
+            Map.entry('5', '₅'), Map.entry('6', '₆'), Map.entry('7', '₇'), Map.entry('8', '₈'), Map.entry('9', '₉'),
+            Map.entry('+', '₊'), Map.entry('-', '₋'), Map.entry('=', '₌'), Map.entry('(', '₍'), Map.entry(')', '₎'),
+            Map.entry('a', 'ₐ'), Map.entry('e', 'ₑ'), Map.entry('h', 'ₕ'), Map.entry('i', 'ᵢ'), Map.entry('j', 'ⱼ'),
+            Map.entry('k', 'ₖ'), Map.entry('l', 'ₗ'), Map.entry('m', 'ₘ'), Map.entry('n', 'ₙ'), Map.entry('o', 'ₒ'),
+            Map.entry('p', 'ₚ'), Map.entry('r', 'ᵣ'), Map.entry('s', 'ₛ'), Map.entry('t', 'ₜ'), Map.entry('u', 'ᵤ'),
+            Map.entry('v', 'ᵥ'), Map.entry('x', 'ₓ')
+    );
 
     private final CurrentUserProvider currentUserProvider;
     private final BlogContentSanitizer sanitizer;
@@ -99,6 +125,7 @@ public class DocumentExportService {
                       padding-left: %dpx;
                       padding-right: %dpx;
                     }
+                    .document-page, .document-page * { color: #111 !important; }
                     h1 { font-size: 16pt; text-align: center; margin: 0 0 6pt; }
                     h2 { font-size: 14pt; margin: 18pt 0 8pt; }
                     h3 { font-size: 12pt; margin: 14pt 0 6pt; }
@@ -125,14 +152,107 @@ public class DocumentExportService {
             String latex = element.attr("data-latex");
             if ("block-math".equals(element.attr("data-type"))) {
                 Element replacement = new Element("div").addClass("math-block");
-                replacement.text(latex);
+                replacement.text(latexToPdfText(latex));
                 element.replaceWith(replacement);
             } else {
                 Element replacement = new Element("span").addClass("math-inline");
-                replacement.text(latex);
+                replacement.text(latexToPdfText(latex));
                 element.replaceWith(replacement);
             }
         }
+    }
+
+    private static String latexToPdfText(String latex) {
+        if (latex == null || latex.isBlank()) {
+            return "";
+        }
+        String value = latex.trim();
+        value = replacePattern(value, FRACTION_PATTERN, match -> "(" + match.group(1) + ")/(" + match.group(2) + ")");
+        value = replacePattern(value, SQRT_PATTERN, match -> "√(" + match.group(1) + ")");
+        value = replacePattern(value, SUPERSCRIPT_GROUP_PATTERN, match -> toScript(match.group(1), SUPERSCRIPT_CHARS));
+        value = replacePattern(value, SUBSCRIPT_GROUP_PATTERN, match -> toScript(match.group(1), SUBSCRIPT_CHARS));
+        value = replacePattern(value, SUPERSCRIPT_CHAR_PATTERN, match -> toScript(match.group(1), SUPERSCRIPT_CHARS));
+        value = replacePattern(value, SUBSCRIPT_CHAR_PATTERN, match -> toScript(match.group(1), SUBSCRIPT_CHARS));
+        for (Map.Entry<String, String> entry : LATEX_SYMBOLS.entrySet()) {
+            value = value.replace(entry.getKey(), entry.getValue());
+        }
+        return value
+                .replace("\\left", "")
+                .replace("\\right", "")
+                .replace("\\,", " ")
+                .replace("\\;", " ")
+                .replace("\\:", " ")
+                .replace("\\!", "")
+                .replaceAll("\\\\([A-Za-z]+)", "$1")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private static String replacePattern(String value, Pattern pattern, MatchReplacement replacement) {
+        Matcher matcher = pattern.matcher(value);
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) {
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement.replace(matcher)));
+        }
+        matcher.appendTail(result);
+        return result.toString();
+    }
+
+    private static String toScript(String value, Map<Character, Character> scriptChars) {
+        StringBuilder result = new StringBuilder();
+        for (char c : value.toCharArray()) {
+            result.append(scriptChars.getOrDefault(c, c));
+        }
+        return result.toString();
+    }
+
+    private static Map<String, String> latexSymbols() {
+        Map<String, String> symbols = new HashMap<>();
+        symbols.put("\\alpha", "α");
+        symbols.put("\\beta", "β");
+        symbols.put("\\gamma", "γ");
+        symbols.put("\\delta", "δ");
+        symbols.put("\\epsilon", "ε");
+        symbols.put("\\varepsilon", "ε");
+        symbols.put("\\zeta", "ζ");
+        symbols.put("\\eta", "η");
+        symbols.put("\\theta", "θ");
+        symbols.put("\\vartheta", "ϑ");
+        symbols.put("\\lambda", "λ");
+        symbols.put("\\mu", "μ");
+        symbols.put("\\nu", "ν");
+        symbols.put("\\xi", "ξ");
+        symbols.put("\\pi", "π");
+        symbols.put("\\rho", "ρ");
+        symbols.put("\\sigma", "σ");
+        symbols.put("\\tau", "τ");
+        symbols.put("\\varphi", "φ");
+        symbols.put("\\phi", "φ");
+        symbols.put("\\omega", "ω");
+        symbols.put("\\Delta", "Δ");
+        symbols.put("\\Omega", "Ω");
+        symbols.put("\\Sigma", "Σ");
+        symbols.put("\\Pi", "Π");
+        symbols.put("\\times", "×");
+        symbols.put("\\cdot", "·");
+        symbols.put("\\leq", "≤");
+        symbols.put("\\le", "≤");
+        symbols.put("\\geq", "≥");
+        symbols.put("\\ge", "≥");
+        symbols.put("\\neq", "≠");
+        symbols.put("\\approx", "≈");
+        symbols.put("\\sim", "∼");
+        symbols.put("\\pm", "±");
+        symbols.put("\\mp", "∓");
+        symbols.put("\\infty", "∞");
+        symbols.put("\\rightarrow", "→");
+        symbols.put("\\to", "→");
+        symbols.put("\\leftarrow", "←");
+        return symbols;
+    }
+
+    private interface MatchReplacement {
+        String replace(Matcher matcher);
     }
 
     private static ExportType parseType(String rawType) {
