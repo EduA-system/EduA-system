@@ -2,6 +2,7 @@ package com.edua.beeduasystem.service.library;
 
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.exception.StateConflictException;
 import com.edua.beeduasystem.domain.model.activitylog.ActivityLogAction;
 import com.edua.beeduasystem.domain.model.activitylog.ActivityLogCategory;
 import com.edua.beeduasystem.domain.model.auth.Role;
@@ -49,7 +50,7 @@ public class LibraryContentService {
     @Transactional
     public LibraryViews.Detail submit(UUID id) {
         LibraryContent c = requireOwner(id);
-        if (c.status() != LibraryContentStatus.PRIVATE && c.status() != LibraryContentStatus.REJECTED) throw new IllegalArgumentException("Only private or rejected content can be submitted for review.");
+        if (c.status() != LibraryContentStatus.PRIVATE && c.status() != LibraryContentStatus.REJECTED) throw new StateConflictException("Only private or rejected content can be submitted for review.");
         if (c.subject() == null) throw new IllegalArgumentException("Nội dung chưa được gán môn học. Vui lòng chọn môn học trước khi gửi duyệt.");
         LibraryContent saved = repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.SUBMITTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),Instant.now(),null,null,null,null,c.version()));
         notificationService.notifyRoleSubject(Role.MODERATOR, c.subject(), c.ownerId(),
@@ -61,7 +62,7 @@ public class LibraryContentService {
     @Transactional
     public LibraryViews.Detail unsubmit(UUID id) {
         LibraryContent c = requireOwner(id);
-        if (c.status() != LibraryContentStatus.SUBMITTED) throw new IllegalArgumentException("Only submitted content can be unsubmitted.");
+        if (c.status() != LibraryContentStatus.SUBMITTED) throw new StateConflictException("Only submitted content can be unsubmitted.");
         return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.PRIVATE,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),null,null,null,null,null,c.version())));
     }
     /** Moderator duyệt content SUBMITTED cùng subject với mình lên Hub công khai. */
@@ -107,7 +108,7 @@ public class LibraryContentService {
     }
     private LibraryContent requireSubmittedInModeratorSubject(UUID id) {
         LibraryContent c = repository.findActiveById(id).orElseThrow(() -> new ResourceNotFoundException("Library content not found."));
-        if (c.status() != LibraryContentStatus.SUBMITTED) throw new IllegalArgumentException("Only submitted content can be reviewed.");
+        if (c.status() != LibraryContentStatus.SUBMITTED) throw new StateConflictException("Only submitted content can be reviewed.");
         Subject moderatorSubject = currentUser.require().subject();
         if (moderatorSubject == null || c.subject() != moderatorSubject) throw new ForbiddenOperationException("You can only review content in your assigned subject.");
         return c;

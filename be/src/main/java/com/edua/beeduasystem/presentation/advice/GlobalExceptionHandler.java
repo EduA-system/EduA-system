@@ -12,6 +12,7 @@ import com.edua.beeduasystem.domain.exception.PhysicsSimulationEditException;
 import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.exception.SlideImageGenerationException;
+import com.edua.beeduasystem.domain.exception.StateConflictException;
 import com.edua.beeduasystem.service.documentexport.DocumentExportException;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
 import com.edua.beeduasystem.service.slides.SlideAiResponseException;
@@ -129,6 +130,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleClassEnrollmentConflict(ClassEnrollmentConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ClassEnrollmentConflictResponse(ex.getMessage(), ex.reason(), ex.details()));
+    }
+
+    @ExceptionHandler(StateConflictException.class)
+    public ResponseEntity<ErrorResponse> handleStateConflict(StateConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage(), "STATE_CONFLICT"));
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
