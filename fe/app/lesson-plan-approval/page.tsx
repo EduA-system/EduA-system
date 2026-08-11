@@ -78,6 +78,7 @@ function LessonPlanApprovalScreen() {
       setItems(data.items);
       setError("");
     } catch (e) {
+      setMsg("");
       setError(e instanceof Error ? e.message : "Không thể tải danh sách chờ duyệt.");
     } finally {
       setLoading(false);
@@ -115,7 +116,10 @@ function LessonPlanApprovalScreen() {
         const d = await getWeeklyTask(authFetch, id);
         if (detailRequestSeq.current === requestSeq) setDetail(d);
       } catch (e) {
-        if (detailRequestSeq.current === requestSeq) setError(e instanceof Error ? e.message : "Không thể tải chi tiết giáo án.");
+        if (detailRequestSeq.current === requestSeq) {
+          setMsg("");
+          setError(e instanceof Error ? e.message : "Không thể tải chi tiết giáo án.");
+        }
       } finally {
         if (detailRequestSeq.current === requestSeq) setDetailLoading(false);
       }
@@ -131,6 +135,8 @@ function LessonPlanApprovalScreen() {
     const target = items.find((t) => t.id === focusTaskId);
     if (!target) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMsg("");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError("Không tìm thấy nhiệm vụ được thông báo trong hàng đợi hiện tại — có thể đã được xử lý.");
       return;
     }
@@ -144,10 +150,12 @@ function LessonPlanApprovalScreen() {
     if (!confirm("Duyệt giáo án này?")) return;
     try {
       await approveWeeklyTask(authFetch, id);
+      setError("");
       setMsg("Đã duyệt.");
       setExpandedId(null);
       await load();
     } catch (e) {
+      setMsg("");
       setError(e instanceof Error ? e.message : "Không thể duyệt giáo án.");
     }
   }
@@ -157,10 +165,12 @@ function LessonPlanApprovalScreen() {
     if (!reason?.trim()) return;
     try {
       await rejectWeeklyTask(authFetch, id, reason.trim());
+      setError("");
       setMsg("Đã từ chối.");
       setExpandedId(null);
       await load();
     } catch (e) {
+      setMsg("");
       setError(e instanceof Error ? e.message : "Không thể từ chối giáo án.");
     }
   }
@@ -168,6 +178,7 @@ function LessonPlanApprovalScreen() {
   function openSubmittedLessonPreview(detail: WeeklyTaskDetail) {
     const document = resolveWeeklyTaskLessonDocument(detail.sourceLibraryContentPayload);
     if (!document) {
+      setMsg("");
       setError("Nhiệm vụ này không có nội dung giáo án để hiển thị.");
       return;
     }
