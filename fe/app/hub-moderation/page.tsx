@@ -211,6 +211,7 @@ export default function HubModerationPage() {
     let cancelled = false;
     const timer = setTimeout(() => {
       setDetailLoading(true);
+      setDetail(null);
       setRejectOpen(false);
       setRejectReason("");
       void getModerationContent(authFetch, selectedId)
@@ -218,7 +219,10 @@ export default function HubModerationPage() {
           if (!cancelled) setDetail(content);
         })
         .catch((cause) => {
-          if (!cancelled) setToast({ kind: "error", message: cause instanceof Error ? cause.message : "Không thể mở nội dung duyệt." });
+          if (!cancelled) {
+            setDetail(null);
+            setToast({ kind: "error", message: cause instanceof Error ? cause.message : "Không thể mở nội dung duyệt." });
+          }
         })
         .finally(() => {
           if (!cancelled) setDetailLoading(false);
