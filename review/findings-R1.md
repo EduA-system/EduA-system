@@ -25,7 +25,7 @@ Hai lượt bổ sung nhau gần như không chồng lấn — xem [mục "Đố
 | R1-06 | `HubContentReportService.java:33` | Báo cáo vi phạm là ngõ cụt, không chặn spam | TB | Cần quyết định |
 | R1-07 | `LibraryContentService.java:39` | Xoá content APPROVED không dọn hệ quả | TB | Sửa |
 | R1-14 | `fe/app/library/page.tsx:216` | FE tự ghi `updatedAt` khi mở trang → xáo trộn thứ tự | TB | ✅ Xong |
-| R1-15 | `LibraryContentService.java:57` | Ghi log audit fail → bài public không có vết duyệt | TB | Sửa |
+| R1-15 | `LibraryContentService.java:57` | Ghi log audit fail → bài public không có vết duyệt | TB | ✅ Xong |
 | R1-16 | `fe/app/hub-moderation/page.tsx:174` | Spinner chặn tới khi tối đa 100 request lẻ xong | TB | Sửa |
 | R1-08 | `HubCommentService.java:23` | Javadoc mô tả sai quyền xoá so với code | Thấp | Sửa |
 | R1-09 | `HubContentService.java:73,83` | N+1 query trên feed Hub (endpoint permitAll) | Thấp | Sửa |
