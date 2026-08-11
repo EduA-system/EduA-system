@@ -413,7 +413,10 @@ class WeeklyTaskServiceTest {
         asModerator();
         UUID taskId = UUID.randomUUID();
         UUID newTeacherId = UUID.randomUUID();
-        when(repository.findById(taskId)).thenReturn(Optional.of(task(taskId, WeeklyTaskReviewStatus.REJECTED, futureDeadline, "Thieu muc tieu")));
+        WeeklyTask existing = task(taskId, WeeklyTaskReviewStatus.REJECTED, futureDeadline, "Thieu muc tieu");
+        when(repository.findById(taskId)).thenReturn(Optional.of(existing));
+        // update() sửa đồng bộ theo cụm, nên cụm phải chứa chính task đang sửa.
+        when(repository.findBySubjectAndGrade(eq(Subject.MATH), eq(GRADE), any(), any())).thenReturn(List.of(existing));
         when(userRepository.findById(newTeacherId)).thenReturn(Optional.of(appUser(newTeacherId, Subject.MATH, UserStatus.ACTIVE)));
         when(userRoleRepository.findRolesByUserId(newTeacherId)).thenReturn(Set.of(Role.TEACHER));
         when(teacherGradeRepository.findGradesByUserIds(List.of(newTeacherId))).thenReturn(java.util.Map.of(newTeacherId, List.of(GRADE)));
@@ -428,7 +431,9 @@ class WeeklyTaskServiceTest {
     void update_sameTeacher_keepsReviewStatus() {
         asModerator();
         UUID taskId = UUID.randomUUID();
-        when(repository.findById(taskId)).thenReturn(Optional.of(task(taskId, WeeklyTaskReviewStatus.SUBMITTED, futureDeadline, null)));
+        WeeklyTask existing = task(taskId, WeeklyTaskReviewStatus.SUBMITTED, futureDeadline, null);
+        when(repository.findById(taskId)).thenReturn(Optional.of(existing));
+        when(repository.findBySubjectAndGrade(eq(Subject.MATH), eq(GRADE), any(), any())).thenReturn(List.of(existing));
 
         WeeklyTaskViews.Detail result = service.update(taskId, teacherId, LocalDate.now(), "Chuong 4 - cap nhat", TEXTBOOK_CODE, CHAPTER_CODE, LESSON_CODE);
 
@@ -452,6 +457,6 @@ class WeeklyTaskServiceTest {
     }
 
     private AppUser appUser(UUID id, Subject subject, UserStatus status) {
-        return new AppUser(id, "u@edua.vn", null, "Teacher Name", null, null, subject, status, Instant.now(), null);
+        return new AppUser(id, "u@edua.vn", null, "Teacher Name", null, null, null, null, subject, status, Instant.now(), null, null);
     }
 }

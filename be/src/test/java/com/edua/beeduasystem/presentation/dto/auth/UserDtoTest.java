@@ -28,7 +28,8 @@ class UserDtoTest {
                 Subject.CHEMISTRY,
                 UserStatus.ACTIVE,
                 Instant.now(),
-                Instant.now());
+                Instant.now(),
+                null);
 
         UserDto dto = UserDto.from(user, Set.of(Role.TEACHER, Role.MODERATOR, Role.PRINCIPAL));
 

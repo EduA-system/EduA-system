@@ -330,9 +330,12 @@ class ClassroomCrudIntegrationTests {
                 fullName,
                 null,
                 null,
+                null,
+                null,
                 subject,
                 status,
                 Instant.now(),
+                null,
                 null));
         userRoleRepository.replaceRole(user.id(), role, user.id(), Instant.now());
         return user;

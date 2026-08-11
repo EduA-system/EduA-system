@@ -1,5 +1,6 @@
 package com.edua.beeduasystem.service.classroom;
 
+import com.edua.beeduasystem.domain.exception.ClassAccessRevokedException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.AccessTokenClaims;
@@ -12,6 +13,9 @@ import com.edua.beeduasystem.domain.model.classroom.Classroom;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.ClassMemberRepository;
 import com.edua.beeduasystem.repository.repositories.ClassRepository;
+import com.edua.beeduasystem.repository.repositories.ClassResourceRepository;
+import com.edua.beeduasystem.repository.repositories.SubmissionRepository;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -34,7 +39,10 @@ class ClassManagementServiceTest {
 
     private ClassRepository classRepository;
     private ClassMemberRepository classMemberRepository;
+    private ClassResourceRepository classResourceRepository;
+    private SubmissionRepository submissionRepository;
     private AppUserRepository userRepository;
+    private TeacherGradeRepository teacherGradeRepository;
     private CurrentUserProvider currentUserProvider;
     private ClassManagementService service;
 
@@ -42,9 +50,13 @@ class ClassManagementServiceTest {
     void setUp() {
         classRepository = mock(ClassRepository.class);
         classMemberRepository = mock(ClassMemberRepository.class);
+        classResourceRepository = mock(ClassResourceRepository.class);
+        submissionRepository = mock(SubmissionRepository.class);
         userRepository = mock(AppUserRepository.class);
+        teacherGradeRepository = mock(TeacherGradeRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
-        service = new ClassManagementService(classRepository, classMemberRepository, userRepository, currentUserProvider);
+        service = new ClassManagementService(classRepository, classMemberRepository, classResourceRepository,
+                submissionRepository, userRepository, teacherGradeRepository, currentUserProvider);
     }
 
     @Test
@@ -54,6 +66,8 @@ class ClassManagementServiceTest {
         when(currentUserProvider.require()).thenReturn(claims(ownerId, Subject.CHEMISTRY));
         when(classRepository.save(any(Classroom.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(userRepository.findById(ownerId)).thenReturn(Optional.of(user(ownerId, "teacher@edua.vn", "Teacher A")));
+        // Giáo viên chỉ được tạo lớp thuộc khối mình phụ trách.
+        when(teacherGradeRepository.findGradesByUserIds(List.of(ownerId))).thenReturn(Map.of(ownerId, List.of(10)));
 
         ClassViews.ClassDetail result = service.createClass(" 10A1 - Chemistry ", Subject.CHEMISTRY, 10, "  Lop hoc  ");
 
@@ -145,7 +159,7 @@ class ClassManagementServiceTest {
         when(classMemberRepository.existsByClassIdAndStudentId(classId, strangerId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.getDetail(classId))
-                .isInstanceOf(ForbiddenOperationException.class);
+                .isInstanceOf(ClassAccessRevokedException.class);
     }
 
     @Test
@@ -185,7 +199,7 @@ class ClassManagementServiceTest {
     }
 
     private static AppUser user(UUID id, String email, String fullName) {
-        return new AppUser(id, email, null, fullName, null, null, null, UserStatus.ACTIVE, Instant.now(), null);
+        return new AppUser(id, email, null, fullName, null, null, null, null, null, UserStatus.ACTIVE, Instant.now(), null, null);
     }
 
     private static AccessTokenClaims claims(UUID userId, Subject subject) {

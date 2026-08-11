@@ -11,6 +11,7 @@ import com.edua.beeduasystem.repository.gateways.GoogleIdentityVerifier;
 import com.edua.beeduasystem.repository.gateways.TokenService;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,7 @@ class AuthServiceTest {
     private AppUserRepository userRepository;
     private RefreshTokenRepository refreshTokenRepository;
     private UserRoleRepository userRoleRepository;
+    private TeacherGradeRepository teacherGradeRepository;
     private ActivityLogService activityLogService;
     private AuthService authService;
 
@@ -48,14 +50,16 @@ class AuthServiceTest {
         userRepository = mock(AppUserRepository.class);
         refreshTokenRepository = mock(RefreshTokenRepository.class);
         userRoleRepository = mock(UserRoleRepository.class);
+        teacherGradeRepository = mock(TeacherGradeRepository.class);
         activityLogService = mock(ActivityLogService.class);
         authService = new AuthService(verifier, tokenService, userRepository, refreshTokenRepository,
-                userRoleRepository, new CurrentUserProvider(), activityLogService, Duration.ofHours(24));
+                userRoleRepository, teacherGradeRepository, new CurrentUserProvider(), activityLogService,
+                Duration.ofHours(24));
     }
 
     private AppUser invitedUser(String email) {
         return new AppUser(UUID.randomUUID(), email, null, null,
-                null, null, null, UserStatus.INVITED, Instant.now(), null);
+                null, null, null, null, null, UserStatus.INVITED, Instant.now(), null, null);
     }
 
     @Test
@@ -102,7 +106,7 @@ class AuthServiceTest {
     void loginWithGoogle_disabledUser_rejectsLogin() {
         String email = "disabled@fpt.edu.vn";
         AppUser disabledUser = new AppUser(UUID.randomUUID(), email, "sub-1", "Disabled User",
-                null, null, null, UserStatus.DISABLED, Instant.now(), null);
+                null, null, null, null, null, UserStatus.DISABLED, Instant.now(), null, null);
         when(verifier.verify("idtok")).thenReturn(new GoogleIdentity("sub-1", email, "Disabled User", true));
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(disabledUser));
 
@@ -116,7 +120,7 @@ class AuthServiceTest {
     void refresh_returnsUserAndRolesWithNewTokens() {
         UUID userId = UUID.randomUUID();
         AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Teacher",
-                null, null, null, UserStatus.ACTIVE, Instant.now(), Instant.now());
+                null, null, null, null, null, UserStatus.ACTIVE, Instant.now(), Instant.now(), null);
         RefreshToken refreshToken = new RefreshToken(UUID.randomUUID(), userId, "hash",
                 Instant.now().plus(Duration.ofHours(1)), false, Instant.now());
         when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(refreshToken));

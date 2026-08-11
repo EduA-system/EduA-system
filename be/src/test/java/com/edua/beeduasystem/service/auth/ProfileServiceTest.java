@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -43,7 +44,7 @@ class ProfileServiceTest {
         Instant createdAt = Instant.now();
         Instant lastLoginAt = Instant.now();
         AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Old Name",
-                null, null, Subject.CHEMISTRY, UserStatus.ACTIVE, createdAt, lastLoginAt);
+                null, null, null, null, Subject.CHEMISTRY, UserStatus.ACTIVE, createdAt, lastLoginAt, null);
 
         when(currentUserProvider.requireUserId()).thenReturn(userId);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -55,7 +56,8 @@ class ProfileServiceTest {
                 " https://cdn.example.com/avatar.png ",
                 "  0900000000  ",
                 "  Short bio  ",
-                "  0987654321  ");
+                "  0987654321  ",
+                LocalDate.of(1990, 5, 20));
 
         ArgumentCaptor<AppUser> saved = ArgumentCaptor.forClass(AppUser.class);
         verify(userRepository).save(saved.capture());
@@ -64,6 +66,7 @@ class ProfileServiceTest {
         assertThat(saved.getValue().contactInfo()).isEqualTo("0900000000");
         assertThat(saved.getValue().bio()).isEqualTo("Short bio");
         assertThat(saved.getValue().phoneNumber()).isEqualTo("0987654321");
+        assertThat(saved.getValue().dateOfBirth()).isEqualTo(LocalDate.of(1990, 5, 20));
         assertThat(saved.getValue().email()).isEqualTo("teacher@fpt.edu.vn");
         assertThat(saved.getValue().subject()).isEqualTo(Subject.CHEMISTRY);
         assertThat(saved.getValue().status()).isEqualTo(UserStatus.ACTIVE);
@@ -74,33 +77,38 @@ class ProfileServiceTest {
     void updateCurrentUserProfile_omittedFieldsKeepExistingValues() {
         UUID userId = UUID.randomUUID();
         AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Old Name",
-                "https://cdn.example.com/old.png", "old-contact",
-                Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null);
+                "https://cdn.example.com/old.png", "old-contact", null, null,
+                Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null, null);
 
         when(currentUserProvider.requireUserId()).thenReturn(userId);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(userRoleRepository.findRolesByUserId(userId)).thenReturn(Set.of(Role.TEACHER));
 
-        ProfileService.ProfileResult result = profileService.updateCurrentUserProfile("New Name", null, null, null, null);
+        // phoneNumber và dateOfBirth là bắt buộc với tài khoản không phải học sinh,
+        // nên chỉ avatarUrl/contactInfo/bio mới giữ giá trị cũ khi bỏ trống.
+        ProfileService.ProfileResult result = profileService.updateCurrentUserProfile(
+                "New Name", null, null, null, "0987654321", LocalDate.of(1990, 5, 20));
 
         assertThat(result.user().fullName()).isEqualTo("New Name");
         assertThat(result.user().avatarUrl()).isEqualTo("https://cdn.example.com/old.png");
         assertThat(result.user().contactInfo()).isEqualTo("old-contact");
         assertThat(result.user().bio()).isNull();
-        assertThat(result.user().phoneNumber()).isNull();
+        assertThat(result.user().phoneNumber()).isEqualTo("0987654321");
+        assertThat(result.user().dateOfBirth()).isEqualTo(LocalDate.of(1990, 5, 20));
     }
 
     @Test
     void updateCurrentUserProfile_invalidAvatarUrl_rejected() {
         UUID userId = UUID.randomUUID();
         AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Old Name",
-                null, null, Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null);
+                null, null, null, null, Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null, null);
 
         when(currentUserProvider.requireUserId()).thenReturn(userId);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-        assertThatThrownBy(() -> profileService.updateCurrentUserProfile(null, "javascript:alert(1)", null, null, null))
+        assertThatThrownBy(() -> profileService.updateCurrentUserProfile(
+                null, "javascript:alert(1)", null, null, "0987654321", LocalDate.of(1990, 5, 20)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("URL ảnh đại diện");
     }
@@ -109,14 +117,15 @@ class ProfileServiceTest {
     void updateCurrentUserProfile_blankAvatarUrl_removesAvatar() {
         UUID userId = UUID.randomUUID();
         AppUser user = new AppUser(userId, "teacher@fpt.edu.vn", "sub-1", "Old Name",
-                "https://cdn.example.com/old.png", null, Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null);
+                "https://cdn.example.com/old.png", null, null, null, Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null, null);
 
         when(currentUserProvider.requireUserId()).thenReturn(userId);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(userRoleRepository.findRolesByUserId(userId)).thenReturn(Set.of(Role.TEACHER));
 
-        ProfileService.ProfileResult result = profileService.updateCurrentUserProfile(null, "", null, null, null);
+        ProfileService.ProfileResult result = profileService.updateCurrentUserProfile(
+                null, "", null, null, "0987654321", LocalDate.of(1990, 5, 20));
 
         assertThat(result.user().avatarUrl()).isNull();
     }

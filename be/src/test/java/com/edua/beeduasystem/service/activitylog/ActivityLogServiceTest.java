@@ -89,8 +89,8 @@ class ActivityLogServiceTest {
                 Instant.now());
         when(repository.search(any(), any(), any(), any(), eq(0), eq(20)))
                 .thenReturn(new ActivityLogRepository.SearchResult(List.of(entry), 0, 20, 1));
-        AppUser actor = new AppUser(actorId, "it-staff@edua.vn", null, "Nguyen Van A", null, null, null,
-                UserStatus.ACTIVE, Instant.now(), Instant.now());
+        AppUser actor = new AppUser(actorId, "it-staff@edua.vn", null, "Nguyen Van A", null, null, null, null, null,
+                UserStatus.ACTIVE, Instant.now(), Instant.now(), null);
         when(userRepository.findAllById(List.of(actorId))).thenReturn(List.of(actor));
 
         ActivityLogViews.Page<ActivityLogViews.Summary> page = service.search(null, null, null, null, 0, 20);
@@ -108,8 +108,8 @@ class ActivityLogServiceTest {
                 ActivityLogAction.GRANT_MODERATOR, "APP_USER", UUID.randomUUID(), null, Instant.now());
         when(repository.search(any(), any(), any(), any(), eq(0), eq(20)))
                 .thenReturn(new ActivityLogRepository.SearchResult(List.of(entry), 0, 20, 1));
-        AppUser actor = new AppUser(actorId, "principal@edua.vn", null, "  ", null, null, null,
-                UserStatus.ACTIVE, Instant.now(), Instant.now());
+        AppUser actor = new AppUser(actorId, "principal@edua.vn", null, "  ", null, null, null, null, null,
+                UserStatus.ACTIVE, Instant.now(), Instant.now(), null);
         when(userRepository.findAllById(List.of(actorId))).thenReturn(List.of(actor));
 
         ActivityLogViews.Page<ActivityLogViews.Summary> page = service.search(null, null, null, null, 0, 20);

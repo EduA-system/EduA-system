@@ -122,11 +122,11 @@ class NotificationServiceTest {
 
     private AppUser teacher(String email) {
         return new AppUser(UUID.randomUUID(), email, null, null, null, null,
-                Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null);
+                null, null, Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null, null);
     }
 
     private AppUser moderator(UUID id) {
         return new AppUser(id, "mod@edua.vn", null, "Mod Name", null, null,
-                Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null);
+                null, null, Subject.CHEMISTRY, UserStatus.ACTIVE, Instant.now(), null, null);
     }
 }

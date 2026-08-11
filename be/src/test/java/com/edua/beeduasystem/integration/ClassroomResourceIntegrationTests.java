@@ -338,7 +338,7 @@ class ClassroomResourceIntegrationTests {
 
     private AppUser user(String email, String fullName, Subject subject, UserStatus status, Role role) {
         AppUser user = userRepository.save(new AppUser(
-                UUID.randomUUID(), email, null, fullName, null, null, subject, status, Instant.now(), null));
+                UUID.randomUUID(), email, null, fullName, null, null, null, null, subject, status, Instant.now(), null, null));
         userRoleRepository.replaceRole(user.id(), role, user.id(), Instant.now());
         return user;
     }

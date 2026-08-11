@@ -90,6 +90,8 @@ class PrincipalModeratorServiceTest {
         when(userRepository.findById(previous.id())).thenReturn(Optional.of(previous));
         when(userRepository.findByEmail(replacement.email())).thenReturn(Optional.of(replacement));
         when(userRoleRepository.findRolesByUserId(previous.id())).thenReturn(Set.of(Role.MODERATOR));
+        // Người thay thế phải là giáo viên/moderator thì mới đi tới bước kiểm tra cùng môn.
+        when(userRoleRepository.findRolesByUserId(replacement.id())).thenReturn(Set.of(Role.TEACHER));
 
         assertThatThrownBy(() -> service.replaceModerator(previous.id(), replacement.email(), false))
                 .isInstanceOf(ForbiddenOperationException.class)
@@ -98,6 +100,6 @@ class PrincipalModeratorServiceTest {
 
     private AppUser user(String email, Subject subject, UserStatus status) {
         return new AppUser(UUID.randomUUID(), email, null, null, null, null,
-                subject, status, Instant.now(), null);
+                null, null, subject, status, Instant.now(), null, null);
     }
 }

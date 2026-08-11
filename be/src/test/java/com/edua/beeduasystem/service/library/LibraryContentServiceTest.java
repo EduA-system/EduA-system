@@ -2,6 +2,7 @@ package com.edua.beeduasystem.service.library;
 
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.exception.StateConflictException;
 import com.edua.beeduasystem.domain.model.auth.AccessTokenClaims;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.library.LibraryContent;
@@ -76,7 +77,7 @@ class LibraryContentServiceTest {
         UUID id = UUID.randomUUID();
         when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.SUBMITTED, Instant.now())));
 
-        assertThatThrownBy(() -> service.submit(id)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.submit(id)).isInstanceOf(StateConflictException.class);
         verify(repository, never()).save(any());
     }
 
@@ -132,7 +133,7 @@ class LibraryContentServiceTest {
         UUID id = UUID.randomUUID();
         when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.PRIVATE, null)));
 
-        assertThatThrownBy(() -> service.unsubmit(id)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.unsubmit(id)).isInstanceOf(StateConflictException.class);
         verify(repository, never()).save(any());
     }
 
