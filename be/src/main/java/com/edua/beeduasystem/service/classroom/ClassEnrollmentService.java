@@ -445,7 +445,7 @@ public class ClassEnrollmentService {
         if (!dateOfBirth.isBefore(LocalDate.now())) {
             return "Ngày sinh phải ở trong quá khứ.";
         }
-        if (LocalDate.now().getYear() - dateOfBirth.getYear() < MIN_STUDENT_AGE_YEARS) {
+        if (dateOfBirth.isAfter(LocalDate.now().minusYears(MIN_STUDENT_AGE_YEARS))) {
             return "Học sinh phải từ 16 tuổi trở lên.";
         }
         return null;

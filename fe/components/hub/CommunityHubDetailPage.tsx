@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2, EyeOff, Loader2, MessageCircle, Pencil, Reply,
 import { Avatar } from "@/components/blog/Avatar";
 import { RichView } from "@/components/blog/RichView";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { hasAnyRole } from "@/lib/auth/permissions";
 import { subjectBadgeClasses, subjectLabel } from "@/lib/blog";
@@ -92,7 +93,9 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
   const [editingCommentId, setEditingCommentId] = useState("");
   const [editCommentText, setEditCommentText] = useState("");
   const [replyTo, setReplyTo] = useState<HubComment | null>(null);
+  const [pendingEditComment, setPendingEditComment] = useState<HubComment | null>(null);
   const [moderationTarget, setModerationTarget] = useState<{ comment: HubComment; action: "delete" | "hide" } | null>(null);
+  const [moderatingComment, setModeratingComment] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
 
   const wordCount = useMemo(() => countWords(comment), [comment]);
@@ -167,11 +170,18 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
   function startEditComment(item: HubComment) {
     setEditingCommentId(item.id);
     setEditCommentText(item.content.replace(/<[^>]*>/g, ""));
+    setPendingEditComment(null);
     setReplyTo(null);
   }
 
-  async function saveEditComment() {
+  function requestSaveEditComment(item: HubComment) {
     if (!editingCommentId || !editCommentText.trim() || editWordCount > COMMENT_MAX_WORDS) return;
+    setPendingEditComment(item);
+  }
+
+  async function saveEditComment() {
+    if (!pendingEditComment || !editingCommentId || !editCommentText.trim() || editWordCount > COMMENT_MAX_WORDS) return;
+    setSavingComment(true);
     try {
       const saved = await updateHubComment(authFetch, editingCommentId, editCommentText.trim());
       setDetail((current) => current ? {
@@ -180,14 +190,19 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
       } : current);
       setEditingCommentId("");
       setEditCommentText("");
+      setPendingEditComment(null);
+      setToast({ kind: "success", message: "Đã lưu chỉnh sửa bình luận." });
     } catch (cause) {
       setToast({ kind: "error", message: cause instanceof Error ? cause.message : "Không thể sửa bình luận." });
+    } finally {
+      setSavingComment(false);
     }
   }
 
   async function confirmDeleteComment() {
     if (!moderationTarget) return;
     const target = moderationTarget.comment;
+    setModeratingComment(true);
     try {
       if (moderationTarget.action === "hide") {
         await hideHubComment(authFetch, target.id);
@@ -200,8 +215,11 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
         ...current,
         comments: current.comments.filter((item) => item.id !== deletedId && item.parentCommentId !== deletedId),
       } : current);
+      setToast({ kind: "success", message: moderationTarget.action === "hide" ? "Đã ẩn bình luận." : "Đã xóa bình luận." });
     } catch (cause) {
       setToast({ kind: "error", message: cause instanceof Error ? cause.message : "Không thể xử lý bình luận." });
+    } finally {
+      setModeratingComment(false);
     }
   }
 
@@ -296,12 +314,12 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
                               </div>
                               {editingCommentId === item.id ? (
                                 <div className="mt-2">
-                                  <input value={editCommentText} onChange={(event) => setEditCommentText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveEditComment(); if (event.key === "Escape") setEditingCommentId(""); }} autoFocus className="h-10 w-full rounded-[10px] border border-[#eaeae7] bg-white px-3 text-sm outline-none focus:border-[#d8d8d5]" />
+                                  <input value={editCommentText} onChange={(event) => setEditCommentText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") requestSaveEditComment(item); if (event.key === "Escape") { setEditingCommentId(""); setPendingEditComment(null); } }} autoFocus className="h-10 w-full rounded-[10px] border border-[#eaeae7] bg-white px-3 text-sm outline-none focus:border-[#d8d8d5]" />
                                   <div className="mt-2 flex items-center justify-between gap-2">
                                     <span className={`text-xs ${editWordCount > COMMENT_MAX_WORDS ? "text-rose-600" : "text-stone-400"}`}>{editWordCount}/{COMMENT_MAX_WORDS} từ</span>
                                     <div className="flex gap-2">
-                                      <button type="button" onClick={() => setEditingCommentId("")} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-stone-500 hover:bg-stone-100">Hủy</button>
-                                      <button type="button" disabled={!editCommentText.trim() || editWordCount > COMMENT_MAX_WORDS} onClick={() => void saveEditComment()} className="rounded-lg bg-[#1c1e2e] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Lưu</button>
+                                      <button type="button" onClick={() => { setEditingCommentId(""); setPendingEditComment(null); }} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-stone-500 hover:bg-stone-100">Hủy</button>
+                                      <button type="button" disabled={!editCommentText.trim() || editWordCount > COMMENT_MAX_WORDS} onClick={() => requestSaveEditComment(item)} className="rounded-lg bg-[#1c1e2e] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Lưu</button>
                                     </div>
                                   </div>
                                 </div>
@@ -332,14 +350,27 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
         </section>
       </div>
 
-      {moderationTarget && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-comment-title">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
-            <div className="flex items-start gap-3"><div className="rounded-full bg-rose-100 p-2 text-rose-700"><Trash2 className="size-5" /></div><div><h2 id="delete-comment-title" className="font-bold">{moderationTarget.action === "hide" ? "Ẩn bình luận?" : "Xóa bình luận?"}</h2><p className="mt-1 text-sm leading-5 text-stone-600">{moderationTarget.action === "hide" ? "Bình luận sẽ không còn hiển thị với người xem bài đăng." : "Bình luận này sẽ bị xóa vĩnh viễn."}</p></div></div>
-            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setModerationTarget(null)} className="rounded-xl px-4 py-2 text-sm font-medium hover:bg-stone-100">Hủy</button><button type="button" onClick={() => void confirmDeleteComment()} className="rounded-xl bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-800">{moderationTarget.action === "hide" ? "Ẩn" : "Xóa"}</button></div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={pendingEditComment !== null}
+        title="Lưu chỉnh sửa bình luận?"
+        description="Nội dung bình luận sẽ được cập nhật ngay sau khi xác nhận."
+        confirmLabel="Lưu chỉnh sửa"
+        loading={savingComment}
+        onConfirm={() => void saveEditComment()}
+        onClose={() => setPendingEditComment(null)}
+      />
+      <ConfirmDialog
+        open={moderationTarget !== null}
+        title={moderationTarget?.action === "hide" ? "Ẩn bình luận?" : "Xóa bình luận?"}
+        description={moderationTarget?.action === "hide"
+          ? "Bình luận sẽ không còn hiển thị với người xem nội dung này."
+          : "Bình luận này và các phản hồi bên dưới sẽ bị xóa khỏi nội dung."}
+        confirmLabel={moderationTarget?.action === "hide" ? "Ẩn bình luận" : "Xóa bình luận"}
+        variant={moderationTarget?.action === "hide" ? "default" : "danger"}
+        loading={moderatingComment}
+        onConfirm={() => void confirmDeleteComment()}
+        onClose={() => setModerationTarget(null)}
+      />
 
       {toast && (
         <div role="status" className={`fixed bottom-5 right-5 z-[70] flex max-w-sm items-start gap-3 rounded-2xl p-4 text-sm shadow-xl ${toast.kind === "success" ? "bg-[#292d3b] text-white" : "bg-rose-700 text-white"}`}>

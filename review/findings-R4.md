@@ -18,13 +18,13 @@ Phạm vi: `be/.../service/classroom/` (8 file: `ClassEnrollmentService`, `Class
 | R4-10 | `ClassEnrollmentService.java:148` | `removeStudent()` dùng `requireOwnedClass` thay vì `requireOwnedActiveClass` — bỏ qua khóa lớp lưu trữ | **Cao** | Đã sửa |
 | R4-12 | `SubmissionService.java:126` vs `:147` | `listSubmissions()` chặn khi `submissionEnabled=false`, `getSubmissionDetail()` thì không — giáo viên khóa nộp bài xong không xem được roster | **Cao** | Đã sửa |
 | R4-04 | `SubmissionService.java:103-111` | `unsubmit()` không báo giáo viên | TB | Sửa |
-| R4-05 | `ClassEnrollmentService.java:448`, `AddStudentPage.tsx:291` | Kiểm tra tuổi 16 lệch tới 364 ngày (trừ theo năm, không theo ngày) — cả 2 lượt quét đều bắt được | TB | Sửa |
+| R4-05 | `ClassEnrollmentService.java:448`, `AddStudentPage.tsx:291` | Kiểm tra tuổi 16 lệch tới 364 ngày (trừ theo năm, không theo ngày) — cả 2 lượt quét đều bắt được | TB | Đã sửa |
 | R4-06 | `ClassEnrollmentService.java:289-294,311-316` | Không khóa khi kiểm tra sĩ số → race hai request cùng lúc có thể vượt 60 | TB | Sửa |
 | R4-11 | `ClassEnrollmentService.java:147-167` | `removeStudent()` không bắt buộc lý do, không báo học sinh bị gỡ | TB | Sửa |
 | R4-13 | `ClassController.java:83` (và 3 endpoint list khác) | `size` không có trần trên, client gửi `size` cực lớn ép DB fetch không giới hạn | TB | Sửa |
-| R4-16 | `ClassDetailPage.tsx:621`, `ClassResourcesPage.tsx:48` | `canManage` ở FE chỉ dựa `status === "ACTIVE"`, không theo quyền sở hữu — MODERATOR/giáo viên không sở hữu vẫn thấy nút sửa/xóa rồi bị 403 | TB | Sửa |
-| R4-07 | `AddStudentPage.tsx:161-162`, `ResourceDetailPage.tsx:212-217` | `load()` không có cancellation guard khi đổi lớp/resource nhanh | Thấp | Sửa |
-| R4-14 | `ClassResourceService.java:338` | `normalizeDescription()` không giới hạn độ dài, khác `ClassManagementService` (2000 ký tự) | Thấp | Sửa |
+| R4-16 | `ClassDetailPage.tsx:621`, `ClassResourcesPage.tsx:48` | `canManage` ở FE chỉ dựa `status === "ACTIVE"`, không theo quyền sở hữu — MODERATOR/giáo viên không sở hữu vẫn thấy nút sửa/xóa rồi bị 403 | TB | Đã sửa |
+| R4-07 | `AddStudentPage.tsx:161-162`, `ResourceDetailPage.tsx:212-217` | `load()` không có cancellation guard khi đổi lớp/resource nhanh | Thấp | Đã sửa |
+| R4-14 | `ClassResourceService.java:338` | `normalizeDescription()` không giới hạn độ dài, khác `ClassManagementService` (2000 ký tự) | Thấp | Đã sửa |
 | R4-15 | `ResourceDetailPage.tsx:242` | `userEditedRef` không reset khi đổi resource nếu component không remount — autosave có thể ghi nháp sai tài nguyên | Thấp | Ghi nhận (cần remount thật để khai thác, hiện route đổi resource luôn remount) |
 | R4-17 | `ClassEnrollmentService.java:492` | Catch-all `IOException \| RuntimeException` khi parse file gộp cả bug parser thật vào thông báo "file hỏng" chung chung | Thấp | Sửa |
 

@@ -170,9 +170,13 @@ export function ResourceDetailPage() {
   const [unsubmitConfirmOpen, setUnsubmitConfirmOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userEditedRef = useRef(false);
+  const loadSeqRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!classId || !resourceId || !user?.id) return;
+    const requestId = loadSeqRef.current + 1;
+    loadSeqRef.current = requestId;
+    const isCurrentRequest = () => loadSeqRef.current === requestId;
     setLoading(true);
     setError("");
     setSuccessMessage("");
@@ -182,6 +186,7 @@ export function ResourceDetailPage() {
         getClassDetail(authFetch, classId),
         listClassResources(authFetch, classId, 0, 200),
       ]);
+      if (!isCurrentRequest()) return;
       setClassDetail(detail);
       const found = resourcePage.items.find((item) => item.id === resourceId) ?? null;
       setResource(found);
@@ -193,6 +198,7 @@ export function ResourceDetailPage() {
         setSubmissionLoading(true);
         try {
           const own = await getMySubmission(authFetch, classId, resourceId);
+          if (!isCurrentRequest()) return;
           setSubmission(own);
           const draft = readDraft(classId, resourceId, user.id);
           const useDraft = shouldUseDraft(draft, own);
@@ -215,10 +221,13 @@ export function ResourceDetailPage() {
           }
           userEditedRef.current = false;
         } finally {
-          setSubmissionLoading(false);
+          if (isCurrentRequest()) {
+            setSubmissionLoading(false);
+          }
         }
       }
     } catch (reason) {
+      if (!isCurrentRequest()) return;
       if (isClassAccessRevoked(reason)) {
         setAccessRevoked(true);
         setError("");
@@ -226,7 +235,9 @@ export function ResourceDetailPage() {
         setError(reason instanceof Error ? reason.message : "Không thể tải tài nguyên. Lớp hoặc tài nguyên có thể không tồn tại.");
       }
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) {
+        setLoading(false);
+      }
     }
   }, [authFetch, classId, resourceId, user?.id]);
 
@@ -234,7 +245,10 @@ export function ResourceDetailPage() {
     const timer = window.setTimeout(() => {
       void load();
     }, 0);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      loadSeqRef.current += 1;
+    };
   }, [load]);
 
   useEffect(() => {

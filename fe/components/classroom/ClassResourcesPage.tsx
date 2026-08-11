@@ -11,7 +11,7 @@ import { ResourceCard } from "./shared";
 import { ResourceFormPanel } from "./ClassDetailPage";
 
 export function ClassResourcesPage() {
-  const { authFetch } = useAuth();
+  const { user, authFetch } = useAuth();
   const router = useRouter();
   const classId = useSearchParams().get("classId") ?? "";
   const [detail, setDetail] = useState<ClassDetail | null>(null);
@@ -47,7 +47,7 @@ export function ClassResourcesPage() {
     finally { setDeleting(null); }
   }
 
-  const canManage = detail?.status === "ACTIVE";
+  const canManage = detail?.status === "ACTIVE" && detail.ownerId === user?.id;
   return <ClassHubFrame classId={classId} active="resources" header={<div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="font-libertine text-[40px] font-normal leading-[1.02] tracking-[-0.025em] sm:text-[52px]">Tài nguyên</h1><p className="mt-3 text-[14px] leading-6 text-[#6b6b6b]">Tài liệu và bài tập được chia sẻ cho lớp.</p></div><div className="flex gap-2">{canManage && <button onClick={() => setTarget("create")} className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#d97757] px-3 text-[12px] font-medium text-white"><Plus className="size-3.5" /> Đăng tài liệu</button>}<button onClick={() => void load()} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] px-3 text-[12px]"><RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} /> Làm mới</button></div></div>}>
     {error && <p className="mt-4 rounded-[10px] bg-[#fdf3ef] px-3 py-2 text-[13px] text-[#c0492b]">{error}</p>}
     {target && <ResourceFormPanel classId={classId} authFetch={authFetch} initial={target === "create" ? null : target} onSaved={saved} onCancel={() => setTarget(null)} />}

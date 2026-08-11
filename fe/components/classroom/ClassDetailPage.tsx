@@ -620,7 +620,7 @@ export function ClassDetailPage() {
 
   if (!user) return null;
 
-  const canManage = selectedClass?.status === "ACTIVE";
+  const canManage = selectedClass?.status === "ACTIVE" && selectedClass.ownerId === user.id;
   const activeResource = resourceId ? resources.find((item) => item.id === resourceId) ?? null : null;
 
   return (
