@@ -1,6 +1,13 @@
 # R6 — Sinh slide & thiết kế slide
 
-Quét ngày 2026-08-11 trên `main`. Đọc tay trước (R6-01…R6-02), `/code-review high` sau (R6-10…).
+Quét ngày 2026-08-11 trên `main`. Đọc tay trước (R6-01…R6-02). Lượt `/code-review high` chạy multi-agent
+nền, nhưng **hầu hết agent con bị dừng giữa chừng do chạm giới hạn phiên** ("session limit · resets
+12:40am Asia/Bangkok") — các nhánh "line-by-line scan", "removed-behavior audit", "cross-file tracer",
+"reuse/simplification/efficiency cleanup" đều fail trước khi báo cáo. Chỉ nhánh "CLAUDE.md conventions
+check" chạy xong trọn vẹn và **không thấy vi phạm nào** (controller mỏng, constructor injection, phụ
+thuộc qua gateway interface, copy tiếng Việt đúng chỗ — đã gộp vào mục "Kiểm tra nhưng không có vấn đề"
+bên dưới). Coi như cụm này mới có **nửa lượt tự động**; nên chạy lại đủ khi phiên mới mở, đặc biệt nhánh
+line-by-line/cross-file vì đó là hai nhánh hay bắt lỗi logic thật nhất theo kinh nghiệm R1-R4.
 
 Phạm vi: `be/.../service/slides/` (6 file, 2063 loc: `GenerateSlideOutlineUseCase` — 1108 loc,
 `SlidePromptBuilder`, `LessonContentChunker`, `OutlineGenerationSessionStore`,
@@ -93,3 +100,8 @@ nhau cho cùng một lớp vấn đề.
 - **Ảnh sinh lỗi không chặn slide**: `FillSlideContentUseCase.tryGenerateImageUrl()` bọc try/catch
   riêng cho từng ảnh, lỗi thì giữ `imagePrompt` làm placeholder + trả `warning`, giáo viên bấm "tạo lại
   ảnh" ở slide editor sau (`GenerateSlideImageUseCase`) — không có ảnh lỗi nào kéo sập cả response.
+- **Quy ước CLAUDE.md** (nhánh tự động duy nhất chạy xong trọn vẹn): controller mỏng đúng vai trò
+  (nhận request → gọi use case → trả response), mọi service dùng constructor injection (không field
+  `@Autowired`), phụ thuộc qua interface ở `repository/gateways` chứ không đụng thẳng lớp hạ tầng, và
+  copy tiếng Việt/tên định danh tiếng Anh đúng quy ước ở cả `OutlineEditor.tsx`/`SlideDetailModal.tsx`
+  lẫn `fe/lib/slide-create/*.ts`.
