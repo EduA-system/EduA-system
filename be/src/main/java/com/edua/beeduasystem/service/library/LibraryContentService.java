@@ -14,6 +14,7 @@ import com.edua.beeduasystem.service.notification.NotificationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -24,40 +25,51 @@ public class LibraryContentService {
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
     public LibraryContentService(LibraryContentRepository repository, CurrentUserProvider currentUser, ActivityLogService activityLogService, NotificationService notificationService) { this.repository = repository; this.currentUser = currentUser; this.activityLogService = activityLogService; this.notificationService = notificationService; }
+    @Transactional(readOnly = true)
     public LibraryViews.Page list(String rawType, String rawSubject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, String sort) {
         return toPage(repository.search(currentUser.requireUserId(), parseType(rawType), parseSubject(rawSubject), grade, cleanCode(textbookCode), cleanCode(chapterCode), q, page, size, "title".equalsIgnoreCase(sort)), page, size);
     }
+    @Transactional(readOnly = true)
     public LibraryViews.Detail get(UUID id) { return toDetail(requireOwner(id)); }
+    @Transactional
     public LibraryViews.Detail create(String rawType, String title, String rawSubject, Integer grade, String textbookCode, String chapterCode, JsonNode payload, String thumbnailUrl) {
         LibraryContentType type = parseTypeRequired(rawType); Instant now = Instant.now();
-        return toDetail(repository.save(new LibraryContent(UUID.randomUUID(), currentUser.requireUserId(), type, requiredTitle(title), parseSubject(rawSubject), cleanGrade(grade), cleanCode(textbookCode), cleanCode(chapterCode), LibraryContentStatus.PRIVATE, payload == null ? JsonNodeFactory.instance.objectNode() : payload, cleanUrl(thumbnailUrl), now, now, null, null, null, null, null)));
+        return toDetail(repository.save(new LibraryContent(UUID.randomUUID(), currentUser.requireUserId(), type, requiredTitle(title), parseSubject(rawSubject), cleanGrade(grade), cleanCode(textbookCode), cleanCode(chapterCode), LibraryContentStatus.PRIVATE, payload == null ? JsonNodeFactory.instance.objectNode() : payload, cleanUrl(thumbnailUrl), now, now, null, null, null, null, null, null)));
     }
+    @Transactional
     public LibraryViews.Detail update(UUID id, String title, String rawSubject, boolean subjectProvided, Integer grade, boolean gradeProvided, String textbookCode, boolean textbookCodeProvided, String chapterCode, boolean chapterCodeProvided, JsonNode payload, boolean payloadProvided, String thumbnailUrl, boolean thumbnailProvided) {
         LibraryContent c = requireOwner(id);
-        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(), title == null ? c.title() : requiredTitle(title), subjectProvided ? parseSubject(rawSubject) : c.subject(), gradeProvided ? cleanGrade(grade) : c.grade(), textbookCodeProvided ? cleanCode(textbookCode) : c.textbookCode(), chapterCodeProvided ? cleanCode(chapterCode) : c.chapterCode(), c.status(), payloadProvided ? (payload == null ? JsonNodeFactory.instance.objectNode() : payload) : c.payload(), thumbnailProvided ? cleanUrl(thumbnailUrl) : c.thumbnailUrl(), c.createdAt(), Instant.now(), c.submittedAt(), null, c.reviewedBy(), c.reviewedAt(), c.rejectionReason())));
+        Subject resolvedSubject = subjectProvided ? parseSubject(rawSubject) : c.subject();
+        if (resolvedSubject == null && c.status() == LibraryContentStatus.SUBMITTED) throw new IllegalArgumentException("Không thể bỏ trống môn học khi nội dung đang chờ duyệt.");
+        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(), title == null ? c.title() : requiredTitle(title), resolvedSubject, gradeProvided ? cleanGrade(grade) : c.grade(), textbookCodeProvided ? cleanCode(textbookCode) : c.textbookCode(), chapterCodeProvided ? cleanCode(chapterCode) : c.chapterCode(), c.status(), payloadProvided ? (payload == null ? JsonNodeFactory.instance.objectNode() : payload) : c.payload(), thumbnailProvided ? cleanUrl(thumbnailUrl) : c.thumbnailUrl(), c.createdAt(), Instant.now(), c.submittedAt(), null, c.reviewedBy(), c.reviewedAt(), c.rejectionReason(), c.version())));
     }
-    public void delete(UUID id) { LibraryContent c = requireOwner(id); repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),c.status(),c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),Instant.now(),c.reviewedBy(),c.reviewedAt(),c.rejectionReason())); }
+    @Transactional
+    public void delete(UUID id) { LibraryContent c = requireOwner(id); repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),c.status(),c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),Instant.now(),c.reviewedBy(),c.reviewedAt(),c.rejectionReason(),c.version())); }
     /** Gửi duyệt: từ PRIVATE (lần đầu) hoặc REJECTED (gửi lại sau khi bị từ chối). */
+    @Transactional
     public LibraryViews.Detail submit(UUID id) {
         LibraryContent c = requireOwner(id);
         if (c.status() != LibraryContentStatus.PRIVATE && c.status() != LibraryContentStatus.REJECTED) throw new IllegalArgumentException("Only private or rejected content can be submitted for review.");
-        LibraryContent saved = repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.SUBMITTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),Instant.now(),null,null,null,null));
+        if (c.subject() == null) throw new IllegalArgumentException("Nội dung chưa được gán môn học. Vui lòng chọn môn học trước khi gửi duyệt.");
+        LibraryContent saved = repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.SUBMITTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),Instant.now(),null,null,null,null,c.version()));
         notificationService.notifyRoleSubject(Role.MODERATOR, c.subject(), c.ownerId(),
                 "Có giáo án mới chờ duyệt lên Community Hub",
                 "Giáo án \"" + c.title() + "\" đã được gửi lên hàng chờ duyệt Community Hub.",
                 "HUB_MODERATION", "/hub-moderation");
         return toDetail(saved);
     }
+    @Transactional
     public LibraryViews.Detail unsubmit(UUID id) {
         LibraryContent c = requireOwner(id);
         if (c.status() != LibraryContentStatus.SUBMITTED) throw new IllegalArgumentException("Only submitted content can be unsubmitted.");
-        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.PRIVATE,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),null,null,null,null,null)));
+        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.PRIVATE,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),null,null,null,null,null,c.version())));
     }
     /** Moderator duyệt content SUBMITTED cùng subject với mình lên Hub công khai. */
+    @Transactional
     public LibraryViews.Detail approve(UUID id) {
         LibraryContent c = requireSubmittedInModeratorSubject(id);
         UUID moderatorId = currentUser.requireUserId();
-        LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.APPROVED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),null)));
+        LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.APPROVED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),null,c.version())));
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
                 ActivityLogAction.APPROVE_LIBRARY_CONTENT, "LIBRARY_CONTENT", c.id(), null);
         notificationService.notifyRecipient(c.ownerId(), moderatorId, c.subject(),
@@ -67,11 +79,12 @@ public class LibraryContentService {
         return detail;
     }
     /** Moderator từ chối content SUBMITTED cùng subject với mình, bắt buộc lý do. */
+    @Transactional
     public LibraryViews.Detail reject(UUID id, String rawReason) {
         if (rawReason == null || rawReason.isBlank()) throw new IllegalArgumentException("Rejection reason is required.");
         LibraryContent c = requireSubmittedInModeratorSubject(id);
         UUID moderatorId = currentUser.requireUserId();
-        LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.REJECTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),rawReason.trim())));
+        LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.REJECTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),rawReason.trim(),c.version())));
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
                 ActivityLogAction.REJECT_LIBRARY_CONTENT, "LIBRARY_CONTENT", c.id(), rawReason.trim());
         notificationService.notifyRecipient(c.ownerId(), moderatorId, c.subject(),
@@ -81,12 +94,14 @@ public class LibraryContentService {
         return detail;
     }
     /** Hàng đợi kiểm duyệt: content SUBMITTED cùng subject với Moderator hiện tại. */
+    @Transactional(readOnly = true)
     public LibraryViews.Page listModerationQueue(int page, int size) {
         Subject moderatorSubject = currentUser.require().subject();
         if (moderatorSubject == null) throw new ForbiddenOperationException("Moderator must have a subject to review content.");
         return toPage(repository.searchByStatusAndSubject(LibraryContentStatus.SUBMITTED, moderatorSubject, page, size), page, size);
     }
     /** Chi tiết content đang chờ duyệt: Moderator chỉ xem được submission cùng subject. */
+    @Transactional(readOnly = true)
     public LibraryViews.Detail getModerationDetail(UUID id) {
         return toDetail(requireSubmittedInModeratorSubject(id));
     }

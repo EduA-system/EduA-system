@@ -17,6 +17,7 @@ import com.edua.beeduasystem.service.lessonplan.LessonPlanGenerationException;
 import com.edua.beeduasystem.service.slides.SlideAiResponseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -128,6 +129,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleClassEnrollmentConflict(ClassEnrollmentConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ClassEnrollmentConflictResponse(ex.getMessage(), ex.reason(), ex.details()));
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("Nội dung đã được thay đổi bởi người khác. Vui lòng tải lại trước khi thao tác tiếp.", "STALE_STATE"));
     }
 
     @ExceptionHandler(BulkEnrollmentFailedException.class)

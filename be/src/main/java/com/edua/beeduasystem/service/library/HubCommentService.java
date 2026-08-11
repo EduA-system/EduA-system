@@ -13,6 +13,7 @@ import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import com.edua.beeduasystem.service.blog.BlogContentSanitizer;
 import com.edua.beeduasystem.service.notification.NotificationService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -48,6 +49,12 @@ public class HubCommentService {
         this.notificationService = notificationService;
     }
 
+    @Transactional
+    public HubViews.CommentView create(UUID contentId, String rawContent) {
+        return create(contentId, rawContent, null);
+    }
+
+    @Transactional
     public HubViews.CommentView create(UUID contentId, String rawContent, UUID parentCommentId) {
         LibraryContent contentItem = requireApprovedContent(contentId);
         UUID authorId = currentUser.requireUserId();
@@ -90,6 +97,7 @@ public class HubCommentService {
         notifications.values().forEach(Runnable::run);
     }
 
+    @Transactional
     public HubViews.CommentView update(UUID commentId, String rawContent) {
         HubComment comment = requireComment(commentId);
         if (!comment.authorId().equals(currentUser.requireUserId())) {
@@ -101,6 +109,7 @@ public class HubCommentService {
         return toView(saved);
     }
 
+    @Transactional
     public void delete(UUID commentId) {
         HubComment comment = requireComment(commentId);
         UUID userId = currentUser.requireUserId();
@@ -110,6 +119,7 @@ public class HubCommentService {
         commentRepository.deleteById(commentId);
     }
 
+    @Transactional
     public void hideByContentOwner(UUID commentId) {
         HubComment comment = requireComment(commentId);
         UUID userId = currentUser.requireUserId();

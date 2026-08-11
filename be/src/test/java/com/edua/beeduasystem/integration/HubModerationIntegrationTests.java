@@ -5,9 +5,14 @@ import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.infrastructure.persistence.TextbookCatalogImporter;
+import com.edua.beeduasystem.infrastructure.persistence.entity.LibraryContentEntity;
 import com.edua.beeduasystem.repository.gateways.TokenService;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.OptimisticLockException;
+import jakarta.persistence.RollbackException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,6 +77,9 @@ class HubModerationIntegrationTests {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     @MockBean
     private TextbookCatalogImporter textbookCatalogImporter;
@@ -227,6 +235,45 @@ class HubModerationIntegrationTests {
         assertThat(count("activity_logs")).isEqualTo(beforeLogs);
     }
 
+    @Test
+    void IT_HM_005_libraryContentVersionRejectsStaleModerationUpdate() {
+        AppUser teacher = user("teacher-005@hub-moderation-it.edua.local", "Teacher Five", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
+        UUID contentId = seedLibraryContent("Concurrent Submitted Review", teacher.id(), "LESSON_PLAN", Subject.MATH, "SUBMITTED", null);
+
+        EntityManager first = entityManagerFactory.createEntityManager();
+        EntityManager second = entityManagerFactory.createEntityManager();
+        try {
+            first.getTransaction().begin();
+            second.getTransaction().begin();
+
+            LibraryContentEntity firstView = first.find(LibraryContentEntity.class, contentId);
+            LibraryContentEntity staleSecondView = second.find(LibraryContentEntity.class, contentId);
+
+            firstView.setStatus(com.edua.beeduasystem.domain.model.library.LibraryContentStatus.APPROVED);
+            first.flush();
+            first.getTransaction().commit();
+
+            staleSecondView.setStatus(com.edua.beeduasystem.domain.model.library.LibraryContentStatus.REJECTED);
+            assertThat(org.assertj.core.api.Assertions.catchThrowable(() -> {
+                second.flush();
+                second.getTransaction().commit();
+            })).isInstanceOfAny(OptimisticLockException.class, RollbackException.class);
+        } finally {
+            if (first.getTransaction().isActive()) {
+                first.getTransaction().rollback();
+            }
+            if (second.getTransaction().isActive()) {
+                second.getTransaction().rollback();
+            }
+            first.close();
+            second.close();
+        }
+
+        Map<String, Object> row = requireLibraryContent(contentId);
+        assertThat(row.get("status")).isEqualTo("APPROVED");
+        assertThat(((Number) row.get("version")).longValue()).isEqualTo(1L);
+    }
+
     private AppUser user(String email, String fullName, Subject subject, UserStatus status, Role role) {
         AppUser user = userRepository.save(new AppUser(
                 UUID.randomUUID(),
@@ -305,6 +352,7 @@ class HubModerationIntegrationTests {
                     rejection_reason TEXT
                 )
                 """);
+        jdbc.execute("ALTER TABLE library_contents ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0");
         jdbc.execute("""
                 CREATE TABLE IF NOT EXISTS activity_logs (
                     id UUID PRIMARY KEY,

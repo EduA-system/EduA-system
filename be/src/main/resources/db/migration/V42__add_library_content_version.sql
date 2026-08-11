@@ -1,0 +1,2 @@
+ALTER TABLE library_contents
+    ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;

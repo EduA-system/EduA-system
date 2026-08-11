@@ -33,4 +33,5 @@ public class LibraryContentEntity {
     @Column(name = "reviewed_by") private UUID reviewedBy;
     @Column(name = "reviewed_at") private Instant reviewedAt;
     @Column(name = "rejection_reason", columnDefinition = "TEXT") private String rejectionReason;
+    @Version private Long version;
 }
