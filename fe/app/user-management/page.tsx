@@ -75,6 +75,7 @@ type SubjectAccountItem = AccountItem & {
 type PageResponse<T> = {
   content: T[];
   page: number;
+  number?: number;
   size: number;
   totalElements: number;
   totalPages: number;
@@ -101,6 +102,13 @@ async function api<T>(authFetch: AuthFetch, path: string, init: RequestInit = {}
     throw new Error((data as { message?: string } | null)?.message ?? res.statusText);
   }
   return data as T;
+}
+
+function normalizePageResponse<T>(data: PageResponse<T>): PageResponse<T> {
+  return {
+    ...data,
+    page: data.page ?? data.number ?? 0,
+  };
 }
 
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -232,10 +240,10 @@ function UserManagementContent() {
 
   const loadModerators = useCallback(
     async (page: number) => {
-      const data = await api<PageResponse<SubjectAccountItem>>(
+      const data = normalizePageResponse(await api<PageResponse<SubjectAccountItem>>(
         authFetch,
         `/principal/moderators?page=${page}&size=${PAGE_SIZE}`,
-      );
+      ));
       setModeratorData(data);
       setModeratorSubject((current) => availableSubject(data.content, current));
     },
@@ -251,10 +259,10 @@ function UserManagementContent() {
 
   const loadTeachers = useCallback(
     async (page: number) => {
-      const data = await api<PageResponse<SubjectAccountItem>>(
+      const data = normalizePageResponse(await api<PageResponse<SubjectAccountItem>>(
         authFetch,
         `/moderator/teachers?page=${page}&size=${PAGE_SIZE}`,
-      );
+      ));
       setTeacherData(data);
     },
     [authFetch],
@@ -274,7 +282,7 @@ function UserManagementContent() {
 
   const loadItStaff = useCallback(
     async (page: number) => {
-      const data = await api<PageResponse<AccountItem>>(authFetch, `/principal/it-staff?page=${page}&size=${PAGE_SIZE}`);
+      const data = normalizePageResponse(await api<PageResponse<AccountItem>>(authFetch, `/principal/it-staff?page=${page}&size=${PAGE_SIZE}`));
       setItStaffData(data);
     },
     [authFetch],
