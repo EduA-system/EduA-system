@@ -1,6 +1,7 @@
 "use client";
 
-import { BookOpen, Check } from "lucide-react";
+import { BookOpen, Check, ExternalLink } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Modal } from "@/components/ui/Modal";
@@ -183,19 +184,28 @@ function canAssignWeek(weekStartDate: string): boolean {
 
 function LessonGroupCard({
   group,
-  expanded,
-  onToggle,
   onEditGroup,
+  onOpenGroup,
 }: {
   group: LessonGroup;
-  expanded: boolean;
-  onToggle: () => void;
   onEditGroup: (t: WeeklyTaskSummary) => void;
+  onOpenGroup: (group: LessonGroup) => void;
 }) {
   const submittedCount = group.tasks.filter((t) => t.reviewStatus !== "NOT_SUBMITTED").length;
   const anchorTask = group.tasks[0];
   return (
-    <div className="rounded-2xl border bg-white p-4">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenGroup(group)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenGroup(group);
+        }
+      }}
+      className="cursor-pointer rounded-2xl border bg-white p-4 transition hover:border-[#e8724a]/60 hover:bg-[#fffaf6]"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium">{group.scopeDescription}</p>
@@ -208,34 +218,26 @@ function LessonGroupCard({
         </div>
         <div className="flex shrink-0 items-center gap-3 text-xs">
           {anchorTask ? (
-            <button type="button" onClick={() => onEditGroup(anchorTask)} className="text-[#b85c3b] underline">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEditGroup(anchorTask);
+              }}
+              className="text-[#b85c3b] underline"
+            >
               Sửa
             </button>
           ) : null}
-          <button type="button" onClick={onToggle} className="text-[#b85c3b] underline">
-            {submittedCount}/{group.tasks.length} đã nộp {expanded ? "▲" : "▼"}
-          </button>
+          <span className="text-[#b85c3b] underline">{submittedCount}/{group.tasks.length} đã nộp</span>
         </div>
       </div>
-      {expanded ? (
-        <div className="mt-3 space-y-2 border-t pt-3">
-          {group.tasks.map((t) => (
-            <div key={t.id} className="flex items-center justify-between gap-2 text-xs">
-              <span className="min-w-0 truncate">{t.teacherName ?? "Giáo viên"}</span>
-              <span className="flex shrink-0 items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 font-medium ${statusClasses[t.reviewStatus]}`}>
-                  {statusLabels[t.reviewStatus]}
-                </span>
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }
 
 function WeeklyScheduleScreen() {
+  const router = useRouter();
   const { user, authFetch } = useAuth();
   const isModerator = hasAnyRole(user, ["MODERATOR"]);
 
@@ -244,7 +246,7 @@ function WeeklyScheduleScreen() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
-  const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null);
+  const [selectedLessonGroup, setSelectedLessonGroup] = useState<LessonGroup | null>(null);
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
   // BR-51: Mod luôn thao tác trong phạm vi đúng 1 khối đã chọn.
@@ -438,6 +440,10 @@ function WeeklyScheduleScreen() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không thể rút giáo án.");
     }
+  }
+
+  function openSubmittedTaskApproval(taskId: string) {
+    router.push(`/lesson-plan-approval?taskId=${encodeURIComponent(taskId)}&preview=1`);
   }
 
   // Task của giáo viên gộp mọi khối họ dạy trong 1 lịch — lọc theo `teacherGradeFilter` để không lẫn lộn
@@ -739,6 +745,55 @@ function WeeklyScheduleScreen() {
             </div>
           </Modal>
 
+          <Modal
+            open={selectedLessonGroup !== null}
+            onClose={() => setSelectedLessonGroup(null)}
+            title={selectedLessonGroup?.scopeDescription ?? "Tình trạng nộp giáo án"}
+            description={
+              selectedLessonGroup
+                ? `${selectedLessonGroup.chapterName} · ${selectedLessonGroup.lessonName} · Lịch dạy thực tế: ${teachingWeekLabel(selectedLessonGroup.weekStartDate)}`
+                : undefined
+            }
+            maxWidthClassName="max-w-3xl"
+          >
+            {selectedLessonGroup ? (
+              <div className="space-y-2">
+                {selectedLessonGroup.tasks.map((t) => {
+                  const canOpenApproval = t.reviewStatus === "SUBMITTED";
+                  const content = (
+                    <>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[#2b2926]">{t.teacherName ?? "Giáo viên"}</p>
+                        <p className="mt-1 text-xs text-[#8a8178]">Nộp lúc {t.submittedAt ? formatDateTime(t.submittedAt) : "-"}</p>
+                      </div>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses[t.reviewStatus]}`}>
+                          {statusLabels[t.reviewStatus]}
+                        </span>
+                        {canOpenApproval ? <ExternalLink className="size-4 text-[#b85c3b]" /> : null}
+                      </span>
+                    </>
+                  );
+
+                  return canOpenApproval ? (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => openSubmittedTaskApproval(t.id)}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-left transition hover:border-[#e8724a] hover:bg-[#fff7f2]"
+                    >
+                      {content}
+                    </button>
+                  ) : (
+                    <div key={t.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#e4ddd4] bg-[#faf9f7] px-4 py-3">
+                      {content}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </Modal>
+
           {msg ? <p className="mt-4 text-sm text-emerald-700">{msg}</p> : null}
           {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
 
@@ -781,9 +836,8 @@ function WeeklyScheduleScreen() {
                                 <LessonGroupCard
                                   key={group.key}
                                   group={group}
-                                  expanded={expandedGroupKey === group.key}
-                                  onToggle={() => setExpandedGroupKey((k) => (k === group.key ? null : group.key))}
                                   onEditGroup={openEditForm}
+                                  onOpenGroup={setSelectedLessonGroup}
                                 />
                               ) : canAssign ? (
                                 <button

@@ -41,10 +41,12 @@ function weekLabel(weekStartDate: string): string {
 
 function LessonPlanApprovalScreen() {
   const { user, authFetch } = useAuth();
+  const searchParams = useSearchParams();
   // Deep-link từ notification "Giáo án chờ duyệt" (WeeklyTaskService.submit): mang theo taskId để tự mở
   // đúng submission được nộp, thay vì chỉ đưa Moderator tới danh sách chung — cần thiết vì nhiều giáo viên
   // có thể nộp gần như cùng lúc và mỗi notification phải phân biệt đúng bài của ai.
-  const focusTaskId = useSearchParams().get("taskId");
+  const focusTaskId = searchParams.get("taskId");
+  const autoPreview = searchParams.get("preview") === "1";
   const focusedRef = useRef(false);
 
   const [items, setItems] = useState<WeeklyTaskSummary[]>([]);
@@ -66,6 +68,19 @@ function LessonPlanApprovalScreen() {
   const [detail, setDetail] = useState<WeeklyTaskDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [preview, setPreview] = useState<{ title: string; document: TiptapNode | string } | null>(null);
+
+  const openSubmittedLessonPreview = useCallback((taskDetail: WeeklyTaskDetail) => {
+    const document = resolveWeeklyTaskLessonDocument(taskDetail.sourceLibraryContentPayload);
+    if (!document) {
+      setMsg("");
+      setError("Nhiệm vụ này không có nội dung giáo án để hiển thị.");
+      return;
+    }
+    setPreview({
+      title: taskDetail.sourceLibraryContentTitle ?? "Giáo án đã nộp",
+      document,
+    });
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -99,8 +114,10 @@ function LessonPlanApprovalScreen() {
   }, [gradeFilter, picker.chapterCode, picker.lessonCode]);
 
   const handleExpand = useCallback(
-    async (id: string) => {
+    async (id: string, options?: { preview?: boolean }) => {
       if (expandedId === id) {
+        if (options?.preview && detail?.id === id) openSubmittedLessonPreview(detail);
+        if (options?.preview) return;
         detailRequestSeq.current += 1;
         setExpandedId(null);
         setDetail(null);
@@ -114,7 +131,10 @@ function LessonPlanApprovalScreen() {
       setDetailLoading(true);
       try {
         const d = await getWeeklyTask(authFetch, id);
-        if (detailRequestSeq.current === requestSeq) setDetail(d);
+        if (detailRequestSeq.current === requestSeq) {
+          setDetail(d);
+          if (options?.preview) openSubmittedLessonPreview(d);
+        }
       } catch (e) {
         if (detailRequestSeq.current === requestSeq) {
           setMsg("");
@@ -124,7 +144,7 @@ function LessonPlanApprovalScreen() {
         if (detailRequestSeq.current === requestSeq) setDetailLoading(false);
       }
     },
-    [authFetch, expandedId],
+    [authFetch, detail, expandedId, openSubmittedLessonPreview],
   );
 
   // Sau khi hàng đợi tải xong lần đầu, nếu có taskId từ notification thì tự mở rộng + cuộn tới đúng thẻ đó.
@@ -140,11 +160,11 @@ function LessonPlanApprovalScreen() {
       setError("Không tìm thấy nhiệm vụ được thông báo trong hàng đợi hiện tại — có thể đã được xử lý.");
       return;
     }
-    void handleExpand(target.id);
+    void handleExpand(target.id, { preview: autoPreview });
     requestAnimationFrame(() => {
       document.getElementById(`weekly-task-${target.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
-  }, [focusTaskId, items, loading, handleExpand]);
+  }, [autoPreview, focusTaskId, items, loading, handleExpand]);
 
   async function handleApprove(id: string) {
     if (!confirm("Duyệt giáo án này?")) return;
@@ -173,19 +193,6 @@ function LessonPlanApprovalScreen() {
       setMsg("");
       setError(e instanceof Error ? e.message : "Không thể từ chối giáo án.");
     }
-  }
-
-  function openSubmittedLessonPreview(detail: WeeklyTaskDetail) {
-    const document = resolveWeeklyTaskLessonDocument(detail.sourceLibraryContentPayload);
-    if (!document) {
-      setMsg("");
-      setError("Nhiệm vụ này không có nội dung giáo án để hiển thị.");
-      return;
-    }
-    setPreview({
-      title: detail.sourceLibraryContentTitle ?? "Giáo án đã nộp",
-      document,
-    });
   }
 
   return (
