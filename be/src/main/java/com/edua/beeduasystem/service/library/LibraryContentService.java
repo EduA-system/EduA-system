@@ -21,6 +21,8 @@ import java.util.UUID;
 
 @Service
 public class LibraryContentService {
+    private static final int NOTIFICATION_CONTENT_MAX_LENGTH = 2000;
+
     private final LibraryContentRepository repository;
     private final CurrentUserProvider currentUser;
     private final ActivityLogService activityLogService;
@@ -84,13 +86,14 @@ public class LibraryContentService {
     public LibraryViews.Detail reject(UUID id, String rawReason) {
         if (rawReason == null || rawReason.isBlank()) throw new IllegalArgumentException("Rejection reason is required.");
         LibraryContent c = requireSubmittedInModeratorSubject(id);
+        String reason = rawReason.trim();
         UUID moderatorId = currentUser.requireUserId();
-        LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.REJECTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),rawReason.trim(),c.version())));
+        LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.REJECTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),reason,c.version())));
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
-                ActivityLogAction.REJECT_LIBRARY_CONTENT, "LIBRARY_CONTENT", c.id(), rawReason.trim());
+                ActivityLogAction.REJECT_LIBRARY_CONTENT, "LIBRARY_CONTENT", c.id(), reason);
         notificationService.notifyRecipient(c.ownerId(), moderatorId, c.subject(),
                 "Nội dung gửi lên Community Hub bị từ chối",
-                "Nội dung \"" + c.title() + "\" bị từ chối. Lý do: " + rawReason.trim(),
+                rejectionNotificationContent(c.title(), reason),
                 "HUB_CONTENT_REJECTION", "/library");
         return detail;
     }
@@ -120,6 +123,15 @@ public class LibraryContentService {
     private static String requiredTitle(String title) { if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required."); return title.trim(); }
     private static String cleanUrl(String url) { return url == null || url.isBlank() ? null : url.trim(); }
     private static String cleanCode(String code) { return code == null || code.isBlank() ? null : code.trim(); }
+    private static String rejectionNotificationContent(String title, String reason) {
+        String prefix = "Nội dung \"" + title + "\" bị từ chối. Lý do: ";
+        int budget = NOTIFICATION_CONTENT_MAX_LENGTH - prefix.length();
+        if (budget <= 0) return prefix.substring(0, NOTIFICATION_CONTENT_MAX_LENGTH);
+        if (reason.length() <= budget) return prefix + reason;
+        String suffix = "...";
+        int reasonBudget = Math.max(0, budget - suffix.length());
+        return prefix + reason.substring(0, reasonBudget) + suffix;
+    }
     private static Integer cleanGrade(Integer grade) { if (grade == null) return null; if (grade < 10 || grade > 12) throw new IllegalArgumentException("Invalid grade. Allowed: 10, 11, 12."); return grade; }
     private static LibraryContentType parseTypeRequired(String value) { LibraryContentType type = parseType(value); if(type == null) throw new IllegalArgumentException("Type is required. Allowed: LESSON_PLAN, SLIDE_DECK, TEST, SIMULATION."); return type; }
     private static LibraryContentType parseType(String value) { if(value == null || value.isBlank()) return null; try { return LibraryContentType.valueOf(value.trim().toUpperCase()); } catch(IllegalArgumentException e) { throw new IllegalArgumentException("Invalid type."); } }

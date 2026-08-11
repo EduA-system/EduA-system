@@ -47,7 +47,7 @@ const tabs: [string, LibraryType][] = [
 const paths: Record<LibraryType, string> = {
   LESSON_PLAN: "/lesson-edit",
   SLIDE_DECK: "/slide-maker",
-  TEST: "/library",
+  TEST: "/exam-edit-new",
   SIMULATION: "/molecules",
 };
 

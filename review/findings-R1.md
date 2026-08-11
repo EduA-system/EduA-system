@@ -16,8 +16,8 @@ Hai lượt bổ sung nhau gần như không chồng lấn — xem [mục "Đố
 | R1-01 | `LibraryContentService.java:41` | Content không có môn kẹt vĩnh viễn ở SUBMITTED | **Cao** | ✅ Xong |
 | R1-02 | `service/library/` (cả package) | Máy trạng thái chạy ngoài transaction, không optimistic lock | **Cao** | ✅ Xong |
 | R1-03 | `LibraryContentController.java:16` | PATCH không bao giờ xoá được field về null | **Cao** | Sửa |
-| R1-10 | `LibraryContentService.java:70` | Lý do từ chối dài → bài bị từ chối nhưng teacher không được báo | **Cao** | Sửa |
-| R1-11 | `fe/app/library/page.tsx:50` | Đề kiểm tra đã lưu không mở được từ thư viện | **Cao** | Sửa |
+| R1-10 | `LibraryContentService.java:70` | Lý do từ chối dài → bài bị từ chối nhưng teacher không được báo | **Cao** | ✅ Xong |
+| R1-11 | `fe/app/library/page.tsx:50` | Đề kiểm tra đã lưu không mở được từ thư viện | **Cao** | ✅ Xong |
 | R1-12 | `fe/app/hub-moderation/page.tsx:216` | Lỗi tải chi tiết để lại bài cũ → duyệt nhầm bài | **Cao** | Sửa |
 | R1-13 | `fe/app/lesson-plan-approval/page.tsx:99` | Không chặn race → hiển thị và mở nhầm bài | **Cao** | Sửa |
 | R1-04 | `LibraryContentService.java:43,53,95` | Xung đột trạng thái trả 400 thay vì 409 | TB | ✅ Xong |
