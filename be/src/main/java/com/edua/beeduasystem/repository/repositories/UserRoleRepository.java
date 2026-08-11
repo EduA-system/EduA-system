@@ -13,6 +13,8 @@ public interface UserRoleRepository {
 
     Set<Role> findRolesByUserId(UUID userId);
 
+    void lockRole(Role role);
+
     void save(UserRole userRole);
 
     /** userId -> granterUserId */

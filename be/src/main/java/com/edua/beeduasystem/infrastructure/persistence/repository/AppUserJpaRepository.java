@@ -25,6 +25,9 @@ public interface AppUserJpaRepository extends JpaRepository<AppUserEntity, UUID>
     @Query("SELECT COUNT(u) > 0 FROM AppUserEntity u JOIN UserRoleEntity ur ON u.id = ur.userId JOIN RoleEntity r ON ur.roleId = r.id WHERE r.name = :roleName AND u.subject = :subject AND u.status <> 'DISABLED'")
     boolean existsActiveByRoleNameAndSubject(@Param("roleName") String roleName, @Param("subject") Subject subject);
 
+    @Query("SELECT COUNT(u) > 0 FROM AppUserEntity u JOIN UserRoleEntity ur ON u.id = ur.userId JOIN RoleEntity r ON ur.roleId = r.id WHERE r.name = :roleName AND u.status <> 'DISABLED'")
+    boolean existsActiveByRoleName(@Param("roleName") String roleName);
+
     @Query(value = """
             SELECT r.name, CASE WHEN u.status = 'ACTIVE' THEN true ELSE false END AS active_bucket, COUNT(*) AS total
             FROM app_users u

@@ -10,6 +10,7 @@ import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
@@ -37,17 +38,20 @@ public class ModeratorTeacherService {
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final TeacherGradeRepository teacherGradeRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ActivityLogService activityLogService;
 
     public ModeratorTeacherService(AppUserRepository userRepository,
                                    UserRoleRepository userRoleRepository,
                                    TeacherGradeRepository teacherGradeRepository,
+                                   RefreshTokenRepository refreshTokenRepository,
                                    CurrentUserProvider currentUserProvider,
                                    ActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.teacherGradeRepository = teacherGradeRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.currentUserProvider = currentUserProvider;
         this.activityLogService = activityLogService;
     }
@@ -163,6 +167,7 @@ public class ModeratorTeacherService {
                 user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
                 user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
+        refreshTokenRepository.revokeAllByUserId(user.id());
         activityLogService.record(currentUserProvider.requireUserId(), "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REVOKE_TEACHER, "APP_USER", user.id(), null);
     }

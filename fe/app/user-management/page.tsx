@@ -265,6 +265,12 @@ function UserManagementContent() {
   const [itStaffEmail, setItStaffEmail] = useState("");
   const [itStaffEmailTouched, setItStaffEmailTouched] = useState(false);
   const [itStaffFullName, setItStaffFullName] = useState("");
+  const [itStaffReplacementTarget, setItStaffReplacementTarget] = useState<AccountItem | null>(null);
+  const [itStaffReplacementEmail, setItStaffReplacementEmail] = useState("");
+  const [itStaffReplacementEmailTouched, setItStaffReplacementEmailTouched] = useState(false);
+  const [itStaffReplacementFullName, setItStaffReplacementFullName] = useState("");
+  const [itStaffReplacementError, setItStaffReplacementError] = useState("");
+  const [isReplacingItStaff, setIsReplacingItStaff] = useState(false);
 
   const loadItStaff = useCallback(
     async (page: number) => {
@@ -408,6 +414,42 @@ function UserManagementContent() {
     }
   }
 
+  function openItStaffReplacement(item: AccountItem) {
+    setItStaffReplacementTarget(item);
+    setItStaffReplacementEmail("");
+    setItStaffReplacementEmailTouched(false);
+    setItStaffReplacementFullName("");
+    setItStaffReplacementError("");
+  }
+
+  function closeItStaffReplacement() {
+    if (isReplacingItStaff) return;
+    setItStaffReplacementTarget(null);
+  }
+
+  async function replaceItStaff() {
+    setItStaffReplacementEmailTouched(true);
+    if (!itStaffReplacementTarget || emailError(itStaffReplacementEmail)) return;
+    setItStaffReplacementError("");
+    setIsReplacingItStaff(true);
+    try {
+      await api(authFetch, `/principal/it-staff/${itStaffReplacementTarget.id}/replacement`, {
+        method: "POST",
+        body: JSON.stringify({
+          replacementEmail: itStaffReplacementEmail,
+          fullName: itStaffReplacementFullName || null,
+        }),
+      });
+      setItStaffReplacementTarget(null);
+      setMsg("Đã thay IT Staff.");
+      await loadItStaff(itStaffData?.page ?? 0);
+    } catch (e) {
+      setItStaffReplacementError(String(e));
+    } finally {
+      setIsReplacingItStaff(false);
+    }
+  }
+
   async function toggleItStaff(item: AccountItem) {
     const isDisabled = item.status === "DISABLED";
     if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
@@ -434,6 +476,7 @@ function UserManagementContent() {
   const takenSubjects = new Set(
     (moderatorData?.content ?? []).filter((i) => i.status !== "DISABLED").map((i) => i.subject),
   );
+  const itStaffSeatOccupied = (itStaffData?.content ?? []).some((i) => i.status !== "DISABLED");
 
   return (
     <main className="min-h-screen bg-white text-[#1f1f1f]">
@@ -755,10 +798,10 @@ function UserManagementContent() {
                     />
                     <button
                       onClick={addItStaff}
-                      disabled={!!emailError(itStaffEmail)}
+                      disabled={itStaffSeatOccupied || !!emailError(itStaffEmail)}
                       className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Cấp quyền
+                      {itStaffSeatOccupied ? "Đã có IT Staff" : "Cấp quyền"}
                     </button>
                   </div>
                 </div>
@@ -778,23 +821,23 @@ function UserManagementContent() {
                             </div>
                             <div className="mt-1 text-xs text-[#8a8178]">{item.email}</div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => toggleItStaff(item)}
-                            className={`inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium transition ${
-                              item.status === "DISABLED" ? "text-[#5a7a4a] hover:bg-[#eef6ec]" : "text-[#c2483c] hover:bg-[#fdeceb]"
-                            }`}
-                          >
-                            {item.status === "DISABLED" ? (
-                              <>
-                                <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
-                              </>
-                            ) : (
-                              <>
-                                <UserMinus className="size-4" aria-hidden /> Thu hồi
-                              </>
-                            )}
-                          </button>
+                          {item.status !== "DISABLED" ? (
+                            <button
+                              type="button"
+                              onClick={() => openItStaffReplacement(item)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#c2483c] transition hover:bg-[#fdeceb]"
+                            >
+                              <ArrowLeftRight className="size-4" aria-hidden /> Thay IT Staff
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => toggleItStaff(item)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#5a7a4a] transition hover:bg-[#eef6ec]"
+                            >
+                              <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -853,6 +896,62 @@ function UserManagementContent() {
                 className="rounded-lg bg-[#1f1f1f] px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isReplacing ? "Đang thay..." : "Xác nhận thay"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {itStaffReplacementTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="replace-it-staff-title">
+            <h2 id="replace-it-staff-title" className="text-lg font-semibold">
+              Thay IT Staff
+            </h2>
+            <p className="mt-2 text-sm text-[#6b6b6b]">
+              {itStaffReplacementTarget.fullName ?? itStaffReplacementTarget.email} sẽ bị thu hồi quyền IT Staff.
+            </p>
+            <label className="mt-4 block text-sm font-medium" htmlFor="it-staff-replacement-email">
+              Email IT Staff thay thế
+            </label>
+            <input
+              id="it-staff-replacement-email"
+              type="email"
+              required
+              maxLength={EMAIL_MAX_LENGTH}
+              value={itStaffReplacementEmail}
+              onChange={(e) => setItStaffReplacementEmail(e.target.value)}
+              onBlur={() => setItStaffReplacementEmailTouched(true)}
+              placeholder="Email"
+              aria-invalid={itStaffReplacementEmailTouched && !!emailError(itStaffReplacementEmail)}
+              className="mt-1 w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+              autoFocus
+            />
+            <EmailFieldError message={itStaffReplacementEmailTouched ? emailError(itStaffReplacementEmail) : null} />
+            <label className="mt-4 block text-sm font-medium" htmlFor="it-staff-replacement-full-name">
+              Họ tên
+            </label>
+            <input
+              id="it-staff-replacement-full-name"
+              value={itStaffReplacementFullName}
+              onChange={(e) => setItStaffReplacementFullName(e.target.value)}
+              placeholder="Không bắt buộc"
+              className="mt-1 w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+            />
+            {itStaffReplacementError && (
+              <p className="mt-4 rounded-lg border border-[#f3c6bd] bg-[#fdeceb] px-3 py-2 text-sm text-[#c2483c]">{itStaffReplacementError}</p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={closeItStaffReplacement} disabled={isReplacingItStaff} className="rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm">
+                Huỷ
+              </button>
+              <button
+                type="button"
+                onClick={replaceItStaff}
+                disabled={isReplacingItStaff || !!emailError(itStaffReplacementEmail)}
+                className="rounded-lg bg-[#1f1f1f] px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isReplacingItStaff ? "Đang thay..." : "Xác nhận thay"}
               </button>
             </div>
           </div>

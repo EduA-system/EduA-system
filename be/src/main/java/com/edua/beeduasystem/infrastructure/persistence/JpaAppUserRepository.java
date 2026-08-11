@@ -67,6 +67,12 @@ public class JpaAppUserRepository implements AppUserRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean existsActiveByRole(Role role) {
+        return jpa.existsActiveByRoleName(role.name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<RoleStatusAggregate> countActiveInactiveByRole(Subject subject) {
         return jpa.countActiveInactiveByRoleRaw(subject != null ? subject.name() : null).stream()
                 .map(row -> new RoleStatusAggregate(Role.valueOf((String) row[0]), (Boolean) row[1], ((Number) row[2]).longValue()))

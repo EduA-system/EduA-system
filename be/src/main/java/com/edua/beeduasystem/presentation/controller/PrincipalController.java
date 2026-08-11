@@ -4,6 +4,7 @@ import com.edua.beeduasystem.presentation.dto.auth.AddModeratorRequest;
 import com.edua.beeduasystem.presentation.dto.auth.AddItStaffRequest;
 import com.edua.beeduasystem.presentation.dto.auth.ItStaffDto;
 import com.edua.beeduasystem.presentation.dto.auth.ModeratorDto;
+import com.edua.beeduasystem.presentation.dto.auth.ReplaceItStaffRequest;
 import com.edua.beeduasystem.presentation.dto.auth.ReplaceModeratorRequest;
 import com.edua.beeduasystem.service.auth.PrincipalModeratorService;
 import com.edua.beeduasystem.service.auth.PrincipalItStaffService;
@@ -108,6 +109,13 @@ public class PrincipalController {
     @DeleteMapping("/it-staff/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void disableItStaff(@PathVariable UUID id) { principalItStaffService.disable(id); }
+
+    @PostMapping("/it-staff/{id}/replacement")
+    public ItStaffDto replaceItStaff(
+            @PathVariable UUID id,
+            @Valid @RequestBody ReplaceItStaffRequest request) {
+        return ItStaffDto.from(principalItStaffService.replace(id, request.replacementEmail(), request.fullName()));
+    }
 
     @PatchMapping("/it-staff/{id}/reactivate")
     public ItStaffDto reactivateItStaff(@PathVariable UUID id) {
