@@ -138,7 +138,7 @@ public class WeeklyTaskService {
         Instant deadline = computeDeadline(monday);
         requireWeekNotEnded(deadline);
         requireActiveTeacherInSubjectAndGrade(teacherId, moderatorSubject, requiredGrade);
-        requireLessonSlotAvailable(moderatorSubject, requiredGrade, monday, List.of(lesson.lessonCode()), null);
+        requireLessonSlotAvailable(moderatorSubject, requiredGrade, monday, List.of(lesson.lessonCode()), (UUID) null);
 
         Instant now = Instant.now();
         WeeklyTask saved = repository.save(new WeeklyTask(UUID.randomUUID(), currentUser.requireUserId(), moderatorSubject,
@@ -176,7 +176,7 @@ public class WeeklyTaskService {
         Instant deadline = computeDeadline(monday);
         requireWeekNotEnded(deadline);
         requireLessonSlotAvailable(moderatorSubject, requiredGrade, monday,
-                resolvedLessons.stream().map(ResolvedLesson::lessonCode).toList(), null);
+                resolvedLessons.stream().map(ResolvedLesson::lessonCode).toList(), (UUID) null);
 
         List<AppUser> activeTeachers = userRepository.findAllByRoleAndSubject(Role.TEACHER, moderatorSubject, Pageable.unpaged())
                 .getContent().stream()

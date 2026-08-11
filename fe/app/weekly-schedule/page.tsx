@@ -185,14 +185,15 @@ function LessonGroupCard({
   group,
   expanded,
   onToggle,
-  onEditTeacher,
+  onEditGroup,
 }: {
   group: LessonGroup;
   expanded: boolean;
   onToggle: () => void;
-  onEditTeacher: (t: WeeklyTaskSummary) => void;
+  onEditGroup: (t: WeeklyTaskSummary) => void;
 }) {
   const submittedCount = group.tasks.filter((t) => t.reviewStatus !== "NOT_SUBMITTED").length;
+  const anchorTask = group.tasks[0];
   return (
     <div className="rounded-2xl border bg-white p-4">
       <div className="flex items-start justify-between gap-3">
@@ -205,9 +206,16 @@ function LessonGroupCard({
             Lịch dạy thực tế: {teachingWeekLabel(group.weekStartDate)} · Hạn nộp: {formatDateTime(group.deadline)}
           </p>
         </div>
-        <button type="button" onClick={onToggle} className="shrink-0 text-xs text-[#b85c3b] underline">
-          {submittedCount}/{group.tasks.length} đã nộp {expanded ? "▲" : "▼"}
-        </button>
+        <div className="flex shrink-0 items-center gap-3 text-xs">
+          {anchorTask ? (
+            <button type="button" onClick={() => onEditGroup(anchorTask)} className="text-[#b85c3b] underline">
+              Sửa
+            </button>
+          ) : null}
+          <button type="button" onClick={onToggle} className="text-[#b85c3b] underline">
+            {submittedCount}/{group.tasks.length} đã nộp {expanded ? "▲" : "▼"}
+          </button>
+        </div>
       </div>
       {expanded ? (
         <div className="mt-3 space-y-2 border-t pt-3">
@@ -218,9 +226,6 @@ function LessonGroupCard({
                 <span className={`rounded-full px-2 py-0.5 font-medium ${statusClasses[t.reviewStatus]}`}>
                   {statusLabels[t.reviewStatus]}
                 </span>
-                <button type="button" onClick={() => onEditTeacher(t)} className="text-[#b85c3b] underline">
-                  Sửa
-                </button>
               </span>
             </div>
           ))}
@@ -248,7 +253,7 @@ function WeeklyScheduleScreen() {
   // thị, không bắt buộc như Mod, nên mặc định "Tất cả khối" (null).
   const [teacherGradeFilter, setTeacherGradeFilter] = useState<number | null>(null);
 
-  // ── Sửa 1 giáo viên trong 1 lịch nộp giáo án (Moderator) ──────────────
+  // ── Sửa 1 lịch nộp giáo án theo cụm giáo viên (Moderator) ─────────────
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formTeacherId, setFormTeacherId] = useState("");
@@ -778,7 +783,7 @@ function WeeklyScheduleScreen() {
                                   group={group}
                                   expanded={expandedGroupKey === group.key}
                                   onToggle={() => setExpandedGroupKey((k) => (k === group.key ? null : group.key))}
-                                  onEditTeacher={openEditForm}
+                                  onEditGroup={openEditForm}
                                 />
                               ) : canAssign ? (
                                 <button

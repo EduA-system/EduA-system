@@ -153,7 +153,7 @@ Cập nhật bảng tiến độ dưới đây sau mỗi lượt.
 | R1 Publish / duyệt | **Xong** | đọc tay + `high` | 19 (7 Cao) | [findings-R1.md](findings-R1.md) |
 | R2 Tài khoản | **Xong** | đọc tay + `high` | 14 (7 Cao) | [findings-R2.md](findings-R2.md) |
 | R3 Weekly Task | **Xong** | đọc tay + `high` | 11 (5 Cao) | [findings-R3.md](findings-R3.md) |
-| R4 Lớp học | Chưa chạy | — | — | — |
+| R4 Lớp học | **Xong** | đọc tay + `high` | 15 (5 Cao) | [findings-R4.md](findings-R4.md) |
 | R5 Giáo án | Chưa chạy | — | — | — |
 | R6 Slide | Chưa chạy | — | — | — |
 | R7 Blog | Chưa chạy | — | — | — |
