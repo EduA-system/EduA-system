@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -115,15 +116,7 @@ public class ModeratorTeacherService {
         var existing = userRepository.findByEmail(normalizedEmail);
         if (existing.isPresent()) {
             AppUser u = existing.get();
-            if (u.status() != UserStatus.DISABLED) {
-                throw new DuplicateEmailException("Email " + normalizedEmail + " đã tồn tại trong hệ thống.");
-            }
-            AppUser reactivated = userRepository.save(new AppUser(
-                    u.id(), u.email(), u.googleSub(),
-                    normalizedFullName != null ? normalizedFullName : u.fullName(),
-                    u.avatarUrl(), u.contactInfo(),
-                    u.bio(), u.phoneNumber(),
-                    moderatorSubject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
+            AppUser reactivated = userRepository.save(prepareExistingTeacher(u, moderatorSubject, normalizedFullName));
             assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
             teacherGradeRepository.replaceGrades(reactivated.id(), normalizedGrades);
             activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
@@ -206,6 +199,43 @@ public class ModeratorTeacherService {
 
     private void assignRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt) {
         userRoleRepository.replaceRole(userId, role, grantedBy, grantedAt);
+    }
+
+    private static final Map<Role, String> INELIGIBLE_ROLE_LABELS = Map.of(
+            Role.STUDENT, "Học sinh",
+            Role.MODERATOR, "Moderator",
+            Role.PRINCIPAL, "Hiệu trưởng",
+            Role.IT_STAFF, "IT Staff");
+
+    private AppUser prepareExistingTeacher(AppUser user, Subject moderatorSubject, String normalizedFullName) {
+        if (user.status() != UserStatus.DISABLED) {
+            throw new DuplicateEmailException("Email " + user.email() + " đã tồn tại trong hệ thống.");
+        }
+        Set<Role> roles = userRoleRepository.findRolesByUserId(user.id());
+        if (!roles.contains(Role.TEACHER)) {
+            String roleLabel = Role.orderedByPriority(roles).stream()
+                    .map(INELIGIBLE_ROLE_LABELS::get)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse("vai trò khác");
+            throw new ForbiddenOperationException(
+                    "Tài khoản này là " + roleLabel + ", không thể trở thành Giáo Viên.");
+        }
+        if (user.subject() != moderatorSubject) {
+            throw new ForbiddenOperationException(
+                    "Tài khoản này thuộc môn " + subjectLabel(user.subject())
+                            + ", không thể thêm vào môn " + moderatorSubject.name() + ".");
+        }
+        return new AppUser(
+                user.id(), user.email(), user.googleSub(),
+                normalizedFullName != null ? normalizedFullName : user.fullName(),
+                user.avatarUrl(), user.contactInfo(),
+                user.bio(), user.phoneNumber(),
+                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt(), user.dateOfBirth());
+    }
+
+    private static String subjectLabel(Subject subject) {
+        return subject == null ? "chưa gán" : subject.name();
     }
 
     private static List<Integer> normalizeGrades(Collection<Integer> grades) {
