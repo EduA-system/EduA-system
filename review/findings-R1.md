@@ -30,7 +30,7 @@ Hai lượt bổ sung nhau gần như không chồng lấn — xem [mục "Đố
 | R1-08 | `HubCommentService.java:23` | Javadoc mô tả sai quyền xoá so với code | Thấp | Sửa |
 | R1-09 | `HubContentService.java:73,83` | N+1 query trên feed Hub (endpoint permitAll) | Thấp | Sửa |
 | R1-17 | `fe/app/lesson-plan-approval/page.tsx:123` | Thông báo "đã xử lý" đè lên lỗi mạng thật | Thấp | Sửa |
-| R1-18 | `fe/app/library/page.tsx:317` | Tab rỗng không có nút tạo mới | Thấp | Sửa |
+| R1-18 | `fe/app/library/page.tsx:317` | Tab rỗng không có nút tạo mới | Thấp | ✅ Xong |
 | R1-19 | `fe/app/lesson-plan-approval/page.tsx:138` | Banner xanh và banner đỏ hiện cùng lúc | Thấp | Sửa |
 
 ---

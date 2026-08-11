@@ -278,6 +278,10 @@ function LibraryScreen() {
       setSaving(false);
     }
   };
+  const createPath = createPaths[type];
+  const createTile = createPath
+    ? <Link href={createPath} className="group flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#e6b5a2] bg-[#fffaf7] p-6 text-center transition hover:border-[#e8724a] hover:bg-[#fff4ee]"><span className="flex size-12 items-center justify-center rounded-full bg-[#fbe1d5] text-3xl font-light leading-none text-[#c65838] transition group-hover:scale-110 group-hover:bg-[#e8724a] group-hover:text-white">+</span><span className="mt-4 font-semibold text-[#75402e]">Tạo {contentMeta[type].label.toLowerCase()} mới</span><span className="mt-1 text-sm text-stone-500">Bắt đầu một nội dung mới</span></Link>
+    : <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50 p-6 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-stone-200 text-3xl font-light leading-none text-stone-500">+</span><span className="mt-4 font-semibold text-stone-600">Tạo bài kiểm tra</span><span className="mt-1 text-sm text-stone-500">Tính năng đang được phát triển</span></div>;
 
   return (
     <main className="min-h-screen bg-[#f5f1ec] text-[#2b2926]">
@@ -313,8 +317,8 @@ function LibraryScreen() {
 
           {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           {loading ? <div className="mt-6 grid grid-cols-3 gap-5">{[1, 2, 3].map((item) => <div key={item} className="h-80 animate-pulse rounded-2xl bg-[#e8e2db]" />)}</div>
-            : items.length === 0 ? <div className="mt-8 rounded-2xl border border-dashed border-stone-300 bg-white p-12 text-center text-sm text-stone-600">{type === "TEST" ? "Tính năng tạo bài kiểm tra đang được phát triển." : q || subject ? "Không tìm thấy nội dung phù hợp. Hãy thử thay đổi bộ lọc." : "Chưa có nội dung nào trong thư viện này."}</div>
-            : <div className="mt-6 grid grid-cols-3 gap-5">{createPaths[type] ? <Link href={createPaths[type]} className="group flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#e6b5a2] bg-[#fffaf7] p-6 text-center transition hover:border-[#e8724a] hover:bg-[#fff4ee]"><span className="flex size-12 items-center justify-center rounded-full bg-[#fbe1d5] text-3xl font-light leading-none text-[#c65838] transition group-hover:scale-110 group-hover:bg-[#e8724a] group-hover:text-white">+</span><span className="mt-4 font-semibold text-[#75402e]">Tạo {contentMeta[type].label.toLowerCase()} mới</span><span className="mt-1 text-sm text-stone-500">Bắt đầu một nội dung mới</span></Link> : <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50 p-6 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-stone-200 text-3xl font-light leading-none text-stone-500">+</span><span className="mt-4 font-semibold text-stone-600">Tạo bài kiểm tra</span><span className="mt-1 text-sm text-stone-500">Tính năng đang được phát triển</span></div>}{items.map((content) => {
+            : items.length === 0 ? <div className="mt-6 grid grid-cols-3 gap-5">{createTile}<div className="col-span-2 flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-white p-8 text-center text-sm text-stone-600">{type === "TEST" ? "Tính năng tạo bài kiểm tra đang được phát triển." : q || subject ? "Không tìm thấy nội dung phù hợp. Hãy thử thay đổi bộ lọc." : "Chưa có nội dung nào trong thư viện này."}</div></div>
+            : <div className="mt-6 grid grid-cols-3 gap-5">{createTile}{items.map((content) => {
               const meta = contentMeta[content.type];
               const Icon = meta.icon;
               const weeklyTaskStatus = content.type === "LESSON_PLAN" ? weeklyTaskStatusByContentId.get(content.id) : undefined;
