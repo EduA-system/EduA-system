@@ -156,7 +156,7 @@ Cập nhật bảng tiến độ dưới đây sau mỗi lượt.
 | R4 Lớp học | Chưa chạy | — | — | — |
 | R5 Giáo án | Chưa chạy | — | — | — |
 | R6 Slide | Chưa chạy | — | — | — |
-| R7 Blog | Chưa chạy | — | — | — |
-| R8 Đề kiểm tra | Chưa chạy | — | — | — |
-| R9 Upload | Chưa chạy | — | — | — |
-| R10 Thông báo | Chưa chạy | — | — | — |
+| R7 Blog | **Xong** | Đọc tay | 9 (3 Cao) | [findings-R7.md](findings-R7.md) |
+| R8 Đề kiểm tra | **Xong** | Đọc tay | 8 (5 Cao) | [findings-R8.md](findings-R8.md) |
+| R9 Upload | **Xong** | Đọc tay | 7 (4 Cao) | [findings-R9.md](findings-R9.md) |
+| R10 Thông báo | **Xong** | Đọc tay | 7 (4 Cao) | [findings-R10.md](findings-R10.md) |
