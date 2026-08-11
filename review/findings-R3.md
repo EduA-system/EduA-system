@@ -21,7 +21,7 @@ chặn cả trường hợp hợp lệ, hoặc bỏ sót đường thoát.
 | R3-12 | `fe/app/weekly-schedule/page.tsx:386` | Modal nộp giữ danh sách giáo án của task trước → nộp nhầm | **Cao** | Sửa |
 | R3-03 | `WeeklyTaskService.java:287` | Rút nộp không báo moderator (BR-48) | TB | Sửa |
 | R3-13 | `WeeklyTaskService.java:259` | `documentUrl` không kiểm tra scheme/host, moderator bấm thẳng | TB | Sửa |
-| R3-14 | `WeeklyTaskService.java:305` | Hàng chờ duyệt không có `ORDER BY` → trùng/sót khi lật trang | TB | Sửa |
+| R3-14 | `WeeklyTaskService.java:305` | Hàng chờ duyệt không có `ORDER BY` → trùng/sót khi lật trang | TB | Đã sửa |
 | R3-04 | `WeeklyTaskService.java:281,320` | Đẩy thông báo WebSocket bên trong transaction, rollback không thu hồi được | TB | Sửa |
 | R3-15 | `fe/app/weekly-schedule/page.tsx:779` | `expandedGroupKey` dùng `lessonCode` trần → hai tuần mở/đóng cùng nhau | Thấp | Sửa |
 | R3-16 | `fe/app/weekly-schedule/page.tsx:278` | `load()` không có cancellation guard | Thấp | Sửa |

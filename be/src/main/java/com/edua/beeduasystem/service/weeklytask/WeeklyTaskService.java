@@ -43,6 +43,7 @@ import java.util.stream.Stream;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -311,11 +312,14 @@ public class WeeklyTaskService {
     /** UC-86: hàng đợi duyệt — task SUBMITTED cùng subject với Moderator hiện tại, lọc thêm khối/chương/bài nếu có (BR-51/BR-53). */
     @Transactional(readOnly = true)
     public WeeklyTaskViews.Page listModerationQueue(int page, int size, Integer grade, String chapterCode, String lessonCode) {
+        int resolvedPage = Math.max(0, page);
+        int resolvedSize = Math.min(Math.max(1, size), 100);
         Page<WeeklyTask> result = repository.searchModerationQueue(requireSubject(), WeeklyTaskReviewStatus.SUBMITTED,
-                grade, blankToNull(chapterCode), blankToNull(lessonCode), PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 100)));
+                grade, blankToNull(chapterCode), blankToNull(lessonCode),
+                PageRequest.of(resolvedPage, resolvedSize, Sort.by("submittedAt").ascending().and(Sort.by("id").ascending())));
         Map<UUID, String> names = resolveNames(result.getContent());
         return new WeeklyTaskViews.Page(result.getContent().stream().map(t -> WeeklyTaskViews.toSummary(t, names)).toList(),
-                page, size, result.getTotalElements());
+                resolvedPage, resolvedSize, result.getTotalElements());
     }
 
     /** UC-88: Moderator duyệt submission SUBMITTED cùng subject. */
