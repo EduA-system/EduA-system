@@ -447,7 +447,7 @@ function LessonPlanApprovalScreen() {
         title="Duyệt giáo án?"
         description={
           <>
-            Giáo án <span className="font-semibold text-[#1f1f1f]">"{approveTarget?.scopeDescription}"</span> của {approveTarget?.teacherName ?? "giáo viên"} sẽ được duyệt.
+            Giáo án <span className="font-semibold text-[#1f1f1f]">&quot;{approveTarget?.scopeDescription}&quot;</span> của {approveTarget?.teacherName ?? "giáo viên"} sẽ được duyệt.
           </>
         }
         confirmLabel="Duyệt"
@@ -461,7 +461,7 @@ function LessonPlanApprovalScreen() {
         title="Từ chối giáo án?"
         description={
           <>
-            Nhập lý do để giáo viên biết cần chỉnh sửa phần nào trong <span className="font-semibold text-[#1f1f1f]">"{rejectTarget?.scopeDescription}"</span>.
+            Nhập lý do để giáo viên biết cần chỉnh sửa phần nào trong <span className="font-semibold text-[#1f1f1f]">&quot;{rejectTarget?.scopeDescription}&quot;</span>.
           </>
         }
         label="Lý do từ chối"
