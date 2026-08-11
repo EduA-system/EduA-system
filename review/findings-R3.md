@@ -14,7 +14,7 @@ chặn cả trường hợp hợp lệ, hoặc bỏ sót đường thoát.
 
 | # | File:line | Vấn đề | Mức | Xử lý |
 | --- | --- | --- | --- | --- |
-| R3-10 | `WeeklyTaskService.java:224` | Nút "Sửa" của moderator luôn lỗi ở khối có ≥2 giáo viên | **Cao** | Sửa |
+| R3-10 | `WeeklyTaskService.java:224` | Nút "Sửa" của moderator luôn lỗi ở khối có ≥2 giáo viên | **Cao** | Đã sửa |
 | R3-01 | `WeeklyTaskService.java:255,388` | Bị từ chối sau hạn nộp = kẹt vĩnh viễn, không ai gỡ được | **Cao** | Sửa |
 | R3-02 | `WeeklyTaskService.java:294` | Rút nộp xoá sạch vết từ chối; nhánh khôi phục REJECTED là code chết | **Cao** | Sửa |
 | R3-11 | `fe/app/weekly-schedule/page.tsx:105` | Lệch tuần đầu tháng → ẩn hẳn tuần đang nộp dở | **Cao** | Sửa |

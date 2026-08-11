@@ -157,7 +157,7 @@ public class WeeklyTaskService {
      * Bulk UC-81: Moderator giao 1 bài (1 ô lịch tuần) cho MỌI Teacher active cùng subject dạy đúng khối
      * đã chọn (BR-51), trong 1 tuần. Nhận danh sách {@code lessons} để linh hoạt, nhưng UI hiện tại luôn
      * gửi đúng 1 phần tử — mỗi ô lịch = 1 bài. Tối đa {@value #MAX_LESSONS_PER_WEEK} bài/tuần cho 1
-     * (subject, grade) (BR-53). Sửa từng giáo viên sau đó dùng {@link #update}.
+     * (subject, grade) (BR-53). Sửa sau đó dùng {@link #update} để cập nhật đồng bộ cả cụm task cùng bài.
      */
     @Transactional
     public WeeklyTaskViews.BulkResult bulkCreate(LocalDate weekStartDate, Integer grade, String textbookCode, List<LessonRequest> lessons) {
@@ -209,7 +209,7 @@ public class WeeklyTaskService {
         return WeeklyTaskViews.toBulkResult(created, resolveNames(created), teachers.size(), resolvedLessons.size());
     }
 
-    /** UC-82: Moderator sửa task còn hạn (BR-47); đổi Teacher sẽ reset reviewStatus vì người mới chưa nộp gì. Khối giữ nguyên, không sửa được. */
+    /** UC-82: Moderator sửa task còn hạn (BR-47); task tạo bulk được sửa đồng bộ theo cụm cùng tuần/bài/khối. Khối giữ nguyên, không sửa được. */
     @Transactional
     public WeeklyTaskViews.Detail update(UUID id, UUID teacherId, LocalDate weekStartDate, String title,
                                           String textbookCode, String chapterCode, String lessonCode) {
@@ -221,28 +221,37 @@ public class WeeklyTaskService {
         LocalDate monday = mondayOf(weekStartDate);
         Instant deadline = computeDeadline(monday);
         requireWeekNotEnded(deadline);
-        requireLessonSlotAvailable(t.subject(), t.grade(), monday, List.of(lesson.lessonCode()), t.id());
+
+        List<WeeklyTask> group = findAssignmentGroup(t);
+        Set<UUID> excludedTaskIds = group.stream().map(WeeklyTask::id).collect(Collectors.toSet());
+        requireLessonSlotAvailable(t.subject(), t.grade(), monday, List.of(lesson.lessonCode()), excludedTaskIds);
+
         boolean reassigned = !teacherId.equals(t.teacherId());
+        if (reassigned && group.size() > 1) {
+            throw new IllegalArgumentException("Nhiệm vụ theo cụm không thể chuyển riêng giáo viên.");
+        }
         if (reassigned) {
             requireActiveTeacherInSubjectAndGrade(teacherId, t.subject(), t.grade());
         }
-        WeeklyTask updated = reassigned
-                ? new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.grade(), teacherId, monday, scope,
-                        lesson.textbookCode(), lesson.chapterCode(), lesson.chapterName(), lesson.lessonCode(), lesson.lessonName(), deadline,
-                        WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null, t.createdAt(), Instant.now(), t.version())
-                : new WeeklyTask(t.id(), t.moderatorId(), t.subject(), t.grade(), t.teacherId(), monday, scope,
-                        lesson.textbookCode(), lesson.chapterCode(), lesson.chapterName(), lesson.lessonCode(), lesson.lessonName(), deadline,
-                        t.reviewStatus(), t.sourceLibraryContentId(), t.sourceLibraryContentTitle(), t.sourceLibraryContentPayload(), t.sourceDocumentUrl(), t.sourceDocumentName(),
-                        t.submittedAt(), t.reviewedBy(), t.reviewedAt(), t.rejectionReason(), t.createdAt(), Instant.now(), t.version());
-        WeeklyTask saved = repository.save(updated);
+        List<WeeklyTask> savedGroup = group.stream()
+                .map(task -> repository.save(reassigned
+                        ? resetForReassignedTeacher(task, teacherId, monday, scope, lesson, deadline)
+                        : updateAssignmentFields(task, monday, scope, lesson, deadline)))
+                .toList();
+        WeeklyTask saved = savedGroup.stream()
+                .filter(task -> task.id().equals(t.id()))
+                .findFirst()
+                .orElse(savedGroup.getFirst());
         if (reassigned) {
             notify(t.teacherId(), "Nhiệm vụ tuần đã được chuyển", "Nhiệm vụ \"" + scope + "\" đã được chuyển cho giáo viên khác.",
                     TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
             notify(teacherId, "Nhiệm vụ tuần mới", "Bạn được giao soạn: " + scope + ". Hạn nộp: " + DEADLINE_FMT.format(deadline) + ".",
                     TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
         } else {
-            notify(t.teacherId(), "Nhiệm vụ tuần đã được cập nhật", "Nhiệm vụ \"" + scope + "\" đã được chỉnh sửa. Hạn nộp mới: " + DEADLINE_FMT.format(deadline) + ".",
-                    TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
+            for (WeeklyTask task : savedGroup) {
+                notify(task.teacherId(), "Nhiệm vụ tuần đã được cập nhật", "Nhiệm vụ \"" + scope + "\" đã được chỉnh sửa. Hạn nộp mới: " + DEADLINE_FMT.format(deadline) + ".",
+                        TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
+            }
         }
         return WeeklyTaskViews.toDetail(saved, resolveNames(List.of(saved)));
     }
@@ -474,8 +483,12 @@ public class WeeklyTaskService {
      * khi đếm/so trùng).
      */
     private void requireLessonSlotAvailable(Subject subject, Integer grade, LocalDate monday, List<String> newLessonCodes, UUID excludeTaskId) {
+        requireLessonSlotAvailable(subject, grade, monday, newLessonCodes, excludeTaskId == null ? Set.of() : Set.of(excludeTaskId));
+    }
+
+    private void requireLessonSlotAvailable(Subject subject, Integer grade, LocalDate monday, List<String> newLessonCodes, Set<UUID> excludedTaskIds) {
         List<WeeklyTask> existing = repository.findBySubjectAndGrade(subject, grade, monday, monday).stream()
-                .filter(t -> excludeTaskId == null || !t.id().equals(excludeTaskId))
+                .filter(t -> !excludedTaskIds.contains(t.id()))
                 .toList();
         Set<String> existingLessonCodes = existing.stream().map(WeeklyTask::lessonCode).collect(Collectors.toCollection(LinkedHashSet::new));
         Set<String> distinctNew = new LinkedHashSet<>(newLessonCodes);
@@ -487,6 +500,28 @@ public class WeeklyTaskService {
         if (existingLessonCodes.size() + distinctNew.size() > MAX_LESSONS_PER_WEEK) {
             throw new IllegalArgumentException("Mỗi tuần chỉ được tối đa " + MAX_LESSONS_PER_WEEK + " bài cho 1 khối.");
         }
+    }
+
+    private List<WeeklyTask> findAssignmentGroup(WeeklyTask anchor) {
+        return repository.findBySubjectAndGrade(anchor.subject(), anchor.grade(), anchor.weekStartDate(), anchor.weekStartDate()).stream()
+                .filter(task -> task.moderatorId().equals(anchor.moderatorId()))
+                .filter(task -> task.textbookCode().equals(anchor.textbookCode()))
+                .filter(task -> task.chapterCode().equals(anchor.chapterCode()))
+                .filter(task -> task.lessonCode().equals(anchor.lessonCode()))
+                .toList();
+    }
+
+    private WeeklyTask updateAssignmentFields(WeeklyTask task, LocalDate monday, String scope, ResolvedLesson lesson, Instant deadline) {
+        return new WeeklyTask(task.id(), task.moderatorId(), task.subject(), task.grade(), task.teacherId(), monday, scope,
+                lesson.textbookCode(), lesson.chapterCode(), lesson.chapterName(), lesson.lessonCode(), lesson.lessonName(), deadline,
+                task.reviewStatus(), task.sourceLibraryContentId(), task.sourceLibraryContentTitle(), task.sourceLibraryContentPayload(), task.sourceDocumentUrl(), task.sourceDocumentName(),
+                task.submittedAt(), task.reviewedBy(), task.reviewedAt(), task.rejectionReason(), task.createdAt(), Instant.now(), task.version());
+    }
+
+    private WeeklyTask resetForReassignedTeacher(WeeklyTask task, UUID teacherId, LocalDate monday, String scope, ResolvedLesson lesson, Instant deadline) {
+        return new WeeklyTask(task.id(), task.moderatorId(), task.subject(), task.grade(), teacherId, monday, scope,
+                lesson.textbookCode(), lesson.chapterCode(), lesson.chapterName(), lesson.lessonCode(), lesson.lessonName(), deadline,
+                WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null, task.createdAt(), Instant.now(), task.version());
     }
 
     private Subject requireSubject() {
