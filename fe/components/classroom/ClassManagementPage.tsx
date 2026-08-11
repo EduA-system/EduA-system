@@ -144,6 +144,10 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
   const activeCount = useMemo(() => items.filter((item) => item.status === "ACTIVE").length, [items]);
   const inactiveCount = items.length - activeCount;
   const isInitialLoading = loading && items.length === 0;
+  const allowedGrades = useMemo(
+    () => (user?.grades ?? []).filter((grade): grade is number => GRADES.includes(grade as (typeof GRADES)[number])),
+    [user?.grades],
+  );
 
   const loadClasses = useCallback(async () => {
     if (status !== "authenticated") return;
@@ -173,6 +177,15 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
     return () => window.clearTimeout(timer);
   }, [loadClasses, view]);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCreateForm((current) => ({
+      ...current,
+      subject: defaultSubject,
+      grade: allowedGrades.includes(current.grade) ? current.grade : (allowedGrades[0] ?? current.grade),
+    }));
+  }, [allowedGrades, defaultSubject]);
+
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (creating) return;
@@ -180,8 +193,8 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
       setError("Tên lớp là trường bắt buộc.");
       return;
     }
-    if (![10, 11, 12].includes(createForm.grade)) {
-      setError("Khối là trường bắt buộc.");
+    if (!allowedGrades.includes(createForm.grade)) {
+      setError("Bạn chỉ được tạo lớp thuộc khối mình phụ trách.");
       return;
     }
     if (!isClassSubject(user?.subject) || createForm.subject !== user.subject) {
@@ -193,7 +206,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
   }
 
   async function confirmCreateClass() {
-    if (creating || !isClassSubject(user?.subject) || createForm.subject !== user.subject) return;
+    if (creating || !isClassSubject(user?.subject) || createForm.subject !== user.subject || !allowedGrades.includes(createForm.grade)) return;
     setCreating(true);
     setError("");
     setMessage("");
@@ -263,6 +276,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
   if (!user) return null;
 
   const allowedSubjects = isClassSubject(user.subject) ? [user.subject] : [];
+  const canCreateClass = allowedSubjects.length > 0 && allowedGrades.length > 0;
 
   const createFormElement = (
     <form ref={createFormRef} onSubmit={handleCreate} className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
@@ -297,7 +311,11 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
             className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]"
             required
           >
-            {GRADES.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}
+            {allowedGrades.length > 0 ? (
+              allowedGrades.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)
+            ) : (
+              <option value={createForm.grade}>Chưa được phân công khối</option>
+            )}
           </select>
         </label>
       </div>
@@ -327,7 +345,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
         )}
         <button
           type="submit"
-          disabled={creating || !createForm.name.trim() || allowedSubjects.length === 0}
+          disabled={creating || !createForm.name.trim() || !canCreateClass}
           className="h-11 flex-1 items-center justify-center gap-2 rounded-[11px] bg-[#d97757] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]"
         >
           <span className="flex items-center justify-center gap-2">
@@ -337,6 +355,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
         </button>
       </div>
       {allowedSubjects.length === 0 && <p className="mt-3 text-[12px] text-[#c0492b]">Tài khoản chưa có chuyên ngành nên chưa thể tạo lớp.</p>}
+      {allowedGrades.length === 0 && <p className="mt-3 text-[12px] text-[#c0492b]">Tài khoản chưa được phân công khối nên chưa thể tạo lớp.</p>}
     </form>
   );
 

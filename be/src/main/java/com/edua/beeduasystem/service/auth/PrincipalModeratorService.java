@@ -9,7 +9,11 @@ import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
+import com.edua.beeduasystem.domain.model.classroom.ClassStatus;
+import com.edua.beeduasystem.domain.model.classroom.Classroom;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.ClassRepository;
+import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
@@ -34,20 +38,26 @@ import java.util.stream.Collectors;
 public class PrincipalModeratorService {
 
     private final AppUserRepository userRepository;
+    private final ClassRepository classRepository;
     private final UserRoleRepository userRoleRepository;
     private final TeacherGradeRepository teacherGradeRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ActivityLogService activityLogService;
 
     @Autowired
     public PrincipalModeratorService(AppUserRepository userRepository,
+                                 ClassRepository classRepository,
                                  UserRoleRepository userRoleRepository,
                                  TeacherGradeRepository teacherGradeRepository,
+                                 RefreshTokenRepository refreshTokenRepository,
                                  CurrentUserProvider currentUserProvider,
                                  ActivityLogService activityLogService) {
         this.userRepository = userRepository;
+        this.classRepository = classRepository;
         this.userRoleRepository = userRoleRepository;
         this.teacherGradeRepository = teacherGradeRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.currentUserProvider = currentUserProvider;
         this.activityLogService = activityLogService;
     }
@@ -56,10 +66,10 @@ public class PrincipalModeratorService {
                               UserRoleRepository userRoleRepository,
                               CurrentUserProvider currentUserProvider,
                               ActivityLogService activityLogService) {
-        this(userRepository, userRoleRepository, new TeacherGradeRepository() {
+        this(userRepository, NoopClassRepository.INSTANCE, userRoleRepository, new TeacherGradeRepository() {
             @Override public void replaceGrades(UUID userId, java.util.Collection<Integer> grades) { }
             @Override public java.util.Map<UUID, java.util.List<Integer>> findGradesByUserIds(java.util.Collection<UUID> userIds) { return java.util.Map.of(); }
-        }, currentUserProvider, activityLogService);
+        }, NoopRefreshTokenRepository.INSTANCE, currentUserProvider, activityLogService);
     }
 
     public record ModeratorListResult(
@@ -94,6 +104,12 @@ public class PrincipalModeratorService {
         return new ModeratorListResult(moderators, granterNames, granterUserIds, grantedAts);
     }
 
+    @Transactional(readOnly = true)
+    public AccountStatusStats countModeratorsByStatus() {
+        var counts = userRepository.countStatusByRole(Role.MODERATOR, null);
+        return new AccountStatusStats(counts.active(), counts.disabled());
+    }
+
     @Transactional
     public AppUser addModerator(String email, String rawSubject, String fullName) {
         String normalizedEmail = AppUserFieldValidator.normalizeEmail(email);
@@ -117,7 +133,7 @@ public class PrincipalModeratorService {
                     normalizedFullName != null ? normalizedFullName : u.fullName(),
                     u.avatarUrl(), u.contactInfo(),
                     u.bio(), u.phoneNumber(),
-                    subject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
+                    subject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt(), u.dateOfBirth()));
             assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
             activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                     ActivityLogAction.GRANT_MODERATOR, "APP_USER", reactivated.id(), null);
@@ -127,8 +143,8 @@ public class PrincipalModeratorService {
         AppUser saved = userRepository.save(new AppUser(
                 UUID.randomUUID(), normalizedEmail, null,
                 normalizedFullName,
-                null, null,
-                subject, UserStatus.INVITED, now, null));
+                null, null, null, null,
+                subject, UserStatus.INVITED, now, null, null));
         assignRole(saved.id(), Role.MODERATOR, currentUserId, now);
         activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.GRANT_MODERATOR, "APP_USER", saved.id(), null);
@@ -165,19 +181,23 @@ public class PrincipalModeratorService {
                 .map(user -> prepareExistingReplacement(user, subject))
                 .orElseGet(() -> new AppUser(
                         UUID.randomUUID(), normalizedEmail, null, null, null, null,
-                        subject, UserStatus.INVITED, now, null));
+                        null, null, subject, UserStatus.INVITED, now, null, null));
 
         UserStatus previousStatus = disablePrevious ? UserStatus.DISABLED : currentModerator.status();
         AppUser demotedModerator = new AppUser(
                 currentModerator.id(), currentModerator.email(), currentModerator.googleSub(), currentModerator.fullName(),
                 currentModerator.avatarUrl(), currentModerator.contactInfo(), currentModerator.bio(), currentModerator.phoneNumber(),
                 currentModerator.subject(), previousStatus,
-                currentModerator.createdAt(), currentModerator.lastLoginAt());
+                currentModerator.createdAt(), currentModerator.lastLoginAt(), currentModerator.dateOfBirth());
 
         // Both updates share this transaction, so a failure restores the original moderator.
         userRepository.save(demotedModerator);
         assignRole(demotedModerator.id(), Role.TEACHER, currentUserId, now);
         teacherGradeRepository.replaceGrades(demotedModerator.id(), List.of(10, 11, 12));
+        if (previousStatus == UserStatus.DISABLED) {
+            classRepository.archiveActiveByOwnerId(demotedModerator.id());
+        }
+        refreshTokenRepository.revokeAllByUserId(demotedModerator.id());
 
         AppUser savedReplacement = userRepository.save(replacement);
         assignRole(savedReplacement.id(), Role.MODERATOR, currentUserId, now);
@@ -207,7 +227,7 @@ public class PrincipalModeratorService {
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
-                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
+                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt(), user.dateOfBirth()));
         assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
         activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REACTIVATE_MODERATOR, "APP_USER", reactivated.id(), null);
@@ -216,6 +236,60 @@ public class PrincipalModeratorService {
 
     private void assignRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt) {
         userRoleRepository.replaceRole(userId, role, grantedBy, grantedAt);
+    }
+
+    private enum NoopRefreshTokenRepository implements RefreshTokenRepository {
+        INSTANCE;
+
+        @Override
+        public com.edua.beeduasystem.domain.model.auth.RefreshToken save(
+                com.edua.beeduasystem.domain.model.auth.RefreshToken token) {
+            return token;
+        }
+
+        @Override
+        public java.util.Optional<com.edua.beeduasystem.domain.model.auth.RefreshToken> findByTokenHash(String tokenHash) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public void revoke(UUID id) {
+        }
+
+        @Override
+        public void revokeAllByUserId(UUID userId) {
+        }
+    }
+
+    private enum NoopClassRepository implements ClassRepository {
+        INSTANCE;
+
+        @Override
+        public Classroom save(Classroom classroom) {
+            return classroom;
+        }
+
+        @Override
+        public java.util.Optional<Classroom> findById(UUID id) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public int archiveActiveByOwnerId(UUID ownerId) {
+            return 0;
+        }
+
+        @Override
+        public SearchResult searchOwned(UUID ownerId, Subject subject, Integer grade, ClassStatus status,
+                                        String q, int page, int size) {
+            return new SearchResult(List.of(), 0);
+        }
+
+        @Override
+        public SearchResult searchEnrolled(UUID studentId, Subject subject, Integer grade, ClassStatus status,
+                                           String q, int page, int size) {
+            return new SearchResult(List.of(), 0);
+        }
     }
 
     // Nhãn tiếng Việt cho các role không đủ điều kiện làm Moderator — dùng để báo lỗi đúng lý do thay vì
@@ -247,6 +321,6 @@ public class PrincipalModeratorService {
         return new AppUser(
                 user.id(), user.email(), user.googleSub(), user.fullName(), user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
-                user.subject(), status, user.createdAt(), user.lastLoginAt());
+                user.subject(), status, user.createdAt(), user.lastLoginAt(), user.dateOfBirth());
     }
 }

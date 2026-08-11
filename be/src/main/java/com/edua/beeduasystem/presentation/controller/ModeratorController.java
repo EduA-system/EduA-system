@@ -1,5 +1,6 @@
 package com.edua.beeduasystem.presentation.controller;
 
+import com.edua.beeduasystem.presentation.dto.auth.AccountStatusStatsDto;
 import com.edua.beeduasystem.presentation.dto.auth.AddTeacherRequest;
 import com.edua.beeduasystem.presentation.dto.auth.TeacherDto;
 import com.edua.beeduasystem.service.auth.ModeratorTeacherService;
@@ -34,6 +35,11 @@ public class ModeratorController {
 
     public ModeratorController(ModeratorTeacherService moderatorTeacherService) {
         this.moderatorTeacherService = moderatorTeacherService;
+    }
+
+    @GetMapping("/teachers/stats")
+    public AccountStatusStatsDto teacherStats() {
+        return AccountStatusStatsDto.from(moderatorTeacherService.countTeachersByStatus());
     }
 
     @GetMapping("/teachers")

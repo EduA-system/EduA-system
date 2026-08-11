@@ -25,6 +25,21 @@ public interface AppUserJpaRepository extends JpaRepository<AppUserEntity, UUID>
     @Query("SELECT COUNT(u) > 0 FROM AppUserEntity u JOIN UserRoleEntity ur ON u.id = ur.userId JOIN RoleEntity r ON ur.roleId = r.id WHERE r.name = :roleName AND u.subject = :subject AND u.status <> 'DISABLED'")
     boolean existsActiveByRoleNameAndSubject(@Param("roleName") String roleName, @Param("subject") Subject subject);
 
+    @Query("SELECT COUNT(u) > 0 FROM AppUserEntity u JOIN UserRoleEntity ur ON u.id = ur.userId JOIN RoleEntity r ON ur.roleId = r.id WHERE r.name = :roleName AND u.status <> 'DISABLED'")
+    boolean existsActiveByRoleName(@Param("roleName") String roleName);
+
+    @Query(value = """
+            SELECT
+              COALESCE(SUM(CASE WHEN u.status <> 'DISABLED' THEN 1 ELSE 0 END), 0) AS active_count,
+              COALESCE(SUM(CASE WHEN u.status = 'DISABLED' THEN 1 ELSE 0 END), 0) AS disabled_count
+            FROM app_users u
+            JOIN user_roles ur ON u.id = ur.user_id
+            JOIN roles r ON ur.role_id = r.id
+            WHERE r.name = :roleName
+              AND (:subject IS NULL OR u.subject = CAST(:subject AS varchar))
+            """, nativeQuery = true)
+    List<Object[]> countStatusByRoleRaw(@Param("roleName") String roleName, @Param("subject") String subject);
+
     @Query(value = """
             SELECT r.name, CASE WHEN u.status = 'ACTIVE' THEN true ELSE false END AS active_bucket, COUNT(*) AS total
             FROM app_users u

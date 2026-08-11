@@ -11,6 +11,7 @@ import com.edua.beeduasystem.repository.repositories.HubCommentRepository;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import com.edua.beeduasystem.service.blog.BlogContentSanitizer;
+import com.edua.beeduasystem.service.notification.NotificationService;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,7 @@ class HubCommentServiceTest {
         contentRepository = mock(LibraryContentRepository.class);
         userRepository = mock(AppUserRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
-        service = new HubCommentService(commentRepository, contentRepository, userRepository, new BlogContentSanitizer(), currentUserProvider);
+        service = new HubCommentService(commentRepository, contentRepository, userRepository, new BlogContentSanitizer(), currentUserProvider, mock(NotificationService.class));
 
         HubComment comment = new HubComment(commentId, contentId, commentAuthorId, "Rat huu ich", Instant.now(), Instant.now());
         when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
@@ -67,12 +68,11 @@ class HubCommentServiceTest {
     }
 
     @Test
-    void delete_allowsContentOwnerEvenIfNotCommentAuthor() {
+    void delete_deniesContentOwnerEvenIfNotCommentAuthor() {
         when(currentUserProvider.requireUserId()).thenReturn(contentOwnerId);
 
-        service.delete(commentId);
-
-        verify(commentRepository).deleteById(commentId);
+        assertThatThrownBy(() -> service.delete(commentId)).isInstanceOf(ForbiddenOperationException.class);
+        verify(commentRepository, never()).deleteById(any());
     }
 
     @Test

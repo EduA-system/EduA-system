@@ -1,8 +1,10 @@
 "use client";
 
-import { BookOpen, Check } from "lucide-react";
+import { BookOpen, Check, ExternalLink, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { MonthPicker } from "@/components/ui/MonthPicker";
 import { GradeSelect } from "@/components/ui/GradeSelect";
@@ -183,54 +185,72 @@ function canAssignWeek(weekStartDate: string): boolean {
 
 function LessonGroupCard({
   group,
-  expanded,
-  onToggle,
-  onEditTeacher,
+  canEdit,
+  onEditGroup,
+  onOpenGroup,
 }: {
   group: LessonGroup;
-  expanded: boolean;
-  onToggle: () => void;
-  onEditTeacher: (t: WeeklyTaskSummary) => void;
+  canEdit: boolean;
+  onEditGroup: (t: WeeklyTaskSummary) => void;
+  onOpenGroup: (group: LessonGroup) => void;
 }) {
   const submittedCount = group.tasks.filter((t) => t.reviewStatus !== "NOT_SUBMITTED").length;
+  const pendingCount = group.tasks.filter((t) => t.reviewStatus === "SUBMITTED").length;
+  const approvedCount = group.tasks.filter((t) => t.reviewStatus === "APPROVED").length;
+  const anchorTask = group.tasks[0];
   return (
-    <div className="rounded-2xl border bg-white p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium">{group.scopeDescription}</p>
-          <p className="mt-0.5 text-xs text-[#6b6b6b]">
-            {group.chapterName} · {group.lessonName}
-          </p>
-          <p className="mt-1 text-xs text-[#6b6b6b]">
-            Lịch dạy thực tế: {teachingWeekLabel(group.weekStartDate)} · Hạn nộp: {formatDateTime(group.deadline)}
-          </p>
+    <article className="overflow-hidden rounded-lg border border-[#e4ddd4] bg-white shadow-[0_1px_2px_rgba(43,41,38,0.04)] transition hover:border-[#e8724a]/60 hover:shadow-[0_8px_22px_rgba(43,41,38,0.08)]">
+      <button type="button" onClick={() => onOpenGroup(group)} className="block w-full p-4 text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="line-clamp-2 text-sm font-semibold leading-5 text-[#2b2926]">{group.scopeDescription}</p>
+            <p className="mt-1 truncate text-xs font-medium uppercase text-[#7b736b]">
+              {group.chapterName} · {group.lessonName}
+            </p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#f5f1ec] px-2.5 py-1 text-xs font-semibold text-[#6b6259]">
+            <Users className="size-3.5" />
+            {submittedCount}/{group.tasks.length}
+          </span>
         </div>
-        <button type="button" onClick={onToggle} className="shrink-0 text-xs text-[#b85c3b] underline">
-          {submittedCount}/{group.tasks.length} đã nộp {expanded ? "▲" : "▼"}
-        </button>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-md bg-[#faf7f3] px-2 py-1 text-[#6b6259]">Dạy: {teachingWeekLabel(group.weekStartDate)}</span>
+          <span className="rounded-md bg-[#faf7f3] px-2 py-1 text-[#6b6259]">Hạn: {formatDateTime(group.deadline)}</span>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full bg-amber-100 px-2.5 py-1 font-medium text-amber-800">{pendingCount} chờ duyệt</span>
+          <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-medium text-emerald-800">{approvedCount} đã duyệt</span>
+        </div>
+      </button>
+      <div className="flex items-center justify-between gap-3 border-t border-[#f0ece5] px-4 py-2 text-xs">
+        <span className="text-[#8a8178]">Bấm card để xem giáo viên</span>
+        <span className="flex shrink-0 items-center gap-2">
+          {anchorTask ? (
+            <button
+              type="button"
+              disabled={!canEdit}
+              onClick={() => onEditGroup(anchorTask)}
+              title={canEdit ? "Sửa lịch nộp giáo án" : "Lịch nộp đã kết thúc, không thể sửa"}
+              className="rounded-md border border-[#e4ddd4] bg-white px-2.5 py-1 font-medium text-[#b85c3b] transition hover:border-[#e8724a] hover:bg-[#fff7f2] disabled:cursor-not-allowed disabled:border-[#e8e2d9] disabled:bg-[#f5f1ec] disabled:text-[#b8afa6]"
+            >
+              Sửa
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => onOpenGroup(group)}
+            className="rounded-md bg-[#e8724a] px-2.5 py-1 font-medium text-white transition hover:bg-[#d9633b]"
+          >
+            Chi tiết
+          </button>
+        </span>
       </div>
-      {expanded ? (
-        <div className="mt-3 space-y-2 border-t pt-3">
-          {group.tasks.map((t) => (
-            <div key={t.id} className="flex items-center justify-between gap-2 text-xs">
-              <span className="min-w-0 truncate">{t.teacherName ?? "Giáo viên"}</span>
-              <span className="flex shrink-0 items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 font-medium ${statusClasses[t.reviewStatus]}`}>
-                  {statusLabels[t.reviewStatus]}
-                </span>
-                <button type="button" onClick={() => onEditTeacher(t)} className="text-[#b85c3b] underline">
-                  Sửa
-                </button>
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
+    </article>
   );
 }
 
 function WeeklyScheduleScreen() {
+  const router = useRouter();
   const { user, authFetch } = useAuth();
   const isModerator = hasAnyRole(user, ["MODERATOR"]);
 
@@ -239,7 +259,7 @@ function WeeklyScheduleScreen() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
-  const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null);
+  const [selectedLessonGroup, setSelectedLessonGroup] = useState<LessonGroup | null>(null);
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
   // BR-51: Mod luôn thao tác trong phạm vi đúng 1 khối đã chọn.
@@ -248,7 +268,7 @@ function WeeklyScheduleScreen() {
   // thị, không bắt buộc như Mod, nên mặc định "Tất cả khối" (null).
   const [teacherGradeFilter, setTeacherGradeFilter] = useState<number | null>(null);
 
-  // ── Sửa 1 giáo viên trong 1 lịch nộp giáo án (Moderator) ──────────────
+  // ── Sửa 1 lịch nộp giáo án theo cụm giáo viên (Moderator) ─────────────
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formTeacherId, setFormTeacherId] = useState("");
@@ -274,6 +294,7 @@ function WeeklyScheduleScreen() {
   // Popup mặc định chỉ lọc đúng Khối/Môn/Chương được giao; bật cờ này khi GV chủ động mở rộng vì
   // giáo án cũ (tạo trước khi có lọc theo chương) chưa có metadata nên không khớp filter.
   const [showAllLessonPlans, setShowAllLessonPlans] = useState(false);
+  const [unsubmitTarget, setUnsubmitTarget] = useState<{ id: string; title: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -424,15 +445,19 @@ function WeeklyScheduleScreen() {
     }
   }
 
-  async function handleUnsubmit(taskId: string, title: string) {
-    if (!confirm(`Rút giáo án đã nộp cho "${title}"?`)) return;
+  async function handleUnsubmit(taskId: string) {
     try {
       await unsubmitWeeklyTask(authFetch, taskId);
       setMsg("Đã rút giáo án.");
+      setUnsubmitTarget(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không thể rút giáo án.");
     }
+  }
+
+  function openSubmittedTaskApproval(taskId: string) {
+    router.push(`/lesson-plan-approval?taskId=${encodeURIComponent(taskId)}&preview=1`);
   }
 
   // Task của giáo viên gộp mọi khối họ dạy trong 1 lịch — lọc theo `teacherGradeFilter` để không lẫn lộn
@@ -445,11 +470,11 @@ function WeeklyScheduleScreen() {
     .filter((week) => week.tasks.length > 0);
 
   return (
-    <main className="min-h-screen bg-white text-[#2b2926]">
+    <main className="min-h-screen bg-[#f7f5f2] text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/weekly-schedule" />
         <section className="min-w-0 flex-1 p-5 sm:p-8">
-          <header className="flex flex-wrap items-start justify-between gap-4">
+          <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[#e4ddd4] pb-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-[#e8724a]">Content</p>
               <h1 className="mt-1 text-3xl font-semibold">Lịch nộp giáo án</h1>
@@ -461,7 +486,7 @@ function WeeklyScheduleScreen() {
             </div>
           </header>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-[#e4ddd4] bg-white px-4 py-3 shadow-sm">
             <MonthPicker
               year={viewYear}
               month={viewMonth}
@@ -734,6 +759,65 @@ function WeeklyScheduleScreen() {
             </div>
           </Modal>
 
+          <Modal
+            open={selectedLessonGroup !== null}
+            onClose={() => setSelectedLessonGroup(null)}
+            title={selectedLessonGroup?.scopeDescription ?? "Tình trạng nộp giáo án"}
+            description={
+              selectedLessonGroup
+                ? `${selectedLessonGroup.chapterName} · ${selectedLessonGroup.lessonName} · Lịch dạy thực tế: ${teachingWeekLabel(selectedLessonGroup.weekStartDate)}`
+                : undefined
+            }
+            maxWidthClassName="max-w-3xl"
+          >
+            {selectedLessonGroup ? (
+              <div className="space-y-3">
+                <div className="grid gap-2 rounded-lg border border-[#e4ddd4] bg-[#faf9f7] px-4 py-3 text-xs text-[#6b6259] sm:grid-cols-3">
+                  <span>Tổng: <strong className="text-[#2b2926]">{selectedLessonGroup.tasks.length}</strong></span>
+                  <span>Chờ duyệt: <strong className="text-amber-800">{selectedLessonGroup.tasks.filter((t) => t.reviewStatus === "SUBMITTED").length}</strong></span>
+                  <span>Đã duyệt: <strong className="text-emerald-800">{selectedLessonGroup.tasks.filter((t) => t.reviewStatus === "APPROVED").length}</strong></span>
+                </div>
+                {selectedLessonGroup.tasks.map((t) => {
+                  const canOpenApproval = t.reviewStatus === "SUBMITTED";
+                  const content = (
+                    <>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#f5f1ec] text-xs font-bold text-[#8a5a44]">
+                          {(t.teacherName ?? "GV").trim().charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[#2b2926]">{t.teacherName ?? "Giáo viên"}</p>
+                          <p className="mt-1 text-xs text-[#8a8178]">Nộp lúc {t.submittedAt ? formatDateTime(t.submittedAt) : "-"}</p>
+                        </div>
+                      </div>
+                      <span className="flex shrink-0 items-center gap-2 self-start sm:self-center">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses[t.reviewStatus]}`}>
+                          {statusLabels[t.reviewStatus]}
+                        </span>
+                        {canOpenApproval ? <ExternalLink className="size-4 text-[#b85c3b]" /> : null}
+                      </span>
+                    </>
+                  );
+
+                  return canOpenApproval ? (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => openSubmittedTaskApproval(t.id)}
+                      className="flex w-full flex-col justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 text-left transition hover:border-[#e8724a] hover:bg-[#fff7f2] sm:flex-row sm:items-center"
+                    >
+                      {content}
+                    </button>
+                  ) : (
+                    <div key={t.id} className="flex flex-col justify-between gap-3 rounded-lg border border-[#e4ddd4] bg-white px-4 py-3 sm:flex-row sm:items-center">
+                      {content}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </Modal>
+
           {msg ? <p className="mt-4 text-sm text-emerald-700">{msg}</p> : null}
           {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
 
@@ -744,10 +828,11 @@ function WeeklyScheduleScreen() {
               ))}
             </div>
           ) : isModerator ? (
-            <div className="mt-6 overflow-x-auto rounded-2xl border bg-white">
+            <div className="mt-6 overflow-hidden rounded-lg border border-[#e4ddd4] bg-white shadow-sm">
+              <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] table-fixed border-collapse text-sm">
                 <colgroup>
-                  <col className="w-32" />
+                  <col className="w-36" />
                   <col />
                 </colgroup>
                 <tbody>
@@ -755,37 +840,35 @@ function WeeklyScheduleScreen() {
                     const current = isCurrentWeek(week.weekStartDate);
                     const canAssign = canAssignWeek(week.weekStartDate);
                     return (
-                      <tr key={week.weekStartDate} className="border-t border-[#e8e2db] align-top">
-                        <td className="border-r border-[#e8e2db] p-3">
-                          <p className="text-sm font-medium">
-                            Lịch nộp {weekLabel(week.weekStartDate)}{" "}
-                            <span className="text-xs font-normal text-[#6b6b6b]">
-                              (lịch dạy thực tế: {teachingWeekLabel(week.weekStartDate)})
-                            </span>
+                      <tr key={week.weekStartDate} className="border-t border-[#eee7df] align-top first:border-t-0">
+                        <td className="border-r border-[#eee7df] bg-[#fbfaf8] p-3">
+                          <p className="text-sm font-semibold leading-5">
+                            Lịch nộp {weekLabel(week.weekStartDate)}
                           </p>
+                          <p className="mt-1 text-xs leading-5 text-[#6b6b6b]">Dạy: {teachingWeekLabel(week.weekStartDate)}</p>
                           {current ? (
-                            <span className="mt-1 inline-block rounded-full bg-[#e8724a]/10 px-2 py-0.5 text-[11px] font-medium text-[#b85c3b]">
+                            <span className="mt-2 inline-block rounded-full bg-[#e8724a]/10 px-2 py-0.5 text-[11px] font-medium text-[#b85c3b]">
                               Tuần nộp
                             </span>
                           ) : null}
                         </td>
-                        <td className="p-3">
+                        <td className="bg-white p-3">
                           <div className="grid gap-3 sm:grid-cols-2">
                             {weekSlots(week.tasks).map((group, slotIndex) =>
                               group ? (
                                 <LessonGroupCard
                                   key={group.key}
                                   group={group}
-                                  expanded={expandedGroupKey === group.key}
-                                  onToggle={() => setExpandedGroupKey((k) => (k === group.key ? null : group.key))}
-                                  onEditTeacher={openEditForm}
+                                  canEdit={canAssign}
+                                  onEditGroup={openEditForm}
+                                  onOpenGroup={setSelectedLessonGroup}
                                 />
                               ) : canAssign ? (
                                 <button
                                   key={`empty-${slotIndex}`}
                                   type="button"
                                   onClick={() => openCreatePanel(week.weekStartDate)}
-                                  className="flex h-20 items-center justify-center rounded-2xl border border-dashed p-2 text-center text-xs text-[#8a8178] hover:bg-[#f5f1ec]"
+                                  className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-[#d8d1c9] bg-[#fffdfb] p-2 text-center text-xs font-medium text-[#8a8178] transition hover:border-[#e8724a]/60 hover:bg-[#fff7f2] hover:text-[#b85c3b]"
                                 >
                                   {slotIndex === 0 ? "Ấn để thêm bài thứ nhất" : "Ấn để thêm bài thứ hai"}
                                 </button>
@@ -793,7 +876,7 @@ function WeeklyScheduleScreen() {
                                 <div
                                   key={`empty-${slotIndex}`}
                                   title="Tuần đã kết thúc, không thể giao bài"
-                                  className="flex h-20 cursor-not-allowed items-center justify-center rounded-2xl border border-dashed bg-[#f5f1ec] p-2 text-center text-xs text-[#c2bcb3]"
+                                  className="flex min-h-24 cursor-not-allowed items-center justify-center rounded-lg border border-dashed border-[#d8d1c9] bg-[#f5f1ec] p-2 text-center text-xs text-[#b8afa6]"
                                 >
                                   Đã qua hạn
                                 </div>
@@ -806,6 +889,7 @@ function WeeklyScheduleScreen() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           ) : teacherWeeks.length === 0 ? (
             <div className="mt-8 rounded-2xl border border-dashed bg-white p-12 text-center text-sm text-[#6b6b6b]">
@@ -886,7 +970,7 @@ function WeeklyScheduleScreen() {
                                         </button>
                                       ) : null}
                                       {current && !expired && t.reviewStatus === "SUBMITTED" ? (
-                                        <button onClick={() => void handleUnsubmit(t.id, t.scopeDescription)} className="text-red-600 underline">
+                                        <button onClick={() => setUnsubmitTarget({ id: t.id, title: t.scopeDescription })} className="text-red-600 underline">
                                           Hủy nộp
                                         </button>
                                       ) : null}
@@ -914,6 +998,19 @@ function WeeklyScheduleScreen() {
           )}
         </section>
       </div>
+      <ConfirmDialog
+        open={unsubmitTarget !== null}
+        onClose={() => setUnsubmitTarget(null)}
+        onConfirm={() => unsubmitTarget && void handleUnsubmit(unsubmitTarget.id)}
+        title="Rút giáo án đã nộp?"
+        description={
+          <>
+            Giáo án cho <span className="font-semibold text-[#1f1f1f]">&quot;{unsubmitTarget?.title}&quot;</span> sẽ rời khỏi hàng chờ duyệt. Bạn có thể nộp lại nếu lịch nộp còn cho phép.
+          </>
+        }
+        confirmLabel="Rút giáo án"
+        variant="danger"
+      />
     </main>
   );
 }

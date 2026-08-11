@@ -13,25 +13,25 @@ Hai lượt bổ sung nhau gần như không chồng lấn — xem [mục "Đố
 
 | # | File:line | Vấn đề | Mức | Xử lý |
 | --- | --- | --- | --- | --- |
-| R1-01 | `LibraryContentService.java:41` | Content không có môn kẹt vĩnh viễn ở SUBMITTED | **Cao** | Sửa |
-| R1-02 | `service/library/` (cả package) | Máy trạng thái chạy ngoài transaction, không optimistic lock | **Cao** | Sửa |
+| R1-01 | `LibraryContentService.java:41` | Content không có môn kẹt vĩnh viễn ở SUBMITTED | **Cao** | ✅ Xong |
+| R1-02 | `service/library/` (cả package) | Máy trạng thái chạy ngoài transaction, không optimistic lock | **Cao** | ✅ Xong |
 | R1-03 | `LibraryContentController.java:16` | PATCH không bao giờ xoá được field về null | **Cao** | Sửa |
-| R1-10 | `LibraryContentService.java:70` | Lý do từ chối dài → bài bị từ chối nhưng teacher không được báo | **Cao** | Sửa |
-| R1-11 | `fe/app/library/page.tsx:50` | Đề kiểm tra đã lưu không mở được từ thư viện | **Cao** | Sửa |
-| R1-12 | `fe/app/hub-moderation/page.tsx:216` | Lỗi tải chi tiết để lại bài cũ → duyệt nhầm bài | **Cao** | Sửa |
-| R1-13 | `fe/app/lesson-plan-approval/page.tsx:99` | Không chặn race → hiển thị và mở nhầm bài | **Cao** | Sửa |
-| R1-04 | `LibraryContentService.java:43,53,95` | Xung đột trạng thái trả 400 thay vì 409 | TB | Sửa |
+| R1-10 | `LibraryContentService.java:70` | Lý do từ chối dài → bài bị từ chối nhưng teacher không được báo | **Cao** | ✅ Xong |
+| R1-11 | `fe/app/library/page.tsx:50` | Đề kiểm tra đã lưu không mở được từ thư viện | **Cao** | ✅ Xong |
+| R1-12 | `fe/app/hub-moderation/page.tsx:216` | Lỗi tải chi tiết để lại bài cũ → duyệt nhầm bài | **Cao** | ✅ Xong |
+| R1-13 | `fe/app/lesson-plan-approval/page.tsx:99` | Không chặn race → hiển thị và mở nhầm bài | **Cao** | ✅ Xong |
+| R1-04 | `LibraryContentService.java:43,53,95` | Xung đột trạng thái trả 400 thay vì 409 | TB | ✅ Xong |
 | R1-05 | `HubCommentService.java:113` | Ẩn bình luận là trạng thái cuối, không có unhide | TB | Sửa |
 | R1-06 | `HubContentReportService.java:33` | Báo cáo vi phạm là ngõ cụt, không chặn spam | TB | Cần quyết định |
 | R1-07 | `LibraryContentService.java:39` | Xoá content APPROVED không dọn hệ quả | TB | Sửa |
-| R1-14 | `fe/app/library/page.tsx:216` | FE tự ghi `updatedAt` khi mở trang → xáo trộn thứ tự | TB | Sửa |
-| R1-15 | `LibraryContentService.java:57` | Ghi log audit fail → bài public không có vết duyệt | TB | Sửa |
+| R1-14 | `fe/app/library/page.tsx:216` | FE tự ghi `updatedAt` khi mở trang → xáo trộn thứ tự | TB | ✅ Xong |
+| R1-15 | `LibraryContentService.java:57` | Ghi log audit fail → bài public không có vết duyệt | TB | ✅ Xong |
 | R1-16 | `fe/app/hub-moderation/page.tsx:174` | Spinner chặn tới khi tối đa 100 request lẻ xong | TB | Sửa |
 | R1-08 | `HubCommentService.java:23` | Javadoc mô tả sai quyền xoá so với code | Thấp | Sửa |
 | R1-09 | `HubContentService.java:73,83` | N+1 query trên feed Hub (endpoint permitAll) | Thấp | Sửa |
 | R1-17 | `fe/app/lesson-plan-approval/page.tsx:123` | Thông báo "đã xử lý" đè lên lỗi mạng thật | Thấp | Sửa |
-| R1-18 | `fe/app/library/page.tsx:317` | Tab rỗng không có nút tạo mới | Thấp | Sửa |
-| R1-19 | `fe/app/lesson-plan-approval/page.tsx:138` | Banner xanh và banner đỏ hiện cùng lúc | Thấp | Sửa |
+| R1-18 | `fe/app/library/page.tsx:317` | Tab rỗng không có nút tạo mới | Thấp | ✅ Xong |
+| R1-19 | `fe/app/lesson-plan-approval/page.tsx:138` | Banner xanh và banner đỏ hiện cùng lúc | Thấp | ✅ Xong |
 
 ---
 

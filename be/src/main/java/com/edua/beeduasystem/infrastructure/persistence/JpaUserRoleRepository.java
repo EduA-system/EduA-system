@@ -47,6 +47,13 @@ public class JpaUserRoleRepository implements UserRoleRepository {
 
     @Override
     @Transactional
+    public void lockRole(Role role) {
+        roleJpa.findLockedByName(role.name())
+                .orElseThrow(() -> new IllegalStateException("Role " + role.name() + " not found in DB"));
+    }
+
+    @Override
+    @Transactional
     public void save(UserRole userRole) {
         UserRoleEntity e = jpa.findById(userRole.id()).orElseGet(UserRoleEntity::new);
         e.setId(userRole.id());

@@ -58,7 +58,8 @@ class LibraryContentServiceTest {
     @Test
     void submit_marksPrivateContentAsSubmittedAndStampsTimestamp() {
         UUID id = UUID.randomUUID();
-        when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.PRIVATE, null)));
+        when(repository.findActiveById(id)).thenReturn(Optional.of(
+                contentWithStatus(id, ownerId, Subject.MATH, LibraryContentStatus.PRIVATE, null)));
 
         LibraryViews.Detail result = service.submit(id);
 
@@ -85,6 +86,18 @@ class LibraryContentServiceTest {
         when(repository.findActiveById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.submit(id)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void submit_throwsWhenSubjectIsMissing() {
+        // R1-01: content chưa được gán môn học phải bị chặn ngay khi gửi duyệt, không được
+        // phép lọt vào SUBMITTED — nếu không sẽ kẹt vĩnh viễn (không moderator nào thấy trong
+        // hàng chờ vì listModerationQueue() luôn lọc theo subject != null).
+        UUID id = UUID.randomUUID();
+        when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.PRIVATE, null)));
+
+        assertThatThrownBy(() -> service.submit(id)).isInstanceOf(IllegalArgumentException.class);
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -146,7 +159,8 @@ class LibraryContentServiceTest {
     @Test
     void submit_allowsResubmissionFromRejected() {
         UUID id = UUID.randomUUID();
-        when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.REJECTED, null)));
+        when(repository.findActiveById(id)).thenReturn(Optional.of(
+                contentWithStatus(id, ownerId, Subject.PHYSICS, LibraryContentStatus.REJECTED, null)));
 
         LibraryViews.Detail result = service.submit(id);
 
@@ -206,5 +220,31 @@ class LibraryContentServiceTest {
         when(currentUserProvider.require()).thenReturn(new AccessTokenClaims(UUID.randomUUID(), "mod@edua.vn", null, null));
 
         assertThatThrownBy(() -> service.listModerationQueue(0, 20)).isInstanceOf(ForbiddenOperationException.class);
+    }
+
+    @Test
+    void update_throwsWhenClearingSubjectWhileContentIsSubmitted() {
+        // R1-01, đường vòng qua update(): một khi PATCH có thể xoá subject về null (R1-03), phải
+        // chặn xoá trong lúc content đang SUBMITTED — nếu không sẽ tái tạo đúng lỗi "kẹt vĩnh
+        // viễn" (không moderator nào thấy trong hàng chờ) qua một cửa khác thay vì qua submit().
+        UUID id = UUID.randomUUID();
+        when(repository.findActiveById(id)).thenReturn(Optional.of(
+                contentWithStatus(id, ownerId, Subject.MATH, LibraryContentStatus.SUBMITTED, Instant.now())));
+
+        assertThatThrownBy(() -> service.update(id, null, null, true, null, false, null, false, null, false, null, false, null, false))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void update_allowsClearingSubjectWhileContentIsPrivate() {
+        // Guard chỉ áp dụng khi đang SUBMITTED — nội dung riêng tư vẫn được sửa tự do.
+        UUID id = UUID.randomUUID();
+        when(repository.findActiveById(id)).thenReturn(Optional.of(
+                contentWithStatus(id, ownerId, Subject.MATH, LibraryContentStatus.PRIVATE, null)));
+
+        LibraryViews.Detail result = service.update(id, null, null, true, null, false, null, false, null, false, null, false, null, false);
+
+        assertThat(result.subject()).isNull();
     }
 }

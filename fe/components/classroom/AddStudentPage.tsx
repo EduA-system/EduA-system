@@ -49,6 +49,12 @@ function formatDateTime(value: string): string {
   }).format(new Date(value));
 }
 
+function latestAllowedBirthDate(): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - MIN_STUDENT_AGE_YEARS);
+  return date.toISOString().slice(0, 10);
+}
+
 function statusClasses(status: ClassStatus): string {
   return status === "ACTIVE"
     ? "border-[#b7e0c4] bg-[#f0faf3] text-[#287447]"
@@ -95,31 +101,46 @@ export function AddStudentPage() {
   const [memberToRemove, setMemberToRemove] = useState<ClassMember | null>(null);
   const [removeReason, setRemoveReason] = useState("");
   const [removeBusy, setRemoveBusy] = useState(false);
+  const classesLoadSeqRef = useRef(0);
+  const membersLoadSeqRef = useRef(0);
+  const classDetailLoadSeqRef = useRef(0);
 
   const loadClasses = useCallback(async () => {
     if (status !== "authenticated") return;
+    const requestId = classesLoadSeqRef.current + 1;
+    classesLoadSeqRef.current = requestId;
     setClassesLoading(true);
     try {
       const result = await listClasses(authFetch, { size: 100 });
+      if (classesLoadSeqRef.current !== requestId) return;
       setClasses(result.items);
     } catch (reason) {
+      if (classesLoadSeqRef.current !== requestId) return;
       setError(reason instanceof Error ? reason.message : "Không thể tải danh sách lớp.");
     } finally {
-      setClassesLoading(false);
+      if (classesLoadSeqRef.current === requestId) {
+        setClassesLoading(false);
+      }
     }
   }, [authFetch, status]);
 
   const loadMembers = useCallback(
     async (id: string) => {
+      const requestId = membersLoadSeqRef.current + 1;
+      membersLoadSeqRef.current = requestId;
       setMembersLoading(true);
       try {
         const result = await listClassMembers(authFetch, id, 0, 100);
+        if (membersLoadSeqRef.current !== requestId) return;
         setMembers(result.items);
         setMembersTotal(result.total);
       } catch (reason) {
+        if (membersLoadSeqRef.current !== requestId) return;
         setError(reason instanceof Error ? reason.message : "Không thể tải danh sách thành viên.");
       } finally {
-        setMembersLoading(false);
+        if (membersLoadSeqRef.current === requestId) {
+          setMembersLoading(false);
+        }
       }
     },
     [authFetch],
@@ -127,17 +148,24 @@ export function AddStudentPage() {
 
   const loadClassDetail = useCallback(
     async (id: string) => {
+      const requestId = classDetailLoadSeqRef.current + 1;
+      classDetailLoadSeqRef.current = requestId;
       setClassLoading(true);
       setError("");
       try {
         const detail = await getClassDetail(authFetch, id);
+        if (classDetailLoadSeqRef.current !== requestId) return;
         setSelectedClass(detail);
         await loadMembers(id);
+        if (classDetailLoadSeqRef.current !== requestId) return;
       } catch (reason) {
+        if (classDetailLoadSeqRef.current !== requestId) return;
         setSelectedClass(null);
         setError(reason instanceof Error ? reason.message : "Không thể mở lớp.");
       } finally {
-        setClassLoading(false);
+        if (classDetailLoadSeqRef.current === requestId) {
+          setClassLoading(false);
+        }
       }
     },
     [authFetch, loadMembers],
@@ -147,11 +175,16 @@ export function AddStudentPage() {
     const timer = window.setTimeout(() => {
       void loadClasses();
     }, 0);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      classesLoadSeqRef.current += 1;
+    };
   }, [loadClasses]);
 
   useEffect(() => {
     if (!classId) {
+      classDetailLoadSeqRef.current += 1;
+      membersLoadSeqRef.current += 1;
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedClass(null);
       setMembers([]);
@@ -159,6 +192,10 @@ export function AddStudentPage() {
       return;
     }
     void loadClassDetail(classId);
+    return () => {
+      classDetailLoadSeqRef.current += 1;
+      membersLoadSeqRef.current += 1;
+    };
   }, [classId, loadClassDetail]);
 
   useEffect(() => {
@@ -288,7 +325,7 @@ export function AddStudentPage() {
   const isInactive = selectedClass?.status === "INACTIVE";
   const isFull = remainingSlots !== null && remainingSlots <= 0;
   const formsDisabled = isInactive || isFull;
-  const latestAllowedBirthDate = `${new Date().getFullYear() - MIN_STUDENT_AGE_YEARS}-12-31`;
+  const maxBirthDate = latestAllowedBirthDate();
 
   return (
     <main className="min-h-screen bg-white text-[#1f1f1f]">
@@ -558,7 +595,7 @@ export function AddStudentPage() {
               </label>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <label className="block text-[12px] font-medium text-[#6b6b6b]">Số điện thoại *<input type="tel" value={addForm.phoneNumber} onChange={(event) => setAddForm((current) => ({ ...current, phoneNumber: event.target.value.replace(/\D/g, "").slice(0, 10) }))} required pattern="0[35789][0-9]{8}" maxLength={10} title="Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 03, 05, 07, 08 hoặc 09." disabled={addBusy || formsDisabled} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]" /></label>
-                <label className="block text-[12px] font-medium text-[#6b6b6b]">Ngày sinh *<input type="date" value={addForm.dateOfBirth} onChange={(event) => setAddForm((current) => ({ ...current, dateOfBirth: event.target.value }))} required max={latestAllowedBirthDate} disabled={addBusy || formsDisabled} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]" /></label>
+                <label className="block text-[12px] font-medium text-[#6b6b6b]">Ngày sinh *<input type="date" value={addForm.dateOfBirth} onChange={(event) => setAddForm((current) => ({ ...current, dateOfBirth: event.target.value }))} required max={maxBirthDate} disabled={addBusy || formsDisabled} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]" /></label>
               </div>
               <label className="mt-3 block text-[12px] font-medium text-[#6b6b6b]">Gmail *<input type="email" value={addForm.email} onChange={(event) => setAddForm((current) => ({ ...current, email: event.target.value }))} placeholder="hocsinh01@gmail.com" required disabled={addBusy || formsDisabled} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]" /></label>
               {addInlineError && <p className="mt-3 text-[12px] leading-5 text-[#c0492b]">{addInlineError}</p>}

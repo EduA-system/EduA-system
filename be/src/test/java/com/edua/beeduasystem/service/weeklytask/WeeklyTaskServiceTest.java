@@ -11,12 +11,15 @@ import com.edua.beeduasystem.domain.model.library.LibraryContent;
 import com.edua.beeduasystem.domain.model.library.LibraryContentStatus;
 import com.edua.beeduasystem.domain.model.library.LibraryContentType;
 import com.edua.beeduasystem.domain.model.notification.Notification;
+import com.edua.beeduasystem.domain.model.textbook.TextbookCatalog;
 import com.edua.beeduasystem.domain.model.weeklytask.WeeklyTask;
 import com.edua.beeduasystem.domain.model.weeklytask.WeeklyTaskReviewStatus;
 import com.edua.beeduasystem.repository.gateways.NotificationStreamPort;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
 import com.edua.beeduasystem.repository.repositories.NotificationRepository;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
+import com.edua.beeduasystem.repository.repositories.TextbookCatalogRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.repository.repositories.WeeklyTaskRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
@@ -49,6 +52,8 @@ class WeeklyTaskServiceTest {
     private LibraryContentRepository libraryContentRepository;
     private AppUserRepository userRepository;
     private UserRoleRepository userRoleRepository;
+    private TeacherGradeRepository teacherGradeRepository;
+    private TextbookCatalogRepository textbookCatalogRepository;
     private CurrentUserProvider currentUserProvider;
     private NotificationRepository notificationRepository;
     private NotificationStreamPort streamPort;
@@ -59,6 +64,10 @@ class WeeklyTaskServiceTest {
     private final UUID teacherId = UUID.randomUUID();
     private final Instant futureDeadline = Instant.now().plusSeconds(3600);
     private final Instant pastDeadline = Instant.now().minusSeconds(3600);
+    private static final int GRADE = 10;
+    private static final String TEXTBOOK_CODE = "SGK10";
+    private static final String CHAPTER_CODE = "C1";
+    private static final String LESSON_CODE = "L1";
 
     @BeforeEach
     void setup() {
@@ -66,21 +75,33 @@ class WeeklyTaskServiceTest {
         libraryContentRepository = mock(LibraryContentRepository.class);
         userRepository = mock(AppUserRepository.class);
         userRoleRepository = mock(UserRoleRepository.class);
+        teacherGradeRepository = mock(TeacherGradeRepository.class);
+        textbookCatalogRepository = mock(TextbookCatalogRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
         notificationRepository = mock(NotificationRepository.class);
         streamPort = mock(NotificationStreamPort.class);
         activityLogService = mock(ActivityLogService.class);
         service = new WeeklyTaskService(repository, libraryContentRepository, userRepository, userRoleRepository,
-                currentUserProvider, notificationRepository, streamPort, activityLogService);
+                teacherGradeRepository, textbookCatalogRepository, currentUserProvider, notificationRepository, streamPort, activityLogService);
 
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repository.findBySubjectAndGrade(eq(Subject.MATH), eq(GRADE), any(), any())).thenReturn(List.of());
+        when(textbookCatalogRepository.listBookNames(Subject.MATH.name())).thenReturn(List.of(
+                new TextbookCatalog.BookName(TEXTBOOK_CODE, "SGK 10", GRADE, Subject.MATH.name(), "Toan", null, "NXB", "KNTT")));
+        when(textbookCatalogRepository.listChapters(TEXTBOOK_CODE)).thenReturn(List.of(
+                new TextbookCatalog.ChapterSummary(CHAPTER_CODE, "Chuong 1")));
+        when(textbookCatalogRepository.listLessons(TEXTBOOK_CODE, CHAPTER_CODE)).thenReturn(List.of(
+                new TextbookCatalog.LessonSummary(LESSON_CODE, "Bai 1", 1),
+                new TextbookCatalog.LessonSummary("L2", "Bai 2", 2)));
+        when(teacherGradeRepository.findGradesByUserIds(any())).thenReturn(java.util.Map.of(teacherId, List.of(GRADE)));
         when(notificationRepository.createWithRecipients(any(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     private WeeklyTask task(UUID id, WeeklyTaskReviewStatus status, Instant deadline, String rejectionReason) {
         Instant now = Instant.now();
-        return new WeeklyTask(id, moderatorId, Subject.MATH, teacherId, LocalDate.now(), "Chuong 3", deadline, status,
+        return new WeeklyTask(id, moderatorId, Subject.MATH, GRADE, teacherId, LocalDate.now(), "Chuong 3",
+                TEXTBOOK_CODE, CHAPTER_CODE, "Chuong 1", LESSON_CODE, "Bai 1", deadline, status,
                 null, null, null, null, null, status == WeeklyTaskReviewStatus.SUBMITTED ? now : null, null, null,
                 rejectionReason, now, now, 0L);
     }
@@ -284,7 +305,7 @@ class WeeklyTaskServiceTest {
         asModerator();
         when(userRepository.findById(teacherId)).thenReturn(Optional.of(appUser(teacherId, Subject.MATH, UserStatus.DISABLED)));
 
-        assertThatThrownBy(() -> service.create(teacherId, LocalDate.now(), "Chuong 3", futureDeadline))
+        assertThatThrownBy(() -> service.create(teacherId, LocalDate.now(), GRADE, "Chuong 3", TEXTBOOK_CODE, CHAPTER_CODE, LESSON_CODE))
                 .isInstanceOf(IllegalArgumentException.class);
         verify(repository, never()).save(any());
     }
@@ -294,7 +315,7 @@ class WeeklyTaskServiceTest {
         asModerator();
         when(userRepository.findById(teacherId)).thenReturn(Optional.of(appUser(teacherId, Subject.PHYSICS, UserStatus.ACTIVE)));
 
-        assertThatThrownBy(() -> service.create(teacherId, LocalDate.now(), "Chuong 3", futureDeadline))
+        assertThatThrownBy(() -> service.create(teacherId, LocalDate.now(), GRADE, "Chuong 3", TEXTBOOK_CODE, CHAPTER_CODE, LESSON_CODE))
                 .isInstanceOf(ForbiddenOperationException.class);
     }
 
@@ -304,7 +325,7 @@ class WeeklyTaskServiceTest {
         when(userRepository.findById(teacherId)).thenReturn(Optional.of(appUser(teacherId, Subject.MATH, UserStatus.ACTIVE)));
         when(userRoleRepository.findRolesByUserId(teacherId)).thenReturn(Set.of(Role.TEACHER));
 
-        WeeklyTaskViews.Detail result = service.create(teacherId, LocalDate.now(), "Chuong 3", futureDeadline);
+        WeeklyTaskViews.Detail result = service.create(teacherId, LocalDate.now(), GRADE, "Chuong 3", TEXTBOOK_CODE, CHAPTER_CODE, LESSON_CODE);
 
         assertThat(result.reviewStatus()).isEqualTo(WeeklyTaskReviewStatus.NOT_SUBMITTED);
         assertThat(result.teacherId()).isEqualTo(teacherId);
@@ -320,16 +341,20 @@ class WeeklyTaskServiceTest {
         UUID teacher1 = UUID.randomUUID();
         UUID teacher2 = UUID.randomUUID();
         UUID disabledTeacher = UUID.randomUUID();
-        when(repository.findBySubject(Subject.MATH, week, week)).thenReturn(List.of());
+        when(repository.findBySubjectAndGrade(Subject.MATH, GRADE, week.with(java.time.DayOfWeek.MONDAY), week.with(java.time.DayOfWeek.MONDAY))).thenReturn(List.of());
         when(userRepository.findAllByRoleAndSubject(eq(Role.TEACHER), eq(Subject.MATH), any()))
                 .thenReturn(new PageImpl<>(List.of(
                         appUser(teacher1, Subject.MATH, UserStatus.ACTIVE),
                         appUser(teacher2, Subject.MATH, UserStatus.ACTIVE),
                         appUser(disabledTeacher, Subject.MATH, UserStatus.DISABLED))));
+        when(teacherGradeRepository.findGradesByUserIds(any())).thenReturn(java.util.Map.of(
+                teacher1, List.of(GRADE),
+                teacher2, List.of(GRADE),
+                disabledTeacher, List.of(GRADE)));
 
-        WeeklyTaskViews.BulkResult result = service.bulkCreate(week, List.of(
-                new WeeklyTaskService.LessonRequest("Bai 1", futureDeadline),
-                new WeeklyTaskService.LessonRequest("Bai 2", futureDeadline)));
+        WeeklyTaskViews.BulkResult result = service.bulkCreate(week, GRADE, TEXTBOOK_CODE, List.of(
+                new WeeklyTaskService.LessonRequest("Bai 1", CHAPTER_CODE, LESSON_CODE),
+                new WeeklyTaskService.LessonRequest("Bai 2", CHAPTER_CODE, "L2")));
 
         assertThat(result.teacherCount()).isEqualTo(2);
         assertThat(result.lessonCount()).isEqualTo(2);
@@ -341,10 +366,10 @@ class WeeklyTaskServiceTest {
     void bulkCreate_rejectsWhenWeekAlreadyHasTasks() {
         asModerator();
         LocalDate week = LocalDate.now();
-        when(repository.findBySubject(Subject.MATH, week, week))
+        when(repository.findBySubjectAndGrade(Subject.MATH, GRADE, week.with(java.time.DayOfWeek.MONDAY), week.with(java.time.DayOfWeek.MONDAY)))
                 .thenReturn(List.of(task(UUID.randomUUID(), WeeklyTaskReviewStatus.NOT_SUBMITTED, futureDeadline, null)));
 
-        assertThatThrownBy(() -> service.bulkCreate(week, List.of(new WeeklyTaskService.LessonRequest("Bai 1", futureDeadline))))
+        assertThatThrownBy(() -> service.bulkCreate(week, GRADE, TEXTBOOK_CODE, List.of(new WeeklyTaskService.LessonRequest("Bai 1", CHAPTER_CODE, LESSON_CODE))))
                 .isInstanceOf(IllegalArgumentException.class);
         verify(repository, never()).save(any());
     }
@@ -353,11 +378,11 @@ class WeeklyTaskServiceTest {
     void bulkCreate_rejectsWhenNoActiveTeachers() {
         asModerator();
         LocalDate week = LocalDate.now();
-        when(repository.findBySubject(Subject.MATH, week, week)).thenReturn(List.of());
+        when(repository.findBySubjectAndGrade(Subject.MATH, GRADE, week.with(java.time.DayOfWeek.MONDAY), week.with(java.time.DayOfWeek.MONDAY))).thenReturn(List.of());
         when(userRepository.findAllByRoleAndSubject(eq(Role.TEACHER), eq(Subject.MATH), any()))
                 .thenReturn(new PageImpl<>(List.of()));
 
-        assertThatThrownBy(() -> service.bulkCreate(week, List.of(new WeeklyTaskService.LessonRequest("Bai 1", futureDeadline))))
+        assertThatThrownBy(() -> service.bulkCreate(week, GRADE, TEXTBOOK_CODE, List.of(new WeeklyTaskService.LessonRequest("Bai 1", CHAPTER_CODE, LESSON_CODE))))
                 .isInstanceOf(IllegalArgumentException.class);
         verify(repository, never()).save(any());
     }
@@ -367,7 +392,7 @@ class WeeklyTaskServiceTest {
         asModerator();
         LocalDate week = LocalDate.now();
 
-        assertThatThrownBy(() -> service.bulkCreate(week, List.of(new WeeklyTaskService.LessonRequest("Bai 1", pastDeadline))))
+        assertThatThrownBy(() -> service.bulkCreate(week.minusWeeks(1), GRADE, TEXTBOOK_CODE, List.of(new WeeklyTaskService.LessonRequest("Bai 1", CHAPTER_CODE, LESSON_CODE))))
                 .isInstanceOf(IllegalArgumentException.class);
         verify(repository, never()).save(any());
     }
@@ -378,7 +403,7 @@ class WeeklyTaskServiceTest {
         UUID taskId = UUID.randomUUID();
         when(repository.findById(taskId)).thenReturn(Optional.of(task(taskId, WeeklyTaskReviewStatus.NOT_SUBMITTED, pastDeadline, null)));
 
-        assertThatThrownBy(() -> service.update(taskId, teacherId, LocalDate.now(), "Chuong 4", futureDeadline))
+        assertThatThrownBy(() -> service.update(taskId, teacherId, LocalDate.now(), "Chuong 4", TEXTBOOK_CODE, CHAPTER_CODE, LESSON_CODE))
                 .isInstanceOf(IllegalArgumentException.class);
         verify(repository, never()).save(any());
     }
@@ -391,8 +416,9 @@ class WeeklyTaskServiceTest {
         when(repository.findById(taskId)).thenReturn(Optional.of(task(taskId, WeeklyTaskReviewStatus.REJECTED, futureDeadline, "Thieu muc tieu")));
         when(userRepository.findById(newTeacherId)).thenReturn(Optional.of(appUser(newTeacherId, Subject.MATH, UserStatus.ACTIVE)));
         when(userRoleRepository.findRolesByUserId(newTeacherId)).thenReturn(Set.of(Role.TEACHER));
+        when(teacherGradeRepository.findGradesByUserIds(List.of(newTeacherId))).thenReturn(java.util.Map.of(newTeacherId, List.of(GRADE)));
 
-        WeeklyTaskViews.Detail result = service.update(taskId, newTeacherId, LocalDate.now(), "Chuong 4", futureDeadline);
+        WeeklyTaskViews.Detail result = service.update(taskId, newTeacherId, LocalDate.now(), "Chuong 4", TEXTBOOK_CODE, CHAPTER_CODE, LESSON_CODE);
 
         assertThat(result.teacherId()).isEqualTo(newTeacherId);
         assertThat(result.reviewStatus()).isEqualTo(WeeklyTaskReviewStatus.NOT_SUBMITTED);
@@ -404,7 +430,7 @@ class WeeklyTaskServiceTest {
         UUID taskId = UUID.randomUUID();
         when(repository.findById(taskId)).thenReturn(Optional.of(task(taskId, WeeklyTaskReviewStatus.SUBMITTED, futureDeadline, null)));
 
-        WeeklyTaskViews.Detail result = service.update(taskId, teacherId, LocalDate.now(), "Chuong 4 - cap nhat", futureDeadline);
+        WeeklyTaskViews.Detail result = service.update(taskId, teacherId, LocalDate.now(), "Chuong 4 - cap nhat", TEXTBOOK_CODE, CHAPTER_CODE, LESSON_CODE);
 
         assertThat(result.reviewStatus()).isEqualTo(WeeklyTaskReviewStatus.SUBMITTED);
         assertThat(result.scopeDescription()).isEqualTo("Chuong 4 - cap nhat");

@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
   CLASS_SUBJECTS,
@@ -470,6 +471,7 @@ export function ClassDetailPage() {
 
   const [formTarget, setFormTarget] = useState<"create" | ClassResourceSummary | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteResourceTarget, setDeleteResourceTarget] = useState<ClassResourceSummary | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [accessRevoked, setAccessRevoked] = useState(false);
@@ -597,7 +599,6 @@ export function ClassDetailPage() {
 
   async function handleDeleteResource(resource: ClassResourceSummary) {
     if (!selectedClass || deletingId) return;
-    if (!window.confirm(`Xóa "${resource.title}"? Toàn bộ bài nộp liên quan (nếu có) cũng sẽ bị xóa vĩnh viễn.`)) return;
     setDeletingId(resource.id);
     setError("");
     try {
@@ -605,6 +606,7 @@ export function ClassDetailPage() {
       setResources((current) => current.filter((item) => item.id !== resource.id));
       setResourcesTotal((current) => Math.max(0, current - 1));
       setMessage("Đã xóa tài nguyên.");
+      setDeleteResourceTarget(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể xóa tài nguyên.");
     } finally {
@@ -618,7 +620,7 @@ export function ClassDetailPage() {
 
   if (!user) return null;
 
-  const canManage = selectedClass?.status === "ACTIVE";
+  const canManage = selectedClass?.status === "ACTIVE" && selectedClass.ownerId === user.id;
   const activeResource = resourceId ? resources.find((item) => item.id === resourceId) ?? null : null;
 
   return (
@@ -929,7 +931,7 @@ export function ClassDetailPage() {
                                 setMessage("");
                                 setFormTarget(target);
                               }}
-                              onDelete={(target) => void handleDeleteResource(target)}
+                              onDelete={setDeleteResourceTarget}
                               onOpen={resource.submissionEnabled ? openSubmissions : undefined}
                               deleting={deletingId === resource.id}
                             />
@@ -950,6 +952,20 @@ export function ClassDetailPage() {
           </div>
         </section>
       </div>
+      <ConfirmDialog
+        open={deleteResourceTarget !== null}
+        onClose={() => setDeleteResourceTarget(null)}
+        onConfirm={() => deleteResourceTarget && void handleDeleteResource(deleteResourceTarget)}
+        loading={Boolean(deleteResourceTarget && deletingId === deleteResourceTarget.id)}
+        title="Xóa tài nguyên?"
+        description={
+          <>
+            Tài nguyên <span className="font-semibold text-[#1f1f1f]">&quot;{deleteResourceTarget?.title}&quot;</span> sẽ bị xóa vĩnh viễn. Toàn bộ bài nộp liên quan của học sinh cũng sẽ bị xóa theo.
+          </>
+        }
+        confirmLabel="Xóa tài nguyên"
+        variant="danger"
+      />
     </main>
   );
 }

@@ -10,6 +10,8 @@ import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.ClassRepository;
+import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
@@ -23,6 +25,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -35,19 +38,25 @@ import java.util.stream.Collectors;
 public class ModeratorTeacherService {
 
     private final AppUserRepository userRepository;
+    private final ClassRepository classRepository;
     private final UserRoleRepository userRoleRepository;
     private final TeacherGradeRepository teacherGradeRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ActivityLogService activityLogService;
 
     public ModeratorTeacherService(AppUserRepository userRepository,
+                                   ClassRepository classRepository,
                                    UserRoleRepository userRoleRepository,
                                    TeacherGradeRepository teacherGradeRepository,
+                                   RefreshTokenRepository refreshTokenRepository,
                                    CurrentUserProvider currentUserProvider,
                                    ActivityLogService activityLogService) {
         this.userRepository = userRepository;
+        this.classRepository = classRepository;
         this.userRoleRepository = userRoleRepository;
         this.teacherGradeRepository = teacherGradeRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.currentUserProvider = currentUserProvider;
         this.activityLogService = activityLogService;
     }
@@ -90,6 +99,16 @@ public class ModeratorTeacherService {
         return new TeacherListResult(teachers, granterNames, granterUserIds, grantedAts, gradesByUserIds);
     }
 
+    @Transactional(readOnly = true)
+    public AccountStatusStats countTeachersByStatus() {
+        Subject moderatorSubject = currentUserProvider.require().subject();
+        if (moderatorSubject == null) {
+            throw new ForbiddenOperationException("Moderator phải có subject để quản lý giáo viên.");
+        }
+        var counts = userRepository.countStatusByRole(Role.TEACHER, moderatorSubject);
+        return new AccountStatusStats(counts.active(), counts.disabled());
+    }
+
     @Transactional
     public AppUser addTeacher(String email, String rawSubject, String fullName, Collection<Integer> grades) {
         Subject moderatorSubject = currentUserProvider.require().subject();
@@ -111,15 +130,7 @@ public class ModeratorTeacherService {
         var existing = userRepository.findByEmail(normalizedEmail);
         if (existing.isPresent()) {
             AppUser u = existing.get();
-            if (u.status() != UserStatus.DISABLED) {
-                throw new DuplicateEmailException("Email " + normalizedEmail + " đã tồn tại trong hệ thống.");
-            }
-            AppUser reactivated = userRepository.save(new AppUser(
-                    u.id(), u.email(), u.googleSub(),
-                    normalizedFullName != null ? normalizedFullName : u.fullName(),
-                    u.avatarUrl(), u.contactInfo(),
-                    u.bio(), u.phoneNumber(),
-                    moderatorSubject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
+            AppUser reactivated = userRepository.save(prepareExistingTeacher(u, moderatorSubject, normalizedFullName));
             assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
             teacherGradeRepository.replaceGrades(reactivated.id(), normalizedGrades);
             activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
@@ -130,8 +141,8 @@ public class ModeratorTeacherService {
         AppUser saved = userRepository.save(new AppUser(
                 UUID.randomUUID(), normalizedEmail, null,
                 normalizedFullName,
-                null, null,
-                moderatorSubject, UserStatus.INVITED, now, null));
+                null, null, null, null,
+                moderatorSubject, UserStatus.INVITED, now, null, null));
         assignRole(saved.id(), Role.TEACHER, currentUserId, now);
         teacherGradeRepository.replaceGrades(saved.id(), normalizedGrades);
         activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
@@ -162,7 +173,9 @@ public class ModeratorTeacherService {
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
-                user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
+                user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt(), user.dateOfBirth()));
+        classRepository.archiveActiveByOwnerId(user.id());
+        refreshTokenRepository.revokeAllByUserId(user.id());
         activityLogService.record(currentUserProvider.requireUserId(), "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REVOKE_TEACHER, "APP_USER", user.id(), null);
     }
@@ -192,7 +205,7 @@ public class ModeratorTeacherService {
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
-                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
+                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt(), user.dateOfBirth()));
         assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
         activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REACTIVATE_TEACHER, "APP_USER", reactivated.id(), null);
@@ -201,6 +214,43 @@ public class ModeratorTeacherService {
 
     private void assignRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt) {
         userRoleRepository.replaceRole(userId, role, grantedBy, grantedAt);
+    }
+
+    private static final Map<Role, String> INELIGIBLE_ROLE_LABELS = Map.of(
+            Role.STUDENT, "Học sinh",
+            Role.MODERATOR, "Moderator",
+            Role.PRINCIPAL, "Hiệu trưởng",
+            Role.IT_STAFF, "IT Staff");
+
+    private AppUser prepareExistingTeacher(AppUser user, Subject moderatorSubject, String normalizedFullName) {
+        if (user.status() != UserStatus.DISABLED) {
+            throw new DuplicateEmailException("Email " + user.email() + " đã tồn tại trong hệ thống.");
+        }
+        Set<Role> roles = userRoleRepository.findRolesByUserId(user.id());
+        if (!roles.contains(Role.TEACHER)) {
+            String roleLabel = Role.orderedByPriority(roles).stream()
+                    .map(INELIGIBLE_ROLE_LABELS::get)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse("vai trò khác");
+            throw new ForbiddenOperationException(
+                    "Tài khoản này là " + roleLabel + ", không thể trở thành Giáo Viên.");
+        }
+        if (user.subject() != moderatorSubject) {
+            throw new ForbiddenOperationException(
+                    "Tài khoản này thuộc môn " + subjectLabel(user.subject())
+                            + ", không thể thêm vào môn " + moderatorSubject.name() + ".");
+        }
+        return new AppUser(
+                user.id(), user.email(), user.googleSub(),
+                normalizedFullName != null ? normalizedFullName : user.fullName(),
+                user.avatarUrl(), user.contactInfo(),
+                user.bio(), user.phoneNumber(),
+                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt(), user.dateOfBirth());
+    }
+
+    private static String subjectLabel(Subject subject) {
+        return subject == null ? "chưa gán" : subject.name();
     }
 
     private static List<Integer> normalizeGrades(Collection<Integer> grades) {

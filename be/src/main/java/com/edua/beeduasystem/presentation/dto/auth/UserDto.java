@@ -20,9 +20,14 @@ public record UserDto(
         LocalDate dateOfBirth,
         String role,
         List<String> roles,
-        String subject
+        String subject,
+        List<Integer> grades
 ) {
     public static UserDto from(AppUser user, Set<Role> roles) {
+        return from(user, roles, List.of());
+    }
+
+    public static UserDto from(AppUser user, Set<Role> roles, List<Integer> grades) {
         List<String> orderedRoles = Role.orderedByPriority(roles).stream().map(Enum::name).toList();
         return new UserDto(
                 user.id(),
@@ -35,6 +40,7 @@ public record UserDto(
                 user.dateOfBirth(),
                 orderedRoles.isEmpty() ? null : orderedRoles.getFirst(),
                 orderedRoles,
-                user.subject() != null ? user.subject().name() : null);
+                user.subject() != null ? user.subject().name() : null,
+                grades == null ? List.of() : grades);
     }
 }

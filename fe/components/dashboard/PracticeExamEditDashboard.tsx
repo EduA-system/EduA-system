@@ -148,19 +148,11 @@ export function PracticeExamEditDashboard() {
             <div className="@container flex h-12 items-center justify-between gap-2 px-3">
               <div className="flex min-w-0 shrink-0 items-center gap-2">
                 {!readOnlyClassResource && <Link
-                  href="/exam-create-new"
+                  href="/library"
                   className="hidden shrink-0 rounded-lg border border-[#e8e2d9] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#5f5750] hover:bg-[#f3efe9] @min-[850px]:inline-flex"
                 >
-                  ← Cấu hình
+                  ← Thư viện
                 </Link>}
-                {!readOnlyClassResource && <button
-                  type="button"
-                  onClick={saveDraft}
-                  disabled={saving}
-                  className="hidden shrink-0 rounded-lg border border-[#e8e2d9] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#5f5750] hover:bg-[#f3efe9] @min-[750px]:inline-flex"
-                >
-                  {saving ? "Đang lưu..." : "Lưu"}
-                </button>}
               </div>
               {readOnlyClassResource && <div className="flex min-w-0 flex-1 justify-center text-xs font-medium text-[#6b6b6b]">Chế độ chỉ xem</div>}
               {!readOnlyClassResource && <button

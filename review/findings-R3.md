@@ -14,14 +14,14 @@ chặn cả trường hợp hợp lệ, hoặc bỏ sót đường thoát.
 
 | # | File:line | Vấn đề | Mức | Xử lý |
 | --- | --- | --- | --- | --- |
-| R3-10 | `WeeklyTaskService.java:224` | Nút "Sửa" của moderator luôn lỗi ở khối có ≥2 giáo viên | **Cao** | Sửa |
+| R3-10 | `WeeklyTaskService.java:224` | Nút "Sửa" của moderator luôn lỗi ở khối có ≥2 giáo viên | **Cao** | Đã sửa |
 | R3-01 | `WeeklyTaskService.java:255,388` | Bị từ chối sau hạn nộp = kẹt vĩnh viễn, không ai gỡ được | **Cao** | Sửa |
 | R3-02 | `WeeklyTaskService.java:294` | Rút nộp xoá sạch vết từ chối; nhánh khôi phục REJECTED là code chết | **Cao** | Sửa |
 | R3-11 | `fe/app/weekly-schedule/page.tsx:105` | Lệch tuần đầu tháng → ẩn hẳn tuần đang nộp dở | **Cao** | Sửa |
 | R3-12 | `fe/app/weekly-schedule/page.tsx:386` | Modal nộp giữ danh sách giáo án của task trước → nộp nhầm | **Cao** | Sửa |
 | R3-03 | `WeeklyTaskService.java:287` | Rút nộp không báo moderator (BR-48) | TB | Sửa |
 | R3-13 | `WeeklyTaskService.java:259` | `documentUrl` không kiểm tra scheme/host, moderator bấm thẳng | TB | Sửa |
-| R3-14 | `WeeklyTaskService.java:305` | Hàng chờ duyệt không có `ORDER BY` → trùng/sót khi lật trang | TB | Sửa |
+| R3-14 | `WeeklyTaskService.java:305` | Hàng chờ duyệt không có `ORDER BY` → trùng/sót khi lật trang | TB | Đã sửa |
 | R3-04 | `WeeklyTaskService.java:281,320` | Đẩy thông báo WebSocket bên trong transaction, rollback không thu hồi được | TB | Sửa |
 | R3-15 | `fe/app/weekly-schedule/page.tsx:779` | `expandedGroupKey` dùng `lessonCode` trần → hai tuần mở/đóng cùng nhau | Thấp | Sửa |
 | R3-16 | `fe/app/weekly-schedule/page.tsx:278` | `load()` không có cancellation guard | Thấp | Sửa |

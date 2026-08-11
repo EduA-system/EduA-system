@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardIcon } from "@/components/ui/DashboardIcon";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { hasAnyRole } from "@/lib/auth/permissions";
@@ -75,12 +76,28 @@ type SubjectAccountItem = AccountItem & {
 type PageResponse<T> = {
   content: T[];
   page: number;
+  number?: number;
   size: number;
   totalElements: number;
   totalPages: number;
 };
 
+type AccountStatusStats = {
+  active: number;
+  disabled: number;
+};
+
+type PrincipalAccountStats = {
+  moderators: AccountStatusStats;
+  itStaff: AccountStatusStats;
+};
+
 type Tab = "moderator" | "teacher" | "it-staff";
+
+type DisableAccountTarget =
+  | { kind: "moderator"; item: SubjectAccountItem }
+  | { kind: "teacher"; item: SubjectAccountItem }
+  | { kind: "it-staff"; item: AccountItem };
 
 function availableSubject(items: SubjectAccountItem[], currentSubject: string): string {
   const activeSubjects = new Set(items.filter((item) => item.status !== "DISABLED").map((item) => item.subject));
@@ -101,6 +118,13 @@ async function api<T>(authFetch: AuthFetch, path: string, init: RequestInit = {}
     throw new Error((data as { message?: string } | null)?.message ?? res.statusText);
   }
   return data as T;
+}
+
+function normalizePageResponse<T>(data: PageResponse<T>): PageResponse<T> {
+  return {
+    ...data,
+    page: data.page ?? data.number ?? 0,
+  };
 }
 
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -213,7 +237,11 @@ function UserManagementContent() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [msg, setMsg] = useState("");
+  const [disableAccountTarget, setDisableAccountTarget] = useState<DisableAccountTarget | null>(null);
+  const [disablingAccount, setDisablingAccount] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>(isPrincipal ? "moderator" : "teacher");
+  const [principalStats, setPrincipalStats] = useState<PrincipalAccountStats | null>(null);
+  const [teacherStats, setTeacherStats] = useState<AccountStatusStats | null>(null);
 
   // ── Moderator accounts (Principal only) ──────────────────────────────
   const [moderatorData, setModeratorData] = useState<PageResponse<SubjectAccountItem> | null>(null);
@@ -232,15 +260,20 @@ function UserManagementContent() {
 
   const loadModerators = useCallback(
     async (page: number) => {
-      const data = await api<PageResponse<SubjectAccountItem>>(
+      const data = normalizePageResponse(await api<PageResponse<SubjectAccountItem>>(
         authFetch,
         `/principal/moderators?page=${page}&size=${PAGE_SIZE}`,
-      );
+      ));
       setModeratorData(data);
       setModeratorSubject((current) => availableSubject(data.content, current));
     },
     [authFetch],
   );
+
+  const loadPrincipalStats = useCallback(async () => {
+    const data = await api<PrincipalAccountStats>(authFetch, "/principal/account-stats");
+    setPrincipalStats(data);
+  }, [authFetch]);
 
   // ── Teacher accounts (Moderator only) ────────────────────────────────
   const [teacherData, setTeacherData] = useState<PageResponse<SubjectAccountItem> | null>(null);
@@ -251,24 +284,35 @@ function UserManagementContent() {
 
   const loadTeachers = useCallback(
     async (page: number) => {
-      const data = await api<PageResponse<SubjectAccountItem>>(
+      const data = normalizePageResponse(await api<PageResponse<SubjectAccountItem>>(
         authFetch,
         `/moderator/teachers?page=${page}&size=${PAGE_SIZE}`,
-      );
+      ));
       setTeacherData(data);
     },
     [authFetch],
   );
+
+  const loadTeacherStats = useCallback(async () => {
+    const data = await api<AccountStatusStats>(authFetch, "/moderator/teachers/stats");
+    setTeacherStats(data);
+  }, [authFetch]);
 
   // ── IT Staff accounts (Principal only) ───────────────────────────────
   const [itStaffData, setItStaffData] = useState<PageResponse<AccountItem> | null>(null);
   const [itStaffEmail, setItStaffEmail] = useState("");
   const [itStaffEmailTouched, setItStaffEmailTouched] = useState(false);
   const [itStaffFullName, setItStaffFullName] = useState("");
+  const [itStaffReplacementTarget, setItStaffReplacementTarget] = useState<AccountItem | null>(null);
+  const [itStaffReplacementEmail, setItStaffReplacementEmail] = useState("");
+  const [itStaffReplacementEmailTouched, setItStaffReplacementEmailTouched] = useState(false);
+  const [itStaffReplacementFullName, setItStaffReplacementFullName] = useState("");
+  const [itStaffReplacementError, setItStaffReplacementError] = useState("");
+  const [isReplacingItStaff, setIsReplacingItStaff] = useState(false);
 
   const loadItStaff = useCallback(
     async (page: number) => {
-      const data = await api<PageResponse<AccountItem>>(authFetch, `/principal/it-staff?page=${page}&size=${PAGE_SIZE}`);
+      const data = normalizePageResponse(await api<PageResponse<AccountItem>>(authFetch, `/principal/it-staff?page=${page}&size=${PAGE_SIZE}`));
       setItStaffData(data);
     },
     [authFetch],
@@ -279,8 +323,10 @@ function UserManagementContent() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       void loadModerators(0).catch((e) => setMsg(String(e)));
       void loadItStaff(0).catch((e) => setMsg(String(e)));
+      void loadPrincipalStats().catch((e) => setMsg(String(e)));
     } else if (isModerator) {
       void loadTeachers(0).catch((e) => setMsg(String(e)));
+      void loadTeacherStats().catch((e) => setMsg(String(e)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPrincipal, isModerator]);
@@ -298,6 +344,7 @@ function UserManagementContent() {
       setModeratorFullName("");
       setMsg("Đã thêm Người Kiểm Duyệt.");
       await loadModerators(moderatorData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -305,16 +352,15 @@ function UserManagementContent() {
 
   async function toggleModerator(item: SubjectAccountItem) {
     const isDisabled = item.status === "DISABLED";
-    if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
+    if (!isDisabled) {
+      setDisableAccountTarget({ kind: "moderator", item });
+      return;
+    }
     try {
-      if (isDisabled) {
-        await api(authFetch, `/principal/moderators/${item.id}/reactivate`, { method: "PATCH" });
-        setMsg("Đã kích hoạt lại.");
-      } else {
-        await api(authFetch, `/principal/moderators/${item.id}`, { method: "DELETE" });
-        setMsg("Đã thu hồi.");
-      }
+      await api(authFetch, `/principal/moderators/${item.id}/reactivate`, { method: "PATCH" });
+      setMsg("Đã kích hoạt lại.");
       await loadModerators(moderatorData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -346,6 +392,7 @@ function UserManagementContent() {
       setReplacementTarget(null);
       setMsg("Đã thay Moderator.");
       await loadModerators(moderatorData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       // Lỗi hiện ngay trong modal (không dùng `msg` ngoài trang — modal là overlay che hết, `msg` sẽ vô hình).
       setReplacementError(String(e));
@@ -368,6 +415,7 @@ function UserManagementContent() {
       setTeacherGrades([10, 11, 12]);
       setMsg("Đã thêm Giáo Viên.");
       await loadTeachers(teacherData?.page ?? 0);
+      await loadTeacherStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -375,16 +423,15 @@ function UserManagementContent() {
 
   async function toggleTeacher(item: SubjectAccountItem) {
     const isDisabled = item.status === "DISABLED";
-    if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
+    if (!isDisabled) {
+      setDisableAccountTarget({ kind: "teacher", item });
+      return;
+    }
     try {
-      if (isDisabled) {
-        await api(authFetch, `/moderator/teachers/${item.id}/reactivate`, { method: "PATCH" });
-        setMsg("Đã kích hoạt lại.");
-      } else {
-        await api(authFetch, `/moderator/teachers/${item.id}`, { method: "DELETE" });
-        setMsg("Đã thu hồi.");
-      }
+      await api(authFetch, `/moderator/teachers/${item.id}/reactivate`, { method: "PATCH" });
+      setMsg("Đã kích hoạt lại.");
       await loadTeachers(teacherData?.page ?? 0);
+      await loadTeacherStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -403,25 +450,88 @@ function UserManagementContent() {
       setItStaffFullName("");
       setMsg("Đã cấp quyền IT Staff.");
       await loadItStaff(itStaffData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       setMsg(String(e));
     }
   }
 
+  function openItStaffReplacement(item: AccountItem) {
+    setItStaffReplacementTarget(item);
+    setItStaffReplacementEmail("");
+    setItStaffReplacementEmailTouched(false);
+    setItStaffReplacementFullName("");
+    setItStaffReplacementError("");
+  }
+
+  function closeItStaffReplacement() {
+    if (isReplacingItStaff) return;
+    setItStaffReplacementTarget(null);
+  }
+
+  async function replaceItStaff() {
+    setItStaffReplacementEmailTouched(true);
+    if (!itStaffReplacementTarget || emailError(itStaffReplacementEmail)) return;
+    setItStaffReplacementError("");
+    setIsReplacingItStaff(true);
+    try {
+      await api(authFetch, `/principal/it-staff/${itStaffReplacementTarget.id}/replacement`, {
+        method: "POST",
+        body: JSON.stringify({
+          replacementEmail: itStaffReplacementEmail,
+          fullName: itStaffReplacementFullName || null,
+        }),
+      });
+      setItStaffReplacementTarget(null);
+      setMsg("Đã thay IT Staff.");
+      await loadItStaff(itStaffData?.page ?? 0);
+      await loadPrincipalStats();
+    } catch (e) {
+      setItStaffReplacementError(String(e));
+    } finally {
+      setIsReplacingItStaff(false);
+    }
+  }
+
   async function toggleItStaff(item: AccountItem) {
     const isDisabled = item.status === "DISABLED";
-    if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
+    if (!isDisabled) {
+      setDisableAccountTarget({ kind: "it-staff", item });
+      return;
+    }
     try {
-      if (isDisabled) {
-        await api(authFetch, `/principal/it-staff/${item.id}/reactivate`, { method: "PATCH" });
-        setMsg("Đã kích hoạt lại.");
-      } else {
-        await api(authFetch, `/principal/it-staff/${item.id}`, { method: "DELETE" });
-        setMsg("Đã thu hồi.");
-      }
+      await api(authFetch, `/principal/it-staff/${item.id}/reactivate`, { method: "PATCH" });
+      setMsg("Đã kích hoạt lại.");
       await loadItStaff(itStaffData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       setMsg(String(e));
+    }
+  }
+
+  async function confirmDisableAccount() {
+    if (!disableAccountTarget) return;
+    setDisablingAccount(true);
+    try {
+      if (disableAccountTarget.kind === "moderator") {
+        await api(authFetch, `/principal/moderators/${disableAccountTarget.item.id}`, { method: "DELETE" });
+        await loadModerators(moderatorData?.page ?? 0);
+        await loadPrincipalStats();
+      } else if (disableAccountTarget.kind === "teacher") {
+        await api(authFetch, `/moderator/teachers/${disableAccountTarget.item.id}`, { method: "DELETE" });
+        await loadTeachers(teacherData?.page ?? 0);
+        await loadTeacherStats();
+      } else {
+        await api(authFetch, `/principal/it-staff/${disableAccountTarget.item.id}`, { method: "DELETE" });
+        await loadItStaff(itStaffData?.page ?? 0);
+        await loadPrincipalStats();
+      }
+      setMsg("Đã thu hồi.");
+      setDisableAccountTarget(null);
+    } catch (e) {
+      setMsg(String(e));
+    } finally {
+      setDisablingAccount(false);
     }
   }
 
@@ -434,6 +544,9 @@ function UserManagementContent() {
   const takenSubjects = new Set(
     (moderatorData?.content ?? []).filter((i) => i.status !== "DISABLED").map((i) => i.subject),
   );
+  const moderatorStats = principalStats?.moderators;
+  const itStaffStats = principalStats?.itStaff;
+  const itStaffSeatOccupied = itStaffStats == null || itStaffStats.active > 0;
 
   return (
     <main className="min-h-screen bg-white text-[#1f1f1f]">
@@ -507,16 +620,20 @@ function UserManagementContent() {
             {isPrincipal && activeTab === "moderator" && (
               <div className="mt-6">
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Metric icon={<Users className="size-4" aria-hidden />} label="Tổng số" value={String(moderatorData?.totalElements ?? 0)} />
+                  <Metric
+                    icon={<Users className="size-4" aria-hidden />}
+                    label="Tổng số"
+                    value={String(moderatorStats ? moderatorStats.active + moderatorStats.disabled : moderatorData?.totalElements ?? 0)}
+                  />
                   <Metric
                     icon={<ShieldCheck className="size-4" aria-hidden />}
                     label="Đang hoạt động"
-                    value={String((moderatorData?.content ?? []).filter((i) => i.status !== "DISABLED").length)}
+                    value={String(moderatorStats?.active ?? 0)}
                   />
                   <Metric
                     icon={<UserMinus className="size-4" aria-hidden />}
                     label="Đã thu hồi"
-                    value={String((moderatorData?.content ?? []).filter((i) => i.status === "DISABLED").length)}
+                    value={String(moderatorStats?.disabled ?? 0)}
                   />
                 </div>
 
@@ -616,16 +733,20 @@ function UserManagementContent() {
             {isModerator && activeTab === "teacher" && (
               <div className="mt-6">
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Metric icon={<Users className="size-4" aria-hidden />} label="Tổng số" value={String(teacherData?.totalElements ?? 0)} />
+                  <Metric
+                    icon={<Users className="size-4" aria-hidden />}
+                    label="Tổng số"
+                    value={String(teacherStats ? teacherStats.active + teacherStats.disabled : teacherData?.totalElements ?? 0)}
+                  />
                   <Metric
                     icon={<ShieldCheck className="size-4" aria-hidden />}
                     label="Đang hoạt động"
-                    value={String((teacherData?.content ?? []).filter((i) => i.status !== "DISABLED").length)}
+                    value={String(teacherStats?.active ?? 0)}
                   />
                   <Metric
                     icon={<UserMinus className="size-4" aria-hidden />}
                     label="Đã thu hồi"
-                    value={String((teacherData?.content ?? []).filter((i) => i.status === "DISABLED").length)}
+                    value={String(teacherStats?.disabled ?? 0)}
                   />
                 </div>
 
@@ -717,16 +838,20 @@ function UserManagementContent() {
             {isPrincipal && activeTab === "it-staff" && (
               <div className="mt-6">
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Metric icon={<Users className="size-4" aria-hidden />} label="Tổng số" value={String(itStaffData?.totalElements ?? 0)} />
+                  <Metric
+                    icon={<Users className="size-4" aria-hidden />}
+                    label="Tổng số"
+                    value={String(itStaffStats ? itStaffStats.active + itStaffStats.disabled : itStaffData?.totalElements ?? 0)}
+                  />
                   <Metric
                     icon={<ShieldCheck className="size-4" aria-hidden />}
                     label="Đang hoạt động"
-                    value={String((itStaffData?.content ?? []).filter((i) => i.status !== "DISABLED").length)}
+                    value={String(itStaffStats?.active ?? 0)}
                   />
                   <Metric
                     icon={<UserMinus className="size-4" aria-hidden />}
                     label="Đã thu hồi"
-                    value={String((itStaffData?.content ?? []).filter((i) => i.status === "DISABLED").length)}
+                    value={String(itStaffStats?.disabled ?? 0)}
                   />
                 </div>
 
@@ -755,10 +880,10 @@ function UserManagementContent() {
                     />
                     <button
                       onClick={addItStaff}
-                      disabled={!!emailError(itStaffEmail)}
+                      disabled={itStaffSeatOccupied || !!emailError(itStaffEmail)}
                       className="rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#34312e] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Cấp quyền
+                      {itStaffSeatOccupied ? "Đã có IT Staff" : "Cấp quyền"}
                     </button>
                   </div>
                 </div>
@@ -778,23 +903,23 @@ function UserManagementContent() {
                             </div>
                             <div className="mt-1 text-xs text-[#8a8178]">{item.email}</div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => toggleItStaff(item)}
-                            className={`inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium transition ${
-                              item.status === "DISABLED" ? "text-[#5a7a4a] hover:bg-[#eef6ec]" : "text-[#c2483c] hover:bg-[#fdeceb]"
-                            }`}
-                          >
-                            {item.status === "DISABLED" ? (
-                              <>
-                                <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
-                              </>
-                            ) : (
-                              <>
-                                <UserMinus className="size-4" aria-hidden /> Thu hồi
-                              </>
-                            )}
-                          </button>
+                          {item.status !== "DISABLED" ? (
+                            <button
+                              type="button"
+                              onClick={() => openItStaffReplacement(item)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#c2483c] transition hover:bg-[#fdeceb]"
+                            >
+                              <ArrowLeftRight className="size-4" aria-hidden /> Thay IT Staff
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => toggleItStaff(item)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#5a7a4a] transition hover:bg-[#eef6ec]"
+                            >
+                              <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -858,6 +983,76 @@ function UserManagementContent() {
           </div>
         </div>
       )}
+
+      {itStaffReplacementTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="replace-it-staff-title">
+            <h2 id="replace-it-staff-title" className="text-lg font-semibold">
+              Thay IT Staff
+            </h2>
+            <p className="mt-2 text-sm text-[#6b6b6b]">
+              {itStaffReplacementTarget.fullName ?? itStaffReplacementTarget.email} sẽ bị thu hồi quyền IT Staff.
+            </p>
+            <label className="mt-4 block text-sm font-medium" htmlFor="it-staff-replacement-email">
+              Email IT Staff thay thế
+            </label>
+            <input
+              id="it-staff-replacement-email"
+              type="email"
+              required
+              maxLength={EMAIL_MAX_LENGTH}
+              value={itStaffReplacementEmail}
+              onChange={(e) => setItStaffReplacementEmail(e.target.value)}
+              onBlur={() => setItStaffReplacementEmailTouched(true)}
+              placeholder="Email"
+              aria-invalid={itStaffReplacementEmailTouched && !!emailError(itStaffReplacementEmail)}
+              className="mt-1 w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+              autoFocus
+            />
+            <EmailFieldError message={itStaffReplacementEmailTouched ? emailError(itStaffReplacementEmail) : null} />
+            <label className="mt-4 block text-sm font-medium" htmlFor="it-staff-replacement-full-name">
+              Họ tên
+            </label>
+            <input
+              id="it-staff-replacement-full-name"
+              value={itStaffReplacementFullName}
+              onChange={(e) => setItStaffReplacementFullName(e.target.value)}
+              placeholder="Không bắt buộc"
+              className="mt-1 w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+            />
+            {itStaffReplacementError && (
+              <p className="mt-4 rounded-lg border border-[#f3c6bd] bg-[#fdeceb] px-3 py-2 text-sm text-[#c2483c]">{itStaffReplacementError}</p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={closeItStaffReplacement} disabled={isReplacingItStaff} className="rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm">
+                Huỷ
+              </button>
+              <button
+                type="button"
+                onClick={replaceItStaff}
+                disabled={isReplacingItStaff || !!emailError(itStaffReplacementEmail)}
+                className="rounded-lg bg-[#1f1f1f] px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isReplacingItStaff ? "Đang thay..." : "Xác nhận thay"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <ConfirmDialog
+        open={disableAccountTarget !== null}
+        onClose={() => setDisableAccountTarget(null)}
+        onConfirm={() => void confirmDisableAccount()}
+        loading={disablingAccount}
+        title="Thu hồi quyền truy cập?"
+        description={
+          <>
+            Tài khoản <span className="font-semibold text-[#1f1f1f]">{disableAccountTarget?.item.fullName ?? disableAccountTarget?.item.email}</span> sẽ bị thu hồi quyền truy cập hiện tại.
+          </>
+        }
+        confirmLabel="Thu hồi"
+        variant="danger"
+      />
     </main>
   );
 }

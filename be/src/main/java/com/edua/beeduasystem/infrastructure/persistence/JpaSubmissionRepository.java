@@ -111,6 +111,12 @@ public class JpaSubmissionRepository implements SubmissionRepository {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public long countByClassId(UUID classId) {
+        return submissionJpa.countByClassId(classId);
+    }
+
     private List<SubmissionFile> toFiles(UUID submissionId) {
         return fileJpa.findBySubmissionId(submissionId).stream().map(JpaSubmissionRepository::toFileDomain).toList();
     }

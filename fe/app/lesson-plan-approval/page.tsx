@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RichView } from "@/components/blog/RichView";
+import { ConfirmDialog, TextPromptDialog } from "@/components/ui/ConfirmDialog";
 import { GradeSelect } from "@/components/ui/GradeSelect";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { resolveWeeklyTaskLessonDocument } from "@/components/weeklytask/WeeklyTaskDocumentViewer";
@@ -41,10 +42,12 @@ function weekLabel(weekStartDate: string): string {
 
 function LessonPlanApprovalScreen() {
   const { user, authFetch } = useAuth();
+  const searchParams = useSearchParams();
   // Deep-link từ notification "Giáo án chờ duyệt" (WeeklyTaskService.submit): mang theo taskId để tự mở
   // đúng submission được nộp, thay vì chỉ đưa Moderator tới danh sách chung — cần thiết vì nhiều giáo viên
   // có thể nộp gần như cùng lúc và mỗi notification phải phân biệt đúng bài của ai.
-  const focusTaskId = useSearchParams().get("taskId");
+  const focusTaskId = searchParams.get("taskId");
+  const autoPreview = searchParams.get("preview") === "1";
   const focusedRef = useRef(false);
 
   const [items, setItems] = useState<WeeklyTaskSummary[]>([]);
@@ -62,9 +65,26 @@ function LessonPlanApprovalScreen() {
   }
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const detailRequestSeq = useRef(0);
   const [detail, setDetail] = useState<WeeklyTaskDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [preview, setPreview] = useState<{ title: string; document: TiptapNode | string } | null>(null);
+  const [approveTarget, setApproveTarget] = useState<WeeklyTaskSummary | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<WeeklyTaskSummary | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+
+  const openSubmittedLessonPreview = useCallback((taskDetail: WeeklyTaskDetail) => {
+    const document = resolveWeeklyTaskLessonDocument(taskDetail.sourceLibraryContentPayload);
+    if (!document) {
+      setMsg("");
+      setError("Nhiệm vụ này không có nội dung giáo án để hiển thị.");
+      return;
+    }
+    setPreview({
+      title: taskDetail.sourceLibraryContentTitle ?? "Giáo án đã nộp",
+      document,
+    });
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,6 +97,7 @@ function LessonPlanApprovalScreen() {
       setItems(data.items);
       setError("");
     } catch (e) {
+      setMsg("");
       setError(e instanceof Error ? e.message : "Không thể tải danh sách chờ duyệt.");
     } finally {
       setLoading(false);
@@ -97,25 +118,37 @@ function LessonPlanApprovalScreen() {
   }, [gradeFilter, picker.chapterCode, picker.lessonCode]);
 
   const handleExpand = useCallback(
-    async (id: string) => {
+    async (id: string, options?: { preview?: boolean }) => {
       if (expandedId === id) {
+        if (options?.preview && detail?.id === id) openSubmittedLessonPreview(detail);
+        if (options?.preview) return;
+        detailRequestSeq.current += 1;
         setExpandedId(null);
         setDetail(null);
+        setDetailLoading(false);
         return;
       }
+      const requestSeq = detailRequestSeq.current + 1;
+      detailRequestSeq.current = requestSeq;
       setExpandedId(id);
       setDetail(null);
       setDetailLoading(true);
       try {
         const d = await getWeeklyTask(authFetch, id);
-        setDetail(d);
+        if (detailRequestSeq.current === requestSeq) {
+          setDetail(d);
+          if (options?.preview) openSubmittedLessonPreview(d);
+        }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Không thể tải chi tiết giáo án.");
+        if (detailRequestSeq.current === requestSeq) {
+          setMsg("");
+          setError(e instanceof Error ? e.message : "Không thể tải chi tiết giáo án.");
+        }
       } finally {
-        setDetailLoading(false);
+        if (detailRequestSeq.current === requestSeq) setDetailLoading(false);
       }
     },
-    [authFetch, expandedId],
+    [authFetch, detail, expandedId, openSubmittedLessonPreview],
   );
 
   // Sau khi hàng đợi tải xong lần đầu, nếu có taskId từ notification thì tự mở rộng + cuộn tới đúng thẻ đó.
@@ -126,50 +159,50 @@ function LessonPlanApprovalScreen() {
     const target = items.find((t) => t.id === focusTaskId);
     if (!target) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMsg("");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError("Không tìm thấy nhiệm vụ được thông báo trong hàng đợi hiện tại — có thể đã được xử lý.");
       return;
     }
-    void handleExpand(target.id);
+    void handleExpand(target.id, { preview: autoPreview });
     requestAnimationFrame(() => {
       document.getElementById(`weekly-task-${target.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
-  }, [focusTaskId, items, loading, handleExpand]);
+  }, [autoPreview, focusTaskId, items, loading, handleExpand]);
 
   async function handleApprove(id: string) {
-    if (!confirm("Duyệt giáo án này?")) return;
+    setReviewingId(id);
     try {
       await approveWeeklyTask(authFetch, id);
+      setError("");
       setMsg("Đã duyệt.");
       setExpandedId(null);
+      setApproveTarget(null);
       await load();
     } catch (e) {
+      setMsg("");
       setError(e instanceof Error ? e.message : "Không thể duyệt giáo án.");
+    } finally {
+      setReviewingId(null);
     }
   }
 
-  async function handleReject(id: string) {
-    const reason = window.prompt("Lý do từ chối:");
-    if (!reason?.trim()) return;
+  async function handleReject(id: string, reason: string) {
+    if (!reason.trim()) return;
+    setReviewingId(id);
     try {
       await rejectWeeklyTask(authFetch, id, reason.trim());
+      setError("");
       setMsg("Đã từ chối.");
       setExpandedId(null);
+      setRejectTarget(null);
       await load();
     } catch (e) {
+      setMsg("");
       setError(e instanceof Error ? e.message : "Không thể từ chối giáo án.");
+    } finally {
+      setReviewingId(null);
     }
-  }
-
-  function openSubmittedLessonPreview(detail: WeeklyTaskDetail) {
-    const document = resolveWeeklyTaskLessonDocument(detail.sourceLibraryContentPayload);
-    if (!document) {
-      setError("Nhiệm vụ này không có nội dung giáo án để hiển thị.");
-      return;
-    }
-    setPreview({
-      title: detail.sourceLibraryContentTitle ?? "Giáo án đã nộp",
-      document,
-    });
   }
 
   return (
@@ -303,7 +336,7 @@ function LessonPlanApprovalScreen() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleApprove(t.id)}
+                        onClick={() => setApproveTarget(t)}
                         className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 font-medium text-white transition hover:bg-emerald-700"
                       >
                         <CheckCircle2 className="size-4" />
@@ -311,7 +344,7 @@ function LessonPlanApprovalScreen() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleReject(t.id)}
+                        onClick={() => setRejectTarget(t)}
                         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 font-medium text-red-700 transition hover:bg-red-100"
                       >
                         <XCircle className="size-4" />
@@ -322,7 +355,7 @@ function LessonPlanApprovalScreen() {
 
                   {expandedId === t.id ? (
                     <div className="border-t border-[#eee7df] bg-[#fbfaf8] px-5 py-4 text-sm">
-                      {detailLoading || !detail ? (
+                      {detailLoading || !detail || detail.id !== t.id ? (
                         <p className="flex items-center gap-2 text-[#6b6b6b]">
                           <Loader2 className="size-4 animate-spin" />
                           Đang tải chi tiết...
@@ -406,6 +439,36 @@ function LessonPlanApprovalScreen() {
           ) : null}
         </section>
       </div>
+      <ConfirmDialog
+        open={approveTarget !== null}
+        onClose={() => setApproveTarget(null)}
+        onConfirm={() => approveTarget && void handleApprove(approveTarget.id)}
+        loading={Boolean(approveTarget && reviewingId === approveTarget.id)}
+        title="Duyệt giáo án?"
+        description={
+          <>
+            Giáo án <span className="font-semibold text-[#1f1f1f]">&quot;{approveTarget?.scopeDescription}&quot;</span> của {approveTarget?.teacherName ?? "giáo viên"} sẽ được duyệt.
+          </>
+        }
+        confirmLabel="Duyệt"
+        variant="success"
+      />
+      <TextPromptDialog
+        open={rejectTarget !== null}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={(reason) => rejectTarget && void handleReject(rejectTarget.id, reason)}
+        loading={Boolean(rejectTarget && reviewingId === rejectTarget.id)}
+        title="Từ chối giáo án?"
+        description={
+          <>
+            Nhập lý do để giáo viên biết cần chỉnh sửa phần nào trong <span className="font-semibold text-[#1f1f1f]">&quot;{rejectTarget?.scopeDescription}&quot;</span>.
+          </>
+        }
+        label="Lý do từ chối"
+        placeholder="Ví dụ: Thiếu hoạt động vận dụng, cần bổ sung tiêu chí đánh giá..."
+        confirmLabel="Từ chối"
+        minLength={1}
+      />
     </main>
   );
 }

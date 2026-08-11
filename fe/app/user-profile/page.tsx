@@ -9,6 +9,8 @@ import type { AuthUser } from "@/lib/auth/client";
 
 const MAX_AVATAR_SIZE = 10 * 1024 * 1024;
 const AVATAR_TYPES = new Set(["image/png", "image/jpeg"]);
+const MIN_DATE_OF_BIRTH = "1900-01-01";
+const VIETNAM_PHONE_PATTERN = /^0[35789][0-9]{8}$/;
 
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -47,7 +49,7 @@ async function uploadAvatar(authFetch: AuthFetch, file: File): Promise<string> {
 
 async function saveProfile(
   authFetch: AuthFetch,
-  payload: Pick<AuthUser, "fullName" | "avatarUrl" | "contactInfo" | "bio" | "phoneNumber">,
+  payload: Pick<AuthUser, "fullName" | "avatarUrl" | "contactInfo" | "bio" | "phoneNumber" | "dateOfBirth">,
 ): Promise<AuthUser> {
   const response = await authFetch("/api/users/me", {
     method: "PATCH",
@@ -67,6 +69,28 @@ function fieldClassName(isLocked = false): string {
   return isLocked
     ? `${base} cursor-not-allowed bg-[#efede9] text-[#5f5a54]`
     : `${base} bg-[#faf9f7] focus:border-[#d97757]`;
+}
+
+function todayDateInputValue(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function phoneNumberError(value: string): string | null {
+  if (!value.trim()) return "Vui lòng nhập số điện thoại.";
+  if (!/^[0-9]+$/.test(value)) return "Số điện thoại chỉ được chứa chữ số.";
+  if (value.length !== 10) return "Số điện thoại phải gồm đúng 10 chữ số.";
+  if (!VIETNAM_PHONE_PATTERN.test(value)) return "Số điện thoại phải bắt đầu bằng 03, 05, 07, 08 hoặc 09.";
+  return null;
+}
+
+function dateOfBirthError(value: string, today: string): string | null {
+  if (!value) return "Vui lòng nhập ngày sinh.";
+  if (value < MIN_DATE_OF_BIRTH) return "Ngày sinh không được trước 01/01/1900.";
+  if (value > today) return "Ngày sinh không được ở tương lai.";
+  return null;
 }
 
 function UserProfileContent() {
@@ -139,6 +163,15 @@ function UserProfileContent() {
     event.preventDefault();
     if (!user || saving) return;
     const isStudent = user.role === "STUDENT";
+    const today = todayDateInputValue();
+    if (!isStudent) {
+      const validationError = phoneNumberError(phoneNumber) ?? dateOfBirthError(dateOfBirth, today);
+      if (validationError) {
+        setError(validationError);
+        setSuccess("");
+        return;
+      }
+    }
     setSaving(true);
     setError("");
     setSuccess("");
@@ -147,6 +180,7 @@ function UserProfileContent() {
       const nextUser = await saveProfile(authFetch, {
         fullName: isStudent ? user.fullName : fullName.trim() || null,
         phoneNumber: isStudent ? user.phoneNumber : phoneNumber.trim() || null,
+        dateOfBirth: isStudent ? user.dateOfBirth ?? null : dateOfBirth || null,
         bio: bio.trim() || null,
         contactInfo: contactInfo.trim() || null,
         avatarUrl,
@@ -173,6 +207,7 @@ function UserProfileContent() {
 
   if (!user) return null;
   const isStudent = user.role === "STUDENT";
+  const maxDateOfBirth = todayDateInputValue();
   const avatarSource = removeAvatar ? null : avatarPreview ?? user.avatarUrl;
   const showsSubject = user.role === "TEACHER" || user.role === "MODERATOR";
   const bioPlaceholder = user.role === "STUDENT"
@@ -231,13 +266,11 @@ function UserProfileContent() {
                     <input value={fullName} onChange={(event) => setFullName(event.target.value)} maxLength={255} placeholder="Nhập tên hiển thị" disabled={isStudent || saving} className={fieldClassName(isStudent)} />
                   </label>
                   <label className="text-[12px] font-medium text-[#6b6b6b]">Số điện thoại
-                    <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} maxLength={30} inputMode="tel" placeholder="Nhập số điện thoại" disabled={isStudent || saving} className={fieldClassName(isStudent)} />
+                    <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value.replace(/\D/g, "").slice(0, 10))} maxLength={10} inputMode="numeric" pattern="0[35789][0-9]{8}" placeholder="Nhập số điện thoại" required={!isStudent} disabled={isStudent || saving} className={fieldClassName(isStudent)} />
                   </label>
-                  {isStudent ? (
-                    <label className="text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">Ngày sinh
-                      <input type="date" value={dateOfBirth} disabled className={fieldClassName(true)} />
-                    </label>
-                  ) : null}
+                  <label className="text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">Ngày sinh
+                    <input type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} min={MIN_DATE_OF_BIRTH} max={maxDateOfBirth} required={!isStudent} disabled={isStudent || saving} className={fieldClassName(isStudent)} />
+                  </label>
                   <label className="text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">Giới thiệu ngắn
                     <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={1000} rows={4} placeholder={bioPlaceholder} className="mt-2 w-full resize-y rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]" />
                   </label>

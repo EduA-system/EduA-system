@@ -10,6 +10,9 @@ import com.edua.beeduasystem.domain.model.classroom.Classroom;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.ClassMemberRepository;
 import com.edua.beeduasystem.repository.repositories.ClassRepository;
+import com.edua.beeduasystem.repository.repositories.ClassResourceRepository;
+import com.edua.beeduasystem.repository.repositories.SubmissionRepository;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,16 +27,25 @@ public class ClassManagementService {
 
     private final ClassRepository classRepository;
     private final ClassMemberRepository classMemberRepository;
+    private final ClassResourceRepository classResourceRepository;
+    private final SubmissionRepository submissionRepository;
     private final AppUserRepository userRepository;
+    private final TeacherGradeRepository teacherGradeRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public ClassManagementService(ClassRepository classRepository,
                                   ClassMemberRepository classMemberRepository,
+                                  ClassResourceRepository classResourceRepository,
+                                  SubmissionRepository submissionRepository,
                                   AppUserRepository userRepository,
+                                  TeacherGradeRepository teacherGradeRepository,
                                   CurrentUserProvider currentUserProvider) {
         this.classRepository = classRepository;
         this.classMemberRepository = classMemberRepository;
+        this.classResourceRepository = classResourceRepository;
+        this.submissionRepository = submissionRepository;
         this.userRepository = userRepository;
+        this.teacherGradeRepository = teacherGradeRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -62,13 +74,15 @@ public class ClassManagementService {
         UUID ownerId = currentUserProvider.requireUserId();
         Subject requestedSubject = requireSubject(subject);
         requireOwnSubject(requestedSubject);
+        Integer requestedGrade = requireGrade(grade);
+        requireOwnGrade(ownerId, requestedGrade);
         Classroom saved = classRepository.save(new Classroom(
                 UUID.randomUUID(),
                 ownerId,
                 requireName(name),
                 normalizeDescription(description),
                 requestedSubject,
-                requireGrade(grade),
+                requestedGrade,
                 ClassStatus.ACTIVE,
                 Instant.now(),
                 Instant.now()));
@@ -89,6 +103,7 @@ public class ClassManagementService {
             requireOwnSubject(newSubject);
         }
         Integer newGrade = grade != null ? requireGrade(grade) : classroom.grade();
+        requireOwnGrade(classroom.ownerId(), newGrade);
         String newDescription = description != null ? normalizeDescription(description) : classroom.description();
         Classroom saved = classRepository.save(new Classroom(
                 classroom.id(),
@@ -138,6 +153,9 @@ public class ClassManagementService {
 
     private ClassViews.ClassDetail toDetail(Classroom classroom) {
         long memberCount = 1L + classMemberRepository.countByClassId(classroom.id());
+        long resourceCount = classResourceRepository.countByClassId(classroom.id());
+        long assignmentCount = classResourceRepository.countAssignmentsByClassId(classroom.id());
+        long submissionCount = submissionRepository.countByClassId(classroom.id());
         String ownerName = resolveOwnerName(classroom.ownerId());
         return new ClassViews.ClassDetail(
                 classroom.id(),
@@ -149,9 +167,9 @@ public class ClassManagementService {
                 classroom.ownerId(),
                 ownerName,
                 memberCount,
-                0L,
-                0L,
-                0L,
+                resourceCount,
+                assignmentCount,
+                submissionCount,
                 classroom.createdAt(),
                 classroom.updatedAt());
     }
@@ -242,6 +260,15 @@ public class ClassManagementService {
             throw new IllegalArgumentException("Grade must be between 10 and 12.");
         }
         return grade;
+    }
+
+    private void requireOwnGrade(UUID teacherId, Integer grade) {
+        List<Integer> assignedGrades = teacherGradeRepository
+                .findGradesByUserIds(List.of(teacherId))
+                .getOrDefault(teacherId, List.of());
+        if (!assignedGrades.contains(grade)) {
+            throw new ForbiddenOperationException("Bạn chỉ được tạo hoặc chỉnh sửa lớp thuộc khối mình phụ trách.");
+        }
     }
 
     private static ClassStatus requireStatus(ClassStatus status) {

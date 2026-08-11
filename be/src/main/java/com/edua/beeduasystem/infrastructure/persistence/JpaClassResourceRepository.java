@@ -67,6 +67,18 @@ public class JpaClassResourceRepository implements ClassResourceRepository {
         jpa.deleteById(id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public long countByClassId(UUID classId) {
+        return jpa.countByClassId(classId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countAssignmentsByClassId(UUID classId) {
+        return jpa.countByClassIdAndSubmissionEnabledTrue(classId);
+    }
+
     private static ClassResource toDomain(ClassResourceEntity entity) {
         return new ClassResource(
                 entity.getId(),

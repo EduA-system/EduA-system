@@ -39,6 +39,8 @@ import java.util.stream.Collectors;
 @Service
 public class ClassResourceService {
 
+    private static final int MAX_DESCRIPTION_LENGTH = 2000;
+
     private final ClassRepository classRepository;
     private final ClassMemberRepository classMemberRepository;
     private final ClassResourceRepository classResourceRepository;
@@ -340,6 +342,9 @@ public class ClassResourceService {
             return null;
         }
         String trimmed = description.trim();
+        if (trimmed.length() > MAX_DESCRIPTION_LENGTH) {
+            throw new IllegalArgumentException("Description must be at most 2000 characters.");
+        }
         return trimmed.isEmpty() ? null : trimmed;
     }
 
