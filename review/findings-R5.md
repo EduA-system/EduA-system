@@ -1,6 +1,9 @@
 # R5 — Sinh giáo án (streaming)
 
-Quét ngày 2026-08-11 trên `main`. Đọc tay trước (R5-01…R5-03), `/code-review high` sau (R5-10…).
+Quét ngày 2026-08-11 trên `main`. Chỉ có lượt đọc tay (R5-01…R5-03). Lượt `/code-review high` đã khởi
+chạy nhưng **agent nền bị dừng giữa chừng do chạm giới hạn phiên** ("session limit · resets 12:40am
+Asia/Bangkok") — không có kết quả tự động nào cho cụm này. Chưa chạy lại; xem mục 5 (Tiến độ) trong
+`logic-audit-plan.md` để chạy bù khi phiên mới mở.
 
 Phạm vi: `be/.../service/lessonplan/` (5 file, 1581 loc: `GenerateLessonPlanStreamUseCase`,
 `LessonPlanService`, `LessonPlan5512PromptBuilder`, `LessonPlanEditPromptBuilder`,

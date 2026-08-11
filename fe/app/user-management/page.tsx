@@ -493,22 +493,6 @@ function UserManagementContent() {
     }
   }
 
-  async function toggleItStaff(item: AccountItem) {
-    const isDisabled = item.status === "DISABLED";
-    if (!isDisabled) {
-      setDisableAccountTarget({ kind: "it-staff", item });
-      return;
-    }
-    try {
-      await api(authFetch, `/principal/it-staff/${item.id}/reactivate`, { method: "PATCH" });
-      setMsg("Đã kích hoạt lại.");
-      await loadItStaff(itStaffData?.page ?? 0);
-      await loadPrincipalStats();
-    } catch (e) {
-      setMsg(String(e));
-    }
-  }
-
   async function confirmDisableAccount() {
     if (!disableAccountTarget) return;
     setDisablingAccount(true);
@@ -547,6 +531,7 @@ function UserManagementContent() {
   const moderatorStats = principalStats?.moderators;
   const itStaffStats = principalStats?.itStaff;
   const itStaffSeatOccupied = itStaffStats == null || itStaffStats.active > 0;
+  const activeItStaff = (itStaffData?.content ?? []).filter((item) => item.status !== "DISABLED");
 
   return (
     <main className="min-h-screen bg-white text-[#1f1f1f]">
@@ -889,12 +874,12 @@ function UserManagementContent() {
                 </div>
 
                 <div className="mt-6">
-                  <h2 className="mb-3 font-medium">Danh sách ({itStaffData?.totalElements ?? 0})</h2>
-                  {(itStaffData?.content.length ?? 0) === 0 ? (
+                  <h2 className="mb-3 font-medium">Danh sách ({activeItStaff.length})</h2>
+                  {activeItStaff.length === 0 ? (
                     <p className="rounded-lg border border-[#d8d1c9] bg-white p-6 text-sm text-[#6b6b6b]">Chưa có IT Staff.</p>
                   ) : (
                     <div className="space-y-2">
-                      {itStaffData!.content.map((item) => (
+                      {activeItStaff.map((item) => (
                         <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d1c9] bg-white p-4 shadow-[0_2px_8px_rgba(43,41,38,0.04)]">
                           <div>
                             <div className="flex items-center gap-2 font-medium text-[#1f1f1f]">
@@ -903,27 +888,18 @@ function UserManagementContent() {
                             </div>
                             <div className="mt-1 text-xs text-[#8a8178]">{item.email}</div>
                           </div>
-                          {item.status !== "DISABLED" ? (
-                            <button
-                              type="button"
-                              onClick={() => openItStaffReplacement(item)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#c2483c] transition hover:bg-[#fdeceb]"
-                            >
-                              <ArrowLeftRight className="size-4" aria-hidden /> Thay IT Staff
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => toggleItStaff(item)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#5a7a4a] transition hover:bg-[#eef6ec]"
-                            >
-                              <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => openItStaffReplacement(item)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#c2483c] transition hover:bg-[#fdeceb]"
+                          >
+                            <ArrowLeftRight className="size-4" aria-hidden /> Thay IT Staff
+                          </button>
                         </div>
                       ))}
                     </div>
                   )}
+                
                   {itStaffData && (
                     <Pager page={itStaffData.page} totalPages={itStaffData.totalPages} onChange={(p) => void loadItStaff(p).catch((e) => setMsg(String(e)))} />
                   )}

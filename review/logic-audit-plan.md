@@ -154,8 +154,8 @@ Cập nhật bảng tiến độ dưới đây sau mỗi lượt.
 | R2 Tài khoản | **Xong** | đọc tay + `high` | 14 (7 Cao) | [findings-R2.md](findings-R2.md) |
 | R3 Weekly Task | **Xong** | đọc tay + `high` | 11 (5 Cao) | [findings-R3.md](findings-R3.md) |
 | R4 Lớp học | **Xong** | đọc tay + `high` | 15 (5 Cao) | [findings-R4.md](findings-R4.md) |
-| R5 Giáo án | Chưa chạy | — | — | — |
-| R6 Slide | Chưa chạy | — | — | — |
+| R5 Giáo án | Tay xong, `high` lỗi (giới hạn phiên) | chỉ đọc tay | 3 (1 Cao) | [findings-R5.md](findings-R5.md) |
+| R6 Slide | Tay xong, `high` chạy nửa (giới hạn phiên) | đọc tay + 1/6 nhánh `high` | 2 (0 Cao) | [findings-R6.md](findings-R6.md) |
 | R7 Blog | Chưa chạy | — | — | — |
 | R8 Đề kiểm tra | Chưa chạy | — | — | — |
 | R9 Upload | Chưa chạy | — | — | — |
