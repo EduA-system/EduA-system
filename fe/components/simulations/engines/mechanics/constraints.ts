@@ -52,6 +52,31 @@ function closestPointOnTrack(points: { x: number; y: number }[], x: number, y: n
   return best;
 }
 
+function closestTrackPointAtHeight(
+  points: { x: number; y: number }[],
+  height: number,
+  x: number,
+  y: number,
+): ClosestTrackPoint | null {
+  let best: ClosestTrackPoint | null = null;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    const dy = b.y - a.y;
+    if (Math.abs(dy) < 1e-12) continue;
+    const t = (height - a.y) / dy;
+    if (t < 0 || t > 1) continue;
+    const dx = b.x - a.x;
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-12) continue;
+    const qx = a.x + dx * t;
+    const dist2 = (x - qx) ** 2 + (y - height) ** 2;
+    const candidate = { x: qx, y: height, tx: dx / len, ty: dy / len, t, segment: i, dist2 };
+    if (!best || candidate.dist2 < best.dist2) best = candidate;
+  }
+  return best;
+}
+
 /**
  * Giải toàn bộ ràng buộc của `scene`, sửa trực tiếp các điểm trong `pts`.
  * `invMass[id]` = 1/m, bằng 0 nếu vật cố định (fixed) — vật cố định không bị
@@ -126,25 +151,32 @@ export function projectConstraints(
       if (c.kind === "curveTrack") {
         const P = pts[c.body];
         if (!P || (invMass[c.body] ?? 0) === 0 || c.points.length < 2) continue;
-        const q = closestPointOnTrack(c.points, P.x, P.y);
+        let q = closestPointOnTrack(c.points, P.x, P.y);
         if (!q) continue;
-        // Ma sát Coulomb dùng vận tốc PHÁP TUYẾN (trước khi ép vật về track)
-        // làm proxy cho xung pháp tuyến — cùng cách với ràng buộc `surface` ở
-        // trên. KHÔNG dùng độ lệch vị trí (Math.hypot(q.x-P.x, q.y-P.y)): độ
-        // lệch đó tích luỹ theo ~dt² (bắt đầu từ vận tốc pháp tuyến 0 sau mỗi
-        // lần ép), trong khi vận tốc pháp tuyến tích luỹ theo ~dt — dùng vị
-        // trí làm ma sát biến mất dần khi substep càng nhỏ, sai vật lý.
-        const nx = -q.ty;
-        const ny = q.tx;
-        const vn = P.vx * nx + P.vy * ny;
+        const initialBody = scene.bodies.find((body) => body.id === c.body);
+        const gravity = scene.forces.find((force) => force.kind === "gravity");
+        const g = gravity?.kind === "gravity" ? gravity.g ?? 9.8 : 0;
+        const initialSpecificEnergy = initialBody
+          ? g * initialBody.y + 0.5 * (initialBody.vx ** 2 + initialBody.vy ** 2)
+          : 0;
+        const maxReachableY = g > 0 ? initialSpecificEnergy / g : Number.POSITIVE_INFINITY;
+        if (c.preserveMechanicalEnergy && q.y > maxReachableY) {
+          q = closestTrackPointAtHeight(c.points, maxReachableY, q.x, q.y) ?? q;
+        }
+        const correction = Math.hypot(q.x - P.x, q.y - P.y);
         let vt = P.vx * q.tx + P.vy * q.ty;
         const atStart = q.segment === 0 && q.t <= 1e-5;
         const atEnd = q.segment === c.points.length - 2 && q.t >= 1 - 1e-5;
         if ((atStart && vt < 0) || (atEnd && vt > 0)) vt = 0;
         const friction = c.friction ?? 0;
-        if (friction > 0) {
-          const drop = Math.min(Math.abs(vt), friction * Math.abs(vn));
+        if (friction > 0 && correction > 0) {
+          const drop = Math.min(Math.abs(vt), friction * correction);
           vt -= Math.sign(vt) * drop;
+        }
+        if (c.preserveMechanicalEnergy && g > 0 && friction === 0) {
+          const speed = Math.sqrt(Math.max(0, 2 * (initialSpecificEnergy - g * q.y)));
+          const direction = Math.abs(vt) > 1e-9 ? Math.sign(vt) : Math.sign(-g * q.ty);
+          vt = direction * speed;
         }
         P.x = q.x;
         P.y = q.y;

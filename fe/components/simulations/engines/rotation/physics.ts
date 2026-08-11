@@ -12,9 +12,70 @@ export function totalInertia(scene: RotationScene): number {
 }
 
 export function rotationTorques(scene: RotationScene, theta = 0): RotationTorques {
-  // Dây và quả cân cùng quay với đĩa. Cánh tay đòn thực của trọng lực là
-  // d·cos(theta): ở theta = 0 đây là đúng d của quy tắc moment lực.
-  const leverFactor = Math.cos(theta);
+  if (scene.torqueModel === "attachedCords" && scene.attachmentGeometry) {
+    const geometry = scene.attachmentGeometry;
+    const torqueFromCord = (
+      radius: number,
+      referenceAngle: number,
+      guideDistance: number,
+      mass: number,
+      tangentDirection?: number,
+    ) => {
+      const angle = referenceAngle + theta;
+      const anchor = {
+        x: radius * Math.cos(angle),
+        y: radius * Math.sin(angle),
+      };
+      const initialAnchor = {
+        x: radius * Math.cos(referenceAngle),
+        y: radius * Math.sin(referenceAngle),
+      };
+      const guide =
+        tangentDirection == null
+          ? { x: initialAnchor.x, y: initialAnchor.y - guideDistance }
+          : {
+              x:
+                initialAnchor.x +
+                guideDistance * Math.cos(tangentDirection),
+              y:
+                initialAnchor.y +
+                guideDistance * Math.sin(tangentDirection),
+            };
+      const dx = guide.x - anchor.x;
+      const dy = guide.y - anchor.y;
+      const length = Math.hypot(dx, dy) || 1;
+      const force = mass * scene.gravity;
+      return (
+        anchor.x * ((force * dy) / length) -
+        anchor.y * ((force * dx) / length)
+      );
+    };
+
+    // Vật m₂ nằm thẳng dưới điểm móc nên dây trái luôn thẳng đứng.
+    const leftTorque =
+      -scene.left.mass *
+      scene.gravity *
+      scene.left.radius *
+      Math.cos(geometry.leftAnchorAngle + theta);
+    const rightTorque = torqueFromCord(
+      scene.right.radius,
+      geometry.rightAnchorAngle,
+      geometry.rightGuideDistance,
+      scene.right.mass,
+      geometry.rightAnchorAngle - Math.PI / 2,
+    );
+    return {
+      left: Math.max(0, leftTorque),
+      right: Math.max(0, -rightTorque),
+      net: leftTorque + rightTorque,
+      inertia: totalInertia(scene),
+    };
+  }
+
+  // Dây quấn trên rãnh luôn kéo tiếp tuyến nên cánh tay đòn bằng đúng bán kính.
+  // Bập bênh/vật gắn vào thanh vẫn dùng hình chiếu d·cos(theta).
+  const leverFactor =
+    scene.torqueModel === "fixedTangential" ? 1 : Math.cos(theta);
   const left = scene.left.mass * scene.gravity * scene.left.radius * leverFactor;
   const right = scene.right.mass * scene.gravity * scene.right.radius * leverFactor;
   return { left, right, net: left - right, inertia: totalInertia(scene) };

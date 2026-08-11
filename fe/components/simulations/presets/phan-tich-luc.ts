@@ -1,230 +1,212 @@
-import type { Preset } from "./types";
+import type { Annotation, Scene } from "../engines/mechanics/types";
+import type { SceneAnnotation } from "../shared/scene-types";
+import type { MechanicsPreset } from "./types";
 
-function degToRad(deg: number): number {
-  return (deg * Math.PI) / 180;
+const RAMP_LENGTH = 5.8;
+const LEFT_X = -2.75;
+const CLEARANCE = 0.16;
+
+const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+function geometry(alpha: number) {
+  const angle = toRadians(alpha);
+  const tangent = { x: Math.cos(angle), y: Math.sin(angle) };
+  const normal = { x: -Math.sin(angle), y: Math.cos(angle) };
+  const start = { x: LEFT_X, y: 0 };
+  const end = {
+    x: start.x + RAMP_LENGTH * tangent.x,
+    y: start.y + RAMP_LENGTH * tangent.y,
+  };
+  const trackStart = {
+    x: start.x + normal.x * CLEARANCE,
+    y: start.y + normal.y * CLEARANCE,
+  };
+  const trackEnd = {
+    x: end.x + normal.x * CLEARANCE,
+    y: end.y + normal.y * CLEARANCE,
+  };
+  return { angle, tangent, normal, start, end, trackStart, trackEnd };
 }
 
-const RAMP_LENGTH = 5.2;
-const RAMP_RIGHT_X = 2.7;
-const BLOCK_CLEARANCE = 0.2;
-const BLOCK_HALF_ALONG_RAMP = 0.48;
+function vector(direction: { x: number; y: number }, length: number) {
+  return { dx: direction.x * length, dy: direction.y * length };
+}
 
-function rampGeometry(alpha: number) {
-  const rad = degToRad(alpha);
-  const tangent = { x: Math.cos(rad), y: -Math.sin(rad) };
-  const normal = { x: Math.sin(rad), y: Math.cos(rad) };
-  const leftTop = {
-    x: RAMP_RIGHT_X - RAMP_LENGTH * Math.cos(rad),
-    y: RAMP_LENGTH * Math.sin(rad),
+function buildScene(params: Record<string, number>): Scene {
+  const alpha = params.alpha ?? 25;
+  const mass = params.m ?? 2;
+  const g = params.g ?? 9.8;
+  const ramp = geometry(alpha);
+  const position = 2.7;
+  const block = {
+    x: ramp.trackStart.x + ramp.tangent.x * position,
+    y: ramp.trackStart.y + ramp.tangent.y * position,
   };
-  const displayMidpoint = {
-    x: (leftTop.x + RAMP_RIGHT_X) / 2,
-    y: leftTop.y / 2,
-  };
-  return {
-    leftTop,
-    rightBase: { x: RAMP_RIGHT_X, y: 0 },
-    surfaceCenter: {
-      x: displayMidpoint.x + normal.x * BLOCK_CLEARANCE,
-      y: displayMidpoint.y + normal.y * BLOCK_CLEARANCE,
+  const weight = mass * g;
+  const normalComponent = weight * Math.cos(ramp.angle);
+  const slopeComponent = weight * Math.sin(ramp.angle);
+  const scale = 0.82 / Math.max(weight, 1);
+  const annotations: Annotation[] = [
+    {
+      kind: "vector",
+      anchor: "vat",
+      dx: 0,
+      dy: -weight * scale,
+      color: "#fb7185",
+      label: "P",
+      labelPosition: "outside",
+      labelSize: 18,
+      width: 3,
     },
-    tangent,
-    normal,
-  };
-}
-
-function values(p: Record<string, number>) {
-  const alpha = p.alpha ?? 25;
-  const m = p.m ?? 2;
-  const g = p.g ?? 9.8;
-  const P = m * g;
-  const P1 = P * Math.cos(degToRad(alpha));
-  const P2 = P * Math.sin(degToRad(alpha));
-  return { alpha, m, g, P, P1, P2 };
-}
-
-function vectorParts(alpha: number) {
-  const theta = -degToRad(alpha);
-  const total = 1.45;
-  const along = total * Math.sin(degToRad(alpha));
-  const normal = total * Math.cos(degToRad(alpha));
-  const ux = Math.cos(theta);
-  const uy = Math.sin(theta);
-  const nx = -Math.sin(theta);
-  const ny = Math.cos(theta);
+    {
+      kind: "vector",
+      anchor: "vat",
+      ...vector(ramp.normal, normalComponent * scale),
+      color: "#c084fc",
+      label: "N",
+      labelPosition: "outside",
+      labelSize: 18,
+      width: 3,
+    },
+    {
+      kind: "vector",
+      anchor: "vat",
+      ...vector({ x: -ramp.normal.x, y: -ramp.normal.y }, normalComponent * scale),
+      color: "#60a5fa",
+      label: "P₁",
+      labelPosition: "outside",
+      labelSize: 17,
+      width: 2.5,
+    },
+    {
+      kind: "vector",
+      anchor: "vat",
+      ...vector({ x: -ramp.tangent.x, y: -ramp.tangent.y }, slopeComponent * scale),
+      color: "#fbbf24",
+      label: "P₂",
+      labelPosition: "outside",
+      labelSize: 17,
+      width: 2.5,
+    },
+  ];
 
   return {
-    p: { dx: 0, dy: -total },
-    p2: { dx: ux * along, dy: uy * along },
-    p1: { dx: -nx * normal, dy: -ny * normal },
+    bodies: [
+      {
+        id: "vat",
+        x: block.x,
+        y: block.y,
+        vx: 0,
+        vy: 0,
+        mass,
+        radius: 0.22,
+        fixed: true,
+        visual: {
+          shape: "box",
+          color: "#14b8a6",
+          label: "m",
+          angle: -alpha,
+          grounded: false,
+        },
+      },
+    ],
+    forces: [{ kind: "gravity", g }],
+    constraints: [
+      {
+        kind: "surface",
+        x: (ramp.trackStart.x + ramp.trackEnd.x) / 2,
+        y: (ramp.trackStart.y + ramp.trackEnd.y) / 2,
+        angle: alpha,
+        length: RAMP_LENGTH,
+        friction: 0,
+      },
+      {
+        kind: "curveTrack",
+        body: "vat",
+        points: [ramp.trackStart, ramp.trackEnd],
+        friction: 0,
+        hidden: true,
+      },
+    ],
+    annotations,
+    view: { minX: -3.15, maxX: 3.25, minY: 0, maxY: 4.2 },
+    groundPadding: 78,
   };
 }
 
-export const phanTichLuc: Preset = {
+function buildAnnotations(params: Record<string, number>): SceneAnnotation[] {
+  const alpha = params.alpha ?? 25;
+  const ramp = geometry(alpha);
+  const middleAngle = ramp.angle / 2;
+  return [
+    {
+      kind: "polygon",
+      points: [ramp.start, ramp.end, { x: ramp.end.x, y: 0 }],
+      fill: "#334155",
+      stroke: "#64748b",
+      strokeWidth: 2,
+    },
+    {
+      kind: "arc",
+      x: ramp.start.x,
+      y: ramp.start.y,
+      radius: 0.58,
+      startAngle: 0,
+      endAngle: alpha,
+      color: "#fbbf24",
+      strokeWidth: 2.4,
+    },
+    {
+      kind: "label",
+      x: ramp.start.x + Math.cos(middleAngle) * 0.38,
+      y: ramp.start.y + Math.sin(middleAngle) * 0.38,
+      text: `α`,
+      color: "#fde68a",
+      fontSize: 18,
+      align: "center",
+      width: 0.45,
+    },
+  ];
+}
+
+export const phanTichLuc: MechanicsPreset = {
   id: "phan-tich-luc",
-  title: "Phân tích lực",
+  title: "Phân tích lực trên mặt phẳng nghiêng",
   domain: "Cơ học",
   grade: 10,
-  desc: "Quan sát trọng lực được phân tích thành hai lực thành phần",
-  objective: "Quan sát trọng lực được phân tích thành hai lực thành phần",
-  sgkRef: "Vật lí 10 - phân tích lực",
+  desc: "Phân tích trọng lực thành hai thành phần song song và vuông góc với mặt phẳng nghiêng.",
+  objective: "Nhận biết đúng P, N, P₁, P₂ và kiểm chứng P₁ = P cos α, P₂ = P sin α.",
+  sgkRef: "Vật lí 10 — Động lực học",
   startPaused: true,
-  paramGuide:
-    "Mô phỏng cho thấy trọng lực P được phân tích theo hai phương của mặt phẳng nghiêng: P₁ vuông góc với mặt phẳng và ép vật vào mặt phẳng; P₂ song song với mặt phẳng và kéo vật trượt xuống dốc. Hãy thay đổi các tham số bên dưới để quan sát độ lớn ba vector lực.",
   params: [
-    {
-      key: "alpha",
-      label: "Góc nghiêng",
-      unit: "°",
-      min: 5,
-      max: 50,
-      step: 1,
-      default: 25,
-      description: "Góc nghiêng càng lớn thì P₂ kéo vật xuống dốc càng tăng, còn P₁ ép vật vào mặt phẳng càng giảm.",
-    },
-    {
-      key: "m",
-      label: "Khối lượng vật",
-      unit: "kg",
-      min: 0.5,
-      max: 8,
-      step: 0.1,
-      default: 2,
-      description: "Khối lượng càng lớn thì trọng lực P = mg và cả hai thành phần P₁, P₂ đều tăng.",
-    },
-    {
-      key: "g",
-      label: "Gia tốc trọng trường",
-      unit: "m/s²",
-      min: 1.6,
-      max: 20,
-      step: 0.1,
-      default: 9.8,
-      description: "g càng lớn thì trọng lực P = mg càng lớn; trên Trái Đất, g xấp xỉ 9,8 m/s².",
-    },
+    { key: "alpha", label: "Góc nghiêng α", unit: "°", min: 10, max: 45, step: 1, default: 25 },
+    { key: "m", label: "Khối lượng vật m", unit: "kg", min: 0.5, max: 6, step: 0.1, default: 2 },
+    { key: "g", label: "Gia tốc trọng trường g", unit: "m/s²", min: 1.6, max: 20, step: 0.1, default: 9.8 },
   ],
-  applyParams: (p) => {
-    const { alpha, m, g } = values(p);
-    const geometry = rampGeometry(alpha);
-    const trackStart = {
-      x: geometry.leftTop.x + geometry.normal.x * BLOCK_CLEARANCE,
-      y: geometry.leftTop.y + geometry.normal.y * BLOCK_CLEARANCE,
-    };
-    const trackEnd = {
-      x: geometry.rightBase.x + geometry.normal.x * BLOCK_CLEARANCE - geometry.tangent.x * BLOCK_HALF_ALONG_RAMP,
-      y: geometry.rightBase.y + geometry.normal.y * BLOCK_CLEARANCE - geometry.tangent.y * BLOCK_HALF_ALONG_RAMP,
-    };
-    const startS = -1.15;
-    const block = {
-      x: geometry.surfaceCenter.x + startS * geometry.tangent.x,
-      y: geometry.surfaceCenter.y + startS * geometry.tangent.y,
-    };
-    const vectors = vectorParts(alpha);
-
-    return {
-      bodies: [
-        {
-          id: "vat",
-          x: block.x,
-          y: block.y,
-          vx: 0,
-          vy: 0,
-          mass: m,
-          radius: 0.24,
-          visual: { shape: "box", color: "#86efac", label: "vật", angle: alpha },
-        },
-      ],
-      forces: [{ kind: "gravity" as const, g }],
-      constraints: [{ kind: "curveTrack" as const, body: "vat", points: [trackStart, trackEnd], appearance: "hidden" as const }],
-      annotations: [
-        { kind: "vector" as const, anchor: "vat", ...vectors.p, color: "#f8fafc", label: "P", width: 3 },
-        { kind: "vector" as const, anchor: "vat", ...vectors.p1, color: "#fbbf24", label: "P1", width: 3 },
-        { kind: "vector" as const, anchor: "vat", ...vectors.p2, color: "#60a5fa", label: "P2", width: 3 },
-      ],
-      view: { minX: -4.1, maxX: 4.1, minY: 0, maxY: 4.4 },
-      groundPadding: 96,
-      disableDragging: true,
-    };
-  },
-  annotations: (p) => {
-    const geometry = rampGeometry(p.alpha ?? 25);
-    return [
-      {
-        kind: "polygon",
-        points: [
-          geometry.leftTop,
-          { x: geometry.leftTop.x, y: 0 },
-          geometry.rightBase,
-        ],
-        fill: "#1e293b",
-        stroke: "#64748b",
-        strokeWidth: 2.5,
-        opacity: 0.96,
-      },
-      {
-        kind: "label",
-        x: geometry.rightBase.x - 1.25,
-        y: 0.08,
-        text: `α = ${(p.alpha ?? 25).toFixed(0)}°`,
-        color: "#cbd5e1",
-        fontSize: 13,
-      },
-    ];
-  },
-  trackingLabels: { vat: "Vật trên mặt phẳng nghiêng (màu xanh)" },
+  quickPresets: [
+    { label: "Dốc thoải", params: { alpha: 15, m: 2, g: 9.8 } },
+    { label: "Góc 25°", params: { alpha: 25, m: 2, g: 9.8 } },
+    { label: "Dốc cao", params: { alpha: 40, m: 2, g: 9.8 } },
+  ],
+  applyParams: buildScene,
+  annotations: buildAnnotations,
   minimalOverlay: true,
+  hideBodyCoordinates: true,
+  hideFixedSupportDecoration: true,
   analysis: {
     landmarks: [
       {
-        key: "weight",
-        label: "Trọng lực P",
-        description: "Trọng lực P luôn hướng thẳng đứng xuống dưới. Khi vật nằm trên mặt phẳng nghiêng, P được phân tích theo hai phương vuông góc: song song và vuông góc với mặt phẳng.",
-        atTime: () => 0,
-        values: (p) => {
-          const { m, g, P } = values(p);
+        key: "components",
+        label: "Các thành phần của trọng lực",
+        description: "P₁ vuông góc mặt dốc, P₂ song song và hướng xuống dốc.",
+        values: (params) => {
+          const alpha = params.alpha ?? 25;
+          const weight = (params.m ?? 2) * (params.g ?? 9.8);
+          const angle = toRadians(alpha);
           return [
-            { label: "m", value: m.toFixed(2), unit: "kg" },
-            { label: "g", value: g.toFixed(2), unit: "m/s²" },
-            { label: "P = mg", value: P.toFixed(2), unit: "N" },
-          ];
-        },
-      },
-      {
-        key: "normal-component",
-        label: "Thành phần P1",
-        description: "P1 vuông góc với mặt phẳng nghiêng, có tác dụng ép vật vào mặt phẳng. Với góc nghiêng α, độ lớn P1 = Pcosα.",
-        values: (p) => {
-          const { alpha, P1 } = values(p);
-          return [
-            { label: "α", value: alpha.toFixed(0), unit: "°" },
-            { label: "P1 = Pcosα", value: P1.toFixed(2), unit: "N" },
-            { label: "Vai trò", value: "ép vật vào mặt phẳng", unit: "" },
-          ];
-        },
-      },
-      {
-        key: "parallel-component",
-        label: "Thành phần P2",
-        description: "P2 song song với mặt phẳng nghiêng, kéo vật trượt xuống dọc mặt phẳng. Với góc nghiêng α, độ lớn P2 = Psinα.",
-        values: (p) => {
-          const { alpha, P2 } = values(p);
-          return [
-            { label: "α", value: alpha.toFixed(0), unit: "°" },
-            { label: "P2 = Psinα", value: P2.toFixed(2), unit: "N" },
-            { label: "Vai trò", value: "kéo vật trượt xuống", unit: "" },
-          ];
-        },
-      },
-      {
-        key: "angle-effect",
-        label: "Ảnh hưởng của góc nghiêng",
-        description: "Khi tăng góc nghiêng, thành phần P2 tăng nên vật có xu hướng trượt mạnh hơn; thành phần P1 giảm nên vật ép vào mặt phẳng yếu hơn.",
-        values: (p) => {
-          const { alpha, P1, P2 } = values(p);
-          return [
-            { label: "Góc nghiêng", value: alpha.toFixed(0), unit: "°" },
-            { label: "P1", value: P1.toFixed(2), unit: "N" },
-            { label: "P2", value: P2.toFixed(2), unit: "N" },
+            { label: "P = mg", value: weight.toFixed(2), unit: "N" },
+            { label: "P₁ = P cos α", value: (weight * Math.cos(angle)).toFixed(2), unit: "N" },
+            { label: "P₂ = P sin α", value: (weight * Math.sin(angle)).toFixed(2), unit: "N" },
           ];
         },
       },

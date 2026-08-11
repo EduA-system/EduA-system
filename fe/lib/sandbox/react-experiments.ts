@@ -46,6 +46,7 @@ const RENDERER_BY_KIND: Record<string, { file: string; component: string }> = {
  *   false → <X onBack={...} />          (trang gốc bọc thêm LegacyExperimentLayout)
  */
 type SelfContained = { file: string; component: string; needsPreset: boolean };
+type SpecialScene = { file: string; component: string };
 
 /** Điều phối theo `preset.id` — 9 thí nghiệm chỉ nhận `onBack`. */
 const SELF_CONTAINED_BY_ID: Record<string, SelfContained> = {
@@ -62,6 +63,13 @@ const SELF_CONTAINED_BY_ID: Record<string, SelfContained> = {
 
 /** Điều phối theo `kind` — nhận cả `preset` lẫn `onBack`. */
 const SELF_CONTAINED_BY_KIND: Record<string, SelfContained> = {
+  // Trang chính dùng component này thay vì renderer Konva thuần vì nó có đồ thị
+  // từ thông/EMF, trạng thái Lenz và bảng phân tích riêng.
+  "electromagnetic-induction": {
+    file: "electromagnetic-induction/ElectromagneticInductionExperiment.tsx",
+    component: "ElectromagneticInductionExperiment",
+    needsPreset: true,
+  },
   brownian: { file: "brownian/BrownianDetailView.tsx", component: "BrownianDetailView", needsPreset: true },
   "heating-curve": { file: "heating-curve/HeatingCurveDetailView.tsx", component: "HeatingCurveDetailView", needsPreset: true },
   "pendulum-resonance": { file: "pendulum-resonance/PendulumResonanceDetailView.tsx", component: "PendulumResonanceDetailView", needsPreset: true },
@@ -79,6 +87,18 @@ const SELF_CONTAINED_BY_KIND: Record<string, SelfContained> = {
   // `cork-pop` không nằm trong PRESETS index nên app không hiển thị, nhưng
   // component vẫn đầy đủ — sandbox nhận thêm được thí nghiệm này.
   "cork-pop": { file: "cork-pop/CorkPopDetailView.tsx", component: "CorkPopDetailView", needsPreset: true },
+};
+
+/** Hai cảnh Newton có canvas và mô hình vật lý riêng, không dùng SceneKonva2D. */
+const SPECIAL_SCENE_BY_ID: Record<string, SpecialScene> = {
+  "dinh-luat-2-newton": {
+    file: "newton-second-law/NewtonSecondLawRaceScene.tsx",
+    component: "NewtonSecondLawRaceScene",
+  },
+  "dinh-luat-3-newton": {
+    file: "newton-third-law/NewtonThirdLawScene.tsx",
+    component: "NewtonThirdLawScene",
+  },
 };
 
 /** Một thí nghiệm kèm mã nguồn — metadata (ExperimentSummary) + file. */
@@ -230,6 +250,65 @@ export default function App() {
 `;
 }
 
+/** Vỏ Sandpack cho các scene chuyên biệt có cùng chữ ký props với trang chính. */
+function buildSpecialSceneApp(
+  scene: SpecialScene,
+  componentPath: string,
+  presetPath: string,
+  presetExport: string,
+): string {
+  return `import { useState } from "react";
+import { ${scene.component} } from "${componentPath}";
+import { ${presetExport} } from "${presetPath}";
+import { ParamPanel } from "${SIM_PREFIX}/shared/param-panel";
+
+export default function App() {
+  const preset = ${presetExport} as any;
+  const [params, setParams] = useState<Record<string, number>>(() =>
+    Object.fromEntries(preset.params.map((p: any) => [p.key, p.default])),
+  );
+  const [running, setRunning] = useState(!preset.startPaused);
+  const [resetSignal, setResetSignal] = useState(0);
+  const [speed, setSpeed] = useState(1);
+
+  const reset = () => {
+    setParams(Object.fromEntries(preset.params.map((p: any) => [p.key, p.default])));
+    setResetSignal((value) => value + 1);
+    setRunning(!preset.startPaused);
+  };
+
+  return (
+    <div style={{ display: "flex", height: "100vh", background: "#fff", fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ flex: 1, minWidth: 0, padding: 8 }}>
+        <div style={{ height: "100%", overflow: "hidden", borderRadius: 14, border: "1px solid #e8e2d9" }}>
+          <${scene.component}
+            params={params}
+            running={running}
+            speed={speed}
+            resetSignal={resetSignal}
+            onRunningChange={setRunning}
+          />
+        </div>
+      </div>
+      <aside style={{ width: 320, flexShrink: 0, borderLeft: "1px solid #e8e2d9", padding: 16, overflowY: "auto" }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{preset.title}</div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+          <button onClick={() => setRunning((value) => !value)}>{running ? "Tạm dừng" : "Chạy"}</button>
+          <button onClick={reset}>Đặt lại</button>
+          {[0.5, 1, 2].map((value) => <button key={value} onClick={() => setSpeed(value)}>{value}×</button>)}
+        </div>
+        <ParamPanel
+          schema={preset.params}
+          values={params}
+          onChange={(key: string, value: number) => setParams((old) => ({ ...old, [key]: value }))}
+        />
+      </aside>
+    </div>
+  );
+}
+`;
+}
+
 function buildAppSource(
   presetPath: string,
   presetExport: string,
@@ -353,7 +432,8 @@ function btn(active: boolean): React.CSSProperties {
 /** Đích render của một preset: renderer theo `kind`, hay component tự dựng. */
 type Target =
   | { mode: "renderer"; renderer: { file: string; component: string } }
-  | { mode: "self-contained"; target: SelfContained };
+  | { mode: "self-contained"; target: SelfContained }
+  | { mode: "special-scene"; target: SpecialScene };
 
 /**
  * Chọn đích GIỐNG trang thật: ưu tiên `preset.id`, rồi tới `kind`, cuối cùng
@@ -363,6 +443,8 @@ type Target =
 function resolveTarget(code: string, presetId: string, kind: string): Target | null {
   const selfContained = SELF_CONTAINED_BY_ID[presetId] ?? SELF_CONTAINED_BY_KIND[kind];
   if (selfContained) return { mode: "self-contained", target: selfContained };
+  const specialScene = SPECIAL_SCENE_BY_ID[presetId];
+  if (specialScene) return { mode: "special-scene", target: specialScene };
   if (isShellPreset(code)) return null;
   const renderer = RENDERER_BY_KIND[kind];
   return renderer ? { mode: "renderer", renderer } : null;
@@ -435,7 +517,9 @@ function scanPresets(): ScannedPreset[] {
         kind: target.mode === "self-contained" && !target.target.needsPreset
           ? "giao diện riêng"
           : kind,
-        mode: target.mode,
+        // Cảnh chuyên biệt vẫn là một renderer từ góc nhìn thư viện; chỉ cách
+        // dựng `/App.tsx` khác với renderer Konva chung.
+        mode: target.mode === "special-scene" ? "renderer" : target.mode,
       },
     });
   }
@@ -474,6 +558,28 @@ export function getExperiment(id: string): ReactExperiment | null {
       files,
       // Mở thẳng file component — nơi chứa toàn bộ logic của thí nghiệm này,
       // vì preset của nó chỉ là vỏ giữ metadata.
+      focusPath: componentPath + ".tsx",
+      fileCount: countRealFiles(files),
+    };
+  }
+
+  if (found.target.mode === "special-scene") {
+    const specialScene = found.target.target;
+    const files = collectSimulationFiles([
+      found.relPath,
+      specialScene.file,
+      "shared/param-panel.tsx",
+    ]);
+    const componentPath = SIM_PREFIX + "/" + specialScene.file.replace(/\.tsx$/, "");
+    files["/App.tsx"] = buildSpecialSceneApp(
+      specialScene,
+      componentPath,
+      presetImportPath,
+      presetExport,
+    );
+    return {
+      ...found.summary,
+      files,
       focusPath: componentPath + ".tsx",
       fileCount: countRealFiles(files),
     };

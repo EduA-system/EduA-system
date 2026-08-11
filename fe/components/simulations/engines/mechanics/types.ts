@@ -26,15 +26,19 @@ export type Body = {
   vy: number;
   mass: number; // khối lượng (kg), phải > 0 — bỏ qua nếu fixed
   fixed?: boolean;
+  /** Hệ số nảy riêng của vật, dùng cho vật chắn cố định (mặc định lấy Scene). */
+  restitution?: number;
   // Bán kính va chạm (m). VẮNG → vật là chất điểm, KHÔNG va chạm vật-vật (giữ
   // nguyên hành vi cũ). Có → tham gia va chạm tròn-tròn (xem collisions.ts).
   radius?: number;
-  // Renderer-only size multiplier; collision radius and physics are unchanged.
-  displayScale?: number;
   visual?: {
-    shape?: "circle" | "metalBall" | "feather" | "streamlined" | "plate" | "box" | "forceMeter" | "pulley" | "coaster" | "collisionCart" | "pendulumBob" | "pendulumPivot" | "hangingWeight";
-    metalTone?: "steel" | "brass";
+    shape?: "circle" | "metalBall" | "feather" | "streamlined" | "plate" | "box" | "wall" | "forceMeter" | "pulley" | "coaster" | "collisionCart" | "pendulumBob" | "pendulumPivot" | "hangingWeight";
+    metalTone?: "steel" | "brass" | "red";
     wheels?: boolean;
+    /** Đặt bánh xe chạm đúng mặt đường khi shape là box. */
+    grounded?: boolean;
+    /** Chiều cao hiển thị riêng cho thành chắn/máng. */
+    wallHeight?: number;
     photogateFlag?: boolean;
     color?: string;
     label?: string;
@@ -43,6 +47,17 @@ export type Body = {
     // Optional fixed body marking the moving lower hook of a vertical force
     // meter. The renderer stretches the visible spring exactly to this point.
     forceMeterHookBody?: string;
+    /** Vật người học kéo để làm thay đổi số chỉ của lực kế. */
+    forceMeterInteractiveBody?: string;
+    /** Giới hạn đo (N) và hành trình kéo (m) dùng cho tương tác trực tiếp. */
+    forceMeterMaxReading?: number;
+    forceMeterPullRange?: number;
+    /** Giới hạn kéo-thả theo trục đứng (tọa độ world), dùng cho con lắc lò xo. */
+    dragAxis?: "vertical";
+    dragMinY?: number;
+    dragMaxY?: number;
+    /** Thả vật sau khi kéo thì bắt đầu mô phỏng từ vị trí vừa chọn. */
+    startOnRelease?: boolean;
     orientation?: "horizontal" | "vertical";
     angle?: number;
     collisionSide?: "left" | "right";
@@ -138,12 +153,12 @@ export type CurveTrackConstraint = {
   body: string;
   points: TrackPoint[];
   friction?: number;
-  /** Biến thể trình bày, không tham gia tính toán vật lý. */
-  appearance?: "rollerCoaster" | "hidden" | "galileiRamp";
-  /** Renderer-only: draw track offset from the constraint path along local normal. */
-  visualOffset?: number;
-  /** Renderer-only: skip drawing the track entirely (apparatus vẽ riêng). */
+  /** Giữ ràng buộc vật lý nhưng không vẽ đường ray tự sinh. */
   hidden?: boolean;
+  /** Giữ cơ năng trọng trường theo trạng thái ban đầu của vật trên ray. */
+  preserveMechanicalEnergy?: boolean;
+  /** Biến thể trình bày, không tham gia tính toán vật lý. */
+  appearance?: "rollerCoaster";
 };
 
 /**
@@ -189,21 +204,6 @@ export type VectorAnnotation = {
 };
 
 /**
- * Vector hợp lực ĐỘNG cho con lắc đơn — renderer tự tính từ trạng thái thực
- * (trọng lực + lực căng dây) mỗi frame, khác VectorAnnotation (dx/dy chốt sẵn).
- */
-export type PendulumResultantAnnotation = {
-  kind: "pendulumResultant";
-  pivot: string;
-  body: string;
-  scale?: number;
-  maxLength?: number;
-  color?: string;
-  label?: string;
-  showMagnitude?: boolean;
-};
-
-/**
  * Vector ĐỘNG minh hoạ một lò xo — độ dài tính lại MỖI FRAME từ trạng thái thực
  * (khác VectorAnnotation có dx/dy chốt sẵn). Trỏ tới spring qua cặp (a, b);
  * renderer đọc k/restLength của CHÍNH spring đó trong scene.forces để tính độ
@@ -226,6 +226,22 @@ export type SpringVectorAnnotation = {
 };
 
 /**
+ * Lực tay kéo xuống khi người học trực tiếp kéo vật ở đầu lò xo. Renderer lấy
+ * độ lệch khỏi vị trí cân bằng để cập nhật độ lớn F = k|x| và chỉ hiện trong
+ * lúc kéo; annotation này không tác động trở lại kernel.
+ */
+export type SpringPullAnnotation = {
+  kind: "springPull";
+  a: string;
+  b: string;
+  equilibriumLength: number;
+  maxExtension: number;
+  forceScale?: number;
+  color?: string;
+  label?: string;
+};
+
+/**
  * Cặp lực tương tác của cùng một lò xo. Renderer đọc lực Hooke thực theo từng
  * frame và vẽ hai vector bằng nhau, ngược chiều trên hai vật.
  */
@@ -244,14 +260,10 @@ export type SpringActionReactionAnnotation = {
 export type PhotogateTimerAnnotation = {
   kind: "photogateTimer";
   body: string;
-  bodyOffsetX?: number;
   startX: number;
   endX: number;
   at: { x: number; y: number };
   color?: string;
-  distance?: number;
-  resultAt?: { x: number; y: number };
-  resultBottom?: number;
 };
 
 /**
@@ -271,9 +283,22 @@ export type CircularMotionVectorsAnnotation = {
   orbitColor?: string;
 };
 
+/** Hợp lực động của con lắc đơn: thành phần tiếp tuyến và hướng tâm. */
+export type PendulumResultantAnnotation = {
+  kind: "pendulumResultant";
+  pivot: string;
+  body: string;
+  scale?: number;
+  maxLength?: number;
+  color?: string;
+  label?: string;
+  showMagnitude?: boolean;
+};
+
 export type Annotation =
   | VectorAnnotation
   | SpringVectorAnnotation
+  | SpringPullAnnotation
   | SpringActionReactionAnnotation
   | PhotogateTimerAnnotation
   | CircularMotionVectorsAnnotation
@@ -290,9 +315,6 @@ export type Scene = {
   // Hệ số đàn hồi e ∈ [0,1] dùng CHUNG cho mọi va chạm trong cảnh. Mặc định 1
   // (va chạm đàn hồi hoàn toàn — bảo toàn động năng). e = 0: va chạm mềm (dính).
   restitution?: number;
-  // Bật cho scene bảo toàn cơ năng lý tưởng. Kernel sẽ hiệu chỉnh sai số số học
-  // sau bước chiếu ràng buộc để W = Wđ + Wt không trôi theo thời gian.
-  conserveMechanicalEnergy?: boolean;
   // Lớp chú thích hình học (vector lực/vận tốc…). CHỈ để vẽ — kernel bỏ qua
   // hoàn toàn. Vắng (đa số preset) → không vẽ gì, hành vi y hệt trước.
   annotations?: Annotation[];
@@ -301,19 +323,6 @@ export type Scene = {
   // tự zoom lại mỗi lần đổi tham số. Vắng → renderer tự đo khung theo quỹ đạo
   // (hành vi mặc định cũ). Renderer vẫn luôn đảm bảo thấy mặt đất y=0.
   view?: { minX: number; maxX: number; minY: number; maxY: number };
-  // Optional horizontal display magnification. It changes rendering only;
-  // positions, distances, constraints and all physics remain in world units.
-  displayScaleX?: number;
-  // Restrict horizontal magnification to a focal interval and optionally
-  // compress the surrounding apparatus so the full scene remains visible.
-  displayScaleXRange?: { startX: number; endX: number; outsideScale?: number };
-  // Renderer-only switch for experiments whose apparatus must stay calibrated.
-  disableDragging?: boolean;
   // Khoảng cách từ mặt đất tới đáy canvas (px), dùng khi cần tránh lớp điều khiển nổi.
   groundPadding?: number;
-  // Khoảng đệm theo tỉ lệ chiều cao canvas; ưu tiên hơn groundPadding khi có.
-  groundPaddingRatio?: number;
-  // Dịch toàn bộ scene lên theo tỉ lệ chiều cao mà không làm thay đổi scale.
-  viewShiftYRatio?: number;
-  preferredScale?: number;
 };

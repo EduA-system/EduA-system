@@ -24,39 +24,10 @@ export const tongHopHaiLucCungPhuong: Preset = {
   desc: "Quan sát trạng thái cân bằng và không cân bằng của 2 lực cùng phương ngược chiều cùng tác dụng lên một vật",
   objective: "Quan sát trạng thái cân bằng và không cân bằng của 2 lực cùng phương ngược chiều cùng tác dụng lên một vật",
   sgkRef: "Vật lí 10",
-  paramGuide:
-    "Mô phỏng cho thấy hai lực cùng phương, ngược chiều tác dụng lên một vật sẽ tạo thành hợp lực R. Khi F₁ và F₂ bằng nhau, R = 0 nên vật cân bằng; khi một lực lớn hơn, vật gia tốc về phía lực đó. Hãy thay đổi các tham số để quan sát hướng và độ lớn các vector lực.",
   params: [
-    {
-      key: "F1",
-      label: "Lực F₁ (sang trái)",
-      unit: "N",
-      min: 0,
-      max: 20,
-      step: 1,
-      default: 10,
-      description: "F₁ là lực kéo vật sang trái; tăng F₁ làm hợp lực nghiêng về bên trái và gia tốc sang trái.",
-    },
-    {
-      key: "F2",
-      label: "Lực F₂ (sang phải)",
-      unit: "N",
-      min: 0,
-      max: 20,
-      step: 1,
-      default: 10,
-      description: "F₂ là lực kéo vật sang phải; tăng F₂ làm hợp lực nghiêng về bên phải và gia tốc sang phải.",
-    },
-    {
-      key: "m",
-      label: "Khối lượng vật",
-      unit: "kg",
-      min: 1,
-      max: 10,
-      step: 0.5,
-      default: 4,
-      description: "Khối lượng càng lớn thì cùng một hợp lực tạo ra gia tốc càng nhỏ: a = R/m.",
-    },
+    { key: "F1", label: "Lực F₁ (sang trái)", unit: "N", min: 0, max: 20, step: 1, default: 10 },
+    { key: "F2", label: "Lực F₂ (sang phải)", unit: "N", min: 0, max: 20, step: 1, default: 10 },
+    { key: "m", label: "Khối lượng vật", unit: "kg", min: 1, max: 10, step: 0.5, default: 4 },
   ],
   applyParams: (p) => {
     const { F1, F2, m } = values(p);
@@ -80,7 +51,7 @@ export const tongHopHaiLucCungPhuong: Preset = {
         { kind: "applied", body: "block", fx: -F1, fy: 0 },
         { kind: "applied", body: "block", fx: F2, fy: 0 },
       ],
-      constraints: [{ kind: "surface", x: 0, y: 0, angle: 0, length: 400, friction: 0 }],
+      constraints: [],
       // Vector minh hoạ hai lực, gốc bám theo vật khi nó di chuyển (chỉ để VẼ).
       annotations: [
         { kind: "vector", anchor: "block", dx: -F1 * N_TO_M, dy: 0, color: "#60a5fa", label: `F₁ = ${F1} N`, labelPosition: "outside" },
@@ -91,10 +62,8 @@ export const tongHopHaiLucCungPhuong: Preset = {
       // hai vector (lực tối đa 20 N ↦ 0.8 m) và một đoạn vật trôi ban đầu.
       view: { minX: -3.5, maxX: 3.5, minY: 0, maxY: 2.2 },
       groundPadding: 96,
-      disableDragging: true,
     };
   },
-  trackingLabels: { block: "Xe" },
   analysis: {
     landmarks: [
       {

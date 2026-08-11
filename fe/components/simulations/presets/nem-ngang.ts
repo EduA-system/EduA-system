@@ -13,43 +13,14 @@ export const nemNgang: Preset = {
   title: "Chuyển động ném ngang",
   domain: "Cơ học",
   grade: 10,
-  desc: "So sánh một quả cầu được ném ngang và một quả cầu được thả rơi từ cùng độ cao.",
-  objective: "Thấy rằng chuyển động ngang không làm thay đổi chuyển động rơi theo phương thẳng đứng: hai quả cầu chạm đất cùng lúc khi bỏ qua sức cản không khí.",
+  desc: "Ném một vật theo phương ngang và một vật thả rơi tự do từ cùng một độ cao và so sánh",
+  objective: "Ném một vật theo phương ngang và một vật thả rơi tự do từ cùng một độ cao và so sánh",
   sgkRef: "Vật lí 10",
   startPaused: true,
-  paramGuide:
-    "Mô phỏng so sánh quả cầu ném ngang với quả cầu thả rơi từ cùng độ cao. Cả hai có chuyển động thẳng đứng giống nhau nên chạm đất cùng lúc; vận tốc ngang chỉ làm quả cầu ném đi xa hơn theo phương ngang. Hãy thay đổi từng tham số bên dưới để quan sát thời gian rơi và tầm xa.",
   params: [
-    {
-      key: "h",
-      label: "Độ cao ném",
-      unit: "m",
-      min: 2,
-      max: 20,
-      step: 0.5,
-      default: 8,
-      description: "Độ cao càng lớn thì cả hai quả cầu rơi càng lâu; quả cầu ném ngang vì thế đi được xa hơn.",
-    },
-    {
-      key: "v0",
-      label: "Vận tốc ngang",
-      unit: "m/s",
-      min: 2,
-      max: 30,
-      step: 0.5,
-      default: 10,
-      description: "Vận tốc ngang càng lớn thì tầm xa càng lớn, nhưng thời gian chạm đất của hai quả cầu không đổi.",
-    },
-    {
-      key: "g",
-      label: "Gia tốc trọng trường",
-      unit: "m/s²",
-      min: 1.6,
-      max: 20,
-      step: 0.1,
-      default: 9.8,
-      description: "g càng lớn thì cả hai quả cầu rơi càng nhanh, thời gian bay và tầm xa của quả cầu ném ngang đều giảm.",
-    },
+    { key: "h", label: "Độ cao ném", unit: "m", min: 2, max: 20, step: 0.5, default: 8 },
+    { key: "v0", label: "Vận tốc ngang", unit: "m/s", min: 2, max: 30, step: 0.5, default: 10 },
+    { key: "g", label: "Gia tốc trọng trường", unit: "m/s²", min: 1.6, max: 20, step: 0.1, default: 9.8 },
   ],
   applyParams: (p) => {
     const h = p.h ?? 8;
@@ -77,10 +48,7 @@ export const nemNgang: Preset = {
         },
       ],
       forces: [{ kind: "gravity", g }],
-      // Trong toàn bộ miền tham số, friction = 20 đủ triệt tiêu vận tốc ngang
-      // ngay ở lần va chạm đầu tiên, nên hai quả cầu dừng tại điểm chạm đất.
-      constraints: [{ kind: "surface", x: 0, y: 0, angle: 0, length: 400, friction: 20 }],
-      disableDragging: true,
+      constraints: [{ kind: "surface", x: 0, y: 0, angle: 0, length: 400, friction: 0.6 }],
     };
   },
   annotations: (p) => {
@@ -107,10 +75,6 @@ export const nemNgang: Preset = {
       { kind: "rect", x: -1, y: h + 0.12, width: 0.18, height: 0.35, fill: "#475569", stroke: "#cbd5e1", strokeWidth: 1.5 },
       { kind: "rect", x: 0, y: h + 0.12, width: 0.18, height: 0.35, fill: "#475569", stroke: "#cbd5e1", strokeWidth: 1.5 },
     ];
-  },
-  trackingLabels: {
-    "nem-ngang": "Quả cầu ném ngang",
-    "roi-tu-do": "Quả cầu thả rơi",
   },
   bodyTrails: {
     "nem-ngang": { color: "#d6a62b", width: 2.5, dash: [8, 7] },

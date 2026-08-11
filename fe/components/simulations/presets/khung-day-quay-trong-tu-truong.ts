@@ -7,7 +7,7 @@ export const khungDayQuayTrongTuTruong: Preset = {
   kind: "magnetic-loop",
   title: "Khung dây quay trong từ trường",
   domain: "Điện & Từ",
-  grade: 12,
+  grade: 11,
   desc: "Máy phát xoay chiều: khung MNPQ quay giữa hai cực từ, cấp điện cho tải qua vành trượt.",
   objective: "Quan sát từ thông, suất điện động hình sin và hai lực từ cản chuyển động theo định luật Lenz.",
   sgkRef: "Vật lí 11 - Khung dây quay trong từ trường và cảm ứng điện từ",

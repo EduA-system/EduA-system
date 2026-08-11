@@ -14,6 +14,15 @@ export type RotationScene = {
   diskRadius: number; // m
   diskMass: number; // kg, đĩa đồng chất
   inertiaModel?: "disk" | "rod";
+  // Quả cân treo ở dây quấn trên rãnh tạo lực tiếp tuyến có moment F·d không
+  // đổi; vật gắn trực tiếp lên thanh/đĩa quay dùng cánh tay đòn d·cos(theta).
+  torqueModel?: "gravityLever" | "fixedTangential" | "attachedCords";
+  attachmentGeometry?: {
+    leftAnchorAngle: number;
+    rightAnchorAngle: number;
+    leftGuideDistance: number;
+    rightGuideDistance: number;
+  };
   gravity: number; // m/s²
   angularDamping: number; // N.m.s/rad, mô-men cản ổ trục
   ropeLength: number; // m, chiều dài không đổi của dây treo
