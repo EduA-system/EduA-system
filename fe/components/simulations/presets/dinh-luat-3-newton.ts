@@ -1,140 +1,90 @@
+import type { Scene } from "../engines/mechanics/types";
+import { collisionOutcome, collisionParams } from "../newton-third-law/collision-physics";
 import type { Preset } from "./types";
 
-const REST_LENGTH = 1.5;
-const TRACK_Y = 0.28;
+const APPROACH_DISTANCE_M = 9.88;
 
-function values(p: Record<string, number>) {
-  const mA = p.mA ?? 1;
-  const mB = p.mB ?? 1;
-  const k = p.k ?? 40;
-  const compression = p.compression ?? 0.4;
-  return { mA, mB, k, compression, force: k * compression };
+function collisionTime(values: Record<string, number>) {
+  const params = collisionParams(values);
+  return APPROACH_DISTANCE_M / (params.speedA + params.speedB);
 }
 
 export const dinhLuat3Newton: Preset = {
   id: "dinh-luat-3-newton",
-  title: "Định luật III Newton",
+  title: "Định luật III Newton — Va chạm và phản lực",
   domain: "Cơ học",
   grade: 10,
-  desc: "Quan sát một vật gắn lò xo áp lại gần một vật khác khi thả tay sẽ thấy hai vật đẩy nhau",
-  objective: "Khi xe A tác dụng lên xe B một lực, xe B đồng thời tác dụng trở lại lên xe A một lực cùng độ lớn và ngược chiều.",
+  desc: "Hai vật chuyển động từ xa, va chạm trực diện và bật ra theo lực–phản lực.",
+  objective: "Quan sát lực tiếp xúc xuất hiện đồng thời, bằng nhau và ngược chiều; đối chiếu vận tốc trước và sau va chạm.",
   sgkRef: "Vật lí 10 — Định luật III Newton",
   startPaused: true,
-  paramGuide:
-    "Định luật III Newton: khi xe A tác dụng lên xe B một lực, xe B cũng tác dụng trở lại lên xe A một lực cùng độ lớn, ngược chiều. Hãy thay đổi tham số để quan sát cặp lực tương tác và chuyển động của từng xe.",
   params: [
-    {
-      key: "mA",
-      label: "Khối lượng xe A",
-      unit: "kg",
-      min: 0.5,
-      max: 8,
-      step: 0.1,
-      default: 1,
-      description: "Xe A càng nặng thì lực từ xe B làm xe A tăng tốc chậm hơn; lực A tác dụng B và B tác dụng A vẫn bằng nhau.",
-    },
-    {
-      key: "mB",
-      label: "Khối lượng xe B",
-      unit: "kg",
-      min: 0.5,
-      max: 8,
-      step: 0.1,
-      default: 1,
-      description: "Xe B càng nặng thì lực từ xe A làm xe B tăng tốc chậm hơn; lực A tác dụng B và B tác dụng A vẫn bằng nhau.",
-    },
-    {
-      key: "k",
-      label: "Độ cứng lò xo",
-      unit: "N/m",
-      min: 10,
-      max: 80,
-      step: 1,
-      default: 40,
-      description: "Lò xo càng cứng thì cặp lực A tác dụng B và B tác dụng A càng lớn, hai xe tách ra nhanh hơn.",
-    },
-    {
-      key: "compression",
-      label: "Độ nén ban đầu",
-      unit: "m",
-      min: 0.15,
-      max: 0.6,
-      step: 0.05,
-      default: 0.4,
-      description: "Lò xo bị nén càng nhiều thì cặp lực tương tác giữa hai xe càng lớn.",
-    },
+    { key: "mA", label: "Khối lượng vật A", unit: "kg", min: 0.5, max: 8, step: 0.1, default: 1 },
+    { key: "mB", label: "Khối lượng vật B", unit: "kg", min: 0.5, max: 8, step: 0.1, default: 1 },
+    { key: "speedA", label: "Tốc độ ban đầu A", unit: "m/s", min: 0.5, max: 5, step: 0.1, default: 2.2 },
+    { key: "speedB", label: "Tốc độ ban đầu B", unit: "m/s", min: 0.5, max: 5, step: 0.1, default: 2.2 },
   ],
-  bodyLabels: { "vat-a": "Xe A", "vat-b": "Xe B" },
-  trackingLabels: { "vat-a": "Xe A (xanh)", "vat-b": "Xe B (cam)" },
-  hideBodyLabelsOnCanvas: true,
-  hideCoordinateLabels: true,
-  applyParams: (p) => {
-    const { mA, mB, k, compression } = values(p);
-    const initialLength = REST_LENGTH - compression;
+  quickPresets: [
+    { label: "Va chạm cân bằng", params: { mA: 1, mB: 1, speedA: 2.2, speedB: 2.2 } },
+    { label: "B nặng hơn", params: { mA: 1, mB: 2, speedA: 2.2, speedB: 2.2 } },
+    { label: "Va chạm mạnh", params: { mA: 1, mB: 1, speedA: 3.2, speedB: 2.8 } },
+  ],
+  bodyLabels: { "vat-a": "A", "vat-b": "B" },
+  applyParams: (values): Scene => {
+    const params = collisionParams(values);
     return {
       bodies: [
-        { id: "vat-a", x: -initialLength / 2, y: TRACK_Y, vx: 0, vy: 0, mass: mA, radius: 0.24, visual: { shape: "box", color: "#60a5fa", label: "A", wheels: true } },
-        { id: "vat-b", x: initialLength / 2, y: TRACK_Y, vx: 0, vy: 0, mass: mB, radius: 0.24, visual: { shape: "box", color: "#f59e0b", label: "B", wheels: true } },
+        { id: "vat-a", x: -APPROACH_DISTANCE_M / 2, y: 0.28, vx: params.speedA, vy: 0, mass: params.mA, radius: 0.24, visual: { shape: "box", color: "#38bdf8", label: "A", wheels: true } },
+        { id: "vat-b", x: APPROACH_DISTANCE_M / 2, y: 0.28, vx: -params.speedB, vy: 0, mass: params.mB, radius: 0.24, visual: { shape: "box", color: "#fb923c", label: "B", wheels: true } },
       ],
-      forces: [{ kind: "spring", a: "vat-a", b: "vat-b", k, restLength: REST_LENGTH, damping: 0, compressionOnly: true }],
+      forces: [],
       constraints: [{ kind: "surface", x: 0, y: 0, angle: 0, length: 400, friction: 0 }],
-      annotations: [
-        {
-          kind: "springActionReaction",
-          a: "vat-a",
-          b: "vat-b",
-          forceScale: 0.03,
-          colorA: "#60a5fa",
-          colorB: "#f59e0b",
-          labelA: "F_B→A",
-          labelB: "F_A→B",
-        },
-      ],
       view: { minX: -5, maxX: 5, minY: 0, maxY: 2.2 },
-      disableDragging: true,
-      // Keep the road and both carts above the shared zoom controls.
       groundPadding: 120,
     };
   },
   analysis: {
     landmarks: [
       {
-        key: "compressed-spring",
-        label: "Trước khi thả",
-        description: "Lò xo đang nén nên sẵn sàng đẩy A sang trái và B sang phải. Hai vật vẫn đứng yên vì mô phỏng đang chờ nút Bắt đầu.",
+        key: "approach",
+        label: "Trước va chạm",
+        description: "Hai vật còn cách xa nhau nên chưa có lực tiếp xúc giữa A và B.",
         atTime: () => 0,
-        values: (p) => {
-          const { compression, force } = values(p);
+        values: (values) => {
+          const params = collisionParams(values);
           return [
-            { label: "Độ nén Δℓ", value: compression.toFixed(2), unit: "m" },
-            { label: "Lực đàn hồi k·Δℓ", value: force.toFixed(2), unit: "N" },
-            { label: "Vận tốc A, B", value: "0", unit: "m/s" },
+            { label: "Tốc độ A (sang phải)", value: params.speedA.toFixed(2), unit: "m/s" },
+            { label: "Tốc độ B (sang trái)", value: params.speedB.toFixed(2), unit: "m/s" },
+            { label: "Động lượng hệ", value: (params.mA * params.speedA - params.mB * params.speedB).toFixed(2), unit: "kg·m/s" },
           ];
         },
       },
       {
-        key: "action-reaction",
-        label: "Cặp lực tương tác",
-        description: "Khi xe A tác dụng lên xe B một lực, xe B đồng thời tác dụng trở lại lên xe A một lực. Hai lực luôn bằng nhau về độ lớn, ngược chiều và đặt lên hai xe khác nhau.",
-        values: (p) => {
-          const { force } = values(p);
+        key: "impact",
+        label: "Đang va chạm",
+        description: "Lực A tác dụng lên B và lực B tác dụng lên A xuất hiện cùng lúc, bằng nhau và ngược chiều.",
+        atTime: collisionTime,
+        values: (values) => {
+          const outcome = collisionOutcome(collisionParams(values));
           return [
-            { label: "|F_B→A|", value: force.toFixed(2), unit: "N" },
-            { label: "|F_A→B|", value: force.toFixed(2), unit: "N" },
-            { label: "Quan hệ", value: "F_B→A = −F_A→B", unit: "" },
+            { label: "Xung lượng |J|", value: outcome.impulse.toFixed(2), unit: "N·s" },
+            { label: "F_B→A", value: outcome.impulse.toFixed(2), unit: "N·s" },
+            { label: "F_A→B", value: outcome.impulse.toFixed(2), unit: "N·s" },
+            { label: "Quan hệ", value: "F_B→A = −F_A→B" },
           ];
         },
       },
       {
-        key: "different-accelerations",
-        label: "Gia tốc của hai vật",
-        description: "Lực tác dụng lên hai vật bằng nhau, nhưng gia tốc có thể khác nhau vì a = F/m. Vật nhẹ hơn tăng tốc nhiều hơn.",
-        values: (p) => {
-          const { mA, mB, force } = values(p);
+        key: "after-impact",
+        label: "Sau va chạm",
+        description: "Hai vật bật ra với vận tốc mới; tổng động lượng của hệ được bảo toàn.",
+        atTime: (values) => collisionTime(values) + 1.2,
+        values: (values) => {
+          const outcome = collisionOutcome(collisionParams(values));
           return [
-            { label: "|a_A| ban đầu", value: (force / mA).toFixed(2), unit: "m/s²" },
-            { label: "|a_B| ban đầu", value: (force / mB).toFixed(2), unit: "m/s²" },
-            { label: "Kết luận", value: "Lực bằng nhau không đồng nghĩa gia tốc bằng nhau", unit: "" },
+            { label: "Vận tốc sau của A", value: `${Math.abs(outcome.vA).toFixed(2)} ${outcome.vA < 0 ? "←" : "→"}`, unit: "m/s" },
+            { label: "Vận tốc sau của B", value: `${Math.abs(outcome.vB).toFixed(2)} ${outcome.vB < 0 ? "←" : "→"}`, unit: "m/s" },
+            { label: "p trước = p sau", value: `${outcome.momentumBefore.toFixed(2)} = ${outcome.momentumAfter.toFixed(2)}`, unit: "kg·m/s" },
           ];
         },
       },

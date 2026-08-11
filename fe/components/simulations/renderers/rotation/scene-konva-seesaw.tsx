@@ -127,7 +127,7 @@ export function SceneKonvaSeesaw({
 
     const infoPanel = new Konva.Rect({ x: 16, y: 16, width: 220, height: 90, fill: "#111c2f", opacity: 0.94, stroke: "#334155", strokeWidth: 1, cornerRadius: 12, listening: false });
     const info = new Konva.Text({ x: 30, y: 29, width: 196, fontSize: 12, fill: "#cbd5e1", fontFamily: "monospace", lineHeight: 1.55, listening: false });
-    const status = new Konva.Text({ x: 8, y: Math.max(108, Math.min(132, H * 0.18)), width: Math.min(280, W - 16), align: "left", fontSize: 13, fontStyle: "bold", fill: "#5eead4", fontFamily: "monospace", listening: false });
+    const status = new Konva.Text({ x: 250, y: 22, width: Math.max(180, W - 500), align: "center", fontSize: 13, fontStyle: "bold", fill: "#5eead4", fontFamily: "monospace", listening: false });
     layer.add(infoPanel, info, status);
 
     const localToStage = (x: number, y: number, theta: number) => {

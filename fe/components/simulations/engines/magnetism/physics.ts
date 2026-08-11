@@ -1,7 +1,6 @@
 import type { MagneticScene, MagneticState } from "./types";
 
 const MIN_DISTANCE = 0.35;
-const EPSILON = 1e-9;
 
 export function normalizeAngle(angle: number) {
   return Math.atan2(Math.sin(angle), Math.cos(angle));
@@ -34,9 +33,7 @@ export function initialMagneticState(): MagneticState {
 
 export function stepMagnetic(scene: MagneticScene, state: MagneticState, dt: number, magnet = scene.barMagnet): MagneticState {
   if (dt <= 0) return state;
-  const acceleration =
-    (magneticTorque(scene, state, magnet) - scene.compass.damping * state.angularVelocity) /
-    Math.max(scene.compass.inertia, EPSILON);
+  const acceleration = (magneticTorque(scene, state, magnet) - scene.compass.damping * state.angularVelocity) / scene.compass.inertia;
   const angularVelocity = state.angularVelocity + acceleration * dt;
   return { angle: normalizeAngle(state.angle + angularVelocity * dt), angularVelocity };
 }

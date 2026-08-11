@@ -1,7 +1,7 @@
 import type { Preset } from "./types";
 export const tuongTacHaiTamKimLoaiMangDongDien: Preset = {
   id: "tuong-tac-hai-tam-kim-loai-mang-dong-dien", kind: "parallel-current-sheets",
-  title: "Tương tác giữa 2 tấm kim loại mang dòng điện", domain: "Điện & Từ", grade: 12,
+  title: "Tương tác giữa 2 tấm kim loại mang dòng điện", domain: "Điện & Từ", grade: 11,
   desc: "Hai tấm kim loại treo song song chịu lực từ khi có dòng điện chạy qua.",
   objective: "Quan sát lực từ giữa hai dòng điện song song: cùng chiều đẩy nhau, ngược chiều hút nhau.",
   sgkRef: "Vật lí 11 — Từ trường của dòng điện",

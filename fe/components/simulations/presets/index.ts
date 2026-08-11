@@ -10,7 +10,6 @@ import { quyTacMomentDiaTron } from "./quy-tac-moment-dia-tron";
 import { phanTichLuc } from "./phan-tich-luc";
 import { tongHopHaiLucCungPhuong } from "./tong-hop-hai-luc-cung-phuong";
 import { roiTuDo } from "./roi-tu-do";
-import { matNghiengMaSat } from "./mat-nghieng-ma-sat";
 import { nemXien } from "./nem-xien";
 import { nemNgang } from "./nem-ngang";
 import { mangCongGalilei } from "./mang-cong-galilei";
@@ -22,6 +21,7 @@ import { lucHuongTam } from "./luc-huong-tam";
 import { conLacLoXo } from "./con-lac-lo-xo";
 import { daoDongTatDan } from "./dao-dong-tat-dan";
 import { congHuongConLac } from "./cong-huong-con-lac";
+import { matNghiengMaSat } from "./mat-nghieng-ma-sat";
 import { vaChamDanHoi } from "./va-cham-dan-hoi";
 import { vaChamMem } from "./va-cham-mem";
 import { ongNewton } from "./ong-newton-khong-khi";
@@ -61,7 +61,7 @@ import { doNhietDungRiengCuaNuoc } from "./do-nhiet-dung-rieng-cua-nuoc";
 import { doNhietNongChayRiengCuaNuocDa } from "./do-nhiet-nong-chay-rieng-cua-nuoc-da";
 import { doNhietHoaHoiRiengCuaNuoc } from "./do-nhiet-hoa-hoi-rieng-cua-nuoc";
 
-export type { Preset, PresetParam, ParamCalculation, Domain } from "./types";
+export type { Preset, PresetParam, Domain } from "./types";
 
 export const PRESETS: Preset[] = [
   dinhLuat2Newton,
@@ -72,7 +72,6 @@ export const PRESETS: Preset[] = [
   phanTichLuc,
   tongHopHaiLucCungPhuong,
   roiTuDo,
-  matNghiengMaSat,
   nemXien,
   nemNgang,
   mangCongGalilei,
@@ -84,6 +83,7 @@ export const PRESETS: Preset[] = [
   conLacLoXo,
   daoDongTatDan,
   congHuongConLac,
+  matNghiengMaSat,
   vaChamDanHoi,
   vaChamMem,
   ongNewton,

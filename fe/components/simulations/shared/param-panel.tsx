@@ -14,7 +14,6 @@ export type ParamDef = {
   max: number;
   step?: number;
   unit?: string;
-  description?: string;
 };
 
 // Tweakpane mặc định theme tối, lệch tông với giao diện sáng EDUA. Set trực
@@ -89,13 +88,6 @@ export function ParamPanel({
         max: p.max,
         step: p.step,
       });
-      if (p.description) {
-        binding.element.classList.add("eduatp-param-with-description");
-        const description = document.createElement("p");
-        description.className = "eduatp-param-description";
-        description.textContent = p.description;
-        binding.element.appendChild(description);
-      }
       binding.on("change", (ev) => {
         if (syncingRef.current) return;
         onChangeRef.current(p.key, ev.value as number);
@@ -136,18 +128,7 @@ export function ParamPanel({
           CSS), nên không phóng to được bằng inline style var. Selector 2 lớp ở
           đây có độ ưu tiên cao hơn rule gốc của Tweakpane nên luôn thắng, bất
           kể thứ tự nạp stylesheet. */}
-      <style>{`
-        .eduatp-panel .tp-rotv { font-size: 13px; }
-        .eduatp-panel .eduatp-param-with-description { flex-wrap: wrap; }
-        .eduatp-panel .eduatp-param-description {
-          box-sizing: border-box;
-          flex: 0 0 100%;
-          margin: 5px 4px 8px;
-          color: #8a8178;
-          font-size: 11px;
-          line-height: 1.45;
-        }
-      `}</style>
+      <style>{`.eduatp-panel .tp-rotv { font-size: 13px; }`}</style>
       <div ref={containerRef} />
     </div>
   );

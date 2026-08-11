@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import Konva from "konva";
-import type { VariableCurrentInductionScene } from "../../engines/electromagnetic-induction/types";
+import { memo, useEffect, useRef } from "react";
 import {
   initialVariableCurrentState,
+  peakCircuitCurrent,
   stepVariableCurrentInduction,
 } from "../../engines/electromagnetic-induction/physics";
+import type {
+  VariableCurrentInductionScene,
+  VariableCurrentInductionState,
+} from "../../engines/electromagnetic-induction/types";
 import { useContainerSize } from "../../shared/use-container-size";
 
 type Props = {
@@ -17,298 +20,581 @@ type Props = {
   speed?: number;
 };
 
-const DESIGN_WIDTH = 1000;
-const DESIGN_HEIGHT = 600;
-const COLORS = {
-  background: "#080d14",
-  surface: "#101923",
-  surfaceRaised: "#16212d",
-  border: "#2b3a48",
-  text: "#e5edf5",
-  muted: "#8da0b3",
-  cyan: "#38bdf8",
-  amber: "#fbbf24",
-  orange: "#fb923c",
-  red: "#fb7185",
-  green: "#34d399",
+const DESIGN_WIDTH = 1100;
+const DESIGN_HEIGHT = 650;
+const TAU = Math.PI * 2;
+
+function roundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  context.beginPath();
+  context.roundRect(x, y, width, height, radius);
+}
+
+function drawPanel(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const gradient = context.createLinearGradient(x, y, x, y + height);
+  gradient.addColorStop(0, "#10233c");
+  gradient.addColorStop(1, "#0b1a2f");
+  context.fillStyle = gradient;
+  context.strokeStyle = "#29415f";
+  context.lineWidth = 2;
+  roundedRect(context, x, y, width, height, 18);
+  context.fill();
+  context.stroke();
+}
+
+function drawMeter(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  label: string,
+  normalizedValue: number,
+  reading: string,
+  accent: string,
+) {
+  const shell = context.createRadialGradient(x - radius * 0.35, y - radius * 0.4, 3, x, y, radius);
+  shell.addColorStop(0, "#f8fafc");
+  shell.addColorStop(0.72, "#dbe4ee");
+  shell.addColorStop(1, "#94a3b8");
+  context.fillStyle = shell;
+  context.strokeStyle = "#f8fafc";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.arc(x, y, radius, 0, TAU);
+  context.fill();
+  context.stroke();
+
+  context.strokeStyle = "#64748b";
+  context.lineWidth = 1.4;
+  for (let index = 0; index <= 10; index += 1) {
+    const angle = Math.PI * 0.72 + (index / 10) * Math.PI * 1.56;
+    context.beginPath();
+    context.moveTo(x + Math.cos(angle) * (radius - 13), y + Math.sin(angle) * (radius - 13));
+    context.lineTo(x + Math.cos(angle) * (radius - 7), y + Math.sin(angle) * (radius - 7));
+    context.stroke();
+  }
+
+  const needleAngle = -Math.PI / 2 + Math.max(-1, Math.min(1, normalizedValue)) * Math.PI * 0.58;
+  context.strokeStyle = accent;
+  context.lineWidth = 3;
+  context.lineCap = "round";
+  context.beginPath();
+  context.moveTo(x, y + 4);
+  context.lineTo(x + Math.cos(needleAngle) * (radius - 12), y + Math.sin(needleAngle) * (radius - 12));
+  context.stroke();
+  context.fillStyle = "#0f172a";
+  context.beginPath();
+  context.arc(x, y + 4, 5, 0, TAU);
+  context.fill();
+
+  context.textAlign = "center";
+  context.fillStyle = "#0f172a";
+  context.font = "800 16px Inter, sans-serif";
+  context.fillText(label, x, y - 2);
+  context.font = "700 10px Inter, sans-serif";
+  context.fillStyle = "#334155";
+  context.fillText(reading, x, y + 19);
+}
+
+type GraphOptions = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  duration: number;
+  axisAmplitude: number;
+  unit: string;
+  symbol: string;
+  color: string;
+  history: TracePoint[];
+  currentTime: number;
+  value: "voltage" | "current";
+  valueScale?: number;
 };
 
-function addLabel(container: Konva.Container, number: number, label: string, x: number, y: number) {
-  const group = new Konva.Group({ x, y, listening: false });
-  group.add(
-    new Konva.Circle({ radius: 13, fill: COLORS.surfaceRaised, stroke: COLORS.cyan, strokeWidth: 1.5 }),
-    new Konva.Text({ x: -10, y: -7, width: 20, text: String(number), align: "center", fontSize: 12, fontStyle: "bold", fill: COLORS.text }),
-    new Konva.Text({ x: 20, y: -8, text: label, fontSize: 13, fontStyle: "bold", fill: COLORS.text }),
-  );
-  container.add(group);
-}
+type TracePoint = {
+  time: number;
+  voltage: number;
+  current: number;
+};
 
-function addGrid(layer: Konva.Layer, width: number, height: number) {
-  for (let x = 0; x <= width; x += 40) {
-    layer.add(new Konva.Line({ points: [x, 0, x, height], stroke: "#17222d", strokeWidth: 1, listening: false }));
+function drawGraph(context: CanvasRenderingContext2D, options: GraphOptions) {
+  const {
+    x,
+    y,
+    width,
+    height,
+    duration,
+    axisAmplitude,
+    unit,
+    symbol,
+    color,
+    history,
+    currentTime,
+    value,
+    valueScale = 1,
+  } = options;
+  drawPanel(context, x, y, width, height);
+
+  const left = x + 48;
+  const right = x + width - 18;
+  const top = y + 35;
+  const bottom = y + height - 35;
+  const middle = (top + bottom) / 2;
+  const plotHeight = bottom - top;
+
+  context.save();
+  context.strokeStyle = "rgba(56,189,248,.22)";
+  context.lineWidth = 1;
+  for (let column = 0; column <= 12; column += 1) {
+    const gx = left + (column / 12) * (right - left);
+    context.beginPath();
+    context.moveTo(gx, top);
+    context.lineTo(gx, bottom);
+    context.stroke();
   }
-  for (let y = 0; y <= height; y += 40) {
-    layer.add(new Konva.Line({ points: [0, y, width, y], stroke: "#17222d", strokeWidth: 1, listening: false }));
+  for (let row = 0; row <= 8; row += 1) {
+    const gy = top + (row / 8) * plotHeight;
+    context.beginPath();
+    context.moveTo(left, gy);
+    context.lineTo(right, gy);
+    context.stroke();
   }
+
+  context.strokeStyle = "#64748b";
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.moveTo(left, top);
+  context.lineTo(left, bottom);
+  context.moveTo(left, middle);
+  context.lineTo(right, middle);
+  context.stroke();
+
+  context.fillStyle = "#cbd5e1";
+  context.font = "700 11px Inter, sans-serif";
+  context.textAlign = "left";
+  context.fillText(`${symbol} (${unit})`, left - 1, y + 21);
+  context.textAlign = "right";
+  context.fillText("t (s)", right, y + height - 11);
+  context.font = "600 9px Inter, sans-serif";
+  context.fillStyle = "#8fa5bf";
+  context.textAlign = "right";
+  context.fillText(axisAmplitude.toFixed(axisAmplitude >= 10 ? 0 : 1), left - 6, top + 4);
+  context.fillText("0", left - 6, middle + 3);
+  context.fillText(`−${axisAmplitude.toFixed(axisAmplitude >= 10 ? 0 : 1)}`, left - 6, bottom + 3);
+  context.textAlign = "center";
+  for (let tick = 0; tick <= 6; tick += 1) {
+    const displayedTime = duration * tick / 6;
+    context.fillText(
+      displayedTime.toFixed(1),
+      left + (tick / 6) * (right - left),
+      bottom + 16,
+    );
+  }
+
+  const visible = history.filter((point) => point.time >= currentTime - duration - 0.01);
+  if (visible.length > 0) {
+    context.save();
+    context.beginPath();
+    context.rect(left, top, right - left, bottom - top);
+    context.clip();
+    context.strokeStyle = color;
+    context.lineWidth = 2.7;
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.shadowColor = color;
+    context.shadowBlur = 8;
+    context.beginPath();
+    visible.forEach((point, index) => {
+      const age = currentTime - point.time;
+      const px = right - (age / duration) * (right - left);
+      const rawValue = point[value] * valueScale;
+      const normalized = Math.max(-1.1, Math.min(1.1, rawValue / axisAmplitude));
+      const py = middle - normalized * plotHeight * 0.44;
+      if (index === 0) context.moveTo(px, py);
+      else context.lineTo(px, py);
+    });
+    context.stroke();
+    context.shadowBlur = 0;
+
+    const latest = visible[visible.length - 1]!;
+    const latestValue = latest[value] * valueScale;
+    const latestY = middle
+      - Math.max(-1.1, Math.min(1.1, latestValue / axisAmplitude)) * plotHeight * 0.44;
+    context.fillStyle = color;
+    context.beginPath();
+    context.arc(right, latestY, 4.5, 0, TAU);
+    context.fill();
+    context.restore();
+  }
+
+  context.fillStyle = "#8fa5bf";
+  context.font = "600 9px Inter, sans-serif";
+  context.textAlign = "right";
+  context.fillText(`cửa sổ ${duration.toFixed(1)} s`, right - 4, top + 12);
+  context.restore();
 }
 
-export function SceneKonvaVariableCurrentInduction({
-  scene,
-  running,
-  resetSignal,
-  onRunningChange,
-  speed = 1,
-}: Props) {
-  const { ref, size } = useContainerSize<HTMLDivElement>();
-  const runningRef = useRef(running);
-  const speedRef = useRef(speed);
+function drawCircuit(
+  context: CanvasRenderingContext2D,
+  scene: VariableCurrentInductionScene,
+  state: VariableCurrentInductionState,
+  switchClosed: boolean,
+  running: boolean,
+) {
+  drawPanel(context, 30, 28, 500, 594);
+  context.fillStyle = "#e2e8f0";
+  context.font = "800 16px Inter, sans-serif";
+  context.textAlign = "left";
+  context.fillText("MẠCH ĐIỆN XOAY CHIỀU", 55, 60);
+  context.fillStyle = "#8fa5bf";
+  context.font = "600 11px Inter, sans-serif";
+  context.fillText("Bấm khoá K; điều chỉnh Rₓ ở bảng Tham số", 55, 81);
 
-  useEffect(() => { runningRef.current = running; }, [running]);
-  useEffect(() => { speedRef.current = speed; }, [speed]);
+  const activeLevel = switchClosed ? 0.55 + Math.abs(Math.sin(TAU * state.phase)) * 0.45 : 0;
+  const wireColor = switchClosed ? `rgba(56,189,248,${activeLevel})` : "#52647b";
+  context.strokeStyle = wireColor;
+  context.lineWidth = 4;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.beginPath();
+  context.moveTo(90, 258);
+  context.lineTo(90, 160);
+  context.lineTo(178, 160);
+  context.moveTo(250, 160);
+  context.lineTo(465, 160);
+  context.lineTo(465, 430);
+  context.lineTo(90, 430);
+  context.lineTo(90, 332);
+  context.moveTo(310, 160);
+  context.lineTo(310, 218);
+  context.moveTo(310, 312);
+  context.lineTo(310, 334);
+  context.moveTo(310, 396);
+  context.lineTo(310, 430);
+  context.moveTo(418, 160);
+  context.lineTo(418, 238);
+  context.moveTo(418, 302);
+  context.lineTo(418, 430);
+  context.stroke();
 
-  useEffect(() => {
-    const container = ref.current;
-    const { width, height } = size;
-    if (!container || !width || !height) return;
+  // Nguồn xoay chiều.
+  context.fillStyle = "#d9f99d";
+  context.strokeStyle = "#f8fafc";
+  context.lineWidth = 2.5;
+  context.beginPath();
+  context.arc(90, 295, 36, 0, TAU);
+  context.fill();
+  context.stroke();
+  context.strokeStyle = "#166534";
+  context.lineWidth = 2;
+  context.beginPath();
+  for (let index = 0; index <= 40; index += 1) {
+    const px = 70 + index;
+    const py = 295 - Math.sin((index / 40) * TAU) * 8;
+    if (index === 0) context.moveTo(px, py);
+    else context.lineTo(px, py);
+  }
+  context.stroke();
+  context.fillStyle = "#d9f99d";
+  context.font = "800 12px Inter, sans-serif";
+  context.textAlign = "center";
+  context.fillText(`${scene.frequency.toFixed(0)} Hz`, 90, 351);
 
-    const stage = new Konva.Stage({ container, width, height });
-    const layer = new Konva.Layer();
-    stage.add(layer);
-    layer.add(new Konva.Rect({ x: 0, y: 0, width, height, fill: COLORS.background }));
-    addGrid(layer, width, height);
+  // Khoá K.
+  context.fillStyle = "#dbe7f3";
+  context.beginPath();
+  context.arc(178, 160, 6, 0, TAU);
+  context.arc(250, 160, 6, 0, TAU);
+  context.fill();
+  context.strokeStyle = "#f59e0b";
+  context.lineWidth = 6;
+  context.beginPath();
+  context.moveTo(178, 160);
+  context.lineTo(switchClosed ? 250 : 236, switchClosed ? 160 : 130);
+  context.stroke();
+  context.fillStyle = switchClosed ? "#6ee7b7" : "#fda4af";
+  context.font = "800 12px Inter, sans-serif";
+  context.fillText(switchClosed ? "K đóng" : "K mở", 214, 116);
 
-    const scale = Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT);
-    const board = new Konva.Group({
-      x: (width - DESIGN_WIDTH * scale) / 2,
-      y: (height - DESIGN_HEIGHT * scale) / 2,
-      scaleX: scale,
-      scaleY: scale,
-    });
-    layer.add(board);
+  // Biến trở X trên nhánh chính.
+  const resistorGradient = context.createLinearGradient(280, 218, 340, 312);
+  resistorGradient.addColorStop(0, "#e2e8f0");
+  resistorGradient.addColorStop(1, "#94a3b8");
+  context.fillStyle = resistorGradient;
+  context.strokeStyle = "#f8fafc";
+  context.lineWidth = 2;
+  roundedRect(context, 282, 218, 56, 94, 8);
+  context.fill();
+  context.stroke();
+  context.strokeStyle = "#475569";
+  context.lineWidth = 2.3;
+  context.beginPath();
+  context.moveTo(310, 228);
+  for (let index = 0; index < 7; index += 1) {
+    context.lineTo(index % 2 === 0 ? 298 : 322, 238 + index * 10);
+  }
+  context.lineTo(310, 302);
+  context.stroke();
+  const resistanceRatio = Math.max(0, Math.min(1, (scene.resistance - 100) / 200));
+  const sliderY = 230 + resistanceRatio * 66;
+  context.strokeStyle = "#f97316";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.moveTo(350, sliderY - 12);
+  context.lineTo(318, sliderY);
+  context.stroke();
+  context.fillStyle = "#fb923c";
+  context.beginPath();
+  context.arc(352, sliderY - 13, 5, 0, TAU);
+  context.fill();
+  context.fillStyle = "#e2e8f0";
+  context.font = "900 14px Inter, sans-serif";
+  context.fillText("X", 310, 207);
 
-    board.add(
-      new Konva.Text({ x: 28, y: 25, text: "CẢM ỨNG ĐIỆN TỪ DO DÒNG ĐIỆN BIẾN THIÊN", fontSize: 17, fontStyle: "bold", fill: COLORS.text }),
-      new Konva.Text({ x: 28, y: 52, text: "Bấm khoá K hoặc kéo con chạy. Quan sát dòng sơ cấp, từ thông và kim điện kế.", fontSize: 13, fill: COLORS.muted }),
-      new Konva.Line({ points: [28, 84, 972, 84], stroke: COLORS.border, strokeWidth: 1 }),
-      new Konva.Text({ x: 70, y: 105, width: 330, text: "MẠCH CẢM ỨNG", align: "center", fontSize: 12, fontStyle: "bold", fill: COLORS.cyan }),
-      new Konva.Text({ x: 590, y: 105, width: 330, text: "MẠCH TẠO TỪ TRƯỜNG", align: "center", fontSize: 12, fontStyle: "bold", fill: COLORS.amber }),
-    );
+  const peakCurrent = peakCircuitCurrent(scene, true);
+  drawMeter(
+    context,
+    310,
+    365,
+    31,
+    "A",
+    peakCurrent > 0 ? state.current / peakCurrent : 0,
+    `${(state.current * 1000).toFixed(1)} mA`,
+    "#2563eb",
+  );
+  drawMeter(
+    context,
+    418,
+    270,
+    32,
+    "V",
+    scene.peakVoltage > 0 ? state.voltage / scene.peakVoltage : 0,
+    `${state.voltage.toFixed(2)} V`,
+    "#ef4444",
+  );
 
-    const wire = (points: number[], color = "#62778b", width = 4) => {
-      const line = new Konva.Line({ points, stroke: color, strokeWidth: width, lineCap: "round", lineJoin: "round" });
-      board.add(line);
-      return line;
-    };
-
-    // Mạch cảm ứng kín bên trái.
-    wire([130, 350, 130, 455, 330, 455, 330, 364], "#64748b");
-    wire([178, 350, 178, 415, 390, 415, 390, 364], "#64748b");
-
-    // Mạch sơ cấp bên phải. Đường sáng nét đứt phía trên cho thấy dòng điện đang chạy.
-    wire([520, 270, 520, 160, 698, 160], "#64748b");
-    wire([822, 160, 930, 160, 930, 400], "#64748b");
-    wire([870, 445, 830, 445], "#64748b");
-    wire([670, 445, 560, 445, 560, 350], "#64748b");
-    const currentPath = new Konva.Line({
-      points: [520, 270, 520, 160, 698, 160, 822, 160, 930, 160, 930, 400],
-      stroke: COLORS.cyan,
-      strokeWidth: 3,
-      dash: [12, 10],
-      lineCap: "round",
-      opacity: 0,
-      listening: false,
-    });
-    board.add(currentPath);
-
-    // Điện kế.
-    const meter = new Konva.Group({ x: 154, y: 285 });
-    board.add(meter);
-    meter.add(
-      new Konva.Rect({ x: -78, y: -82, width: 156, height: 142, cornerRadius: 12, fill: COLORS.surface, stroke: "#52677a", strokeWidth: 2 }),
-      new Konva.Arc({ x: 0, y: 0, innerRadius: 56, outerRadius: 60, angle: 180, rotation: 180, fill: "#71869a" }),
-      new Konva.Text({ x: -55, y: 27, width: 110, text: "ĐIỆN KẾ", align: "center", fontSize: 12, fontStyle: "bold", fill: COLORS.text }),
-      new Konva.Circle({ x: -24, y: 60, radius: 7, fill: "#2563eb", stroke: "#93c5fd", strokeWidth: 1.5 }),
-      new Konva.Circle({ x: 24, y: 60, radius: 7, fill: "#be123c", stroke: "#fda4af", strokeWidth: 1.5 }),
-    );
-    for (let i = 0; i <= 10; i += 1) {
-      const angle = Math.PI + Math.PI * i / 10;
-      meter.add(new Konva.Line({
-        points: [Math.cos(angle) * 44, Math.sin(angle) * 44, Math.cos(angle) * 55, Math.sin(angle) * 55],
-        stroke: i === 5 ? COLORS.red : COLORS.muted,
-        strokeWidth: i === 5 ? 2 : 1,
-      }));
-    }
-    meter.add(new Konva.Text({ x: -8, y: -54, width: 16, text: "0", align: "center", fontSize: 11, fontStyle: "bold", fill: COLORS.red }));
-    const needle = new Konva.Line({ points: [0, 0, 0, -48], stroke: COLORS.red, strokeWidth: 3, lineCap: "round" });
-    meter.add(needle, new Konva.Circle({ radius: 5, fill: COLORS.text }));
-
-    // Cuộn dây kín và nam châm điện đặt cạnh nhau để nhìn rõ liên kết từ thông.
-    const secondary = new Konva.Group({ x: 360, y: 320 });
-    board.add(secondary);
-    secondary.add(new Konva.Rect({ x: -60, y: -50, width: 120, height: 100, cornerRadius: 9, fill: "#3b210d", stroke: "#9a5b20", strokeWidth: 2 }));
-    for (let i = 0; i < 15; i += 1) {
-      secondary.add(new Konva.Ellipse({ x: -46 + i * 6.6, y: 0, radiusX: 12, radiusY: 41, stroke: COLORS.amber, strokeWidth: 2.2 }));
-    }
-
-    const electromagnet = new Konva.Group({ x: 550, y: 320 });
-    board.add(electromagnet);
-    electromagnet.add(
-      new Konva.Rect({ x: -80, y: -17, width: 160, height: 34, cornerRadius: 5, fill: "#64748b", stroke: "#a8bac9", strokeWidth: 2 }),
-      new Konva.Rect({ x: -66, y: -45, width: 52, height: 90, cornerRadius: 7, fill: "#4a2a12", stroke: "#9a5b20", strokeWidth: 2 }),
-      new Konva.Rect({ x: 14, y: -45, width: 52, height: 90, cornerRadius: 7, fill: "#4a2a12", stroke: "#9a5b20", strokeWidth: 2 }),
-    );
-    for (const offset of [-40, 40]) {
-      for (let i = 0; i < 8; i += 1) {
-        electromagnet.add(new Konva.Ellipse({ x: offset - 21 + i * 6, y: 0, radiusX: 9, radiusY: 36, stroke: COLORS.orange, strokeWidth: 2.2 }));
+  // Hạt tải điện dao động qua lại trên dây dẫn.
+  if (switchClosed) {
+    const displacement = Math.sin(TAU * state.phase) * 15;
+    context.fillStyle = running ? "#67e8f9" : "#94a3b8";
+    context.shadowColor = "#22d3ee";
+    context.shadowBlur = running ? 9 : 0;
+    for (let index = 0; index < 6; index += 1) {
+      const y = 180 + index * 38 + displacement;
+      if (y > 180 && y < 420) {
+        context.beginPath();
+        context.arc(465, y, 3.2, 0, TAU);
+        context.fill();
       }
     }
+    context.shadowBlur = 0;
+  }
 
-    const fieldLines = new Konva.Group({ x: 455, y: 320, listening: false, opacity: 0.12 });
-    for (const spread of [26, 44, 62]) {
-      fieldLines.add(
-        new Konva.Line({ points: [-70, -8, -40, -spread, 40, -spread, 70, -8], stroke: COLORS.cyan, strokeWidth: 1.7, tension: 0.45 }),
-        new Konva.Line({ points: [-70, 8, -40, spread, 40, spread, 70, 8], stroke: COLORS.cyan, strokeWidth: 1.7, tension: 0.45 }),
-      );
-    }
-    board.add(fieldLines);
-    const fluxLabel = new Konva.Text({ x: 410, y: 202, width: 95, text: "Từ thông ổn định", align: "center", fontSize: 11, fontStyle: "bold", fill: COLORS.muted });
-    board.add(fluxLabel);
+  // Giá trị điện trở chỉ đọc tại đây; việc thay đổi nằm trong bảng Tham số chung.
+  context.fillStyle = "rgba(15,35,60,.78)";
+  context.strokeStyle = "#334a65";
+  context.lineWidth = 1.5;
+  roundedRect(context, 64, 482, 432, 78, 12);
+  context.fill();
+  context.stroke();
+  context.fillStyle = "#8fa5bf";
+  context.font = "700 10px Inter, sans-serif";
+  context.textAlign = "left";
+  context.fillText("GIÁ TRỊ TỪ BẢNG THAM SỐ", 82, 504);
+  context.fillStyle = "#fde68a";
+  context.font = "900 18px Inter, sans-serif";
+  context.fillText(`Rₓ = ${scene.resistance.toFixed(0)} Ω`, 82, 535);
+  context.fillStyle = "#7dd3fc";
+  context.font = "800 12px Inter, sans-serif";
+  context.fillText(`I₀ = U₀/Rₓ = ${(peakCurrent * 1000).toFixed(1)} mA`, 270, 533);
 
-    // Nguồn DC.
-    const supply = new Konva.Group({ x: 760, y: 160 });
-    board.add(supply);
-    supply.add(
-      new Konva.Rect({ x: -62, y: -42, width: 124, height: 84, cornerRadius: 10, fill: COLORS.surface, stroke: "#52677a", strokeWidth: 2 }),
-      new Konva.Text({ x: -45, y: -26, width: 90, text: "NGUỒN DC", align: "center", fontSize: 12, fontStyle: "bold", fill: COLORS.text }),
-      new Konva.Text({ x: -45, y: -5, width: 90, text: `${scene.supplyVoltage.toFixed(1)} V`, align: "center", fontSize: 15, fontStyle: "bold", fill: COLORS.green }),
-      new Konva.Circle({ x: -31, y: 41, radius: 7, fill: "#2563eb", stroke: "#93c5fd", strokeWidth: 1.5 }),
-      new Konva.Circle({ x: 31, y: 41, radius: 7, fill: "#be123c", stroke: "#fda4af", strokeWidth: 1.5 }),
-    );
-
-    // Biến trở kéo ngang.
-    const rheostat = new Konva.Group({ x: 750, y: 445 });
-    board.add(rheostat);
-    rheostat.add(
-      new Konva.Rect({ x: -80, y: -48, width: 160, height: 96, cornerRadius: 10, fill: COLORS.surface, stroke: "#52677a", strokeWidth: 2 }),
-      new Konva.Line({ points: [-58, 4, 58, 4], stroke: "#5f6f7f", strokeWidth: 12, lineCap: "round" }),
-      new Konva.Text({ x: -60, y: 25, width: 120, text: "KÉO ĐỂ ĐỔI R", align: "center", fontSize: 10, fontStyle: "bold", fill: COLORS.muted }),
-      new Konva.Text({ x: -63, y: -30, text: "0 Ω", fontSize: 10, fill: COLORS.muted }),
-      new Konva.Text({ x: 31, y: -30, width: 35, text: `${scene.rheostatMaxResistance} Ω`, align: "right", fontSize: 10, fill: COLORS.muted }),
-    );
-    let rheostatFraction = 0.55;
-    const resistanceFill = new Konva.Line({ points: [-58, 4, 6, 4], stroke: COLORS.orange, strokeWidth: 12, lineCap: "round" });
-    rheostat.add(resistanceFill);
-    const slider = new Konva.Group({ x: 6, y: 4, draggable: true });
-    slider.add(
-      new Konva.Circle({ radius: 14, fill: COLORS.text, stroke: COLORS.orange, strokeWidth: 3 }),
-      new Konva.Line({ points: [0, -18, 0, -31], stroke: COLORS.text, strokeWidth: 3, lineCap: "round" }),
-      new Konva.Line({ points: [-5, -25, 0, -32, 5, -25], stroke: COLORS.text, strokeWidth: 2, lineCap: "round", lineJoin: "round" }),
-    );
-    rheostat.add(slider);
-    slider.on("dragstart", () => { runningRef.current = true; onRunningChange(true); });
-    slider.on("dragmove", () => {
-      const x = Math.max(-58, Math.min(58, slider.x()));
-      slider.position({ x, y: 4 });
-      rheostatFraction = (x + 58) / 116;
-      resistanceFill.points([-58, 4, x, 4]);
-    });
-    slider.on("mouseenter", () => { stage.container().style.cursor = "grab"; });
-    slider.on("mouseleave", () => { stage.container().style.cursor = "default"; });
-
-    // Khoá K, vùng bấm lớn và trạng thái viết rõ.
-    let switchClosed = false;
-    const switchGroup = new Konva.Group({ x: 915, y: 442 });
-    board.add(switchGroup);
-    const switchBase = new Konva.Rect({ x: -45, y: -42, width: 90, height: 84, cornerRadius: 10, fill: COLORS.surface, stroke: "#52677a", strokeWidth: 2 });
-    const leftTerminal = new Konva.Circle({ x: -23, y: 2, radius: 7, fill: "#71869a" });
-    const rightTerminal = new Konva.Circle({ x: 23, y: 2, radius: 7, fill: "#71869a" });
-    const switchArm = new Konva.Line({ points: [-23, 2, 20, -16], stroke: COLORS.amber, strokeWidth: 7, lineCap: "round" });
-    const switchLabel = new Konva.Text({ x: -38, y: 23, width: 76, text: "K MỞ", align: "center", fontSize: 11, fontStyle: "bold", fill: COLORS.red });
-    switchGroup.add(switchBase, leftTerminal, rightTerminal, switchArm, switchLabel);
-    switchGroup.on("click tap", () => {
-      switchClosed = !switchClosed;
-      switchArm.points(switchClosed ? [-23, 2, 23, 2] : [-23, 2, 20, -16]);
-      switchArm.stroke(switchClosed ? COLORS.green : COLORS.amber);
-      switchLabel.text(switchClosed ? "K ĐÓNG" : "K MỞ");
-      switchLabel.fill(switchClosed ? COLORS.green : COLORS.red);
-      runningRef.current = true;
-      onRunningChange(true);
-    });
-    switchGroup.on("mouseenter", () => { stage.container().style.cursor = "pointer"; });
-    switchGroup.on("mouseleave", () => { stage.container().style.cursor = "default"; });
-
-    addLabel(board, 3, "Điện kế", 74, 166);
-    addLabel(board, 2, "Cuộn dây kín", 300, 166);
-    addLabel(board, 1, "Nam châm điện", 460, 392);
-    addLabel(board, 5, "Nguồn điện", 570, 132);
-    addLabel(board, 6, "Biến trở", 673, 374);
-    addLabel(board, 4, "Khoá K", 870, 374);
-
-    const statusPanel = new Konva.Rect({ x: 28, y: 515, width: 944, height: 58, cornerRadius: 10, fill: COLORS.surface, stroke: COLORS.border, strokeWidth: 1.5 });
-    const observation = new Konva.Text({ x: 48, y: 528, width: 560, fontSize: 13, fontStyle: "bold", fill: COLORS.text });
-    const readout = new Konva.Text({ x: 615, y: 528, width: 337, align: "right", fontSize: 13, fontFamily: "monospace", fill: COLORS.cyan });
-    const hint = new Konva.Text({ x: 48, y: 549, width: 560, text: "Dòng điện chỉ xuất hiện trong cuộn kín khi từ thông đang thay đổi.", fontSize: 11, fill: COLORS.muted });
-    board.add(statusPanel, observation, readout, hint);
-
-    let state = initialVariableCurrentState();
-    let previousCurrent = 0;
-    let dashOffset = 0;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const draw = () => {
-      needle.rotation(state.needle * 70);
-      const changing = Math.abs(state.inducedEmf) > 0.002;
-      const currentRate = state.primaryCurrent - previousCurrent;
-      const fieldStrength = Math.min(0.9, 0.12 + state.primaryCurrent * 1.8);
-      fieldLines.opacity(fieldStrength);
-      currentPath.opacity(switchClosed && state.primaryCurrent > 0.005 ? 0.95 : 0);
-      if (!reduceMotion && switchClosed) {
-        dashOffset = (dashOffset - 1.4) % 22;
-        currentPath.dashOffset(dashOffset);
-      }
-      fluxLabel.text(changing ? (currentRate >= 0 ? "Từ thông đang tăng" : "Từ thông đang giảm") : "Từ thông ổn định");
-      fluxLabel.fill(changing ? COLORS.cyan : COLORS.muted);
-      observation.text(
-        changing
-          ? state.inducedEmf > 0
-            ? "Kim lệch phải: xuất hiện dòng điện cảm ứng"
-            : "Kim lệch trái: dòng cảm ứng đổi chiều"
-          : switchClosed
-            ? "Dòng sơ cấp đã ổn định: kim trở về vạch 0"
-            : "Mạch sơ cấp đang hở: chưa có dòng điện",
-      );
-      observation.fill(changing ? COLORS.green : COLORS.text);
-      const resistance = scene.primaryResistance + rheostatFraction * scene.rheostatMaxResistance;
-      readout.text(`R = ${resistance.toFixed(1)} Ω    I₁ = ${state.primaryCurrent.toFixed(2)} A`);
-      previousCurrent = state.primaryCurrent;
-      layer.batchDraw();
-    };
-    draw();
-
-    let frame = 0;
-    let last = performance.now();
-    const loop = (now: number) => {
-      const dt = Math.min((now - last) / 1000, 1 / 30) * speedRef.current;
-      last = now;
-      if (runningRef.current) {
-        state = stepVariableCurrentInduction(scene, state, switchClosed, rheostatFraction, dt);
-        draw();
-      }
-      frame = requestAnimationFrame(loop);
-    };
-    frame = requestAnimationFrame(loop);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      stage.destroy();
-    };
-  }, [scene, size, resetSignal, onRunningChange, ref]);
-
-  return (
-    <div
-      ref={ref}
-      className="h-full w-full overflow-hidden rounded-lg bg-[#080d14]"
-      role="img"
-      aria-label="Mạch cảm ứng điện từ nền tối gồm điện kế, cuộn dây kín, nam châm điện, nguồn, biến trở và khoá K. Bấm khoá K hoặc kéo con chạy biến trở để quan sát dòng điện cảm ứng."
-    />
+  context.fillStyle = switchClosed ? "rgba(16,185,129,.16)" : "rgba(244,63,94,.14)";
+  context.strokeStyle = switchClosed ? "#34d399" : "#fb7185";
+  context.lineWidth = 1.5;
+  roundedRect(context, 63, 580, 434, 28, 9);
+  context.fill();
+  context.stroke();
+  context.fillStyle = switchClosed ? "#a7f3d0" : "#fecdd3";
+  context.font = "800 11px Inter, sans-serif";
+  context.fillText(
+    switchClosed
+      ? `Mạch kín · u và i cùng pha · I₀ = ${(peakCurrent * 1000).toFixed(1)} mA`
+      : "Mạch hở · i = 0 và hai đồ thị trở về trục thời gian",
+    280,
+    599,
   );
 }
+
+export const SceneKonvaVariableCurrentInduction = memo(
+  function SceneKonvaVariableCurrentInduction({
+    scene,
+    running,
+    resetSignal,
+    onRunningChange,
+    speed = 1,
+  }: Props) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const runningRef = useRef(running);
+    const speedRef = useRef(speed);
+    const { ref, size } = useContainerSize<HTMLDivElement>();
+
+    useEffect(() => {
+      runningRef.current = running;
+    }, [running]);
+    useEffect(() => {
+      speedRef.current = speed;
+    }, [speed]);
+
+    useEffect(() => {
+      const canvas = canvasRef.current;
+      if (!canvas || !size.width || !size.height) return;
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(size.width * dpr);
+      canvas.height = Math.round(size.height * dpr);
+      canvas.style.width = `${size.width}px`;
+      canvas.style.height = `${size.height}px`;
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      let switchClosed = true;
+      let state = initialVariableCurrentState(scene);
+      const history: TracePoint[] = [{ time: 0, voltage: 0, current: 0 }];
+      let frameId = 0;
+      let last = performance.now();
+      let transform = { scale: 1, offsetX: 0, offsetY: 0 };
+
+      const toDesignPoint = (event: PointerEvent) => {
+        const bounds = canvas.getBoundingClientRect();
+        return {
+          x: (event.clientX - bounds.left - transform.offsetX) / transform.scale,
+          y: (event.clientY - bounds.top - transform.offsetY) / transform.scale,
+        };
+      };
+
+      const onPointerDown = (event: PointerEvent) => {
+        const point = toDesignPoint(event);
+        if (point.x >= 160 && point.x <= 265 && point.y >= 105 && point.y <= 185) {
+          switchClosed = !switchClosed;
+          runningRef.current = true;
+          onRunningChange(true);
+          canvas.style.cursor = "pointer";
+        }
+      };
+
+      const onPointerMove = (event: PointerEvent) => {
+        const point = toDesignPoint(event);
+        const overSwitch = point.x >= 160 && point.x <= 265 && point.y >= 105 && point.y <= 185;
+        canvas.style.cursor = overSwitch ? "pointer" : "default";
+      };
+
+      canvas.addEventListener("pointerdown", onPointerDown);
+      canvas.addEventListener("pointermove", onPointerMove);
+
+      const render = (now: number) => {
+        const dt = Math.min((now - last) / 1000, 1 / 30)
+          * speedRef.current
+          * scene.visualTimeScale;
+        last = now;
+        if (runningRef.current) {
+          state = stepVariableCurrentInduction(scene, state, switchClosed, dt);
+          history.push({ time: state.elapsed, voltage: state.voltage, current: state.current });
+          const oldestVisibleTime = state.elapsed - scene.graphDuration - 0.04;
+          while (history.length > 2 && history[1]!.time < oldestVisibleTime) history.shift();
+        } else if (!switchClosed && (state.voltage !== 0 || state.current !== 0)) {
+          state = { ...state, voltage: 0, current: 0 };
+        }
+
+        const scale = Math.min(size.width / DESIGN_WIDTH, size.height / DESIGN_HEIGHT);
+        const offsetX = (size.width - DESIGN_WIDTH * scale) / 2;
+        const offsetY = (size.height - DESIGN_HEIGHT * scale) / 2;
+        transform = { scale, offsetX, offsetY };
+
+        context.setTransform(dpr, 0, 0, dpr, 0, 0);
+        context.clearRect(0, 0, size.width, size.height);
+        context.fillStyle = "#081526";
+        context.fillRect(0, 0, size.width, size.height);
+        context.save();
+        context.translate(offsetX, offsetY);
+        context.scale(scale, scale);
+
+        drawCircuit(context, scene, state, switchClosed, runningRef.current);
+        drawGraph(context, {
+          x: 552,
+          y: 28,
+          width: 518,
+          height: 282,
+          duration: scene.graphDuration,
+          axisAmplitude: 10,
+          unit: "V",
+          symbol: "u",
+          color: "#fb7185",
+          history,
+          currentTime: state.elapsed,
+          value: "voltage",
+        });
+        drawGraph(context, {
+          x: 552,
+          y: 340,
+          width: 518,
+          height: 282,
+          duration: scene.graphDuration,
+          axisAmplitude: 100,
+          unit: "mA",
+          symbol: "i",
+          color: "#38bdf8",
+          history,
+          currentTime: state.elapsed,
+          value: "current",
+          valueScale: 1000,
+        });
+
+        context.strokeStyle = "rgba(148,163,184,.38)";
+        context.lineWidth = 1.4;
+        context.setLineDash([5, 6]);
+        context.beginPath();
+        context.moveTo(450, 270);
+        context.lineTo(552, 170);
+        context.moveTo(342, 365);
+        context.lineTo(552, 480);
+        context.stroke();
+        context.setLineDash([]);
+        context.restore();
+
+        frameId = requestAnimationFrame(render);
+      };
+
+      frameId = requestAnimationFrame(render);
+      return () => {
+        cancelAnimationFrame(frameId);
+        canvas.removeEventListener("pointerdown", onPointerDown);
+        canvas.removeEventListener("pointermove", onPointerMove);
+      };
+    }, [onRunningChange, ref, resetSignal, scene, size.height, size.width]);
+
+    return (
+      <div ref={ref} className="h-full w-full overflow-hidden rounded-lg bg-[#081526]">
+        <canvas
+          ref={canvasRef}
+          className="h-full w-full touch-none"
+          role="img"
+          aria-label="Mạch điện xoay chiều gồm nguồn, khoá K, biến trở X, ampe kế, vôn kế và đồ thị điện áp cùng cường độ dòng điện theo thời gian"
+        />
+      </div>
+    );
+  },
+);

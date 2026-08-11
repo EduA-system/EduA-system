@@ -123,10 +123,6 @@ export function BrownianDetailView({
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
-      {/* Khung trang, không thuộc thí nghiệm: lặp lại y hệt LegacyExperimentLayout
-          trong app/mo-phong-vat-ly/page.tsx, vốn đã bọc sẵn cho nhóm thí nghiệm
-          điều phối theo preset.id. Nhóm điều phối theo `kind` (14 component) lại
-          tự vẽ lấy, nên mỗi file đều chép lại đúng dòng Sidebar này. */}
       <Sidebar activeHref="/mo-phong-vat-ly" />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[#e8e2d9] bg-white px-4">

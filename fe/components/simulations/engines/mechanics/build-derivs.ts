@@ -64,61 +64,6 @@ export function buildKernel(scene: Scene): SceneKernel {
   const velOf = (id: string, s: StateVec): Vec2 =>
     fixedPos[id] ? { x: 0, y: 0 } : { x: s[kVX(id)]!, y: s[kVY(id)]! };
 
-  const pointsOf = (s: StateVec): Record<string, PointState> => {
-    const pts: Record<string, PointState> = {};
-    for (const b of scene.bodies) {
-      const p = posOf(b.id, s);
-      const v = velOf(b.id, s);
-      pts[b.id] = { x: p.x, y: p.y, vx: v.x, vy: v.y };
-    }
-    return pts;
-  };
-
-  const gravity = scene.forces.find((f) => f.kind === "gravity");
-  const gravityG = gravity?.kind === "gravity" ? gravity.g ?? 9.8 : 0;
-  const kineticEnergyOfPoints = (pts: Record<string, PointState>): number => {
-    let ke = 0;
-    for (const b of dynamic) {
-      const p = pts[b.id]!;
-      ke += 0.5 * b.mass * (p.vx * p.vx + p.vy * p.vy);
-    }
-    return ke;
-  };
-  const potentialEnergyOfPoints = (pts: Record<string, PointState>): number => {
-    let pe = 0;
-    for (const b of dynamic) {
-      pe += b.mass * gravityG * pts[b.id]!.y;
-    }
-    for (const f of scene.forces) {
-      if (f.kind !== "spring") continue;
-      const pa = pts[f.a], pb = pts[f.b];
-      if (!pa || !pb) continue;
-      const ext = Math.hypot(pb.x - pa.x, pb.y - pa.y) - f.restLength;
-      if (f.compressionOnly && ext >= 0) continue;
-      pe += 0.5 * f.k * ext * ext;
-    }
-    return pe;
-  };
-  const mechanicalEnergyOfPoints = (pts: Record<string, PointState>): number =>
-    kineticEnergyOfPoints(pts) + potentialEnergyOfPoints(pts);
-  // Mục tiêu năng lượng được khoá từ trạng thái ĐÃ CHIẾU ràng buộc (giống hệt
-  // trạng thái mà mọi bước chạy thật xuất phát từ, xem stepScene/kernel.project
-  // ở renderer) — không phải từ toạ độ khai báo thô. Nếu vị trí ban đầu trong
-  // Scene không khớp tuyệt đối rod/curveTrack (vd lệch nhỏ do làm tròn số),
-  // dùng thẳng toạ độ thô sẽ khoá sai mục tiêu và bơm/rút năng lượng từ frame 1.
-  //
-  // Đồng thời: nếu scene vừa bật conserveMechanicalEnergy vừa có va chạm KHÔNG
-  // đàn hồi (restitution < 1), bỏ qua việc khoá năng lượng hoàn toàn — va chạm
-  // đó CHỦ ĐÍCH làm mất động năng, ép năng lượng về lại target sẽ triệt tiêu
-  // đúng phần mất mát đó. Hai cấu hình này không nên dùng chung.
-  const targetMechanicalEnergy = (() => {
-    if (!scene.conserveMechanicalEnergy) return null;
-    if (hasCollidable && (scene.restitution ?? 1) < 1) return null;
-    const pts = pointsOf(initialState);
-    projectConstraints(scene, pts, invMass);
-    return mechanicalEnergyOfPoints(pts);
-  })();
-
   // Pha 1 — LỰC: cộng hợp lực rồi áp định luật II Newton a = F/m.
   const derivs = (s: StateVec): StateVec => {
     const F = netForces(scene, {
@@ -138,11 +83,7 @@ export function buildKernel(scene: Scene): SceneKernel {
   // Pha 2 — RÀNG BUỘC: chiếu trạng thái về thoả mãn rod/rope.
   // Pha 3 — VA CHẠM: giải xung lượng tròn–tròn (chạy cả khi không có ràng buộc).
   const project = (s: StateVec): StateVec => {
-    // Không được early-return chỉ dựa vào constraints/hasCollidable — scene
-    // thuần lực (lò xo/trọng lực, không ràng buộc, không va chạm) vẫn có thể
-    // bật conserveMechanicalEnergy và cần chạy khối hiệu chỉnh năng lượng bên
-    // dưới; targetMechanicalEnergy == null tương đương cờ đó đang tắt.
-    if (scene.constraints.length === 0 && !hasCollidable && targetMechanicalEnergy == null) return s;
+    if (scene.constraints.length === 0 && !hasCollidable) return s;
     // Gom mọi vật (cả fixed) thành các điểm cho bộ giải ràng buộc.
     const pts: Record<string, PointState> = {};
     for (const b of scene.bodies) {
@@ -152,24 +93,6 @@ export function buildKernel(scene: Scene): SceneKernel {
     }
     projectConstraints(scene, pts, invMass);
     if (hasCollidable) resolveCollisions(scene, pts, invMass, stickyPairs);
-    if (targetMechanicalEnergy != null) {
-      const targetKinetic = Math.max(0, targetMechanicalEnergy - potentialEnergyOfPoints(pts));
-      const currentKinetic = kineticEnergyOfPoints(pts);
-      if (targetKinetic <= 1e-10) {
-        for (const b of dynamic) {
-          const p = pts[b.id]!;
-          p.vx = 0;
-          p.vy = 0;
-        }
-      } else if (currentKinetic > 1e-10) {
-        const velocityScale = Math.sqrt(targetKinetic / currentKinetic);
-        for (const b of dynamic) {
-          const p = pts[b.id]!;
-          p.vx *= velocityScale;
-          p.vy *= velocityScale;
-        }
-      }
-    }
     // Ghi kết quả trở lại StateVec — chỉ vật động (fixed vẫn đứng yên).
     const out: StateVec = { ...s };
     for (const b of dynamic) {
