@@ -62,6 +62,7 @@ function LessonPlanApprovalScreen() {
   }
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const detailRequestSeq = useRef(0);
   const [detail, setDetail] = useState<WeeklyTaskDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [preview, setPreview] = useState<{ title: string; document: TiptapNode | string } | null>(null);
@@ -99,20 +100,24 @@ function LessonPlanApprovalScreen() {
   const handleExpand = useCallback(
     async (id: string) => {
       if (expandedId === id) {
+        detailRequestSeq.current += 1;
         setExpandedId(null);
         setDetail(null);
+        setDetailLoading(false);
         return;
       }
+      const requestSeq = detailRequestSeq.current + 1;
+      detailRequestSeq.current = requestSeq;
       setExpandedId(id);
       setDetail(null);
       setDetailLoading(true);
       try {
         const d = await getWeeklyTask(authFetch, id);
-        setDetail(d);
+        if (detailRequestSeq.current === requestSeq) setDetail(d);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Không thể tải chi tiết giáo án.");
+        if (detailRequestSeq.current === requestSeq) setError(e instanceof Error ? e.message : "Không thể tải chi tiết giáo án.");
       } finally {
-        setDetailLoading(false);
+        if (detailRequestSeq.current === requestSeq) setDetailLoading(false);
       }
     },
     [authFetch, expandedId],
@@ -322,7 +327,7 @@ function LessonPlanApprovalScreen() {
 
                   {expandedId === t.id ? (
                     <div className="border-t border-[#eee7df] bg-[#fbfaf8] px-5 py-4 text-sm">
-                      {detailLoading || !detail ? (
+                      {detailLoading || !detail || detail.id !== t.id ? (
                         <p className="flex items-center gap-2 text-[#6b6b6b]">
                           <Loader2 className="size-4 animate-spin" />
                           Đang tải chi tiết...
