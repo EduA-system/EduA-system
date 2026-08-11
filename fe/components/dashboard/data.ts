@@ -43,8 +43,8 @@ export const navGroups: NavGroup[] = [
     label: "M\u00f4 ph\u1ecfng & kh\u00e1m ph\u00e1",
     items: [
       { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/homepage", expanded: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"], requiredSubjects: ["PHYSICS", "CHEMISTRY"] },
-      { label: "V\u1eadt l\u00fd", icon: "physics", href: "/mo-phong-vat-ly", child: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"], requiredSubjects: ["PHYSICS"] },
-      { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/periodic-table", child: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"], requiredSubjects: ["CHEMISTRY"] },
+      { label: "V\u1eadt l\u00fd", icon: "physics", href: "/mo-phong-vat-ly", child: true, requiredRole: ["TEACHER", "MODERATOR"], requiredSubjects: ["PHYSICS"] },
+      { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/periodic-table", child: true, requiredRole: ["TEACHER", "MODERATOR"], requiredSubjects: ["CHEMISTRY"] },
       { label: "C\u1ea5u t\u1ea1o ch\u1ea5t", icon: "atom", href: "/molecules", child: true, requiredRole: ["TEACHER", "MODERATOR"], requiredSubjects: ["CHEMISTRY"] },
     ],
   },

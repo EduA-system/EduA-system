@@ -64,9 +64,9 @@ describe("canAccessRoute — theo môn", () => {
     expect(canAccessRoute("/molecules", moderator("MATH"))).toBe(false);
   });
 
-  it("vai trò không gắn môn không bị ràng buộc môn", () => {
-    expect(canAccessRoute("/mo-phong-vat-ly", principal)).toBe(true);
-    expect(canAccessRoute("/periodic-table", student)).toBe(true);
+  it("chặn Hiệu trưởng và Học sinh khỏi mô phỏng theo môn", () => {
+    expect(canAccessRoute("/mo-phong-vat-ly", principal)).toBe(false);
+    expect(canAccessRoute("/periodic-table", student)).toBe(false);
   });
 });
 
