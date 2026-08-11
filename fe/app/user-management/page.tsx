@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardIcon } from "@/components/ui/DashboardIcon";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { hasAnyRole } from "@/lib/auth/permissions";
@@ -92,6 +93,11 @@ type PrincipalAccountStats = {
 };
 
 type Tab = "moderator" | "teacher" | "it-staff";
+
+type DisableAccountTarget =
+  | { kind: "moderator"; item: SubjectAccountItem }
+  | { kind: "teacher"; item: SubjectAccountItem }
+  | { kind: "it-staff"; item: AccountItem };
 
 function availableSubject(items: SubjectAccountItem[], currentSubject: string): string {
   const activeSubjects = new Set(items.filter((item) => item.status !== "DISABLED").map((item) => item.subject));
@@ -231,6 +237,8 @@ function UserManagementContent() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [msg, setMsg] = useState("");
+  const [disableAccountTarget, setDisableAccountTarget] = useState<DisableAccountTarget | null>(null);
+  const [disablingAccount, setDisablingAccount] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>(isPrincipal ? "moderator" : "teacher");
   const [principalStats, setPrincipalStats] = useState<PrincipalAccountStats | null>(null);
   const [teacherStats, setTeacherStats] = useState<AccountStatusStats | null>(null);
@@ -344,15 +352,13 @@ function UserManagementContent() {
 
   async function toggleModerator(item: SubjectAccountItem) {
     const isDisabled = item.status === "DISABLED";
-    if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
+    if (!isDisabled) {
+      setDisableAccountTarget({ kind: "moderator", item });
+      return;
+    }
     try {
-      if (isDisabled) {
-        await api(authFetch, `/principal/moderators/${item.id}/reactivate`, { method: "PATCH" });
-        setMsg("Đã kích hoạt lại.");
-      } else {
-        await api(authFetch, `/principal/moderators/${item.id}`, { method: "DELETE" });
-        setMsg("Đã thu hồi.");
-      }
+      await api(authFetch, `/principal/moderators/${item.id}/reactivate`, { method: "PATCH" });
+      setMsg("Đã kích hoạt lại.");
       await loadModerators(moderatorData?.page ?? 0);
       await loadPrincipalStats();
     } catch (e) {
@@ -417,15 +423,13 @@ function UserManagementContent() {
 
   async function toggleTeacher(item: SubjectAccountItem) {
     const isDisabled = item.status === "DISABLED";
-    if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
+    if (!isDisabled) {
+      setDisableAccountTarget({ kind: "teacher", item });
+      return;
+    }
     try {
-      if (isDisabled) {
-        await api(authFetch, `/moderator/teachers/${item.id}/reactivate`, { method: "PATCH" });
-        setMsg("Đã kích hoạt lại.");
-      } else {
-        await api(authFetch, `/moderator/teachers/${item.id}`, { method: "DELETE" });
-        setMsg("Đã thu hồi.");
-      }
+      await api(authFetch, `/moderator/teachers/${item.id}/reactivate`, { method: "PATCH" });
+      setMsg("Đã kích hoạt lại.");
       await loadTeachers(teacherData?.page ?? 0);
       await loadTeacherStats();
     } catch (e) {
@@ -491,19 +495,43 @@ function UserManagementContent() {
 
   async function toggleItStaff(item: AccountItem) {
     const isDisabled = item.status === "DISABLED";
-    if (!isDisabled && !window.confirm("Xác nhận thu hồi quyền truy cập của tài khoản này?")) return;
+    if (!isDisabled) {
+      setDisableAccountTarget({ kind: "it-staff", item });
+      return;
+    }
     try {
-      if (isDisabled) {
-        await api(authFetch, `/principal/it-staff/${item.id}/reactivate`, { method: "PATCH" });
-        setMsg("Đã kích hoạt lại.");
-      } else {
-        await api(authFetch, `/principal/it-staff/${item.id}`, { method: "DELETE" });
-        setMsg("Đã thu hồi.");
-      }
+      await api(authFetch, `/principal/it-staff/${item.id}/reactivate`, { method: "PATCH" });
+      setMsg("Đã kích hoạt lại.");
       await loadItStaff(itStaffData?.page ?? 0);
       await loadPrincipalStats();
     } catch (e) {
       setMsg(String(e));
+    }
+  }
+
+  async function confirmDisableAccount() {
+    if (!disableAccountTarget) return;
+    setDisablingAccount(true);
+    try {
+      if (disableAccountTarget.kind === "moderator") {
+        await api(authFetch, `/principal/moderators/${disableAccountTarget.item.id}`, { method: "DELETE" });
+        await loadModerators(moderatorData?.page ?? 0);
+        await loadPrincipalStats();
+      } else if (disableAccountTarget.kind === "teacher") {
+        await api(authFetch, `/moderator/teachers/${disableAccountTarget.item.id}`, { method: "DELETE" });
+        await loadTeachers(teacherData?.page ?? 0);
+        await loadTeacherStats();
+      } else {
+        await api(authFetch, `/principal/it-staff/${disableAccountTarget.item.id}`, { method: "DELETE" });
+        await loadItStaff(itStaffData?.page ?? 0);
+        await loadPrincipalStats();
+      }
+      setMsg("Đã thu hồi.");
+      setDisableAccountTarget(null);
+    } catch (e) {
+      setMsg(String(e));
+    } finally {
+      setDisablingAccount(false);
     }
   }
 
@@ -1011,6 +1039,20 @@ function UserManagementContent() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={disableAccountTarget !== null}
+        onClose={() => setDisableAccountTarget(null)}
+        onConfirm={() => void confirmDisableAccount()}
+        loading={disablingAccount}
+        title="Thu hồi quyền truy cập?"
+        description={
+          <>
+            Tài khoản <span className="font-semibold text-[#1f1f1f]">{disableAccountTarget?.item.fullName ?? disableAccountTarget?.item.email}</span> sẽ bị thu hồi quyền truy cập hiện tại.
+          </>
+        }
+        confirmLabel="Thu hồi"
+        variant="danger"
+      />
     </main>
   );
 }

@@ -123,7 +123,7 @@ public class SubmissionService {
     @Transactional(readOnly = true)
     public SubmissionViews.Roster listSubmissions(UUID classId, UUID resourceId) {
         requireOwnedClass(classId);
-        ClassResource resource = requireSubmittableResource(classId, resourceId);
+        ClassResource resource = requireClassResource(classId, resourceId);
 
         Map<UUID, SubmissionRepository.SubmissionWithFiles> submissionsByStudent = submissionRepository
                 .findAllByResource(resourceId).stream()

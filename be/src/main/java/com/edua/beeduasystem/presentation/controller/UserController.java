@@ -1,8 +1,10 @@
 package com.edua.beeduasystem.presentation.controller;
 
+import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.presentation.dto.auth.UpdateProfileRequest;
 import com.edua.beeduasystem.presentation.dto.auth.UserDto;
 import com.edua.beeduasystem.presentation.dto.auth.UserProfileViewDto;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.service.auth.ProfileService;
 import com.edua.beeduasystem.service.auth.UserProfileViewService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -25,10 +28,14 @@ public class UserController {
 
     private final ProfileService profileService;
     private final UserProfileViewService profileViewService;
+    private final TeacherGradeRepository teacherGradeRepository;
 
-    public UserController(ProfileService profileService, UserProfileViewService profileViewService) {
+    public UserController(ProfileService profileService,
+                          UserProfileViewService profileViewService,
+                          TeacherGradeRepository teacherGradeRepository) {
         this.profileService = profileService;
         this.profileViewService = profileViewService;
+        this.teacherGradeRepository = teacherGradeRepository;
     }
 
     @PatchMapping("/me")
@@ -44,7 +51,10 @@ public class UserController {
                 request.bio(),
                 request.phoneNumber(),
                 request.dateOfBirth());
-        return UserDto.from(result.user(), result.roles());
+        List<Integer> grades = result.roles().contains(Role.TEACHER)
+                ? teacherGradeRepository.findGradesByUserIds(List.of(result.user().id())).getOrDefault(result.user().id(), List.of())
+                : List.of();
+        return UserDto.from(result.user(), result.roles(), grades);
     }
 
     @GetMapping("/{id}/profile")

@@ -20,6 +20,7 @@ import {
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RichEditor } from "@/components/blog/RichEditor";
 import { RichView } from "@/components/blog/RichView";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
   type ClassDetail,
@@ -52,34 +53,45 @@ function hasTextContent(html: string): boolean {
   return html.replace(/<[^>]*>/g, "").trim().length > 0;
 }
 
-function draftStorageKey(classId: string, resourceId: string): string {
+function legacyDraftStorageKey(classId: string, resourceId: string): string {
   return `edua:submission-draft:${classId}:${resourceId}`;
 }
 
+function draftStorageKey(classId: string, resourceId: string, userId: string): string {
+  return `edua:submission-draft:${userId}:${classId}:${resourceId}`;
+}
+
 /** Nháp tự lưu ở localStorage — chỉ để khôi phục khi mất trang, không thay cho việc Nộp bài thật. */
-function readDraft(classId: string, resourceId: string): SubmissionDraft | null {
+function readDraft(classId: string, resourceId: string, userId: string): SubmissionDraft | null {
   try {
-    const raw = window.localStorage.getItem(draftStorageKey(classId, resourceId));
+    const raw = window.localStorage.getItem(draftStorageKey(classId, resourceId, userId));
     return raw ? (JSON.parse(raw) as SubmissionDraft) : null;
   } catch {
     return null;
   }
 }
 
-function writeDraft(classId: string, resourceId: string, draft: SubmissionDraft): void {
+function writeDraft(classId: string, resourceId: string, userId: string, draft: SubmissionDraft): void {
   try {
-    window.localStorage.setItem(draftStorageKey(classId, resourceId), JSON.stringify(draft));
+    window.localStorage.setItem(draftStorageKey(classId, resourceId, userId), JSON.stringify(draft));
   } catch {
     // localStorage khong kha dung (che do an danh, het dung luong...) - bo qua, khong chan luong nop bai.
   }
 }
 
-function clearDraft(classId: string, resourceId: string): void {
+function clearDraft(classId: string, resourceId: string, userId: string): void {
   try {
-    window.localStorage.removeItem(draftStorageKey(classId, resourceId));
+    window.localStorage.removeItem(draftStorageKey(classId, resourceId, userId));
+    window.localStorage.removeItem(legacyDraftStorageKey(classId, resourceId));
   } catch {
     // ignore
   }
+}
+
+function shouldUseDraft(draft: SubmissionDraft | null, submission: SubmissionDetail | null): draft is SubmissionDraft {
+  if (!draft) return false;
+  if (!submission) return true;
+  return new Date(draft.savedAt).getTime() > new Date(submission.submittedAt).getTime();
 }
 
 function formatSavedTime(iso: string): string {
@@ -154,11 +166,13 @@ export function ResourceDetailPage() {
   // Đã có bài nộp thì mặc định chỉ xem lại (read-only) — phải bấm "Chỉnh sửa bài" mới vào
   // form sửa/nộp lại, tránh sửa nhầm bài đã nộp.
   const [isEditing, setIsEditing] = useState(false);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [unsubmitConfirmOpen, setUnsubmitConfirmOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userEditedRef = useRef(false);
 
   const load = useCallback(async () => {
-    if (!classId || !resourceId) return;
+    if (!classId || !resourceId || !user?.id) return;
     setLoading(true);
     setError("");
     setSuccessMessage("");
@@ -180,19 +194,26 @@ export function ResourceDetailPage() {
         try {
           const own = await getMySubmission(authFetch, classId, resourceId);
           setSubmission(own);
-          setIsEditing(!own);
-          const draft = readDraft(classId, resourceId);
-          if (draft) {
+          const draft = readDraft(classId, resourceId, user.id);
+          const useDraft = shouldUseDraft(draft, own);
+          setIsEditing(!own || useDraft);
+          if (useDraft) {
             setInitialText(draft.textContent);
             setTextContent(draft.textContent);
             setFiles(draft.files);
             setSavedAt(draft.savedAt);
             setSaveStatus("saved");
           } else {
+            if (draft && own) {
+              clearDraft(classId, resourceId, user.id);
+            }
             setInitialText(own?.textContent ?? "");
             setTextContent(own?.textContent ?? "");
             setFiles(own?.files ?? []);
+            setSavedAt(null);
+            setSaveStatus("idle");
           }
+          userEditedRef.current = false;
         } finally {
           setSubmissionLoading(false);
         }
@@ -207,7 +228,7 @@ export function ResourceDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, classId, resourceId]);
+  }, [authFetch, classId, resourceId, user?.id]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -239,16 +260,16 @@ export function ResourceDetailPage() {
   // chỉnh sửa (userEditedRef), không tự nộp bài lên server — "Nộp bài" vẫn là hành động
   // tường minh riêng (có xác nhận), autosave chỉ để không mất bài khi lỡ tắt/tải lại trang.
   useEffect(() => {
-    if (!userEditedRef.current || !classId || !resourceId) return;
+    if (!userEditedRef.current || !classId || !resourceId || !user?.id) return;
     setSaveStatus("saving");
     const timer = window.setTimeout(() => {
       const now = new Date().toISOString();
-      writeDraft(classId, resourceId, { textContent, files, savedAt: now });
+      writeDraft(classId, resourceId, user.id, { textContent, files, savedAt: now });
       setSavedAt(now);
       setSaveStatus("saved");
     }, AUTOSAVE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [textContent, files, classId, resourceId]);
+  }, [textContent, files, classId, resourceId, user?.id]);
 
   function handleTextChange(html: string) {
     userEditedRef.current = true;
@@ -280,16 +301,17 @@ export function ResourceDetailPage() {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function handleSubmit() {
+  function requestSubmit() {
     if (!classId || !resourceId) return;
     if (!hasTextContent(textContent) && files.length === 0) {
       setFormError("Bạn cần nhập nội dung hoặc đính kèm ít nhất 1 tệp để nộp bài.");
       return;
     }
-    const confirmMessage = submission
-      ? "Bạn có chắc chắn muốn nộp lại bài này không? Bài nộp trước đó sẽ bị thay thế."
-      : "Bạn có chắc chắn muốn nộp bài này không?";
-    if (!window.confirm(confirmMessage)) return;
+    setSubmitConfirmOpen(true);
+  }
+
+  async function handleSubmit() {
+    if (!classId || !resourceId || !user?.id) return;
     setSubmitting(true);
     setFormError("");
     setSuccessMessage("");
@@ -300,12 +322,13 @@ export function ResourceDetailPage() {
       });
       setSubmission(saved);
       setInitialText(saved.textContent ?? "");
-      clearDraft(classId, resourceId);
+      clearDraft(classId, resourceId, user.id);
       userEditedRef.current = false;
       setSaveStatus("idle");
       setSavedAt(null);
       setIsEditing(false);
       setSuccessMessage("Nộp bài thành công.");
+      setSubmitConfirmOpen(false);
     } catch (reason) {
       setFormError(reason instanceof Error ? reason.message : "Không thể nộp bài.");
     } finally {
@@ -313,9 +336,13 @@ export function ResourceDetailPage() {
     }
   }
 
-  async function handleUnsubmit() {
+  function requestUnsubmit() {
     if (!classId || !resourceId) return;
-    if (!window.confirm("Bạn có chắc chắn muốn thu hồi bài nộp này không? Bạn có thể nộp lại sau.")) return;
+    setUnsubmitConfirmOpen(true);
+  }
+
+  async function handleUnsubmit() {
+    if (!classId || !resourceId || !user?.id) return;
     setUnsubmitting(true);
     setFormError("");
     setSuccessMessage("");
@@ -325,12 +352,13 @@ export function ResourceDetailPage() {
       setTextContent("");
       setInitialText("");
       setFiles([]);
-      clearDraft(classId, resourceId);
+      clearDraft(classId, resourceId, user.id);
       userEditedRef.current = false;
       setSaveStatus("idle");
       setSavedAt(null);
       setIsEditing(true);
       setSuccessMessage("Đã thu hồi bài nộp.");
+      setUnsubmitConfirmOpen(false);
     } catch (reason) {
       setFormError(reason instanceof Error ? reason.message : "Không thể thu hồi bài nộp.");
     } finally {
@@ -531,7 +559,7 @@ export function ResourceDetailPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => void handleUnsubmit()}
+                            onClick={requestUnsubmit}
                             disabled={unsubmitting}
                             className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#e8b4a4] bg-white px-4 text-[13px] font-medium text-[#c0492b] transition hover:bg-[#fdf3ef] disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -596,7 +624,7 @@ export function ResourceDetailPage() {
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => void handleSubmit()}
+                            onClick={requestSubmit}
                             disabled={submitting || uploading}
                             className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[13px] font-medium text-white transition hover:bg-[#c96a4c] disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -615,7 +643,7 @@ export function ResourceDetailPage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => void handleUnsubmit()}
+                                onClick={requestUnsubmit}
                                 disabled={unsubmitting}
                                 className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#e8b4a4] bg-white px-4 text-[13px] font-medium text-[#c0492b] transition hover:bg-[#fdf3ef] disabled:cursor-not-allowed disabled:opacity-50"
                               >
@@ -647,6 +675,30 @@ export function ResourceDetailPage() {
           </div>
         </section>
       </div>
+      <ConfirmDialog
+        open={submitConfirmOpen}
+        onClose={() => setSubmitConfirmOpen(false)}
+        onConfirm={() => void handleSubmit()}
+        loading={submitting}
+        title={submission ? "Nộp lại bài?" : "Nộp bài?"}
+        description={
+          submission
+            ? "Bài nộp trước đó sẽ bị thay thế bằng nội dung hiện tại. Bạn vẫn có thể xem trạng thái sau khi nộp."
+            : "Bài làm hiện tại sẽ được gửi cho giáo viên chấm/xem xét."
+        }
+        confirmLabel={submission ? "Nộp lại" : "Nộp bài"}
+        variant="default"
+      />
+      <ConfirmDialog
+        open={unsubmitConfirmOpen}
+        onClose={() => setUnsubmitConfirmOpen(false)}
+        onConfirm={() => void handleUnsubmit()}
+        loading={unsubmitting}
+        title="Thu hồi bài nộp?"
+        description="Bài nộp hiện tại sẽ bị gỡ khỏi danh sách giáo viên thấy. Bạn có thể nộp lại sau nếu lớp và hạn nộp còn cho phép."
+        confirmLabel="Thu hồi"
+        variant="danger"
+      />
     </main>
   );
 }

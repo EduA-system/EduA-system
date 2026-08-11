@@ -1,9 +1,10 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, CheckCircle2, Loader2, RefreshCw, Save } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   isClassSubject,
   type ClassDetail,
@@ -16,7 +17,7 @@ import {
 } from "@/lib/classroom";
 import { ClassHubFrame } from "./ClassHubFrame";
 
-const grades = [10, 11, 12];
+const GRADES = [10, 11, 12] as const;
 
 export function ClassSettingsPage() {
   const { authFetch, user } = useAuth();
@@ -27,8 +28,14 @@ export function ClassSettingsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [pendingUpdate, setPendingUpdate] = useState<UpdateClassPayload | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<ClassStatus | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<number | "">("");
   const ownSubject = isClassSubject(user?.subject) ? user.subject : null;
   const legacySubject = detail && detail.subject !== ownSubject ? detail.subject : null;
+  const allowedGrades = useMemo(
+    () => (user?.grades ?? []).filter((grade): grade is number => GRADES.includes(grade as (typeof GRADES)[number])),
+    [user?.grades],
+  );
 
   const load = useCallback(async () => {
     if (!classId) return;
@@ -47,18 +54,26 @@ export function ClassSettingsPage() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
+  useEffect(() => {
+    if (!detail) {
+      setSelectedGrade("");
+      return;
+    }
+    setSelectedGrade(allowedGrades.includes(detail.grade) ? detail.grade : "");
+  }, [allowedGrades, detail]);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!detail || detail.status === "INACTIVE" || !ownSubject) return;
     const data = new FormData(event.currentTarget);
     const name = String(data.get("name") ?? "").trim();
-    const grade = Number(data.get("grade"));
+    const grade = selectedGrade;
     if (!name) {
       setError("Tên lớp là trường bắt buộc.");
       return;
     }
-    if (!grades.includes(grade)) {
-      setError("Khối là trường bắt buộc.");
+    if (grade === "" || !allowedGrades.includes(grade)) {
+      setError("Bạn chỉ được chọn khối mình phụ trách.");
       return;
     }
     setError("");
@@ -86,13 +101,18 @@ export function ClassSettingsPage() {
     }
   }
 
-  async function toggle() {
+  function requestToggle() {
     if (!detail || saving) return;
+    setPendingStatus(detail.status === "ACTIVE" ? "INACTIVE" : "ACTIVE");
+  }
+
+  async function confirmToggle() {
+    if (!detail || !pendingStatus || saving) return;
     setSaving(true);
     try {
-      const next: ClassStatus = detail.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-      setDetail(await updateClassStatus(authFetch, detail.id, next));
-      setMessage(next === "ACTIVE" ? "Đã kích hoạt lại lớp." : "Lớp đã chuyển sang chế độ chỉ đọc.");
+      setDetail(await updateClassStatus(authFetch, detail.id, pendingStatus));
+      setMessage(pendingStatus === "ACTIVE" ? "Đã kích hoạt lại lớp." : "Lớp đã chuyển sang chế độ chỉ đọc.");
+      setPendingStatus(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể đổi trạng thái lớp.");
     } finally {
@@ -112,20 +132,42 @@ export function ClassSettingsPage() {
             <label className="block text-[12px] font-medium text-[#6b6b6b]">Tên lớp <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><input name="name" defaultValue={detail.name} disabled={detail.status === "INACTIVE"} required className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] disabled:text-[#8a837b]" /></label>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <label className="text-[12px] font-medium text-[#6b6b6b]">Môn <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><div className="mt-2 flex h-10 items-center rounded-lg border border-[#d8d1c9] bg-[#f3f0ec] px-3 text-[13px] text-[#4f4943]">{subjectLabel(detail.subject)}</div></label>
-              <label className="text-[12px] font-medium text-[#6b6b6b]">Khối <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><select name="grade" defaultValue={detail.grade} disabled={detail.status === "INACTIVE"} required className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]">{grades.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}</select></label>
+              <label className="text-[12px] font-medium text-[#6b6b6b]">Khối <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><select name="grade" value={selectedGrade} onChange={(event) => setSelectedGrade(event.target.value ? Number(event.target.value) : "")} disabled={detail.status === "INACTIVE" || allowedGrades.length === 0} required className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]"><option value="">{allowedGrades.length === 0 ? "Chưa được phân công khối" : "Chọn khối phụ trách"}</option>{allowedGrades.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}</select></label>
             </div>
             {legacySubject && <p className="mt-3 text-[12px] text-[#8a5a35]">Lớp này được tạo trước khi giới hạn chuyên ngành được áp dụng; môn học hiện tại được giữ nguyên.</p>}
+            {detail.grade && !allowedGrades.includes(detail.grade) && <p className="mt-3 text-[12px] text-[#8a5a35]">Khối hiện tại của lớp là {detail.grade}, nhưng tài khoản của bạn không còn được phân công khối này. Hãy chọn một khối đang phụ trách để lưu thay đổi.</p>}
             <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">Mô tả<textarea name="description" defaultValue={detail.description ?? ""} disabled={detail.status === "INACTIVE"} rows={5} className="mt-2 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2 text-[13px] disabled:text-[#8a837b]" /></label>
             <div className="mt-5 flex flex-wrap gap-3">
-              <button disabled={saving || detail.status === "INACTIVE" || ownSubject === null} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#1f1f1f] px-4 text-[13px] font-medium text-white disabled:opacity-50"><Save className="size-4" /> Lưu thông tin</button>
-              <button type="button" onClick={() => void toggle()} disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#d8d1c9] px-4 text-[13px] font-medium"><>{detail.status === "ACTIVE" ? <Archive className="size-4" /> : <RefreshCw className="size-4" />}</> {detail.status === "ACTIVE" ? "Lưu trữ lớp" : "Kích hoạt lại lớp"}</button>
+              <button disabled={saving || detail.status === "INACTIVE" || ownSubject === null || selectedGrade === ""} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#1f1f1f] px-4 text-[13px] font-medium text-white disabled:opacity-50"><Save className="size-4" /> Lưu thông tin</button>
+              <button type="button" onClick={requestToggle} disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#d8d1c9] px-4 text-[13px] font-medium"><>{detail.status === "ACTIVE" ? <Archive className="size-4" /> : <RefreshCw className="size-4" />}</> {detail.status === "ACTIVE" ? "Lưu trữ lớp" : "Kích hoạt lại lớp"}</button>
             </div>
             {ownSubject === null && <p className="mt-4 text-[12px] text-[#c0492b]">Tài khoản chưa có chuyên ngành nên chưa thể chỉnh sửa lớp.</p>}
+            {allowedGrades.length === 0 && <p className="mt-4 text-[12px] text-[#c0492b]">Tài khoản chưa được phân công khối nên chưa thể chỉnh sửa lớp.</p>}
             {detail.status === "INACTIVE" && <p className="mt-4 text-[12px] text-[#8a5a35]">Lớp đang ở chế độ chỉ đọc. Kích hoạt lại để chỉnh sửa.</p>}
           </form>
         )}
       </div>
-      {pendingUpdate && <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-class-save-title"><div className="w-full max-w-md rounded-[14px] border border-[#d8d1c9] bg-white p-5 shadow-xl"><h2 id="confirm-class-save-title" className="text-[18px] font-semibold">Lưu thay đổi lớp?</h2><p className="mt-2 text-[13px] leading-6 text-[#6b6b6b]">Thông tin lớp sẽ được cập nhật cho các thành viên trong lớp.</p><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setPendingUpdate(null)} disabled={saving} className="h-9 rounded-[10px] border border-[#d8d1c9] px-3 text-[12px] font-medium disabled:opacity-50">Hủy</button><button type="button" onClick={() => void confirmSave()} disabled={saving} className="inline-flex h-9 items-center gap-2 rounded-[10px] bg-[#1f1f1f] px-3 text-[12px] font-medium text-white disabled:opacity-50">{saving && <Loader2 className="size-3.5 animate-spin" />} Xác nhận lưu</button></div></div></div>}
+      <ConfirmDialog
+        open={pendingUpdate !== null}
+        title="Lưu thay đổi lớp?"
+        description="Thông tin lớp sẽ được cập nhật cho các thành viên trong lớp."
+        confirmLabel="Xác nhận lưu"
+        loading={saving}
+        onConfirm={() => void confirmSave()}
+        onClose={() => setPendingUpdate(null)}
+      />
+      <ConfirmDialog
+        open={pendingStatus !== null}
+        title={pendingStatus === "ACTIVE" ? "Kích hoạt lại lớp?" : "Lưu trữ lớp?"}
+        description={pendingStatus === "ACTIVE"
+          ? "Lớp sẽ được mở lại để giáo viên tiếp tục chỉnh sửa và quản lý."
+          : "Lớp sẽ chuyển sang chế độ chỉ đọc. Bạn có thể kích hoạt lại sau nếu cần."}
+        confirmLabel={pendingStatus === "ACTIVE" ? "Kích hoạt lại" : "Lưu trữ lớp"}
+        variant={pendingStatus === "ACTIVE" ? "success" : "danger"}
+        loading={saving}
+        onConfirm={() => void confirmToggle()}
+        onClose={() => setPendingStatus(null)}
+      />
     </ClassHubFrame>
   );
 }

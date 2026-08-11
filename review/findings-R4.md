@@ -12,11 +12,11 @@ Phạm vi: `be/.../service/classroom/` (8 file: `ClassEnrollmentService`, `Class
 
 | # | File:line | Vấn đề | Mức | Xử lý |
 | --- | --- | --- | --- | --- |
-| R4-01 | `ClassManagementService.java:139-157` | `resourceCount`/`submissionCount` luôn trả về 0, FE hiển thị sai | **Cao** | Sửa |
+| R4-01 | `ClassManagementService.java:139-157` | `resourceCount`/`submissionCount` luôn trả về 0, FE hiển thị sai | **Cao** | Đã sửa |
 | R4-02 | `ClassResourceService.java:196-201` | Xóa resource cascade xóa sạch bài nộp của học sinh, không cảnh báo | **Cao** | Sửa |
-| R4-03 | `fe/components/classroom/ResourceDetailPage.tsx:60-83,184-195` | Nháp nộp bài lưu localStorage không theo user, đè lên bài đã nộp thật | **Cao** | Sửa |
-| R4-10 | `ClassEnrollmentService.java:148` | `removeStudent()` dùng `requireOwnedClass` thay vì `requireOwnedActiveClass` — bỏ qua khóa lớp lưu trữ | **Cao** | Sửa |
-| R4-12 | `SubmissionService.java:126` vs `:147` | `listSubmissions()` chặn khi `submissionEnabled=false`, `getSubmissionDetail()` thì không — giáo viên khóa nộp bài xong không xem được roster | **Cao** | Sửa |
+| R4-03 | `fe/components/classroom/ResourceDetailPage.tsx:60-83,184-195` | Nháp nộp bài lưu localStorage không theo user, đè lên bài đã nộp thật | **Cao** | Đã sửa |
+| R4-10 | `ClassEnrollmentService.java:148` | `removeStudent()` dùng `requireOwnedClass` thay vì `requireOwnedActiveClass` — bỏ qua khóa lớp lưu trữ | **Cao** | Đã sửa |
+| R4-12 | `SubmissionService.java:126` vs `:147` | `listSubmissions()` chặn khi `submissionEnabled=false`, `getSubmissionDetail()` thì không — giáo viên khóa nộp bài xong không xem được roster | **Cao** | Đã sửa |
 | R4-04 | `SubmissionService.java:103-111` | `unsubmit()` không báo giáo viên | TB | Sửa |
 | R4-05 | `ClassEnrollmentService.java:448`, `AddStudentPage.tsx:291` | Kiểm tra tuổi 16 lệch tới 364 ngày (trừ theo năm, không theo ngày) — cả 2 lượt quét đều bắt được | TB | Sửa |
 | R4-06 | `ClassEnrollmentService.java:289-294,311-316` | Không khóa khi kiểm tra sĩ số → race hai request cùng lúc có thể vượt 60 | TB | Sửa |

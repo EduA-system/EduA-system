@@ -145,7 +145,7 @@ public class ClassEnrollmentService {
 
     @Transactional
     public ClassMemberViews.RemoveResult removeStudent(UUID classId, UUID studentId, String reason) {
-        Classroom classroom = requireOwnedClass(classId);
+        Classroom classroom = requireOwnedActiveClass(classId);
         ClassMember member = classMemberRepository.findAnyByClassIdAndStudentId(classId, studentId)
                 .filter(m -> m.status() == ClassMemberStatus.ENROLLED)
                 .orElse(null);

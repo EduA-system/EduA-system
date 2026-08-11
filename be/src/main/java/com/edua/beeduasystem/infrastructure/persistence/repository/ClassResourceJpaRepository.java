@@ -10,4 +10,8 @@ import java.util.UUID;
 public interface ClassResourceJpaRepository extends JpaRepository<ClassResourceEntity, UUID> {
 
     Page<ClassResourceEntity> findByClassIdOrderByCreatedAtDesc(UUID classId, Pageable pageable);
+
+    long countByClassId(UUID classId);
+
+    long countByClassIdAndSubmissionEnabledTrue(UUID classId);
 }

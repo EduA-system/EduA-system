@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RichView } from "@/components/blog/RichView";
+import { ConfirmDialog, TextPromptDialog } from "@/components/ui/ConfirmDialog";
 import { GradeSelect } from "@/components/ui/GradeSelect";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { resolveWeeklyTaskLessonDocument } from "@/components/weeklytask/WeeklyTaskDocumentViewer";
@@ -68,6 +69,9 @@ function LessonPlanApprovalScreen() {
   const [detail, setDetail] = useState<WeeklyTaskDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [preview, setPreview] = useState<{ title: string; document: TiptapNode | string } | null>(null);
+  const [approveTarget, setApproveTarget] = useState<WeeklyTaskSummary | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<WeeklyTaskSummary | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   const openSubmittedLessonPreview = useCallback((taskDetail: WeeklyTaskDetail) => {
     const document = resolveWeeklyTaskLessonDocument(taskDetail.sourceLibraryContentPayload);
@@ -167,31 +171,37 @@ function LessonPlanApprovalScreen() {
   }, [autoPreview, focusTaskId, items, loading, handleExpand]);
 
   async function handleApprove(id: string) {
-    if (!confirm("Duyệt giáo án này?")) return;
+    setReviewingId(id);
     try {
       await approveWeeklyTask(authFetch, id);
       setError("");
       setMsg("Đã duyệt.");
       setExpandedId(null);
+      setApproveTarget(null);
       await load();
     } catch (e) {
       setMsg("");
       setError(e instanceof Error ? e.message : "Không thể duyệt giáo án.");
+    } finally {
+      setReviewingId(null);
     }
   }
 
-  async function handleReject(id: string) {
-    const reason = window.prompt("Lý do từ chối:");
-    if (!reason?.trim()) return;
+  async function handleReject(id: string, reason: string) {
+    if (!reason.trim()) return;
+    setReviewingId(id);
     try {
       await rejectWeeklyTask(authFetch, id, reason.trim());
       setError("");
       setMsg("Đã từ chối.");
       setExpandedId(null);
+      setRejectTarget(null);
       await load();
     } catch (e) {
       setMsg("");
       setError(e instanceof Error ? e.message : "Không thể từ chối giáo án.");
+    } finally {
+      setReviewingId(null);
     }
   }
 
@@ -326,7 +336,7 @@ function LessonPlanApprovalScreen() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleApprove(t.id)}
+                        onClick={() => setApproveTarget(t)}
                         className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 font-medium text-white transition hover:bg-emerald-700"
                       >
                         <CheckCircle2 className="size-4" />
@@ -334,7 +344,7 @@ function LessonPlanApprovalScreen() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleReject(t.id)}
+                        onClick={() => setRejectTarget(t)}
                         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 font-medium text-red-700 transition hover:bg-red-100"
                       >
                         <XCircle className="size-4" />
@@ -429,6 +439,36 @@ function LessonPlanApprovalScreen() {
           ) : null}
         </section>
       </div>
+      <ConfirmDialog
+        open={approveTarget !== null}
+        onClose={() => setApproveTarget(null)}
+        onConfirm={() => approveTarget && void handleApprove(approveTarget.id)}
+        loading={Boolean(approveTarget && reviewingId === approveTarget.id)}
+        title="Duyệt giáo án?"
+        description={
+          <>
+            Giáo án <span className="font-semibold text-[#1f1f1f]">"{approveTarget?.scopeDescription}"</span> của {approveTarget?.teacherName ?? "giáo viên"} sẽ được duyệt.
+          </>
+        }
+        confirmLabel="Duyệt"
+        variant="success"
+      />
+      <TextPromptDialog
+        open={rejectTarget !== null}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={(reason) => rejectTarget && void handleReject(rejectTarget.id, reason)}
+        loading={Boolean(rejectTarget && reviewingId === rejectTarget.id)}
+        title="Từ chối giáo án?"
+        description={
+          <>
+            Nhập lý do để giáo viên biết cần chỉnh sửa phần nào trong <span className="font-semibold text-[#1f1f1f]">"{rejectTarget?.scopeDescription}"</span>.
+          </>
+        }
+        label="Lý do từ chối"
+        placeholder="Ví dụ: Thiếu hoạt động vận dụng, cần bổ sung tiêu chí đánh giá..."
+        confirmLabel="Từ chối"
+        minLength={1}
+      />
     </main>
   );
 }

@@ -14,6 +14,7 @@ import com.edua.beeduasystem.repository.gateways.GoogleIdentityVerifier;
 import com.edua.beeduasystem.repository.gateways.TokenService;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +29,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,6 +41,7 @@ public class AuthService {
     private final AppUserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRoleRepository userRoleRepository;
+    private final TeacherGradeRepository teacherGradeRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ActivityLogService activityLogService;
     private final Duration refreshTtl;
@@ -50,6 +53,7 @@ public class AuthService {
                        AppUserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
                        UserRoleRepository userRoleRepository,
+                       TeacherGradeRepository teacherGradeRepository,
                        CurrentUserProvider currentUserProvider,
                        ActivityLogService activityLogService,
                        @Value("${app.auth.jwt.refresh-ttl:PT24H}") Duration refreshTtl) {
@@ -58,18 +62,19 @@ public class AuthService {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.userRoleRepository = userRoleRepository;
+        this.teacherGradeRepository = teacherGradeRepository;
         this.currentUserProvider = currentUserProvider;
         this.activityLogService = activityLogService;
         this.refreshTtl = refreshTtl;
     }
 
-    public record LoginResult(AppUser user, Set<Role> roles, AuthTokens tokens) {
+    public record LoginResult(AppUser user, Set<Role> roles, List<Integer> grades, AuthTokens tokens) {
     }
 
-    public record RefreshResult(AppUser user, Set<Role> roles, AuthTokens tokens) {
+    public record RefreshResult(AppUser user, Set<Role> roles, List<Integer> grades, AuthTokens tokens) {
     }
 
-    public record CurrentUserInfo(AppUser user, Set<Role> roles) {
+    public record CurrentUserInfo(AppUser user, Set<Role> roles, List<Integer> grades) {
     }
 
     @Transactional
@@ -112,7 +117,7 @@ public class AuthService {
         AuthTokens tokens = issueTokens(saved, roles, now);
         activityLogService.record(saved.id(), roleNameOf(roles), ActivityLogCategory.AUTH, ActivityLogAction.LOGIN,
                 "APP_USER", saved.id(), null);
-        return new LoginResult(saved, roles, tokens);
+        return new LoginResult(saved, roles, assignedGrades(saved.id(), roles), tokens);
     }
 
     @Transactional
@@ -141,7 +146,7 @@ public class AuthService {
             throw new EmailNotAllowedException("Tài khoản đã bị khóa.");
         }
         Set<Role> roles = userRoleRepository.findRolesByUserId(user.id());
-        return new RefreshResult(user, roles, issueTokens(user, roles, now));
+        return new RefreshResult(user, roles, assignedGrades(user.id(), roles), issueTokens(user, roles, now));
     }
 
     @Transactional
@@ -163,7 +168,14 @@ public class AuthService {
         AppUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new InvalidTokenException("User not found."));
         Set<Role> roles = userRoleRepository.findRolesByUserId(userId);
-        return new CurrentUserInfo(user, roles);
+        return new CurrentUserInfo(user, roles, assignedGrades(userId, roles));
+    }
+
+    private List<Integer> assignedGrades(UUID userId, Set<Role> roles) {
+        if (!roles.contains(Role.TEACHER)) {
+            return List.of();
+        }
+        return teacherGradeRepository.findGradesByUserIds(List.of(userId)).getOrDefault(userId, List.of());
     }
 
     private AuthTokens issueTokens(AppUser user, Set<Role> roles, Instant now) {

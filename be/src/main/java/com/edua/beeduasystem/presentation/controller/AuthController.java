@@ -48,7 +48,7 @@ public class AuthController {
         AuthService.LoginResult result = authService.loginWithGoogle(request.idToken());
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookie(result.tokens().refreshToken()).toString())
-                .body(new AuthResponse(result.tokens().accessToken(), UserDto.from(result.user(), result.roles())));
+                .body(new AuthResponse(result.tokens().accessToken(), UserDto.from(result.user(), result.roles(), result.grades())));
     }
 
     @PostMapping("/refresh")
@@ -60,7 +60,7 @@ public class AuthController {
         AuthService.RefreshResult result = authService.refresh(refreshToken);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookie(result.tokens().refreshToken()).toString())
-                .body(new AuthResponse(result.tokens().accessToken(), UserDto.from(result.user(), result.roles())));
+                .body(new AuthResponse(result.tokens().accessToken(), UserDto.from(result.user(), result.roles(), result.grades())));
     }
 
     @PostMapping("/logout")
@@ -77,7 +77,7 @@ public class AuthController {
     @Operation(summary = "Thông tin user hiện tại", description = "Yêu cầu Authorization: Bearer <access>.")
     public UserDto me() {
         var info = authService.currentUser();
-        return UserDto.from(info.user(), info.roles());
+        return UserDto.from(info.user(), info.roles(), info.grades());
     }
 
     private ResponseCookie refreshCookie(String value) {

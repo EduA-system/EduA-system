@@ -24,6 +24,8 @@ public interface SubmissionRepository {
     /** Toan bo submission (kem file) cua 1 resource, dung cho Teacher xem danh sach bai nop (UC-44). */
     List<SubmissionWithFiles> findAllByResource(UUID classResourceId);
 
+    long countByClassId(UUID classId);
+
     record SubmissionWithFiles(Submission submission, List<SubmissionFile> files) {
     }
 }

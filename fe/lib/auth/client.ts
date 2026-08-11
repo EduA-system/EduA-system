@@ -12,6 +12,7 @@ export type AuthUser = {
   role: string;
   roles: string[];
   subject: string | null;
+  grades?: number[];
 };
 
 export type AuthResponse = {

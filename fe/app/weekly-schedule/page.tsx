@@ -4,6 +4,7 @@ import { BookOpen, Check, ExternalLink, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { MonthPicker } from "@/components/ui/MonthPicker";
 import { GradeSelect } from "@/components/ui/GradeSelect";
@@ -293,6 +294,7 @@ function WeeklyScheduleScreen() {
   // Popup mặc định chỉ lọc đúng Khối/Môn/Chương được giao; bật cờ này khi GV chủ động mở rộng vì
   // giáo án cũ (tạo trước khi có lọc theo chương) chưa có metadata nên không khớp filter.
   const [showAllLessonPlans, setShowAllLessonPlans] = useState(false);
+  const [unsubmitTarget, setUnsubmitTarget] = useState<{ id: string; title: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -443,11 +445,11 @@ function WeeklyScheduleScreen() {
     }
   }
 
-  async function handleUnsubmit(taskId: string, title: string) {
-    if (!confirm(`Rút giáo án đã nộp cho "${title}"?`)) return;
+  async function handleUnsubmit(taskId: string) {
     try {
       await unsubmitWeeklyTask(authFetch, taskId);
       setMsg("Đã rút giáo án.");
+      setUnsubmitTarget(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không thể rút giáo án.");
@@ -968,7 +970,7 @@ function WeeklyScheduleScreen() {
                                         </button>
                                       ) : null}
                                       {current && !expired && t.reviewStatus === "SUBMITTED" ? (
-                                        <button onClick={() => void handleUnsubmit(t.id, t.scopeDescription)} className="text-red-600 underline">
+                                        <button onClick={() => setUnsubmitTarget({ id: t.id, title: t.scopeDescription })} className="text-red-600 underline">
                                           Hủy nộp
                                         </button>
                                       ) : null}
@@ -996,6 +998,19 @@ function WeeklyScheduleScreen() {
           )}
         </section>
       </div>
+      <ConfirmDialog
+        open={unsubmitTarget !== null}
+        onClose={() => setUnsubmitTarget(null)}
+        onConfirm={() => unsubmitTarget && void handleUnsubmit(unsubmitTarget.id)}
+        title="Rút giáo án đã nộp?"
+        description={
+          <>
+            Giáo án cho <span className="font-semibold text-[#1f1f1f]">"{unsubmitTarget?.title}"</span> sẽ rời khỏi hàng chờ duyệt. Bạn có thể nộp lại nếu lịch nộp còn cho phép.
+          </>
+        }
+        confirmLabel="Rút giáo án"
+        variant="danger"
+      />
     </main>
   );
 }

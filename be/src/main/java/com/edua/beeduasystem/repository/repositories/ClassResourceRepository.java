@@ -19,6 +19,10 @@ public interface ClassResourceRepository {
     /** Xoa vinh vien 1 resource (UC-40 Delete). */
     void deleteById(UUID id);
 
+    long countByClassId(UUID classId);
+
+    long countAssignmentsByClassId(UUID classId);
+
     record PageResult(List<ClassResource> items, long total) {
     }
 }
