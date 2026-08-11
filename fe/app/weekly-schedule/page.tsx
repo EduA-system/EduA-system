@@ -1005,7 +1005,7 @@ function WeeklyScheduleScreen() {
         title="Rút giáo án đã nộp?"
         description={
           <>
-            Giáo án cho <span className="font-semibold text-[#1f1f1f]">"{unsubmitTarget?.title}"</span> sẽ rời khỏi hàng chờ duyệt. Bạn có thể nộp lại nếu lịch nộp còn cho phép.
+            Giáo án cho <span className="font-semibold text-[#1f1f1f]">&quot;{unsubmitTarget?.title}&quot;</span> sẽ rời khỏi hàng chờ duyệt. Bạn có thể nộp lại nếu lịch nộp còn cho phép.
           </>
         }
         confirmLabel="Rút giáo án"

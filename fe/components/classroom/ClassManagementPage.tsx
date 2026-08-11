@@ -178,6 +178,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
   }, [loadClasses, view]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCreateForm((current) => ({
       ...current,
       subject: defaultSubject,

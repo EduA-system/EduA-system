@@ -56,6 +56,7 @@ export function ClassSettingsPage() {
 
   useEffect(() => {
     if (!detail) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedGrade("");
       return;
     }

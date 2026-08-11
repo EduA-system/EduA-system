@@ -960,7 +960,7 @@ export function ClassDetailPage() {
         title="Xóa tài nguyên?"
         description={
           <>
-            Tài nguyên <span className="font-semibold text-[#1f1f1f]">"{deleteResourceTarget?.title}"</span> sẽ bị xóa vĩnh viễn. Toàn bộ bài nộp liên quan của học sinh cũng sẽ bị xóa theo.
+            Tài nguyên <span className="font-semibold text-[#1f1f1f]">&quot;{deleteResourceTarget?.title}&quot;</span> sẽ bị xóa vĩnh viễn. Toàn bộ bài nộp liên quan của học sinh cũng sẽ bị xóa theo.
           </>
         }
         confirmLabel="Xóa tài nguyên"
