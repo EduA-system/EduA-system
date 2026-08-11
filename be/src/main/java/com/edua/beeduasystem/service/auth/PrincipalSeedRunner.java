@@ -56,8 +56,11 @@ public class PrincipalSeedRunner implements ApplicationRunner {
                 null,
                 null,
                 null,
+                null,
+                null,
                 UserStatus.INVITED,
                 now,
+                null,
                 null));
         userRoleRepository.replaceRole(saved.id(), Role.PRINCIPAL, null, now);
         log.info("Seeded PRINCIPAL account for {}", email);

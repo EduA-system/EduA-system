@@ -20,8 +20,8 @@ khắp nơi** (lượt tự động).
 | R2-02 | `PrincipalModeratorService.java:105,201` | BR-41 là check-then-act, không có ràng buộc DB → race tạo 2 moderator cùng môn | **Cao** | Sửa |
 | R2-03 | `PrincipalItStaffService.java:40,63` | IT Staff thiếu cả ba lớp bảo vệ mà Moderator có | **Cao** | Đã sửa |
 | R2-04 | `ModeratorTeacherService.java:112-122` | `addTeacher` vượt ranh giới môn học mà chính class này canh ở chỗ khác | **Cao** | Đã sửa |
-| R2-10 | `AppUser.java:27,41` | Hai constructor tiện lợi âm thầm null hoá `dateOfBirth` ở 15 call site | **Cao** | Sửa |
-| R2-11 | `ProfileService.java:41` | Sửa hồ sơ cá nhân xoá mất ngày sinh, kẹt luồng thêm học sinh vào lớp | **Cao** | Sửa |
+| R2-10 | `AppUser.java:27,41` | Hai constructor tiện lợi âm thầm null hoá `dateOfBirth` ở 15 call site | **Cao** | Đã sửa |
+| R2-11 | `ProfileService.java:41` | Sửa hồ sơ cá nhân xoá mất ngày sinh, kẹt luồng thêm học sinh vào lớp | **Cao** | Đã sửa |
 | R2-12 | `fe/app/user-management/page.tsx:77` | Phân trang hỏng: FE đọc `page`, backend trả `number` | **Cao** | Sửa |
 | R2-05 | `ModeratorTeacherService.java:112` | Không kiểm tra vai trò cũ khi tái sử dụng tài khoản DISABLED | TB | Đã sửa |
 | R2-06 | `service/auth/` (cả package) | Không service nào gửi thông báo cho người bị thao tác (BR-49) | TB | Sửa |

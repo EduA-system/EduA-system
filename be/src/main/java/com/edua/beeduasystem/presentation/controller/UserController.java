@@ -34,7 +34,7 @@ public class UserController {
     @PatchMapping("/me")
     @Operation(
             summary = "Cập nhật hồ sơ cá nhân",
-            description = "Cập nhật tên hiển thị, URL ảnh đại diện, số điện thoại, giới thiệu ngắn và thông tin liên hệ của user đang đăng nhập. Gửi avatarUrl rỗng để gỡ ảnh đại diện khỏi hồ sơ."
+            description = "Cập nhật tên hiển thị, URL ảnh đại diện, số điện thoại, ngày sinh, giới thiệu ngắn và thông tin liên hệ của user đang đăng nhập. Student không tự sửa ngày sinh. Gửi avatarUrl rỗng để gỡ ảnh đại diện khỏi hồ sơ."
     )
     public UserDto updateMe(@Valid @RequestBody UpdateProfileRequest request) {
         var result = profileService.updateCurrentUserProfile(
@@ -42,7 +42,8 @@ public class UserController {
                 request.avatarUrl(),
                 request.contactInfo(),
                 request.bio(),
-                request.phoneNumber());
+                request.phoneNumber(),
+                request.dateOfBirth());
         return UserDto.from(result.user(), result.roles());
     }
 

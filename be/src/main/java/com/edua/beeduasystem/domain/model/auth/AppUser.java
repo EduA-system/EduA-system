@@ -24,25 +24,6 @@ public record AppUser(
         Instant lastLoginAt,
         LocalDate dateOfBirth
 ) {
-    public AppUser(UUID id,
-                   String email,
-                   String googleSub,
-                   String fullName,
-                   String avatarUrl,
-                   String contactInfo,
-                   Subject subject,
-                   UserStatus status,
-                   Instant createdAt,
-                   Instant lastLoginAt) {
-        this(id, email, googleSub, fullName, avatarUrl, contactInfo, null, null,
-                subject, status, createdAt, lastLoginAt, null);
-    }
-
-    public AppUser(UUID id, String email, String googleSub, String fullName, String avatarUrl, String contactInfo,
-                   String bio, String phoneNumber, Subject subject, UserStatus status, Instant createdAt, Instant lastLoginAt) {
-        this(id, email, googleSub, fullName, avatarUrl, contactInfo, bio, phoneNumber, subject, status, createdAt, lastLoginAt, null);
-    }
-
     public boolean isActiveOrInvited() {
         return status == UserStatus.INVITED || status == UserStatus.ACTIVE;
     }

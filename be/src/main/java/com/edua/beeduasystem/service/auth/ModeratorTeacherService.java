@@ -131,8 +131,8 @@ public class ModeratorTeacherService {
         AppUser saved = userRepository.save(new AppUser(
                 UUID.randomUUID(), normalizedEmail, null,
                 normalizedFullName,
-                null, null,
-                moderatorSubject, UserStatus.INVITED, now, null));
+                null, null, null, null,
+                moderatorSubject, UserStatus.INVITED, now, null, null));
         assignRole(saved.id(), Role.TEACHER, currentUserId, now);
         teacherGradeRepository.replaceGrades(saved.id(), normalizedGrades);
         activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
@@ -163,7 +163,7 @@ public class ModeratorTeacherService {
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
-                user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
+                user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt(), user.dateOfBirth()));
         classRepository.archiveActiveByOwnerId(user.id());
         refreshTokenRepository.revokeAllByUserId(user.id());
         activityLogService.record(currentUserProvider.requireUserId(), "MODERATOR", ActivityLogCategory.ACCOUNT,
@@ -195,7 +195,7 @@ public class ModeratorTeacherService {
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
-                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
+                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt(), user.dateOfBirth()));
         assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
         activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REACTIVATE_TEACHER, "APP_USER", reactivated.id(), null);

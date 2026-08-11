@@ -127,7 +127,7 @@ public class PrincipalModeratorService {
                     normalizedFullName != null ? normalizedFullName : u.fullName(),
                     u.avatarUrl(), u.contactInfo(),
                     u.bio(), u.phoneNumber(),
-                    subject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt()));
+                    subject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt(), u.dateOfBirth()));
             assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
             activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                     ActivityLogAction.GRANT_MODERATOR, "APP_USER", reactivated.id(), null);
@@ -137,8 +137,8 @@ public class PrincipalModeratorService {
         AppUser saved = userRepository.save(new AppUser(
                 UUID.randomUUID(), normalizedEmail, null,
                 normalizedFullName,
-                null, null,
-                subject, UserStatus.INVITED, now, null));
+                null, null, null, null,
+                subject, UserStatus.INVITED, now, null, null));
         assignRole(saved.id(), Role.MODERATOR, currentUserId, now);
         activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.GRANT_MODERATOR, "APP_USER", saved.id(), null);
@@ -175,14 +175,14 @@ public class PrincipalModeratorService {
                 .map(user -> prepareExistingReplacement(user, subject))
                 .orElseGet(() -> new AppUser(
                         UUID.randomUUID(), normalizedEmail, null, null, null, null,
-                        subject, UserStatus.INVITED, now, null));
+                        null, null, subject, UserStatus.INVITED, now, null, null));
 
         UserStatus previousStatus = disablePrevious ? UserStatus.DISABLED : currentModerator.status();
         AppUser demotedModerator = new AppUser(
                 currentModerator.id(), currentModerator.email(), currentModerator.googleSub(), currentModerator.fullName(),
                 currentModerator.avatarUrl(), currentModerator.contactInfo(), currentModerator.bio(), currentModerator.phoneNumber(),
                 currentModerator.subject(), previousStatus,
-                currentModerator.createdAt(), currentModerator.lastLoginAt());
+                currentModerator.createdAt(), currentModerator.lastLoginAt(), currentModerator.dateOfBirth());
 
         // Both updates share this transaction, so a failure restores the original moderator.
         userRepository.save(demotedModerator);
@@ -221,7 +221,7 @@ public class PrincipalModeratorService {
                 user.id(), user.email(), user.googleSub(), user.fullName(),
                 user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
-                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt()));
+                user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt(), user.dateOfBirth()));
         assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
         activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REACTIVATE_MODERATOR, "APP_USER", reactivated.id(), null);
@@ -315,6 +315,6 @@ public class PrincipalModeratorService {
         return new AppUser(
                 user.id(), user.email(), user.googleSub(), user.fullName(), user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
-                user.subject(), status, user.createdAt(), user.lastLoginAt());
+                user.subject(), status, user.createdAt(), user.lastLoginAt(), user.dateOfBirth());
     }
 }
