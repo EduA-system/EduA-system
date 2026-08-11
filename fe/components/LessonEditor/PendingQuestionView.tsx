@@ -50,7 +50,14 @@ export function PendingQuestionView({ editor, node }: NodeViewProps) {
           </button>
         </div>
       ) : (
-        <div className="lp-pending-status">⏳ Đang soạn nội dung…</div>
+        <div
+          className="lp-pending-progress"
+          role="progressbar"
+          aria-label="Đang soạn nội dung"
+          aria-valuetext="Đang soạn nội dung"
+        >
+          <div className="lp-pending-progress-bar" />
+        </div>
       )}
     </NodeViewWrapper>
   );

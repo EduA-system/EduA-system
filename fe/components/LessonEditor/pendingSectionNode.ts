@@ -39,7 +39,16 @@ export const PendingSection = Node.create({
       "div",
       mergeAttributes(HTMLAttributes, { "data-pending-section": "", class: "lp-pending" }),
       ["div", { class: "lp-pending-title" }, label],
-      ["div", { class: "lp-pending-status" }, "⏳ Đang soạn nội dung…"],
+      [
+        "div",
+        {
+          class: "lp-pending-progress",
+          role: "progressbar",
+          "aria-label": "Đang soạn nội dung",
+          "aria-valuetext": "Đang soạn nội dung",
+        },
+        ["div", { class: "lp-pending-progress-bar" }],
+      ],
     ];
   },
 });

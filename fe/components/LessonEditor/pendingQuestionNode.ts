@@ -77,9 +77,7 @@ export const PendingQuestion = Node.create({
     const score = ((node.attrs.scoreCentiPoints as number) / 100).toFixed(2);
     const typeLabel = TYPE_LABELS[node.attrs.questionType as string] ?? "";
     const failed = node.attrs.status === "failed";
-    const status = failed
-      ? "⚠️ Chưa soạn được nội dung — mời soạn tay hoặc bấm Thử lại."
-      : "⏳ Đang soạn nội dung…";
+    const status = "⚠️ Chưa soạn được nội dung — mời soạn tay hoặc bấm Thử lại.";
     return [
       "div",
       mergeAttributes(HTMLAttributes, {
@@ -87,7 +85,18 @@ export const PendingQuestion = Node.create({
         class: failed ? "lp-pending lp-pending-failed" : "lp-pending",
       }),
       ["div", { class: "lp-pending-title" }, `Câu ${order} (${score} điểm) — ${typeLabel}`],
-      ["div", { class: "lp-pending-status" }, status],
+      failed
+        ? ["div", { class: "lp-pending-status" }, status]
+        : [
+            "div",
+            {
+              class: "lp-pending-progress",
+              role: "progressbar",
+              "aria-label": "Đang soạn nội dung",
+              "aria-valuetext": "Đang soạn nội dung",
+            },
+            ["div", { class: "lp-pending-progress-bar" }],
+          ],
     ];
   },
 

@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git ls-tree *)",
+      "Bash(npm run *)",
+      "Bash(./mvnw.cmd test *)",
+      "Bash(node -e \"const {CellSelection}=require\\('@tiptap/pm/tables'\\); console.log\\(Object.getOwnPropertyNames\\(CellSelection.prototype\\).join\\(', '\\)\\)\")",
+      "Bash(git add *)",
+      "Bash(./mvnw.cmd -q -o compile)",
+      "Bash(./mvnw.cmd -q compile)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(git commit -m '@ *)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(./mvnw.cmd -q test -Dtest=GenerateSlideOutlineUseCaseTest)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(vercel whoami *)",
+      "WebFetch(domain:vercel.com)",
+      "Agent",
+      "mcp__plugin_vercel_vercel__search_vercel_documentation",
+      "WebSearch",
+      "WebFetch(domain:vqa.moet.gov.vn)",
+      "WebFetch(domain:edugo.vn)",
+      "WebFetch(domain:giaoduc.net.vn)",
+      "Bash(./mvnw.cmd -Dtest=LessonPlanServiceActivityDetailTest test)",
+      "Bash(grep -n \"disabled\\\\|\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\,\" src/main/java/com/edua/beeduasystem/service/lessonplan/LessonPlanService.java)",
+      "Bash(curl *)",
+      "Bash(cd /tmp)",
+      "Bash(node -e ' *)",
+      "Bash(./mvnw -o clean test)",
+      "WebFetch(domain:www.drawio.com)"
+    ]
+  }
+}

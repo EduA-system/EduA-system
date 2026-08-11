@@ -316,6 +316,27 @@ body::-webkit-scrollbar {
   color: #b07a52;
 }
 
+.lesson-document-editor .lp-pending-progress {
+  height: 7px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eadfd5;
+}
+
+.lesson-document-editor .lp-pending-progress-bar {
+  width: 40%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #e8724a, #f4b183, #e8724a);
+  animation: lp-pending-progress 1.35s ease-in-out infinite;
+}
+
+@keyframes lp-pending-progress {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(275%); }
+}
+
 .lesson-document-editor .lp-failed {
   margin-top: 8px;
   font-size: 13px;

@@ -36,6 +36,8 @@ interface AssistantPanelProps {
   bookId?: string;
   chapterId?: string;
   lessonId?: string;
+  /** Chỉ cho phép chỉnh sửa sau khi luồng tạo giáo án đã kết thúc. */
+  lessonGenerationComplete?: boolean;
 }
 
 export function AssistantPanel({
@@ -46,6 +48,7 @@ export function AssistantPanel({
   bookId,
   chapterId,
   lessonId,
+  lessonGenerationComplete = true,
 }: AssistantPanelProps) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<AssistantStatus>("idle");
@@ -84,8 +87,8 @@ export function AssistantPanel({
   }, [collapsed, onClose]);
 
   const canSubmit = useMemo(
-    () => Boolean(editor && authFetch && input.trim() && status !== "loading" && pendingDiffs.length === 0),
-    [authFetch, editor, input, pendingDiffs.length, status],
+    () => Boolean(editor && authFetch && lessonGenerationComplete && input.trim() && status !== "loading" && pendingDiffs.length === 0),
+    [authFetch, editor, input, lessonGenerationComplete, pendingDiffs.length, status],
   );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -95,7 +98,7 @@ export function AssistantPanel({
       return;
     }
     const instruction = input.trim();
-    if (!instruction || pendingDiffs.length > 0) return;
+    if (!instruction || !lessonGenerationComplete || pendingDiffs.length > 0) return;
 
     const sections = extractEditableSections(editor);
     if (sections.length === 0) {
@@ -233,8 +236,9 @@ export function AssistantPanel({
           EDUA AI
         </div>
         <div className="mt-2 w-[251px] rounded-bl-[14px] rounded-br-[14px] rounded-tl rounded-tr-[14px] border border-[#d8d1c9] bg-[#faf7f4] px-3.5 py-3 text-[13px] leading-[21px] text-[#171717]">
-          Giáo án đã được tạo xong. Bạn có muốn tôi điều chỉnh phần nào không? Tôi có thể
-          tinh gọn nội dung, bổ sung hoạt động nhóm hoặc tạo câu hỏi kiểm tra.
+          {lessonGenerationComplete
+            ? <>Giáo án đã được tạo xong. Bạn có muốn tôi điều chỉnh phần nào không? Tôi có thể tinh gọn nội dung, bổ sung hoạt động nhóm hoặc tạo câu hỏi kiểm tra.</>
+            : <>EDUA AI đang soạn giáo án. Bạn có thể xem nội dung đang được tạo; tính năng chỉnh sửa sẽ sẵn sàng khi hoàn tất.</>}
         </div>
 
         {pendingDiffs.length > 0 ? (
@@ -280,8 +284,8 @@ export function AssistantPanel({
             value={input}
             onChange={(event) => setInput(event.target.value)}
             rows={3}
-            disabled={status === "loading" || pendingDiffs.length > 0}
-            placeholder="Nhập yêu cầu chỉnh sửa..."
+            disabled={!lessonGenerationComplete || status === "loading" || pendingDiffs.length > 0}
+            placeholder={lessonGenerationComplete ? "Nhập yêu cầu chỉnh sửa..." : "Đang soạn giáo án..."}
             className="max-h-32 min-h-14 flex-1 resize-none bg-transparent text-[13px] leading-5 text-[#171717] outline-none placeholder:text-[#171717]/50 disabled:cursor-wait"
           />
           <button
@@ -295,7 +299,9 @@ export function AssistantPanel({
           </button>
         </div>
         <p className="mt-2 text-center text-[10px] leading-[15px] text-[#6b6b6b]">
-          {pendingDiffs.length > 0
+          {!lessonGenerationComplete
+            ? "Vui lòng chờ EDUA AI soạn xong giáo án trước khi chỉnh sửa"
+            : pendingDiffs.length > 0
             ? `Chấp nhận hoặc Bỏ ${pendingDiffs.length} đề xuất hiện tại trước khi gửi yêu cầu mới`
             : "AI sẽ chỉnh sửa trực tiếp trên giáo án của bạn"}
         </p>

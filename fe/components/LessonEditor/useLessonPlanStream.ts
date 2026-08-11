@@ -99,14 +99,19 @@ function setPendingStatus(
 export function useLessonPlanStream(
   editor: Editor | null,
   onComplete?: (session: LessonPlanSession) => void,
+  onFinished?: () => void,
   enabled = true,
 ) {
   const { accessToken, status } = useAuth();
   const startedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
+  const onFinishedRef = useRef(onFinished);
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
+  useEffect(() => {
+    onFinishedRef.current = onFinished;
+  }, [onFinished]);
   // Token mới nhất cho nút "Thử lại" (retry có thể xảy ra lâu sau khi mở stream, token có thể
   // đã refresh) — đọc qua ref để không phụ thuộc closure cũ của effect.
   const accessTokenRef = useRef(accessToken);
@@ -238,12 +243,14 @@ export function useLessonPlanStream(
               "color:#2e7d32;font-weight:bold",
               event,
             );
+            onFinishedRef.current?.();
             onCompleteRef.current?.(session);
             break;
           }
           case "ERROR": {
             console.error("← ERROR khi sinh giáo án:", event.message);
             showErrorFallback(event.message);
+            onFinishedRef.current?.();
             break;
           }
         }
@@ -252,7 +259,10 @@ export function useLessonPlanStream(
         console.log("[lesson-edit] stream đóng.");
         // Mất kết nối (onDisconnect/onStompError) mà chưa từng nhận FRAME_READY hay
         // ERROR tường minh — coi như thất bại, mở khoá thay vì kẹt vĩnh viễn.
-        if (!cancelled) showErrorFallback();
+        if (!cancelled) {
+          showErrorFallback();
+          onFinishedRef.current?.();
+        }
       },
     });
 

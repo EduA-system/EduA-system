@@ -72,9 +72,7 @@ export const PendingActivity = Node.create({
     const name = node.attrs.name || (order != null ? `Hoạt động ${order}` : "Hoạt động");
     const duration = node.attrs.duration ? ` (${node.attrs.duration})` : "";
     const failed = node.attrs.status === "failed";
-    const status = failed
-      ? "⚠️ Chưa soạn được nội dung — mời soạn tay hoặc bấm Thử lại."
-      : "⏳ Đang soạn nội dung…";
+    const status = "⚠️ Chưa soạn được nội dung — mời soạn tay hoặc bấm Thử lại.";
     return [
       "div",
       mergeAttributes(HTMLAttributes, {
@@ -82,7 +80,18 @@ export const PendingActivity = Node.create({
         class: failed ? "lp-pending lp-pending-failed" : "lp-pending",
       }),
       ["div", { class: "lp-pending-title" }, `${name}${duration}`],
-      ["div", { class: "lp-pending-status" }, status],
+      failed
+        ? ["div", { class: "lp-pending-status" }, status]
+        : [
+            "div",
+            {
+              class: "lp-pending-progress",
+              role: "progressbar",
+              "aria-label": "Đang soạn nội dung",
+              "aria-valuetext": "Đang soạn nội dung",
+            },
+            ["div", { class: "lp-pending-progress-bar" }],
+          ],
     ];
   },
 

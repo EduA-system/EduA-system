@@ -56,6 +56,7 @@ export function LessonEditDashboard() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [documentReady, setDocumentReady] = useState(!libraryId);
+  const [isGeneratingLesson, setIsGeneratingLesson] = useState(Boolean(pendingSession));
   const [isDirty, setIsDirty] = useState(false);
   // Còn đề xuất AI (đang hiện diff đỏ/xanh trong tài liệu) chưa Chấp nhận/Bỏ — chặn "Lưu" khi
   // true, tránh lưu một bản giáo án dở dang có cả nội dung cũ/mới lẫn lộn mà sau khi mở lại
@@ -175,8 +176,13 @@ export function LessonEditDashboard() {
   }, [isDirty]);
 
   const saveLesson = useCallback(
-    async (session: LessonPlanSession | null = lessonSession) => {
+    async (session: LessonPlanSession | null = lessonSession, allowDuringGeneration = false) => {
       if (!editor || savingRef.current) return;
+      if (isGeneratingLesson && !allowDuringGeneration) {
+        setSaveStatus("error");
+        setSaveError("Giáo án đang được tạo, vui lòng chờ hoàn tất trước khi lưu.");
+        return;
+      }
       // Chặn lưu khi tài liệu còn diff AI chưa Chấp nhận/Bỏ — quét trực tiếp thay vì tin
       // `hasPendingAiDiff` (state React có thể chưa kịp đồng bộ ngay sau lần "update" cuối)
       // để đảm bảo không bao giờ lưu một bản có cả nội dung cũ/mới lẫn lộn.
@@ -246,7 +252,7 @@ export function LessonEditDashboard() {
         savingRef.current = false;
       }
     },
-    [authFetch, editor, lessonSession],
+    [authFetch, editor, isGeneratingLesson, lessonSession],
   );
 
   const exportPdf = useCallback(async () => {
@@ -254,6 +260,11 @@ export function LessonEditDashboard() {
     if (!documentReady) {
       setSaveStatus("error");
       setSaveError("Giáo án đang tải, vui lòng đợi trong giây lát rồi xuất PDF.");
+      return;
+    }
+    if (isGeneratingLesson) {
+      setSaveStatus("error");
+      setSaveError("Giáo án đang được tạo, vui lòng chờ hoàn tất trước khi xuất PDF.");
       return;
     }
     const title = editor.state.doc.firstChild?.textContent.trim() || "Giáo án";
@@ -275,13 +286,13 @@ export function LessonEditDashboard() {
     } finally {
       setExportingPdf(false);
     }
-  }, [authFetch, documentReady, editor, margins.left, margins.right]);
+  }, [authFetch, documentReady, editor, isGeneratingLesson, margins.left, margins.right]);
 
   // Khi AI đã hoàn thành toàn bộ activity, lưu bản giáo án đầu tiên vào thư viện.
   useLessonPlanStream(editor, (session) => {
     setLessonSession(session);
-    void saveLesson(session);
-  }, !libraryId);
+    void saveLesson(session, true);
+  }, () => setIsGeneratingLesson(false), !libraryId);
 
   // Ưu tiên phiên streaming đang sống (mới nhất); mở lại từ Library thì dùng `lessonSource`
   // đọc từ payload đã lưu.
@@ -301,9 +312,11 @@ export function LessonEditDashboard() {
                 {!libraryId && (
                   <HeaderActionButton
                     onClick={() => void saveLesson()}
-                    disabled={hasPendingAiDiff}
+                    disabled={isGeneratingLesson || hasPendingAiDiff}
                     label={
-                      saveStatus === "saving"
+                      isGeneratingLesson
+                        ? "Đang tạo giáo án..."
+                        : saveStatus === "saving"
                         ? "Đang lưu..."
                         : hasPendingAiDiff
                           ? "Còn đề xuất AI chưa duyệt"
@@ -315,13 +328,13 @@ export function LessonEditDashboard() {
                 )}
                 <HeaderActionButton
                   onClick={() => void exportPdf()}
-                  disabled={exportingPdf || !documentReady}
-                  label={!documentReady ? "Đang tải giáo án..." : exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                  disabled={isGeneratingLesson || exportingPdf || !documentReady}
+                  label={isGeneratingLesson ? "Đang tạo giáo án..." : !documentReady ? "Đang tải giáo án..." : exportingPdf ? "Đang xuất..." : "Xuất PDF"}
                 >
                   <PrintIcon />
                 </HeaderActionButton>
                 {!libraryId && (
-                  <HeaderActionButton onClick={() => undefined} label="Tạo giáo án" primary>
+                  <HeaderActionButton onClick={() => undefined} disabled={isGeneratingLesson} label={isGeneratingLesson ? "Đang tạo giáo án..." : "Tạo giáo án"} primary>
                     <CreateLessonIcon />
                   </HeaderActionButton>
                 )}
@@ -386,6 +399,7 @@ export function LessonEditDashboard() {
           bookId={activeSource?.bookId}
           chapterId={activeSource?.chapterId}
           lessonId={activeSource?.lessonId}
+          lessonGenerationComplete={!isGeneratingLesson}
         />
       </div>
 
