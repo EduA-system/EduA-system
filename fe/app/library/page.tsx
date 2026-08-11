@@ -233,7 +233,6 @@ function LibraryScreen() {
           if (!detail.thumbnailUrl && thumbnailUrl) patch.thumbnailUrl = thumbnailUrl;
           if (!detail.grade && grade) patch.grade = grade;
           if (!patch.thumbnailUrl && !patch.grade) return;
-          await updateLibraryContent(authFetch, detail.id, patch);
           setItems((current) => current.map((content) => content.id === detail.id ? { ...content, ...patch } : content));
         })
         .catch(() => undefined);
