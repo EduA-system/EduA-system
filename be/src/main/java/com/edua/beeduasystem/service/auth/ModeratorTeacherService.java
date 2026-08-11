@@ -99,6 +99,16 @@ public class ModeratorTeacherService {
         return new TeacherListResult(teachers, granterNames, granterUserIds, grantedAts, gradesByUserIds);
     }
 
+    @Transactional(readOnly = true)
+    public AccountStatusStats countTeachersByStatus() {
+        Subject moderatorSubject = currentUserProvider.require().subject();
+        if (moderatorSubject == null) {
+            throw new ForbiddenOperationException("Moderator phải có subject để quản lý giáo viên.");
+        }
+        var counts = userRepository.countStatusByRole(Role.TEACHER, moderatorSubject);
+        return new AccountStatusStats(counts.active(), counts.disabled());
+    }
+
     @Transactional
     public AppUser addTeacher(String email, String rawSubject, String fullName, Collection<Integer> grades) {
         Subject moderatorSubject = currentUserProvider.require().subject();

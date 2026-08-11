@@ -81,6 +81,16 @@ type PageResponse<T> = {
   totalPages: number;
 };
 
+type AccountStatusStats = {
+  active: number;
+  disabled: number;
+};
+
+type PrincipalAccountStats = {
+  moderators: AccountStatusStats;
+  itStaff: AccountStatusStats;
+};
+
 type Tab = "moderator" | "teacher" | "it-staff";
 
 function availableSubject(items: SubjectAccountItem[], currentSubject: string): string {
@@ -222,6 +232,8 @@ function UserManagementContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [msg, setMsg] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>(isPrincipal ? "moderator" : "teacher");
+  const [principalStats, setPrincipalStats] = useState<PrincipalAccountStats | null>(null);
+  const [teacherStats, setTeacherStats] = useState<AccountStatusStats | null>(null);
 
   // ── Moderator accounts (Principal only) ──────────────────────────────
   const [moderatorData, setModeratorData] = useState<PageResponse<SubjectAccountItem> | null>(null);
@@ -250,6 +262,11 @@ function UserManagementContent() {
     [authFetch],
   );
 
+  const loadPrincipalStats = useCallback(async () => {
+    const data = await api<PrincipalAccountStats>(authFetch, "/principal/account-stats");
+    setPrincipalStats(data);
+  }, [authFetch]);
+
   // ── Teacher accounts (Moderator only) ────────────────────────────────
   const [teacherData, setTeacherData] = useState<PageResponse<SubjectAccountItem> | null>(null);
   const [teacherEmail, setTeacherEmail] = useState("");
@@ -267,6 +284,11 @@ function UserManagementContent() {
     },
     [authFetch],
   );
+
+  const loadTeacherStats = useCallback(async () => {
+    const data = await api<AccountStatusStats>(authFetch, "/moderator/teachers/stats");
+    setTeacherStats(data);
+  }, [authFetch]);
 
   // ── IT Staff accounts (Principal only) ───────────────────────────────
   const [itStaffData, setItStaffData] = useState<PageResponse<AccountItem> | null>(null);
@@ -293,8 +315,10 @@ function UserManagementContent() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       void loadModerators(0).catch((e) => setMsg(String(e)));
       void loadItStaff(0).catch((e) => setMsg(String(e)));
+      void loadPrincipalStats().catch((e) => setMsg(String(e)));
     } else if (isModerator) {
       void loadTeachers(0).catch((e) => setMsg(String(e)));
+      void loadTeacherStats().catch((e) => setMsg(String(e)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPrincipal, isModerator]);
@@ -312,6 +336,7 @@ function UserManagementContent() {
       setModeratorFullName("");
       setMsg("Đã thêm Người Kiểm Duyệt.");
       await loadModerators(moderatorData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -329,6 +354,7 @@ function UserManagementContent() {
         setMsg("Đã thu hồi.");
       }
       await loadModerators(moderatorData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -360,6 +386,7 @@ function UserManagementContent() {
       setReplacementTarget(null);
       setMsg("Đã thay Moderator.");
       await loadModerators(moderatorData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       // Lỗi hiện ngay trong modal (không dùng `msg` ngoài trang — modal là overlay che hết, `msg` sẽ vô hình).
       setReplacementError(String(e));
@@ -382,6 +409,7 @@ function UserManagementContent() {
       setTeacherGrades([10, 11, 12]);
       setMsg("Đã thêm Giáo Viên.");
       await loadTeachers(teacherData?.page ?? 0);
+      await loadTeacherStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -399,6 +427,7 @@ function UserManagementContent() {
         setMsg("Đã thu hồi.");
       }
       await loadTeachers(teacherData?.page ?? 0);
+      await loadTeacherStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -417,6 +446,7 @@ function UserManagementContent() {
       setItStaffFullName("");
       setMsg("Đã cấp quyền IT Staff.");
       await loadItStaff(itStaffData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -451,6 +481,7 @@ function UserManagementContent() {
       setItStaffReplacementTarget(null);
       setMsg("Đã thay IT Staff.");
       await loadItStaff(itStaffData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       setItStaffReplacementError(String(e));
     } finally {
@@ -470,6 +501,7 @@ function UserManagementContent() {
         setMsg("Đã thu hồi.");
       }
       await loadItStaff(itStaffData?.page ?? 0);
+      await loadPrincipalStats();
     } catch (e) {
       setMsg(String(e));
     }
@@ -484,7 +516,9 @@ function UserManagementContent() {
   const takenSubjects = new Set(
     (moderatorData?.content ?? []).filter((i) => i.status !== "DISABLED").map((i) => i.subject),
   );
-  const itStaffSeatOccupied = (itStaffData?.content ?? []).some((i) => i.status !== "DISABLED");
+  const moderatorStats = principalStats?.moderators;
+  const itStaffStats = principalStats?.itStaff;
+  const itStaffSeatOccupied = itStaffStats == null || itStaffStats.active > 0;
 
   return (
     <main className="min-h-screen bg-white text-[#1f1f1f]">
@@ -558,16 +592,20 @@ function UserManagementContent() {
             {isPrincipal && activeTab === "moderator" && (
               <div className="mt-6">
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Metric icon={<Users className="size-4" aria-hidden />} label="Tổng số" value={String(moderatorData?.totalElements ?? 0)} />
+                  <Metric
+                    icon={<Users className="size-4" aria-hidden />}
+                    label="Tổng số"
+                    value={String(moderatorStats ? moderatorStats.active + moderatorStats.disabled : moderatorData?.totalElements ?? 0)}
+                  />
                   <Metric
                     icon={<ShieldCheck className="size-4" aria-hidden />}
                     label="Đang hoạt động"
-                    value={String((moderatorData?.content ?? []).filter((i) => i.status !== "DISABLED").length)}
+                    value={String(moderatorStats?.active ?? 0)}
                   />
                   <Metric
                     icon={<UserMinus className="size-4" aria-hidden />}
                     label="Đã thu hồi"
-                    value={String((moderatorData?.content ?? []).filter((i) => i.status === "DISABLED").length)}
+                    value={String(moderatorStats?.disabled ?? 0)}
                   />
                 </div>
 
@@ -667,16 +705,20 @@ function UserManagementContent() {
             {isModerator && activeTab === "teacher" && (
               <div className="mt-6">
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Metric icon={<Users className="size-4" aria-hidden />} label="Tổng số" value={String(teacherData?.totalElements ?? 0)} />
+                  <Metric
+                    icon={<Users className="size-4" aria-hidden />}
+                    label="Tổng số"
+                    value={String(teacherStats ? teacherStats.active + teacherStats.disabled : teacherData?.totalElements ?? 0)}
+                  />
                   <Metric
                     icon={<ShieldCheck className="size-4" aria-hidden />}
                     label="Đang hoạt động"
-                    value={String((teacherData?.content ?? []).filter((i) => i.status !== "DISABLED").length)}
+                    value={String(teacherStats?.active ?? 0)}
                   />
                   <Metric
                     icon={<UserMinus className="size-4" aria-hidden />}
                     label="Đã thu hồi"
-                    value={String((teacherData?.content ?? []).filter((i) => i.status === "DISABLED").length)}
+                    value={String(teacherStats?.disabled ?? 0)}
                   />
                 </div>
 
@@ -768,16 +810,20 @@ function UserManagementContent() {
             {isPrincipal && activeTab === "it-staff" && (
               <div className="mt-6">
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Metric icon={<Users className="size-4" aria-hidden />} label="Tổng số" value={String(itStaffData?.totalElements ?? 0)} />
+                  <Metric
+                    icon={<Users className="size-4" aria-hidden />}
+                    label="Tổng số"
+                    value={String(itStaffStats ? itStaffStats.active + itStaffStats.disabled : itStaffData?.totalElements ?? 0)}
+                  />
                   <Metric
                     icon={<ShieldCheck className="size-4" aria-hidden />}
                     label="Đang hoạt động"
-                    value={String((itStaffData?.content ?? []).filter((i) => i.status !== "DISABLED").length)}
+                    value={String(itStaffStats?.active ?? 0)}
                   />
                   <Metric
                     icon={<UserMinus className="size-4" aria-hidden />}
                     label="Đã thu hồi"
-                    value={String((itStaffData?.content ?? []).filter((i) => i.status === "DISABLED").length)}
+                    value={String(itStaffStats?.disabled ?? 0)}
                   />
                 </div>
 

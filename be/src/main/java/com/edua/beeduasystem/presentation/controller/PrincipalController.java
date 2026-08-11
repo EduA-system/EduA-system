@@ -1,9 +1,11 @@
 package com.edua.beeduasystem.presentation.controller;
 
 import com.edua.beeduasystem.presentation.dto.auth.AddModeratorRequest;
+import com.edua.beeduasystem.presentation.dto.auth.AccountStatusStatsDto;
 import com.edua.beeduasystem.presentation.dto.auth.AddItStaffRequest;
 import com.edua.beeduasystem.presentation.dto.auth.ItStaffDto;
 import com.edua.beeduasystem.presentation.dto.auth.ModeratorDto;
+import com.edua.beeduasystem.presentation.dto.auth.PrincipalAccountStatsDto;
 import com.edua.beeduasystem.presentation.dto.auth.ReplaceItStaffRequest;
 import com.edua.beeduasystem.presentation.dto.auth.ReplaceModeratorRequest;
 import com.edua.beeduasystem.service.auth.PrincipalModeratorService;
@@ -41,6 +43,13 @@ public class PrincipalController {
     public PrincipalController(PrincipalModeratorService principalModeratorService, PrincipalItStaffService principalItStaffService) {
         this.principalModeratorService = principalModeratorService;
         this.principalItStaffService = principalItStaffService;
+    }
+
+    @GetMapping("/account-stats")
+    public PrincipalAccountStatsDto accountStats() {
+        return new PrincipalAccountStatsDto(
+                AccountStatusStatsDto.from(principalModeratorService.countModeratorsByStatus()),
+                AccountStatusStatsDto.from(principalItStaffService.countByStatus()));
     }
 
     @GetMapping("/moderators")

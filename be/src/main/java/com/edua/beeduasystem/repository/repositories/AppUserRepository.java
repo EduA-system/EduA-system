@@ -41,7 +41,11 @@ public interface AppUserRepository {
     /** Kiểm tra có user chưa bị thu hồi với role đã cho không. */
     boolean existsActiveByRole(Role role);
 
+    StatusCounts countStatusByRole(Role role, Subject subject);
+
     List<RoleStatusAggregate> countActiveInactiveByRole(Subject subject);
 
     record RoleStatusAggregate(Role role, boolean active, long count) { }
+
+    record StatusCounts(long active, long disabled) { }
 }

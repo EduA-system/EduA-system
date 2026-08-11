@@ -28,7 +28,7 @@ khắp nơi** (lượt tự động).
 | R2-13 | `ModeratorTeacherService.java:161` | Thu hồi tài khoản không thu hồi phiên đăng nhập — giữ quyền tới 60 phút | TB | Đã sửa |
 | R2-14 | `fe/app/it-staff/activity-log/page.tsx:77` | Bộ lọc ngày "đến" loại bỏ trọn ngày được chọn | TB | Đã sửa |
 | R2-07 | `ModeratorTeacherService.java:161` | Thu hồi giáo viên bỏ lại tài nguyên họ đang sở hữu | TB | Đã sửa |
-| R2-15 | `fe/app/user-management/page.tsx:623` | Số liệu "Đang hoạt động" đếm theo trang, đặt cạnh "Tổng số" toàn hệ thống | Thấp | Sửa |
+| R2-15 | `fe/app/user-management/page.tsx:623` | Số liệu "Đang hoạt động" đếm theo trang, đặt cạnh "Tổng số" toàn hệ thống | Thấp | Đã sửa |
 | R2-16 | `PrincipalItStaffService.java:41` | Bỏ qua `normalizeEmail` → email quá dài thành 500 thay vì 400 | Thấp | Sửa |
 
 ---

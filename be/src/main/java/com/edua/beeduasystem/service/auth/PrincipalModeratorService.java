@@ -104,6 +104,12 @@ public class PrincipalModeratorService {
         return new ModeratorListResult(moderators, granterNames, granterUserIds, grantedAts);
     }
 
+    @Transactional(readOnly = true)
+    public AccountStatusStats countModeratorsByStatus() {
+        var counts = userRepository.countStatusByRole(Role.MODERATOR, null);
+        return new AccountStatusStats(counts.active(), counts.disabled());
+    }
+
     @Transactional
     public AppUser addModerator(String email, String rawSubject, String fullName) {
         String normalizedEmail = AppUserFieldValidator.normalizeEmail(email);

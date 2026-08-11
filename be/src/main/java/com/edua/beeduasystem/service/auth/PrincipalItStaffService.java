@@ -44,6 +44,12 @@ public class PrincipalItStaffService {
     @Transactional(readOnly = true)
     public Page<AppUser> list(Pageable pageable) { return userRepository.findAllByRole(Role.IT_STAFF, pageable); }
 
+    @Transactional(readOnly = true)
+    public AccountStatusStats countByStatus() {
+        var counts = userRepository.countStatusByRole(Role.IT_STAFF, null);
+        return new AccountStatusStats(counts.active(), counts.disabled());
+    }
+
     @Transactional
     public AppUser add(String email, String fullName) {
         userRoleRepository.lockRole(Role.IT_STAFF);
