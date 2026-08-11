@@ -54,6 +54,12 @@ public class JpaClassRepository implements ClassRepository {
     }
 
     @Override
+    @Transactional
+    public int archiveActiveByOwnerId(UUID ownerId) {
+        return jpa.archiveActiveByOwnerId(ownerId, ClassStatus.INACTIVE, ClassStatus.ACTIVE);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public SearchResult searchOwned(UUID ownerId, Subject subject, Integer grade, ClassStatus status, String q, int page, int size) {
         Specification<ClassEntity> spec = (root, cq, cb) -> {

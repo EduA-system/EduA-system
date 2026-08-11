@@ -10,6 +10,7 @@ import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.ClassRepository;
 import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 public class ModeratorTeacherService {
 
     private final AppUserRepository userRepository;
+    private final ClassRepository classRepository;
     private final UserRoleRepository userRoleRepository;
     private final TeacherGradeRepository teacherGradeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -44,12 +46,14 @@ public class ModeratorTeacherService {
     private final ActivityLogService activityLogService;
 
     public ModeratorTeacherService(AppUserRepository userRepository,
+                                   ClassRepository classRepository,
                                    UserRoleRepository userRoleRepository,
                                    TeacherGradeRepository teacherGradeRepository,
                                    RefreshTokenRepository refreshTokenRepository,
                                    CurrentUserProvider currentUserProvider,
                                    ActivityLogService activityLogService) {
         this.userRepository = userRepository;
+        this.classRepository = classRepository;
         this.userRoleRepository = userRoleRepository;
         this.teacherGradeRepository = teacherGradeRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -160,6 +164,7 @@ public class ModeratorTeacherService {
                 user.avatarUrl(), user.contactInfo(),
                 user.bio(), user.phoneNumber(),
                 user.subject(), UserStatus.DISABLED, user.createdAt(), user.lastLoginAt()));
+        classRepository.archiveActiveByOwnerId(user.id());
         refreshTokenRepository.revokeAllByUserId(user.id());
         activityLogService.record(currentUserProvider.requireUserId(), "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REVOKE_TEACHER, "APP_USER", user.id(), null);

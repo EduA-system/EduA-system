@@ -14,6 +14,8 @@ public interface ClassRepository {
 
     Optional<Classroom> findById(UUID id);
 
+    int archiveActiveByOwnerId(UUID ownerId);
+
     SearchResult searchOwned(UUID ownerId, Subject subject, Integer grade, ClassStatus status, String q, int page, int size);
 
     /** Danh sach lop 1 student dang enrolled (UC-35), khong phan biet ai la owner. */

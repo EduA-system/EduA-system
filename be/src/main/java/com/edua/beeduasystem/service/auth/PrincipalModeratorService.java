@@ -9,7 +9,10 @@ import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
+import com.edua.beeduasystem.domain.model.classroom.ClassStatus;
+import com.edua.beeduasystem.domain.model.classroom.Classroom;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.ClassRepository;
 import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
@@ -35,6 +38,7 @@ import java.util.stream.Collectors;
 public class PrincipalModeratorService {
 
     private final AppUserRepository userRepository;
+    private final ClassRepository classRepository;
     private final UserRoleRepository userRoleRepository;
     private final TeacherGradeRepository teacherGradeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -43,12 +47,14 @@ public class PrincipalModeratorService {
 
     @Autowired
     public PrincipalModeratorService(AppUserRepository userRepository,
+                                 ClassRepository classRepository,
                                  UserRoleRepository userRoleRepository,
                                  TeacherGradeRepository teacherGradeRepository,
                                  RefreshTokenRepository refreshTokenRepository,
                                  CurrentUserProvider currentUserProvider,
                                  ActivityLogService activityLogService) {
         this.userRepository = userRepository;
+        this.classRepository = classRepository;
         this.userRoleRepository = userRoleRepository;
         this.teacherGradeRepository = teacherGradeRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -60,7 +66,7 @@ public class PrincipalModeratorService {
                               UserRoleRepository userRoleRepository,
                               CurrentUserProvider currentUserProvider,
                               ActivityLogService activityLogService) {
-        this(userRepository, userRoleRepository, new TeacherGradeRepository() {
+        this(userRepository, NoopClassRepository.INSTANCE, userRoleRepository, new TeacherGradeRepository() {
             @Override public void replaceGrades(UUID userId, java.util.Collection<Integer> grades) { }
             @Override public java.util.Map<UUID, java.util.List<Integer>> findGradesByUserIds(java.util.Collection<UUID> userIds) { return java.util.Map.of(); }
         }, NoopRefreshTokenRepository.INSTANCE, currentUserProvider, activityLogService);
@@ -182,6 +188,9 @@ public class PrincipalModeratorService {
         userRepository.save(demotedModerator);
         assignRole(demotedModerator.id(), Role.TEACHER, currentUserId, now);
         teacherGradeRepository.replaceGrades(demotedModerator.id(), List.of(10, 11, 12));
+        if (previousStatus == UserStatus.DISABLED) {
+            classRepository.archiveActiveByOwnerId(demotedModerator.id());
+        }
         refreshTokenRepository.revokeAllByUserId(demotedModerator.id());
 
         AppUser savedReplacement = userRepository.save(replacement);
@@ -243,6 +252,37 @@ public class PrincipalModeratorService {
 
         @Override
         public void revokeAllByUserId(UUID userId) {
+        }
+    }
+
+    private enum NoopClassRepository implements ClassRepository {
+        INSTANCE;
+
+        @Override
+        public Classroom save(Classroom classroom) {
+            return classroom;
+        }
+
+        @Override
+        public java.util.Optional<Classroom> findById(UUID id) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public int archiveActiveByOwnerId(UUID ownerId) {
+            return 0;
+        }
+
+        @Override
+        public SearchResult searchOwned(UUID ownerId, Subject subject, Integer grade, ClassStatus status,
+                                        String q, int page, int size) {
+            return new SearchResult(List.of(), 0);
+        }
+
+        @Override
+        public SearchResult searchEnrolled(UUID studentId, Subject subject, Integer grade, ClassStatus status,
+                                           String q, int page, int size) {
+            return new SearchResult(List.of(), 0);
         }
     }
 
