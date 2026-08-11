@@ -52,6 +52,16 @@ function formatDateTime(value: string): string {
   }).format(new Date(value));
 }
 
+function localDateBoundaryIso(value: string, boundary: "start" | "end"): string | undefined {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return undefined;
+  const date =
+    boundary === "start"
+      ? new Date(year, month - 1, day, 0, 0, 0, 0)
+      : new Date(year, month - 1, day, 23, 59, 59, 999);
+  return date.toISOString();
+}
+
 function ActivityLogContent() {
   const { authFetch } = useAuth();
   const [items, setItems] = useState<ActivityLogSummary[]>([]);
@@ -73,8 +83,8 @@ function ActivityLogContent() {
       const result = await listActivityLogs(authFetch, {
         actorId: actorId ?? undefined,
         category: category ?? undefined,
-        from: from ? new Date(from).toISOString() : undefined,
-        to: to ? new Date(to).toISOString() : undefined,
+        from: localDateBoundaryIso(from, "start"),
+        to: localDateBoundaryIso(to, "end"),
         page,
         size: PAGE_SIZE,
       });

@@ -26,7 +26,7 @@ khắp nơi** (lượt tự động).
 | R2-05 | `ModeratorTeacherService.java:112` | Không kiểm tra vai trò cũ khi tái sử dụng tài khoản DISABLED | TB | Đã sửa |
 | R2-06 | `service/auth/` (cả package) | Không service nào gửi thông báo cho người bị thao tác (BR-49) | TB | Sửa |
 | R2-13 | `ModeratorTeacherService.java:161` | Thu hồi tài khoản không thu hồi phiên đăng nhập — giữ quyền tới 60 phút | TB | Đã sửa |
-| R2-14 | `fe/app/it-staff/activity-log/page.tsx:77` | Bộ lọc ngày "đến" loại bỏ trọn ngày được chọn | TB | Sửa |
+| R2-14 | `fe/app/it-staff/activity-log/page.tsx:77` | Bộ lọc ngày "đến" loại bỏ trọn ngày được chọn | TB | Đã sửa |
 | R2-07 | `ModeratorTeacherService.java:161` | Thu hồi giáo viên bỏ lại tài nguyên họ đang sở hữu | TB | Đã sửa |
 | R2-15 | `fe/app/user-management/page.tsx:623` | Số liệu "Đang hoạt động" đếm theo trang, đặt cạnh "Tổng số" toàn hệ thống | Thấp | Sửa |
 | R2-16 | `PrincipalItStaffService.java:41` | Bỏ qua `normalizeEmail` → email quá dài thành 500 thay vì 400 | Thấp | Sửa |
