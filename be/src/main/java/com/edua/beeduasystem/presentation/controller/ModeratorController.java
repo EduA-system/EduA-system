@@ -3,6 +3,7 @@ package com.edua.beeduasystem.presentation.controller;
 import com.edua.beeduasystem.presentation.dto.auth.AccountStatusStatsDto;
 import com.edua.beeduasystem.presentation.dto.auth.AddTeacherRequest;
 import com.edua.beeduasystem.presentation.dto.auth.TeacherDto;
+import com.edua.beeduasystem.presentation.dto.auth.UpdateTeacherRequest;
 import com.edua.beeduasystem.service.auth.ModeratorTeacherService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -63,6 +64,16 @@ public class ModeratorController {
             description = "Cấp quyền bằng email. Subject phải trùng với subject của moderator. Email chưa tồn tại.")
     public TeacherDto addTeacher(@Valid @RequestBody AddTeacherRequest request) {
         var user = moderatorTeacherService.addTeacher(request.email(), request.subject(), request.fullName(), request.grades());
+        return TeacherDto.from(user, request.grades(), null, null);
+    }
+
+    @PatchMapping("/teachers/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Cập nhật thông tin Teacher",
+            description = "Moderator chỉ được sửa giáo viên cùng subject. Không sửa email/subject; lớp và task cũ giữ nguyên.")
+    public TeacherDto updateTeacher(@PathVariable UUID id, @Valid @RequestBody UpdateTeacherRequest request) {
+        var user = moderatorTeacherService.updateTeacher(
+                id, request.fullName(), request.phoneNumber(), request.dateOfBirth(), request.grades());
         return TeacherDto.from(user, request.grades(), null, null);
     }
 
