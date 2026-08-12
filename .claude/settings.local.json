@@ -28,7 +28,8 @@
       "Bash(cd /tmp)",
       "Bash(node -e ' *)",
       "Bash(./mvnw -o clean test)",
-      "WebFetch(domain:www.drawio.com)"
+      "WebFetch(domain:www.drawio.com)",
+      "Bash(npm ci *)"
     ]
   }
 }
