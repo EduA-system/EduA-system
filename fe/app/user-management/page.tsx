@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import {
   ArrowLeftRight,
   ChevronLeft,
   ChevronRight,
   Menu,
+  Pencil,
   RotateCcw,
   ShieldCheck,
   UserMinus,
@@ -38,6 +39,9 @@ const PAGE_SIZE = 20;
 
 // Khớp AppUserFieldValidator.MAX_EMAIL_LENGTH ở backend (be/.../service/auth/AppUserFieldValidator.java).
 const EMAIL_MAX_LENGTH = 320;
+const MIN_EDUCATOR_AGE = 21;
+const MAX_EDUCATOR_AGE = 60;
+const VIETNAM_PHONE_PATTERN = /^0[35789][0-9]{8}$/;
 // Cú pháp email chung — cố tình không khoá theo domain gmail.com cụ thể, vì backend cũng không giới hạn
 // domain (Google Workspace của trường có thể dùng domain riêng, không chỉ @gmail.com).
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -52,6 +56,30 @@ function emailError(raw: string): string | null {
   return null;
 }
 
+function dateYearsAgo(years: number): string {
+  const now = new Date();
+  now.setFullYear(now.getFullYear() - years);
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function phoneNumberError(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return "Vui lòng nhập số điện thoại.";
+  if (!/^[0-9]+$/.test(trimmed)) return "Số điện thoại chỉ được chứa chữ số.";
+  if (trimmed.length !== 10) return "Số điện thoại phải gồm đúng 10 chữ số.";
+  if (!VIETNAM_PHONE_PATTERN.test(trimmed)) return "Số điện thoại phải bắt đầu bằng 03, 05, 07, 08 hoặc 09.";
+  return null;
+}
+
+function dateOfBirthError(value: string): string | null {
+  if (!value) return "Vui lòng nhập ngày sinh.";
+  if (value < dateYearsAgo(MAX_EDUCATOR_AGE)) return "Tuổi giáo viên không được vượt quá 60.";
+  if (value > dateYearsAgo(MIN_EDUCATOR_AGE)) return "Giáo viên phải từ 21 tuổi trở lên.";
+  return null;
+}
+
 function EmailFieldError({ message }: { message: string | null }) {
   if (!message) return null;
   return <p className="mt-1 text-xs font-medium text-[#c2483c]">{message}</p>;
@@ -63,6 +91,8 @@ type AccountItem = {
   id: string;
   email: string;
   fullName: string | null;
+  phoneNumber?: string | null;
+  dateOfBirth?: string | null;
   status: string;
 };
 
@@ -281,6 +311,14 @@ function UserManagementContent() {
   const [teacherEmailTouched, setTeacherEmailTouched] = useState(false);
   const [teacherFullName, setTeacherFullName] = useState("");
   const [teacherGrades, setTeacherGrades] = useState<number[]>([10, 11, 12]);
+  const [teacherEditTarget, setTeacherEditTarget] = useState<SubjectAccountItem | null>(null);
+  const [teacherEditFullName, setTeacherEditFullName] = useState("");
+  const [teacherEditPhoneNumber, setTeacherEditPhoneNumber] = useState("");
+  const [teacherEditDateOfBirth, setTeacherEditDateOfBirth] = useState("");
+  const [teacherEditGrades, setTeacherEditGrades] = useState<number[]>([]);
+  const [teacherEditError, setTeacherEditError] = useState("");
+  const [teacherEditConfirmOpen, setTeacherEditConfirmOpen] = useState(false);
+  const [savingTeacherEdit, setSavingTeacherEdit] = useState(false);
 
   const loadTeachers = useCallback(
     async (page: number) => {
@@ -434,6 +472,63 @@ function UserManagementContent() {
       await loadTeacherStats();
     } catch (e) {
       setMsg(String(e));
+    }
+  }
+
+  function openTeacherEdit(item: SubjectAccountItem) {
+    setTeacherEditTarget(item);
+    setTeacherEditFullName(item.fullName ?? "");
+    setTeacherEditPhoneNumber(item.phoneNumber ?? "");
+    setTeacherEditDateOfBirth(item.dateOfBirth ?? "");
+    setTeacherEditGrades(item.grades && item.grades.length > 0 ? item.grades : [10, 11, 12]);
+    setTeacherEditError("");
+    setTeacherEditConfirmOpen(false);
+  }
+
+  function closeTeacherEdit() {
+    if (savingTeacherEdit) return;
+    setTeacherEditTarget(null);
+    setTeacherEditConfirmOpen(false);
+    setTeacherEditError("");
+  }
+
+  function requestTeacherEditSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const validationError =
+      phoneNumberError(teacherEditPhoneNumber)
+      ?? dateOfBirthError(teacherEditDateOfBirth)
+      ?? (teacherEditGrades.length === 0 ? "Vui lòng chọn ít nhất một khối." : null);
+    if (validationError) {
+      setTeacherEditError(validationError);
+      return;
+    }
+    setTeacherEditError("");
+    setTeacherEditConfirmOpen(true);
+  }
+
+  async function saveTeacherEdit() {
+    if (!teacherEditTarget) return;
+    setSavingTeacherEdit(true);
+    setTeacherEditError("");
+    try {
+      await api(authFetch, `/moderator/teachers/${teacherEditTarget.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          fullName: teacherEditFullName.trim() || null,
+          phoneNumber: teacherEditPhoneNumber.trim(),
+          dateOfBirth: teacherEditDateOfBirth,
+          grades: teacherEditGrades,
+        }),
+      });
+      setTeacherEditTarget(null);
+      setTeacherEditConfirmOpen(false);
+      setMsg("Đã cập nhật thông tin Giáo Viên.");
+      await loadTeachers(teacherData?.page ?? 0);
+    } catch (e) {
+      setTeacherEditConfirmOpen(false);
+      setTeacherEditError(String(e));
+    } finally {
+      setSavingTeacherEdit(false);
     }
   }
 
@@ -803,26 +898,39 @@ function UserManagementContent() {
                             <div className="mt-1 text-xs text-[#8a8178]">
                               {item.email} · Môn {SUBJECT_LABELS[item.subject] ?? item.subject}
                               {gradeText(item.grades)}
+                              {item.phoneNumber ? ` · SĐT ${item.phoneNumber}` : ""}
+                              {item.dateOfBirth ? ` · DOB ${item.dateOfBirth}` : ""}
                               {item.grantedByEmail ? ` · cấp bởi ${item.grantedByEmail}` : ""}
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => toggleTeacher(item)}
-                            className={`inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium transition ${
-                              item.status === "DISABLED" ? "text-[#5a7a4a] hover:bg-[#eef6ec]" : "text-[#c2483c] hover:bg-[#fdeceb]"
-                            }`}
-                          >
-                            {item.status === "DISABLED" ? (
-                              <>
-                                <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
-                              </>
-                            ) : (
-                              <>
-                                <UserMinus className="size-4" aria-hidden /> Thu hồi
-                              </>
+                          <div className="flex flex-wrap gap-2">
+                            {item.status !== "DISABLED" && (
+                              <button
+                                type="button"
+                                onClick={() => openTeacherEdit(item)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium text-[#4f4943] transition hover:bg-[#f5f1ec]"
+                              >
+                                <Pencil className="size-4" aria-hidden /> Sửa
+                              </button>
                             )}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => toggleTeacher(item)}
+                              className={`inline-flex items-center gap-1.5 rounded-lg border border-[#d8d1c9] px-3 py-1.5 text-sm font-medium transition ${
+                                item.status === "DISABLED" ? "text-[#5a7a4a] hover:bg-[#eef6ec]" : "text-[#c2483c] hover:bg-[#fdeceb]"
+                              }`}
+                            >
+                              {item.status === "DISABLED" ? (
+                                <>
+                                  <RotateCcw className="size-4" aria-hidden /> Kích hoạt lại
+                                </>
+                              ) : (
+                                <>
+                                  <UserMinus className="size-4" aria-hidden /> Thu hồi
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -934,6 +1042,78 @@ function UserManagementContent() {
         </section>
       </div>
 
+      {teacherEditTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <form onSubmit={requestTeacherEditSave} className="w-full max-w-lg rounded-lg bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="edit-teacher-title">
+            <h2 id="edit-teacher-title" className="text-lg font-semibold">
+              Sửa thông tin Giáo Viên
+            </h2>
+            <p className="mt-2 text-sm text-[#6b6b6b]">
+              {teacherEditTarget.email} · Môn {SUBJECT_LABELS[teacherEditTarget.subject] ?? teacherEditTarget.subject}
+            </p>
+            <label className="mt-4 block text-sm font-medium" htmlFor="teacher-edit-full-name">
+              Họ tên
+            </label>
+            <input
+              id="teacher-edit-full-name"
+              value={teacherEditFullName}
+              onChange={(e) => setTeacherEditFullName(e.target.value)}
+              maxLength={255}
+              placeholder="Không bắt buộc"
+              className="mt-1 w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+            />
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium" htmlFor="teacher-edit-phone">
+                Số điện thoại <span className="text-[#c2483c]">*</span>
+                <input
+                  id="teacher-edit-phone"
+                  value={teacherEditPhoneNumber}
+                  onChange={(e) => setTeacherEditPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  maxLength={10}
+                  inputMode="numeric"
+                  pattern="0[35789][0-9]{8}"
+                  required
+                  placeholder="0912345678"
+                  className="mt-1 w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                />
+              </label>
+              <label className="block text-sm font-medium" htmlFor="teacher-edit-dob">
+                Ngày sinh <span className="text-[#c2483c]">*</span>
+                <input
+                  id="teacher-edit-dob"
+                  type="date"
+                  value={teacherEditDateOfBirth}
+                  onChange={(e) => setTeacherEditDateOfBirth(e.target.value)}
+                  min={dateYearsAgo(MAX_EDUCATOR_AGE)}
+                  max={dateYearsAgo(MIN_EDUCATOR_AGE)}
+                  required
+                  className="mt-1 w-full rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm outline-none focus:border-[#d97757]"
+                />
+              </label>
+            </div>
+            <div className="mt-4">
+              <p className="mb-2 text-sm font-medium">Khối phụ trách <span className="text-[#c2483c]">*</span></p>
+              <GradeCheckboxes value={teacherEditGrades} onChange={setTeacherEditGrades} />
+            </div>
+            {teacherEditError && (
+              <p className="mt-4 rounded-lg border border-[#f3c6bd] bg-[#fdeceb] px-3 py-2 text-sm text-[#c2483c]">{teacherEditError}</p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={closeTeacherEdit} disabled={savingTeacherEdit} className="rounded-lg border border-[#d8d1c9] px-3 py-2 text-sm">
+                Huỷ
+              </button>
+              <button
+                type="submit"
+                disabled={savingTeacherEdit || teacherEditGrades.length === 0}
+                className="rounded-lg bg-[#1f1f1f] px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Lưu thay đổi
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {replacementTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
           <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="replace-moderator-title">
@@ -1039,6 +1219,19 @@ function UserManagementContent() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={teacherEditConfirmOpen}
+        onClose={() => setTeacherEditConfirmOpen(false)}
+        onConfirm={() => void saveTeacherEdit()}
+        loading={savingTeacherEdit}
+        title="Lưu thay đổi Giáo Viên?"
+        description={
+          <>
+            Thông tin tài khoản <span className="font-semibold text-[#1f1f1f]">{teacherEditTarget?.fullName ?? teacherEditTarget?.email}</span> sẽ được cập nhật. Lớp và task cũ vẫn được giữ nguyên.
+          </>
+        }
+        confirmLabel="Lưu thay đổi"
+      />
       <ConfirmDialog
         open={disableAccountTarget !== null}
         onClose={() => setDisableAccountTarget(null)}

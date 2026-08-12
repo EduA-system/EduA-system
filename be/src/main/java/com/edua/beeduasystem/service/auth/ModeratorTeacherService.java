@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -181,6 +182,34 @@ public class ModeratorTeacherService {
     }
 
     @Transactional
+    public AppUser updateTeacher(UUID id, String fullName, String phoneNumber, LocalDate dateOfBirth, Collection<Integer> grades) {
+        Subject moderatorSubject = currentUserProvider.require().subject();
+        if (moderatorSubject == null) {
+            throw new ForbiddenOperationException("Moderator phải có subject để quản lý giáo viên.");
+        }
+        AppUser user = requireManageableTeacher(id, moderatorSubject);
+        List<Integer> normalizedGrades = normalizeGrades(grades);
+        AppUser updated = userRepository.save(new AppUser(
+                user.id(),
+                user.email(),
+                user.googleSub(),
+                AppUserFieldValidator.normalizeOptionalDisplayName(fullName),
+                user.avatarUrl(),
+                user.contactInfo(),
+                user.bio(),
+                AppUserFieldValidator.normalizeVietnamPhoneNumber(phoneNumber),
+                user.subject(),
+                user.status(),
+                user.createdAt(),
+                user.lastLoginAt(),
+                AppUserFieldValidator.normalizeEducatorDateOfBirth(dateOfBirth)));
+        teacherGradeRepository.replaceGrades(updated.id(), normalizedGrades);
+        activityLogService.record(currentUserProvider.requireUserId(), "MODERATOR", ActivityLogCategory.ACCOUNT,
+                ActivityLogAction.UPDATE_TEACHER, "APP_USER", updated.id(), null);
+        return updated;
+    }
+
+    @Transactional
     public AppUser reactivateTeacher(UUID id) {
         Subject moderatorSubject = currentUserProvider.require().subject();
         if (moderatorSubject == null) {
@@ -210,6 +239,20 @@ public class ModeratorTeacherService {
         activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REACTIVATE_TEACHER, "APP_USER", reactivated.id(), null);
         return reactivated;
+    }
+
+    private AppUser requireManageableTeacher(UUID id, Subject moderatorSubject) {
+        AppUser user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giáo viên."));
+        var roles = userRoleRepository.findRolesByUserId(id);
+        if (!roles.contains(Role.TEACHER)) {
+            throw new ResourceNotFoundException("Không tìm thấy giáo viên.");
+        }
+        if (user.subject() != moderatorSubject) {
+            throw new ForbiddenOperationException(
+                    "Bạn chỉ có thể quản lý giáo viên môn " + moderatorSubject.name() + ".");
+        }
+        return user;
     }
 
     private void assignRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt) {
