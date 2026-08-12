@@ -216,7 +216,6 @@ function IsobaricProcessPanel({
   const tabs: Array<[PanelTab, string]> = [
     ["params", "Tham số"],
     ["analysis", "Phân tích"],
-    ["ai", "Sửa bằng AI"],
   ];
 
   const applyPreset = (temperatureC: number) => {

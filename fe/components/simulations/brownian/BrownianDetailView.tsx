@@ -607,7 +607,6 @@ export function BrownianPanel({
           [
             ["params", "Tham số"],
             ["analysis", "Phân tích"],
-            ["ai", "Sửa bằng AI"],
           ] as const
         ).map(([key, label]) => (
           <button

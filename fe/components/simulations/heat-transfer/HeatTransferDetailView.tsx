@@ -298,7 +298,6 @@ export function HeatTransferPanel({
   const tabItems: Array<[PanelTab, string]> = [
     ["params", "Tham số"],
     ["analysis", "Phân tích"],
-    ["ai", "Sửa bằng AI"],
   ];
   const updateNumber = (key: keyof HeatTransferParams) => (value: number) =>
     onParamsChange({ [key]: value } as Partial<HeatTransferParams>);

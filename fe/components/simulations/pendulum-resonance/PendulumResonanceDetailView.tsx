@@ -484,7 +484,6 @@ export function PendulumResonancePanel({
   const tabItems: Array<[PanelTab, string]> = [
     ["params", "Tham số"],
     ["analysis", "Phân tích"],
-    ["ai", "Sửa bằng AI"],
   ];
   const modeItems: Array<[ResonanceMode, string]> = [
     ["energy-transfer", "Truyền năng lượng"],

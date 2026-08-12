@@ -256,7 +256,6 @@ export function IsothermalBoylePanel({
   const tabItems: Array<[PanelTab, string]> = [
     ["params", "Tham số"],
     ["analysis", "Phân tích"],
-    ["ai", "Sửa bằng AI"],
   ];
   const pressureA = calculatePressureFromVolume(
     params.volumeA,

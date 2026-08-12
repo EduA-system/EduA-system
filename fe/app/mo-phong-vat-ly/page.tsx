@@ -5237,7 +5237,6 @@ function GenericDetailView({
                 [
                   ["params", "Tham số"],
                   ["analysis", "Phân tích"],
-                  ["ai", "Sửa bằng AI"],
                 ] as const
               ).map(([k, label]) => (
                 <button
