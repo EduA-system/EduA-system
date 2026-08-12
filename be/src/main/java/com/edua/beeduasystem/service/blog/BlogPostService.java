@@ -26,6 +26,8 @@ import java.util.UUID;
 @Service
 public class BlogPostService {
 
+    private static final String DELETED_COMMENT_PLACEHOLDER = "<p>Bình luận đã bị xóa.</p>";
+
     private static final int MAX_TITLE_LENGTH = 255;
 
     private final BlogPostRepository postRepository;
@@ -142,8 +144,9 @@ public class BlogPostService {
         Map<UUID, BlogAuthorResolver.Profile> commentAuthors = authorResolver.profiles(storedComments.stream().map(com.edua.beeduasystem.domain.model.blog.BlogComment::authorId).toList());
         List<BlogViews.CommentView> comments = storedComments.stream()
                 .map(c -> new BlogViews.CommentView(
-                        c.id(), c.content(), c.authorId(), c.parentCommentId(), commentAuthors.get(c.authorId()).name(),
-                        commentAuthors.get(c.authorId()).avatarUrl(), c.createdAt(), c.updatedAt()))
+                        c.id(), c.hiddenAt() != null ? DELETED_COMMENT_PLACEHOLDER : c.content(),
+                        c.authorId(), c.parentCommentId(), commentAuthors.get(c.authorId()).name(),
+                        commentAuthors.get(c.authorId()).avatarUrl(), c.createdAt(), c.updatedAt(), c.hiddenAt() != null))
                 .toList();
         BlogAuthorResolver.Profile postAuthor = authorResolver.profile(post.authorId());
         return new BlogViews.PostDetail(

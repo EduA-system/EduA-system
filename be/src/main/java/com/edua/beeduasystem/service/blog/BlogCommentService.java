@@ -22,6 +22,8 @@ import java.util.UUID;
 @Service
 public class BlogCommentService {
 
+    private static final String DELETED_COMMENT_PLACEHOLDER = "<p>Bình luận đã bị xóa.</p>";
+
     private final BlogCommentRepository commentRepository;
     private final BlogPostRepository postRepository;
     private final BlogContentSanitizer sanitizer;
@@ -104,11 +106,14 @@ public class BlogCommentService {
         return toView(saved);
     }
 
-    /** Xóa bình luận của chính mình (hard delete). */
+    /** Xóa mềm bình luận của chính mình để không làm đứt cây reply. */
     public void delete(UUID commentId) {
         BlogComment comment = requireComment(commentId);
         requireOwner(comment.authorId());
-        commentRepository.deleteById(commentId);
+        UUID userId = currentUser.requireUserId();
+        commentRepository.save(new BlogComment(
+                comment.id(), comment.postId(), comment.authorId(), comment.parentCommentId(), comment.content(),
+                comment.createdAt(), Instant.now(), Instant.now(), userId));
     }
 
     /** Chủ bài viết có thể ẩn mềm bình luận của người khác trên bài của mình. */
@@ -130,9 +135,11 @@ public class BlogCommentService {
 
     private BlogViews.CommentView toView(BlogComment comment) {
         BlogAuthorResolver.Profile author = authorResolver.profile(comment.authorId());
+        boolean hidden = comment.hiddenAt() != null;
         return new BlogViews.CommentView(
-                comment.id(), comment.content(), comment.authorId(), comment.parentCommentId(),
-                author.name(), author.avatarUrl(), comment.createdAt(), comment.updatedAt());
+                comment.id(), hidden ? DELETED_COMMENT_PLACEHOLDER : comment.content(),
+                comment.authorId(), comment.parentCommentId(),
+                author.name(), author.avatarUrl(), comment.createdAt(), comment.updatedAt(), hidden);
     }
 
     private BlogComment requireComment(UUID commentId) {

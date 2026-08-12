@@ -9,13 +9,13 @@ Phạm vi: `be/.../service/blog/`, `BlogController`, các repository/entity/migr
 
 | # | File:line | Vấn đề | Mức | Xử lý |
 | --- | --- | --- | --- | --- |
-| R7-01 | `BlogCommentService.java:107` | Xóa comment cha có reply trả 500 do vi phạm khóa ngoại | **Cao** | Sửa |
+| R7-01 | `BlogCommentService.java:107` | Xóa comment cha có reply trả 500 do vi phạm khóa ngoại | **Cao** | Đã sửa |
 | R7-02 | `service/blog/` (cả package) | Đổi trạng thái không có transaction bao trọn use case hoặc optimistic lock | **Cao** | Sửa |
-| R7-03 | `BlogCommunityPage.tsx:228` | Response chi tiết cũ có thể ghi đè bài mới → thao tác nhầm bài | **Cao** | Sửa |
+| R7-03 | `BlogCommunityPage.tsx:228` | Response chi tiết cũ có thể ghi đè bài mới → thao tác nhầm bài | **Cao** | Đã sửa |
 | R7-04 | `BlogPostService.java:81` | Xóa mềm bài để lại toàn bộ comment không thể truy cập trong DB | TB | Sửa |
 | R7-05 | `BlogCommentService.java:115` | Ẩn comment không thông báo cho tác giả | TB | Sửa |
 | R7-06 | `BlogPostService.java:121`, `JpaBlogPostRepository.java:78` | Phân trang không clamp/validate → tham số xấu thành 500 hoặc query quá lớn | TB | Sửa |
-| R7-07 | `BlogCommunityPage.tsx:276` | Gửi comment không khóa nút khi request đang chạy → tạo comment trùng | TB | Sửa |
+| R7-07 | `BlogCommunityPage.tsx:276` | Gửi comment không khóa nút khi request đang chạy → tạo comment trùng | TB | Đã sửa |
 | R7-08 | `BlogCommunityPage.tsx:296` | Sửa comment làm mất toàn bộ HTML/định dạng đã lưu | Thấp | Sửa |
 | R7-09 | `BlogContentSanitizer.java:15` | `thumbnailUrl` và ảnh trong nội dung cho phép URL ngoài hệ thống không được kiểm soát | Thấp | Cần quyết định |
 

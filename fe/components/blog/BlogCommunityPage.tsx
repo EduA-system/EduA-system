@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -155,7 +155,7 @@ function summaryFromDetail(post: Detail): Summary {
     authorName: post.authorName,
     authorAvatarUrl: post.authorAvatarUrl,
     createdAt: post.createdAt,
-    commentCount: post.comments.length,
+    commentCount: post.comments.filter((commentItem) => !commentItem.hidden).length,
     excerpt: textExcerptFromHtml(post.content),
     thumbnailUrl: post.thumbnailUrl ?? firstImageFromHtml(post.content),
   };
@@ -175,11 +175,15 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   const [editOpen, setEditOpen] = useState(false);
   const [activeSubjectFilter, setActiveSubjectFilter] = useState<string | null>(() => subjectRestriction);
   const [comment, setComment] = useState("");
+  const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [commentToHide, setCommentToHide] = useState<Comment | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<Comment | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState("");
+  const [editCommentConfirmOpen, setEditCommentConfirmOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<{ id: string } | null>(null);
+  const detailLoadSeqRef = useRef(0);
   const showSuccess = useCallback((message: string) => setSuccessMessage(message), []);
 
   useEffect(() => {
@@ -226,22 +230,40 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   }, [router]);
 
   const loadDetail = useCallback(async (id: string) => {
+    const requestId = detailLoadSeqRef.current + 1;
+    detailLoadSeqRef.current = requestId;
+    const isCurrentRequest = () => detailLoadSeqRef.current === requestId;
     setIsDetailLoading(true);
-    try { setDetail(await api<Detail>(authFetch, `/blog-posts/${id}`)); setMsg(""); }
+    try {
+      const loadedDetail = await api<Detail>(authFetch, `/blog-posts/${id}`);
+      if (!isCurrentRequest() || loadedDetail.id !== id) return;
+      setDetail(loadedDetail);
+      setMsg("");
+    }
     catch (e) {
+      if (!isCurrentRequest()) return;
       if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
       setMsg(String(e));
     }
-    finally { setIsDetailLoading(false); }
+    finally {
+      if (isCurrentRequest()) {
+        setIsDetailLoading(false);
+      }
+    }
   }, [authFetch, handleModeratorRemoved]);
 
   useEffect(() => {
     if (!postId || status !== "authenticated") {
+      detailLoadSeqRef.current += 1;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting detail when postId/status no longer selects a post
       setDetail(null);
       return;
     }
+    setDetail(null);
     void loadDetail(postId);
+    return () => {
+      detailLoadSeqRef.current += 1;
+    };
   }, [loadDetail, postId, status]);
 
   useEffect(() => {
@@ -274,19 +296,22 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   }
 
   async function addComment() {
-    if (!detail || !comment.trim()) return;
+    if (!detail || !comment.trim() || isCommentSubmitting) return;
+    setIsCommentSubmitting(true);
     try {
       await api<Comment>(authFetch, `/blog-posts/${detail.id}/comments`, { method: "POST", body: JSON.stringify({ content: comment, parentCommentId: replyTo?.id ?? null }) });
       setComment(""); setReplyTo(null); showSuccess("Đã đăng bình luận thành công."); await loadDetail(detail.id); await loadPosts(activeSubjectFilter);
     } catch (e) {
       if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
       setMsg(String(e));
+    } finally {
+      setIsCommentSubmitting(false);
     }
   }
 
   async function deleteComment(cid: string) {
     if (!detail) return;
-    try { await api(authFetch, `/blog-comments/${cid}`, { method: "DELETE" }); showSuccess("Đã xóa bình luận thành công."); await loadDetail(detail.id); }
+    try { await api(authFetch, `/blog-comments/${cid}`, { method: "DELETE" }); setCommentToDelete(null); showSuccess("Đã xóa bình luận thành công."); await loadDetail(detail.id); }
     catch (e) {
       if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }
       setMsg(String(e));
@@ -301,6 +326,12 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   function cancelEditComment() {
     setEditingCommentId(null);
     setEditCommentText("");
+    setEditCommentConfirmOpen(false);
+  }
+
+  function requestUpdateComment() {
+    if (!editingCommentId || !editCommentText.trim()) return;
+    setEditCommentConfirmOpen(true);
   }
 
   async function updateComment() {
@@ -355,6 +386,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   const commentsForDisplay = detail ? detail.comments
     .filter((commentItem) => !commentItem.parentCommentId)
     .flatMap((commentItem) => [commentItem, ...detail.comments.filter((reply) => reply.parentCommentId === commentItem.id)]) : [];
+  const visibleCommentCount = detail ? detail.comments.filter((commentItem) => !commentItem.hidden).length : 0;
   const featuredPost = posts[0];
   const recentPosts = posts.slice(1, 5);
   const discussionPosts = [...posts].sort((a, b) => b.commentCount - a.commentCount).slice(0, 3);
@@ -452,14 +484,14 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                   <div className="mt-8 flex items-center gap-5 border-b-[0.8px] border-t-[0.8px] border-[#f5f5f3] py-4 text-[13px] text-[#b0b1c2]">
                     <div className="flex items-center gap-1.5">
                       <span className="size-3.5"><CommentBubbleIcon /></span>
-                      {detail.comments.length} bình luận
+                      {visibleCommentCount} bình luận
                     </div>
                   </div>
 
                   <section className="pt-5">
                     <h3 className="text-[14px] font-semibold text-[#1c1e2e]">Bình luận</h3>
 
-                    {replyTo && <div className="mt-3 flex items-center justify-between rounded-xl bg-[#f4f3f8] px-3 py-2 text-[12px] text-[#5d6381]"><span>Đang trả lời <strong>{replyTo.authorName}</strong></span><button type="button" onClick={() => setReplyTo(null)} className="font-semibold text-[#7661b3] hover:text-[#4f3e8a]">Hủy</button></div>}
+                    {replyTo && <div className="mt-3 flex items-center justify-between rounded-xl bg-[#f4f3f8] px-3 py-2 text-[12px] text-[#5d6381]"><span>Đang trả lời <strong>{replyTo.authorName}</strong></span><button type="button" disabled={isCommentSubmitting} onClick={() => setReplyTo(null)} className="font-semibold text-[#7661b3] hover:text-[#4f3e8a] disabled:cursor-not-allowed disabled:opacity-50">Hủy</button></div>}
 
                     <div className="flex items-start gap-3 pt-4">
                       <Avatar name={currentUserName} seed={user.id} size={32} />
@@ -468,16 +500,21 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                           value={comment}
                           onChange={(e) => setComment(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") addComment();
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void addComment();
+                            }
                           }}
+                          disabled={isCommentSubmitting}
                           placeholder="Viết bình luận..."
-                          className="h-10 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] py-2 pl-4 pr-11 text-[13px] text-[#4a4b5e] outline-none transition-colors placeholder:text-[#c0c1d0] focus:border-[#d8d8d5]"
+                          className="h-10 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] py-2 pl-4 pr-11 text-[13px] text-[#4a4b5e] outline-none transition-colors placeholder:text-[#c0c1d0] focus:border-[#d8d8d5] disabled:cursor-not-allowed disabled:opacity-70"
                         />
                         <button
                           type="button"
+                          disabled={isCommentSubmitting || !comment.trim()}
                           onClick={addComment}
                           title="Gửi bình luận"
-                          className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-[10px] text-[#b0b1c2] transition-colors hover:bg-white hover:text-[#4a4b5e]"
+                          className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-[10px] text-[#b0b1c2] transition-colors hover:bg-white hover:text-[#4a4b5e] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-[#b0b1c2]"
                         >
                           <span className="size-3"><SendIcon /></span>
                         </button>
@@ -502,7 +539,10 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                                     value={editCommentText}
                                     onChange={(e) => setEditCommentText(e.target.value)}
                                     onKeyDown={(e) => {
-                                      if (e.key === "Enter") updateComment();
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        requestUpdateComment();
+                                      }
                                       if (e.key === "Escape") cancelEditComment();
                                     }}
                                     autoFocus
@@ -512,7 +552,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                                     <button type="button" onClick={cancelEditComment} className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-[#9b9caf] transition-colors hover:text-[#4a4b5e]">
                                       Hủy
                                     </button>
-                                    <button type="button" onClick={updateComment} className="rounded-lg bg-[#1c1e2e] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#35374b]">
+                                    <button type="button" onClick={requestUpdateComment} disabled={!editCommentText.trim()} className="rounded-lg bg-[#1c1e2e] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#35374b] disabled:cursor-not-allowed disabled:opacity-50">
                                       Lưu
                                     </button>
                                   </div>
@@ -533,18 +573,18 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                               )}
                             </div>
                             <div className="flex items-center gap-3 px-1 pt-1.5 text-[11px] font-semibold text-[#9b9caf]">
-                              {!c.parentCommentId && <button type="button" onClick={() => setReplyTo(c)} className="hover:text-[#4a4b5e]">Trả lời</button>}
-                              {c.authorId === user.id && (
+                              {!c.hidden && !c.parentCommentId && <button type="button" onClick={() => setReplyTo(c)} className="hover:text-[#4a4b5e]">Trả lời</button>}
+                              {!c.hidden && c.authorId === user.id && (
                                 <>
                                   <button type="button" onClick={() => startEditComment(c)} className="hover:text-[#4a4b5e]">
                                     Sửa
                                   </button>
-                                  <button type="button" onClick={() => deleteComment(c.id)} className="text-red-500 hover:text-red-600">
+                                  <button type="button" onClick={() => setCommentToDelete(c)} className="text-red-500 hover:text-red-600">
                                     Xóa
                                   </button>
                                 </>
                               )}
-                              {detail.authorId === user.id && c.authorId !== user.id && (
+                              {!c.hidden && detail.authorId === user.id && c.authorId !== user.id && (
                                 <button type="button" onClick={() => setCommentToHide(c)} className="text-[#d75a88] hover:text-[#b83b69]">
                                   Ẩn bình luận
                                 </button>
@@ -616,6 +656,8 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
         )}
         {successMessage && <BlogSuccessToast message={successMessage} onClose={() => setSuccessMessage("")} />}
         {commentToHide && <BlogConfirmationDialog title="Ẩn bình luận này?" description="Bình luận sẽ không còn hiển thị với người xem bài viết. Bạn vẫn có thể xem lại dữ liệu này trong hệ thống." confirmLabel="Ẩn bình luận" onCancel={() => setCommentToHide(null)} onConfirm={hideComment} />}
+        {commentToDelete && <BlogConfirmationDialog title="Xóa bình luận này?" description="Bình luận sẽ bị xóa khỏi cuộc thảo luận. Nếu bình luận có phản hồi, hệ thống sẽ giữ vị trí để mạch trả lời không bị đứt." confirmLabel="Xóa bình luận" onCancel={() => setCommentToDelete(null)} onConfirm={() => void deleteComment(commentToDelete.id)} />}
+        {editCommentConfirmOpen && <BlogConfirmationDialog title="Lưu thay đổi bình luận?" description="Nội dung bình luận sẽ được cập nhật và hiển thị lại trong cuộc thảo luận." confirmLabel="Lưu thay đổi" onCancel={() => setEditCommentConfirmOpen(false)} onConfirm={() => void updateComment()} />}
         {postToDelete && <BlogConfirmationDialog title="Xóa bài viết này?" description="Bài viết sẽ bị gỡ khỏi Blog và không còn hiển thị với người đọc." confirmLabel="Xóa bài viết" onCancel={() => setPostToDelete(null)} onConfirm={() => void deletePost(postToDelete.id)} />}
       </main>
     </div>

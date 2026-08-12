@@ -57,7 +57,7 @@ export function formatRelativeTime(iso: string): string {
 }
 
 export type Summary = { id: string; title: string; subject: string; authorId: string; authorName: string; authorAvatarUrl: string | null; createdAt: string; commentCount: number; excerpt: string; thumbnailUrl: string | null };
-export type Comment = { id: string; content: string; authorId: string; parentCommentId: string | null; authorName: string; authorAvatarUrl: string | null; createdAt: string };
+export type Comment = { id: string; content: string; authorId: string; parentCommentId: string | null; authorName: string; authorAvatarUrl: string | null; createdAt: string; hidden?: boolean };
 export type Detail = { id: string; title: string; content: string; thumbnailUrl: string | null; subject: string; authorId: string; authorName: string; authorAvatarUrl: string | null; createdAt: string; comments: Comment[] };
 
 // ---- gọi BE: thêm Bearer + JSON, ném lỗi kèm message từ BE ----
