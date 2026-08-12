@@ -13,7 +13,6 @@
 - **Expanded Classroom:** teachers assign resources/assignments; students access them, submit, resubmit, or withdraw submissions. The system distinguishes on-time from late submissions.
 - **Adjusted the Principal role:** focused on school-wide statistics by subject, AI material type, weekly tasks, material-approval progress, and accounts.
 - **Added IT Staff:** manages AI system prompts and activity logs to improve operability and system control.
-- **Specialized input:** teachers can upload reference documents so the AI generates content matching the style and requirements of each specific period.
 
 ## II. Overall Solution and Role Model
 
@@ -27,9 +26,10 @@
 
 ### 2. Closed-Loop Material Lifecycle
 
-`AI generates lesson plan/slides/test/simulation → Teacher edits → Save to library or submit for approval → Share with classroom → Students study/submit work → Teachers and school track progress`
+`AI generates lesson plans/slides/tests and supports simulations → Teacher edits → Save to Library → Submit lesson plan for Weekly Task approval → Moderator approves/rejects → Teacher shares resources or assignments with the classroom → Students study/submit work → Teachers track submissions and the school tracks aggregate workflow metrics`
 
-- Materials are organized through the Library and Community Hub, with support for comments, content reports, and approve/reject before wide sharing.
+- Weekly lesson-plan approval is distinct from Community Hub moderation: a teacher submits a Library lesson plan to a Weekly Task; the subject-group leader (Moderator) approves or rejects it with a reason, and the teacher can revise and resubmit.
+- Materials are organized through the Library and Community Hub. Community Hub moderation is optional and separately controls broad sharing, with comments, content reports, and approve/reject states.
 - Real-time notifications keep users aware of events such as task assignment, submission, and approval.
 
 ## III. AI Architecture and Knowledge Management
@@ -44,6 +44,7 @@
 ### 2. Textbook Grounding
 
 - The system stores the core content of the *Ket noi tri thuc* textbook series in a `textbooks → chapters → lessons` structure; each lesson carries a `knowledge_json`.
+
 - When a teacher picks a lesson, the system retrieves the matching knowledge as context for the AI so the content stays aligned with the curriculum.
 - Grounding reduces the risk of AI generating inaccurate content; teachers still review before classroom use.
 
@@ -99,3 +100,4 @@
 - **Pedagogical review:** AI is an assistant, not a replacement for the teacher in final decisions on content and teaching method.
 - **Device performance:** 3D models and simulations need WebGL 2.0 browser support for a good experience.
 - **Future expansion:** more subjects, more textbook data, a more complete AI evaluation rubric, learning analytics from classroom data, and a larger simulation catalog.
+- **Reference-document grounding:** extend the current upload capability so teachers can attach reference documents to an AI-generation request; the system will extract relevant content and use it as context for period-specific requirements and writing style.

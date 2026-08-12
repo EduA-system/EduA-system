@@ -13,7 +13,6 @@
 - **Mở rộng Classroom:** giáo viên giao tài nguyên/bài tập; học sinh truy cập, nộp bài, nộp lại hoặc thu hồi bài nộp. Hệ thống phân biệt bài nộp đúng hạn và trễ hạn.
 - **Điều chỉnh vai trò Hiệu trưởng (Principal):** tập trung vào thống kê tổng thể theo môn học, loại học liệu AI, nhiệm vụ tuần, tiến độ duyệt học liệu và tài khoản.
 - **Bổ sung IT Staff:** quản lý system prompt AI và nhật ký hoạt động để tăng khả năng vận hành, kiểm soát hệ thống.
-- **Input chuyên biệt:** giáo viên có thể tải tài liệu tham khảo lên để AI sinh nội dung theo phong cách và yêu cầu của từng tiết học.
 
 ## II. Giải pháp tổng thể và phân quyền
 
@@ -27,9 +26,10 @@
 
 ### 2. Vòng đời học liệu khép kín
 
-`AI tạo giáo án/slide/đề/mô phỏng → Giáo viên biên tập → Lưu thư viện hoặc gửi duyệt → Chia sẻ cho lớp học → Học sinh học/nộp bài → Giáo viên và nhà trường theo dõi`
+`AI tạo giáo án/slide/đề và hỗ trợ mô phỏng → Giáo viên biên tập → Lưu vào Thư viện → Nộp giáo án cho nhiệm vụ tuần để duyệt → Tổ trưởng phê duyệt/từ chối → Giáo viên chia sẻ tài nguyên hoặc bài tập cho lớp → Học sinh học/nộp bài → Giáo viên theo dõi bài nộp, nhà trường theo dõi chỉ số quy trình tổng hợp`
 
-- Học liệu được tổ chức qua thư viện và Community Hub, có hỗ trợ bình luận, báo cáo nội dung và duyệt/từ chối trước khi chia sẻ rộng rãi.
+- Duyệt giáo án tuần khác với kiểm duyệt Community Hub: giáo viên nộp giáo án từ Thư viện vào Weekly Task; Tổ trưởng (Moderator) phê duyệt hoặc từ chối kèm lý do, sau đó giáo viên có thể chỉnh sửa và nộp lại.
+- Học liệu được tổ chức qua Thư viện và Community Hub. Kiểm duyệt Community Hub là luồng tùy chọn, độc lập để kiểm soát việc chia sẻ rộng rãi; hệ thống hỗ trợ bình luận, báo cáo nội dung và duyệt/từ chối.
 - Thông báo thời gian thực hỗ trợ người dùng nhận biết các sự kiện như giao nhiệm vụ, nộp bài và phê duyệt.
 
 ## III. Kiến trúc AI và quản lý tri thức
