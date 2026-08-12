@@ -120,7 +120,7 @@ export function usePracticeExamStream(
   onComplete?: (exam: PracticeExam) => void,
   enabled = true,
 ): { questionSummaries: QuestionSummary[] } {
-  const { accessToken, status } = useAuth();
+  const { accessToken, getValidAccessToken, status } = useAuth();
   const [questionSummaries, setQuestionSummaries] = useState<QuestionSummary[]>([]);
   const startedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
@@ -175,7 +175,7 @@ export function usePracticeExamStream(
 
     const { disconnect } = connectPracticeExamStream({
       topic: practiceExamTopic(session.sessionId),
-      accessToken,
+      getAccessToken: getValidAccessToken,
       onEvent: (event) => {
         switch (event.type) {
           case "PLAN_READY": {
@@ -253,7 +253,7 @@ export function usePracticeExamStream(
       cancelled = true;
       disconnect();
     };
-  }, [accessToken, editor, enabled, status]);
+  }, [accessToken, editor, enabled, getValidAccessToken, status]);
 
   // Đăng ký handler "Thử lại" theo VÒNG ĐỜI EDITOR (không gắn với effect stream, vì effect đó
   // early-return khi token refresh → sẽ mất handler). Đọc ngữ cảnh qua ref nên luôn mới nhất.

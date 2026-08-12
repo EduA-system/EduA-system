@@ -102,7 +102,7 @@ export function useLessonPlanStream(
   onFinished?: () => void,
   enabled = true,
 ) {
-  const { accessToken, status } = useAuth();
+  const { accessToken, getValidAccessToken, status } = useAuth();
   const startedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const onFinishedRef = useRef(onFinished);
@@ -169,7 +169,7 @@ export function useLessonPlanStream(
 
     const { disconnect } = connectLessonPlanStream({
       topic: lessonPlanTopic(session.sessionId),
-      accessToken,
+      getAccessToken: getValidAccessToken,
       onEvent: (event) => {
         switch (event.type) {
           case "FRAME_READY": {
@@ -270,7 +270,7 @@ export function useLessonPlanStream(
       cancelled = true;
       disconnect();
     };
-  }, [accessToken, editor, enabled, status]);
+  }, [accessToken, editor, enabled, getValidAccessToken, status]);
 
   // Đăng ký handler "Thử lại" theo VÒNG ĐỜI EDITOR (không gắn với effect stream, vì effect đó
   // early-return khi token refresh → sẽ mất handler). Đọc ngữ cảnh qua ref nên luôn mới nhất.

@@ -48,7 +48,7 @@ function visualFor(notification: NotificationSummary): { icon: LucideIcon; badge
 }
 
 function NotificationsScreen() {
-  const { user, accessToken, authFetch } = useAuth();
+  const { user, accessToken, authFetch, getValidAccessToken } = useAuth();
   const router = useRouter();
   const isModerator = user?.role === "MODERATOR";
 
@@ -86,11 +86,11 @@ function NotificationsScreen() {
   useEffect(() => {
     if (!accessToken) return;
     const { disconnect } = connectNotificationsStream({
-      accessToken,
+      getAccessToken: getValidAccessToken,
       onEvent: () => void load(),
     });
     return () => disconnect();
-  }, [accessToken, load]);
+  }, [accessToken, getValidAccessToken, load]);
 
   const handleMarkRead = async (id: string) => {
     try {

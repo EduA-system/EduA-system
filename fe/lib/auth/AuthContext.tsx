@@ -27,6 +27,7 @@ type AuthContextValue = {
   signIn: (idToken: string) => Promise<AuthUser>;
   signOut: () => Promise<void>;
   refreshToken: () => Promise<string | null>;
+  getValidAccessToken: () => Promise<string | null>;
   authFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 };
 
@@ -42,6 +43,20 @@ function withAuthHeaders(init: RequestInit, token: string | null): RequestInit {
     credentials: "include",
     headers,
   };
+}
+
+/** Returns true when a JWT is missing, invalid, or about to expire. */
+function needsRefresh(token: string | null): boolean {
+  if (!token) return true;
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return true;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="))) as { exp?: unknown };
+    return typeof decoded.exp !== "number" || decoded.exp * 1000 <= Date.now() + 30_000;
+  } catch {
+    return true;
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -123,6 +138,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(nextUser);
   }, []);
 
+  // STOMP reconnects do not pass through authFetch. Supply them a token that is
+  // still valid instead of repeatedly reconnecting with the expired JWT.
+  const getValidAccessToken = useCallback(async () => {
+    const token = tokenRef.current;
+    return needsRefresh(token) ? refreshToken() : token;
+  }, [refreshToken]);
+
   const authFetch = useCallback(
     async (input: RequestInfo | URL, init: RequestInit = {}) => {
       let token = tokenRef.current;
@@ -154,9 +176,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signOut,
       refreshToken,
+      getValidAccessToken,
       authFetch,
     }),
-    [accessToken, authFetch, refreshToken, signIn, signOut, status, updateUser, user],
+    [accessToken, authFetch, getValidAccessToken, refreshToken, signIn, signOut, status, updateUser, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

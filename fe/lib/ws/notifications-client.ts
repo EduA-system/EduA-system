@@ -13,17 +13,24 @@ export type NotificationEvent = {
 };
 
 export function connectNotificationsStream({
-  accessToken,
+  getAccessToken,
   onEvent,
 }: {
-  accessToken: string;
+  getAccessToken: () => Promise<string | null>;
   onEvent: (event: NotificationEvent) => void;
 }): { disconnect: () => void } {
   const brokerURL = `${BACKEND_WS_URL}/ws`;
 
   const client = new Client({
     brokerURL,
-    connectHeaders: { Authorization: `Bearer ${accessToken}` },
+    beforeConnect: async () => {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        client.reconnectDelay = 0;
+        throw new Error("Không thể làm mới phiên đăng nhập cho WebSocket.");
+      }
+      client.connectHeaders = { Authorization: `Bearer ${accessToken}` };
+    },
     reconnectDelay: 2000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,

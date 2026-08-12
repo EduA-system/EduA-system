@@ -148,7 +148,7 @@ export default function SlideOutlinePage() {
 
 function SlideOutlineScreen() {
   const router = useRouter();
-  const { accessToken, authFetch, status: authStatus } = useAuth();
+  const { accessToken, authFetch, getValidAccessToken, status: authStatus } = useAuth();
   const [boot] = useState(loadOutlineBoot);
   const [session, setSession] = useState<SlideGenerationSession | null>(boot.session);
   const [status, setStatus] = useState<Status>(boot.status);
@@ -316,7 +316,7 @@ function SlideOutlineScreen() {
 
         const { disconnect } = connectOutlineStream({
           topic: res.outlineTopic,
-          accessToken,
+          getAccessToken: getValidAccessToken,
           onEvent: handleOutlineEvent,
           onReady: () => {
             void startOutlineSession(authFetch, res.sessionId).catch((startError) => {
@@ -342,7 +342,7 @@ function SlideOutlineScreen() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, authFetch, authStatus, status, session, handleOutlineEvent]);
+  }, [accessToken, authFetch, authStatus, getValidAccessToken, status, session, handleOutlineEvent]);
 
   const handleRetrySlide = useCallback(async (partId: string, slideId: string) => {
     if (!session?.sessionId) return;

@@ -37,7 +37,7 @@ export function Sidebar({
   responsive = false,
   mobileOpen = false,
 }: SidebarProps) {
-  const { user, accessToken, authFetch } = useAuth();
+  const { user, accessToken, authFetch, getValidAccessToken } = useAuth();
   const pathname = usePathname();
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
@@ -83,14 +83,14 @@ export function Sidebar({
       })
       .catch(() => {});
     const { disconnect } = connectNotificationsStream({
-      accessToken,
+      getAccessToken: getValidAccessToken,
       onEvent: () => setUnreadCount((count) => count + 1),
     });
     return () => {
       cancelled = true;
       disconnect();
     };
-  }, [authFetch, accessToken, user]);
+  }, [authFetch, accessToken, getValidAccessToken, user]);
 
   if (!user) return null;
 
