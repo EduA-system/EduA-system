@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
@@ -39,6 +39,7 @@ export default function BlogModerationPage() {
   const [selectedDay, setSelectedDay] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [noticeVisible, setNoticeVisible] = useState(false);
+  const detailLoadSeqRef = useRef(0);
   const isModerator = hasAnyRole(user, ["MODERATOR"]);
 
   const loadPosts = useCallback(async () => {
@@ -64,12 +65,22 @@ export default function BlogModerationPage() {
   }, [searchParams]);
   useEffect(() => {
     if (!postId || status !== "authenticated") {
+      detailLoadSeqRef.current += 1;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting detail when postId/status no longer selects a post
       setDetail(null);
       return;
     }
+    const requestId = detailLoadSeqRef.current + 1;
+    detailLoadSeqRef.current = requestId;
+    const isCurrentRequest = () => detailLoadSeqRef.current === requestId;
+    setDetail(null);
     setLoading(true);
-    api<Detail>(authFetch, `/blog-posts/${postId}`).then((data) => { setDetail(data); setMessage(""); }).catch((error) => {
+    api<Detail>(authFetch, `/blog-posts/${postId}`).then((data) => {
+      if (!isCurrentRequest() || data.id !== postId) return;
+      setDetail(data);
+      setMessage("");
+    }).catch((error) => {
+      if (!isCurrentRequest()) return;
       if (error instanceof Error && error.message.includes("Blog post not found")) {
         setDetail(null);
         router.replace("/blog-moderator?notice=author-deleted");
@@ -77,7 +88,14 @@ export default function BlogModerationPage() {
         return;
       }
       setMessage(String(error));
-    }).finally(() => setLoading(false));
+    }).finally(() => {
+      if (isCurrentRequest()) {
+        setLoading(false);
+      }
+    });
+    return () => {
+      detailLoadSeqRef.current += 1;
+    };
   }, [authFetch, loadPosts, postId, router, status]);
 
   async function removePost() {

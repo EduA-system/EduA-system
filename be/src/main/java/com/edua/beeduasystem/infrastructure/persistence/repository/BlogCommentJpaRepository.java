@@ -10,7 +10,19 @@ import java.util.UUID;
 
 public interface BlogCommentJpaRepository extends JpaRepository<BlogCommentEntity, UUID> {
 
-    List<BlogCommentEntity> findByPostIdAndHiddenAtIsNullOrderByCreatedAtAsc(UUID postId);
+    @Query("""
+            SELECT c FROM BlogCommentEntity c
+            WHERE c.postId = :postId
+              AND (
+                c.hiddenAt IS NULL
+                OR EXISTS (
+                  SELECT child.id FROM BlogCommentEntity child
+                  WHERE child.parentCommentId = c.id AND child.hiddenAt IS NULL
+                )
+              )
+            ORDER BY c.createdAt ASC
+            """)
+    List<BlogCommentEntity> findVisibleTreeByPostId(@Param("postId") UUID postId);
 
     long countByPostIdAndHiddenAtIsNull(UUID postId);
 

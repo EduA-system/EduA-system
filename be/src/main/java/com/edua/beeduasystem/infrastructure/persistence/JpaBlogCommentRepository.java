@@ -48,7 +48,7 @@ public class JpaBlogCommentRepository implements BlogCommentRepository {
     @Override
     @Transactional(readOnly = true)
     public List<BlogComment> findByPostId(UUID postId) {
-        return jpa.findByPostIdAndHiddenAtIsNullOrderByCreatedAtAsc(postId).stream().map(JpaBlogCommentRepository::toDomain).toList();
+        return jpa.findVisibleTreeByPostId(postId).stream().map(JpaBlogCommentRepository::toDomain).toList();
     }
 
     @Override

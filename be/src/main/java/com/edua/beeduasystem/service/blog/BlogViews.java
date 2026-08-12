@@ -24,7 +24,8 @@ public final class BlogViews {
             String authorName,
             String authorAvatarUrl,
             Instant createdAt,
-            Instant updatedAt
+            Instant updatedAt,
+            boolean hidden
     ) {
     }
 
