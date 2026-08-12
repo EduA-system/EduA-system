@@ -333,16 +333,11 @@ export function LessonEditDashboard() {
                 >
                   <PrintIcon />
                 </HeaderActionButton>
-                {!libraryId && (
-                  <HeaderActionButton onClick={() => undefined} disabled={isGeneratingLesson} label={isGeneratingLesson ? "Đang tạo giáo án..." : "Tạo giáo án"} primary>
-                    <CreateLessonIcon />
-                  </HeaderActionButton>
-                )}
               </div>
 
               {/* Trước đây chỉ có icon lấp lánh trơ trọi + `aria-label` tiếng Anh — không có
                * tooltip, không có chữ, GV nhìn vào không đoán được đây là nút bật/tắt trợ lý AI.
-               * Giờ dùng đúng khuôn `HeaderActionButton` (title + nhãn hiện ở màn rộng) như 3 nút
+               * Giờ dùng đúng khuôn `HeaderActionButton` (title + nhãn hiện ở màn rộng) như 2 nút
                * bên trái, cộng thêm viền/nền đổi màu theo trạng thái đang mở/đóng để rõ cả 2 chiều
                * (đang bấm thì trông "nhấn xuống", không phải đoán qua icon suông). */}
               <HeaderActionButton
@@ -471,15 +466,6 @@ function SaveIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M5 4h12l2 2v14H5V4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
       <path d="M8 4v6h8V4M8 20v-6h8v6" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CreateLessonIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M12 4l1.3 4.4L18 10l-4.7 1.6L12 16l-1.3-4.4L6 10l4.7-1.6L12 4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M5 17h4M7 15v4M17 17h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }
