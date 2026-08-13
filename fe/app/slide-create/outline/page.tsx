@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
+import { skeletonSlidesFromParts } from "@/components/slide-editor/lib/be-mapper";
 import { generateOutline, retryOutlineSessionSlide, startOutlineSession, type OutlinePart } from "@/lib/api/slides";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
@@ -16,6 +17,7 @@ import {
   writeActiveGeneration,
   type SlideGenerationSession,
 } from "@/lib/slide-create/session";
+import { useEditorStore } from "@/stores/slide-editor-store";
 
 type Status = "loading" | "outlining" | "ready" | "error";
 
@@ -417,6 +419,10 @@ function SlideOutlineScreen() {
         parts: editedParts,
       });
       patchSlideCreateSession({ outlineParts: editedParts });
+      // A confirm from the outline always starts a new deck.  Resetting here
+      // prevents the client-side Zustand store from showing the previous deck
+      // after the user navigates back and generates again.
+      useEditorStore.getState().resetSlidesForNewGeneration(skeletonSlidesFromParts(editedParts));
       router.push("/slide-maker?generating=1");
     },
     [session, router],

@@ -68,6 +68,8 @@ interface EditorState {
   cutSelected: () => void;
   paste: () => void;
   replaceSlides: (slides: Slide[]) => void;
+  /** Start a separate deck-generation session without carrying editor history over. */
+  resetSlidesForNewGeneration: (slides: Slide[]) => void;
 
   undo: () => void;
   redo: () => void;
@@ -657,6 +659,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       currentSlideId: slides[0]?.id ?? state.currentSlideId,
       selectedIds: [],
     })),
+
+  resetSlidesForNewGeneration: (slides) =>
+    set({
+      slides: normalizeSlides(slides),
+      currentSlideId: slides[0]?.id ?? normalizedSeedSlides[0].id,
+      selectedIds: [],
+      clipboard: [],
+      history: { past: [], future: [] },
+      activeSandboxIds: [],
+    }),
 
   undo: () =>
     set((state) => {
