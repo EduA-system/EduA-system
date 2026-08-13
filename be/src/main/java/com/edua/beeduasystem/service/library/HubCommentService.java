@@ -5,7 +5,6 @@ import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.library.HubComment;
 import com.edua.beeduasystem.domain.model.library.LibraryContent;
-import com.edua.beeduasystem.domain.model.library.LibraryContentStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.HubCommentRepository;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
@@ -126,7 +125,7 @@ public class HubCommentService {
         if (comment.authorId().equals(userId)) {
             throw new IllegalArgumentException("Use the delete action to remove your own comment.");
         }
-        LibraryContent content = contentRepository.findActiveById(comment.libraryContentId())
+        LibraryContent content = contentRepository.findApprovedForHubById(comment.libraryContentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Content not found."));
         if (!content.ownerId().equals(userId)) {
             throw new ForbiddenOperationException("You can only hide comments on your own Hub content.");
@@ -143,12 +142,8 @@ public class HubCommentService {
     }
 
     private LibraryContent requireApprovedContent(UUID contentId) {
-        LibraryContent content = contentRepository.findActiveById(contentId)
+        return contentRepository.findApprovedForHubById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Content not found."));
-        if (content.status() != LibraryContentStatus.APPROVED) {
-            throw new ResourceNotFoundException("Content not found.");
-        }
-        return content;
     }
 
     private HubComment requireComment(UUID commentId) {

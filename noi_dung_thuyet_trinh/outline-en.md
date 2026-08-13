@@ -76,10 +76,59 @@
 
 ## V. System Architecture and Operability
 
-- Frontend: Next.js, React, TypeScript; backend: Spring Boot; database: PostgreSQL.
-- WebSocket/STOMP powers AI progress updates and real-time notifications.
-- Cloudflare R2 stores uploaded files and image assets.
-- The backend is layered as Presentation → Service → Domain → Repository/Infrastructure, separating business logic from AI, storage, and messaging integrations.
+### 1. Technology and Runtime Architecture
+
+- Frontend: Next.js, React, and TypeScript; backend: Spring Boot; database: PostgreSQL.
+- REST APIs handle normal client requests, while WebSocket/STOMP delivers AI-generation progress and real-time notifications without requiring the client to continuously poll the server.
+- Cloudflare R2 stores uploaded documents and generated image assets; PostgreSQL stores structured business data and workflow state.
+- The backend follows the dependency direction **Presentation → Service → Domain → Repository/Infrastructure**. This keeps business rules independent from HTTP, database, AI-provider, storage, and messaging details, so technical integrations can be changed with lower impact.
+
+### 2. Backend Folder Responsibilities
+
+- **`config/` – application configuration and bean wiring:** contains Spring-specific setup such as security, WebSocket/STOMP, executors, CORS, and configuration properties. It connects components together but does not contain business rules.
+
+- **`presentation/` – API boundary:** receives requests from the frontend and returns responses. This layer is intentionally thin: it validates/maps input, invokes a service, and formats the output.
+  - **`presentation/controller/`**: REST controllers and WebSocket-facing endpoints. They expose functions such as authentication, lesson-plan generation, classroom management, weekly-task approval, uploads, and notifications.
+  - **`presentation/dto/`**: request and response data-transfer objects, grouped by feature (`ai`, `auth`, `classroom`, `lessonplan`, `slides`, `weeklytask`, and others). DTOs prevent external API contracts from leaking directly into the core domain.
+  - **`presentation/advice/`**: global exception handling. It translates known application/domain errors into consistent HTTP status codes and error responses.
+
+- **`service/` – use cases and workflow orchestration:** implements application behavior by coordinating domain models with repository and gateway interfaces. Feature-oriented packages such as `ai`, `lessonplan`, `slides`, `classroom`, `practiceexam`, `weeklytask`, `library`, `notification`, `statistics`, and `textbook` keep each workflow cohesive. For example, this layer coordinates the two-phase slide-generation process, weekly-plan submission/approval, assignment submissions, and notification delivery.
+
+- **`domain/` – core educational business model:** contains framework-independent models and rules. Its feature packages represent concepts such as users/authentication, lesson plans, classrooms, textbooks, library materials, slides, practice exams, weekly tasks, notifications, blogs, AI sessions, and activity logs.
+  - **`domain/model/`**: business entities, value objects, and state/rule definitions grouped by feature.
+  - **`domain/exception/`**: business exceptions, for example invalid state transitions or unauthorized business actions, with no dependency on HTTP or Spring.
+
+- **`repository/` – contracts required by services:** defines interfaces rather than concrete technical implementations.
+  - **`repository/repositories/`**: persistence contracts for reading and saving business data.
+  - **`repository/gateways/`**: contracts for technical capabilities used by services, such as AI providers, file storage, document export, or message publishing. This makes services testable and prevents vendor SDK code from entering business workflows.
+
+- **`infrastructure/` – replaceable technical adapters:** implements the contracts from `repository/` and contains technology-specific code.
+  - **`infrastructure/persistence/`**: JPA entities, Spring Data repositories, mappings, and implementations that persist data in PostgreSQL.
+  - **`infrastructure/ai/`**: AI-provider adapters and configuration, including provider selection/fallback and structured-output handling.
+  - **`infrastructure/storage/`**: Cloudflare R2/S3 integration for uploads and generated assets.
+  - **`infrastructure/messaging/`**: STOMP/WebSocket message publishing for generation progress and notifications.
+  - **`infrastructure/security/`**: authentication and authorization mechanisms, such as token/security filters and Spring Security integration.
+  - **`infrastructure/documentexport/`**: concrete document/PDF/export generation capabilities.
+  - **`infrastructure/logging/`**: technical activity/audit logging support.
+
+### 3. Frontend Folder Responsibilities
+
+- **`fe/app/`:** Next.js routes, full screens, and server-side Route Handlers for each product feature.
+- **`fe/components/`:** Reusable feature UI and shared layout/UI building blocks.
+- **`fe/stores/`:** Zustand stores for shared interactive client-side state.
+- **`fe/services/`:** Centralized HTTP API calls and response/error handling.
+- **`fe/lib/`:** Shared helpers for authentication, WebSocket, layouts, assets, and feature utilities.
+- **`fe/data/`:** Static data and configuration consumed by frontend features.
+- **`fe/public/`:** Static assets served directly to the browser.
+- **Hooks/utilities:** Reusable interaction, animation, export, and graphics-support logic kept near common or feature code.
+
+### 4. Why This Structure Improves Operability
+
+- Technical failures are isolated: an AI, R2, database, or messaging adapter can be retried, replaced, or monitored without rewriting the lesson/classroom business flow.
+- Each use case has a clear entry point and ownership, making logs, error handling, testing, and troubleshooting easier.
+- The role model is enforced across the API and security layers, while workflow rules remain in the service/domain layers; this supports safe operations for Teacher, Student, Moderator, Principal, and IT Staff functions.
+- The architecture supports observable long-running AI work: the service manages the generation session, infrastructure sends progress events, and the frontend shows live status to the teacher.
+
 
 ## VI. Testing and Evaluation
 

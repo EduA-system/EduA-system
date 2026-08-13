@@ -55,7 +55,7 @@ class HubCommentServiceTest {
         Instant now = Instant.now();
         LibraryContent content = new LibraryContent(contentId, contentOwnerId, LibraryContentType.LESSON_PLAN, "Bai giang", null,
                 LibraryContentStatus.APPROVED, JsonNodeFactory.instance.objectNode(), null, now, now, null, null, null, null, null);
-        when(contentRepository.findActiveById(contentId)).thenReturn(Optional.of(content));
+        when(contentRepository.findApprovedForHubById(contentId)).thenReturn(Optional.of(content));
     }
 
     @Test
@@ -88,7 +88,7 @@ class HubCommentServiceTest {
         Instant now = Instant.now();
         LibraryContent notApproved = new LibraryContent(contentId, contentOwnerId, LibraryContentType.LESSON_PLAN, "Bai giang", null,
                 LibraryContentStatus.SUBMITTED, JsonNodeFactory.instance.objectNode(), null, now, now, now, null, null, null, null);
-        when(contentRepository.findActiveById(contentId)).thenReturn(Optional.of(notApproved));
+        when(contentRepository.findApprovedForHubById(contentId)).thenReturn(Optional.empty());
         when(currentUserProvider.requireUserId()).thenReturn(commentAuthorId);
 
         assertThatThrownBy(() -> service.create(contentId, "Binh luan")).isInstanceOf(ResourceNotFoundException.class);

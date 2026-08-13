@@ -324,13 +324,15 @@ export async function editLessonSection(
   });
   if (!res.ok) {
     let message = `Chỉnh sửa giáo án bằng AI thất bại (HTTP ${res.status}).`;
+    let code: string | undefined;
     try {
-      const body = (await res.json()) as { message?: string };
+      const body = (await res.json()) as { message?: string; code?: string };
       if (body?.message) message = body.message;
+      code = body?.code;
     } catch {
       // body không phải JSON — giữ message mặc định.
     }
-    throw new Error(message);
+    throw new LessonPlanRequestError(message, code);
   }
   return res.json();
 }
@@ -340,6 +342,13 @@ export async function editLessonSection(
 // (/topic/lesson-plan/{sessionId}). FE không đọc body — chỉ kiểm 2xx.
 export interface StartLessonPlanStreamRequest extends GenerateLessonPlanRequest {
   sessionId: string;
+}
+
+export class LessonPlanRequestError extends Error {
+  constructor(message: string, readonly code?: string) {
+    super(message);
+    this.name = "LessonPlanRequestError";
+  }
 }
 
 export async function startLessonPlanStream(
@@ -353,13 +362,15 @@ export async function startLessonPlanStream(
   });
   if (!res.ok) {
     let message = `Khởi tạo sinh giáo án thất bại (HTTP ${res.status}).`;
+    let code: string | undefined;
     try {
-      const body = (await res.json()) as { message?: string };
+      const body = (await res.json()) as { message?: string; code?: string };
       if (body?.message) message = body.message;
+      code = body?.code;
     } catch {
       // body không phải JSON — giữ message mặc định.
     }
-    throw new Error(message);
+    throw new LessonPlanRequestError(message, code);
   }
 }
 

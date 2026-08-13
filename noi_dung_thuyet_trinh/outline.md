@@ -60,7 +60,7 @@
 - Sinh outline slide theo **2 pha**: tạo khung bài trình chiếu trước, sau đó tạo chi tiết từng phần/slide để người dùng có thể theo dõi tiến trình và thử lại phần lỗi.
 - Các tác vụ AI dài chạy theo phiên và cập nhật tiến độ qua WebSocket/STOMP, tránh việc người dùng chờ một request kéo dài.
 
-### 3. Pipeline thiết kế slide thông minh
+### 3. Pipeline thiết kế slide thông minh (phần này đưa lên trên)
 
 - **Bước 1 – Skin deck:** AI tạo phong cách trực quan chung: nền, palette và vùng header.
 - **Bước 2 – Dynamic layout:** thuật toán frontend tự bố trí nội dung theo loại slide, độ dày nội dung và các quan hệ ngữ nghĩa; không phụ thuộc hoàn toàn vào template cố định.

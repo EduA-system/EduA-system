@@ -31,19 +31,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class GenerateLessonPlanStreamUseCase {
 
     private final LessonPlanService lessonPlanService;
+    private final LessonPlanAdditionalRequestValidator additionalRequestValidator;
     private final LessonPlanStreamPort stream;
     private final ExecutorService executor;
 
     public GenerateLessonPlanStreamUseCase(LessonPlanService lessonPlanService,
+                                           LessonPlanAdditionalRequestValidator additionalRequestValidator,
                                            LessonPlanStreamPort stream,
                                            @Qualifier("slideSessionExecutor") ExecutorService executor) {
         this.lessonPlanService = lessonPlanService;
+        this.additionalRequestValidator = additionalRequestValidator;
         this.stream = stream;
         this.executor = executor;
     }
 
     /** Kickoff bất đồng bộ: submit lên executor rồi trả về ngay (controller đáp 202). */
     public void start(GenerateLessonPlanStreamRequest req) {
+        additionalRequestValidator.validateOrThrow(req.userPrompt());
         executor.submit(() -> run(req));
     }
 

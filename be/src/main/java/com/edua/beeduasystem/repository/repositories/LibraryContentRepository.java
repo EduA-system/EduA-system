@@ -12,6 +12,10 @@ import java.util.UUID;
 public interface LibraryContentRepository {
     LibraryContent save(LibraryContent content);
     Optional<LibraryContent> findActiveById(UUID id);
+    /**
+     * Community Hub keeps approved publications visible after they are removed from Personal Library.
+     */
+    Optional<LibraryContent> findApprovedForHubById(UUID id);
     SearchResult search(UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, boolean titleAscending);
     /** Nội dung đang APPROVED, không giới hạn owner — dùng cho Community Hub feed + guest preview. */
     SearchResult searchApproved(LibraryContentType type, Subject subject, String q, int page, int size);

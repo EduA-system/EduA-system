@@ -20,6 +20,7 @@ export function connectNotificationsStream({
   onEvent: (event: NotificationEvent) => void;
 }): { disconnect: () => void } {
   const brokerURL = `${BACKEND_WS_URL}/ws`;
+  let isDisconnecting = false;
 
   const client = new Client({
     brokerURL,
@@ -44,12 +45,19 @@ export function connectNotificationsStream({
       });
     },
     onStompError: (frame) => {
+      // React dev mode can mount, clean up, then mount this stream again while
+      // the first STOMP handshake is still in flight. Spring reports that
+      // expected race as an ERROR frame with "Session closed.".
+      if (isDisconnecting || frame.headers.message === "Session closed.") {
+        return;
+      }
       console.error("[EDUA] [WS] notifications STOMP error", frame.headers, frame.body);
     },
   });
   client.activate();
   return {
     disconnect: () => {
+      isDisconnecting = true;
       void client.deactivate();
     },
   };

@@ -88,7 +88,7 @@ class CommunityHubContentIntegrationTests {
     }
 
     @Test
-    void IT_HC_001_guestViewsApprovedHubFeedOnly() throws Exception {
+    void IT_HC_001_guestViewsApprovedHubFeedIncludingContentRemovedFromPersonalLibrary() throws Exception {
         AppUser owner = user("owner-001@community-hub-content-it.edua.local", "Hub Owner", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
         UUID approvedId = seedLibraryContent("Alpha Math Hub", owner.id(), "LESSON_PLAN", Subject.MATH, "APPROVED",
                 "{\"source\":\"approved-alpha\"}", null);
@@ -111,11 +111,11 @@ class CommunityHubContentIntegrationTests {
                 .andExpect(jsonPath("$.items[*].title", not(hasItem("Alpha Private Hub"))))
                 .andExpect(jsonPath("$.items[*].title", not(hasItem("Alpha Submitted Hub"))))
                 .andExpect(jsonPath("$.items[*].title", not(hasItem("Alpha Rejected Hub"))))
-                .andExpect(jsonPath("$.items[*].title", not(hasItem("Alpha Deleted Hub"))))
+                .andExpect(jsonPath("$.items[*].title", hasItem("Alpha Deleted Hub")))
                 .andExpect(jsonPath("$.items[*].title", not(hasItem("Beta Chemistry Hub"))))
                 .andExpect(jsonPath("$.items[0].ownerName").value("Hub Owner"))
                 .andExpect(jsonPath("$.items[0].commentCount").value(1))
-                .andExpect(jsonPath("$.total").value(1));
+                .andExpect(jsonPath("$.total").value(2));
 
         assertThat(tableCounts()).isEqualTo(before);
     }

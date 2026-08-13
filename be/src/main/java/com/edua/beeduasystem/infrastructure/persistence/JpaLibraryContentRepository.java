@@ -28,6 +28,11 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
     @Override @Transactional(readOnly = true) public Optional<LibraryContent> findActiveById(UUID id) {
         return jpa.findById(id).filter(e -> e.getDeletedAt() == null).map(JpaLibraryContentRepository::toDomain);
     }
+    @Override @Transactional(readOnly = true) public Optional<LibraryContent> findApprovedForHubById(UUID id) {
+        return jpa.findById(id)
+                .filter(e -> e.getStatus() == LibraryContentStatus.APPROVED)
+                .map(JpaLibraryContentRepository::toDomain);
+    }
     @Override @Transactional(readOnly = true) public SearchResult search(UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, boolean titleAscending) {
         Specification<LibraryContentEntity> spec = (root, cq, cb) -> { List<Predicate> ps = new ArrayList<>(); ps.add(cb.equal(root.get("ownerId"), ownerId)); ps.add(cb.isNull(root.get("deletedAt")));
             if (type != null) ps.add(cb.equal(root.get("type"), type)); if (subject != null) ps.add(cb.equal(root.get("subject"), subject));
@@ -40,7 +45,7 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
         return new SearchResult(result.getContent().stream().map(JpaLibraryContentRepository::toDomain).toList(), result.getTotalElements());
     }
     @Override @Transactional(readOnly = true) public SearchResult searchApproved(LibraryContentType type, Subject subject, String q, int page, int size) {
-        Specification<LibraryContentEntity> spec = (root, cq, cb) -> { List<Predicate> ps = new ArrayList<>(); ps.add(cb.equal(root.get("status"), LibraryContentStatus.APPROVED)); ps.add(cb.isNull(root.get("deletedAt")));
+        Specification<LibraryContentEntity> spec = (root, cq, cb) -> { List<Predicate> ps = new ArrayList<>(); ps.add(cb.equal(root.get("status"), LibraryContentStatus.APPROVED));
             if (type != null) ps.add(cb.equal(root.get("type"), type)); if (subject != null) ps.add(cb.equal(root.get("subject"), subject));
             if (q != null && !q.isBlank()) ps.add(cb.like(cb.lower(root.get("title")), "%" + q.trim().toLowerCase() + "%")); return cb.and(ps.toArray(Predicate[]::new)); };
         Page<LibraryContentEntity> result = jpa.findAll(spec, PageRequest.of(Math.max(0,page), Math.min(Math.max(1,size),100), Sort.by("updatedAt").descending()));

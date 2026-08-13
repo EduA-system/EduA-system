@@ -53,7 +53,7 @@ class HubContentServiceTest {
     @Test
     void get_throwsResourceNotFoundWhenContentIsNotApproved() {
         UUID id = UUID.randomUUID();
-        when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.SUBMITTED)));
+        when(repository.findApprovedForHubById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.get(id)).isInstanceOf(ResourceNotFoundException.class);
     }
@@ -61,7 +61,7 @@ class HubContentServiceTest {
     @Test
     void get_throwsResourceNotFoundWhenContentMissing() {
         UUID id = UUID.randomUUID();
-        when(repository.findActiveById(id)).thenReturn(Optional.empty());
+        when(repository.findApprovedForHubById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.get(id)).isInstanceOf(ResourceNotFoundException.class);
     }
@@ -69,7 +69,20 @@ class HubContentServiceTest {
     @Test
     void get_returnsDetailForApprovedContentWithoutOwnerCheck() {
         UUID id = UUID.randomUUID();
-        when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.APPROVED)));
+        when(repository.findApprovedForHubById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.APPROVED)));
+
+        HubViews.ContentDetail result = service.get(id);
+
+        assertThat(result.id()).isEqualTo(id);
+    }
+
+    @Test
+    void get_returnsDetailForApprovedContentRemovedFromPersonalLibrary() {
+        UUID id = UUID.randomUUID();
+        Instant now = Instant.now();
+        LibraryContent removedFromLibrary = new LibraryContent(id, ownerId, LibraryContentType.LESSON_PLAN, "Bai giang", null,
+                LibraryContentStatus.APPROVED, JsonNodeFactory.instance.objectNode(), null, now, now, null, now, null, null, null);
+        when(repository.findApprovedForHubById(id)).thenReturn(Optional.of(removedFromLibrary));
 
         HubViews.ContentDetail result = service.get(id);
 
@@ -79,7 +92,7 @@ class HubContentServiceTest {
     @Test
     void customize_throwsWhenSourceContentIsNotApproved() {
         UUID id = UUID.randomUUID();
-        when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.PRIVATE)));
+        when(repository.findApprovedForHubById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.customize(id)).isInstanceOf(ResourceNotFoundException.class);
     }
@@ -89,7 +102,7 @@ class HubContentServiceTest {
         UUID id = UUID.randomUUID();
         UUID requesterId = UUID.randomUUID();
         when(currentUserProvider.requireUserId()).thenReturn(requesterId);
-        when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.APPROVED)));
+        when(repository.findApprovedForHubById(id)).thenReturn(Optional.of(contentWithStatus(id, LibraryContentStatus.APPROVED)));
 
         LibraryViews.Detail result = service.customize(id);
 

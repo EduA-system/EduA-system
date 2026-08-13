@@ -64,9 +64,8 @@ public class HubContentService {
     }
 
     private LibraryContent requireApproved(UUID id) {
-        LibraryContent c = repository.findActiveById(id).orElseThrow(() -> new ResourceNotFoundException("Content not found."));
-        if (c.status() != LibraryContentStatus.APPROVED) throw new ResourceNotFoundException("Content not found.");
-        return c;
+        return repository.findApprovedForHubById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Content not found."));
     }
 
     private HubViews.ContentSummary toSummary(LibraryContent c) {

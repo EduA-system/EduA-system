@@ -11,6 +11,7 @@ import {
   fetchChapterLessons,
   fetchTextbookChapters,
   fetchTextbookNames,
+  LessonPlanRequestError,
   startLessonPlanStream,
   storeLessonPlanSession,
   type CatalogBookName,
@@ -41,6 +42,7 @@ export function UserDashboard() {
   const [chapterId, setChapterId] = useState<string | null>(null);
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [userPrompt, setUserPrompt] = useState("");
+  const [additionalRequestError, setAdditionalRequestError] = useState<string | null>(null);
 
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -171,6 +173,7 @@ export function UserDashboard() {
     if (!bookId || !chapterId || !lessonId) return;
     setGenerating(true);
     setGenerateError(null);
+    setAdditionalRequestError(null);
     try {
       // Luồng streaming: chỉ kickoff (BE trả 202 ngay), rồi sang /lesson-edit mở STOMP
       // và fill dần. Không chờ AI ở đây nữa → không còn request đồng bộ dài/timeout.
@@ -207,7 +210,11 @@ export function UserDashboard() {
       storeLessonPlanSession(displaySession);
       router.push("/lesson-edit");
     } catch (error: unknown) {
-      setGenerateError(error instanceof Error ? error.message : "Tạo giáo án thất bại.");
+      if (error instanceof LessonPlanRequestError && error.code === "INVALID_LESSON_PLAN_ADDITIONAL_REQUEST") {
+        setAdditionalRequestError(error.message);
+      } else {
+        setGenerateError(error instanceof Error ? error.message : "Tạo giáo án thất bại.");
+      }
       setGenerating(false);
     }
   }
@@ -298,11 +305,20 @@ export function UserDashboard() {
               <textarea
                 id="user-prompt"
                 value={userPrompt}
-                onChange={(event) => setUserPrompt(event.target.value)}
+                onChange={(event) => {
+                  setUserPrompt(event.target.value);
+                  setAdditionalRequestError(null);
+                }}
                 rows={3}
                 placeholder="Ví dụ: Nhấn mạnh năng lực thực nghiệm và liên hệ thực tiễn."
-                className="mt-2 w-full resize-none rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-[15px] py-2.5 text-[13px] text-[#171717] outline-none placeholder:text-[#a8a097] focus:border-[#d97757]"
+                aria-describedby={additionalRequestError ? "user-prompt-error" : undefined}
+                className={`mt-2 w-full resize-none rounded-lg border bg-[#faf9f7] px-[15px] py-2.5 text-[13px] text-[#171717] outline-none placeholder:text-[#a8a097] focus:border-[#d97757] ${
+                  additionalRequestError ? "border-[#c0492b]" : "border-[#d8d1c9]"
+                }`}
               />
+              {additionalRequestError && (
+                <p id="user-prompt-error" className="mt-2 text-[12px] text-[#c0492b]">{additionalRequestError}</p>
+              )}
             </div>
 
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">

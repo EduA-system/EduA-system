@@ -2,7 +2,6 @@ package com.edua.beeduasystem.service.library;
 
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.library.HubContentReport;
-import com.edua.beeduasystem.domain.model.library.LibraryContentStatus;
 import com.edua.beeduasystem.repository.repositories.HubContentReportRepository;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
@@ -34,11 +33,8 @@ public class HubContentReportService {
         if (rawReason == null || rawReason.isBlank()) {
             throw new IllegalArgumentException("Report reason is required.");
         }
-        var content = contentRepository.findActiveById(contentId)
+        contentRepository.findApprovedForHubById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Content not found."));
-        if (content.status() != LibraryContentStatus.APPROVED) {
-            throw new ResourceNotFoundException("Content not found.");
-        }
         reportRepository.save(new HubContentReport(UUID.randomUUID(), contentId, currentUser.requireUserId(), rawReason.trim(), Instant.now()));
     }
 }

@@ -7,6 +7,7 @@ import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateActivityDetails
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanRequest;
 import com.edua.beeduasystem.presentation.dto.lessonplan.GenerateLessonPlanStreamRequest;
 import com.edua.beeduasystem.service.lessonplan.GenerateLessonPlanStreamUseCase;
+import com.edua.beeduasystem.service.lessonplan.LessonPlanAdditionalRequestValidator;
 import com.edua.beeduasystem.service.lessonplan.LessonPlanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -30,11 +31,14 @@ public class LessonPlanController {
 
     private final LessonPlanService lessonPlanService;
     private final GenerateLessonPlanStreamUseCase generateLessonPlanStreamUseCase;
+    private final LessonPlanAdditionalRequestValidator additionalRequestValidator;
 
     public LessonPlanController(LessonPlanService lessonPlanService,
-                                GenerateLessonPlanStreamUseCase generateLessonPlanStreamUseCase) {
+                                GenerateLessonPlanStreamUseCase generateLessonPlanStreamUseCase,
+                                LessonPlanAdditionalRequestValidator additionalRequestValidator) {
         this.lessonPlanService = lessonPlanService;
         this.generateLessonPlanStreamUseCase = generateLessonPlanStreamUseCase;
+        this.additionalRequestValidator = additionalRequestValidator;
     }
 
     @PostMapping("/generate")
@@ -132,6 +136,7 @@ public class LessonPlanController {
             }
     )
     public List<EditLessonSectionResponse> editSection(@RequestBody EditLessonSectionRequest request) {
+        additionalRequestValidator.validateOrThrow(request == null ? null : request.instruction());
         return lessonPlanService.editSection(request);
     }
 
@@ -150,4 +155,5 @@ public class LessonPlanController {
     public void generateStream(@RequestBody GenerateLessonPlanStreamRequest request) {
         generateLessonPlanStreamUseCase.start(request);
     }
+
 }

@@ -7,6 +7,7 @@ import com.edua.beeduasystem.domain.exception.EmailNotAllowedException;
 import com.edua.beeduasystem.domain.exception.ClassAccessRevokedException;
 import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.InvalidTokenException;
+import com.edua.beeduasystem.domain.exception.InvalidLessonPlanAdditionalRequestException;
 import com.edua.beeduasystem.domain.exception.MoleculeBuildException;
 import com.edua.beeduasystem.domain.exception.PhysicsSimulationEditException;
 import com.edua.beeduasystem.domain.exception.PracticeExamGenerationException;
@@ -53,6 +54,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidLessonPlanAdditionalRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidLessonPlanAdditionalRequest(
+            InvalidLessonPlanAdditionalRequestException ex) {
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse(ex.getMessage(), "INVALID_LESSON_PLAN_ADDITIONAL_REQUEST"));
     }
 
     @ExceptionHandler(MoleculeBuildException.class)

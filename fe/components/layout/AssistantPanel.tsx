@@ -15,6 +15,7 @@ import {
 import { DashboardIcon } from "../ui/DashboardIcon";
 import {
   editLessonSection,
+  LessonPlanRequestError,
   type AuthFetch,
   type EditLessonSectionEdit,
 } from "@/services/lessonPlanService";
@@ -64,6 +65,7 @@ export function AssistantPanel({
   // diff đã chèn trước đó "mồ côi" không ai theo dõi.
   const [pendingDiffs, setPendingDiffs] = useState<PendingSectionDiff[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [inputError, setInputError] = useState("");
 
   useEffect(() => {
     if (!editor) return;
@@ -108,6 +110,7 @@ export function AssistantPanel({
 
     setStatus("loading");
     setErrorMessage("");
+    setInputError("");
     try {
       const edits = await editLessonSection(
         {
@@ -180,7 +183,12 @@ export function AssistantPanel({
         setStatus("idle");
       }
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Không thể chỉnh sửa giáo án bằng AI.");
+      if (error instanceof LessonPlanRequestError && error.code === "INVALID_LESSON_PLAN_ADDITIONAL_REQUEST") {
+        setInputError(error.message);
+        setStatus("idle");
+      } else {
+        showError(error instanceof Error ? error.message : "Không thể chỉnh sửa giáo án bằng AI.");
+      }
     }
   }
 
@@ -279,13 +287,19 @@ export function AssistantPanel({
       </div>
 
       <form onSubmit={handleSubmit} className="min-w-[320px] px-5 pb-5 pt-3">
-        <div className="flex items-end gap-2 rounded-[12px] border border-[#d8d1c9] bg-[#faf7f4] px-[15px] py-[11px]">
+        <div className={`flex items-end gap-2 rounded-[12px] border bg-[#faf7f4] px-[15px] py-[11px] ${
+          inputError ? "border-[#c0492b]" : "border-[#d8d1c9]"
+        }`}>
           <textarea
             value={input}
-            onChange={(event) => setInput(event.target.value)}
+            onChange={(event) => {
+              setInput(event.target.value);
+              setInputError("");
+            }}
             rows={3}
             disabled={!lessonGenerationComplete || status === "loading" || pendingDiffs.length > 0}
             placeholder={lessonGenerationComplete ? "Nhập yêu cầu chỉnh sửa..." : "Đang soạn giáo án..."}
+            aria-describedby={inputError ? "lesson-edit-input-error" : undefined}
             className="max-h-32 min-h-14 flex-1 resize-none bg-transparent text-[13px] leading-5 text-[#171717] outline-none placeholder:text-[#171717]/50 disabled:cursor-wait"
           />
           <button
@@ -298,6 +312,11 @@ export function AssistantPanel({
             {status === "loading" ? <span className="size-3 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <DashboardIcon name="send" />}
           </button>
         </div>
+        {inputError ? (
+          <p id="lesson-edit-input-error" className="mt-2 text-[12px] leading-5 text-[#c0492b]" role="alert">
+            {inputError}
+          </p>
+        ) : null}
         <p className="mt-2 text-center text-[10px] leading-[15px] text-[#6b6b6b]">
           {!lessonGenerationComplete
             ? "Vui lòng chờ EDUA AI soạn xong giáo án trước khi chỉnh sửa"
