@@ -210,20 +210,23 @@ public class WeeklyTaskService {
         return WeeklyTaskViews.toBulkResult(created, resolveNames(created), teachers.size(), resolvedLessons.size());
     }
 
-    /** UC-82: Moderator sửa task còn hạn (BR-47); task tạo bulk được sửa đồng bộ theo cụm cùng tuần/bài/khối. Khối giữ nguyên, không sửa được. */
+    /** UC-82: Moderator sửa task còn hạn (BR-47); task tạo bulk được sửa đồng bộ theo cụm cùng tuần/bài/khối.
+     * Không được sửa cụm đã có giáo án được duyệt để bảo toàn yêu cầu mà bài nộp đã được duyệt theo. Khối giữ nguyên, không sửa được. */
     @Transactional
     public WeeklyTaskViews.Detail update(UUID id, UUID teacherId, LocalDate weekStartDate, String title,
                                           String textbookCode, String chapterCode, String lessonCode) {
         WeeklyTask t = requireModeratorOwnerInSubject(id);
         requireBeforeDeadline(t);
+        List<WeeklyTask> group = findAssignmentGroup(t);
+        if (group.stream().anyMatch(task -> task.reviewStatus() == WeeklyTaskReviewStatus.APPROVED)) {
+            throw new IllegalArgumentException("Không thể sửa nhiệm vụ đã có giáo án được duyệt.");
+        }
         String scope = requireScope(title);
         ResolvedLesson lesson = resolveLesson(textbookCode, chapterCode, lessonCode);
         requireBookMatchesGrade(lesson.textbookCode(), t.subject(), t.grade());
         LocalDate monday = mondayOf(weekStartDate);
         Instant deadline = computeDeadline(monday);
         requireWeekNotEnded(deadline);
-
-        List<WeeklyTask> group = findAssignmentGroup(t);
         Set<UUID> excludedTaskIds = group.stream().map(WeeklyTask::id).collect(Collectors.toSet());
         requireLessonSlotAvailable(t.subject(), t.grade(), monday, List.of(lesson.lessonCode()), excludedTaskIds);
 

@@ -442,6 +442,22 @@ class WeeklyTaskServiceTest {
     }
 
     @Test
+    void update_whenAssignmentGroupHasApprovedTask_throws() {
+        asModerator();
+        UUID taskId = UUID.randomUUID();
+        WeeklyTask existing = task(taskId, WeeklyTaskReviewStatus.NOT_SUBMITTED, futureDeadline, null);
+        WeeklyTask approvedTask = task(UUID.randomUUID(), WeeklyTaskReviewStatus.APPROVED, futureDeadline, null);
+        when(repository.findById(taskId)).thenReturn(Optional.of(existing));
+        when(repository.findBySubjectAndGrade(eq(Subject.MATH), eq(GRADE), any(), any()))
+                .thenReturn(List.of(existing, approvedTask));
+
+        assertThatThrownBy(() -> service.update(taskId, teacherId, LocalDate.now(), "Chuong 4", TEXTBOOK_CODE, CHAPTER_CODE, LESSON_CODE))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Không thể sửa nhiệm vụ đã có giáo án được duyệt.");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void get_throwsResourceNotFoundWhenMissing() {
         asTeacher();
         UUID taskId = UUID.randomUUID();
