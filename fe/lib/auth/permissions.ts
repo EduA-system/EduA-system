@@ -55,7 +55,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   // Cùng một page component phục vụ hai URL (`app/blog/moderation/`, re-export ở `app/blog-moderator/`).
   // Khai báo cả hai để URL thật không rơi vào prefix `/blog` vốn rộng hơn (Teacher cũng vào được).
   "/blog/moderation": { requireAuth: true, allowedRoles: ["MODERATOR"] },
-  "/community-hub":   { requireAuth: false, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
+  "/community-hub":   { requireAuth: false, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL"] },
   "/hub-moderation":  { requireAuth: true, allowedRoles: ["MODERATOR"] },
   "/weekly-schedule": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/weekly-task-document": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },

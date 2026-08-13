@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,6 +55,17 @@ public class JpaHubCommentRepository implements HubCommentRepository {
     @Transactional(readOnly = true)
     public long countByLibraryContentId(UUID libraryContentId) {
         return jpa.countByLibraryContentIdAndHiddenAtIsNull(libraryContentId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CommentCount> countVisibleByLibraryContentIds(Collection<UUID> libraryContentIds) {
+        if (libraryContentIds == null || libraryContentIds.isEmpty()) {
+            return List.of();
+        }
+        return jpa.countVisibleByLibraryContentIdsRaw(List.copyOf(libraryContentIds)).stream()
+                .map(row -> new CommentCount((UUID) row[0], ((Number) row[1]).longValue()))
+                .toList();
     }
 
     @Override

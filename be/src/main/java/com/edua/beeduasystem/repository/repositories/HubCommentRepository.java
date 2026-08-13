@@ -2,6 +2,7 @@ package com.edua.beeduasystem.repository.repositories;
 
 import com.edua.beeduasystem.domain.model.library.HubComment;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,5 +19,10 @@ public interface HubCommentRepository {
 
     long countByLibraryContentId(UUID libraryContentId);
 
+    /** Visible comment totals for a feed page, grouped to avoid one query per content. */
+    List<CommentCount> countVisibleByLibraryContentIds(Collection<UUID> libraryContentIds);
+
     void deleteById(UUID id);
+
+    record CommentCount(UUID libraryContentId, long count) { }
 }

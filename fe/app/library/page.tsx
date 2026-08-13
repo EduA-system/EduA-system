@@ -17,7 +17,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -25,7 +25,6 @@ import { hasAnyRole } from "@/lib/auth/permissions";
 import { getSubjectRestriction, SUBJECT_LABELS } from "@/lib/auth/subject-access";
 import {
   deleteLibraryContent,
-  getLibraryContent,
   listLibrary,
   submitLibraryContent,
   unsubmitLibraryContent,
@@ -33,8 +32,6 @@ import {
   type LibraryContent,
   type LibraryType,
 } from "@/lib/library";
-import { createLessonThumbnail, createSlideThumbnail } from "@/lib/library-thumbnail";
-import { parseSlideDeck } from "@/lib/slide-deck-library";
 import { getWeeklySchedule } from "@/lib/weekly-task";
 
 const tabs: [string, LibraryType][] = [
@@ -124,21 +121,6 @@ function gradeLabel(grade: LibraryContent["grade"]) {
   return grade ? `Khối ${grade}` : null;
 }
 
-function collectTiptapText(node: unknown): string {
-  if (!node || typeof node !== "object") return "";
-  const record = node as { text?: unknown; content?: unknown };
-  const ownText = typeof record.text === "string" ? record.text : "";
-  const childText = Array.isArray(record.content) ? record.content.map(collectTiptapText).join(" ") : "";
-  return `${ownText} ${childText}`.trim();
-}
-
-function extractGradeFromPayload(payload: unknown): number | undefined {
-  const document = (payload as { document?: unknown } | undefined)?.document;
-  const text = collectTiptapText(document);
-  const match = text.match(/\b(?:lớp|lop|khối|khoi)\s*:?\s*(10|11|12)\b/i);
-  return match ? Number(match[1]) : undefined;
-}
-
 function LibraryScreen() {
   const { authFetch, user } = useAuth();
   const subjectRestriction = getSubjectRestriction(user);
@@ -155,7 +137,6 @@ function LibraryScreen() {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [saving, setSaving] = useState(false);
-  const metadataBackfillIds = useRef(new Set<string>());
   // Giáo án đang là nguồn 1 Weekly Task (đã nộp qua "chọn từ thư viện") → contentId -> reviewStatus mới
   // nhất. Chỉ Teacher mới có Weekly Task của riêng mình (Moderator không nộp task).
   const [weeklyTaskStatusByContentId, setWeeklyTaskStatusByContentId] = useState<Map<string, "SUBMITTED" | "APPROVED" | "REJECTED">>(new Map());
@@ -212,32 +193,6 @@ function LibraryScreen() {
     const timer = setTimeout(() => void load(), 200);
     return () => clearTimeout(timer);
   }, [load]);
-
-  useEffect(() => {
-    const missingMetadata = items.filter((content) =>
-      (
-        (!content.thumbnailUrl && (content.type === "LESSON_PLAN" || content.type === "SLIDE_DECK"))
-        || (content.type === "LESSON_PLAN" && !content.grade)
-      )
-      && !metadataBackfillIds.current.has(content.id),
-    );
-    missingMetadata.forEach((summary) => {
-      metadataBackfillIds.current.add(summary.id);
-      void getLibraryContent(authFetch, summary.id)
-        .then(async (detail) => {
-          const thumbnailUrl = detail.type === "LESSON_PLAN"
-            ? createLessonThumbnail(detail.title, detail.subject, (detail.payload as { document?: unknown } | undefined)?.document)
-            : createSlideThumbnail(parseSlideDeck(detail.payload) ?? []);
-          const grade = detail.grade ?? (detail.type === "LESSON_PLAN" ? extractGradeFromPayload(detail.payload) : undefined);
-          const patch: { thumbnailUrl?: string; grade?: number } = {};
-          if (!detail.thumbnailUrl && thumbnailUrl) patch.thumbnailUrl = thumbnailUrl;
-          if (!detail.grade && grade) patch.grade = grade;
-          if (!patch.thumbnailUrl && !patch.grade) return;
-          setItems((current) => current.map((content) => content.id === detail.id ? { ...content, ...patch } : content));
-        })
-        .catch(() => undefined);
-    });
-  }, [authFetch, items]);
 
   const open = (content: LibraryContent) => `${paths[content.type]}?libraryId=${content.id}`;
   const openRename = (content: LibraryContent) => {

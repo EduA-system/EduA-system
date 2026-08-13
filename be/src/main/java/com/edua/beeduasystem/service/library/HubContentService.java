@@ -13,6 +13,8 @@ import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.UUID;
 
@@ -41,7 +43,12 @@ public class HubContentService {
     /** Danh sách content APPROVED, public — không lọc theo owner. */
     public HubViews.Page<HubViews.ContentSummary> list(String rawType, String rawSubject, String q, int page, int size) {
         LibraryContentRepository.SearchResult result = repository.searchApproved(parseType(rawType), parseSubject(rawSubject), q, page, size);
-        return new HubViews.Page<>(result.items().stream().map(this::toSummary).toList(), Math.max(0, page), Math.min(Math.max(1, size), 100), result.total());
+        List<LibraryContent> items = result.items();
+        Map<UUID, String> ownerNames = userRepository.findAllById(items.stream().map(LibraryContent::ownerId).distinct().toList()).stream()
+                .collect(Collectors.toMap(AppUser::id, HubContentService::displayName));
+        Map<UUID, Long> commentCounts = commentRepository.countVisibleByLibraryContentIds(items.stream().map(LibraryContent::id).toList()).stream()
+                .collect(Collectors.toMap(HubCommentRepository.CommentCount::libraryContentId, HubCommentRepository.CommentCount::count));
+        return new HubViews.Page<>(items.stream().map(content -> toSummary(content, ownerNames, commentCounts)).toList(), Math.max(0, page), Math.min(Math.max(1, size), 100), result.total());
     }
 
     /** Chi tiết content APPROVED kèm bình luận — guest preview. */
@@ -68,9 +75,9 @@ public class HubContentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Content not found."));
     }
 
-    private HubViews.ContentSummary toSummary(LibraryContent c) {
-        return new HubViews.ContentSummary(c.id(), c.type(), c.title(), c.subject(), c.ownerId(), ownerName(c.ownerId()),
-                c.thumbnailUrl(), c.reviewedAt(), commentRepository.countByLibraryContentId(c.id()));
+    private HubViews.ContentSummary toSummary(LibraryContent c, Map<UUID, String> ownerNames, Map<UUID, Long> commentCounts) {
+        return new HubViews.ContentSummary(c.id(), c.type(), c.title(), c.subject(), c.ownerId(), ownerNames.get(c.ownerId()),
+                c.thumbnailUrl(), c.reviewedAt(), commentCounts.getOrDefault(c.id(), 0L));
     }
 
     private HubViews.ContentDetail toDetail(LibraryContent c) {
