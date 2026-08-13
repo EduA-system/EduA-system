@@ -32,6 +32,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -210,20 +211,56 @@ public class WeeklyTaskService {
         return WeeklyTaskViews.toBulkResult(created, resolveNames(created), teachers.size(), resolvedLessons.size());
     }
 
-    /** UC-82: Moderator sửa task còn hạn (BR-47); task tạo bulk được sửa đồng bộ theo cụm cùng tuần/bài/khối. Khối giữ nguyên, không sửa được. */
+    /**
+     * Cấp bù lịch của tuần hiện tại khi một giáo viên vừa được thêm, được khôi phục, hoặc vừa được gán
+     * thêm khối dạy. Chỉ sao chép những bài cùng môn/khối còn hạn; mỗi bài chỉ tạo một lần cho giáo viên.
+     */
+    @Transactional
+    public void assignOpenCurrentWeekTasks(UUID teacherId, Subject subject, Collection<Integer> grades) {
+        LocalDate currentMonday = LocalDate.now(VN_ZONE).with(DayOfWeek.MONDAY);
+        Instant now = Instant.now();
+        List<WeeklyTask> assigned = new ArrayList<>();
+
+        for (Integer grade : new LinkedHashSet<>(grades)) {
+            List<WeeklyTask> weekTasks = repository.findBySubjectAndGrade(subject, grade, currentMonday, currentMonday);
+            Set<String> existingAssignmentKeys = weekTasks.stream()
+                    .filter(task -> task.teacherId().equals(teacherId))
+                    .map(WeeklyTaskService::assignmentKey)
+                    .collect(Collectors.toSet());
+            Map<String, WeeklyTask> templates = weekTasks.stream()
+                    .filter(task -> task.deadline().isAfter(now))
+                    .collect(Collectors.toMap(WeeklyTaskService::assignmentKey, task -> task, (first, ignored) -> first));
+
+            for (Map.Entry<String, WeeklyTask> entry : templates.entrySet()) {
+                if (existingAssignmentKeys.add(entry.getKey())) {
+                    assigned.add(repository.save(copyForTeacher(entry.getValue(), teacherId, now)));
+                }
+            }
+        }
+
+        if (!assigned.isEmpty()) {
+            notify(teacherId, "Lịch tuần mới", "Bạn được bổ sung " + assigned.size()
+                    + " nhiệm vụ còn hạn của tuần hiện tại.", TARGET_TYPE_TEACHER_SUBMIT, TARGET_URL_TEACHER_SUBMIT);
+        }
+    }
+
+    /** UC-82: Moderator sửa task còn hạn (BR-47); task tạo bulk được sửa đồng bộ theo cụm cùng tuần/bài/khối.
+     * Không được sửa cụm đã có giáo án được duyệt để bảo toàn yêu cầu mà bài nộp đã được duyệt theo. Khối giữ nguyên, không sửa được. */
     @Transactional
     public WeeklyTaskViews.Detail update(UUID id, UUID teacherId, LocalDate weekStartDate, String title,
                                           String textbookCode, String chapterCode, String lessonCode) {
         WeeklyTask t = requireModeratorOwnerInSubject(id);
         requireBeforeDeadline(t);
+        List<WeeklyTask> group = findAssignmentGroup(t);
+        if (group.stream().anyMatch(task -> task.reviewStatus() == WeeklyTaskReviewStatus.APPROVED)) {
+            throw new IllegalArgumentException("Không thể sửa nhiệm vụ đã có giáo án được duyệt.");
+        }
         String scope = requireScope(title);
         ResolvedLesson lesson = resolveLesson(textbookCode, chapterCode, lessonCode);
         requireBookMatchesGrade(lesson.textbookCode(), t.subject(), t.grade());
         LocalDate monday = mondayOf(weekStartDate);
         Instant deadline = computeDeadline(monday);
         requireWeekNotEnded(deadline);
-
-        List<WeeklyTask> group = findAssignmentGroup(t);
         Set<UUID> excludedTaskIds = group.stream().map(WeeklyTask::id).collect(Collectors.toSet());
         requireLessonSlotAvailable(t.subject(), t.grade(), monday, List.of(lesson.lessonCode()), excludedTaskIds);
 
@@ -526,6 +563,17 @@ public class WeeklyTaskService {
         return new WeeklyTask(task.id(), task.moderatorId(), task.subject(), task.grade(), teacherId, monday, scope,
                 lesson.textbookCode(), lesson.chapterCode(), lesson.chapterName(), lesson.lessonCode(), lesson.lessonName(), deadline,
                 WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null, task.createdAt(), Instant.now(), task.version());
+    }
+
+    private static WeeklyTask copyForTeacher(WeeklyTask template, UUID teacherId, Instant now) {
+        return new WeeklyTask(UUID.randomUUID(), template.moderatorId(), template.subject(), template.grade(), teacherId,
+                template.weekStartDate(), template.scopeDescription(), template.textbookCode(), template.chapterCode(),
+                template.chapterName(), template.lessonCode(), template.lessonName(), template.deadline(),
+                WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null, now, now, null);
+    }
+
+    private static String assignmentKey(WeeklyTask task) {
+        return task.textbookCode() + "|" + task.chapterCode() + "|" + task.lessonCode();
     }
 
     private Subject requireSubject() {

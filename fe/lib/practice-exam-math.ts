@@ -1,5 +1,7 @@
 const COMMANDS = [
+  "frac",
   "sqrt",
+  "overline",
   "times",
   "theta",
   "alpha",
@@ -10,6 +12,7 @@ const COMMANDS = [
   "leftarrow",
   "leq",
   "geq",
+  "Delta",
 ];
 
 export function normalizePracticeExamLatex(value: string): string {
@@ -35,7 +38,7 @@ export function normalizePracticeExamMathText(value: string): string {
   return value.split("\n").map((line) => {
     if (line.includes("$")) return line;
     const unescaped = line.replace(/\\\\(?=[A-Za-z])/g, "\\");
-    if (/\\(?:frac|sqrt|vec|cdot|approx|cos|sin|tan|text)\b/.test(unescaped)) {
+    if (/(?:\\)?(?:frac|sqrt|overline|vec|cdot|approx|cos|sin|tan|text|Delta)\b/.test(unescaped)) {
       return `$${normalizePracticeExamLatex(unescaped)}$`;
     }
     return unescaped.replace(/(?<!\\)\bvec\s*([A-Za-z](?:_\{?[A-Za-z0-9]+\}?)?)/g, "$\\vec{$1}$");

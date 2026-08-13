@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, BookOpen, CalendarClock, CheckCircle2, Eye, Filter, Inbox, Library, Loader2, UserRound, X, XCircle } from "lucide-react";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RichView } from "@/components/blog/RichView";
@@ -38,6 +38,85 @@ function weekLabel(weekStartDate: string): string {
   end.setDate(end.getDate() + 6);
   const fmt = (d: Date) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
   return `${fmt(start)} - ${fmt(end)}`;
+}
+
+const FILTER_WIDTH_MIN = 224;
+const FILTER_WIDTH_MAX = 480;
+const FILTER_WIDTH_DEFAULT = 256;
+
+function clampFilterWidth(width: number): number {
+  return Math.min(FILTER_WIDTH_MAX, Math.max(FILTER_WIDTH_MIN, width));
+}
+
+/** Dropdown filter có tay nắm kéo ngang trên desktop; độ rộng được lưu riêng cho từng ô trên trình duyệt. */
+function ResizableFilterField({ storageKey, children }: { storageKey: string; children: ReactNode }) {
+  const [width, setWidth] = useState(FILTER_WIDTH_DEFAULT);
+  const resizeStart = useRef<{ clientX: number; width: number } | null>(null);
+
+  useEffect(() => {
+    const stored = Number(window.localStorage.getItem(storageKey));
+    if (!Number.isFinite(stored)) return;
+    const frame = window.requestAnimationFrame(() => setWidth(clampFilterWidth(stored)));
+    return () => window.cancelAnimationFrame(frame);
+  }, [storageKey]);
+
+  function updateWidth(nextWidth: number) {
+    const clamped = clampFilterWidth(nextWidth);
+    setWidth(clamped);
+    window.localStorage.setItem(storageKey, String(clamped));
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    resizeStart.current = { clientX: event.clientX, width };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!resizeStart.current) return;
+    updateWidth(resizeStart.current.width + event.clientX - resizeStart.current.clientX);
+  }
+
+  function finishResize(event: PointerEvent<HTMLDivElement>) {
+    resizeStart.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      updateWidth(width - 16);
+    }
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      updateWidth(width + 16);
+    }
+  }
+
+  return (
+    <div
+      className="relative min-w-0 w-full lg:flex-none lg:[width:var(--filter-width)]"
+      style={{ "--filter-width": `${width}px` } as CSSProperties}
+    >
+      {children}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Kéo để thay đổi độ rộng bộ lọc"
+        tabIndex={0}
+        title="Kéo để thay đổi độ rộng (hoặc dùng phím mũi tên)"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishResize}
+        onPointerCancel={finishResize}
+        onKeyDown={handleKeyDown}
+        className="absolute inset-y-1 right-0 z-10 hidden w-3 touch-none cursor-col-resize items-center justify-center gap-0.5 rounded-sm outline-none hover:bg-[#efe7df] focus-visible:bg-[#efe7df] lg:flex"
+      >
+        <span className="h-5 w-px rounded-full bg-[#a69b90]" />
+        <span className="h-5 w-px rounded-full bg-[#a69b90]" />
+      </div>
+    </div>
+  );
 }
 
 function LessonPlanApprovalScreen() {
@@ -227,14 +306,14 @@ function LessonPlanApprovalScreen() {
             </div>
           </header>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-[#e4ddd4] bg-white px-4 py-3 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-medium text-[#4f4943]">
+          <div className="mt-5 flex flex-wrap items-center gap-2.5 rounded-xl border border-[#e4ddd4] bg-white p-3 shadow-sm sm:px-4">
+            <div className="flex shrink-0 items-center gap-2 rounded-lg bg-[#fff7f2] px-2.5 py-2 text-sm font-medium text-[#7a4a37]">
               <Filter className="size-4 text-[#d97757]" />
               Bộ lọc
             </div>
-            <div className="h-6 w-px bg-[#e8e2d9]" />
-            <GradeSelect value={gradeFilter} onChange={handleGradeChange} includeAll />
-            <div className="w-full sm:w-56">
+            <div className="hidden h-7 w-px bg-[#e8e2d9] sm:block" />
+            <GradeSelect value={gradeFilter} onChange={handleGradeChange} includeAll className="shrink-0" />
+            <ResizableFilterField storageKey="edua.lesson-plan-approval.chapter-filter-width">
               <Dropdown
                 placeholder="Chọn chương..."
                 value={picker.chapterCode || null}
@@ -242,8 +321,8 @@ function LessonPlanApprovalScreen() {
                 onChange={picker.setChapterCode}
                 disabled={!picker.bookCode}
               />
-            </div>
-            <div className="w-full sm:w-56">
+            </ResizableFilterField>
+            <ResizableFilterField storageKey="edua.lesson-plan-approval.lesson-filter-width">
               <Dropdown
                 placeholder="Chọn bài..."
                 value={picker.lessonCode || null}
@@ -251,9 +330,9 @@ function LessonPlanApprovalScreen() {
                 onChange={picker.setLessonCode}
                 disabled={!picker.chapterCode}
               />
-            </div>
+            </ResizableFilterField>
             {picker.chapterCode || picker.lessonCode ? (
-              <button type="button" onClick={picker.reset} className="rounded-lg px-3 py-2 text-sm font-medium text-[#b85c3b] hover:bg-[#fff4ed]">
+              <button type="button" onClick={picker.reset} className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-[#b85c3b] hover:bg-[#fff4ed]">
                 Xóa bộ lọc chương/bài
               </button>
             ) : null}

@@ -1,8 +1,9 @@
 "use client";
 
-import { BookOpen, Check, ExternalLink, Users } from "lucide-react";
+import { AlertCircle, BookOpen, Check, ExternalLink, Loader2, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { RichView } from "@/components/blog/RichView";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
@@ -18,14 +19,18 @@ import { useTextbookPicker } from "@/lib/textbook-picker";
 import {
   bulkCreateWeeklyTasks,
   getWeeklySchedule,
+  getWeeklyTask,
   submitWeeklyTask,
   unsubmitWeeklyTask,
   updateWeeklyTask,
   type WeeklyTaskGrade,
+  type WeeklyTaskDetail,
   type WeeklyTaskReviewStatus,
   type WeeklyTaskSchedule,
   type WeeklyTaskSummary,
 } from "@/lib/weekly-task";
+import { resolveWeeklyTaskLessonDocument } from "@/components/weeklytask/WeeklyTaskDocumentViewer";
+import type { TiptapNode } from "@/lib/tiptap-to-text";
 
 const statusLabels: Record<WeeklyTaskReviewStatus, string> = {
   NOT_SUBMITTED: "Chưa nộp",
@@ -106,8 +111,13 @@ function mondaysInMonth(year: number, month: number): string[] {
 
 function monthRange(year: number, month: number): { from: string; to: string } {
   const lastDay = new Date(year, month + 1, 0).getDate();
+  const firstOfMonth = new Date(year, month, 1);
+  const mondayOffset = (firstOfMonth.getDay() + 6) % 7;
+  const firstVisibleMonday = new Date(year, month, 1 - mondayOffset);
   return {
-    from: `${year}-${pad2(month + 1)}-01`,
+    // Lấy cả Thứ 2 của tuần đầu tháng để task của tuần giao hai tháng (vd 31/08–06/09)
+    // xuất hiện nhất quán ở cả tháng 8 lẫn tháng 9.
+    from: toDateOnly(firstVisibleMonday),
     to: `${year}-${pad2(month + 1)}-${pad2(lastDay)}`,
   };
 }
@@ -197,6 +207,7 @@ function LessonGroupCard({
   const submittedCount = group.tasks.filter((t) => t.reviewStatus !== "NOT_SUBMITTED").length;
   const pendingCount = group.tasks.filter((t) => t.reviewStatus === "SUBMITTED").length;
   const approvedCount = group.tasks.filter((t) => t.reviewStatus === "APPROVED").length;
+  const canEditGroup = canEdit && approvedCount === 0;
   const anchorTask = group.tasks[0];
   return (
     <article className="overflow-hidden rounded-lg border border-[#e4ddd4] bg-white shadow-[0_1px_2px_rgba(43,41,38,0.04)] transition hover:border-[#e8724a]/60 hover:shadow-[0_8px_22px_rgba(43,41,38,0.08)]">
@@ -228,9 +239,15 @@ function LessonGroupCard({
           {anchorTask ? (
             <button
               type="button"
-              disabled={!canEdit}
+              disabled={!canEditGroup}
               onClick={() => onEditGroup(anchorTask)}
-              title={canEdit ? "Sửa lịch nộp giáo án" : "Lịch nộp đã kết thúc, không thể sửa"}
+              title={
+                !canEdit
+                  ? "Lịch nộp đã kết thúc, không thể sửa"
+                  : approvedCount > 0
+                    ? "Đã có giáo án được duyệt, không thể sửa"
+                    : "Sửa lịch nộp giáo án"
+              }
               className="rounded-md border border-[#e4ddd4] bg-white px-2.5 py-1 font-medium text-[#b85c3b] transition hover:border-[#e8724a] hover:bg-[#fff7f2] disabled:cursor-not-allowed disabled:border-[#e8e2d9] disabled:bg-[#f5f1ec] disabled:text-[#b8afa6]"
             >
               Sửa
@@ -260,6 +277,14 @@ function WeeklyScheduleScreen() {
   const [msg, setMsg] = useState("");
 
   const [selectedLessonGroup, setSelectedLessonGroup] = useState<LessonGroup | null>(null);
+  // Xem lại giáo án đã duyệt ngay từ popup danh sách nộp. Popup này nằm trên popup
+  // danh sách; đóng nó chỉ quay về danh sách để Mod tiếp tục xem giáo viên khác.
+  const [viewingApprovedTask, setViewingApprovedTask] = useState<WeeklyTaskSummary | null>(null);
+  const [approvedLessonDocument, setApprovedLessonDocument] = useState<TiptapNode | string | null>(null);
+  const [approvedLessonDetail, setApprovedLessonDetail] = useState<WeeklyTaskDetail | null>(null);
+  const [approvedLessonError, setApprovedLessonError] = useState("");
+  const [approvedLessonLoading, setApprovedLessonLoading] = useState(false);
+  const approvedLessonRequestRef = useRef(0);
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
   // BR-51: Mod luôn thao tác trong phạm vi đúng 1 khối đã chọn.
@@ -287,7 +312,6 @@ function WeeklyScheduleScreen() {
 
   // ── Nộp giáo án (Teacher) — chỉ từ thư viện cá nhân, chọn qua popup dạng thẻ (không còn tải tệp lên) ──
   const [submittingTask, setSubmittingTask] = useState<WeeklyTaskSummary | null>(null);
-  const [resubmittingId, setResubmittingId] = useState<string | null>(null);
   const [ownedLessonPlans, setOwnedLessonPlans] = useState<LibraryContent[]>([]);
   const [selectedLessonPlanId, setSelectedLessonPlanId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -428,23 +452,6 @@ function WeeklyScheduleScreen() {
     }
   }
 
-  // Bị từ chối + đã từng nộp từ thư viện → nộp lại đúng giáo án cũ, không bắt chọn lại dropdown (dễ bấm
-  // nhầm dưa bài khác vào). Chỉ áp dụng khi nguồn cũ là thư viện (sourceLibraryContentId có giá trị) —
-  // nộp bằng tệp tải lên thì vẫn phải mở panel chọn/tải lại như cũ.
-  async function handleResubmit(t: WeeklyTaskSummary) {
-    if (!t.sourceLibraryContentId) return;
-    setResubmittingId(t.id);
-    try {
-      await submitWeeklyTask(authFetch, t.id, { libraryContentId: t.sourceLibraryContentId });
-      setMsg("Đã nộp lại giáo án.");
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể nộp lại giáo án.");
-    } finally {
-      setResubmittingId(null);
-    }
-  }
-
   async function handleUnsubmit(taskId: string) {
     try {
       await unsubmitWeeklyTask(authFetch, taskId);
@@ -458,6 +465,39 @@ function WeeklyScheduleScreen() {
 
   function openSubmittedTaskApproval(taskId: string) {
     router.push(`/lesson-plan-approval?taskId=${encodeURIComponent(taskId)}&preview=1`);
+  }
+
+  function openApprovedLessonViewer(task: WeeklyTaskSummary) {
+    const requestId = ++approvedLessonRequestRef.current;
+    setViewingApprovedTask(task);
+    setApprovedLessonDocument(null);
+    setApprovedLessonDetail(null);
+    setApprovedLessonError("");
+    setApprovedLessonLoading(true);
+
+    void getWeeklyTask(authFetch, task.id)
+      .then((detail) => {
+        if (requestId !== approvedLessonRequestRef.current) return;
+        const document = resolveWeeklyTaskLessonDocument(detail.sourceLibraryContentPayload);
+        if (!document) throw new Error("Giáo án này không có nội dung có thể xem lại.");
+        setApprovedLessonDetail(detail);
+        setApprovedLessonDocument(document);
+      })
+      .catch((reason: unknown) => {
+        if (requestId !== approvedLessonRequestRef.current) return;
+        setApprovedLessonError(reason instanceof Error ? reason.message : "Không thể mở giáo án đã duyệt.");
+      })
+      .finally(() => {
+        if (requestId === approvedLessonRequestRef.current) setApprovedLessonLoading(false);
+      });
+  }
+
+  function closeApprovedLessonViewer() {
+    approvedLessonRequestRef.current += 1;
+    setViewingApprovedTask(null);
+    setApprovedLessonDocument(null);
+    setApprovedLessonDetail(null);
+    setApprovedLessonError("");
   }
 
   // Task của giáo viên gộp mọi khối họ dạy trong 1 lịch — lọc theo `teacherGradeFilter` để không lẫn lộn
@@ -779,6 +819,7 @@ function WeeklyScheduleScreen() {
                 </div>
                 {selectedLessonGroup.tasks.map((t) => {
                   const canOpenApproval = t.reviewStatus === "SUBMITTED";
+                  const canViewApprovedLesson = t.reviewStatus === "APPROVED";
                   const content = (
                     <>
                       <div className="flex min-w-0 items-center gap-3">
@@ -808,6 +849,21 @@ function WeeklyScheduleScreen() {
                     >
                       {content}
                     </button>
+                  ) : canViewApprovedLesson ? (
+                    <div
+                      key={t.id}
+                      className="flex w-full flex-col justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50/50 px-4 py-3 sm:flex-row sm:items-center"
+                    >
+                      {content}
+                      <button
+                        type="button"
+                        onClick={() => openApprovedLessonViewer(t)}
+                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#e8724a] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#d9633b]"
+                      >
+                        <BookOpen className="size-3.5" />
+                        Mở tài nguyên
+                      </button>
+                    </div>
                   ) : (
                     <div key={t.id} className="flex flex-col justify-between gap-3 rounded-lg border border-[#e4ddd4] bg-white px-4 py-3 sm:flex-row sm:items-center">
                       {content}
@@ -817,6 +873,52 @@ function WeeklyScheduleScreen() {
               </div>
             ) : null}
           </Modal>
+
+          {viewingApprovedTask ? (
+            <div
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="approved-lesson-preview-title"
+              onMouseDown={closeApprovedLessonViewer}
+            >
+              <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-[#f7f5f2] shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+                <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e4ddd4] bg-white px-5 py-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#d97757]">Giáo án đã duyệt · {viewingApprovedTask.teacherName ?? "Giáo viên"}</p>
+                    <h2 id="approved-lesson-preview-title" className="truncate text-base font-semibold">
+                      {approvedLessonDetail?.sourceLibraryContentTitle ?? viewingApprovedTask.scopeDescription}
+                    </h2>
+                  </div>
+                  <button type="button" onClick={closeApprovedLessonViewer} aria-label="Quay lại danh sách nộp" className="flex size-9 shrink-0 items-center justify-center rounded-lg text-[#6b6259] transition hover:bg-[#f5f1ec]">
+                    <X className="size-5" />
+                  </button>
+                </header>
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+                  {approvedLessonLoading ? (
+                    <div className="flex min-h-72 items-center justify-center gap-2 text-sm text-[#6b6b6b]">
+                      <Loader2 className="size-4 animate-spin" />
+                      Đang mở giáo án...
+                    </div>
+                  ) : approvedLessonError ? (
+                    <div className="mx-auto flex min-h-40 max-w-[860px] items-center justify-center gap-2 rounded-xl border border-[#e8b4a4] bg-[#fdf3ef] px-5 text-sm text-[#c0492b]">
+                      <AlertCircle className="size-4 shrink-0" />
+                      {approvedLessonError}
+                    </div>
+                  ) : approvedLessonDocument ? (
+                    <article className="mx-auto min-h-[1123px] max-w-[794px] bg-white px-8 py-10 shadow-[0_1px_2px_rgba(43,41,38,0.06),0_8px_28px_rgba(43,41,38,0.08)] sm:px-12 lg:px-16">
+                      <RichView html={approvedLessonDocument} variant="document" />
+                    </article>
+                  ) : null}
+                </div>
+                <footer className="flex shrink-0 justify-end border-t border-[#e4ddd4] bg-white px-5 py-3">
+                  <button type="button" onClick={closeApprovedLessonViewer} className="rounded-lg border border-[#d8d1c9] px-4 py-2 text-sm font-medium text-[#4f4943] transition hover:bg-[#f5f1ec]">
+                    Quay lại danh sách nộp
+                  </button>
+                </footer>
+              </div>
+            </div>
+          ) : null}
 
           {msg ? <p className="mt-4 text-sm text-emerald-700">{msg}</p> : null}
           {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
@@ -953,18 +1055,9 @@ function WeeklyScheduleScreen() {
                                       </p>
                                     </div>
                                     <div className="flex shrink-0 items-center gap-2 text-sm">
-                                      {current && !expired && t.reviewStatus === "REJECTED" && t.sourceLibraryContentId ? (
-                                        <button
-                                          onClick={() => void handleResubmit(t)}
-                                          disabled={resubmittingId === t.id}
-                                          title="Nộp lại đúng giáo án đã chọn trước đó"
-                                          className="text-[#b85c3b] underline disabled:opacity-50"
-                                        >
-                                          {resubmittingId === t.id ? "Đang nộp lại..." : "Nộp lại"}
-                                        </button>
-                                      ) : current &&
-                                        !expired &&
-                                        (t.reviewStatus === "NOT_SUBMITTED" || (t.reviewStatus === "REJECTED" && !t.sourceLibraryContentId)) ? (
+                                      {current &&
+                                      !expired &&
+                                      (t.reviewStatus === "NOT_SUBMITTED" || t.reviewStatus === "REJECTED") ? (
                                         <button onClick={() => openSubmitPanel(t)} className="text-[#b85c3b] underline">
                                           Nộp giáo án
                                         </button>

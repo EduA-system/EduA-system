@@ -62,7 +62,7 @@ export function Dropdown({
   const isDisabled = disabled || options.length === 0;
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative min-w-0">
       <button
         type="button"
         disabled={isDisabled}
@@ -73,7 +73,7 @@ export function Dropdown({
             : "bg-[#faf9f7] text-[#1f1f1f] hover:border-[#c9bfb2]"
         }`}
       >
-        <span className={selected ? "" : "text-[#6b6b6b]"}>
+        <span title={selected?.label ?? placeholder} className={`min-w-0 truncate ${selected ? "" : "text-[#6b6b6b]"}`}>
           {selected ? selected.label : placeholder}
         </span>
         <DashboardIcon name="chevronDown" className="size-3 shrink-0" />

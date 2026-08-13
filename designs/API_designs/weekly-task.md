@@ -219,6 +219,9 @@ FE sắp thứ tự "bài thứ nhất/hai" trong 1 tuần (ổn định theo th
 ```
 
 - Target: mọi Teacher `ACTIVE` cùng `subject` và có `grade` trong `teacher_grades`.
+- Khi Moderator thêm, khôi phục, hoặc bổ sung khối dạy cho Teacher, hệ thống cũng cấp bù các task cùng
+  `subject` + `grade` của **tuần hiện tại** nếu deadline còn hiệu lực. Task đã hết hạn không được cấp bù;
+  mỗi bài chỉ có một task cho mỗi Teacher.
 - `textbookCode` dùng chung cho cả `lessons` trong 1 lần gọi (1 modal = 1 sách).
 - Check theo `(subject, grade, weekStartDate)`: tổng số `lessonCode` phân biệt (đã có + mới thêm) không
   vượt 2; không trùng `lessonCode` với bài đã có.

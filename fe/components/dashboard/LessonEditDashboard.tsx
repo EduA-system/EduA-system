@@ -309,23 +309,23 @@ export function LessonEditDashboard() {
           <header className="z-30 shrink-0 border-b border-[#e8e2d9] bg-[#fbfaf8] shadow-[0_1px_2px_rgba(43,41,38,0.06)]">
             <div className="@container flex min-h-12 items-center justify-between gap-3 px-3 py-1.5">
               <div className="flex min-w-0 shrink-0 items-center gap-1.5">
-                {!libraryId && (
-                  <HeaderActionButton
-                    onClick={() => void saveLesson()}
-                    disabled={isGeneratingLesson || hasPendingAiDiff}
-                    label={
-                      isGeneratingLesson
-                        ? "Đang tạo giáo án..."
+                <HeaderActionButton
+                  onClick={() => void saveLesson()}
+                  disabled={isGeneratingLesson || hasPendingAiDiff || !documentReady}
+                  label={
+                    isGeneratingLesson
+                      ? "Đang tạo giáo án..."
+                      : !documentReady
+                        ? "Đang tải giáo án..."
                         : saveStatus === "saving"
-                        ? "Đang lưu..."
-                        : hasPendingAiDiff
-                          ? "Còn đề xuất AI chưa duyệt"
-                          : "Lưu"
-                    }
-                  >
-                    <SaveIcon />
-                  </HeaderActionButton>
-                )}
+                          ? "Đang lưu..."
+                          : hasPendingAiDiff
+                            ? "Còn đề xuất AI chưa duyệt"
+                            : "Lưu"
+                  }
+                >
+                  <SaveIcon />
+                </HeaderActionButton>
                 <HeaderActionButton
                   onClick={() => void exportPdf()}
                   disabled={isGeneratingLesson || exportingPdf || !documentReady}

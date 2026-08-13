@@ -38,6 +38,10 @@ nhưng `grade` khác nhau) — check "tuần này đã có lịch, không tạo 
 (`repository.findBySubject(subject, weekStartDate, weekStartDate).isEmpty()`,
 `WeeklyTaskService.java:129`) phải đổi thành check theo `(subject, grade, weekStartDate)`.
 
+Khi một Teacher được thêm mới, được khôi phục, hoặc được bổ sung khối dạy, hệ thống cấp bù các task còn
+hạn của tuần hiện tại khớp `subject` và khối mới của Teacher. Không cấp lại task quá hạn hoặc tạo trùng
+bài mà Teacher đã có.
+
 ### 2b. BR-52 (đề xuất, thay thế BR-50 ở `deadline-rule.md`) — Hạn nộp khoá cứng theo tuần lịch thực
 
 > Hạn nộp của Weekly Task cho tuần dạy A luôn là **23:59:59 (giờ VN) Chủ Nhật của chính tuần A**, tính
