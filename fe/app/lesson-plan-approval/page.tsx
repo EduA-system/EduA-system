@@ -227,14 +227,14 @@ function LessonPlanApprovalScreen() {
             </div>
           </header>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-[#e4ddd4] bg-white px-4 py-3 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-medium text-[#4f4943]">
+          <div className="mt-5 flex flex-wrap items-center gap-2.5 rounded-xl border border-[#e4ddd4] bg-white p-3 shadow-sm sm:px-4">
+            <div className="flex shrink-0 items-center gap-2 rounded-lg bg-[#fff7f2] px-2.5 py-2 text-sm font-medium text-[#7a4a37]">
               <Filter className="size-4 text-[#d97757]" />
               Bộ lọc
             </div>
-            <div className="h-6 w-px bg-[#e8e2d9]" />
-            <GradeSelect value={gradeFilter} onChange={handleGradeChange} includeAll />
-            <div className="w-full sm:w-56">
+            <div className="hidden h-7 w-px bg-[#e8e2d9] sm:block" />
+            <GradeSelect value={gradeFilter} onChange={handleGradeChange} includeAll className="shrink-0" />
+            <div className="min-w-0 flex-1 basis-56 sm:max-w-64">
               <Dropdown
                 placeholder="Chọn chương..."
                 value={picker.chapterCode || null}
@@ -243,7 +243,7 @@ function LessonPlanApprovalScreen() {
                 disabled={!picker.bookCode}
               />
             </div>
-            <div className="w-full sm:w-56">
+            <div className="min-w-0 flex-1 basis-56 sm:max-w-64">
               <Dropdown
                 placeholder="Chọn bài..."
                 value={picker.lessonCode || null}
@@ -253,7 +253,7 @@ function LessonPlanApprovalScreen() {
               />
             </div>
             {picker.chapterCode || picker.lessonCode ? (
-              <button type="button" onClick={picker.reset} className="rounded-lg px-3 py-2 text-sm font-medium text-[#b85c3b] hover:bg-[#fff4ed]">
+              <button type="button" onClick={picker.reset} className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-[#b85c3b] hover:bg-[#fff4ed]">
                 Xóa bộ lọc chương/bài
               </button>
             ) : null}

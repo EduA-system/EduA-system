@@ -26,7 +26,9 @@ import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.time.Instant;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -360,6 +362,38 @@ class WeeklyTaskServiceTest {
         assertThat(result.lessonCount()).isEqualTo(2);
         assertThat(result.created()).hasSize(4);
         verify(repository, times(4)).save(any());
+    }
+
+    @Test
+    void assignOpenCurrentWeekTasks_copiesOnlyOpenUniqueTasksForNewTeacher() {
+        asModerator();
+        UUID newTeacherId = UUID.randomUUID();
+        LocalDate currentMonday = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).with(DayOfWeek.MONDAY);
+        WeeklyTask open = new WeeklyTask(UUID.randomUUID(), moderatorId, Subject.MATH, GRADE, teacherId, currentMonday,
+                "Bài đang giao", TEXTBOOK_CODE, CHAPTER_CODE, "Chương 1", LESSON_CODE, "Bài 1", futureDeadline,
+                WeeklyTaskReviewStatus.SUBMITTED, UUID.randomUUID(), null, null, null, null, Instant.now(), null, null,
+                null, Instant.now(), Instant.now(), 0L);
+        WeeklyTask expired = new WeeklyTask(UUID.randomUUID(), moderatorId, Subject.MATH, GRADE, teacherId, currentMonday,
+                "Bài đã quá hạn", TEXTBOOK_CODE, CHAPTER_CODE, "Chương 1", "L2", "Bài 2", pastDeadline,
+                WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null,
+                Instant.now(), Instant.now(), 0L);
+        WeeklyTask duplicateOpen = new WeeklyTask(UUID.randomUUID(), moderatorId, Subject.MATH, GRADE, UUID.randomUUID(), currentMonday,
+                "Bài đang giao", TEXTBOOK_CODE, CHAPTER_CODE, "Chương 1", LESSON_CODE, "Bài 1", futureDeadline,
+                WeeklyTaskReviewStatus.NOT_SUBMITTED, null, null, null, null, null, null, null, null, null,
+                Instant.now(), Instant.now(), 0L);
+        when(repository.findBySubjectAndGrade(Subject.MATH, GRADE, currentMonday, currentMonday))
+                .thenReturn(List.of(open, expired, duplicateOpen));
+
+        service.assignOpenCurrentWeekTasks(newTeacherId, Subject.MATH, List.of(GRADE));
+
+        ArgumentCaptor<WeeklyTask> taskCaptor = ArgumentCaptor.forClass(WeeklyTask.class);
+        verify(repository).save(taskCaptor.capture());
+        WeeklyTask copied = taskCaptor.getValue();
+        assertThat(copied.teacherId()).isEqualTo(newTeacherId);
+        assertThat(copied.lessonCode()).isEqualTo(LESSON_CODE);
+        assertThat(copied.reviewStatus()).isEqualTo(WeeklyTaskReviewStatus.NOT_SUBMITTED);
+        assertThat(copied.sourceLibraryContentId()).isNull();
+        verify(notificationRepository).createWithRecipients(any(), eq(List.of(newTeacherId)));
     }
 
     @Test

@@ -15,6 +15,7 @@ import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
 import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
+import com.edua.beeduasystem.service.weeklytask.WeeklyTaskService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class ModeratorTeacherService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ActivityLogService activityLogService;
+    private final WeeklyTaskService weeklyTaskService;
 
     public ModeratorTeacherService(AppUserRepository userRepository,
                                    ClassRepository classRepository,
@@ -52,7 +54,8 @@ public class ModeratorTeacherService {
                                    TeacherGradeRepository teacherGradeRepository,
                                    RefreshTokenRepository refreshTokenRepository,
                                    CurrentUserProvider currentUserProvider,
-                                   ActivityLogService activityLogService) {
+                                   ActivityLogService activityLogService,
+                                   WeeklyTaskService weeklyTaskService) {
         this.userRepository = userRepository;
         this.classRepository = classRepository;
         this.userRoleRepository = userRoleRepository;
@@ -60,6 +63,7 @@ public class ModeratorTeacherService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.currentUserProvider = currentUserProvider;
         this.activityLogService = activityLogService;
+        this.weeklyTaskService = weeklyTaskService;
     }
 
     public record TeacherListResult(
@@ -134,6 +138,7 @@ public class ModeratorTeacherService {
             AppUser reactivated = userRepository.save(prepareExistingTeacher(u, moderatorSubject, normalizedFullName));
             assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
             teacherGradeRepository.replaceGrades(reactivated.id(), normalizedGrades);
+            weeklyTaskService.assignOpenCurrentWeekTasks(reactivated.id(), moderatorSubject, normalizedGrades);
             activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
                     ActivityLogAction.GRANT_TEACHER, "APP_USER", reactivated.id(), null);
             return reactivated;
@@ -146,6 +151,7 @@ public class ModeratorTeacherService {
                 moderatorSubject, UserStatus.INVITED, now, null, null));
         assignRole(saved.id(), Role.TEACHER, currentUserId, now);
         teacherGradeRepository.replaceGrades(saved.id(), normalizedGrades);
+        weeklyTaskService.assignOpenCurrentWeekTasks(saved.id(), moderatorSubject, normalizedGrades);
         activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.GRANT_TEACHER, "APP_USER", saved.id(), null);
         return saved;
@@ -204,6 +210,7 @@ public class ModeratorTeacherService {
                 user.lastLoginAt(),
                 AppUserFieldValidator.normalizeEducatorDateOfBirth(dateOfBirth)));
         teacherGradeRepository.replaceGrades(updated.id(), normalizedGrades);
+        weeklyTaskService.assignOpenCurrentWeekTasks(updated.id(), moderatorSubject, normalizedGrades);
         activityLogService.record(currentUserProvider.requireUserId(), "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.UPDATE_TEACHER, "APP_USER", updated.id(), null);
         return updated;
@@ -236,6 +243,9 @@ public class ModeratorTeacherService {
                 user.bio(), user.phoneNumber(),
                 user.subject(), UserStatus.INVITED, user.createdAt(), user.lastLoginAt(), user.dateOfBirth()));
         assignRole(reactivated.id(), Role.TEACHER, currentUserId, now);
+        List<Integer> grades = teacherGradeRepository.findGradesByUserIds(Set.of(reactivated.id()))
+                .getOrDefault(reactivated.id(), List.of());
+        weeklyTaskService.assignOpenCurrentWeekTasks(reactivated.id(), moderatorSubject, grades);
         activityLogService.record(currentUserId, "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REACTIVATE_TEACHER, "APP_USER", reactivated.id(), null);
         return reactivated;

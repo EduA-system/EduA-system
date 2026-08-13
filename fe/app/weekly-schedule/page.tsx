@@ -111,8 +111,13 @@ function mondaysInMonth(year: number, month: number): string[] {
 
 function monthRange(year: number, month: number): { from: string; to: string } {
   const lastDay = new Date(year, month + 1, 0).getDate();
+  const firstOfMonth = new Date(year, month, 1);
+  const mondayOffset = (firstOfMonth.getDay() + 6) % 7;
+  const firstVisibleMonday = new Date(year, month, 1 - mondayOffset);
   return {
-    from: `${year}-${pad2(month + 1)}-01`,
+    // Lấy cả Thứ 2 của tuần đầu tháng để task của tuần giao hai tháng (vd 31/08–06/09)
+    // xuất hiện nhất quán ở cả tháng 8 lẫn tháng 9.
+    from: toDateOnly(firstVisibleMonday),
     to: `${year}-${pad2(month + 1)}-${pad2(lastDay)}`,
   };
 }
@@ -307,7 +312,6 @@ function WeeklyScheduleScreen() {
 
   // ── Nộp giáo án (Teacher) — chỉ từ thư viện cá nhân, chọn qua popup dạng thẻ (không còn tải tệp lên) ──
   const [submittingTask, setSubmittingTask] = useState<WeeklyTaskSummary | null>(null);
-  const [resubmittingId, setResubmittingId] = useState<string | null>(null);
   const [ownedLessonPlans, setOwnedLessonPlans] = useState<LibraryContent[]>([]);
   const [selectedLessonPlanId, setSelectedLessonPlanId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -445,23 +449,6 @@ function WeeklyScheduleScreen() {
       setError(e instanceof Error ? e.message : "Không thể nộp giáo án.");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  // Bị từ chối + đã từng nộp từ thư viện → nộp lại đúng giáo án cũ, không bắt chọn lại dropdown (dễ bấm
-  // nhầm dưa bài khác vào). Chỉ áp dụng khi nguồn cũ là thư viện (sourceLibraryContentId có giá trị) —
-  // nộp bằng tệp tải lên thì vẫn phải mở panel chọn/tải lại như cũ.
-  async function handleResubmit(t: WeeklyTaskSummary) {
-    if (!t.sourceLibraryContentId) return;
-    setResubmittingId(t.id);
-    try {
-      await submitWeeklyTask(authFetch, t.id, { libraryContentId: t.sourceLibraryContentId });
-      setMsg("Đã nộp lại giáo án.");
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể nộp lại giáo án.");
-    } finally {
-      setResubmittingId(null);
     }
   }
 
@@ -1068,18 +1055,9 @@ function WeeklyScheduleScreen() {
                                       </p>
                                     </div>
                                     <div className="flex shrink-0 items-center gap-2 text-sm">
-                                      {current && !expired && t.reviewStatus === "REJECTED" && t.sourceLibraryContentId ? (
-                                        <button
-                                          onClick={() => void handleResubmit(t)}
-                                          disabled={resubmittingId === t.id}
-                                          title="Nộp lại đúng giáo án đã chọn trước đó"
-                                          className="text-[#b85c3b] underline disabled:opacity-50"
-                                        >
-                                          {resubmittingId === t.id ? "Đang nộp lại..." : "Nộp lại"}
-                                        </button>
-                                      ) : current &&
-                                        !expired &&
-                                        (t.reviewStatus === "NOT_SUBMITTED" || (t.reviewStatus === "REJECTED" && !t.sourceLibraryContentId)) ? (
+                                      {current &&
+                                      !expired &&
+                                      (t.reviewStatus === "NOT_SUBMITTED" || t.reviewStatus === "REJECTED") ? (
                                         <button onClick={() => openSubmitPanel(t)} className="text-[#b85c3b] underline">
                                           Nộp giáo án
                                         </button>
