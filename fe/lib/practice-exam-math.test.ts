@@ -21,4 +21,9 @@ describe("normalizePracticeExamLatex", () => {
     expect(normalizePracticeExamMathText("F' = \\\\frac{k}{r^2}"))
       .toBe("$F' = \\frac{k}{r^2}$");
   });
+
+  it("wraps bare frac, overline, and Delta as inline LaTex", () => {
+    expect(normalizePracticeExamMathText("δ s = frac{Delta s}{overline{s}} · 100%"))
+      .toBe("$δ s = \\frac{\\Delta s}{\\overline{s}} · 100%$");
+  });
 });

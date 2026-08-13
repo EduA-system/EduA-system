@@ -7,12 +7,14 @@ import com.edua.beeduasystem.service.blog.BlogContentSanitizer;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Parser;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -25,6 +27,12 @@ public class DocumentExportService {
     private static final String PDF_CONTENT_TYPE = "application/pdf";
     private static final Pattern FRACTION_PATTERN = Pattern.compile("\\\\frac\\s*\\{([^{}]+)}\\s*\\{([^{}]+)}");
     private static final Pattern SQRT_PATTERN = Pattern.compile("\\\\sqrt\\s*\\{([^{}]+)}");
+    private static final Pattern OVERLINE_PATTERN = Pattern.compile("\\\\overline\\s*\\{([^{}]+)}");
+    private static final Pattern TEXT_PATTERN = Pattern.compile("\\\\text\\s*\\{([^{}]+)}");
+    private static final Pattern BARE_BRACED_COMMAND_PATTERN = Pattern.compile("(?<!\\\\)\\b(frac|sqrt|overline|text)\\s*\\{");
+    private static final Pattern BARE_DELTA_PATTERN = Pattern.compile("(?<!\\\\)\\bDelta\\b");
+    private static final Pattern RAW_LATEX_PATTERN = Pattern.compile(
+            "(?<![A-Za-z])(?:\\\\)?(?:frac|sqrt|overline|Delta|delta|cdot|times|pm|mp|leq|geq)\\s*(?:\\{|[A-Za-z])");
     private static final Pattern SUPERSCRIPT_GROUP_PATTERN = Pattern.compile("\\^\\{([^{}]+)}");
     private static final Pattern SUBSCRIPT_GROUP_PATTERN = Pattern.compile("_\\{([^{}]+)}");
     private static final Pattern SUPERSCRIPT_CHAR_PATTERN = Pattern.compile("\\^([A-Za-z0-9+\\-=()])");
@@ -160,15 +168,36 @@ public class DocumentExportService {
                 element.replaceWith(replacement);
             }
         }
+        normalizeRawLatexTextNodes(document);
+    }
+
+    /** Các tài liệu cũ có thể lưu LaTex như text thường thay vì node TipTap math; vẫn chuyển được khi xuất. */
+    private static void normalizeRawLatexTextNodes(Document document) {
+        for (Element element : document.getAllElements()) {
+            for (TextNode textNode : List.copyOf(element.textNodes())) {
+                String text = textNode.getWholeText();
+                if (RAW_LATEX_PATTERN.matcher(text).find()) {
+                    textNode.text(latexToPdfText(text));
+                }
+            }
+        }
     }
 
     private static String latexToPdfText(String latex) {
         if (latex == null || latex.isBlank()) {
             return "";
         }
-        String value = latex.trim();
-        value = replacePattern(value, FRACTION_PATTERN, match -> "(" + match.group(1) + ")/(" + match.group(2) + ")");
-        value = replacePattern(value, SQRT_PATTERN, match -> "√(" + match.group(1) + ")");
+        String value = normalizeBareLatexCommands(latex.trim());
+        for (int pass = 0; pass < 8; pass++) {
+            String previous = value;
+            value = replacePattern(value, TEXT_PATTERN, match -> match.group(1));
+            value = replacePattern(value, OVERLINE_PATTERN, match -> overline(match.group(1)));
+            value = replacePattern(value, SQRT_PATTERN, match -> "√(" + match.group(1) + ")");
+            value = replacePattern(value, FRACTION_PATTERN, match -> "(" + match.group(1) + ")/(" + match.group(2) + ")");
+            if (value.equals(previous)) {
+                break;
+            }
+        }
         value = replacePattern(value, SUPERSCRIPT_GROUP_PATTERN, match -> toScript(match.group(1), SUPERSCRIPT_CHARS));
         value = replacePattern(value, SUBSCRIPT_GROUP_PATTERN, match -> toScript(match.group(1), SUBSCRIPT_CHARS));
         value = replacePattern(value, SUPERSCRIPT_CHAR_PATTERN, match -> toScript(match.group(1), SUPERSCRIPT_CHARS));
@@ -186,6 +215,22 @@ public class DocumentExportService {
                 .replaceAll("\\\\([A-Za-z]+)", "$1")
                 .replaceAll("\\s+", " ")
                 .trim();
+    }
+
+    private static String normalizeBareLatexCommands(String value) {
+        String normalized = replacePattern(value, BARE_BRACED_COMMAND_PATTERN, match -> "\\" + match.group(1) + "{");
+        return replacePattern(normalized, BARE_DELTA_PATTERN, match -> "\\Delta");
+    }
+
+    private static String overline(String value) {
+        StringBuilder result = new StringBuilder(value.length() * 2);
+        for (char c : value.toCharArray()) {
+            result.append(c);
+            if (!Character.isWhitespace(c)) {
+                result.append('\u0305');
+            }
+        }
+        return result.toString();
     }
 
     private static String replacePattern(String value, Pattern pattern, MatchReplacement replacement) {
