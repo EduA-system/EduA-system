@@ -7,7 +7,6 @@ import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
@@ -62,9 +61,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Cho phep exception handler xu ly loi goc; neu khong ERROR dispatch se bi che thanh 401.
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
-                        // Community Hub: xem feed/chi tiet content da duyet cho phep guest (guest preview);
-                        // POST/PATCH/DELETE (customize/comment/report) khong nam trong permitAll nay, van yeu cau dang nhap.
-                        .requestMatchers(HttpMethod.GET, "/api/hub/contents/**").permitAll()
                         .requestMatchers(PUBLIC_PATHS).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

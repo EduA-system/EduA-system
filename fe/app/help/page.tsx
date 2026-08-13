@@ -93,10 +93,9 @@ const helpGuides: Record<HelpRole, HelpGuide> = {
   },
   GUEST: {
     label: "khách truy cập",
-    summary: "Đăng nhập để nhận hướng dẫn theo vai trò và truy cập đầy đủ không gian làm việc.",
+    summary: "Đăng nhập để nhận hướng dẫn theo vai trò và truy cập các không gian làm việc được cấp quyền.",
     actions: [
       { title: "Đăng nhập", description: "Đăng nhập bằng tài khoản đã được nhà trường cấp quyền.", href: "/login?next=%2Fhelp", action: "Đăng nhập", icon: ShieldCheck },
-      { title: "Khám phá Community Hub", description: "Xem các nội dung cộng đồng đã được phê duyệt.", href: "/community-hub", action: "Mở Community Hub", icon: Library },
     ],
     tips: ["Liên hệ nhà trường nếu tài khoản chưa được cấp quyền.", "Sau khi đăng nhập, trang này sẽ hiển thị các thao tác phù hợp với vai trò của bạn.", "Không chia sẻ thông tin đăng nhập với người khác."],
   },

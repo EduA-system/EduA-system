@@ -34,8 +34,8 @@ Khuyến nghị dùng bộ **30 chức năng core non-AI** dưới đây làm đ
 | 16 | `updateClass` | Class Management CRUD | Medium-High | Teacher owner sửa thông tin lớp khi lớp còn `ACTIVE`, chặn user không phải owner. |
 | 17 | `updateClassStatus` | Class Management workflow | Medium-High | Teacher owner chuyển `ACTIVE/INACTIVE`, kiểm tra soft-delete/read-only rule. |
 | 18 | `addClassMember` | Class membership | High | Teacher owner thêm Student bằng email, kiểm tra role STUDENT, duplicate và lớp active. |
-| 19 | `listHubContents` | Community Hub read/list | Medium | Guest/all users xem feed content `APPROVED`, có filter type/subject/q và phân trang. |
-| 20 | `getHubContentDetail` | Community Hub read/detail | Medium | Xem chi tiết content approved kèm comment, hỗ trợ guest preview. |
+| 19 | `listHubContents` | Community Hub read/list | Medium | Teacher/Moderator/Principal đã đăng nhập xem feed content `APPROVED`, có filter type/subject/q và phân trang. |
+| 20 | `getHubContentDetail` | Community Hub read/detail | Medium | Teacher/Moderator/Principal đã đăng nhập xem chi tiết content approved kèm comment. |
 | 21 | `customizeHubContent` | Community Hub reuse | Medium-High | Teacher/Moderator copy content approved về thư viện cá nhân, kiểm tra quyền authenticated. |
 | 22 | `createHubComment` | Community Hub comment | Medium | User đăng nhập bình luận trên content approved, có sanitize và parent comment. |
 | 23 | `reportHubContent` | Community Hub report | Medium | User đăng nhập báo cáo content vi phạm, bắt buộc reason và lưu report. |

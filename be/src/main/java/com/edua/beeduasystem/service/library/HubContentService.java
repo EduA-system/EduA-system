@@ -13,13 +13,11 @@ import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.UUID;
 
 /**
- * Community Hub công khai: xem feed/chi tiết content đã APPROVED (kể cả guest chưa đăng nhập)
+ * Community Hub: tài khoản được cấp quyền xem feed/chi tiết content đã APPROVED
  * và "tùy biến" (copy) một content về thư viện riêng.
  */
 @Service
@@ -42,13 +40,8 @@ public class HubContentService {
 
     /** Danh sách content APPROVED, public — không lọc theo owner. */
     public HubViews.Page<HubViews.ContentSummary> list(String rawType, String rawSubject, String q, int page, int size) {
-        LibraryContentRepository.SearchResult result = repository.searchApproved(parseType(rawType), parseSubject(rawSubject), q, page, size);
-        List<LibraryContent> items = result.items();
-        Map<UUID, String> ownerNames = userRepository.findAllById(items.stream().map(LibraryContent::ownerId).distinct().toList()).stream()
-                .collect(Collectors.toMap(AppUser::id, HubContentService::displayName));
-        Map<UUID, Long> commentCounts = commentRepository.countVisibleByLibraryContentIds(items.stream().map(LibraryContent::id).toList()).stream()
-                .collect(Collectors.toMap(HubCommentRepository.CommentCount::libraryContentId, HubCommentRepository.CommentCount::count));
-        return new HubViews.Page<>(items.stream().map(content -> toSummary(content, ownerNames, commentCounts)).toList(), Math.max(0, page), Math.min(Math.max(1, size), 100), result.total());
+        LibraryContentRepository.HubSearchResult result = repository.searchApprovedHubSummaries(parseType(rawType), parseSubject(rawSubject), q, page, size);
+        return new HubViews.Page<>(result.items().stream().map(HubContentService::toSummary).toList(), Math.max(0, page), Math.min(Math.max(1, size), 100), result.total());
     }
 
     /** Chi tiết content APPROVED kèm bình luận — guest preview. */
@@ -75,9 +68,9 @@ public class HubContentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Content not found."));
     }
 
-    private HubViews.ContentSummary toSummary(LibraryContent c, Map<UUID, String> ownerNames, Map<UUID, Long> commentCounts) {
-        return new HubViews.ContentSummary(c.id(), c.type(), c.title(), c.subject(), c.ownerId(), ownerNames.get(c.ownerId()),
-                c.thumbnailUrl(), c.reviewedAt(), commentCounts.getOrDefault(c.id(), 0L));
+    private static HubViews.ContentSummary toSummary(LibraryContentRepository.HubContentSummary content) {
+        return new HubViews.ContentSummary(content.id(), content.type(), content.title(), content.subject(), content.ownerId(), content.ownerName(),
+                content.thumbnailUrl(), content.reviewedAt(), content.commentCount());
     }
 
     private HubViews.ContentDetail toDetail(LibraryContent c) {

@@ -88,7 +88,7 @@ class CommunityHubContentIntegrationTests {
     }
 
     @Test
-    void IT_HC_001_guestViewsApprovedHubFeedIncludingContentRemovedFromPersonalLibrary() throws Exception {
+    void IT_HC_001_authorizedUserViewsApprovedHubFeedIncludingContentRemovedFromPersonalLibrary() throws Exception {
         AppUser owner = user("owner-001@community-hub-content-it.edua.local", "Hub Owner", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
         UUID approvedId = seedLibraryContent("Alpha Math Hub", owner.id(), "LESSON_PLAN", Subject.MATH, "APPROVED",
                 "{\"source\":\"approved-alpha\"}", null);
@@ -105,7 +105,8 @@ class CommunityHubContentIntegrationTests {
                 "{\"source\":\"beta\"}", null);
         Map<String, Integer> before = tableCounts();
 
-        mockMvc.perform(get("/api/hub/contents?type=LESSON_PLAN&subject=MATH&q=Alpha&page=0&size=20"))
+        mockMvc.perform(get("/api/hub/contents?type=LESSON_PLAN&subject=MATH&q=Alpha&page=0&size=20")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[*].title", hasItem("Alpha Math Hub")))
                 .andExpect(jsonPath("$.items[*].title", not(hasItem("Alpha Private Hub"))))
@@ -121,7 +122,7 @@ class CommunityHubContentIntegrationTests {
     }
 
     @Test
-    void IT_HC_002_guestOpensApprovedHubContentDetail() throws Exception {
+    void IT_HC_002_authorizedUserOpensApprovedHubContentDetail() throws Exception {
         AppUser owner = user("owner-002@community-hub-content-it.edua.local", "Detail Owner", Subject.PHYSICS, UserStatus.ACTIVE, Role.TEACHER);
         AppUser commenter = user("commenter-002@community-hub-content-it.edua.local", "Comment Author", Subject.PHYSICS, UserStatus.ACTIVE, Role.TEACHER);
         UUID approvedId = seedLibraryContent("Physics Detail Hub", owner.id(), "LESSON_PLAN", Subject.PHYSICS, "APPROVED",
@@ -131,7 +132,8 @@ class CommunityHubContentIntegrationTests {
         seedComment(approvedId, commenter.id(), "Ready for class");
         Map<String, Integer> before = tableCounts();
 
-        mockMvc.perform(get("/api/hub/contents/{id}", approvedId))
+        mockMvc.perform(get("/api/hub/contents/{id}", approvedId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(approvedId.toString()))
                 .andExpect(jsonPath("$.title").value("Physics Detail Hub"))
@@ -142,7 +144,8 @@ class CommunityHubContentIntegrationTests {
                 .andExpect(jsonPath("$.comments[*].content", hasItem("Ready for class")))
                 .andExpect(jsonPath("$.comments[*].authorName", hasItem("Comment Author")));
 
-        mockMvc.perform(get("/api/hub/contents/{id}", privateId))
+        mockMvc.perform(get("/api/hub/contents/{id}", privateId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER)))
                 .andExpect(status().isNotFound());
 
         assertThat(tableCounts()).isEqualTo(before);

@@ -55,7 +55,7 @@ export const routePermissions: Record<string, RoutePermission> = {
   // Cùng một page component phục vụ hai URL (`app/blog/moderation/`, re-export ở `app/blog-moderator/`).
   // Khai báo cả hai để URL thật không rơi vào prefix `/blog` vốn rộng hơn (Teacher cũng vào được).
   "/blog/moderation": { requireAuth: true, allowedRoles: ["MODERATOR"] },
-  "/community-hub":   { requireAuth: false, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL"] },
+  "/community-hub":   { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR", "PRINCIPAL"] },
   "/hub-moderation":  { requireAuth: true, allowedRoles: ["MODERATOR"] },
   "/weekly-schedule": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
   "/weekly-task-document": { requireAuth: true, allowedRoles: ["TEACHER", "MODERATOR"] },
@@ -96,9 +96,7 @@ export function canAccessRoute(
   // Educator thiếu môn: chặn trước mọi kiểm tra khác. Khách vãng lai không dính vì
   // isSubjectUnassigned chỉ đúng với TEACHER/MODERATOR đã đăng nhập.
   if (permission.requiresAssignedSubject && isSubjectUnassigned(user)) return false;
-  // A role allowlist still applies to signed-in users even on a route that
-  // doesn't require auth (e.g. Community Hub is public, but IT_STAFF is
-  // excluded once logged in). Anonymous visitors fall back to requireAuth.
+  // A role allowlist applies after the route's authentication requirement is resolved.
   if (permission.allowedRoles) {
     if (!user) return !permission.requireAuth;
     return hasAnyRole(user, permission.allowedRoles) && canAccessSubjectScope(user, permission.allowedSubjects);

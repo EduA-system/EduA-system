@@ -37,7 +37,7 @@ export function Sidebar({
   responsive = false,
   mobileOpen = false,
 }: SidebarProps) {
-  const { user, accessToken, authFetch, getValidAccessToken } = useAuth();
+  const { user, accessToken, authFetch, getValidAccessToken, status } = useAuth();
   const pathname = usePathname();
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
@@ -92,7 +92,17 @@ export function Sidebar({
     };
   }, [authFetch, accessToken, getValidAccessToken, user]);
 
-  if (!user) return null;
+  if (!user) {
+    if (status !== "loading") return null;
+    return (
+      <aside aria-hidden className="hidden h-screen w-[280px] min-w-[280px] shrink-0 border-r border-black/10 bg-[#f7f5f2] px-3 py-4 md:block">
+        <div className="h-10 w-36 animate-pulse rounded-lg bg-[#e7e2dc]" />
+        <div className="mt-8 space-y-3">
+          {[1, 2, 3, 4, 5, 6].map((item) => <div key={item} className="h-8 animate-pulse rounded-lg bg-[#ece8e2]" />)}
+        </div>
+      </aside>
+    );
+  }
 
   const filteredGroups = navGroups
     .map((group) => ({

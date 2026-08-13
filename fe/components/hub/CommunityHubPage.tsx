@@ -27,7 +27,7 @@ const contentMeta: Record<LibraryType, { label: string; icon: typeof BookOpen; c
 };
 
 function CommunityHubScreen() {
-  const { user } = useAuth();
+  const { user, authFetch } = useAuth();
   const [type, setType] = useState<LibraryType | "">("");
   const [subject, setSubject] = useState("");
   const [q, setQ] = useState("");
@@ -48,8 +48,7 @@ function CommunityHubScreen() {
       if (type) params.set("type", type);
       if (subject) params.set("subject", subject);
       if (q) params.set("q", q);
-      // The public Hub feed must not wait for the session-refresh request.
-      const data = await listHubContents(fetch, params);
+      const data = await listHubContents(authFetch, params);
       if (version !== requestVersion.current) return;
       setItems((current) => append ? [...current, ...data.items] : data.items);
       setTotal(data.total);
@@ -64,7 +63,7 @@ function CommunityHubScreen() {
         setLoadingMore(false);
       }
     }
-  }, [q, subject, type]);
+  }, [authFetch, q, subject, type]);
 
   useEffect(() => {
     const timer = setTimeout(() => void load(), 200);

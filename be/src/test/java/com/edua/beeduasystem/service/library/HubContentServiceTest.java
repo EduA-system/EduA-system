@@ -1,8 +1,6 @@
 package com.edua.beeduasystem.service.library;
 
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
-import com.edua.beeduasystem.domain.model.auth.AppUser;
-import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.domain.model.library.LibraryContent;
 import com.edua.beeduasystem.domain.model.library.LibraryContentStatus;
 import com.edua.beeduasystem.domain.model.library.LibraryContentType;
@@ -16,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -95,27 +92,18 @@ class HubContentServiceTest {
     }
 
     @Test
-    void list_batchesOwnerAndCommentLookupsForThePage() {
+    void list_usesHubSummaryProjectionWithoutPerItemLookups() {
         UUID firstId = UUID.randomUUID();
         UUID secondId = UUID.randomUUID();
         UUID secondOwnerId = UUID.randomUUID();
-        LibraryContent first = contentWithStatus(firstId, LibraryContentStatus.APPROVED);
-        LibraryContent second = new LibraryContent(secondId, secondOwnerId, LibraryContentType.TEST, "Bai kiem tra", null,
-                LibraryContentStatus.APPROVED, JsonNodeFactory.instance.objectNode(), null, Instant.now(), Instant.now(), null, null, null, null, null);
-        AppUser firstOwner = new AppUser(ownerId, "first@example.com", null, "First Owner", null, null, null, null, null, UserStatus.ACTIVE, Instant.now(), null, null);
-        AppUser secondOwner = new AppUser(secondOwnerId, "second@example.com", null, null, null, null, null, null, null, UserStatus.ACTIVE, Instant.now(), null, null);
-        when(repository.searchApproved(null, null, null, 0, 30)).thenReturn(new LibraryContentRepository.SearchResult(List.of(first, second), 2));
-        when(userRepository.findAllById(List.of(ownerId, secondOwnerId))).thenReturn(List.of(firstOwner, secondOwner));
-        when(commentRepository.countVisibleByLibraryContentIds(List.of(firstId, secondId))).thenReturn(List.of(
-                new HubCommentRepository.CommentCount(firstId, 3),
-                new HubCommentRepository.CommentCount(secondId, 1)));
+        when(repository.searchApprovedHubSummaries(null, null, null, 0, 30)).thenReturn(new LibraryContentRepository.HubSearchResult(java.util.List.of(
+                new LibraryContentRepository.HubContentSummary(firstId, LibraryContentType.LESSON_PLAN, "Bai giang", null, ownerId, "First Owner", null, Instant.now(), 3),
+                new LibraryContentRepository.HubContentSummary(secondId, LibraryContentType.TEST, "Bai kiem tra", null, secondOwnerId, "second@example.com", null, Instant.now(), 1)), 2));
 
         HubViews.Page<HubViews.ContentSummary> result = service.list(null, null, null, 0, 30);
 
         assertThat(result.items()).extracting(HubViews.ContentSummary::ownerName).containsExactly("First Owner", "second@example.com");
         assertThat(result.items()).extracting(HubViews.ContentSummary::commentCount).containsExactly(3L, 1L);
-        verify(userRepository).findAllById(List.of(ownerId, secondOwnerId));
-        verify(commentRepository).countVisibleByLibraryContentIds(List.of(firstId, secondId));
         verify(userRepository, never()).findById(any());
         verify(commentRepository, never()).countByLibraryContentId(any());
     }
