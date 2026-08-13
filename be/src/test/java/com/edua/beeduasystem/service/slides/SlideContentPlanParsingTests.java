@@ -117,6 +117,7 @@ class SlideContentPlanParsingTests {
             // Mô phỏng chiếm trọn slide (topology `physics-stage` ở frontend), nên
             // block text kèm theo sẽ bị bố cục bỏ — prompt phải nói rõ đừng sinh.
             assertTrue(prompt.contains("block DUY NHẤT của slide"));
+            assertTrue(prompt.contains("ƯU TIÊN DẠNG GẠCH ĐẦU DÒNG"));
         }
         // Chỉ expandSlidePrompt mang khối GIỚI HẠN ĐỘ DÀI; expandPartPrompt
         // không có khối này từ trước, nên đừng đòi nó ở cả hai bản.
@@ -221,6 +222,26 @@ class SlideContentPlanParsingTests {
         assertTrue(structure.contains("Không gộp nhiều bài"));
         assertTrue(detail.contains("chỉ có một đề bài HOẶC một lời giải"));
         assertTrue(detail.contains("Chỉ có 1 block quiz"));
+    }
+
+    @Test
+    void promptsKeepEachMultipleChoiceQuestionAsOneCompleteQuizOutlineItem() {
+        SlidePromptBuilder builder = new SlidePromptBuilder();
+        LessonContext lesson = new LessonContext("id", "Nitơ", 11, "", List.of(), List.of(), List.of(), List.of(), List.of());
+        InlineLessonPlanDto plan = new InlineLessonPlanDto("Nitơ", 11, 45, List.of(), List.of(), List.of(), "", "");
+        SlideItemDto quiz = new SlideItemDto("p4s2", "Câu hỏi", "practice", null, null,
+                new ContentPlan("quiz", "fixed", List.of(), List.of()));
+
+        String skeleton = builder.partSkeletonPrompt(lesson, plan, null, "CHEMISTRY", "p4", "Luyện tập", List.of("c1"), 4, "p4: Luyện tập");
+        String partDetail = builder.expandPartPrompt(lesson, plan, "{}", "p4", "Luyện tập", "CHEMISTRY");
+        String slideDetail = builder.expandSlidePrompt(lesson, plan, "{}", "p4", "Luyện tập", quiz, "CHEMISTRY", "p4: Luyện tập");
+
+        assertTrue(skeleton.contains("KHÔNG tạo slide \"Đáp án\""));
+        for (String prompt : List.of(partDetail, slideDetail)) {
+            assertTrue(prompt.contains("choices` gồm đúng 4 lựa chọn"));
+            assertTrue(prompt.contains("answer` phải khớp nguyên văn"));
+            assertTrue(prompt.contains("không tạo text block chứa \"Đáp án\""));
+        }
     }
 
     @Test

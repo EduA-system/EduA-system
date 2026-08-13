@@ -130,6 +130,10 @@ public class SlidePromptBuilder {
                 Mỗi bài tập chiếm một slide riêng: slide `exercise` chỉ có ĐỀ BÀI của một bài; nếu cần lời giải,
                 đặt ngay sau nó ở một slide `formula` hoặc `concept` chỉ có LỜI GIẢI của đúng bài đó. Không gộp hai bài,
                 cũng không gộp đề bài và lời giải trên cùng slide.
+                Với câu hỏi trắc nghiệm, dùng đúng một slide `quiz` trong outline cho mỗi câu. Slide quiz là đơn vị
+                hoàn chỉnh chứa question/choices/answer/explanation ở pha soạn chi tiết; KHÔNG tạo slide "Đáp án" hoặc
+                "Lời giải" riêng trong outline. Frontend sẽ tự tách quiz thành slide câu hỏi rồi slide đáp án khi trình chiếu.
+                Không biểu diễn trắc nghiệm bằng slide `concept`, `exercise` hay brief/text có các dòng A/B/C/D và "Đáp án".
                 Section opener rule: the first slide of this part must be slideType `section`, headerMode `hidden`,
                 title exactly the part title converted to UPPERCASE, and brief one short Vietnamese sentence introducing
                 what students will learn next. Only the title is uppercase; the brief follows normal Vietnamese capitalization.
@@ -242,6 +246,9 @@ public class SlidePromptBuilder {
                 - Mỗi bài tập chiếm một slide riêng: slide `exercise` chỉ có đề bài của một bài; lời giải (nếu có)
                   phải là slide kế tiếp, dùng `formula` hoặc `concept`, và chỉ giải đúng bài đó. Không gộp nhiều bài,
                   cũng không gộp đề bài và lời giải trên cùng slide.
+                - Với trắc nghiệm, mỗi câu là đúng một slide `quiz` trong outline; không tạo slide đáp án/lời giải riêng.
+                  Pha soạn chi tiết sẽ đặt question/choices/answer/explanation vào QuizBlock của chính slide quiz.
+                  Không dùng `concept`, `exercise` hoặc text A/B/C/D kèm "Đáp án" để biểu diễn trắc nghiệm.
                 Không trả tọa độ, kích thước, font, màu, tỷ lệ cột hoặc bất kỳ quyết định trình bày nào.
 
                 Trả JSON thuần, không markdown:
@@ -310,7 +317,10 @@ public class SlidePromptBuilder {
                 - sequence: thêm `steps:[{id,label,text}]` theo đúng thứ tự bắt buộc.
                 - formula: thêm `expression`, có thể có `explanation`. `expression` chỉ chứa biểu thức/ký hiệu cần hiển thị,
                   không kèm tiền tố dài, diễn giải hoặc nhiều ví dụ; đặt diễn giải vào `explanation` hoặc text block riêng.
-                - quiz: thêm `question`, có thể có `choices`, `answer`, `explanation`.
+                - quiz: BẮT BUỘC thêm `question`, `choices` gồm đúng 4 lựa chọn, `answer`, `explanation` trong đúng
+                  một QuizBlock. `answer` phải khớp nguyên văn một phần tử của `choices`.
+                  Đây là MỘT mục outline hoàn chỉnh; không tạo text block chứa "Đáp án"/"Giải thích" và không tạo
+                  slide đáp án/lời giải riêng, vì frontend sẽ tự sinh slide đáp án liền sau khi trình chiếu.
                 Quan hệ chỉ dùng một trong:
                 RULE BẮT BUỘC THEO slideType:
                 - comparison: phải có đúng một block `comparison` với ít nhất hai items và một hoặc nhiều criteria;
@@ -318,9 +328,14 @@ public class SlidePromptBuilder {
                 - table: phải có đúng một block `table` với columns và rows; không được dồn ô bảng thành text thường.
                 - concept: tối đa hai text block chính; mỗi block chỉ nêu một ý ngắn, không ghép nhiều tiêu đề/ý song song
                   vào một đoạn văn dài.
+                - TEXT BLOCKS: ƯU TIÊN DẠNG GẠCH ĐẦU DÒNG. Khi block có từ hai ý, đặc điểm, bước, nguyên nhân,
+                  hệ quả, ví dụ hoặc thông tin song song, hãy viết mỗi ý trên một dòng ngắn bắt đầu bằng `- `.
+                  Chỉ dùng đoạn văn 1–3 câu khi các câu là một lập luận hoặc diễn giải liền mạch, không thể tách
+                  thành các ý độc lập mà không mất nghĩa. Không viết một đoạn văn dài chỉ để chứa danh sách ý.
                 - exercise: chỉ có một đề bài HOẶC một lời giải của đúng một bài; không có Bài tập 2, câu hỏi thứ hai,
                   hoặc lời giải kèm đề bài trên cùng slide. Dùng slide kế tiếp cho nửa còn lại.
-                - quiz: chỉ có đúng một block `quiz`, tức một câu hỏi trắc nghiệm trên mỗi slide.
+                - quiz: chỉ có đúng một block `quiz`, tức một câu hỏi trắc nghiệm trên mỗi slide. Không thay quiz bằng
+                  text A/B/C/D hoặc đặt đáp án/giải thích trong text block.
                 NỘI DUNG SƯ PHẠM (bắt buộc):
                 - Slide nội dung phải đủ để người học hiểu được một ý hoàn chỉnh, không chỉ nhắc lại tiêu đề hoặc nêu một nhận xét chung chung.
                   Hãy thể hiện ít nhất hai thông tin cụ thể có liên hệ (khái niệm/đặc điểm kèm nguyên nhân, cơ chế, ý nghĩa, hệ quả hoặc ví dụ phù hợp).
@@ -407,7 +422,10 @@ public class SlidePromptBuilder {
                 - sequence: thêm `steps:[{id,label,text}]` theo đúng thứ tự bắt buộc.
                 - formula: thêm `expression`, có thể có `explanation`. `expression` chỉ chứa biểu thức/ký hiệu cần hiển thị,
                   không kèm tiền tố dài, diễn giải hoặc nhiều ví dụ; đặt diễn giải vào `explanation` hoặc text block riêng.
-                - quiz: thêm `question`, có thể có `choices`, `answer`, `explanation`.
+                - quiz: BẮT BUỘC thêm `question`, `choices` gồm đúng 4 lựa chọn, `answer`, `explanation` trong đúng
+                  một QuizBlock. `answer` phải khớp nguyên văn một phần tử của `choices`.
+                  Đây là MỘT mục outline hoàn chỉnh; không tạo text block chứa "Đáp án"/"Giải thích" và không tạo
+                  slide đáp án/lời giải riêng, vì frontend sẽ tự sinh slide đáp án liền sau khi trình chiếu.
                 Quan hệ chỉ dùng một trong:
                 {"type":"illustrates","visualBlockId":"...","targetBlockId":"..."},
                 {"type":"supports","supportingBlockId":"...","targetBlockId":"..."},
@@ -423,9 +441,14 @@ public class SlidePromptBuilder {
                 - table: phải có đúng một block `table` với columns và rows; không được dồn ô bảng thành text thường.
                 - concept: tối đa hai text block chính; mỗi block chỉ nêu một ý ngắn, không ghép nhiều tiêu đề/ý song song
                   vào một đoạn văn dài.
+                - TEXT BLOCKS: ƯU TIÊN DẠNG GẠCH ĐẦU DÒNG. Khi block có từ hai ý, đặc điểm, bước, nguyên nhân,
+                  hệ quả, ví dụ hoặc thông tin song song, hãy viết mỗi ý trên một dòng ngắn bắt đầu bằng `- `.
+                  Chỉ dùng đoạn văn 1–3 câu khi các câu là một lập luận hoặc diễn giải liền mạch, không thể tách
+                  thành các ý độc lập mà không mất nghĩa. Không viết một đoạn văn dài chỉ để chứa danh sách ý.
                 - exercise: chỉ có một đề bài HOẶC một lời giải của đúng một bài; không có Bài tập 2, câu hỏi thứ hai,
                   hoặc lời giải kèm đề bài trên cùng slide. Dùng slide kế tiếp cho nửa còn lại.
-                - quiz: chỉ có đúng một block `quiz`, tức một câu hỏi trắc nghiệm trên mỗi slide.
+                - quiz: chỉ có đúng một block `quiz`, tức một câu hỏi trắc nghiệm trên mỗi slide. Không thay quiz bằng
+                  text A/B/C/D hoặc đặt đáp án/giải thích trong text block.
 
                 NỘI DUNG SƯ PHẠM (bắt buộc):
                 - Slide nội dung phải đủ để người học hiểu được một ý hoàn chỉnh, không chỉ nhắc lại tiêu đề hoặc nêu một nhận xét chung chung.
@@ -484,6 +507,8 @@ public class SlidePromptBuilder {
                 3. Cùng một câu hỏi nhưng đáp án khác nhau giữa các slide: thống nhất về MỘT đáp án đúng theo nguồn, sửa cả
                    `answer` lẫn `explanation` cho khớp.
                 4. Mọi text/câu hỏi/đáp án/giải thích không phải tiếng Việt: dịch sang tiếng Việt (giữ tên riêng/thuật ngữ hoá học).
+                5. Với quiz: giữ một QuizBlock hoàn chỉnh (question, 4 choices, answer, explanation) trên chính slide quiz;
+                   không đổi quiz thành text A/B/C/D, không để "Đáp án"/"Giải thích" trong text block và không thêm slide đáp án riêng.
 
                 Chỉ trả về các slide CẦN sửa. Giữ nguyên cấu trúc block hợp lệ như khi soạn (mỗi block có id, kind, role,
                 semanticType, priority, required; comparison/table/quiz đúng schema). Không đổi slideType, không thêm block title.

@@ -613,16 +613,9 @@ public class SlideDesignPromptBuilder {
 
               data-zone="body"
                 → APPEND ONE
-                  PREFER a short &lt;p&gt; paragraph (1–3 sentences) when
-                  the idea is prose — it reads more editorial than bullets:
-                  &lt;p data-layer="content"
-                       style="margin:6px 0 0;
-                              font-family:Inter,sans-serif;
-                              font-size:[14–18px]; font-weight:400;
-                              line-height:1.55; color:[mood-color];
-                              z-index:65;"&gt;…&lt;/p&gt;
-                  Use a &lt;ul&gt; ONLY for genuinely list-like content,
-                  capped at 3–4 SHORT bullets (same font 14–18px):
+                  PREFER a &lt;ul&gt; for teaching content: split distinct facts,
+                  features, steps, causes, effects, examples, or parallel ideas
+                  into 2–4 SHORT bullets (same font 14–18px):
                   &lt;ul data-layer="content"
                        style="margin:6px 0 0; padding-left:18px;
                               font-family:Inter,sans-serif;
@@ -631,6 +624,15 @@ public class SlideDesignPromptBuilder {
                               z-index:65;"&gt;
                     &lt;li&gt;…&lt;/li&gt;
                   &lt;/ul&gt;
+                  Use a short &lt;p&gt; paragraph (1–3 sentences) ONLY when the
+                  meaning is one continuous explanation or argument that would
+                  become unclear if split into independent bullets:
+                  &lt;p data-layer="content"
+                       style="margin:6px 0 0;
+                              font-family:Inter,sans-serif;
+                              font-size:[14–18px]; font-weight:400;
+                              line-height:1.55; color:[mood-color];
+                              z-index:65;"&gt;…&lt;/p&gt;
                   data-max-chars / data-max-lines are a FIT CONTRACT, not
                   decoration: fit the assigned content inside the zone at
                   readable type. Condense phrasing and distribute distinct
