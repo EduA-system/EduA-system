@@ -22,7 +22,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Kh\u00f4ng gian chung",
     items: [
-      { label: "Community Hub", icon: "community", href: "/community-hub", requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"] },
+      { label: "Community Hub", icon: "community", href: "/community-hub", requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL"] },
       { label: "Blog", icon: "community", href: "/blog", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "Thông báo", icon: "notification", href: "/notifications" },
     ],
@@ -34,9 +34,9 @@ export const navGroups: NavGroup[] = [
       { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["STUDENT"] },
       { label: "Lịch nộp giáo án", icon: "book", href: "/weekly-schedule", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "T\u1ea1o b\u00e0i gi\u1ea3ng", icon: "book", href: "/lesson-create", active: true, requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "T\u1ea1o gi\u00e1o \u00e1n", icon: "book", href: "/lesson-create", active: true, requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "T\u1ea1o slide", icon: "slides", href: "/slide-create", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "T\u1ea1o b\u00e0i ki\u1ec3m tra", icon: "check", href: "/exam-create-new", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "T\u1ea1o \u0111\u1ec1 ki\u1ec3m tra", icon: "check", href: "/exam-create-new", requiredRole: ["TEACHER", "MODERATOR"] },
     ],
   },
   {

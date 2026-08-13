@@ -246,7 +246,7 @@ class RoleBasedAccessControlIntegrationTests {
     }
 
     @Test
-    void IT_RBAC_010_guestUsersAreDeniedProtectedApisButCanReadPublicHub() throws Exception {
+    void IT_RBAC_010_guestUsersAreDeniedProtectedApisIncludingCommunityHub() throws Exception {
         AppUser teacher = user("teacher-010@rbac-it.edua.local", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
         seedLibraryContent("approved-public-content-010", teacher.id(), Subject.MATH, "APPROVED");
         Map<String, Integer> before = tableCounts();
@@ -256,9 +256,7 @@ class RoleBasedAccessControlIntegrationTests {
         mockMvc.perform(get("/api/principal/moderators"))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/hub/contents?page=0&size=20"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items[*].title", hasItem("approved-public-content-010")))
-                .andExpect(jsonPath("$.total").value(1));
+                .andExpect(status().isUnauthorized());
 
         assertThat(tableCounts()).isEqualTo(before);
     }

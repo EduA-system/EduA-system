@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Atom, BookOpen, FileText, MessageCircle, Presentation, Search } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Atom, BookOpen, FileText, LoaderCircle, MessageCircle, Presentation, Search } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { subjectBadgeClasses, subjectLabel } from "@/lib/blog";
@@ -16,6 +16,8 @@ const tabs: [string, LibraryType | ""][] = [
   ["Bài kiểm tra", "TEST"],
   ["Mô phỏng", "SIMULATION"],
 ];
+
+const PAGE_SIZE = 30;
 
 const contentMeta: Record<LibraryType, { label: string; icon: typeof BookOpen; color: string; iconColor: string }> = {
   LESSON_PLAN: { label: "Bài giảng", icon: BookOpen, color: "from-amber-100 via-orange-50 to-stone-100", iconColor: "text-amber-800" },
@@ -31,24 +33,35 @@ function CommunityHubScreen() {
   const [q, setQ] = useState("");
   const [items, setItems] = useState<HubContentSummary[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const requestVersion = useRef(0);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (nextPage = 0, append = false) => {
+    const version = ++requestVersion.current;
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     try {
-      const params = new URLSearchParams({ size: "30" });
+      const params = new URLSearchParams({ page: String(nextPage), size: String(PAGE_SIZE) });
       if (type) params.set("type", type);
       if (subject) params.set("subject", subject);
       if (q) params.set("q", q);
       const data = await listHubContents(authFetch, params);
-      setItems(data.items);
+      if (version !== requestVersion.current) return;
+      setItems((current) => append ? [...current, ...data.items] : data.items);
       setTotal(data.total);
+      setPage(data.page);
       setError("");
     } catch (cause) {
+      if (version !== requestVersion.current) return;
       setError(cause instanceof Error ? cause.message : "Không thể tải Community Hub.");
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   }, [authFetch, q, subject, type]);
 
@@ -56,6 +69,8 @@ function CommunityHubScreen() {
     const timer = setTimeout(() => void load(), 200);
     return () => clearTimeout(timer);
   }, [load]);
+
+  const hasMore = items.length < total;
 
   return (
     <main className="min-h-screen bg-white text-[#2b2926]">
@@ -112,7 +127,8 @@ function CommunityHubScreen() {
               <p className="mt-1 text-sm text-stone-500">{q || subject || type ? "Hãy thử thay đổi từ khóa hoặc bộ lọc." : "Nội dung được duyệt từ cộng đồng sẽ xuất hiện tại đây."}</p>
             </div>
           ) : (
-            <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <>
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {items.map((item) => {
                 const meta = contentMeta[item.type];
                 const Icon = meta.icon;
@@ -143,7 +159,21 @@ function CommunityHubScreen() {
                   </article>
                 );
               })}
-            </div>
+              </div>
+              {hasMore && (
+                <div className="mt-8 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => void load(page + 1, true)}
+                    disabled={loadingMore}
+                    className="inline-flex min-w-36 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-bold text-[#30343d] shadow-sm transition hover:border-[#e8724a] hover:text-[#b95133] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loadingMore ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : null}
+                    {loadingMore ? "Đang tải..." : `Tải thêm (${items.length}/${total})`}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>

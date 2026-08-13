@@ -43,8 +43,8 @@ describe("canAccessRoute — theo role", () => {
     expect(canAccessRoute("/lesson-plan-approval", moderator("MATH"))).toBe(true);
   });
 
-  it("route public vẫn áp danh sách role khi đã đăng nhập", () => {
-    expect(canAccessRoute("/community-hub", null)).toBe(true);
+  it("Community Hub yêu cầu đăng nhập và áp danh sách role", () => {
+    expect(canAccessRoute("/community-hub", null)).toBe(false);
     expect(canAccessRoute("/community-hub", itStaff)).toBe(false);
     expect(canAccessRoute("/community-hub", teacher("PHYSICS"))).toBe(true);
   });

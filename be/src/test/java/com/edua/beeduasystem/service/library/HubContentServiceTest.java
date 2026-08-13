@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class HubContentServiceTest {
@@ -87,6 +89,23 @@ class HubContentServiceTest {
         HubViews.ContentDetail result = service.get(id);
 
         assertThat(result.id()).isEqualTo(id);
+    }
+
+    @Test
+    void list_usesHubSummaryProjectionWithoutPerItemLookups() {
+        UUID firstId = UUID.randomUUID();
+        UUID secondId = UUID.randomUUID();
+        UUID secondOwnerId = UUID.randomUUID();
+        when(repository.searchApprovedHubSummaries(null, null, null, 0, 30)).thenReturn(new LibraryContentRepository.HubSearchResult(java.util.List.of(
+                new LibraryContentRepository.HubContentSummary(firstId, LibraryContentType.LESSON_PLAN, "Bai giang", null, ownerId, "First Owner", null, Instant.now(), 3),
+                new LibraryContentRepository.HubContentSummary(secondId, LibraryContentType.TEST, "Bai kiem tra", null, secondOwnerId, "second@example.com", null, Instant.now(), 1)), 2));
+
+        HubViews.Page<HubViews.ContentSummary> result = service.list(null, null, null, 0, 30);
+
+        assertThat(result.items()).extracting(HubViews.ContentSummary::ownerName).containsExactly("First Owner", "second@example.com");
+        assertThat(result.items()).extracting(HubViews.ContentSummary::commentCount).containsExactly(3L, 1L);
+        verify(userRepository, never()).findById(any());
+        verify(commentRepository, never()).countByLibraryContentId(any());
     }
 
     @Test
