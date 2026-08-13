@@ -26,6 +26,7 @@ export function connectOutlineStream({
   onClose: () => void;
 }): { disconnect: () => void } {
   const brokerURL = `${BACKEND_WS_URL}/ws`;
+  let isDisconnecting = false;
   logSlideStreamLifecycle("outline connecting");
 
   const client = new Client({
@@ -63,6 +64,13 @@ export function connectOutlineStream({
       onClose();
     },
     onStompError: (frame) => {
+      // An idle/backgrounded browser tab can miss a heartbeat and Spring then
+      // closes the STOMP session. The client reconnects automatically, so this
+      // transport-level close must not become a Next.js dev error overlay.
+      if (isDisconnecting || frame.headers.message === "Session closed.") {
+        logSlideStreamLifecycle("outline STOMP session closed; reconnecting");
+        return;
+      }
       console.error("[EDUA slide] [WS] outline STOMP error", frame.headers, frame.body);
       onClose();
     },
@@ -70,6 +78,7 @@ export function connectOutlineStream({
   client.activate();
   return {
     disconnect: () => {
+      isDisconnecting = true;
       logSlideStreamLifecycle("outline disconnect requested");
       void client.deactivate();
     },

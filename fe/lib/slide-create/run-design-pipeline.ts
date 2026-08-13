@@ -251,7 +251,9 @@ export async function runContentFillStep(
           molecule: await buildMolecule(slot.sourceText),
         }))),
         Promise.all(periodicSlots.map(async (slot): Promise<SlideContentFillSlot | null> => {
-          const periodic = resolvePeriodicPayload(slot.sourceText);
+          const sourceBlock = slide.contentPlan.blocks.find((block) => block.id === slot.sourceBlockId);
+          const declaredSymbols = sourceBlock?.kind === "periodic" ? sourceBlock.elementSymbols : undefined;
+          const periodic = resolvePeriodicPayload(slot.sourceText, declaredSymbols);
           if (!periodic) return null;
           return {
             slotId: slot.id,

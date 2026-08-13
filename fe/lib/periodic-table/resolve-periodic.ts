@@ -53,12 +53,19 @@ function groupSymbols(sourceText: string): { symbols: string[]; focus?: string }
   };
 }
 
-export function resolvePeriodicPayload(sourceText: string): PeriodicSimulationPayload | null {
+/**
+ * Explicit symbols from the outline are authoritative.  This avoids treating
+ * prose such as "Nitrogen" or "nhóm VA" as incidental symbols (Ni, V, ...).
+ */
+export function resolvePeriodicPayload(sourceText: string, declaredSymbols?: string[]): PeriodicSimulationPayload | null {
   const requested = sourceText.trim();
   if (!requested) return null;
 
   const group = groupSymbols(requested);
-  const symbols = uniqueSymbols([...group.symbols, ...symbolsFromText(requested)]);
+  const explicitSymbols = uniqueSymbols(declaredSymbols ?? []);
+  const symbols = explicitSymbols.length
+    ? explicitSymbols
+    : uniqueSymbols([...group.symbols, ...symbolsFromText(requested)]);
   if (!symbols.length) return null;
 
   const normalized = normalizeText(requested);

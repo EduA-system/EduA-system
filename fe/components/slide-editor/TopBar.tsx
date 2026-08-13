@@ -15,8 +15,6 @@ export interface DesignStepControls {
 }
 
 interface TopBarProps {
-  aiOpen: boolean;
-  onToggleAi: () => void;
   designSteps?: DesignStepControls;
   onRetrySlide?: (slideId: string) => void;
   onSaveToLibrary?: () => void;
@@ -240,8 +238,6 @@ function deckTitle(slide: Slide | undefined) {
 }
 
 export function TopBar({
-  aiOpen,
-  onToggleAi,
   designSteps,
   onRetrySlide,
   onSaveToLibrary,
@@ -426,11 +422,6 @@ export function TopBar({
           Trình chiếu
         </ActionButton>
       ) : null}
-      <ActionButton onClick={onToggleAi} variant={aiOpen ? "dark" : "ai"} title="Bật/tắt bảng AI">
-        <SparkIcon />
-        AI
-      </ActionButton>
-
       <input
         ref={fileRef}
         type="file"

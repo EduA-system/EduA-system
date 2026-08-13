@@ -6,6 +6,7 @@ import { sandboxViewZoom } from "./lib/sandbox-scale";
 import { ELEMENTS } from "@/components/periodic-table/data";
 import { CATEGORY_COLORS } from "@/components/periodic-table/types";
 import type { Element as PeriodicElement } from "@/components/periodic-table/types";
+import { defaultPeriodicSimulationElement } from "./lib/periodic-selection";
 
 const MoleculeViewer = dynamic(
   () => import("@/components/molecules/MoleculeViewer").then((m) => m.MoleculeViewer),
@@ -128,6 +129,7 @@ function SimulationBlock({
   interactive,
   previewLive,
   sandboxActive,
+  onSelectPeriodicElement,
   style,
   onMouseDown,
   onDoubleClick,
@@ -138,6 +140,8 @@ function SimulationBlock({
   previewLive?: boolean;
   /** Người dùng đã bấm "Chạy thử" cho element này trong editor. */
   sandboxActive?: boolean;
+  /** Opens a highlighted element detail view in the presentation overlay. */
+  onSelectPeriodicElement?: (element: PeriodicElement) => void;
   style: CSSProperties;
   onMouseDown?: MouseEventHandler;
   onDoubleClick?: MouseEventHandler;
@@ -159,6 +163,15 @@ function SimulationBlock({
   // chứ không phải một thí nghiệm.
   const sandboxResolved = el.kind === "sandbox" && el.experimentId.length > 0;
   const showSandboxViewer = sandboxResolved && Boolean(sandboxActive || (interactive && activated));
+  const handleInteractiveClick = () => {
+    if (isPeriodic && onSelectPeriodicElement) {
+      const element = defaultPeriodicSimulationElement(el.periodic);
+      if (element) onSelectPeriodicElement(element);
+      return;
+    }
+
+    if (el.kind !== "sandbox" || sandboxResolved) setActivated(true);
+  };
 
   if (showSandboxViewer && el.kind === "sandbox") {
     // Khung slide thấp hơn nhiều so với cửa sổ mà giao diện thí nghiệm được
@@ -223,7 +236,7 @@ function SimulationBlock({
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      onClick={interactive && (el.kind !== "sandbox" || sandboxResolved) ? () => setActivated(true) : undefined}
+      onClick={interactive ? handleInteractiveClick : undefined}
       role={interactive ? "button" : undefined}
       style={{ ...style, cursor: interactive ? "pointer" : style.cursor }}
       className="relative flex select-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-700 text-white"
@@ -264,6 +277,8 @@ interface ElementViewProps {
   simulationPreview?: boolean;
   /** Element sandbox này đã được bấm "Chạy thử" trong editor. */
   sandboxActive?: boolean;
+  /** Receives the highlighted periodic element selected during presentation. */
+  onSelectPeriodicElement?: (element: PeriodicElement) => void;
   onMouseDown?: MouseEventHandler;
   onDoubleClick?: MouseEventHandler;
   onContextMenu?: MouseEventHandler;
@@ -336,6 +351,7 @@ export function ElementView({
   interactive,
   simulationPreview,
   sandboxActive,
+  onSelectPeriodicElement,
   onMouseDown,
   onDoubleClick,
   onContextMenu,
@@ -654,6 +670,7 @@ export function ElementView({
         interactive={interactive}
         previewLive={simulationPreview}
         sandboxActive={sandboxActive}
+        onSelectPeriodicElement={onSelectPeriodicElement}
         style={base}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}

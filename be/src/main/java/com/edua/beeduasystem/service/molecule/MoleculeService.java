@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -31,6 +32,14 @@ public class MoleculeService {
     private static final Map<String, Integer> MAX_VALENCE = Map.of(
             "C", 4, "N", 3, "O", 2, "F", 1, "P", 5, "S", 6, "Cl", 1, "Br", 1, "I", 1);
     private static final Pattern FORMULA_PART = Pattern.compile("([A-Za-z][a-z]?)(\\d*)");
+    private static final Map<String, MoleculeStructure> KNOWN_FORMULA_STRUCTURES = Map.of(
+            "H2", structure("Hydrogen", "H", "H", 1),
+            "N2", structure("Nitrogen", "N", "N", 3),
+            "O2", structure("Oxygen", "O", "O", 2),
+            "F2", structure("Fluorine", "F", "F", 1),
+            "Cl2", structure("Chlorine", "Cl", "Cl", 1),
+            "Br2", structure("Bromine", "Br", "Br", 1),
+            "I2", structure("Iodine", "I", "I", 1));
     private final AiClient aiClient;
     private final MoleculePromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
@@ -57,12 +66,13 @@ public class MoleculeService {
 
     public MoleculeStructure build(String input) {
         if (input == null || input.isBlank()) throw new MoleculeBuildException("Hãy nhập tên hoặc công thức chất.");
-        MoleculeStructure formulaStructure = buildFromFormula(input.strip());
+        String normalizedInput = input.strip();
+        MoleculeStructure formulaStructure = KNOWN_FORMULA_STRUCTURES.get(normalizedInput);
         if (formulaStructure != null) return formulaStructure;
         RawStructure raw;
         try {
-            raw = objectMapper.readValue(extractJson(generateWithTimeout(input)), RawStructure.class);
-            return validate(input.strip(), raw);
+            raw = objectMapper.readValue(extractJson(generateWithTimeout(normalizedInput)), RawStructure.class);
+            return validate(normalizedInput, raw, parseFormula(normalizedInput));
         } catch (MoleculeBuildException e) {
             throw e;
         } catch (Exception e) {
@@ -70,15 +80,17 @@ public class MoleculeService {
         }
     }
 
-    /**
-     * Common formula requests do not need an external model. This provides a
-     * deterministic, immediately viewable connection table while preserving AI
-     * generation for chemical names and natural-language requests.
-     */
-    private MoleculeStructure buildFromFormula(String input) {
-        if (!input.matches(".*\\d.*")) return null;
+    private static MoleculeStructure structure(String name, String firstElement, String secondElement, int bondOrder) {
+        return new MoleculeStructure(name,
+                List.of(new MoleculeAtom(firstElement), new MoleculeAtom(secondElement)),
+                List.of(new MoleculeBond(0, 1, bondOrder)));
+    }
+
+    /** Parses a plain molecular formula for validation only; it must never infer bonds. */
+    private FormulaCounts parseFormula(String input) {
+        if (!input.matches("(?:[A-Z][a-z]?\\d*)+")) return null;
         Matcher matcher = FORMULA_PART.matcher(input);
-        List<String> elements = new ArrayList<>();
+        Map<String, Integer> counts = new HashMap<>();
         int cursor = 0;
         while (matcher.find()) {
             if (matcher.start() != cursor) return null;
@@ -86,24 +98,9 @@ public class MoleculeService {
             String element = normalize(matcher.group(1));
             int count = matcher.group(2).isBlank() ? 1 : Integer.parseInt(matcher.group(2));
             if (count < 1 || count > 100 || !MAX_VALENCE.containsKey(element) && !"H".equals(element)) return null;
-            if (!"H".equals(element)) {
-                for (int i = 0; i < count; i++) elements.add(element);
-            }
+            counts.merge(element, count, Integer::sum);
         }
-        if (cursor != input.length() || elements.isEmpty()) return null;
-
-        List<MoleculeAtom> atoms = elements.stream().map(MoleculeAtom::new).toList();
-        List<MoleculeBond> bonds = new ArrayList<>();
-        List<Integer> carbons = new ArrayList<>();
-        for (int i = 0; i < atoms.size(); i++) if ("C".equals(atoms.get(i).element())) carbons.add(i);
-        for (int i = 1; i < carbons.size(); i++) bonds.add(new MoleculeBond(carbons.get(i - 1), carbons.get(i), 1));
-        int anchor = carbons.isEmpty() ? 0 : 0;
-        for (int i = 0; i < atoms.size(); i++) {
-            if (i == anchor || "C".equals(atoms.get(i).element())) continue;
-            int target = carbons.isEmpty() ? anchor : carbons.get((i - (carbons.size())) % carbons.size());
-            bonds.add(new MoleculeBond(target, i, 1));
-        }
-        return new MoleculeStructure(input, atoms, List.copyOf(bonds));
+        return cursor == input.length() && !counts.isEmpty() ? new FormulaCounts(Map.copyOf(counts)) : null;
     }
 
     private String generateWithTimeout(String input) {
@@ -127,7 +124,7 @@ public class MoleculeService {
         }
     }
 
-    private MoleculeStructure validate(String input, RawStructure raw) {
+    private MoleculeStructure validate(String input, RawStructure raw, FormulaCounts formula) {
         if (raw == null) {
             throw new MoleculeBuildException("AI trả về thiếu tên, nguyên tử hoặc liên kết.");
         }
@@ -168,7 +165,25 @@ public class MoleculeService {
                 throw new MoleculeBuildException("Cấu trúc vượt hoá trị của " + atoms.get(i).element() + ".");
             }
         }
+        validateFormulaConsistency(formula, atoms, valence);
         return new MoleculeStructure(raw.name.strip(), List.copyOf(atoms), List.copyOf(bonds));
+    }
+
+    /** Ensures model bonds produce exactly the atoms and implicit hydrogens in a formula request. */
+    private void validateFormulaConsistency(FormulaCounts formula, List<MoleculeAtom> atoms, int[] valence) {
+        if (formula == null) return;
+        Map<String, Integer> actualHeavyAtoms = new HashMap<>();
+        for (MoleculeAtom atom : atoms) actualHeavyAtoms.merge(atom.element(), 1, Integer::sum);
+        Map<String, Integer> expectedHeavyAtoms = new HashMap<>(formula.counts());
+        expectedHeavyAtoms.remove("H");
+        if (!actualHeavyAtoms.equals(expectedHeavyAtoms)) {
+            throw new MoleculeBuildException("Cấu trúc AI không khớp với công thức hoá học đã yêu cầu.");
+        }
+        int impliedHydrogens = 0;
+        for (int i = 0; i < atoms.size(); i++) impliedHydrogens += MAX_VALENCE.get(atoms.get(i).element()) - valence[i];
+        if (impliedHydrogens != formula.counts().getOrDefault("H", 0)) {
+            throw new MoleculeBuildException("Bậc liên kết AI không khớp với công thức hoá học đã yêu cầu.");
+        }
     }
 
     private static String toUserFacingAiError(String input, RawStructure raw) {
@@ -203,4 +218,5 @@ public class MoleculeService {
     private record RawAtom(String element) { }
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record RawBond(Integer from, Integer to, Integer order) { }
+    private record FormulaCounts(Map<String, Integer> counts) { }
 }

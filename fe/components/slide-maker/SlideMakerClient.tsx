@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SlideEditor } from "@/components/slide-editor/SlideEditor";
@@ -70,6 +71,12 @@ export function SlideMakerClient() {
   const [deckSubject, setDeckSubject] = useState<LibrarySubject>("PHYSICS");
   const [presentSlides, setPresentSlides] = useState<Slide[] | null>(null);
   const replaceSlides = useEditorStore((s) => s.replaceSlides);
+
+  useEffect(() => {
+    if (!saveNotice) return;
+    const timer = window.setTimeout(() => setSaveNotice(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [saveNotice]);
 
   useEffect(() => {
     if (!requestedLibraryId) {
@@ -330,12 +337,20 @@ export function SlideMakerClient() {
         </div>
       </div>
       {saveNotice ? (
-        <p
+        <div
           role="status"
-          className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 rounded-lg bg-[#2b2926] px-4 py-2 text-xs text-white shadow-lg"
+          className="fixed bottom-4 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-2 rounded-lg bg-[#2b2926] px-4 py-2 text-xs text-white shadow-lg"
         >
-          {saveNotice}
-        </p>
+          <span>{saveNotice}</span>
+          <button
+            type="button"
+            aria-label="Đóng thông báo"
+            onClick={() => setSaveNotice(null)}
+            className="rounded p-0.5 text-white/80 hover:bg-white/15 hover:text-white"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
       ) : null}
       {saveDialogOpen ? (
         <div className="fixed inset-0 z-[100] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-labelledby="save-deck-title">

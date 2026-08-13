@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ElementView } from "@/components/slide-editor/ElementView";
 import { CANVAS_H, CANVAS_W, type Slide } from "@/components/slide-editor/types";
+import { ElementDetailPanel } from "@/components/periodic-table/element-detail-panel";
+import type { Element as PeriodicElement } from "@/components/periodic-table/types";
 
 type SlidePresentationOverlayProps = {
   slides: Slide[];
@@ -17,6 +19,7 @@ export function SlidePresentationOverlay({ slides, onExit }: SlidePresentationOv
   const stageRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [scale, setScale] = useState(1);
+  const [selectedElement, setSelectedElement] = useState<PeriodicElement | null>(null);
 
   // Giữ callback thoát trong ref để các effect fullscreen chỉ chạy một lần khi mount.
   const exitRef = useRef(onExit);
@@ -25,6 +28,7 @@ export function SlidePresentationOverlay({ slides, onExit }: SlidePresentationOv
   }, [onExit]);
 
   const goTo = useCallback((index: number) => {
+    setSelectedElement(null);
     setActiveIndex(() => Math.max(0, Math.min(index, Math.max(0, slides.length - 1))));
   }, [slides.length]);
   const previous = useCallback(() => goTo(activeIndex - 1), [activeIndex, goTo]);
@@ -80,13 +84,14 @@ export function SlidePresentationOverlay({ slides, onExit }: SlidePresentationOv
     const stage = stageRef.current;
     if (!stage) return;
     const onWheel = (e: WheelEvent) => {
+      if (selectedElement) return;
       e.preventDefault();
       if (e.deltaY > 0) next();
       else if (e.deltaY < 0) previous();
     };
     stage.addEventListener("wheel", onWheel, { passive: false });
     return () => stage.removeEventListener("wheel", onWheel);
-  }, [next, previous]);
+  }, [next, previous, selectedElement]);
 
   // Bắt phím ở pha capture và chặn lan truyền: khi lớp phủ mở trên trình soạn thảo,
   // các phím tắt của editor (mũi tên, Delete, Escape...) không được chạy theo.
@@ -95,6 +100,10 @@ export function SlidePresentationOverlay({ slides, onExit }: SlidePresentationOv
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
+        if (selectedElement) {
+          setSelectedElement(null);
+          return;
+        }
         exitRef.current();
         return;
       }
@@ -112,7 +121,7 @@ export function SlidePresentationOverlay({ slides, onExit }: SlidePresentationOv
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [next, previous]);
+  }, [next, previous, selectedElement]);
 
   useLayoutEffect(() => {
     const stage = stageRef.current;
@@ -140,12 +149,20 @@ export function SlidePresentationOverlay({ slides, onExit }: SlidePresentationOv
           style={{ width: CANVAS_W, height: CANVAS_H, transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: "center" }}
         >
           <div className="relative overflow-hidden" style={{ width: CANVAS_W, height: CANVAS_H, background: current.bg }}>
-            {current.elements.map((element) => <ElementView key={element.id} el={element} interactive />)}
+            {current.elements.map((element) => (
+              <ElementView
+                key={element.id}
+                el={element}
+                interactive
+                onSelectPeriodicElement={setSelectedElement}
+              />
+            ))}
           </div>
         </div>
       ) : (
         <div className="grid h-full place-items-center text-sm text-white/60">Đang tải bộ slide...</div>
       )}
+      <ElementDetailPanel element={selectedElement} onClose={() => setSelectedElement(null)} />
     </div>
   );
 }

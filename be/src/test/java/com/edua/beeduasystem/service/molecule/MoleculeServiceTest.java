@@ -42,13 +42,30 @@ class MoleculeServiceTest {
     }
 
     @Test
-    void buildsFormulaWithoutWaitingForAi() {
-        MoleculeStructure result = service.build("C12H22O11");
+    void buildsKnownDiatomicFormulaWithoutWaitingForAi() {
+        MoleculeStructure result = service.build("N2");
 
-        assertEquals(23, result.atoms().size());
-        assertEquals(12, result.atoms().stream().filter(atom -> atom.element().equals("C")).count());
-        assertEquals(11, result.atoms().stream().filter(atom -> atom.element().equals("O")).count());
+        assertEquals(2, result.atoms().size());
+        assertEquals("N", result.atoms().getFirst().element());
+        assertEquals(3, result.bonds().getFirst().order());
         verifyNoInteractions(aiClient);
+    }
+
+    @Test
+    void asksAiForNonCatalogFormulaAndValidatesItsBondOrders() {
+        when(aiClient.generate(anyString())).thenReturn("{\"name\":\"Ethene\",\"atoms\":[{\"element\":\"C\"},{\"element\":\"C\"}],\"bonds\":[{\"from\":0,\"to\":1,\"order\":2}]}");
+
+        MoleculeStructure result = service.build("C2H4");
+
+        assertEquals(2, result.atoms().size());
+        assertEquals(2, result.bonds().getFirst().order());
+    }
+
+    @Test
+    void rejectsFormulaWhenAiReturnsBondOrdersThatWouldAddExtraHydrogens() {
+        when(aiClient.generate(anyString())).thenReturn("{\"name\":\"Carbon dioxide\",\"atoms\":[{\"element\":\"O\"},{\"element\":\"C\"},{\"element\":\"O\"}],\"bonds\":[{\"from\":0,\"to\":1,\"order\":1},{\"from\":1,\"to\":2,\"order\":1}]}");
+
+        assertThrows(MoleculeBuildException.class, () -> service.build("CO2"));
     }
 
     @Test

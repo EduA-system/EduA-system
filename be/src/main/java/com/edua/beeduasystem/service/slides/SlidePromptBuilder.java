@@ -77,7 +77,8 @@ public class SlidePromptBuilder {
                 lesson — never restate a fact, definition, or comparison another chapter already owns. When two
                 chapters must share a sourceChunkId (too few chunks for the chapter count), split that chunk's
                 material by facet across them (e.g. one owns the definition, another owns worked examples or
-                practice) instead of letting both re-explain the same concept. %s
+                practice) instead of letting both re-explain the same concept. Reserve separate slide budget for
+                every practice prompt and its worked solution; never plan several exercises on one slide. %s
                 """.formatted(lesson.title(), lesson.grade(), teacherPersona(subject), contentMapsJson, allowedChunkIds,
                 userPrompt == null || userPrompt.isBlank() ? "" : "Teacher preference: " + userPrompt);
     }
@@ -126,8 +127,12 @@ public class SlidePromptBuilder {
                 practice khi có câu hỏi/bài tập cho học sinh làm, recap khi tổng kết ý phần. Chỉ dùng explain cho slide thuần diễn giải khái niệm.
                 slideType: intro|section|concept|text-image|experiment|comparison|table|process|formula|exercise|quiz|summary.
                 headerMode: hidden cho intro/section, fixed cho các loại khác.
+                Mỗi bài tập chiếm một slide riêng: slide `exercise` chỉ có ĐỀ BÀI của một bài; nếu cần lời giải,
+                đặt ngay sau nó ở một slide `formula` hoặc `concept` chỉ có LỜI GIẢI của đúng bài đó. Không gộp hai bài,
+                cũng không gộp đề bài và lời giải trên cùng slide.
                 Section opener rule: the first slide of this part must be slideType `section`, headerMode `hidden`,
-                title exactly the part title, and brief one short sentence introducing what students will learn next.
+                title exactly the part title converted to UPPERCASE, and brief one short Vietnamese sentence introducing
+                what students will learn next. Only the title is uppercase; the brief follows normal Vietnamese capitalization.
                 Trả JSON thuần, không markdown:
                 {"lessonTitle":"%s","parts":[{"id":"%s","title":"%s","sourceChunkIds":%s,"slides":[
                   {"id":"%ss1","title":"...","pedagogicalRole":"derive","brief":"...","contentPlan":{"slideType":"concept","headerMode":"fixed"}},
@@ -234,6 +239,9 @@ public class SlidePromptBuilder {
                 - contentPlan.headerMode: hidden cho intro/section, fixed cho các loại còn lại.
                 - Ở pha khung, contentPlan CHỈ có slideType và headerMode; chưa trả blocks/relationships.
                 - brief: một dòng mô tả góc nội dung riêng để pha sau soạn chi tiết.
+                - Mỗi bài tập chiếm một slide riêng: slide `exercise` chỉ có đề bài của một bài; lời giải (nếu có)
+                  phải là slide kế tiếp, dùng `formula` hoặc `concept`, và chỉ giải đúng bài đó. Không gộp nhiều bài,
+                  cũng không gộp đề bài và lời giải trên cùng slide.
                 Không trả tọa độ, kích thước, font, màu, tỷ lệ cột hoặc bất kỳ quyết định trình bày nào.
 
                 Trả JSON thuần, không markdown:
@@ -310,6 +318,15 @@ public class SlidePromptBuilder {
                 - table: phải có đúng một block `table` với columns và rows; không được dồn ô bảng thành text thường.
                 - concept: tối đa hai text block chính; mỗi block chỉ nêu một ý ngắn, không ghép nhiều tiêu đề/ý song song
                   vào một đoạn văn dài.
+                - exercise: chỉ có một đề bài HOẶC một lời giải của đúng một bài; không có Bài tập 2, câu hỏi thứ hai,
+                  hoặc lời giải kèm đề bài trên cùng slide. Dùng slide kế tiếp cho nửa còn lại.
+                - quiz: chỉ có đúng một block `quiz`, tức một câu hỏi trắc nghiệm trên mỗi slide.
+                NỘI DUNG SƯ PHẠM (bắt buộc):
+                - Slide nội dung phải đủ để người học hiểu được một ý hoàn chỉnh, không chỉ nhắc lại tiêu đề hoặc nêu một nhận xét chung chung.
+                  Hãy thể hiện ít nhất hai thông tin cụ thể có liên hệ (khái niệm/đặc điểm kèm nguyên nhân, cơ chế, ý nghĩa, hệ quả hoặc ví dụ phù hợp).
+                - Với slide có pedagogicalRole `recap` hoặc slideType `summary`, hãy nêu 2–4 ý kiến thức trọng tâm, không dùng một câu tổng quát thay cho phần tổng kết.
+                - Ngoại lệ: intro, section, slide chỉ có block physics và câu hỏi quiz độc lập có thể ngắn theo đúng chức năng của chúng.
+                - Với bài tập, mỗi slide chỉ truyền đạt một nửa: đề bài hoặc lời giải, không gộp cả hai và không gộp nhiều bài.
                 {"type":"illustrates","visualBlockId":"...","targetBlockId":"..."},
                 {"type":"supports","supportingBlockId":"...","targetBlockId":"..."},
                 {"type":"follows","beforeBlockId":"...","afterBlockId":"..."}.
@@ -406,18 +423,28 @@ public class SlidePromptBuilder {
                 - table: phải có đúng một block `table` với columns và rows; không được dồn ô bảng thành text thường.
                 - concept: tối đa hai text block chính; mỗi block chỉ nêu một ý ngắn, không ghép nhiều tiêu đề/ý song song
                   vào một đoạn văn dài.
+                - exercise: chỉ có một đề bài HOẶC một lời giải của đúng một bài; không có Bài tập 2, câu hỏi thứ hai,
+                  hoặc lời giải kèm đề bài trên cùng slide. Dùng slide kế tiếp cho nửa còn lại.
+                - quiz: chỉ có đúng một block `quiz`, tức một câu hỏi trắc nghiệm trên mỗi slide.
+
+                NỘI DUNG SƯ PHẠM (bắt buộc):
+                - Slide nội dung phải đủ để người học hiểu được một ý hoàn chỉnh, không chỉ nhắc lại tiêu đề hoặc nêu một nhận xét chung chung.
+                  Hãy thể hiện ít nhất hai thông tin cụ thể có liên hệ (khái niệm/đặc điểm kèm nguyên nhân, cơ chế, ý nghĩa, hệ quả hoặc ví dụ phù hợp).
+                - Với slide có pedagogicalRole `recap` hoặc slideType `summary`, hãy nêu 2–4 ý kiến thức trọng tâm, không dùng một câu tổng quát thay cho phần tổng kết.
+                - Ngoại lệ: intro, section, slide chỉ có block physics và câu hỏi quiz độc lập có thể ngắn theo đúng chức năng của chúng.
+                - Với bài tập, mỗi slide chỉ truyền đạt một nửa: đề bài hoặc lời giải, không gộp cả hai và không gộp nhiều bài.
 
                 NGÔN NGỮ (bắt buộc): toàn bộ text, question, choices, answer, explanation và mọi nhãn bảng/so sánh phải bằng
                 tiếng Việt. Giữ tên riêng/thuật ngữ hoá học tiếng Anh khi cần (vd polyethylene, PVC), nhưng phần diễn giải phải tiếng Việt.
 
-                GIỚI HẠN ĐỘ DÀI (bắt buộc, slide sẽ bị từ chối nếu vượt quá — hãy chắt lọc ý chính thay vì nhồi hết nội dung nguồn):
-                - Slide có block visual, molecule hoặc periodic: tổng ký tự các block text khác tối đa 60.
+                GIỚI HẠN ĐỘ DÀI (bắt buộc, ưu tiên đủ ý để dạy rồi mới chắt lọc; không nhồi nguyên văn nội dung nguồn):
+                - Slide có block visual, molecule hoặc periodic: tổng ký tự các block text khác tối đa 140.
                 - Slide có block physics: không kèm block nào khác (mô phỏng chiếm trọn slide).
                 - Slide slideType=comparison: tổng ký tự (nhãn item, nhãn criteria, toàn bộ values) tối đa 130.
                 - Slide slideType=table: tổng ký tự (cột, toàn bộ ô) tối đa 150; mỗi ô tối đa 40 ký tự.
-                - Các slide còn lại (không visual, không phải comparison/table): tổng ký tự các block text tối đa 100.
+                - Các slide còn lại (không visual, không phải comparison/table): tổng ký tự các block text tối đa 220.
                 - Tối đa 6 gạch đầu dòng trong một block text.
-                - Tối đa 2 block quiz (câu hỏi trắc nghiệm) trong một slide.
+                - Chỉ có 1 block quiz (một câu hỏi trắc nghiệm) trong một slide.
 
                 If slideType is `section`: return exactly one text block with role `body`, semanticType `description`,
                 priority `primary`, required true, and one short Vietnamese sentence under the title; use no visual/table/quiz/formula blocks and keep relationships [].

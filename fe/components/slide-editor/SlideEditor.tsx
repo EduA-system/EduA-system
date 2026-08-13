@@ -9,7 +9,6 @@ import { LeftPanel, type LeftPanelTab } from "./LeftPanel";
 import { Canvas, type ActiveTool } from "./Canvas";
 import { SlideTray } from "./SlideTray";
 import { BottomBar } from "./BottomBar";
-import { AiPanel } from "./AiPanel";
 import { loadSlides, saveSlides } from "./lib/storage";
 
 interface DragState {
@@ -48,7 +47,6 @@ export function SlideEditor({
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
   const [drawColor, setDrawColor] = useState("#2b2926");
   const [drawSize, setDrawSize] = useState(6);
-  const [aiOpen, setAiOpen] = useState(false);
   // Sidebar trái đóng mặc định — chỉ mở khi người dùng bấm vào icon, không tự
   // bật lên trong quá trình chạy các bước gen slide.
   const [leftTab, setLeftTab] = useState<LeftPanelTab>(null);
@@ -63,7 +61,6 @@ export function SlideEditor({
   if (closeLeftPanelSignal !== prevCloseSignal) {
     setPrevCloseSignal(closeLeftPanelSignal);
     setLeftTab(null);
-    setAiOpen(false);
   }
 
   const handleMouseDown = useCallback(
@@ -252,8 +249,6 @@ export function SlideEditor({
       onMouseDown={handleMouseDown}
     >
       <TopBar
-        aiOpen={aiOpen}
-        onToggleAi={() => setAiOpen((value) => !value)}
         designSteps={designSteps}
         onSaveToLibrary={onSaveToLibrary}
         savingToLibrary={savingToLibrary}
@@ -274,7 +269,6 @@ export function SlideEditor({
           <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
             <ContextualToolbar
               onOpenProperties={() => {
-                setAiOpen(false);
                 setLeftTab("properties");
               }}
             />
@@ -297,7 +291,6 @@ export function SlideEditor({
           </div>
           {showTray && <SlideTray />}
         </div>
-        {aiOpen && <AiPanel />}
       </div>
     </div>
   );

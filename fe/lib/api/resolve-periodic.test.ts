@@ -17,4 +17,11 @@ describe("resolvePeriodicPayload", () => {
     expect(payload?.focus).toBe("Nhóm halogen");
     expect(payload?.elementSymbols).toEqual(expect.arrayContaining(["F", "Cl", "Br", "I"]));
   });
+
+  it("uses symbols declared by the outline instead of re-parsing its prose", () => {
+    expect(resolvePeriodicPayload("Nitrogen (N) trong bảng tuần hoàn, vị trí ô 7, nhóm VA", ["N"])).toMatchObject({
+      mode: "table",
+      elementSymbols: ["N"],
+    });
+  });
 });

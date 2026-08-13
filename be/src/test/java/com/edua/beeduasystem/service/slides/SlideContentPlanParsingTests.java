@@ -186,6 +186,44 @@ class SlideContentPlanParsingTests {
     }
 
     @Test
+    void detailPromptsRequireEnoughTeachingContentInsteadOfAStandaloneGenericSentence() {
+        SlidePromptBuilder builder = new SlidePromptBuilder();
+        LessonContext lesson = new LessonContext("id", "Nitơ", 11, "", List.of(), List.of(), List.of(), List.of(), List.of());
+        InlineLessonPlanDto plan = new InlineLessonPlanDto("Nitơ", 11, 45, List.of(), List.of(), List.of(), "", "");
+        SlideItemDto slide = new SlideItemDto("p1s2", "Ý nghĩa của chu trình nitrate", "recap", null, null,
+                new ContentPlan("summary", "fixed", List.of(), List.of()));
+
+        String partDetail = builder.expandPartPrompt(lesson, plan, "{}", "p1", "Phần 1", "CHEMISTRY");
+        String slideDetail = builder.expandSlidePrompt(lesson, plan, "{}", "p1", "Phần 1", slide, "CHEMISTRY", "p1: Phần 1");
+
+        for (String prompt : List.of(partDetail, slideDetail)) {
+            assertTrue(prompt.contains("NỘI DUNG SƯ PHẠM (bắt buộc)"));
+            assertTrue(prompt.contains("ít nhất hai thông tin cụ thể có liên hệ"));
+            assertTrue(prompt.contains("2–4 ý kiến thức trọng tâm"));
+        }
+        assertTrue(slideDetail.contains("tối đa 140"));
+        assertTrue(slideDetail.contains("tối đa 220"));
+    }
+
+    @Test
+    void promptsKeepEachPracticeProblemAndItsSolutionOnSeparateSlides() {
+        SlidePromptBuilder builder = new SlidePromptBuilder();
+        LessonContext lesson = new LessonContext("id", "Nitơ", 11, "", List.of(), List.of(), List.of(), List.of(), List.of());
+        InlineLessonPlanDto plan = new InlineLessonPlanDto("Nitơ", 11, 45, List.of(), List.of(), List.of(), "", "");
+        SlideItemDto exercise = new SlideItemDto("p5s2", "Bài tập tính toán", "practice", null, null,
+                new ContentPlan("exercise", "fixed", List.of(), List.of()));
+
+        String skeleton = builder.partSkeletonPrompt(lesson, plan, null, "CHEMISTRY", "p5", "Luyện tập", List.of("c1"), 4, "p5: Luyện tập");
+        String structure = builder.outlineStructurePrompt(lesson, plan, null, "", "CHEMISTRY");
+        String detail = builder.expandSlidePrompt(lesson, plan, "{}", "p5", "Luyện tập", exercise, "CHEMISTRY", "p5: Luyện tập");
+
+        assertTrue(skeleton.contains("Không gộp hai bài"));
+        assertTrue(structure.contains("Không gộp nhiều bài"));
+        assertTrue(detail.contains("chỉ có một đề bài HOẶC một lời giải"));
+        assertTrue(detail.contains("Chỉ có 1 block quiz"));
+    }
+
+    @Test
     void chemistryPromptsExposeMoleculeAndPeriodicBlocksForEnumSubject() {
         SlidePromptBuilder builder = new SlidePromptBuilder();
         LessonContext lesson = new LessonContext("id", "Bang tuan hoan", 10, "", List.of(), List.of(), List.of(), List.of(), List.of());

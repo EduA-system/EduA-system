@@ -183,9 +183,11 @@ export function Canvas({
   const handleElementMouseDown = useCallback(
     (e: React.MouseEvent, el: SlideElement) => {
       if (e.button !== 0) return;
+      // Lớp nền/trang trí bị khóa không thể được chọn. Để event nổi lên canvas
+      // thì click vào chúng vẫn được xem là click vùng trống và bỏ selection.
+      if (el.locked) return;
       e.stopPropagation();
       if (slideLocked || editingId) return;
-      if (el.locked) return;
 
       if (e.shiftKey) {
         toggleSelect(el.id);
@@ -309,8 +311,8 @@ export function Canvas({
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
       if (slideLocked) return;
-      // Chỉ xử lý khi bấm trúng nền canvas (không phải element con).
-      if (e.target !== canvasInnerRef.current) return;
+      // Event từ element/handle đã bị chặn ở handler riêng. Vì vậy mọi click còn
+      // lại bên trong canvas đều là vùng trống và cần bỏ chọn.
       e.stopPropagation();
       select([]);
 
