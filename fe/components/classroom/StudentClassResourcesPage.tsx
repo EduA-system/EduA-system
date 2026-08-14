@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowLeft, BookOpen, Inbox, RefreshCw } from "lucide-react";
+import { AlertCircle, ArrowLeft, BookOpen, Inbox, RefreshCw, Users } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
@@ -315,15 +316,20 @@ export function StudentClassResourcesPage() {
                       </div>
                     </div>
 
-                    <div className="mt-6 flex items-center justify-between">
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                       <h2 className="text-[14px] font-semibold text-[#1f1f1f]">Tài nguyên & bài tập</h2>
-                      <button
-                        type="button"
-                        onClick={() => void loadResources(selectedClass.id)}
-                        className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
-                      >
-                        <RefreshCw className={`size-3.5 ${resourcesLoading ? "animate-spin" : ""}`} /> Làm mới
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/class-members?classId=${encodeURIComponent(selectedClass.id)}`} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]">
+                          <Users className="size-3.5" /> Thành viên
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => void loadResources(selectedClass.id)}
+                          className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"
+                        >
+                          <RefreshCw className={`size-3.5 ${resourcesLoading ? "animate-spin" : ""}`} /> Làm mới
+                        </button>
+                      </div>
                     </div>
 
                     {selectedClass.status === "INACTIVE" && (

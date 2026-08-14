@@ -74,6 +74,7 @@ export function PracticeExamCreateDashboard() {
   const [duration, setDuration] = useState("15");
   const [difficulty, setDifficulty] =
     useState<PracticeExamRequest["difficulty"]>("MEDIUM");
+  const [libraryTitle, setLibraryTitle] = useState("");
   const [objective, setObjective] = useState("");
   const [books, setBooks] = useState<CatalogBookName[]>([]);
   const [chapters, setChapters] = useState<CatalogChapterSummary[]>([]);
@@ -176,6 +177,7 @@ export function PracticeExamCreateDashboard() {
     totalScore === 1000 &&
     totalQuestions > 0 &&
     hasValidScoreDistribution &&
+    libraryTitle.trim().length > 0 &&
     selectedLessons.length > 0 &&
     status !== "INFEASIBLE" &&
     (status !== "WARNING" || confirmed);
@@ -239,6 +241,8 @@ export function PracticeExamCreateDashboard() {
     setError(null);
     try {
       const request: PracticeExamRequest = {
+        // Đây là nhãn kỹ thuật cho luồng tạo AI. Tên giáo viên đặt được giữ
+        // riêng trong display.libraryTitle và tuyệt đối không gửi vào API này.
         title: `Kiểm tra ${durationMinutes} phút`,
         subject: effectiveSubject,
         grade,
@@ -272,7 +276,13 @@ export function PracticeExamCreateDashboard() {
       storePracticeExamSession({
         sessionId,
         request,
-        display: { subject: effectiveSubject, grade: String(grade), duration: durationMinutes, difficulty },
+        display: {
+          libraryTitle: libraryTitle.trim(),
+          subject: effectiveSubject,
+          grade: String(grade),
+          duration: durationMinutes,
+          difficulty,
+        },
       });
       router.push("/exam-edit-new");
     } catch (reason) {
@@ -345,6 +355,20 @@ export function PracticeExamCreateDashboard() {
                       </div>
                     </label>
                   </div>
+                  <label className="mt-4 block text-xs font-semibold">
+                    Tên bài kiểm tra
+                    <input
+                      type="text"
+                      value={libraryTitle}
+                      disabled={loading}
+                      onChange={(event) => setLibraryTitle(event.target.value)}
+                      placeholder="Ví dụ: Kiểm tra chương 2 - Hàm số bậc hai"
+                      className="mt-2 h-10 w-full rounded-lg border border-[#ddd5cc] px-3 text-sm"
+                    />
+                    <span className="mt-1 block font-normal text-[#81776e]">
+                      Chỉ dùng để nhận biết bài trong thư viện và khi chọn tài liệu; không dùng để tạo đề bằng AI.
+                    </span>
+                  </label>
                   <div className="mt-4">
                     <p className="text-xs font-semibold">Thời lượng làm bài</p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -428,7 +452,7 @@ export function PracticeExamCreateDashboard() {
               ) : (
                 <StepSummary
                   title="1. Thông tin đề"
-                  summary={`${SUBJECT_LABELS[subject]} · Lớp ${grade} · ${duration || "?"} phút · ${DIFFICULTY_LABELS[difficulty]}${objective.trim() ? " · Có mục tiêu riêng" : ""}`}
+                  summary={`${libraryTitle.trim() || "Chưa đặt tên"} · ${SUBJECT_LABELS[subject]} · Lớp ${grade} · ${duration || "?"} phút · ${DIFFICULTY_LABELS[difficulty]}${objective.trim() ? " · Có mục tiêu riêng" : ""}`}
                   onEdit={() => goToStep(1)}
                 />
               )}

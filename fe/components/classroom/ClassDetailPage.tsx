@@ -35,6 +35,7 @@ import {
   getClassDetail,
   isClassAccessRevoked,
   listClassResources,
+  listResourceSubmissions,
   postClassResource,
   sourceTypeLabel,
   subjectLabel,
@@ -115,6 +116,9 @@ export function ResourceFormPanel({
   );
   const [uploading, setUploading] = useState(false);
   const [submissionEnabled, setSubmissionEnabled] = useState(initial?.submissionEnabled ?? false);
+  const [submissionSettingLocked, setSubmissionSettingLocked] = useState(
+    () => Boolean(initial?.submissionEnabled),
+  );
   const initialDeadlineValue = toDatetimeLocalValue(initial?.deadline ?? null);
   const [deadline, setDeadline] = useState(initialDeadlineValue);
   const [minDeadline, setMinDeadline] = useState(() => toDatetimeLocalValue(new Date().toISOString()));
@@ -154,6 +158,26 @@ export function ResourceFormPanel({
       window.clearTimeout(timer);
     };
   }, [authFetch, isEdit, libraryQuery, libraryType, sourceType]);
+
+  useEffect(() => {
+    if (!isEdit || !initial?.submissionEnabled) return;
+    let cancelled = false;
+    void listResourceSubmissions(authFetch, classId, initial.id)
+      .then((roster) => {
+        if (!cancelled) {
+          setSubmissionSettingLocked(
+            roster.items.some((submission) => submission.firstSubmittedAt !== null),
+          );
+        }
+      })
+      .catch(() => {
+        // Giữ khóa nếu chưa xác nhận được dữ liệu để không vô tình tắt bài tập
+        // đã có học sinh nộp bài.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, classId, initial?.id, initial?.submissionEnabled, isEdit]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -403,24 +427,31 @@ export function ResourceFormPanel({
           <button
             type="button"
             onClick={() => setSubmissionEnabled((current) => !current)}
+            disabled={isEdit && submissionSettingLocked}
             aria-label={submissionEnabled ? "Tắt yêu cầu nộp bài" : "Bật yêu cầu nộp bài"}
-            title={submissionEnabled ? "Tắt yêu cầu nộp bài" : "Bật yêu cầu nộp bài"}
-            className={`group/tooltip relative h-6 w-11 shrink-0 rounded-full transition ${submissionEnabled ? "bg-[#d97757]" : "bg-[#d8d1c9]"}`}
+            title={isEdit && submissionSettingLocked ? "Không thể thay đổi vì đã có học sinh nộp bài" : submissionEnabled ? "Tắt yêu cầu nộp bài" : "Bật yêu cầu nộp bài"}
+            className={`group/tooltip relative h-6 w-11 shrink-0 rounded-full transition disabled:cursor-not-allowed disabled:opacity-60 ${submissionEnabled ? "bg-[#d97757]" : "bg-[#d8d1c9]"}`}
           >
             <span
               className={`absolute top-0.5 size-5 rounded-full bg-white transition ${submissionEnabled ? "left-[22px]" : "left-0.5"}`}
             />
-            <span role="tooltip" className="pointer-events-none absolute right-0 top-8 z-[70] whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">{submissionEnabled ? "Tắt yêu cầu nộp bài" : "Bật yêu cầu nộp bài"}</span>
+            <span role="tooltip" className="pointer-events-none absolute right-0 top-8 z-[70] whitespace-nowrap rounded-md bg-[#2b2926] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover/tooltip:opacity-100 group-focus-visible/tooltip:opacity-100">{isEdit && submissionSettingLocked ? "Đã có học sinh nộp bài" : submissionEnabled ? "Tắt yêu cầu nộp bài" : "Bật yêu cầu nộp bài"}</span>
           </button>
         </div>
+        {isEdit && submissionSettingLocked && (
+          <p className="-mt-2 text-[11px] text-[#8a837b]">
+            Không thể thay đổi yêu cầu nộp bài vì đã có học sinh nộp bài.
+          </p>
+        )}
 
         {submissionEnabled && (
           <label className="block text-[12px] font-medium text-[#6b6b6b]">
-            Hạn nộp bài
+            Hạn nộp bài <span aria-hidden="true" className="text-[#c0492b]">*</span>
             <input
               type="datetime-local"
               value={deadline}
               min={minDeadline}
+              required
               onChange={(event) => setDeadline(event.target.value)}
               className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none transition focus:border-[#d97757]"
             />

@@ -295,7 +295,7 @@ function LibraryScreen() {
                   <Link href={open(content)} aria-label={`Mở ${content.title}`} className={`relative block aspect-[16/7] overflow-hidden rounded-2xl border border-[#d7e6eb] bg-gradient-to-br ${meta.color}`}>
                     {content.thumbnailUrl ? <img src={content.thumbnailUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" /> : <div className="flex h-full flex-col items-center justify-center gap-4 text-[#275c68]"><span className="flex size-20 items-center justify-center rounded-[28px] bg-white/60 shadow-sm"><Icon aria-hidden className="size-10" /></span><span className="text-xs font-bold uppercase tracking-[0.2em]">{meta.label}</span></div>}
                   </Link>
-                  <div className="px-2 pb-1 pt-2"><Link href={open(content)} className="line-clamp-1 text-base font-bold leading-5 text-[#30343d] transition hover:text-sky-700 hover:underline">{content.title}</Link>{content.status === "REJECTED" && content.rejectionReason && <p className="mt-1 line-clamp-1 text-xs text-rose-700">{content.rejectionReason}</p>}</div>
+                  <div className="px-2 pb-1 pt-2"><Link href={open(content)} className="line-clamp-1 text-base font-bold leading-5 text-[#30343d] transition hover:text-sky-700 hover:underline">{content.title}</Link></div>
                   <div className="mt-auto flex items-center gap-2 rounded-2xl bg-white p-2 shadow-[0_2px_8px_rgba(43,41,38,0.08)]">
                     <div className="min-w-0 flex-1 px-2">
                       <div className="flex flex-wrap items-end gap-2">

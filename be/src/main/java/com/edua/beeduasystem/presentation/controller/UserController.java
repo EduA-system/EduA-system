@@ -58,11 +58,11 @@ public class UserController {
     }
 
     @GetMapping("/{id}/profile")
-    @PreAuthorize("hasAnyRole('MODERATOR', 'TEACHER', 'PRINCIPAL')")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'TEACHER', 'PRINCIPAL', 'STUDENT')")
     @Operation(
             summary = "Xem hồ sơ read-only của người khác",
-            description = "Chỉ theo đúng quan hệ quản lý 1 chiều: Moderator xem Teacher cùng môn, Teacher xem "
-                    + "Student trong lớp mình dạy, Principal xem Moderator/IT Staff. Không có chiều ngược, "
+            description = "Theo quan hệ được cấp quyền: Moderator xem Teacher cùng môn, Teacher xem "
+                    + "Student trong lớp mình dạy, Student xem Student cùng lớp, Principal xem Moderator/IT Staff. "
                     + "không xem được tài khoản đã bị thu hồi."
     )
     public UserProfileViewDto viewProfile(@PathVariable UUID id) {
