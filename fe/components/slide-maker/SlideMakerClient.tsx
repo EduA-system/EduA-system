@@ -49,6 +49,14 @@ function isSeedState() {
   return current.length === SEED_SLIDE_IDS.size && current.every((slide) => SEED_SLIDE_IDS.has(slide.id));
 }
 
+// Deck vừa dựng từ outline: mọi slide còn là khung rỗng (chưa qua bước 1/2/3).
+// Dùng để quyết định có tự chạy pipeline hay không, thay vì dựa vào ref cục bộ —
+// ref bị reset khi component remount trong khi store vẫn giữ slides đã gen.
+function isUndesignedDeck() {
+  const current = useEditorStore.getState().slides;
+  return current.length > 0 && current.every((slide) => slide.elements.length === 0);
+}
+
 export function SlideMakerClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -58,6 +66,7 @@ export function SlideMakerClient() {
   const requestedLibraryId = searchParams.get("libraryId");
   const activeRef = useRef<ActiveGeneration | null>(generating ? readActiveGeneration() : null);
   const bootedSessionIdRef = useRef<string | null>(null);
+  const autoRanSessionIdRef = useRef<string | null>(null);
   const loadedLibraryIdRef = useRef<string | null>(null);
   const [steps, setSteps] = useState<StepStates>(INITIAL_STEPS);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
@@ -159,24 +168,6 @@ export function SlideMakerClient() {
     }));
   }, []);
 
-  useEffect(() => {
-    if (!generating) return;
-    const active = readActiveGeneration();
-    if (!active) {
-      router.replace("/slide-maker");
-      return;
-    }
-    activeRef.current = active;
-    if (bootedSessionIdRef.current !== active.sessionId) {
-      bootedSessionIdRef.current = active.sessionId;
-      // Nếu store vẫn đang là seed mặc định (chưa có nội dung từ phiên gen này)
-      // thì tạo skeleton; ngược lại (quay lại từ trình chiếu) giữ slides đã gen.
-      if (isSeedState()) {
-        replaceSlides(skeletonSlidesFromParts(active.parts));
-      }
-    }
-  }, [generating, replaceSlides, router]);
-
   const suggestedTitle = useCallback(() => {
     const current = useEditorStore.getState().currentSlide();
     return current?.aiPrompt?.trim() || "Bộ slide mới";
@@ -258,20 +249,22 @@ export function SlideMakerClient() {
 
   const closePresentation = useCallback(() => setPresentSlides(null), []);
 
-  const finishStep = useCallback((step: 1 | 2 | 3, failedSlideIds: string[] = []) => {
+  const finishStep = useCallback((step: 1 | 2 | 3, failedSlideIds: string[] = []): DesignStepStatus => {
     const key = `step${step}` as keyof StepStates;
-    setSteps((current) => ({ ...current, [key]: failedSlideIds.length ? "error" : "complete" }));
+    const status: DesignStepStatus = failedSlideIds.length ? "error" : "complete";
+    setSteps((current) => ({ ...current, [key]: status }));
     // Sau bước 3 thành công, tự đóng thanh công cụ bên trái để nhường chỗ cho canvas.
     if (step === 3 && failedSlideIds.length === 0) {
       setLeftPanelCloseSignal((value) => value + 1);
     }
+    return status;
   }, []);
 
-  const runStep = useCallback(async (step: 1 | 2 | 3) => {
+  const runStep = useCallback(async (step: 1 | 2 | 3): Promise<DesignStepStatus> => {
     const active = activeRef.current;
     if (!active) {
       setSteps((current) => ({ ...current, [`step${step}` as keyof StepStates]: "error" }));
-      return;
+      return "error";
     }
 
     const key = `step${step}` as keyof StepStates;
@@ -289,23 +282,53 @@ export function SlideMakerClient() {
             }));
           },
         });
-        finishStep(1);
-        return;
+        return finishStep(1);
       }
 
       if (step === 2) {
         markSlidesPending();
         const result = await runStructuralStep({ onSlideFrames: handleSlideFrames, onSlideFailed: handleSlideFailed });
-        finishStep(2, result.failedSlideIds);
-        return;
+        return finishStep(2, result.failedSlideIds);
       }
 
       const result = await runContentFillStep({ onSlideReady: handleSlideReady, onSlideFailed: handleSlideFailed });
-      finishStep(3, result.failedSlideIds);
+      return finishStep(3, result.failedSlideIds);
     } catch {
       setSteps((current) => ({ ...current, [key]: "error" }));
+      return "error";
     }
   }, [finishStep, handleSlideFailed, handleSlideFrames, handleSlideReady, markSlidesPending]);
+
+  useEffect(() => {
+    if (!generating) return;
+    const active = readActiveGeneration();
+    if (!active) {
+      router.replace("/slide-maker");
+      return;
+    }
+    activeRef.current = active;
+    if (bootedSessionIdRef.current !== active.sessionId) {
+      bootedSessionIdRef.current = active.sessionId;
+      // Nếu store vẫn đang là seed mặc định (chưa có nội dung từ phiên gen này)
+      // thì tạo skeleton; ngược lại (quay lại từ trình chiếu) giữ slides đã gen.
+      if (isSeedState()) replaceSlides(skeletonSlidesFromParts(active.parts));
+    }
+
+    // Vào từ trang outline thì 3 bước thiết kế tự chạy lần lượt, không cần bấm tay.
+    // Chỉ chạy khi deck còn là khung rỗng, nên quay lại editor với slides đã thiết kế
+    // sẽ không bị chạy đè. Bước lỗi dừng chuỗi, giống ràng buộc "bước trước phải hoàn
+    // tất" của các nút trên TopBar, để người dùng bấm lại thủ công.
+    if (autoRanSessionIdRef.current === active.sessionId) return;
+    if (!isUndesignedDeck()) return;
+    autoRanSessionIdRef.current = active.sessionId;
+
+    void (async () => {
+      for (const step of [1, 2, 3] as const) {
+        const status = await runStep(step);
+        if (status !== "complete") return;
+      }
+    })();
+  }, [generating, replaceSlides, router, runStep]);
 
   const designSteps: DesignStepControls | undefined = generating
     ? { ...steps, onRunStep: (step) => void runStep(step) }
