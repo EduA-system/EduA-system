@@ -7,10 +7,14 @@ import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.classroom.ClassStatus;
 import com.edua.beeduasystem.domain.model.classroom.Classroom;
+import com.edua.beeduasystem.domain.model.notification.Notification;
+import com.edua.beeduasystem.repository.gateways.NotificationEvent;
+import com.edua.beeduasystem.repository.gateways.NotificationStreamPort;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.ClassMemberRepository;
 import com.edua.beeduasystem.repository.repositories.ClassRepository;
 import com.edua.beeduasystem.repository.repositories.ClassResourceRepository;
+import com.edua.beeduasystem.repository.repositories.NotificationRepository;
 import com.edua.beeduasystem.repository.repositories.SubmissionRepository;
 import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
@@ -19,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -32,6 +38,8 @@ public class ClassManagementService {
     private final AppUserRepository userRepository;
     private final TeacherGradeRepository teacherGradeRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final NotificationRepository notificationRepository;
+    private final NotificationStreamPort notificationStreamPort;
 
     public ClassManagementService(ClassRepository classRepository,
                                   ClassMemberRepository classMemberRepository,
@@ -39,7 +47,9 @@ public class ClassManagementService {
                                   SubmissionRepository submissionRepository,
                                   AppUserRepository userRepository,
                                   TeacherGradeRepository teacherGradeRepository,
-                                  CurrentUserProvider currentUserProvider) {
+                                  CurrentUserProvider currentUserProvider,
+                                  NotificationRepository notificationRepository,
+                                  NotificationStreamPort notificationStreamPort) {
         this.classRepository = classRepository;
         this.classMemberRepository = classMemberRepository;
         this.classResourceRepository = classResourceRepository;
@@ -47,6 +57,8 @@ public class ClassManagementService {
         this.userRepository = userRepository;
         this.teacherGradeRepository = teacherGradeRepository;
         this.currentUserProvider = currentUserProvider;
+        this.notificationRepository = notificationRepository;
+        this.notificationStreamPort = notificationStreamPort;
     }
 
     @Transactional(readOnly = true)
@@ -115,6 +127,7 @@ public class ClassManagementService {
                 classroom.status(),
                 classroom.createdAt(),
                 Instant.now()));
+        notifyClassUpdated(classroom, saved);
         return toDetail(saved);
     }
 
@@ -136,6 +149,49 @@ public class ClassManagementService {
                 classroom.createdAt(),
                 Instant.now()));
         return toDetail(saved);
+    }
+
+    // ---- notification (BR-46): bao cho hoc sinh trong lop khi thong tin lop thay doi ----
+
+    /** Chi gui khi co truong hien thi voi hoc sinh thuc su doi (ten/mon/khoi/mo ta). */
+    private void notifyClassUpdated(Classroom before, Classroom after) {
+        List<String> changes = describeChanges(before, after);
+        if (changes.isEmpty()) {
+            return;
+        }
+        List<UUID> studentIds = classMemberRepository.findAllStudentIds(after.id());
+        if (studentIds.isEmpty()) {
+            return;
+        }
+        UUID senderId = currentUserProvider.requireUserId();
+        String title = "Lớp " + after.name() + " đã được cập nhật";
+        String content = "Giáo viên đã cập nhật " + String.join(", ", changes)
+                + " của lớp \"" + after.name() + "\".";
+        Notification saved = notificationRepository.createWithRecipients(
+                new Notification(UUID.randomUUID(), senderId, after.subject(), title, content, Instant.now(),
+                        "CLASS", "/class-detail?classId=" + after.id()),
+                studentIds);
+        NotificationEvent event = new NotificationEvent(
+                saved.id(), saved.title(), saved.content(), saved.subject(), resolveOwnerName(senderId),
+                saved.createdAt(), saved.targetType(), saved.targetUrl());
+        studentIds.forEach(studentId -> notificationStreamPort.publishNew(studentId, event));
+    }
+
+    private static List<String> describeChanges(Classroom before, Classroom after) {
+        List<String> changes = new ArrayList<>();
+        if (!Objects.equals(before.name(), after.name())) {
+            changes.add("tên lớp (\"" + before.name() + "\" → \"" + after.name() + "\")");
+        }
+        if (before.subject() != after.subject()) {
+            changes.add("môn học");
+        }
+        if (!Objects.equals(before.grade(), after.grade())) {
+            changes.add("khối");
+        }
+        if (!Objects.equals(before.description(), after.description())) {
+            changes.add("mô tả");
+        }
+        return changes;
     }
 
     private ClassViews.ClassSummary toSummary(Classroom classroom) {

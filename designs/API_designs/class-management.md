@@ -161,6 +161,9 @@ body: { name?, subject?, grade?, description? }
 - Chi cho cap nhat khi `status = ACTIVE` theo `BR-37`.
 - Cho cap nhat cac field SRS cho phep: name, description, subject, grade.
 - Khong lam thay doi members, resources, assignments, submissions.
+- Notify hoc sinh trong lop theo `BR-46` khi co it nhat 1 field doi thuc su (name/subject/grade/description).
+  Noi dung liet ke cac field da doi; `targetType = CLASS`, `targetUrl = /class-detail?classId={id}`.
+  Khong doi gi thi khong gui.
 - Map: `UC-31`.
 
 ### 5. `PATCH /api/classes/{id}/status` — Doi trang thai lop

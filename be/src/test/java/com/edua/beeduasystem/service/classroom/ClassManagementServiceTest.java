@@ -10,10 +10,14 @@ import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.domain.model.classroom.ClassMember;
 import com.edua.beeduasystem.domain.model.classroom.ClassStatus;
 import com.edua.beeduasystem.domain.model.classroom.Classroom;
+import com.edua.beeduasystem.domain.model.notification.Notification;
+import com.edua.beeduasystem.repository.gateways.NotificationEvent;
+import com.edua.beeduasystem.repository.gateways.NotificationStreamPort;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
 import com.edua.beeduasystem.repository.repositories.ClassMemberRepository;
 import com.edua.beeduasystem.repository.repositories.ClassRepository;
 import com.edua.beeduasystem.repository.repositories.ClassResourceRepository;
+import com.edua.beeduasystem.repository.repositories.NotificationRepository;
 import com.edua.beeduasystem.repository.repositories.SubmissionRepository;
 import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
@@ -44,6 +48,8 @@ class ClassManagementServiceTest {
     private AppUserRepository userRepository;
     private TeacherGradeRepository teacherGradeRepository;
     private CurrentUserProvider currentUserProvider;
+    private NotificationRepository notificationRepository;
+    private NotificationStreamPort notificationStreamPort;
     private ClassManagementService service;
 
     @BeforeEach
@@ -55,8 +61,11 @@ class ClassManagementServiceTest {
         userRepository = mock(AppUserRepository.class);
         teacherGradeRepository = mock(TeacherGradeRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
+        notificationRepository = mock(NotificationRepository.class);
+        notificationStreamPort = mock(NotificationStreamPort.class);
         service = new ClassManagementService(classRepository, classMemberRepository, classResourceRepository,
-                submissionRepository, userRepository, teacherGradeRepository, currentUserProvider);
+                submissionRepository, userRepository, teacherGradeRepository, currentUserProvider,
+                notificationRepository, notificationStreamPort);
     }
 
     @Test
@@ -172,6 +181,49 @@ class ClassManagementServiceTest {
 
         assertThatThrownBy(() -> service.updateClass(classId, "New name", null, null, null))
                 .isInstanceOf(ForbiddenOperationException.class);
+    }
+
+    @Test
+    void updateClass_notifiesEnrolledStudentsAboutChangedFields() {
+        UUID ownerId = UUID.randomUUID();
+        UUID classId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        Classroom classroom = classroom(classId, ownerId, "10A1", "Desc", Subject.CHEMISTRY, 10, ClassStatus.ACTIVE);
+        when(currentUserProvider.requireUserId()).thenReturn(ownerId);
+        when(classRepository.findById(classId)).thenReturn(Optional.of(classroom));
+        when(classRepository.save(any(Classroom.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.findById(ownerId)).thenReturn(Optional.of(user(ownerId, "owner@edua.vn", "Owner Name")));
+        when(teacherGradeRepository.findGradesByUserIds(List.of(ownerId))).thenReturn(Map.of(ownerId, List.of(10)));
+        when(classMemberRepository.findAllStudentIds(classId)).thenReturn(List.of(studentId));
+        when(notificationRepository.createWithRecipients(any(Notification.class), any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.updateClass(classId, "10A2", null, null, "Mo ta moi");
+
+        ArgumentCaptor<Notification> notification = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).createWithRecipients(notification.capture(), org.mockito.ArgumentMatchers.eq(List.of(studentId)));
+        assertThat(notification.getValue().title()).isEqualTo("Lớp 10A2 đã được cập nhật");
+        assertThat(notification.getValue().content()).contains("tên lớp", "mô tả").doesNotContain("khối", "môn học");
+        assertThat(notification.getValue().targetType()).isEqualTo("CLASS");
+        assertThat(notification.getValue().targetUrl()).isEqualTo("/class-detail?classId=" + classId);
+        verify(notificationStreamPort).publishNew(org.mockito.ArgumentMatchers.eq(studentId), any(NotificationEvent.class));
+    }
+
+    @Test
+    void updateClass_skipsNotificationWhenNothingChanged() {
+        UUID ownerId = UUID.randomUUID();
+        UUID classId = UUID.randomUUID();
+        Classroom classroom = classroom(classId, ownerId, "10A1", "Desc", Subject.CHEMISTRY, 10, ClassStatus.ACTIVE);
+        when(currentUserProvider.requireUserId()).thenReturn(ownerId);
+        when(classRepository.findById(classId)).thenReturn(Optional.of(classroom));
+        when(classRepository.save(any(Classroom.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.findById(ownerId)).thenReturn(Optional.of(user(ownerId, "owner@edua.vn", "Owner Name")));
+        when(teacherGradeRepository.findGradesByUserIds(List.of(ownerId))).thenReturn(Map.of(ownerId, List.of(10)));
+
+        service.updateClass(classId, "10A1", null, null, "Desc");
+
+        verify(notificationRepository, org.mockito.Mockito.never()).createWithRecipients(any(Notification.class), any());
+        verify(notificationStreamPort, org.mockito.Mockito.never()).publishNew(any(UUID.class), any(NotificationEvent.class));
     }
 
     @Test
