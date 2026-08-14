@@ -1,18 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { BookOpen, ClipboardList, Loader2, Settings, Users } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { type ClassDetail, getClassDetail, isClassAccessRevoked, statusLabel, subjectLabel } from "@/lib/classroom";
+import { type ClassDetail, type ClassSummary, getClassDetail, isClassAccessRevoked, listClasses, statusLabel, subjectLabel } from "@/lib/classroom";
 import { ClassHubFrame, classHubHref } from "./ClassHubFrame";
 import { statusClasses, subjectBannerClasses } from "./shared";
 
 export function ClassOverviewPage() {
   const { authFetch } = useAuth();
+  const router = useRouter();
   const classId = useSearchParams().get("classId") ?? "";
   const [detail, setDetail] = useState<ClassDetail | null>(null);
+  const [classes, setClasses] = useState<ClassSummary[]>([]);
+  const [classesLoading, setClassesLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,10 +32,31 @@ export function ClassOverviewPage() {
   }, [authFetch, classId]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setClassesLoading(true);
+      void listClasses(authFetch, { size: 100 }).then((result) => setClasses(result.items)).finally(() => setClassesLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [authFetch]);
+
+  function handleSelectClass(event: ChangeEvent<HTMLSelectElement>) {
+    const id = event.target.value;
+    router.push(id ? `/class-detail?classId=${encodeURIComponent(id)}` : "/class-detail");
+  }
 
   return (
     <ClassHubFrame classId={classId} active="overview" header={<div><h1 className="font-libertine text-[40px] font-normal leading-[1.02] tracking-[-0.025em] sm:text-[52px]">Tổng quan lớp</h1><p className="mt-3 text-[14px] leading-6 text-[#6b6b6b]">Thông tin, hoạt động và tài nguyên của lớp học.</p></div>}>
-      {!classId ? <Empty message="Chọn một lớp từ danh sách để xem tổng quan." /> : loading ? (
+      <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-4">
+        <label className="block text-[12px] font-medium text-[#6b6b6b] sm:max-w-[340px]">
+          Chuyển lớp nhanh
+          <select value={classId} onChange={handleSelectClass} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]">
+            <option value="">{classesLoading ? "Đang tải danh sách lớp..." : "-- Chọn lớp của bạn --"}</option>
+            {classes.map((item) => <option key={item.id} value={item.id}>{item.name} · Khối {item.grade} · {subjectLabel(item.subject)}</option>)}
+          </select>
+        </label>
+      </div>
+      {!classId ? <Empty message="Chọn một lớp ở trên để xem tổng quan." /> : loading ? (
         <div className="mt-6 flex items-center gap-2 text-sm text-[#6b6b6b]"><Loader2 className="size-4 animate-spin" /> Đang tải lớp học...</div>
       ) : error ? <Empty message={error} /> : detail ? (
         <div className="mt-6">

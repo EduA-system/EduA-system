@@ -1,10 +1,9 @@
 "use client";
 
-import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
-  BookOpen,
   CheckCircle2,
   Loader2,
   RefreshCw,
@@ -20,8 +19,6 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import {
   type ClassDetail,
   type ClassMember,
-  type ClassStatus,
-  type ClassSummary,
   type ImportStudentsResult,
   addClassStudent,
   ClassApiError,
@@ -29,11 +26,8 @@ import {
   importClassStudents,
   importSkipReasonLabel,
   listClassMembers,
-  listClasses,
   memberStatusLabel,
   removeClassStudent,
-  statusLabel,
-  subjectLabel,
 } from "@/lib/classroom";
 
 const MAX_CLASS_SIZE = 60;
@@ -55,12 +49,6 @@ function latestAllowedBirthDate(): string {
   return date.toISOString().slice(0, 10);
 }
 
-function statusClasses(status: ClassStatus): string {
-  return status === "ACTIVE"
-    ? "border-[#b7e0c4] bg-[#f0faf3] text-[#287447]"
-    : "border-[#e6d8cb] bg-[#f8f2ec] text-[#8a5a35]";
-}
-
 function studentStatusClasses(status: string | null): string {
   if (status === "ENROLLED") return "border-[#b7e0c4] bg-[#f0faf3] text-[#287447]";
   if (status === "REMOVED") return "border-[#e8b4a4] bg-[#fdf3ef] text-[#c0492b]";
@@ -68,14 +56,11 @@ function studentStatusClasses(status: string | null): string {
 }
 
 export function AddStudentPage() {
-  const { user, status, authFetch } = useAuth();
-  const router = useRouter();
+  const { user, authFetch } = useAuth();
   const searchParams = useSearchParams();
   const classId = searchParams.get("classId") ?? "";
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [classes, setClasses] = useState<ClassSummary[]>([]);
-  const [classesLoading, setClassesLoading] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassDetail | null>(null);
   const [classLoading, setClassLoading] = useState(false);
 
@@ -101,28 +86,8 @@ export function AddStudentPage() {
   const [memberToRemove, setMemberToRemove] = useState<ClassMember | null>(null);
   const [removeReason, setRemoveReason] = useState("");
   const [removeBusy, setRemoveBusy] = useState(false);
-  const classesLoadSeqRef = useRef(0);
   const membersLoadSeqRef = useRef(0);
   const classDetailLoadSeqRef = useRef(0);
-
-  const loadClasses = useCallback(async () => {
-    if (status !== "authenticated") return;
-    const requestId = classesLoadSeqRef.current + 1;
-    classesLoadSeqRef.current = requestId;
-    setClassesLoading(true);
-    try {
-      const result = await listClasses(authFetch, { size: 100 });
-      if (classesLoadSeqRef.current !== requestId) return;
-      setClasses(result.items);
-    } catch (reason) {
-      if (classesLoadSeqRef.current !== requestId) return;
-      setError(reason instanceof Error ? reason.message : "Không thể tải danh sách lớp.");
-    } finally {
-      if (classesLoadSeqRef.current === requestId) {
-        setClassesLoading(false);
-      }
-    }
-  }, [authFetch, status]);
 
   const loadMembers = useCallback(
     async (id: string) => {
@@ -172,16 +137,6 @@ export function AddStudentPage() {
   );
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadClasses();
-    }, 0);
-    return () => {
-      window.clearTimeout(timer);
-      classesLoadSeqRef.current += 1;
-    };
-  }, [loadClasses]);
-
-  useEffect(() => {
     if (!classId) {
       classDetailLoadSeqRef.current += 1;
       membersLoadSeqRef.current += 1;
@@ -213,18 +168,8 @@ export function AddStudentPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [addDialogOpen, importErrorMessage, importErrorResult]);
 
-  function handleSelectClass(event: ChangeEvent<HTMLSelectElement>) {
-    const id = event.target.value;
-    setMessage("");
-    setError("");
-    setImportResult(null);
-    setImportErrorResult(null);
-    setImportErrorMessage("");
-    router.replace(id ? `/class-detail/members?classId=${id}` : "/class-detail/members");
-  }
-
   async function refreshSelectedClass(id: string) {
-    await Promise.all([loadMembers(id), loadClasses()]);
+    await loadMembers(id);
     try {
       const refreshed = await getClassDetail(authFetch, id);
       setSelectedClass(refreshed);
@@ -397,43 +342,6 @@ export function AddStudentPage() {
 
             <ClassHubNavigation classId={classId} active="members" />
 
-            <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <label className="block text-[12px] font-medium text-[#6b6b6b] sm:min-w-[340px]">
-                  Chọn lớp
-                  <select
-                    value={classId}
-                    onChange={handleSelectClass}
-                    className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]"
-                  >
-                    <option value="">{classesLoading ? "Đang tải danh sách lớp..." : "-- Chọn lớp của bạn --"}</option>
-                    {classes.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} · Khối {item.grade} · {subjectLabel(item.subject)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {selectedClass && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusClasses(selectedClass.status)}`}>
-                      {statusLabel(selectedClass.status)}
-                    </span>
-                    <span className="text-[12px] text-[#6b6b6b]">Chủ lớp: {selectedClass.ownerName ?? "Bạn"}</span>
-                  </div>
-                )}
-              </div>
-              {classes.length === 0 && !classesLoading && (
-                <p className="mt-3 text-[12px] text-[#6b6b6b]">
-                  Bạn chưa có lớp nào.{" "}
-                  <Link href="/list-class" className="font-medium text-[#d97757] underline">
-                    Tạo lớp mới
-                  </Link>{" "}
-                  trước khi thêm học sinh.
-                </p>
-              )}
-            </div>
-
             {(error || message) && (
               <div
                 className={`mt-6 flex items-start gap-2 rounded-[12px] border px-4 py-3 text-[13px] ${
@@ -551,15 +459,7 @@ export function AddStudentPage() {
                   </div>
                 </section>
               </div>
-            ) : (
-              !classesLoading &&
-              classes.length > 0 && (
-                <div className="mt-8 rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
-                  <BookOpen className="mx-auto size-8 text-[#a8a097]" />
-                  <p className="mt-3 text-[13px] font-medium">Chọn một lớp ở trên để quản lý học sinh</p>
-                </div>
-              )
-            )}
+            ) : null}
           </div>
         </section>
       </div>

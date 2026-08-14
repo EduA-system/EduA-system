@@ -6,6 +6,9 @@ import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
+import com.edua.beeduasystem.repository.repositories.ClassRepository;
+import com.edua.beeduasystem.repository.repositories.RefreshTokenRepository;
+import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
 import com.edua.beeduasystem.service.activitylog.ActivityLogService;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -29,7 +33,10 @@ import static org.mockito.Mockito.when;
 class PrincipalModeratorServiceTest {
 
     private AppUserRepository userRepository;
+    private ClassRepository classRepository;
     private UserRoleRepository userRoleRepository;
+    private TeacherGradeRepository teacherGradeRepository;
+    private RefreshTokenRepository refreshTokenRepository;
     private CurrentUserProvider currentUserProvider;
     private ActivityLogService activityLogService;
     private PrincipalModeratorService service;
@@ -37,11 +44,14 @@ class PrincipalModeratorServiceTest {
     @BeforeEach
     void setUp() {
         userRepository = mock(AppUserRepository.class);
+        classRepository = mock(ClassRepository.class);
         userRoleRepository = mock(UserRoleRepository.class);
+        teacherGradeRepository = mock(TeacherGradeRepository.class);
+        refreshTokenRepository = mock(RefreshTokenRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
         activityLogService = mock(ActivityLogService.class);
-        service = new PrincipalModeratorService(userRepository, userRoleRepository, currentUserProvider,
-                activityLogService);
+        service = new PrincipalModeratorService(userRepository, classRepository, userRoleRepository,
+                teacherGradeRepository, refreshTokenRepository, currentUserProvider, activityLogService);
     }
 
     @Test
@@ -55,7 +65,7 @@ class PrincipalModeratorServiceTest {
         when(currentUserProvider.requireUserId()).thenReturn(UUID.randomUUID());
         when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        AppUser result = service.replaceModerator(previous.id(), replacement.email(), false);
+        AppUser result = service.replaceModerator(previous.id(), replacement.email(), false, List.of(10, 11));
 
         ArgumentCaptor<AppUser> savedUsers = ArgumentCaptor.forClass(AppUser.class);
         verify(userRepository, times(2)).save(savedUsers.capture());
@@ -64,6 +74,8 @@ class PrincipalModeratorServiceTest {
         assertThat(result.id()).isEqualTo(replacement.id());
         verify(userRoleRepository).replaceRole(eq(previous.id()), eq(Role.TEACHER), any(), any());
         verify(userRoleRepository).replaceRole(eq(replacement.id()), eq(Role.MODERATOR), any(), any());
+        verify(teacherGradeRepository).replaceGrades(previous.id(), List.of(10, 11));
+        verify(teacherGradeRepository).replaceGrades(replacement.id(), List.of(10, 11, 12));
     }
 
     @Test
@@ -75,12 +87,26 @@ class PrincipalModeratorServiceTest {
         when(currentUserProvider.requireUserId()).thenReturn(UUID.randomUUID());
         when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.replaceModerator(previous.id(), "new@edua.vn", true);
+        service.replaceModerator(previous.id(), "new@edua.vn", true, null);
 
         ArgumentCaptor<AppUser> savedUsers = ArgumentCaptor.forClass(AppUser.class);
         verify(userRepository, times(2)).save(savedUsers.capture());
         assertThat(savedUsers.getAllValues().get(0).status()).isEqualTo(UserStatus.DISABLED);
         assertThat(savedUsers.getAllValues().get(1).status()).isEqualTo(UserStatus.INVITED);
+        verify(teacherGradeRepository).replaceGrades(savedUsers.getAllValues().get(1).id(), List.of(10, 11, 12));
+    }
+
+    @Test
+    void addModerator_assignsAllHighSchoolGrades() {
+        UUID principalId = UUID.randomUUID();
+        when(userRepository.existsActiveByRoleAndSubject(Role.MODERATOR, Subject.PHYSICS)).thenReturn(false);
+        when(userRepository.findByEmail("moderator@edua.vn")).thenReturn(Optional.empty());
+        when(currentUserProvider.requireUserId()).thenReturn(principalId);
+        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppUser saved = service.addModerator("moderator@edua.vn", "PHYSICS", "Moderator Vật lý");
+
+        verify(teacherGradeRepository).replaceGrades(saved.id(), List.of(10, 11, 12));
     }
 
     @Test
@@ -93,7 +119,7 @@ class PrincipalModeratorServiceTest {
         // Người thay thế phải là giáo viên/moderator thì mới đi tới bước kiểm tra cùng môn.
         when(userRoleRepository.findRolesByUserId(replacement.id())).thenReturn(Set.of(Role.TEACHER));
 
-        assertThatThrownBy(() -> service.replaceModerator(previous.id(), replacement.email(), false))
+        assertThatThrownBy(() -> service.replaceModerator(previous.id(), replacement.email(), false, List.of(10)))
                 .isInstanceOf(ForbiddenOperationException.class)
                 .hasMessageContaining("cùng môn");
     }

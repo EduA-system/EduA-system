@@ -172,7 +172,7 @@ public class AuthService {
     }
 
     private List<Integer> assignedGrades(UUID userId, Set<Role> roles) {
-        if (!roles.contains(Role.TEACHER)) {
+        if (!roles.contains(Role.TEACHER) && !roles.contains(Role.MODERATOR)) {
             return List.of();
         }
         return teacherGradeRepository.findGradesByUserIds(List.of(userId)).getOrDefault(userId, List.of());

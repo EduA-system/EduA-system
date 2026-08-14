@@ -25,7 +25,14 @@ export function ClassResourceLibraryRedirect() {
   useEffect(() => {
     if (missingParams) return;
     void getClassResourceLibraryContent(authFetch, classId, resourceId)
-      .then((content) => router.replace(`${paths[content.type]}?classId=${encodeURIComponent(classId)}&resourceId=${encodeURIComponent(resourceId)}`))
+      .then((content) => {
+        const isPhysicsSimulation =
+          content.type === "SIMULATION" && content.subject === "PHYSICS";
+        const path = isPhysicsSimulation
+          ? "/class-resource-physics-simulation"
+          : paths[content.type];
+        router.replace(`${path}?classId=${encodeURIComponent(classId)}&resourceId=${encodeURIComponent(resourceId)}`);
+      })
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Không thể mở tài nguyên từ thư viện."));
   }, [authFetch, classId, resourceId, router, missingParams]);
 

@@ -89,7 +89,8 @@ public class PrincipalController {
     public ModeratorDto replaceModerator(
             @PathVariable UUID id,
             @Valid @RequestBody ReplaceModeratorRequest request) {
-        var user = principalModeratorService.replaceModerator(id, request.replacementEmail(), request.disablePrevious());
+        var user = principalModeratorService.replaceModerator(
+                id, request.replacementEmail(), request.disablePrevious(), request.previousTeacherGrades());
         return ModeratorDto.from(user, null, null);
     }
 

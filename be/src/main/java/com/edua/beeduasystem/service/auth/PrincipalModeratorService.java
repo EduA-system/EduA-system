@@ -37,6 +37,8 @@ import java.util.stream.Collectors;
 @Service
 public class PrincipalModeratorService {
 
+    private static final List<Integer> ALL_HIGH_SCHOOL_GRADES = List.of(10, 11, 12);
+
     private final AppUserRepository userRepository;
     private final ClassRepository classRepository;
     private final UserRoleRepository userRoleRepository;
@@ -135,6 +137,7 @@ public class PrincipalModeratorService {
                     u.bio(), u.phoneNumber(),
                     subject, UserStatus.INVITED, u.createdAt(), u.lastLoginAt(), u.dateOfBirth()));
             assignRole(reactivated.id(), Role.MODERATOR, currentUserId, now);
+            teacherGradeRepository.replaceGrades(reactivated.id(), ALL_HIGH_SCHOOL_GRADES);
             activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                     ActivityLogAction.GRANT_MODERATOR, "APP_USER", reactivated.id(), null);
             return reactivated;
@@ -146,6 +149,7 @@ public class PrincipalModeratorService {
                 null, null, null, null,
                 subject, UserStatus.INVITED, now, null, null));
         assignRole(saved.id(), Role.MODERATOR, currentUserId, now);
+        teacherGradeRepository.replaceGrades(saved.id(), ALL_HIGH_SCHOOL_GRADES);
         activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.GRANT_MODERATOR, "APP_USER", saved.id(), null);
         return saved;
@@ -158,7 +162,7 @@ public class PrincipalModeratorService {
     }
 
     @Transactional
-    public AppUser replaceModerator(UUID id, String replacementEmail, boolean disablePrevious) {
+    public AppUser replaceModerator(UUID id, String replacementEmail, boolean disablePrevious, List<Integer> previousTeacherGrades) {
         AppUser currentModerator = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy moderator."));
         if (currentModerator.status() == UserStatus.DISABLED
@@ -193,7 +197,9 @@ public class PrincipalModeratorService {
         // Both updates share this transaction, so a failure restores the original moderator.
         userRepository.save(demotedModerator);
         assignRole(demotedModerator.id(), Role.TEACHER, currentUserId, now);
-        teacherGradeRepository.replaceGrades(demotedModerator.id(), List.of(10, 11, 12));
+        if (!disablePrevious) {
+            teacherGradeRepository.replaceGrades(demotedModerator.id(), requireGrades(previousTeacherGrades));
+        }
         if (previousStatus == UserStatus.DISABLED) {
             classRepository.archiveActiveByOwnerId(demotedModerator.id());
         }
@@ -201,6 +207,7 @@ public class PrincipalModeratorService {
 
         AppUser savedReplacement = userRepository.save(replacement);
         assignRole(savedReplacement.id(), Role.MODERATOR, currentUserId, now);
+        teacherGradeRepository.replaceGrades(savedReplacement.id(), ALL_HIGH_SCHOOL_GRADES);
         activityLogService.record(currentUserId, "PRINCIPAL", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.REPLACE_MODERATOR, "APP_USER", savedReplacement.id(),
                 "oldUserId=" + demotedModerator.id());
@@ -236,6 +243,18 @@ public class PrincipalModeratorService {
 
     private void assignRole(UUID userId, Role role, UUID grantedBy, Instant grantedAt) {
         userRoleRepository.replaceRole(userId, role, grantedBy, grantedAt);
+    }
+
+    private static List<Integer> requireGrades(List<Integer> grades) {
+        if (grades == null || grades.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn ít nhất một khối cho giáo viên.");
+        }
+        for (Integer grade : grades) {
+            if (grade == null || grade < 10 || grade > 12) {
+                throw new IllegalArgumentException("Khối chỉ được chọn 10, 11 hoặc 12.");
+            }
+        }
+        return grades.stream().distinct().sorted().toList();
     }
 
     private enum NoopRefreshTokenRepository implements RefreshTokenRepository {

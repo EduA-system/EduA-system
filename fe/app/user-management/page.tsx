@@ -286,6 +286,7 @@ function UserManagementContent() {
   // hết trang, `msg` render phía sau overlay sẽ vô hình, người dùng bấm xong tưởng không có gì xảy ra.
   const [replacementError, setReplacementError] = useState("");
   const [disablePrevious, setDisablePrevious] = useState(false);
+  const [previousTeacherGrades, setPreviousTeacherGrades] = useState<number[]>([10, 11, 12]);
   const [isReplacing, setIsReplacing] = useState(false);
 
   const loadModerators = useCallback(
@@ -410,6 +411,7 @@ function UserManagementContent() {
     setReplacementEmailTouched(false);
     setReplacementError("");
     setDisablePrevious(false);
+    setPreviousTeacherGrades([10, 11, 12]);
   }
 
   function closeReplacement() {
@@ -419,13 +421,13 @@ function UserManagementContent() {
 
   async function replaceModerator() {
     setReplacementEmailTouched(true);
-    if (!replacementTarget || emailError(replacementEmail)) return;
+    if (!replacementTarget || emailError(replacementEmail) || (!disablePrevious && previousTeacherGrades.length === 0)) return;
     setReplacementError("");
     setIsReplacing(true);
     try {
       await api(authFetch, `/principal/moderators/${replacementTarget.id}/replacement`, {
         method: "POST",
-        body: JSON.stringify({ replacementEmail, disablePrevious }),
+        body: JSON.stringify({ replacementEmail, disablePrevious, previousTeacherGrades: disablePrevious ? null : previousTeacherGrades }),
       });
       setReplacementTarget(null);
       setMsg("Đã thay Moderator.");
@@ -1120,6 +1122,12 @@ function UserManagementContent() {
               <input type="checkbox" checked={disablePrevious} onChange={(e) => setDisablePrevious(e.target.checked)} />
               Vô hiệu hoá tài khoản Moderator cũ sau khi chuyển thành Teacher
             </label>
+            {!disablePrevious && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium">Khối phụ trách của Teacher sau khi chuyển <span className="text-[#c2483c]">*</span></p>
+                <GradeCheckboxes value={previousTeacherGrades} onChange={setPreviousTeacherGrades} />
+              </div>
+            )}
             {replacementError && (
               <p className="mt-4 rounded-lg border border-[#f3c6bd] bg-[#fdeceb] px-3 py-2 text-sm text-[#c2483c]">{replacementError}</p>
             )}
@@ -1130,7 +1138,7 @@ function UserManagementContent() {
               <button
                 type="button"
                 onClick={replaceModerator}
-                disabled={isReplacing || !!emailError(replacementEmail)}
+                disabled={isReplacing || !!emailError(replacementEmail) || (!disablePrevious && previousTeacherGrades.length === 0)}
                 className="rounded-lg bg-[#1f1f1f] px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isReplacing ? "Đang thay..." : "Xác nhận thay"}

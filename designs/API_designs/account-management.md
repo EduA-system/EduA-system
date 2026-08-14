@@ -56,7 +56,20 @@ body: { email, subject, fullName? }
 
 - `subject` bắt buộc (Moderator phải gắn với một môn)
 - Tạo user mới: `role = MODERATOR`, `status = INVITED`, `granted_by = currentUserId`, `granted_at = now`
+- Moderator được tự động gán cả ba khối `10`, `11`, `12` trong `teacher_grades`, để có thể quản lý lớp của môn mình phụ trách.
 - Email được chuẩn hóa về lowercase trim
+
+### 2a. `POST /api/principal/moderators/{id}/replacement` — Thay Moderator
+
+```
+body: { replacementEmail, disablePrevious, previousTeacherGrades? }
+→ 200 ModeratorDto
+→ 400 previousTeacherGrades thiếu/rỗng khi disablePrevious = false
+```
+
+- Moderator thay thế tự động được gán khối `10`, `11`, `12`.
+- Nếu `disablePrevious = false`, Moderator cũ chuyển thành Teacher và bắt buộc chọn ít nhất một khối qua `previousTeacherGrades`.
+- Nếu `disablePrevious = true`, tài khoản cũ bị vô hiệu hóa; không nhận hoặc thay đổi phân công khối Teacher.
 
 ### 3. `DELETE /api/principal/moderators/{id}` — Thu hồi Moderator
 

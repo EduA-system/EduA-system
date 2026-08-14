@@ -37,12 +37,14 @@ public class LibraryContentService {
     @Transactional
     public LibraryViews.Detail create(String rawType, String title, String rawSubject, Integer grade, String textbookCode, String chapterCode, JsonNode payload, String thumbnailUrl) {
         LibraryContentType type = parseTypeRequired(rawType); Instant now = Instant.now();
+        requirePhysicsTeacherForPreset(type, payload);
         return toDetail(repository.save(new LibraryContent(UUID.randomUUID(), currentUser.requireUserId(), type, requiredTitle(title), parseSubject(rawSubject), cleanGrade(grade), cleanCode(textbookCode), cleanCode(chapterCode), LibraryContentStatus.PRIVATE, payload == null ? JsonNodeFactory.instance.objectNode() : payload, cleanUrl(thumbnailUrl), now, now, null, null, null, null, null, null)));
     }
     @Transactional
     public LibraryViews.Detail update(UUID id, String title, String rawSubject, boolean subjectProvided, Integer grade, boolean gradeProvided, String textbookCode, boolean textbookCodeProvided, String chapterCode, boolean chapterCodeProvided, JsonNode payload, boolean payloadProvided, String thumbnailUrl, boolean thumbnailProvided) {
         LibraryContent c = requireOwner(id);
         Subject resolvedSubject = subjectProvided ? parseSubject(rawSubject) : c.subject();
+        if (payloadProvided) requirePhysicsTeacherForPreset(c.type(), payload);
         if (resolvedSubject == null && c.status() == LibraryContentStatus.SUBMITTED) throw new IllegalArgumentException("Không thể bỏ trống môn học khi nội dung đang chờ duyệt.");
         return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(), title == null ? c.title() : requiredTitle(title), resolvedSubject, gradeProvided ? cleanGrade(grade) : c.grade(), textbookCodeProvided ? cleanCode(textbookCode) : c.textbookCode(), chapterCodeProvided ? cleanCode(chapterCode) : c.chapterCode(), c.status(), payloadProvided ? (payload == null ? JsonNodeFactory.instance.objectNode() : payload) : c.payload(), thumbnailProvided ? cleanUrl(thumbnailUrl) : c.thumbnailUrl(), c.createdAt(), Instant.now(), c.submittedAt(), null, c.reviewedBy(), c.reviewedAt(), c.rejectionReason(), c.version())));
     }
@@ -52,6 +54,9 @@ public class LibraryContentService {
     @Transactional
     public LibraryViews.Detail submit(UUID id) {
         LibraryContent c = requireOwner(id);
+        if (isPhysicsSimulation(c)) {
+            throw new ForbiddenOperationException("Mô phỏng Vật lý chỉ được lưu trong thư viện cá nhân, không thể gửi lên Community Hub.");
+        }
         if (c.status() != LibraryContentStatus.PRIVATE && c.status() != LibraryContentStatus.REJECTED) throw new StateConflictException("Only private or rejected content can be submitted for review.");
         if (c.subject() == null) throw new IllegalArgumentException("Nội dung chưa được gán môn học. Vui lòng chọn môn học trước khi gửi duyệt.");
         LibraryContent saved = repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.SUBMITTED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),Instant.now(),null,null,null,null,c.version()));
@@ -133,6 +138,16 @@ public class LibraryContentService {
         return prefix + reason.substring(0, reasonBudget) + suffix;
     }
     private static Integer cleanGrade(Integer grade) { if (grade == null) return null; if (grade < 10 || grade > 12) throw new IllegalArgumentException("Invalid grade. Allowed: 10, 11, 12."); return grade; }
+    private void requirePhysicsTeacherForPreset(LibraryContentType type, JsonNode payload) {
+        if (type != LibraryContentType.SIMULATION || payload == null || !"physics-preset".equals(payload.path("source").asText())) return;
+        var claims = currentUser.require();
+        if (!claims.roles().contains(Role.TEACHER) || claims.subject() != Subject.PHYSICS) {
+            throw new ForbiddenOperationException("Chỉ giáo viên Vật lý mới có thể lưu mô phỏng Vật lý vào thư viện cá nhân.");
+        }
+    }
+    private static boolean isPhysicsSimulation(LibraryContent content) {
+        return content.type() == LibraryContentType.SIMULATION && content.subject() == Subject.PHYSICS;
+    }
     private static LibraryContentType parseTypeRequired(String value) { LibraryContentType type = parseType(value); if(type == null) throw new IllegalArgumentException("Type is required. Allowed: LESSON_PLAN, SLIDE_DECK, TEST, SIMULATION."); return type; }
     private static LibraryContentType parseType(String value) { if(value == null || value.isBlank()) return null; try { return LibraryContentType.valueOf(value.trim().toUpperCase()); } catch(IllegalArgumentException e) { throw new IllegalArgumentException("Invalid type."); } }
     private static Subject parseSubject(String value) { if(value == null || value.isBlank()) return null; try { return Subject.valueOf(value.trim().toUpperCase()); } catch(IllegalArgumentException e) { throw new IllegalArgumentException("Invalid subject. Allowed: MATH, CHEMISTRY, PHYSICS."); } }

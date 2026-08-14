@@ -13,6 +13,8 @@ Principal  ──cấp/thu hồi──▶  Moderator (gắn với 1 subject)
                                     └──cấp/thu hồi──▶  Teacher (cùng subject)
 ```
 
+Moderator luôn được gán phạm vi khối 10, 11 và 12 của môn mình phụ trách. Khi thay Moderator, người thay thế nhận đủ ba khối tự động; Moderator cũ chỉ chọn lại khối khi tiếp tục hoạt động với role Teacher.
+
 - **Principal**: cấp/thu hồi Moderator, quản lý toàn hệ thống
 - **Moderator (Head of Subject)**: cấp/thu hồi Teacher **trong môn mình phụ trách**
 - **Teacher**: chỉ dùng tính năng, không cấp quyền

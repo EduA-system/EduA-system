@@ -10,8 +10,9 @@
  *   bản gốc bất khả xâm phạm, luôn revert được.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   ChevronLeft,
@@ -19,9 +20,13 @@ import {
   Pause,
   RotateCcw,
   CheckCircle2,
+  BookmarkPlus,
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { createLibraryContent, getLibraryContent } from "@/lib/library";
+import { getClassResourceLibraryContent } from "@/lib/classroom";
 import { ParamPanel } from "@/components/simulations/shared/param-panel";
 import {
   LandmarksPanel,
@@ -4168,11 +4173,80 @@ function DomainChip({
 /* ─────────────────────────── Trang chính ─────────────────────────── */
 
 export default function MoPhongHubPage() {
+  return (
+    <Suspense fallback={<main className="flex h-screen items-center justify-center bg-[#f5f1ec] text-sm text-[#6b6b6b]">Đang mở mô phỏng...</main>}>
+      <MoPhongHubContent />
+    </Suspense>
+  );
+}
+
+function MoPhongHubContent() {
+  const { user, authFetch } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const libraryId = searchParams.get("libraryId");
+  const classId = searchParams.get("classId");
+  const resourceId = searchParams.get("resourceId");
+  const isClassResource = Boolean(classId && resourceId);
+  const savedSimulationId = isClassResource ? resourceId : libraryId;
   const [selected, setSelected] = useState<Preset | null>(null);
   const [domainFilter, setDomainFilter] = useState<Set<Domain>>(
     new Set(DOMAINS),
   );
   const [query, setQuery] = useState("");
+  const [savingPresetId, setSavingPresetId] = useState<string | null>(null);
+  const [savedPresetIds, setSavedPresetIds] = useState<Set<string>>(new Set());
+  const [saveError, setSaveError] = useState("");
+  const [libraryOpenError, setLibraryOpenError] = useState("");
+
+  // Bản mở từ thư viện hoặc snapshot trong lớp là nội dung đã lưu; không cho lưu chồng thêm bản sao.
+  const canSaveToLibrary = !savedSimulationId && user?.roles.includes("TEACHER") === true && user.subject === "PHYSICS";
+
+  useEffect(() => {
+    if (!savedSimulationId) return;
+    let cancelled = false;
+    const contentRequest = isClassResource
+      ? getClassResourceLibraryContent(authFetch, classId!, resourceId!)
+      : getLibraryContent(authFetch, libraryId!);
+    void contentRequest
+      .then((content) => {
+        const payload = content.payload as { source?: unknown; presetId?: unknown } | undefined;
+        if (content.type !== "SIMULATION" || payload?.source !== "physics-preset" || typeof payload.presetId !== "string") {
+          if (!cancelled) setLibraryOpenError("Nội dung đã lưu không phải là mô phỏng Vật lý hợp lệ.");
+          return;
+        }
+        const preset = PRESETS.find((item) => item.id === payload.presetId);
+        if (preset && !cancelled) setSelected(preset);
+        else if (!cancelled) setLibraryOpenError("Không tìm thấy preset của mô phỏng đã lưu.");
+      })
+      .catch((reason: unknown) => { if (!cancelled) setLibraryOpenError(reason instanceof Error ? reason.message : "Không thể mở mô phỏng đã lưu."); });
+    return () => { cancelled = true; };
+  }, [authFetch, classId, isClassResource, libraryId, resourceId, savedSimulationId]);
+
+  const saveToLibrary = async (preset: Preset) => {
+    if (!canSaveToLibrary || savingPresetId || savedPresetIds.has(preset.id)) return;
+    setSavingPresetId(preset.id);
+    setSaveError("");
+    try {
+      await createLibraryContent(authFetch, {
+        type: "SIMULATION",
+        title: preset.title,
+        subject: "PHYSICS",
+        grade: preset.grade,
+        payload: {
+          source: "physics-preset",
+          presetId: preset.id,
+          kind: preset.kind,
+          params: Object.fromEntries(preset.params.map((param) => [param.key, param.default])),
+        },
+      });
+      setSavedPresetIds((ids) => new Set(ids).add(preset.id));
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Không thể lưu mô phỏng vào thư viện.");
+    } finally {
+      setSavingPresetId(null);
+    }
+  };
 
   const toggleDomain = (d: Domain) => {
     setDomainFilter((prev) => {
@@ -4203,8 +4277,24 @@ export default function MoPhongHubPage() {
     ? PRESETS.find((preset) => preset.id === selected.id) ?? selected
     : null;
 
+  const handleBack = () => {
+    if (isClassResource) {
+      router.back();
+      return;
+    }
+    if (libraryId) {
+      router.push("/library");
+      return;
+    }
+    setSelected(null);
+  };
+
+  if (savedSimulationId && !currentSelected && !libraryOpenError) {
+    return <main className="flex h-screen items-center justify-center bg-[#f5f1ec] text-sm text-[#6b6b6b]">Đang mở mô phỏng đã lưu...</main>;
+  }
+
   if (currentSelected)
-    return <DetailView preset={currentSelected} onBack={() => setSelected(null)} />;
+    return <DetailView preset={currentSelected} onBack={handleBack} canSaveToLibrary={canSaveToLibrary} onSaveToLibrary={saveToLibrary} saving={savingPresetId === currentSelected.id} saved={savedPresetIds.has(currentSelected.id)} />;
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
@@ -4266,12 +4356,13 @@ export default function MoPhongHubPage() {
         {/* Library grid */}
         <div className="min-h-0 flex-1 overflow-y-auto p-8">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {(saveError || libraryOpenError) && <p className="col-span-full rounded-[12px] border border-[#f3c6bd] bg-[#fff4f1] px-4 py-3 text-[13px] text-[#c2483c]">{saveError || libraryOpenError}</p>}
             {presets.map((sim) => (
-              <button
+              <div
                 key={sim.id}
-                onClick={() => setSelected(sim)}
                 className="group overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-white text-left shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[#d97757] hover:shadow-md"
               >
+                <button type="button" onClick={() => setSelected(sim)} className="block w-full text-left">
                 <div className="aspect-[5/3] w-full overflow-hidden bg-[#0f172a] p-2.5">
                   <div className="relative h-full w-full overflow-hidden rounded-[10px]">
                     <Thumb id={sim.id} />
@@ -4302,7 +4393,16 @@ export default function MoPhongHubPage() {
                     {sim.desc}
                   </p>
                 </div>
-              </button>
+                </button>
+                {canSaveToLibrary && (
+                  <div className="px-5 pb-5">
+                    <button type="button" onClick={() => void saveToLibrary(sim)} disabled={savingPresetId === sim.id || savedPresetIds.has(sim.id)} className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[10px] border border-[#d8d1c9] text-[12px] font-semibold text-[#4f4943] transition hover:border-[#d97757] hover:text-[#c96545] disabled:cursor-not-allowed disabled:border-emerald-200 disabled:bg-emerald-50 disabled:text-emerald-700">
+                      <BookmarkPlus className="size-3.5" />
+                      {savedPresetIds.has(sim.id) ? "Đã lưu vào thư viện" : savingPresetId === sim.id ? "Đang lưu..." : "Lưu vào thư viện cá nhân"}
+                    </button>
+                  </div>
+                )}
+              </div>
             ))}
 
             {placeholders.map((sim) => (
@@ -4602,9 +4702,17 @@ function LegacyExperimentLayout({ children }: { children: ReactNode }) {
 function DetailView({
   preset,
   onBack,
+  canSaveToLibrary,
+  onSaveToLibrary,
+  saving,
+  saved,
 }: {
   preset: Preset;
   onBack: () => void;
+  canSaveToLibrary: boolean;
+  onSaveToLibrary: (preset: Preset) => Promise<void>;
+  saving: boolean;
+  saved: boolean;
 }) {
   if (preset.id === "nut-bac-bat-noi-nang-thanh-cong")
     return (
@@ -4696,14 +4804,22 @@ function DetailView({
     return (
       <ElectromagneticInductionExperiment preset={preset} onBack={onBack} />
     );
-  return <GenericDetailView preset={preset} onBack={onBack} />;
+  return <GenericDetailView preset={preset} onBack={onBack} canSaveToLibrary={canSaveToLibrary} onSaveToLibrary={onSaveToLibrary} saving={saving} saved={saved} />;
 }
 function GenericDetailView({
   preset,
   onBack,
+  canSaveToLibrary,
+  onSaveToLibrary,
+  saving,
+  saved,
 }: {
   preset: Preset;
   onBack: () => void;
+  canSaveToLibrary: boolean;
+  onSaveToLibrary: (preset: Preset) => Promise<void>;
+  saving: boolean;
+  saved: boolean;
 }) {
   const baseParams = Object.fromEntries(
     preset.params.map((p) => [p.key, p.default]),
@@ -4886,8 +5002,14 @@ function GenericDetailView({
           <span className="text-[14px] font-semibold text-[#171717]">
             {preset.title}
           </span>
+          {canSaveToLibrary && (
+            <button type="button" onClick={() => void onSaveToLibrary(preset)} disabled={saving || saved} className="ml-auto inline-flex items-center gap-1.5 rounded-[10px] border border-[#d8d1c9] px-3 py-1.5 text-[12px] font-semibold text-[#4f4943] transition hover:border-[#d97757] hover:text-[#c96545] disabled:cursor-not-allowed disabled:border-emerald-200 disabled:bg-emerald-50 disabled:text-emerald-700">
+              <BookmarkPlus className="size-3.5" />
+              {saved ? "Đã lưu" : saving ? "Đang lưu..." : "Lưu vào thư viện"}
+            </button>
+          )}
           <span
-            className={`ml-auto flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium ${
+            className={`${canSaveToLibrary ? "" : "ml-auto "}flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium ${
               edited
                 ? "bg-amber-100 text-amber-700"
                 : "bg-emerald-100 text-emerald-700"

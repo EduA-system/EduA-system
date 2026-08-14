@@ -194,7 +194,12 @@ function LibraryScreen() {
     return () => clearTimeout(timer);
   }, [load]);
 
-  const open = (content: LibraryContent) => `${paths[content.type]}?libraryId=${content.id}`;
+  const open = (content: LibraryContent) => {
+    if (content.type === "SIMULATION" && content.subject === "PHYSICS") {
+      return `/mo-phong-vat-ly?libraryId=${encodeURIComponent(content.id)}`;
+    }
+    return `${paths[content.type]}?libraryId=${encodeURIComponent(content.id)}`;
+  };
   const openRename = (content: LibraryContent) => {
     setMenuId(null);
     setName(content.title);
@@ -281,6 +286,7 @@ function LibraryScreen() {
               const weeklyStatus = content.type === "LESSON_PLAN" ? weeklyTaskStatusMeta(weeklyTaskStatus) : null;
               const WeeklyStatusIcon = weeklyStatus?.icon;
               const grade = gradeLabel(content.grade);
+              const isPhysicsSimulation = content.type === "SIMULATION" && content.subject === "PHYSICS";
               return <article key={content.id} className="group relative min-w-0 rounded-[26px] border border-[#dfe7eb] bg-white shadow-[0_8px_24px_rgba(43,41,38,0.10)] transition duration-200 hover:-translate-y-1 hover:border-[#cbdde4] hover:shadow-[0_14px_30px_rgba(43,41,38,0.16)]">
                 <div className="flex h-full flex-col overflow-visible rounded-[26px] bg-[#f8fbfc] p-3">
                   <div className="flex items-center gap-2 px-1 pb-3">
@@ -289,8 +295,8 @@ function LibraryScreen() {
                       <p className="min-w-0 truncate text-sm font-bold text-[#363a43]">{meta.label} {subjectLabel(content.subject)}</p>
                       {grade && <span className="shrink-0 rounded-full bg-[#edf4ff] px-2 py-1 text-[10px] font-semibold text-[#2f5f9b]">{grade}</span>}
                     </div>
-                    <span title={hubStatus.title} className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-semibold ${hubStatus.className}`}><hubStatus.icon className="size-3.5" />Hub: {hubStatus.label}</span>
-                    {content.status !== "APPROVED" && <div className="group/approval relative"><button type="button" aria-label={content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"} onClick={() => requestAction(content, content.status === "SUBMITTED" ? "unsubmit" : "submit")} className="flex size-9 items-center justify-center rounded-xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900">{content.status === "SUBMITTED" ? <Undo2 className="size-4" /> : <Send className="size-4" />}</button><span role="tooltip" className="pointer-events-none absolute right-0 top-11 z-20 w-max max-w-48 rounded-lg bg-[#292d3b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition group-hover/approval:opacity-100">{content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"}</span></div>}
+                    {!isPhysicsSimulation && <span title={hubStatus.title} className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-semibold ${hubStatus.className}`}><hubStatus.icon className="size-3.5" />Hub: {hubStatus.label}</span>}
+                    {!isPhysicsSimulation && content.status !== "APPROVED" && <div className="group/approval relative"><button type="button" aria-label={content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"} onClick={() => requestAction(content, content.status === "SUBMITTED" ? "unsubmit" : "submit")} className="flex size-9 items-center justify-center rounded-xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900">{content.status === "SUBMITTED" ? <Undo2 className="size-4" /> : <Send className="size-4" />}</button><span role="tooltip" className="pointer-events-none absolute right-0 top-11 z-20 w-max max-w-48 rounded-lg bg-[#292d3b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition group-hover/approval:opacity-100">{content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"}</span></div>}
                   </div>
                   <Link href={open(content)} aria-label={`Mở ${content.title}`} className={`relative block aspect-[16/7] overflow-hidden rounded-2xl border border-[#d7e6eb] bg-gradient-to-br ${meta.color}`}>
                     {content.thumbnailUrl ? <img src={content.thumbnailUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" /> : <div className="flex h-full flex-col items-center justify-center gap-4 text-[#275c68]"><span className="flex size-20 items-center justify-center rounded-[28px] bg-white/60 shadow-sm"><Icon aria-hidden className="size-10" /></span><span className="text-xs font-bold uppercase tracking-[0.2em]">{meta.label}</span></div>}

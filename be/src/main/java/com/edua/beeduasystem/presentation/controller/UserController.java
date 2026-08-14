@@ -51,7 +51,7 @@ public class UserController {
                 request.bio(),
                 request.phoneNumber(),
                 request.dateOfBirth());
-        List<Integer> grades = result.roles().contains(Role.TEACHER)
+        List<Integer> grades = (result.roles().contains(Role.TEACHER) || result.roles().contains(Role.MODERATOR))
                 ? teacherGradeRepository.findGradesByUserIds(List.of(result.user().id())).getOrDefault(result.user().id(), List.of())
                 : List.of();
         return UserDto.from(result.user(), result.roles(), grades);
