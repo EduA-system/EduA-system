@@ -25,6 +25,12 @@ type BlogDraft = {
   coverImageUrl: string | null;
 };
 
+type FormErrors = {
+  cover?: string;
+  content?: string;
+  title?: string;
+};
+
 function readStoredDraft(userId: string): BlogDraft | null {
   if (typeof window === "undefined") return null;
   const saved = window.localStorage.getItem(draftStorageKey(userId));
@@ -81,7 +87,8 @@ function CreateBlogPostForm() {
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(() => storedDraft?.coverImageUrl ?? null);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [submitError, setSubmitError] = useState("");
   const [draftRestored, setDraftRestored] = useState(() => Boolean(storedDraft));
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -103,27 +110,31 @@ function CreateBlogPostForm() {
   async function handleCoverFile(file: File | undefined) {
     if (!file) return;
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      setError("Ảnh đại diện chỉ hỗ trợ định dạng PNG, JPG hoặc WebP.");
+      setErrors((current) => ({ ...current, cover: "Ảnh đại diện chỉ hỗ trợ định dạng PNG, JPG hoặc WebP." }));
       return;
     }
     setUploadingCover(true);
-    setError("");
+    setErrors((current) => ({ ...current, cover: undefined }));
     try {
       setCoverImageUrl(await uploadFile(authFetch, await optimizeBlogCover(file)));
     } catch (err) {
-      setError(String(err));
+      setErrors((current) => ({ ...current, cover: String(err) }));
     } finally {
       setUploadingCover(false);
     }
   }
 
   async function handleSubmit() {
-    if (!title.trim() || !content.trim()) {
-      setError("Vui lòng nhập tiêu đề và nội dung.");
+    const validationErrors: FormErrors = {
+      title: title.trim() ? undefined : "Vui lòng nhập tiêu đề bài viết.",
+      content: content.trim() ? undefined : "Vui lòng nhập nội dung bài viết.",
+    };
+    if (validationErrors.title || validationErrors.content) {
+      setErrors((current) => ({ ...current, ...validationErrors }));
       return;
     }
     setSubmitting(true);
-    setError("");
+    setSubmitError("");
     try {
       // Bản nháp trong localStorage có thể mang môn cũ (lưu trước khi tài khoản được
       // đổi/gán môn), nên chốt lại theo chuyên môn hiện tại ngay lúc gửi.
@@ -135,7 +146,7 @@ function CreateBlogPostForm() {
       if (userId) window.localStorage.removeItem(draftStorageKey(userId));
       router.push("/blog?toast=created");
     } catch (err) {
-      setError(String(err));
+      setSubmitError(String(err));
     } finally {
       setSubmitting(false);
     }
@@ -176,7 +187,8 @@ function CreateBlogPostForm() {
               <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_260px]">
                 <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Tiêu đề</span>
-              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Nhập tiêu đề bài viết..." className="mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] placeholder:text-[#c0c1d0] focus:outline-none" />
+              <input value={title} onChange={(event) => { setTitle(event.target.value); setErrors((current) => ({ ...current, title: undefined })); }} placeholder="Nhập tiêu đề bài viết..." aria-invalid={Boolean(errors.title)} aria-describedby={errors.title ? "blog-title-error" : undefined} className="mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] placeholder:text-[#c0c1d0] focus:outline-none" />
+              {errors.title && <p id="blog-title-error" className="mt-1.5 text-[13px] text-red-600" role="alert">{errors.title}</p>}
                 </label>
 
                 <label className="block">
@@ -199,6 +211,7 @@ function CreateBlogPostForm() {
                 {coverImageUrl ? <div className="flex flex-col items-center gap-3 sm:flex-row sm:text-left"><img src={coverImageUrl} alt="Ảnh đại diện bài viết" className="h-20 w-32 rounded-lg object-cover" /><div className="text-[12px] text-[#4a4b5e]"><p>Ảnh đại diện đã sẵn sàng.</p><div className="mt-2 flex justify-center gap-3 sm:justify-start"><button type="button" onClick={() => fileRef.current?.click()} className="font-semibold text-[#7661b3] underline">Đổi ảnh</button><button type="button" onClick={() => setCoverImageUrl(null)} className="font-semibold text-[#b45309] underline">Xóa ảnh</button></div></div></div> : <div className="flex h-20 flex-col items-center justify-center gap-2 text-[12px] text-[#9b9caf]">{uploadingCover ? "Đang tải ảnh..." : <>Kéo thả ảnh PNG/JPG hoặc <button type="button" onClick={() => fileRef.current?.click()} className="font-semibold text-[#f5a623]">chọn file</button></>}</div>}
                 <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => { void handleCoverFile(event.target.files?.[0]); event.target.value = ""; }} />
               </div>
+              {errors.cover && <p className="mt-1.5 text-[13px] text-red-600" role="alert">{errors.cover}</p>}
               </div>
             </div>
 
@@ -209,16 +222,17 @@ function CreateBlogPostForm() {
                 <RichEditor
                   authFetch={authFetch}
                   initialContent={initialEditorContent}
-                  onChange={setContent}
-                  onUploadError={setError}
+                  onChange={(value) => { setContent(value); setErrors((current) => ({ ...current, content: undefined })); }}
+                  onUploadError={(message) => setErrors((current) => ({ ...current, content: message }))}
                   stickyToolbar
                   heightClassName="min-h-[calc(100vh-380px)]"
                   editorClassName="bg-white px-6 py-8 text-[16px] shadow-[0_1px_2px_rgba(43,41,38,0.06),0_4px_14px_rgba(43,41,38,0.05)] sm:px-12 sm:py-12"
                 />
               </div>
+              {errors.content && <p className="mt-1.5 text-[13px] text-red-600" role="alert">{errors.content}</p>}
             </div>
 
-            {error && <p className="mt-4 text-[13px] text-red-600">{error}</p>}
+            {submitError && <p className="mt-4 text-[13px] text-red-600" role="alert">{submitError}</p>}
 
             <div className="mt-7 flex items-center justify-between border-t border-[#eaeae7] pt-5">
               <p className="text-[12px] text-[#9b9caf]">Tự động lưu bản nháp trên thiết bị này.</p>

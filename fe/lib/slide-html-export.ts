@@ -1,4 +1,5 @@
 import { CANVAS_H, CANVAS_W, type DashStyle, type Slide, type SlideElement } from "@/components/slide-editor/types";
+import { normalizedLetterSpacing } from "@/components/slide-editor/lib/text-spacing";
 
 export type HtmlExportWarning = { source: string; reason: string };
 export type OfflineHtmlExport = { html: string; warnings: HtmlExportWarning[] };
@@ -25,7 +26,7 @@ function baseStyle(element: SlideElement): string {
 function textHtml(element: Extract<SlideElement, { type: "text" }>): string {
   const text = escapeHtml(element.text).replace(/\n/g, "<br>");
   const decoration = [element.underline && "underline", element.strikethrough && "line-through"].filter(Boolean).join(" ") || "none";
-  const style = `${baseStyle(element)}display:flex;align-items:${element.listStyle ? "flex-start" : "center"};justify-content:${element.align === "center" ? "center" : element.align === "right" ? "flex-end" : "flex-start"};box-sizing:border-box;padding:4px 0;overflow:visible;background:${css(element.textBg)};font-family:${css(element.fontFamily)};font-size:${element.fontSize}px;font-weight:${element.bold ? 700 : 400};font-style:${element.italic ? "italic" : "normal"};text-decoration:${decoration};color:${css(element.color)};text-align:${element.align};line-height:${element.lineHeight ?? 1.2};letter-spacing:${element.letterSpacing ?? 0}px;text-transform:${element.textTransform === "capitalize-words" ? "capitalize" : element.textTransform ?? "none"};text-shadow:${css(element.textShadow)};white-space:pre-wrap;overflow-wrap:anywhere;`;
+  const style = `${baseStyle(element)}display:flex;align-items:${element.listStyle ? "flex-start" : "center"};justify-content:${element.align === "center" ? "center" : element.align === "right" ? "flex-end" : "flex-start"};box-sizing:border-box;padding:4px 0;overflow:visible;background:${css(element.textBg)};font-family:${css(element.fontFamily)};font-size:${element.fontSize}px;font-weight:${element.bold ? 700 : 400};font-style:${element.italic ? "italic" : "normal"};text-decoration:${decoration};color:${css(element.color)};text-align:${element.align};line-height:${element.lineHeight ?? 1.2};letter-spacing:${normalizedLetterSpacing(element.letterSpacing)}px;text-transform:${element.textTransform === "capitalize-words" ? "capitalize" : element.textTransform ?? "none"};text-shadow:${css(element.textShadow)};white-space:pre-wrap;overflow-wrap:anywhere;`;
   return `<div style="${style}">${text}</div>`;
 }
 

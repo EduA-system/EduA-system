@@ -1,4 +1,5 @@
 import type { ElementPatch, TextElement } from "../types";
+import { normalizedLetterSpacing } from "./text-spacing";
 
 const MIN_TEXT_BOX_HEIGHT = 24;
 
@@ -25,7 +26,7 @@ function applyTextStyles(node: HTMLElement, el: TextElement, width: number) {
     fontWeight: el.bold ? "700" : "400",
     fontStyle: el.italic ? "italic" : "normal",
     lineHeight: String(el.lineHeight ?? 1.2),
-    letterSpacing: el.letterSpacing != null ? `${el.letterSpacing}px` : "normal",
+    letterSpacing: `${normalizedLetterSpacing(el.letterSpacing)}px`,
     textAlign: el.align,
     textTransform: textTransformValue(el),
     whiteSpace: "pre-wrap",

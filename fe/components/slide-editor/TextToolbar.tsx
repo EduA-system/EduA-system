@@ -10,6 +10,7 @@ import { AlignIcon, Chevron, LineSpacingIcon, ListIcon, OpacityIcon, Sep, ToolBt
 import { ColorPicker } from "./ColorPicker";
 import { Popover } from "./Popover";
 import { ensureTextBoxHeight } from "./lib/text-box";
+import { normalizedLetterSpacing } from "./lib/text-spacing";
 
 type Upd = (patch: ElementPatch) => void;
 
@@ -246,7 +247,7 @@ export function TextToolbar({ el, upd, onOpenProperties }: { el: TextElement; up
         triggerContent={<LineSpacingIcon />}
       >
         <SliderRow label="Giãn dòng" value={el.lineHeight ?? 1.2} min={0.5} max={3} step={0.1} fmt={(v) => v.toFixed(1)} onChange={(v) => updateText({ lineHeight: v })} />
-        <SliderRow label="Giãn chữ" value={el.letterSpacing ?? 0} min={-5} max={20} step={0.5} fmt={(v) => v.toFixed(1)} onChange={(v) => updateText({ letterSpacing: v })} />
+        <SliderRow label="Giãn chữ" value={normalizedLetterSpacing(el.letterSpacing)} min={-2} max={5} step={0.5} fmt={(v) => v.toFixed(1)} onChange={(v) => updateText({ letterSpacing: v })} />
       </Popover>
 
       {/* Độ trong suốt */}

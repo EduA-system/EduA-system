@@ -278,6 +278,10 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   }
 
   async function deletePost(id: string) {
+    // A detail request may still be in flight while its author deletes the post.
+    // Invalidate it first so its expected 404 cannot replace the self-delete toast
+    // with the moderator-removal message.
+    detailLoadSeqRef.current += 1;
     try { await api(authFetch, `/blog-posts/${id}`, { method: "DELETE" }); setPostToDelete(null); setDetail(null); router.push("/blog?toast=deleted"); await loadPosts(activeSubjectFilter); }
     catch (e) {
       if (e instanceof Error && e.message.includes("Blog post not found")) { handleModeratorRemoved(); return; }

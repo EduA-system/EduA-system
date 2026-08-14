@@ -8,6 +8,7 @@
 import { useLayoutEffect, useRef } from "react";
 import type { TextElement } from "./types";
 import { textBoxMinHeight } from "./lib/text-box";
+import { normalizedLetterSpacing } from "./lib/text-spacing";
 
 export function InlineTextEditor({
   el,
@@ -83,7 +84,7 @@ export function InlineTextEditor({
           color: el.color,
           textAlign: el.align,
           lineHeight: el.lineHeight ?? 1.2,
-          letterSpacing: el.letterSpacing != null ? `${el.letterSpacing}px` : undefined,
+          letterSpacing: `${normalizedLetterSpacing(el.letterSpacing)}px`,
           overflow: "visible",
           boxSizing: "border-box",
         }}

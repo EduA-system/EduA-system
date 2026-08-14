@@ -211,6 +211,15 @@ body::-webkit-scrollbar {
   word-break: break-word;
 }
 
+/* Nội dung cũ có thể đã lưu `font-family: Georgia`. Không dùng font cài trên
+   máy để tránh lỗi glyph tiếng Việt; biến này là Merriweather do next/font tự host. */
+.lesson-document-editor [style*="font-family: Georgia"],
+.lesson-document-editor [style*="font-family:Georgia"],
+.tiptap [style*="font-family: Georgia"],
+.tiptap [style*="font-family:Georgia"] {
+  font-family: var(--font-serif-vietnamese), Georgia, serif !important;
+}
+
 .lesson-document-editor:focus {
   outline: none;
 }

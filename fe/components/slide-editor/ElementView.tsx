@@ -7,6 +7,7 @@ import { ELEMENTS } from "@/components/periodic-table/data";
 import { CATEGORY_COLORS } from "@/components/periodic-table/types";
 import type { Element as PeriodicElement } from "@/components/periodic-table/types";
 import { defaultPeriodicSimulationElement } from "./lib/periodic-selection";
+import { normalizedLetterSpacing } from "./lib/text-spacing";
 
 const MoleculeViewer = dynamic(
   () => import("@/components/molecules/MoleculeViewer").then((m) => m.MoleculeViewer),
@@ -386,7 +387,7 @@ export function ElementView({
       color: el.color,
       textAlign: el.align,
       lineHeight: el.lineHeight ?? 1.2,
-      letterSpacing: el.letterSpacing != null ? `${el.letterSpacing}px` : undefined,
+      letterSpacing: `${normalizedLetterSpacing(el.letterSpacing)}px`,
       textTransform: cssTransform as CSSProperties["textTransform"],
       textShadow: el.textShadow,
       wordBreak: "break-word",

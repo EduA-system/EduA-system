@@ -44,8 +44,10 @@ export function createEditorExtensions(options: {
     // Cho phép set màu highlight tuỳ ý (hiliteColor cũ).
     Highlight.configure({ multicolor: true }),
     TextAlign.configure({ types: ["heading", "paragraph"] }),
-    Subscript,
-    Superscript,
+    // Một ký tự không thể vừa là chỉ số trên vừa là chỉ số dưới. Khai báo loại trừ
+    // ở schema để quy tắc này áp dụng cả khi dùng toolbar lẫn phím tắt.
+    Subscript.extend({ excludes: "superscript" }),
+    Superscript.extend({ excludes: "subscript" }),
     // Table + TableRow + TableHeader + TableCell.
     TableKit.configure({ table: { resizable: true } }),
     // Bôi đen cả bảng + Backspace/Delete → xoá cả bảng (như Google Docs).

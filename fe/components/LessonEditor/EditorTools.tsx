@@ -17,7 +17,15 @@ const TEXT_STYLES = [
 type BlockType = (typeof TEXT_STYLES)[number]["value"];
 
 const FONT_SIZES = [11, 12, 13, 14, 16, 18, 24];
-const FONT_FAMILIES = ["Arial", "Inter", "Times New Roman", "Georgia", "Verdana"] as const;
+// Không dùng trực tiếp Georgia cài trên máy vì một số bản thiếu/bị lỗi glyph tiếng Việt.
+// Merriweather là serif Việt hóa được Next tự host qua --font-serif-vietnamese.
+const FONT_FAMILIES = [
+  { label: "Arial", value: "Arial, var(--font-inter), sans-serif" },
+  { label: "Inter", value: "var(--font-inter), Inter, Arial, sans-serif" },
+  { label: "Times New Roman", value: '"Times New Roman", var(--font-inter), serif' },
+  { label: "Georgia (Việt hóa)", value: "var(--font-serif-vietnamese), Georgia, serif" },
+  { label: "Verdana", value: "Verdana, var(--font-inter), sans-serif" },
+] as const;
 const ALIGN_OPTIONS = [
   { value: "left", label: "Căn trái", icon: AlignLeftIcon },
   { value: "center", label: "Căn giữa", icon: AlignCenterIcon },
@@ -214,7 +222,7 @@ export function EditorTools({
         openMenu={openMenu}
         setOpenMenu={setOpenMenu}
         value={state.fontFamily}
-        options={FONT_FAMILIES.map((font) => ({ label: font, value: font }))}
+        options={[...FONT_FAMILIES]}
         widthClass="w-[150px] shrink-0"
         onSelect={applyFontFamily}
       />
@@ -472,7 +480,9 @@ function TextDropdown<T extends string | number>({
   placeholder?: string;
   onSelect: (value: T) => void;
 }) {
-  const selected = options.find((option) => option.value === value);
+  // Các bài cũ lưu tên font đơn lẻ (ví dụ "Georgia"), còn bài mới lưu font stack.
+  // Nhận cả hai định dạng để toolbar vẫn hiển thị đúng lựa chọn.
+  const selected = options.find((option) => option.value === value || option.label === value || (option.label === "Georgia (Việt hóa)" && value === "Georgia"));
   const isOpen = openMenu === menuId;
 
   return (
@@ -491,7 +501,7 @@ function TextDropdown<T extends string | number>({
       {isOpen ? (
         <div className="absolute left-0 top-full z-[60] mt-1 min-w-full overflow-hidden rounded-lg border border-[#e8e2d9] bg-white p-1 shadow-[0_8px_24px_rgba(43,41,38,0.12)]">
           {options.map((option) => {
-            const active = option.value === value;
+            const active = option.value === value || option.label === value || (option.label === "Georgia (Việt hóa)" && value === "Georgia");
 
             return (
               <button
