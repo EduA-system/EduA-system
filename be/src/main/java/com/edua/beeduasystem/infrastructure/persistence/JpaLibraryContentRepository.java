@@ -29,16 +29,25 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
         e.setId(c.id()); e.setOwnerId(c.ownerId()); e.setType(c.type()); e.setTitle(c.title()); e.setSubject(c.subject()); e.setGrade(c.grade());
         e.setTextbookCode(c.textbookCode()); e.setChapterCode(c.chapterCode());
         e.setStatus(c.status()); e.setPayload(c.payload()); e.setThumbnailUrl(c.thumbnailUrl()); e.setCreatedAt(c.createdAt()); e.setUpdatedAt(c.updatedAt()); e.setSubmittedAt(c.submittedAt()); e.setDeletedAt(c.deletedAt());
-        e.setReviewedBy(c.reviewedBy()); e.setReviewedAt(c.reviewedAt()); e.setRejectionReason(c.rejectionReason());
+        e.setReviewedBy(c.reviewedBy()); e.setReviewedAt(c.reviewedAt()); e.setRejectionReason(c.rejectionReason()); e.setSourceLibraryContentId(c.sourceLibraryContentId());
         return toDomain(jpa.save(e));
     }
     @Override @Transactional(readOnly = true) public Optional<LibraryContent> findActiveById(UUID id) {
         return jpa.findById(id).filter(e -> e.getDeletedAt() == null).map(JpaLibraryContentRepository::toDomain);
     }
+    @Override @Transactional(readOnly = true) public List<LibraryContent> findActiveSnapshotsBySourceId(UUID sourceLibraryContentId) {
+        return jpa.findBySourceLibraryContentIdAndDeletedAtIsNull(sourceLibraryContentId).stream()
+                .map(JpaLibraryContentRepository::toDomain)
+                .toList();
+    }
+    @Override @Transactional(readOnly = true) public boolean hasAnySnapshotBySourceId(UUID sourceLibraryContentId) {
+        return jpa.existsBySourceLibraryContentId(sourceLibraryContentId);
+    }
     @Override @Transactional(readOnly = true) public Optional<LibraryContent> findApprovedForHubById(UUID id) {
         return jpa.findById(id)
                 .filter(e -> e.getStatus() == LibraryContentStatus.APPROVED)
                 .filter(e -> e.getDeletedAt() == null)
+                .filter(e -> e.getSourceLibraryContentId() != null || !jpa.existsBySourceLibraryContentId(e.getId()))
                 .map(JpaLibraryContentRepository::toDomain);
     }
     @Override @Transactional(readOnly = true) public SummarySearchResult searchSummaries(UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, boolean titleAscending) {
@@ -79,7 +88,7 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
         @SuppressWarnings("unchecked")
         List<Object[]> rows = feedQuery.getResultList();
 
-        Query countQuery = entityManager.createNativeQuery("SELECT COUNT(*) FROM library_contents lc" + where);
+        Query countQuery = entityManager.createNativeQuery("SELECT COUNT(*) FROM library_contents lc " + where);
         bindApprovedHubFilters(countQuery, type, subject, q);
         long total = ((Number) countQuery.getSingleResult()).longValue();
         return new HubSearchResult(rows.stream().map(JpaLibraryContentRepository::toHubContentSummary).toList(), total);
@@ -109,7 +118,10 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
     private static List<Predicate> summaryPredicates(jakarta.persistence.criteria.CriteriaBuilder cb, jakarta.persistence.criteria.Root<LibraryContentEntity> root, UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, LibraryContentStatus status) {
         List<Predicate> predicates = new ArrayList<>();
         predicates.add(cb.isNull(root.get("deletedAt")));
-        if (ownerId != null) predicates.add(cb.equal(root.get("ownerId"), ownerId));
+        if (ownerId != null) {
+            predicates.add(cb.equal(root.get("ownerId"), ownerId));
+            predicates.add(cb.isNull(root.get("sourceLibraryContentId")));
+        }
         if (type != null) predicates.add(cb.equal(root.get("type"), type));
         if (subject != null) predicates.add(cb.equal(root.get("subject"), subject));
         if (grade != null) predicates.add(cb.equal(root.get("grade"), grade));
@@ -120,7 +132,7 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
         return predicates;
     }
     @Override @Transactional(readOnly = true) public long countByStatusAndSubject(LibraryContentStatus status, Subject subject) {
-        return jpa.countByStatusAndSubjectAndDeletedAtIsNull(status, subject);
+        return jpa.countByStatusAndSubjectAndSourceLibraryContentIdIsNullAndDeletedAtIsNull(status, subject);
     }
     @Override @Transactional(readOnly = true) public List<MonthTypeAggregate> countCreatedByMonthAndType(Instant fromInclusive, Instant toExclusive) {
         return jpa.countCreatedByMonthAndTypeRaw(fromInclusive, toExclusive).stream()
@@ -133,10 +145,16 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
                 .toList();
     }
     @Override @Transactional(readOnly = true) public long countByStatus(LibraryContentStatus status) {
-        return jpa.countByStatusAndDeletedAtIsNull(status);
+        return jpa.countByStatusAndSourceLibraryContentIdIsNullAndDeletedAtIsNull(status);
     }
     private static String approvedHubWhere(LibraryContentType type, Subject subject, String q) {
-        StringBuilder where = new StringBuilder(" WHERE lc.status = 'APPROVED' AND lc.deleted_at IS NULL");
+        StringBuilder where = new StringBuilder("""
+                WHERE lc.status = 'APPROVED'
+                  AND lc.deleted_at IS NULL
+                  AND (lc.source_library_content_id IS NOT NULL
+                       OR NOT EXISTS (SELECT 1 FROM library_contents snapshot
+                                      WHERE snapshot.source_library_content_id = lc.id))
+                """);
         if (type != null) where.append(" AND lc.type = :type");
         if (subject != null) where.append(" AND lc.subject = :subject");
         if (q != null && !q.isBlank()) where.append(" AND LOWER(lc.title) LIKE :q");
@@ -159,6 +177,6 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
         if (value instanceof java.sql.Timestamp timestamp) return timestamp.toInstant();
         throw new IllegalArgumentException("Unsupported timestamp value from Community Hub projection: " + value.getClass());
     }
-    private static LibraryContent toDomain(LibraryContentEntity e) { return new LibraryContent(e.getId(),e.getOwnerId(),e.getType(),e.getTitle(),e.getSubject(),e.getGrade(),e.getTextbookCode(),e.getChapterCode(),e.getStatus(),e.getPayload(),e.getThumbnailUrl(),e.getCreatedAt(),e.getUpdatedAt(),e.getSubmittedAt(),e.getDeletedAt(),e.getReviewedBy(),e.getReviewedAt(),e.getRejectionReason(),e.getVersion()); }
+    private static LibraryContent toDomain(LibraryContentEntity e) { return new LibraryContent(e.getId(),e.getOwnerId(),e.getType(),e.getTitle(),e.getSubject(),e.getGrade(),e.getTextbookCode(),e.getChapterCode(),e.getStatus(),e.getPayload(),e.getThumbnailUrl(),e.getCreatedAt(),e.getUpdatedAt(),e.getSubmittedAt(),e.getDeletedAt(),e.getReviewedBy(),e.getReviewedAt(),e.getRejectionReason(),e.getVersion(),e.getSourceLibraryContentId()); }
     private static LibraryContentSummary toSummary(Object[] row) { return new LibraryContentSummary((UUID) row[0], (LibraryContentType) row[1], (String) row[2], (Subject) row[3], (Integer) row[4], (String) row[5], (String) row[6], (LibraryContentStatus) row[7], (String) row[8], (Instant) row[9], (Instant) row[10], (Instant) row[11], (String) row[12]); }
 }
