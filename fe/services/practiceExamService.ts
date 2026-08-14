@@ -91,6 +91,8 @@ export async function regenerateQuestion(
 const EXAM_SESSION_KEY = "edua:practiceExamSession";
 
 export type PracticeExamDisplayMetadata = {
+  /** Tên giáo viên đặt để nhận diện trong thư viện; không gửi tới API tạo AI. */
+  libraryTitle?: string;
   subject: string;
   grade: string;
   duration: number;

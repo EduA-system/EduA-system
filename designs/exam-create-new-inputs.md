@@ -15,10 +15,12 @@ Route: `fe/app/exam-create-new/page.tsx` (bọc bởi `RouteGuard`, chỉ Teache
 |---|---|---|---|
 | Môn học | `subject` | `PHYSICS` \| `CHEMISTRY` \| `MATH` | `PHYSICS` |
 | Khối lớp | `grade` | `10` \| `11` \| `12` | `10` |
+| Tên bài kiểm tra | `libraryTitle` | chuỗi không rỗng | rỗng |
 | Thời lượng (phút) | `duration` (string) → `durationMinutes` (number) | số nguyên 1–90 | `"15"` |
 | Độ khó | `difficulty` | `EASY` \| `MEDIUM` \| `HARD` | `MEDIUM` |
 
 - Đổi **môn** hoặc **khối** sẽ gọi `selectBook("")`, reset toàn bộ lựa chọn sách/chương/bài (mục 1.2) vì phạm vi SGK phụ thuộc môn + khối.
+- `libraryTitle` chỉ là tên giáo viên đặt để hiển thị trong Thư viện cá nhân và danh sách chọn tài liệu. Giá trị này được truyền qua `sessionStorage` sang trang soạn đề để lưu thành `LibraryContent.title`; **không nằm trong `PracticeExamRequest` và không được gửi tới AI**.
 
 ### 1.2. Khối "Phạm vi kiến thức SGK"
 
@@ -90,26 +92,17 @@ Tất cả phải đúng:
 2. `totalScore === 1000` (đúng 10 điểm)
 3. `totalQuestions > 0`
 4. `hasValidScoreDistribution`: với mỗi loại câu, `counts[type] === 0` phải khớp với `scores[type] === 0` (không được có câu mà 0 điểm, hoặc có điểm mà 0 câu)
-5. `selectedLessons.length > 0` (đã chọn ít nhất 1 bài)
-6. `status !== "INFEASIBLE"`
-7. Nếu `status === "WARNING"` thì phải `confirmed === true`
+5. `libraryTitle.trim().length > 0` (đã đặt tên bài kiểm tra để lưu/nhận biết)
+6. `selectedLessons.length > 0` (đã chọn ít nhất 1 bài)
+7. `status !== "INFEASIBLE"`
+8. Nếu `status === "WARNING"` thì phải `confirmed === true`
 
-Panel bên phải hiển thị checklist trực quan cho điều kiện 2, 5 và việc đã chọn sách hay chưa.
+Panel bên phải hiển thị checklist trực quan cho điều kiện 2, 6 và việc đã chọn sách hay chưa.
 
 ### 2.3. Khi bấm "Tạo đề bằng AI" (`generate()`)
 
 1. Khóa toàn bộ form (`loading = true`), disable mọi input.
-2. Chạy progress bar giả lập theo thời gian trôi qua (không phản ánh tiến trình thật từ server):
-
-   | Thời gian trôi qua | `generationProgress` | Thông báo |
-   |---|---|---|
-   | < 8s | 22% | "Đang gửi cấu hình đề tới AI..." |
-   | 8s–45s | 30% → 68% | "AI đang tạo khoảng N nhóm câu của đề..." |
-   | 45s–90s | 62% → 86% | "Đang chờ các nhóm câu dài hoàn thành..." |
-   | > 90s | 92% | "Đang kiểm tra đáp án và thang điểm..." |
-
-3. Ghi nháp `{subject, grade, duration, difficulty}` vào `sessionStorage["edua-practice-exam-draft"]` (dùng để phục hồi form nếu quay lại).
-4. Build `PracticeExamRequest` từ input và gửi `POST /api/practice-exams/generate` (`generatePracticeExam`, service `practiceExamService.ts`):
+2. Build `PracticeExamRequest` từ các input cấu hình AI và gửi `POST /api/practice-exams/generate-stream` (`startPracticeExamStream`, service `practiceExamService.ts`). `libraryTitle` không thuộc request này:
 
    ```ts
    {
@@ -135,9 +128,9 @@ Panel bên phải hiển thị checklist trực quan cho điều kiện 2, 5 và
 
    Ghi chú: `TRUE_FALSE` luôn cố định 4 ý (`itemsPerQuestion: 4`) — không phải input người dùng.
 
-5. Backend trả về `PracticeExam` (đề đầy đủ: câu hỏi, đáp án, giải thích, thang điểm...). Frontend lưu bằng `storePracticeExam()` vào `sessionStorage["edua:practiceExamDraft"]`.
-6. `generationProgress = 100`, hiển thị "Đang mở trình chỉnh sửa đề...", rồi `router.push("/exam-edit-new")` — trang chỉnh sửa đọc lại đề từ `sessionStorage` bằng `readPracticeExam()`.
-7. Nếu request lỗi: bắt `Error`, hiển thị message trong banner đỏ đầu trang; `loading = false` để mở khóa form lại (khối `finally`).
+3. Frontend tạo `sessionId`, gọi endpoint khởi tạo stream, rồi lưu `{sessionId, request, display}` vào `sessionStorage["edua:practiceExamSession"]`. `display` chứa `{libraryTitle, subject, grade, duration, difficulty}`; trang `/exam-edit-new` dùng `sessionId` để nhận đề qua STOMP.
+4. Sau khi đề được tạo, nút **Lưu vào thư viện** ở `/exam-edit-new` lưu `libraryTitle` làm `LibraryContent.title`; vì thế danh sách chọn tài liệu hiển thị tên giáo viên đã đặt.
+5. Nếu request lỗi: bắt `Error`, hiển thị message trong banner đỏ đầu trang; `loading = false` để mở khóa form lại.
 
 ### 2.4. Các lệnh gọi API phụ trợ (nạp dữ liệu, không phải hành động submit)
 

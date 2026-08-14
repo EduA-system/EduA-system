@@ -22,10 +22,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
- * Xem hồ sơ read-only của người khác — chỉ theo đúng quan hệ quản lý 1 chiều, không có chiều ngược:
- * Moderator → Teacher cùng môn; Teacher → Student trong lớp mình dạy; Principal → Moderator/IT Staff.
+ * Xem hồ sơ read-only của người khác theo quan hệ được cấp quyền:
+ * Moderator → Teacher cùng môn; Teacher → Student trong lớp mình dạy; Student → Student cùng lớp;
+ * Principal → Moderator/IT Staff.
  * Tài khoản đã bị thu hồi (DISABLED) không xem được. Việc sửa hồ sơ của chính mình dùng
  * {@code ProfileService}/{@code PATCH /api/users/me}, không đi qua service này.
  */
@@ -93,6 +95,32 @@ public class UserProfileViewService {
                     .map(Classroom::grade).filter(Objects::nonNull).distinct().sorted().toList();
             Instant joinedAt = ownedClassesWithStudent.stream()
                     .map(c -> classMemberRepository.findAnyByClassIdAndStudentId(c.id(), targetId))
+                    .flatMap(Optional::stream)
+                    .map(ClassMember::joinedAt)
+                    .filter(Objects::nonNull)
+                    .min(Instant::compareTo)
+                    .orElse(null);
+            return toDto(target, Role.STUDENT, grades, joinedAt, null);
+        }
+
+        if (viewerRoles.contains(Role.STUDENT) && targetRoles.contains(Role.STUDENT)) {
+            Set<UUID> viewerClassIds = classRepository
+                    .searchEnrolled(viewerId, null, null, null, null, 0, 100)
+                    .items().stream()
+                    .map(Classroom::id)
+                    .collect(Collectors.toSet());
+            List<Classroom> sharedClasses = classRepository
+                    .searchEnrolled(targetId, null, null, null, null, 0, 100)
+                    .items().stream()
+                    .filter(classroom -> viewerClassIds.contains(classroom.id()))
+                    .toList();
+            if (sharedClasses.isEmpty()) {
+                throw new ForbiddenOperationException("Bạn chỉ có thể xem hồ sơ học sinh cùng lớp.");
+            }
+            List<Integer> grades = sharedClasses.stream()
+                    .map(Classroom::grade).filter(Objects::nonNull).distinct().sorted().toList();
+            Instant joinedAt = sharedClasses.stream()
+                    .map(classroom -> classMemberRepository.findAnyByClassIdAndStudentId(classroom.id(), targetId))
                     .flatMap(Optional::stream)
                     .map(ClassMember::joinedAt)
                     .filter(Objects::nonNull)

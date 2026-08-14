@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { generateHTML } from "@tiptap/core";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Download, Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { createEditorExtensions } from "@/components/LessonEditor/editorConfig";
 import { RichView } from "@/components/blog/RichView";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getClassResourceLibraryContent, type ClassResourceLibraryContent } from "@/lib/classroom";
+import { exportDocumentPdf, openExportedPdf } from "@/lib/document-export";
 import type { TiptapNode } from "@/lib/tiptap-to-text";
 
 type DocumentKind = "lesson" | "exam";
@@ -41,14 +45,31 @@ function resolveDocument(content: ClassResourceLibraryContent, kind: DocumentKin
   return getExamDocument(content.payload);
 }
 
+function documentToHtml(document: TiptapNode | string): string {
+  return typeof document === "string"
+    ? document
+    : generateHTML(document, createEditorExtensions());
+}
+
+function viewerErrorMessage(reason: unknown): string {
+  const message = reason instanceof Error ? reason.message : "Không thể mở tài nguyên.";
+  if (message === "Class resource not found.") {
+    return "Không tìm thấy tài nguyên. Tài nguyên này có thể đã bị giáo viên xóa.";
+  }
+  return message;
+}
+
 export function ClassResourceDocumentViewer({ kind }: { kind: DocumentKind }) {
-  const { authFetch } = useAuth();
+  const { authFetch, user } = useAuth();
   const params = useSearchParams();
   const classId = params.get("classId") ?? "";
   const resourceId = params.get("resourceId") ?? "";
   const missingParams = !classId || !resourceId;
+  const assignmentDetailHref = `${user?.role === "STUDENT" ? "/detail-resource" : "/class-detail"}?${new URLSearchParams({ classId, resourceId }).toString()}`;
   const requestKey = `${kind}:${classId}:${resourceId}`;
   const [viewer, setViewer] = useState<ViewerState>({ key: "", content: null, document: null, error: "" });
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -67,7 +88,7 @@ export function ClassResourceDocumentViewer({ kind }: { kind: DocumentKind }) {
           key: requestKey,
           content: null,
           document: null,
-          error: reason instanceof Error ? reason.message : "Không thể mở tài nguyên.",
+          error: viewerErrorMessage(reason),
         });
       });
 
@@ -80,12 +101,57 @@ export function ClassResourceDocumentViewer({ kind }: { kind: DocumentKind }) {
   const displayError = missingParams ? "Thiếu thông tin lớp hoặc tài nguyên." : stale ? "" : viewer.error;
   const loading = !missingParams && stale;
 
+  async function exportPdf() {
+    if (!viewer.document || !viewer.content) return;
+    setExportingPdf(true);
+    setExportError("");
+    try {
+      const result = await exportDocumentPdf(authFetch, {
+        type: kind === "lesson" ? "LESSON_PLAN" : "TEST",
+        title: viewer.content.title,
+        documentHtml: documentToHtml(viewer.document),
+      });
+      openExportedPdf(result);
+    } catch (reason) {
+      setExportError(reason instanceof Error ? reason.message : "Không thể xuất PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f5f2] text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar />
         <section className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-10">
           <div className="mx-auto max-w-[980px]">
+            {!missingParams && (
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <Link
+                  href={assignmentDetailHref}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#d8d1c9] bg-white px-3 py-2 text-sm font-medium text-[#4f4943] transition hover:border-[#d97757] hover:bg-[#fff4ed] hover:text-[#c96545]"
+                >
+                  <ArrowLeft className="size-4" />
+                  Quay lại chi tiết bài tập
+                </Link>
+                {user?.role === "STUDENT" && viewer.document && viewer.content && (
+                  <button
+                    type="button"
+                    onClick={() => void exportPdf()}
+                    disabled={exportingPdf}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#d97757] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {exportingPdf ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                    {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                  </button>
+                )}
+              </div>
+            )}
+            {exportError && (
+              <p role="alert" className="mb-5 rounded-lg border border-[#e8b4a4] bg-[#fdf3ef] px-3 py-2 text-sm text-[#c0492b]">
+                {exportError}
+              </p>
+            )}
             {displayError ? (
               <div className="flex min-h-[280px] items-center justify-center gap-2 rounded-xl border border-[#e8b4a4] bg-[#fdf3ef] px-5 text-sm text-[#c0492b]">
                 <AlertCircle className="size-4 shrink-0" />

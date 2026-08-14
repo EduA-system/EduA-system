@@ -39,6 +39,10 @@ export function PracticeExamEditDashboard() {
     typeof window !== "undefined" && Boolean(readPracticeExamSession()),
   );
   const [metadata, setMetadata] = useState(draftMetadata);
+  const [libraryTitle, setLibraryTitle] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return readPracticeExamSession()?.display.libraryTitle ?? "";
+  });
   const [margins, setMargins] = useState({ left: 80, right: 80 });
   const [mathClick, setMathClick] = useState<MathClickInfo | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -83,6 +87,7 @@ export function PracticeExamEditDashboard() {
       editor.commands.setContent(payload.documentHtml);
       setSavedExam(payload.exam ?? null);
       setLibraryId(content.id);
+      setLibraryTitle(content.title);
       setMetadata((current) => ({
         ...current,
         subject: content.subject ?? current.subject,
@@ -106,9 +111,10 @@ export function PracticeExamEditDashboard() {
     try {
       const payload = { exam, documentHtml: editor.getHTML(), grade };
       const subject = metadata.subject as LibrarySubject;
+      const title = libraryTitle.trim() || exam.title;
       const saved = libraryId
-        ? await updateLibraryContent(authFetch, libraryId, { title: exam.title, subject, payload })
-        : await createLibraryContent(authFetch, { type: "TEST", title: exam.title, subject, payload });
+        ? await updateLibraryContent(authFetch, libraryId, { title, subject, payload })
+        : await createLibraryContent(authFetch, { type: "TEST", title, subject, payload });
       setLibraryId(saved.id);
       setNotice("Đề đã được lưu vào Thư viện của tôi · Bài kiểm tra.");
     } catch (error) {
@@ -155,14 +161,26 @@ export function PracticeExamEditDashboard() {
                 </Link>}
               </div>
               {readOnlyClassResource && <div className="flex min-w-0 flex-1 justify-center text-xs font-medium text-[#6b6b6b]">Chế độ chỉ xem</div>}
-              {!readOnlyClassResource && <button
-                type="button"
-                onClick={() => void exportPdf()}
-                disabled={exportingPdf || !documentReady}
-                className="shrink-0 rounded-lg bg-[#d97757] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#c96545]"
-              >
-                {!documentReady ? "Đang tải..." : exportingPdf ? "Đang xuất..." : "Xuất đề"}
-              </button>}
+              {!readOnlyClassResource && (
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void saveDraft()}
+                    disabled={saving || !documentReady}
+                    className="rounded-lg border border-[#d97757] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#c96545] shadow-sm hover:bg-[#fff4ed] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {!documentReady ? "Đang tải..." : saving ? "Đang lưu..." : "Lưu vào thư viện"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void exportPdf()}
+                    disabled={exportingPdf || !documentReady}
+                    className="rounded-lg bg-[#d97757] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#c96545] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {!documentReady ? "Đang tải..." : exportingPdf ? "Đang xuất..." : "Xuất đề"}
+                  </button>
+                </div>
+              )}
             </div>
             {/* Không đặt overflow-x-auto — EditorTools.tsx đã tự flex-wrap khi hẹp nên không cần
              * cuộn ngang, và overflow-x-auto một mình từng ép overflow-y thành auto theo spec CSS

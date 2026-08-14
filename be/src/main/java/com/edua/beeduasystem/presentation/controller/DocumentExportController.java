@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/document-exports")
-@PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR')")
+@PreAuthorize("hasAnyRole('TEACHER', 'MODERATOR', 'STUDENT')")
 public class DocumentExportController {
 
     private final DocumentExportService service;
