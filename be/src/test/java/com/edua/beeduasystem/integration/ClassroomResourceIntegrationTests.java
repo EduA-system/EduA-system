@@ -166,6 +166,17 @@ class ClassroomResourceIntegrationTests {
                                 """))
                 .andExpect(status().isBadRequest());
 
+        mockMvc.perform(post("/api/classes/{id}/resources", classId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sourceType": "LIBRARY_SNAPSHOT",
+                                  "sourceLibraryContentId": "%s"
+                                }
+                                """.formatted(UUID.randomUUID())))
+                .andExpect(status().isBadRequest());
+
         assertThat(count("class_resources")).isEqualTo(beforeResources + 1);
     }
 

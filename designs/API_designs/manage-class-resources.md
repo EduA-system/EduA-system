@@ -33,10 +33,10 @@
   `fileId`: FE gọi upload trước để lấy `{url, fileName, contentType, sizeBytes}`, rồi gửi lại đúng
   shape đó khi Post/Update resource kiểu `FILE_UPLOAD` — khớp đúng field `attachment` đã định nghĩa
   sẵn trong `ClassResourceSummaryDto`.
-- **`title` optional khi `LIBRARY_SNAPSHOT`, bắt buộc khi `FILE_UPLOAD`**: SRS không mô tả bước nhập
-  title riêng cho nhánh Personal Library (chỉ "select an owned item" + optional description) — mặc
-  định lấy `LibraryContent.title()` nếu teacher bỏ trống. Nhánh upload file không có nguồn title tự
-  nhiên nên bắt buộc nhập.
+- **`title` bắt buộc cho cả hai nguồn**: teacher luôn phải nhập tiêu đề khi Post, kể cả nhánh
+  `LIBRARY_SNAPSHOT` — tên hiển thị trong lớp thường khác tên file/bài giảng gốc trong thư viện, để
+  trống rồi copy `LibraryContent.title()` dễ tạo danh sách tài nguyên khó phân biệt. FE tự điền sẵn
+  tên item khi teacher chọn từ thư viện (vẫn sửa được), nên yêu cầu này không thêm thao tác thừa.
 - **Không cần exception loại mới**: 3 endpoint chỉ cần `IllegalArgumentException` (400),
   `ForbiddenOperationException` (403), `ResourceNotFoundException` (404) — đã map sẵn trong
   `GlobalExceptionHandler`, khác với Add Student cần thêm exception riêng cho case 409 phức tạp hơn.
@@ -80,8 +80,7 @@ Tất cả request cần `Authorization: Bearer <access>` theo JWT filter của 
 }
 ```
 
-- `title`: bắt buộc khi `sourceType = FILE_UPLOAD`; optional khi `LIBRARY_SNAPSHOT` (mặc định lấy
-  `LibraryContent.title()` nếu bỏ trống).
+- `title`: **bắt buộc** với mọi `sourceType`, trim rồi ≤ 255 ký tự; rỗng/toàn khoảng trắng → `400`.
 - `sourceType`: `LIBRARY_SNAPSHOT | FILE_UPLOAD` — bắt buộc, quyết định field nào bên dưới cần có.
 - `sourceLibraryContentId`: bắt buộc khi `LIBRARY_SNAPSHOT`, phải trỏ tới item do chính teacher sở
   hữu (verify qua `LibraryContentRepository.findActiveById` + so `ownerId`); bỏ qua khi `FILE_UPLOAD`.
@@ -138,7 +137,7 @@ Tất cả request cần `Authorization: Bearer <access>` theo JWT filter của 
 ```http
 body: PostClassResourceRequest
 → 201  ClassResourceSummaryDto
-→ 400  thieu title (khi FILE_UPLOAD) / thieu sourceLibraryContentId (khi LIBRARY_SNAPSHOT) /
+→ 400  thieu title (moi sourceType) / thieu sourceLibraryContentId (khi LIBRARY_SNAPSHOT) /
        thieu attachment (khi FILE_UPLOAD) / submissionEnabled=true nhung thieu deadline
 → 403  khong phai owner, hoac lop Inactive (MSG23), hoac sourceLibraryContentId khong thuoc
        so huu cua teacher
@@ -148,11 +147,12 @@ body: PostClassResourceRequest
 
 - Guard đầu tiên: owner + lớp `ACTIVE` (BR-34, BR-37) — chặn trước khi đụng tới bất kỳ dữ liệu nào
   khác, giống thứ tự guard của `POST /members` (`add-student.md`).
+- Validate `title` trước khi rẽ nhánh theo `sourceType` — thiếu là `400` cho cả hai nguồn.
 - Nếu `LIBRARY_SNAPSHOT`: tra `LibraryContentRepository.findActiveById(sourceLibraryContentId)` →
-  không có → `404`; có nhưng `ownerId != currentUserId` → `403`. Copy `title` (nếu request bỏ trống),
-  `thumbnailUrl` từ `LibraryContent` vào bản ghi mới — đây là bước tạo "independent snapshot" (BR-35),
-  sau bước này `class_resources` không còn phụ thuộc `LibraryContent` để hiển thị.
-- Nếu `FILE_UPLOAD`: validate `title` + `attachment` bắt buộc có mặt; không tra `LibraryContent`.
+  không có → `404`; có nhưng `ownerId != currentUserId` → `403`. Copy `thumbnailUrl` từ
+  `LibraryContent` vào bản ghi mới (title lấy từ request) — đây là bước tạo "independent snapshot"
+  (BR-35), sau bước này `class_resources` không còn phụ thuộc `LibraryContent` để hiển thị.
+- Nếu `FILE_UPLOAD`: validate `attachment` bắt buộc có mặt; không tra `LibraryContent`.
 - Validate `submissionEnabled`/`deadline` theo cặp bắt buộc đi cùng nhau.
 - Ghi 1 dòng `class_resources` mới (`postedBy = currentUserId`, `createdAt = updatedAt = now()`).
 - Notify **toàn bộ** học sinh đang enrolled trong lớp (BR-46) — dùng danh sách đầy đủ, không phân

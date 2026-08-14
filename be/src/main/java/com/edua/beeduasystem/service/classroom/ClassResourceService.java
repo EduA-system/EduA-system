@@ -103,7 +103,7 @@ public class ClassResourceService {
         Classroom classroom = requireOwnedActiveClass(classId);
         UUID currentUserId = currentUserProvider.requireUserId();
 
-        String resolvedTitle;
+        String resolvedTitle = requireTitle(title);
         String thumbnailUrl = null;
         UUID resolvedSourceLibraryContentId = null;
         String attachmentUrl = null;
@@ -118,11 +118,9 @@ public class ClassResourceService {
             if (!libraryContent.ownerId().equals(currentUserId)) {
                 throw new ForbiddenOperationException("You can only share your own Personal Library items.");
             }
-            resolvedTitle = StringUtils.hasText(title) ? requireTitle(title) : libraryContent.title();
             thumbnailUrl = libraryContent.thumbnailUrl();
             resolvedSourceLibraryContentId = libraryContent.id();
         } else {
-            resolvedTitle = requireTitle(title);
             ClassResourceViews.AttachmentInput requiredAttachment = requireAttachment(attachment);
             attachmentUrl = requiredAttachment.url();
             attachmentFileName = requiredAttachment.fileName();

@@ -51,7 +51,7 @@
 Teacher                          Backend                              Database
   |                                |                                     |
   | POST /api/classes/{id}/resources                                   |
-  | { title?, description?, sourceType, sourceLibraryContentId?,       |
+  | { title, description?, sourceType, sourceLibraryContentId?,        |
   |   attachment?, submissionEnabled, deadline? }                      |
   |------------------------------->                                    |
   |                                | load class theo id                  |
@@ -63,17 +63,19 @@ Teacher                          Backend                              Database
   |                                |   khong phai owner -> 403           |
   |                                | verify status = ACTIVE (BR-37)      |
   |                                |   INACTIVE -> 403 MSG23              |
+  |                                | validate title bat buoc (moi nguon)  |
+  |                                |   thieu/rong -> 400                  |
   |                                | sourceType = LIBRARY_SNAPSHOT?       |
   |                                |------------------------------------->
   |                                | tra LibraryContent theo id           |
   |                                | khong ton tai -> 404                 |
   |                                | ownerId != currentUserId -> 403      |
   |                                <-------------------------------------|
-  |                                | copy title/thumbnailUrl neu can      |
+  |                                | copy thumbnailUrl tu LibraryContent  |
   |                                |   (tao "independent snapshot", BR-35)|
   |                                | sourceType = FILE_UPLOAD?             |
-  |                                |   validate title + attachment bat    |
-  |                                |   buoc co mat, khong tra LibraryContent|
+  |                                |   validate attachment bat buoc co    |
+  |                                |   mat, khong tra LibraryContent       |
   |                                | validate submissionEnabled/deadline  |
   |                                |   (thieu deadline khi enabled -> 400)|
   |                                | INSERT class_resources               |
@@ -175,7 +177,7 @@ flowchart TD
     sourceChoice -- "Personal Library" --> checkLibOwner{"La chu so huu item?"}
     checkLibOwner -- "Khong" --> forbiddenLib403["403 - Khong so huu item"]
     checkLibOwner -- "Co" --> snapshot["Tao independent snapshot (BR-35)"]
-    sourceChoice -- "Upload file" --> uploadFile["Validate title + attachment"]
+    sourceChoice -- "Upload file" --> uploadFile["Validate attachment"]
     snapshot --> insertResource["INSERT class_resources"]
     uploadFile --> insertResource
     insertResource --> notifyAll["Notify toan bo enrolled students (BR-46)"]
@@ -240,7 +242,8 @@ presentation/controller/          ClassController (them 3 method: POST/PATCH/DEL
 | Lớp đang `INACTIVE` khi gọi Post/Update/Delete | `403` (MSG23) |
 | Post `LIBRARY_SNAPSHOT` với `sourceLibraryContentId` không tồn tại | `404` |
 | Post `LIBRARY_SNAPSHOT` với item không thuộc sở hữu teacher | `403` |
-| Post `FILE_UPLOAD` thiếu `title` hoặc `attachment` | `400` |
+| Post thiếu `title` (cả `LIBRARY_SNAPSHOT` lẫn `FILE_UPLOAD`) | `400` |
+| Post `FILE_UPLOAD` thiếu `attachment` | `400` |
 | Post với `submissionEnabled=true` nhưng thiếu `deadline` | `400` |
 | Update gửi `attachment` cho resource gốc là `LIBRARY_SNAPSHOT` | `400` |
 | Update/Delete với `resourceId` không tồn tại hoặc không thuộc lớp | `404` |

@@ -197,8 +197,12 @@ export function ResourceFormPanel({
       setError("Vui lòng chọn một tài liệu từ thư viện cá nhân.");
       return;
     }
-    if (!isEdit && sourceType === "FILE_UPLOAD" && (!title.trim() || !attachment)) {
-      setError("Vui lòng nhập tiêu đề và tải lên tệp đính kèm.");
+    if (!title.trim()) {
+      setError("Vui lòng nhập tiêu đề.");
+      return;
+    }
+    if (!isEdit && sourceType === "FILE_UPLOAD" && !attachment) {
+      setError("Vui lòng tải lên tệp đính kèm.");
       return;
     }
     if (submissionEnabled && !deadline) {
@@ -325,7 +329,10 @@ export function ResourceFormPanel({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setSourceLibraryContentId(item.id)}
+                    onClick={() => {
+                      setSourceLibraryContentId(item.id);
+                      setTitle((current) => (current.trim() ? current : item.title.slice(0, 255)));
+                    }}
                     className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[12.5px] transition ${
                       sourceLibraryContentId === item.id ? "bg-[#fdf1ec] text-[#c96545]" : "hover:bg-[#f5f1ec]"
                     }`}
@@ -340,10 +347,11 @@ export function ResourceFormPanel({
         )}
 
         <label className="block text-[12px] font-medium text-[#6b6b6b]">
-          Tiêu đề{!isEdit && sourceType === "LIBRARY_SNAPSHOT" ? " (để trống sẽ lấy tên tài liệu gốc)" : ""}
+          Tiêu đề <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span>
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
+            required
             maxLength={255}
             placeholder="Ví dụ: Bài tập chương 1 - Phản ứng oxi hóa khử"
             className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
