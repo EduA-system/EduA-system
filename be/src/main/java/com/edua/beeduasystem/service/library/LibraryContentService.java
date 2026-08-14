@@ -44,7 +44,9 @@ public class LibraryContentService {
         LibraryContent c = requireOwner(id);
         Subject resolvedSubject = subjectProvided ? parseSubject(rawSubject) : c.subject();
         if (resolvedSubject == null && c.status() == LibraryContentStatus.SUBMITTED) throw new IllegalArgumentException("Không thể bỏ trống môn học khi nội dung đang chờ duyệt.");
-        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(), title == null ? c.title() : requiredTitle(title), resolvedSubject, gradeProvided ? cleanGrade(grade) : c.grade(), textbookCodeProvided ? cleanCode(textbookCode) : c.textbookCode(), chapterCodeProvided ? cleanCode(chapterCode) : c.chapterCode(), c.status(), payloadProvided ? (payload == null ? JsonNodeFactory.instance.objectNode() : payload) : c.payload(), thumbnailProvided ? cleanUrl(thumbnailUrl) : c.thumbnailUrl(), c.createdAt(), Instant.now(), c.submittedAt(), null, c.reviewedBy(), c.reviewedAt(), c.rejectionReason(), c.version())));
+        boolean publishedSnapshotExists = c.status() == LibraryContentStatus.APPROVED && repository.hasAnySnapshotBySourceId(c.id());
+        LibraryContentStatus status = publishedSnapshotExists ? LibraryContentStatus.PRIVATE : c.status();
+        return toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(), title == null ? c.title() : requiredTitle(title), resolvedSubject, gradeProvided ? cleanGrade(grade) : c.grade(), textbookCodeProvided ? cleanCode(textbookCode) : c.textbookCode(), chapterCodeProvided ? cleanCode(chapterCode) : c.chapterCode(), status, payloadProvided ? (payload == null ? JsonNodeFactory.instance.objectNode() : payload) : c.payload(), thumbnailProvided ? cleanUrl(thumbnailUrl) : c.thumbnailUrl(), c.createdAt(), Instant.now(), publishedSnapshotExists ? null : c.submittedAt(), null, publishedSnapshotExists ? null : c.reviewedBy(), publishedSnapshotExists ? null : c.reviewedAt(), publishedSnapshotExists ? null : c.rejectionReason(), c.version(), c.sourceLibraryContentId())));
     }
     @Transactional
     public void delete(UUID id) { LibraryContent c = requireOwner(id); repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),c.status(),c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),Instant.now(),c.reviewedBy(),c.reviewedAt(),c.rejectionReason(),c.version())); }
@@ -72,7 +74,13 @@ public class LibraryContentService {
     public LibraryViews.Detail approve(UUID id) {
         LibraryContent c = requireSubmittedInModeratorSubject(id);
         UUID moderatorId = currentUser.requireUserId();
-        LibraryViews.Detail detail = toDetail(repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.APPROVED,c.payload(),c.thumbnailUrl(),c.createdAt(),Instant.now(),c.submittedAt(),null,moderatorId,Instant.now(),null,c.version())));
+        Instant now = Instant.now();
+        for (LibraryContent previousSnapshot : repository.findActiveSnapshotsBySourceId(c.id())) {
+            repository.save(new LibraryContent(previousSnapshot.id(), previousSnapshot.ownerId(), previousSnapshot.type(), previousSnapshot.title(), previousSnapshot.subject(), previousSnapshot.grade(), previousSnapshot.textbookCode(), previousSnapshot.chapterCode(), previousSnapshot.status(), previousSnapshot.payload(), previousSnapshot.thumbnailUrl(), previousSnapshot.createdAt(), now, previousSnapshot.submittedAt(), now, previousSnapshot.reviewedBy(), previousSnapshot.reviewedAt(), previousSnapshot.rejectionReason(), previousSnapshot.version(), previousSnapshot.sourceLibraryContentId()));
+        }
+        LibraryContent approvedSource = repository.save(new LibraryContent(c.id(),c.ownerId(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),LibraryContentStatus.APPROVED,c.payload(),c.thumbnailUrl(),c.createdAt(),now,c.submittedAt(),null,moderatorId,now,null,c.version(),c.sourceLibraryContentId()));
+        repository.save(new LibraryContent(UUID.randomUUID(), c.ownerId(), c.type(), c.title(), c.subject(), c.grade(), c.textbookCode(), c.chapterCode(), LibraryContentStatus.APPROVED, c.payload().deepCopy(), c.thumbnailUrl(), now, now, c.submittedAt(), null, moderatorId, now, null, null, c.id()));
+        LibraryViews.Detail detail = toDetail(approvedSource);
         activityLogService.record(moderatorId, "MODERATOR", ActivityLogCategory.MODERATION,
                 ActivityLogAction.APPROVE_LIBRARY_CONTENT, "LIBRARY_CONTENT", c.id(), null);
         notificationService.notifyRecipient(c.ownerId(), moderatorId, c.subject(),
@@ -116,7 +124,7 @@ public class LibraryContentService {
         if (moderatorSubject == null || c.subject() != moderatorSubject) throw new ForbiddenOperationException("You can only review content in your assigned subject.");
         return c;
     }
-    private LibraryContent requireOwner(UUID id) { LibraryContent c = repository.findActiveById(id).orElseThrow(() -> new ResourceNotFoundException("Library content not found.")); if (!c.ownerId().equals(currentUser.requireUserId())) throw new ForbiddenOperationException("You can only access your own library content."); return c; }
+    private LibraryContent requireOwner(UUID id) { LibraryContent c = repository.findActiveById(id).orElseThrow(() -> new ResourceNotFoundException("Library content not found.")); if (!c.ownerId().equals(currentUser.requireUserId()) || c.sourceLibraryContentId() != null) throw new ForbiddenOperationException("You can only access your own library content."); return c; }
     private static LibraryViews.Page toPage(LibraryContentRepository.SummarySearchResult r, int page, int size) {
         return new LibraryViews.Page(r.items().stream().map(LibraryContentService::toSummary).toList(), Math.max(0, page), Math.min(Math.max(1, size), 100), r.total());
     }

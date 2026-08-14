@@ -12,6 +12,8 @@ import java.util.UUID;
 public interface LibraryContentRepository {
     LibraryContent save(LibraryContent content);
     Optional<LibraryContent> findActiveById(UUID id);
+    List<LibraryContent> findActiveSnapshotsBySourceId(UUID sourceLibraryContentId);
+    boolean hasAnySnapshotBySourceId(UUID sourceLibraryContentId);
     /**
      * Community Hub keeps approved publications visible after they are removed from Personal Library.
      */
