@@ -99,6 +99,59 @@ class SlideContentPlanParsingTests {
     }
 
     @Test
+    void transposesComparisonValuesWhenTheModelWritesOneRowPerItem() throws Exception {
+        // ContentPlan đòi values[criteria][item]; model hay trả ngược một hàng cho mỗi item,
+        // khiến cả slide hỏng vì "Comparison matrix has invalid dimensions". Xoay lại thay vì báo lỗi.
+        var root = MAPPER.readTree("""
+                {"blocks":[
+                  {"id":"c","kind":"comparison","role":"body","semanticType":"comparison","priority":"primary","required":true,
+                   "items":[{"id":"et","label":"Ethanol"},{"id":"pr","label":"Propane"},{"id":"dme","label":"Dimethyl ether"}],
+                   "criteria":[{"id":"m","label":"M"},{"id":"ts","label":"Nhiệt độ sôi"}],
+                   "values":[["46","78"],["44","-42"],["46","-24"]],
+                   "preferredPresentation":"table"}
+                ],"relationships":[]}
+                """);
+
+        ContentPlan plan = GenerateSlideOutlineUseCase.parseContentPlan("comparison", "fixed", root.path("blocks"), root.path("relationships"));
+
+        ContentPlan.ComparisonBlock comparison = assertInstanceOf(ContentPlan.ComparisonBlock.class, plan.blocks().get(0));
+        assertEquals(List.of(List.of("46", "44", "46"), List.of("78", "-42", "-24")), comparison.values());
+    }
+
+    @Test
+    void rejectsComparisonValuesThatFitNeitherOrientation() throws Exception {
+        var root = MAPPER.readTree("""
+                {"blocks":[
+                  {"id":"c","kind":"comparison","role":"body","semanticType":"comparison","priority":"primary","required":true,
+                   "items":[{"id":"a","label":"A"},{"id":"b","label":"B"},{"id":"c2","label":"C"}],
+                   "criteria":[{"id":"m","label":"M"},{"id":"ts","label":"T"}],
+                   "values":[["1","2","3"],["4"]],
+                   "preferredPresentation":"table"}
+                ],"relationships":[]}
+                """);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> GenerateSlideOutlineUseCase.parseContentPlan("comparison", "fixed", root.path("blocks"), root.path("relationships")));
+    }
+
+    @Test
+    void detailPromptsSpellOutTheComparisonMatrixOrientation() {
+        SlidePromptBuilder builder = new SlidePromptBuilder();
+        LessonContext lesson = new LessonContext("id", "Ancol", 11, "", List.of(), List.of(), List.of(), List.of(), List.of());
+        InlineLessonPlanDto plan = new InlineLessonPlanDto("Ancol", 11, 45, List.of(), List.of(), List.of(), "", "");
+        SlideItemDto slide = new SlideItemDto("p2s2", "So sánh tính chất vật lý", "explain", null, null,
+                new ContentPlan("comparison", "fixed", List.of(), List.of()));
+
+        String partDetail = builder.expandPartPrompt(lesson, plan, "{}", "p2", "Phần 2", "CHEMISTRY");
+        String slideDetail = builder.expandSlidePrompt(lesson, plan, "{}", "p2", "Phần 2", slide, "CHEMISTRY", "p2: Phần 2");
+
+        for (String prompt : List.of(partDetail, slideDetail)) {
+            assertTrue(prompt.contains("MỘT HÀNG cho MỖI criteria"));
+            assertTrue(prompt.contains("values[i][j] là giá trị của criteria[i] xét trên item[j]"));
+        }
+    }
+
+    @Test
     void physicsPromptsExposePhysicsBlocksAlongsideChemistryOnes() {
         SlidePromptBuilder builder = new SlidePromptBuilder();
         LessonContext lesson = new LessonContext("id", "Con lac don", 10, "", List.of(), List.of(), List.of(), List.of(), List.of());

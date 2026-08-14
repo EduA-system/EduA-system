@@ -1014,6 +1014,24 @@ public class GenerateSlideOutlineUseCase {
         return values;
     }
 
+    /**
+     * ContentPlan requires values[criteriaIndex][itemIndex], but the model frequently emits the matrix
+     * the other way round (one row per item). Transposing that case is lossless and saves an expand retry;
+     * any other shape is passed through untouched so ContentPlan still rejects it.
+     */
+    static List<List<String>> orientComparisonValues(List<List<String>> values, int itemCount, int criteriaCount) {
+        if (values.size() == criteriaCount && values.stream().allMatch(row -> row.size() == itemCount)) return values;
+        if (values.size() != itemCount || values.stream().anyMatch(row -> row.size() != criteriaCount)) return values;
+        List<List<String>> transposed = new ArrayList<>(criteriaCount);
+        for (int criterion = 0; criterion < criteriaCount; criterion++) {
+            List<String> row = new ArrayList<>(itemCount);
+            for (int item = 0; item < itemCount; item++) row.add(values.get(item).get(criterion));
+            transposed.add(row);
+        }
+        log.warn("Transposed comparison values from {} item rows to {} criteria rows", itemCount, criteriaCount);
+        return transposed;
+    }
+
     private static List<ContentPlan.Label> labels(JsonNode node) {
         if (!node.isArray()) throw new IllegalArgumentException("Expected label array");
         List<ContentPlan.Label> items = new ArrayList<>();
@@ -1067,7 +1085,8 @@ public class GenerateSlideOutlineUseCase {
                 List<List<String>> values = new ArrayList<>();
                 for (JsonNode row : node.path("values")) values.add(stringList(row));
                 yield new ContentPlan.ComparisonBlock(id, kind, role, semanticType, priority, required, groupId,
-                        items, criteria, values, requiredText(node, "preferredPresentation"));
+                        items, criteria, orientComparisonValues(values, items.size(), criteria.size()),
+                        requiredText(node, "preferredPresentation"));
             }
             case "table" -> {
                 List<ContentPlan.TableRow> rows = new ArrayList<>();

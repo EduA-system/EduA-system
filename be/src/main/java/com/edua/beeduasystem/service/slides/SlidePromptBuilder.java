@@ -311,8 +311,11 @@ public class SlidePromptBuilder {
                   không nêu thông số. Tuyệt đối không dùng cho môn khác.
                   Slide có block physics thì block đó phải là block DUY NHẤT của slide: mô phỏng chiếm trọn slide và
                   đã tự mang tiêu đề, mô tả, bảng tham số bên trong, nên mọi block text kèm theo đều thừa và sẽ bị bỏ.
-                - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]` đúng kích thước,
+                - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]`,
                   `preferredPresentation` (auto|table|panels).
+                  `values` phải theo ĐÚNG chiều: MỘT HÀNG cho MỖI criteria, trong mỗi hàng MỘT Ô cho MỖI item,
+                  giữ nguyên thứ tự đã khai báo — values[i][j] là giá trị của criteria[i] xét trên item[j].
+                  Vd 3 items và 2 criteria => `values` có đúng 2 hàng, mỗi hàng đúng 3 ô. Không đảo hàng/cột.
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
                 - sequence: thêm `steps:[{id,label,text}]` theo đúng thứ tự bắt buộc.
                 - formula: thêm `expression`, có thể có `explanation`. `expression` chỉ chứa biểu thức/ký hiệu cần hiển thị,
@@ -416,8 +419,11 @@ public class SlidePromptBuilder {
                   không nêu thông số. Tuyệt đối không dùng cho môn khác.
                   Slide có block physics thì block đó phải là block DUY NHẤT của slide: mô phỏng chiếm trọn slide và
                   đã tự mang tiêu đề, mô tả, bảng tham số bên trong, nên mọi block text kèm theo đều thừa và sẽ bị bỏ.
-                - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]` đúng kích thước,
+                - comparison: thêm `items:[{id,label}]`, `criteria:[{id,label}]`, `values:string[][]`,
                   `preferredPresentation` (auto|table|panels).
+                  `values` phải theo ĐÚNG chiều: MỘT HÀNG cho MỖI criteria, trong mỗi hàng MỘT Ô cho MỖI item,
+                  giữ nguyên thứ tự đã khai báo — values[i][j] là giá trị của criteria[i] xét trên item[j].
+                  Vd 3 items và 2 criteria => `values` có đúng 2 hàng, mỗi hàng đúng 3 ô. Không đảo hàng/cột.
                 - table: thêm `columns:[{id,label}]`, `rows:[{id,cells:string[]}]`; mỗi hàng đủ số ô.
                 - sequence: thêm `steps:[{id,label,text}]` theo đúng thứ tự bắt buộc.
                 - formula: thêm `expression`, có thể có `explanation`. `expression` chỉ chứa biểu thức/ký hiệu cần hiển thị,
