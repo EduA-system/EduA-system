@@ -10,6 +10,10 @@ import { ClassHubFrame } from "./ClassHubFrame";
 import { ResourceCard } from "./shared";
 import { ResourceFormPanel } from "./ClassDetailPage";
 
+function SuccessToast({ message, onClose }: { message: string; onClose: () => void }) {
+  return <div className="fixed right-5 top-5 z-[70] flex max-w-sm items-center gap-3 rounded-2xl border border-[#bde6ce] bg-white px-4 py-3 text-sm font-semibold text-[#23613d] shadow-[0_14px_34px_rgba(22,82,49,0.18)]" role="status"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#31a66a] text-sm text-white">✓</span><span className="flex-1">{message}</span><button type="button" onClick={onClose} aria-label="Đóng thông báo" className="text-lg font-normal leading-none text-[#548266] hover:text-[#23613d]">×</button></div>;
+}
+
 export function ClassResourcesPage() {
   const { user, authFetch } = useAuth();
   const router = useRouter();
@@ -21,6 +25,13 @@ export function ClassResourcesPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ClassResourceSummary | null>(null);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = window.setTimeout(() => setSuccessMessage(""), 3500);
+    return () => window.clearTimeout(timer);
+  }, [successMessage]);
 
   const load = useCallback(async () => {
     if (!classId) return;
@@ -37,12 +48,13 @@ export function ClassResourcesPage() {
     const created = target === "create";
     setResources((items) => items.some((item) => item.id === resource.id) ? items.map((item) => item.id === resource.id ? resource : item) : [resource, ...items]);
     setTarget(null);
+    setSuccessMessage(created ? "Đã đăng tài liệu thành công." : "Đã cập nhật tài liệu thành công.");
     if (created) void load();
   }
   async function remove(resource: ClassResourceSummary) {
     if (!classId || deleting) return;
     setDeleting(resource.id);
-    try { await deleteClassResource(authFetch, classId, resource.id); setResources((items) => items.filter((item) => item.id !== resource.id)); setDeleteTarget(null); }
+    try { await deleteClassResource(authFetch, classId, resource.id); setResources((items) => items.filter((item) => item.id !== resource.id)); setDeleteTarget(null); setSuccessMessage("Đã xóa tài nguyên thành công."); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Không thể xóa tài nguyên."); }
     finally { setDeleting(null); }
   }
@@ -66,5 +78,6 @@ export function ClassResourcesPage() {
       confirmLabel="Xóa tài nguyên"
       variant="danger"
     />
+    {successMessage && <SuccessToast message={successMessage} onClose={() => setSuccessMessage("")} />}
   </ClassHubFrame>;
 }
