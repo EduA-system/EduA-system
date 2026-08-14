@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { RichView } from "@/components/blog/RichView";
+import { SlideDeckPreview } from "@/components/hub/SlideDeckPreview";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
@@ -128,21 +129,7 @@ function ContentPreview({ content }: { content: LibraryContent }) {
   }
 
   if (slides) {
-    return (
-      <div className="rounded-xl border border-[#e8e2d9] bg-white p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-[#30343d]">Bộ slide</p>
-            <p className="text-xs text-stone-500">{slides.length} slide trong nội dung gửi duyệt</p>
-          </div>
-          <Presentation className="size-5 text-rose-700" />
-        </div>
-        {content.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- moderation preview uses user-generated library thumbnail
-          <img src={content.thumbnailUrl} alt="" className="mt-4 aspect-video w-full rounded-lg border border-[#e8e2d9] object-cover" />
-        ) : null}
-      </div>
-    );
+    return <SlideDeckPreview slides={slides} caption={`${slides.length} slide trong nội dung gửi duyệt`} />;
   }
 
   return <JsonFallback payload={content.payload} />;
