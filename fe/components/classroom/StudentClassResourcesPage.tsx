@@ -351,6 +351,7 @@ export function StudentClassResourcesPage() {
                             <ResourceCard
                               key={resource.id}
                               resource={resource}
+                              classInactive={selectedClass.status === "INACTIVE"}
                               onOpen={(target) =>
                                 router.push(`/detail-resource?classId=${classId}&resourceId=${target.id}`)
                               }

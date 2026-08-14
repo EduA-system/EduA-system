@@ -934,6 +934,7 @@ export function ClassDetailPage() {
                               key={resource.id}
                               resource={resource}
                               canManage={canManage}
+                              classInactive={selectedClass.status === "INACTIVE"}
                               onEdit={(target) => {
                                 setError("");
                                 setMessage("");

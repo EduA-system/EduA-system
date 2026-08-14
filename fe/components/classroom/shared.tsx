@@ -99,6 +99,7 @@ export function ResourceCard({
   onDelete,
   onOpen,
   deleting,
+  classInactive,
 }: {
   resource: ClassResourceSummary;
   canManage?: boolean;
@@ -106,8 +107,11 @@ export function ResourceCard({
   onDelete?: (resource: ClassResourceSummary) => void;
   onOpen?: (resource: ClassResourceSummary) => void;
   deleting?: boolean;
+  /** Lop INACTIVE: an het badge (nguon, trang thai nop bai, han nop) vi lop da dong. */
+  classInactive?: boolean;
 }) {
   const SourceIcon = resource.sourceType === "LIBRARY_SNAPSHOT" ? Library : UploadCloud;
+  const showDeadline = Boolean(resource.deadline) && !classInactive;
 
   return (
     <article
@@ -167,50 +171,54 @@ export function ResourceCard({
       )}
 
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2 pr-16">
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]">
-            <SourceIcon className="size-3" /> {sourceTypeLabel(resource.sourceType)}
-          </span>
-          {resource.submissionEnabled && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#f0d9aa] bg-[#fff7df] px-2.5 py-1 text-[11px] font-medium text-[#9a661c]">
-              <ClipboardList className="size-3" />{" "}
-              {/* NOT_APPLICABLE ở đây luôn là do người xem là chủ lớp (giáo viên không tự nộp
-                  bài của mình), không phải "tài nguyên không cần nộp bài" — badge chỉ hiện khi
-                  submissionEnabled=true nên không nhầm với trường hợp còn lại của NOT_APPLICABLE. */}
-              {resource.submissionStatus === "NOT_APPLICABLE" ? "Yêu cầu nộp bài" : submissionStatusLabel(resource.submissionStatus)}
+        {!classInactive && (
+          <div className="flex flex-wrap items-center gap-2 pr-16">
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]">
+              <SourceIcon className="size-3" /> {sourceTypeLabel(resource.sourceType)}
             </span>
-          )}
-        </div>
+            {resource.submissionEnabled && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-[#f0d9aa] bg-[#fff7df] px-2.5 py-1 text-[11px] font-medium text-[#9a661c]">
+                <ClipboardList className="size-3" />{" "}
+                {/* NOT_APPLICABLE ở đây luôn là do người xem là chủ lớp (giáo viên không tự nộp
+                    bài của mình), không phải "tài nguyên không cần nộp bài" — badge chỉ hiện khi
+                    submissionEnabled=true nên không nhầm với trường hợp còn lại của NOT_APPLICABLE. */}
+                {resource.submissionStatus === "NOT_APPLICABLE" ? "Yêu cầu nộp bài" : submissionStatusLabel(resource.submissionStatus)}
+              </span>
+            )}
+          </div>
+        )}
 
-        <h3 className="mt-2.5 text-[15px] font-semibold leading-snug text-[#1f1f1f]">{resource.title}</h3>
+        <h3 className={`text-[15px] font-semibold leading-snug text-[#1f1f1f] ${classInactive ? "pr-16" : "mt-2.5"}`}>{resource.title}</h3>
         {resource.description && (
           <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-[19px] text-[#6b6b6b]">{resource.description}</p>
         )}
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {resource.attachment?.url && (
-            <a
-              href={resource.attachment.url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(event) => event.stopPropagation()}
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1.5 text-[11.5px] font-medium text-[#1f1f1f] transition hover:bg-[#f5f1ec]"
-            >
-              <Paperclip className="size-3.5 text-[#8a837b]" />
-              <span className="max-w-[220px] truncate">{resource.attachment.fileName ?? "Tệp đính kèm"}</span>
-              {resource.attachment.sizeBytes !== null && (
-                <span className="text-[#8a837b]">· {formatFileSize(resource.attachment.sizeBytes)}</span>
-              )}
-              <Download className="size-3.5 text-[#8a837b]" />
-            </a>
-          )}
-          {resource.deadline && (
-            <span className={`inline-flex items-center gap-1.5 rounded-[10px] border px-2.5 py-1.5 text-[11.5px] font-medium ${deadlineClasses(resource.deadline)}`}>
-              <CalendarClock className="size-3.5" />
-              {isOverdue(resource.deadline) ? "Quá hạn" : "Hạn nộp"}: {formatDateTime(resource.deadline)}
-            </span>
-          )}
-        </div>
+        {(resource.attachment?.url || showDeadline) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {resource.attachment?.url && (
+              <a
+                href={resource.attachment.url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(event) => event.stopPropagation()}
+                className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1.5 text-[11.5px] font-medium text-[#1f1f1f] transition hover:bg-[#f5f1ec]"
+              >
+                <Paperclip className="size-3.5 text-[#8a837b]" />
+                <span className="max-w-[220px] truncate">{resource.attachment.fileName ?? "Tệp đính kèm"}</span>
+                {resource.attachment.sizeBytes !== null && (
+                  <span className="text-[#8a837b]">· {formatFileSize(resource.attachment.sizeBytes)}</span>
+                )}
+                <Download className="size-3.5 text-[#8a837b]" />
+              </a>
+            )}
+            {showDeadline && resource.deadline && (
+              <span className={`inline-flex items-center gap-1.5 rounded-[10px] border px-2.5 py-1.5 text-[11.5px] font-medium ${deadlineClasses(resource.deadline)}`}>
+                <CalendarClock className="size-3.5" />
+                {isOverdue(resource.deadline) ? "Quá hạn" : "Hạn nộp"}: {formatDateTime(resource.deadline)}
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="mt-3 flex items-center justify-between border-t border-[#ede8e1] pt-2.5 text-[11.5px] text-[#8a837b]">
           <span>{resource.postedByName ?? "Giáo viên"}</span>

@@ -13,6 +13,11 @@
 - **Owner hoặc enrolled student, không phân biệt trạng thái lớp**: khác với Add Student/Class
   Management (chặn ghi khi `INACTIVE`), đọc resource **luôn được phép** kể cả lớp `INACTIVE`, theo
   `BR-39`.
+- **Lớp `INACTIVE` thì FE ẩn badge trạng thái**: API vẫn trả nguyên `submissionStatus`/`deadline`
+  (BR-39, không đổi), nhưng UI ẩn badge trạng thái nộp bài (`Đã nộp`/`Chưa nộp`/`Nộp muộn`/
+  `Yêu cầu nộp bài`) và badge `Hạn nộp`/`Quá hạn` ở card + trang chi tiết resource, vì lớp đã đóng
+  nên các trạng thái đó không còn hành động nào đi kèm. Khu "Bài nộp của bạn" (đọc lại bài đã nộp) và
+  roster/chi tiết bài nộp phía Teacher vẫn giữ nguyên.
 - **Resource là snapshot độc lập (BR-35)**: dù đăng từ Personal Library hay upload file trực tiếp,
   dữ liệu đọc ở đây không cần join ngược về nguồn (Personal Library item) — mọi field hiển thị đã có
   sẵn trên chính bản ghi `class_resources`.

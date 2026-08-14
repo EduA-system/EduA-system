@@ -501,18 +501,20 @@ export function ResourceDetailPage() {
             ) : resource ? (
               <>
                 <div className="mt-4 rounded-[14px] border border-[#d8d1c9] bg-white p-5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]">
-                      <SourceIcon className="size-3" /> {sourceTypeLabel(resource.sourceType)}
-                    </span>
-                    {resource.submissionEnabled && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-[#f0d9aa] bg-[#fff7df] px-2.5 py-1 text-[11px] font-medium text-[#9a661c]">
-                        {submissionStatusLabel(submission ? submission.status : "NOT_SUBMITTED")}
+                  {!classInactive && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-[#d8d1c9] bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]">
+                        <SourceIcon className="size-3" /> {sourceTypeLabel(resource.sourceType)}
                       </span>
-                    )}
-                  </div>
+                      {resource.submissionEnabled && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[#f0d9aa] bg-[#fff7df] px-2.5 py-1 text-[11px] font-medium text-[#9a661c]">
+                          {submissionStatusLabel(submission ? submission.status : "NOT_SUBMITTED")}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
-                  <h1 className="font-libertine mt-3 text-[28px] font-normal leading-tight">{resource.title}</h1>
+                  <h1 className={`font-libertine text-[28px] font-normal leading-tight ${classInactive ? "" : "mt-3"}`}>{resource.title}</h1>
                   {resource.description && (
                     <p className="mt-2 text-[13px] leading-[21px] text-[#6b6b6b]">{resource.description}</p>
                   )}
@@ -542,7 +544,7 @@ export function ResourceDetailPage() {
                         <Download className="size-3.5 text-[#8a837b]" />
                       </a>
                     )}
-                    {resource.deadline && (
+                    {!classInactive && resource.deadline && (
                       <span className={`inline-flex items-center gap-1.5 rounded-[10px] border px-2.5 py-1.5 text-[11.5px] font-medium ${deadlineClasses(resource.deadline)}`}>
                         <CalendarClock className="size-3.5" />
                         {isOverdue(resource.deadline) ? "Quá hạn" : "Hạn nộp"}: {formatDateTime(resource.deadline)}
