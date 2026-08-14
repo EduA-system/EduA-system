@@ -18,7 +18,7 @@ import { RichView } from "./RichView";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { hasAnyRole } from "@/lib/auth/permissions";
-import { canUseSubject, getSubjectRestriction, SUBJECT_LABELS, type SubjectCode } from "@/lib/auth/subject-access";
+import { SUBJECT_CODES, SUBJECT_LABELS } from "@/lib/auth/subject-access";
 
 function BackIcon() {
   return (
@@ -163,7 +163,6 @@ function summaryFromDetail(post: Detail): Summary {
 
 export function BlogCommunityPage({ postId }: { postId?: string }) {
   const { user, status, authFetch } = useAuth();
-  const subjectRestriction = getSubjectRestriction(user);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [posts, setPosts] = useState<Summary[]>([]);
@@ -173,7 +172,8 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   const [msg, setMsg] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [editOpen, setEditOpen] = useState(false);
-  const [activeSubjectFilter, setActiveSubjectFilter] = useState<string | null>(() => subjectRestriction);
+  // Blog là không gian chung: giáo viên đọc được bài của mọi môn, mặc định mở ở "Tất cả".
+  const [activeSubjectFilter, setActiveSubjectFilter] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
@@ -203,25 +203,16 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   const loadPosts = useCallback(async (subject?: string | null) => {
     setIsPostsLoading(true);
     try {
-      const effectiveSubject = subjectRestriction ?? subject;
-      const scope = effectiveSubject ? `?subject=${effectiveSubject}&size=50` : `?size=50`;
+      const scope = subject ? `?subject=${subject}&size=50` : `?size=50`;
       setPosts((await api<{ items: Summary[] }>(authFetch, `/blog-posts${scope}`)).items);
     } catch (e) { setMsg(String(e)); }
     finally { setIsPostsLoading(false); }
-  }, [authFetch, subjectRestriction]);
-
-  useEffect(() => {
-    if (!subjectRestriction) return;
-    queueMicrotask(() => {
-      setActiveSubjectFilter(subjectRestriction);
-      void loadPosts(subjectRestriction);
-    });
-  }, [loadPosts, subjectRestriction]);
+  }, [authFetch]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    queueMicrotask(() => void loadPosts(subjectRestriction));
-  }, [loadPosts, status, subjectRestriction]);
+    queueMicrotask(() => void loadPosts(activeSubjectFilter));
+  }, [activeSubjectFilter, loadPosts, status]);
 
   const handleModeratorRemoved = useCallback(() => {
     setDetail(null);
@@ -282,9 +273,8 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   }
 
   function handleFilterChange(subject: string | null) {
-    const effectiveSubject = subjectRestriction ?? subject;
-    setActiveSubjectFilter(effectiveSubject);
-    void loadPosts(effectiveSubject);
+    // Danh sách được nạp lại bởi effect theo activeSubjectFilter, không gọi loadPosts thủ công ở đây.
+    setActiveSubjectFilter(subject);
   }
 
   async function deletePost(id: string) {
@@ -382,7 +372,6 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   const detailCover = detail?.thumbnailUrl ?? currentSummary?.thumbnailUrl ?? "/blog-detail-cover.png";
   const currentUserName = user.fullName ?? user.email;
   const isModerator = hasAnyRole(user, ["MODERATOR"]);
-  const blogFilterSubjects: SubjectCode[] = subjectRestriction ? [subjectRestriction] : ["MATH", "CHEMISTRY", "PHYSICS"];
   const commentsForDisplay = detail ? detail.comments
     .filter((commentItem) => !commentItem.parentCommentId)
     .flatMap((commentItem) => [commentItem, ...detail.comments.filter((reply) => reply.parentCommentId === commentItem.id)]) : [];
@@ -411,8 +400,8 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                 </div>
               </header>
               <nav aria-label="Lọc bài viết theo môn" className="flex gap-5 overflow-x-auto border-b border-[#eaeae7] py-3.5 scrollbar-none">
-                {!subjectRestriction && <button type="button" onClick={() => handleFilterChange(null)} className={`shrink-0 text-[13px] font-semibold transition ${activeSubjectFilter === null ? "border-b-2 border-[#1c1e2e] pb-1 text-[#1c1e2e]" : "text-[#8b8c9d] hover:text-[#1c1e2e]"}`}>Tất cả</button>}
-                {blogFilterSubjects.map((subject) => <button key={subject} type="button" onClick={() => handleFilterChange(activeSubjectFilter === subject && !subjectRestriction ? null : subject)} className={`shrink-0 text-[13px] font-semibold transition ${activeSubjectFilter === subject ? "border-b-2 border-[#1c1e2e] pb-1 text-[#1c1e2e]" : "text-[#8b8c9d] hover:text-[#1c1e2e]"}`}>{SUBJECT_LABELS[subject]}</button>)}
+                <button type="button" onClick={() => handleFilterChange(null)} className={`shrink-0 text-[13px] font-semibold transition ${activeSubjectFilter === null ? "border-b-2 border-[#1c1e2e] pb-1 text-[#1c1e2e]" : "text-[#8b8c9d] hover:text-[#1c1e2e]"}`}>Tất cả</button>
+                {SUBJECT_CODES.map((subject) => <button key={subject} type="button" onClick={() => handleFilterChange(activeSubjectFilter === subject ? null : subject)} className={`shrink-0 text-[13px] font-semibold transition ${activeSubjectFilter === subject ? "border-b-2 border-[#1c1e2e] pb-1 text-[#1c1e2e]" : "text-[#8b8c9d] hover:text-[#1c1e2e]"}`}>{SUBJECT_LABELS[subject]}</button>)}
               </nav>
             </>
           )}
@@ -456,7 +445,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                       <p className="truncate text-[12px] leading-[18px] text-[#9b9caf]">Giáo viên EDUA</p>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {detail.authorId === user.id && canUseSubject(user, detail.subject) && (
+                      {detail.authorId === user.id && (
                         <button
                           type="button"
                           onClick={() => openEdit(detail.id)}
@@ -465,7 +454,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                           Sửa bài
                         </button>
                       )}
-                      {detail.authorId === user.id && canUseSubject(user, detail.subject) && (
+                      {detail.authorId === user.id && (
                         <button
                           type="button"
                           onClick={() => setPostToDelete(detail)}
@@ -622,12 +611,12 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
 
               <section className="border-t border-[#eaeae7] pt-7">
                 <div className="mb-5"><p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7661b3]">Đang được quan tâm</p><h2 className="mt-1 text-[23px] font-bold tracking-[-0.03em] text-[#1c1e2e]">Thảo luận nổi bật</h2></div>
-                <div className="grid gap-5 md:grid-cols-3">{discussionPosts.map((post) => <PostCard key={post.id} post={post} onClick={() => openDetail(post.id)} onEdit={post.authorId === user.id && canUseSubject(user, post.subject) ? () => void openEdit(post.id) : undefined} onDelete={post.authorId === user.id && canUseSubject(user, post.subject) ? () => setPostToDelete(post) : undefined} />)}</div>
+                <div className="grid gap-5 md:grid-cols-3">{discussionPosts.map((post) => <PostCard key={post.id} post={post} onClick={() => openDetail(post.id)} onEdit={post.authorId === user.id ? () => void openEdit(post.id) : undefined} onDelete={post.authorId === user.id ? () => setPostToDelete(post) : undefined} />)}</div>
               </section>
 
               <section className="mt-10 border-t border-[#eaeae7] pt-7">
                 <div className="mb-5 flex items-center justify-between"><div><p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#7661b3]">Cập nhật cộng đồng</p><h2 className="mt-1 text-[23px] font-bold tracking-[-0.03em] text-[#1c1e2e]">Tất cả bài viết</h2></div><span className="text-[12px] text-[#9b9caf]">{posts.length} bài viết</span></div>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{posts.map((post) => <PostCard key={post.id} post={post} onClick={() => openDetail(post.id)} onEdit={post.authorId === user.id && canUseSubject(user, post.subject) ? () => void openEdit(post.id) : undefined} onDelete={post.authorId === user.id && canUseSubject(user, post.subject) ? () => setPostToDelete(post) : undefined} />)}</div>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{posts.map((post) => <PostCard key={post.id} post={post} onClick={() => openDetail(post.id)} onEdit={post.authorId === user.id ? () => void openEdit(post.id) : undefined} onDelete={post.authorId === user.id ? () => setPostToDelete(post) : undefined} />)}</div>
               </section>
             </div>
           ) : (
