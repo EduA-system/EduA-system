@@ -27,6 +27,7 @@ import {
   type ClassResourceSummary,
   type SubmissionDetail,
   type SubmissionFileItem,
+  ClassApiError,
   formatFileSize,
   getClassDetail,
   getMySubmission,
@@ -52,6 +53,19 @@ type SubmissionDraft = {
 function hasTextContent(html: string): boolean {
   return html.replace(/<[^>]*>/g, "").trim().length > 0;
 }
+
+/**
+ * 403 ở đây gần như luôn là "lớp đã bị giáo viên chuyển sang lưu trữ" (BE trả message tiếng
+ * Anh "Class is inactive and read-only."). Trang được tải trước khi lớp đổi trạng thái nên UI
+ * không biết, vì vậy sau lần 403 đầu tiên ta khóa luôn các nút ghi thay vì để học sinh bấm lại.
+ */
+function isWriteForbidden(reason: unknown): boolean {
+  return reason instanceof ClassApiError && reason.status === 403;
+}
+
+const WRITE_FORBIDDEN_MESSAGE =
+  "Lớp đã được giáo viên chuyển sang chế độ lưu trữ nên không thể nộp bài hoặc thu hồi bài nữa. " +
+  "Nội dung bạn soạn dở vẫn được lưu ở máy, tải lại trang để xem lại bài đã nộp.";
 
 function legacyDraftStorageKey(classId: string, resourceId: string): string {
   return `edua:submission-draft:${classId}:${resourceId}`;
@@ -168,6 +182,8 @@ export function ResourceDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [unsubmitConfirmOpen, setUnsubmitConfirmOpen] = useState(false);
+  // Bật sau khi server từ chối (403) — khóa mọi nút ghi cho tới khi tải lại trang.
+  const [writeLocked, setWriteLocked] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userEditedRef = useRef(false);
   const loadSeqRef = useRef(0);
@@ -181,6 +197,7 @@ export function ResourceDetailPage() {
     setError("");
     setSuccessMessage("");
     setAccessRevoked(false);
+    setWriteLocked(false);
     try {
       const [detail, resourcePage] = await Promise.all([
         getClassDetail(authFetch, classId),
@@ -342,11 +359,17 @@ export function ResourceDetailPage() {
       setSavedAt(null);
       setIsEditing(false);
       setSuccessMessage("Nộp bài thành công.");
-      setSubmitConfirmOpen(false);
     } catch (reason) {
-      setFormError(reason instanceof Error ? reason.message : "Không thể nộp bài.");
+      if (isWriteForbidden(reason)) {
+        setWriteLocked(true);
+        setFormError(WRITE_FORBIDDEN_MESSAGE);
+      } else {
+        setFormError(reason instanceof Error ? reason.message : "Không thể nộp bài.");
+      }
     } finally {
       setSubmitting(false);
+      // Luôn đóng để thông báo lỗi/thành công phía dưới không bị lớp phủ của dialog che mất.
+      setSubmitConfirmOpen(false);
     }
   }
 
@@ -372,11 +395,16 @@ export function ResourceDetailPage() {
       setSavedAt(null);
       setIsEditing(true);
       setSuccessMessage("Đã thu hồi bài nộp.");
-      setUnsubmitConfirmOpen(false);
     } catch (reason) {
-      setFormError(reason instanceof Error ? reason.message : "Không thể thu hồi bài nộp.");
+      if (isWriteForbidden(reason)) {
+        setWriteLocked(true);
+        setFormError(WRITE_FORBIDDEN_MESSAGE);
+      } else {
+        setFormError(reason instanceof Error ? reason.message : "Không thể thu hồi bài nộp.");
+      }
     } finally {
       setUnsubmitting(false);
+      setUnsubmitConfirmOpen(false);
     }
   }
 
@@ -566,7 +594,8 @@ export function ResourceDetailPage() {
                           <button
                             type="button"
                             onClick={() => setIsEditing(true)}
-                            className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[13px] font-medium text-white transition hover:bg-[#c96a4c]"
+                            disabled={writeLocked}
+                            className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[13px] font-medium text-white transition hover:bg-[#c96a4c] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <Pencil className="size-4" />
                             Chỉnh sửa bài
@@ -574,7 +603,7 @@ export function ResourceDetailPage() {
                           <button
                             type="button"
                             onClick={requestUnsubmit}
-                            disabled={unsubmitting}
+                            disabled={unsubmitting || writeLocked}
                             className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#e8b4a4] bg-white px-4 text-[13px] font-medium text-[#c0492b] transition hover:bg-[#fdf3ef] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {unsubmitting ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
@@ -626,7 +655,7 @@ export function ResourceDetailPage() {
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
+                            disabled={uploading || writeLocked}
                             className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#d8d1c9] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Paperclip className="size-3.5" />}
@@ -639,7 +668,7 @@ export function ResourceDetailPage() {
                           <button
                             type="button"
                             onClick={requestSubmit}
-                            disabled={submitting || uploading}
+                            disabled={submitting || uploading || writeLocked}
                             className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#d97757] px-4 text-[13px] font-medium text-white transition hover:bg-[#c96a4c] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {submitting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
@@ -658,7 +687,7 @@ export function ResourceDetailPage() {
                               <button
                                 type="button"
                                 onClick={requestUnsubmit}
-                                disabled={unsubmitting}
+                                disabled={unsubmitting || writeLocked}
                                 className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#e8b4a4] bg-white px-4 text-[13px] font-medium text-[#c0492b] transition hover:bg-[#fdf3ef] disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {unsubmitting ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
