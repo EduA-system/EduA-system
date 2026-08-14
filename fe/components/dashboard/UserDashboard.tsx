@@ -143,8 +143,12 @@ export function UserDashboard() {
 
   const canGenerate = subjectAllowed && Boolean(bookId && chapterId && lessonId) && !generating;
 
+  // Các handler dưới đây xoá danh sách cấp dưới rồi dựa vào effect fetch lại. Effect chỉ chạy khi id
+  // đổi, nên chọn lại đúng giá trị đang chọn sẽ xoá danh sách mà không fetch lại → dropdown sau bị khoá
+  // vĩnh viễn (options rỗng). Chặn sớm khi giá trị không đổi.
   function handleSubjectChange(value: string) {
     if (!canUseSubject(user, value)) return;
+    if (value === subjectCode) return;
     setSubjectCode(value as SubjectCode);
     setBookId(null);
     setChapterId(null);
@@ -156,6 +160,7 @@ export function UserDashboard() {
   }
 
   function handleBookChange(value: string) {
+    if (value === bookId) return;
     setBookId(value);
     setChapterId(null);
     setLessonId(null);
@@ -164,6 +169,7 @@ export function UserDashboard() {
   }
 
   function handleChapterChange(value: string) {
+    if (value === chapterId) return;
     setChapterId(value);
     setLessonId(null);
     setLessons([]);
