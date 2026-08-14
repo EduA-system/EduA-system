@@ -30,7 +30,7 @@ public class LibraryContentService {
     public LibraryContentService(LibraryContentRepository repository, CurrentUserProvider currentUser, ActivityLogService activityLogService, NotificationService notificationService) { this.repository = repository; this.currentUser = currentUser; this.activityLogService = activityLogService; this.notificationService = notificationService; }
     @Transactional(readOnly = true)
     public LibraryViews.Page list(String rawType, String rawSubject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, String sort) {
-        return toPage(repository.search(currentUser.requireUserId(), parseType(rawType), parseSubject(rawSubject), grade, cleanCode(textbookCode), cleanCode(chapterCode), q, page, size, "title".equalsIgnoreCase(sort)), page, size);
+        return toPage(repository.searchSummaries(currentUser.requireUserId(), parseType(rawType), parseSubject(rawSubject), grade, cleanCode(textbookCode), cleanCode(chapterCode), q, page, size, "title".equalsIgnoreCase(sort)), page, size);
     }
     @Transactional(readOnly = true)
     public LibraryViews.Detail get(UUID id) { return toDetail(requireOwner(id)); }
@@ -102,7 +102,7 @@ public class LibraryContentService {
     public LibraryViews.Page listModerationQueue(int page, int size) {
         Subject moderatorSubject = currentUser.require().subject();
         if (moderatorSubject == null) throw new ForbiddenOperationException("Moderator must have a subject to review content.");
-        return toPage(repository.searchByStatusAndSubject(LibraryContentStatus.SUBMITTED, moderatorSubject, page, size), page, size);
+        return toPage(repository.searchSummariesByStatusAndSubject(LibraryContentStatus.SUBMITTED, moderatorSubject, page, size), page, size);
     }
     /** Chi tiết content đang chờ duyệt: Moderator chỉ xem được submission cùng subject. */
     @Transactional(readOnly = true)
@@ -117,7 +117,10 @@ public class LibraryContentService {
         return c;
     }
     private LibraryContent requireOwner(UUID id) { LibraryContent c = repository.findActiveById(id).orElseThrow(() -> new ResourceNotFoundException("Library content not found.")); if (!c.ownerId().equals(currentUser.requireUserId())) throw new ForbiddenOperationException("You can only access your own library content."); return c; }
-    private static LibraryViews.Page toPage(LibraryContentRepository.SearchResult r, int page, int size) { return new LibraryViews.Page(r.items().stream().map(LibraryContentService::toSummary).toList(), Math.max(0,page), Math.min(Math.max(1,size),100), r.total()); }
+    private static LibraryViews.Page toPage(LibraryContentRepository.SummarySearchResult r, int page, int size) {
+        return new LibraryViews.Page(r.items().stream().map(LibraryContentService::toSummary).toList(), Math.max(0, page), Math.min(Math.max(1, size), 100), r.total());
+    }
+    private static LibraryViews.Summary toSummary(LibraryContentRepository.LibraryContentSummary c) { return new LibraryViews.Summary(c.id(), c.type(), c.title(), c.subject(), c.grade(), c.textbookCode(), c.chapterCode(), c.status(), c.thumbnailUrl(), c.createdAt(), c.updatedAt(), c.submittedAt(), c.rejectionReason()); }
     private static LibraryViews.Summary toSummary(LibraryContent c) { return new LibraryViews.Summary(c.id(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),c.status(),c.thumbnailUrl(),c.createdAt(),c.updatedAt(),c.submittedAt(),c.rejectionReason()); }
     private static LibraryViews.Detail toDetail(LibraryContent c) { return new LibraryViews.Detail(c.id(),c.type(),c.title(),c.subject(),c.grade(),c.textbookCode(),c.chapterCode(),c.status(),c.payload(),c.thumbnailUrl(),c.createdAt(),c.updatedAt(),c.submittedAt(),c.rejectionReason()); }
     private static String requiredTitle(String title) { if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required."); return title.trim(); }
