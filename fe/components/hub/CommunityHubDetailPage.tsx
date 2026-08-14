@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, EyeOff, Loader2, MessageCircle, Pencil, Reply, Save, Send, Trash2, X } from "lucide-react";
 import { Avatar } from "@/components/blog/Avatar";
 import { RichView } from "@/components/blog/RichView";
@@ -13,9 +14,11 @@ import { subjectBadgeClasses, subjectLabel } from "@/lib/blog";
 import {
   createHubComment,
   customizeHubContent,
+  deleteHubContent,
   deleteHubComment,
   getHubContent,
   hideHubComment,
+  notifyHubContentCommentsChanged,
   updateHubComment,
   type HubComment,
   type HubContentDetail,
@@ -84,12 +87,16 @@ function HubContentBody({ detail }: { detail: HubContentDetail }) {
 
 export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
   const { user, authFetch } = useAuth();
+  const router = useRouter();
   const [detail, setDetail] = useState<HubContentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [comment, setComment] = useState("");
   const [savingCopy, setSavingCopy] = useState(false);
+  const [deletingContent, setDeletingContent] = useState(false);
+  const [deleteContentPending, setDeleteContentPending] = useState(false);
   const [savingComment, setSavingComment] = useState(false);
+  const commentSubmissionRef = useRef(false);
   const [editingCommentId, setEditingCommentId] = useState("");
   const [editCommentText, setEditCommentText] = useState("");
   const [replyTo, setReplyTo] = useState<HubComment | null>(null);
@@ -102,6 +109,7 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
   const editWordCount = useMemo(() => countWords(editCommentText), [editCommentText]);
   const currentUserName = user?.fullName || user?.email || "Bạn";
   const canSaveToLibrary = hasAnyRole(user, ["TEACHER", "MODERATOR"]);
+  const canDeleteContent = user?.id === detail?.ownerId;
   const commentsForDisplay = useMemo(() => {
     if (!detail) return [];
     const roots = detail.comments.filter((item) => !item.parentCommentId);
@@ -151,19 +159,36 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
   }
 
   async function addComment() {
-    if (!detail || !comment.trim()) return;
+    if (!detail || !comment.trim() || commentSubmissionRef.current) return;
     if (!user) return requireLogin();
     if (wordCount > COMMENT_MAX_WORDS) return;
+    commentSubmissionRef.current = true;
     setSavingComment(true);
     try {
       const saved = await createHubComment(authFetch, detail.id, comment.trim(), replyTo?.id ?? null);
       setDetail((current) => current ? { ...current, comments: [...current.comments, saved] } : current);
+      notifyHubContentCommentsChanged();
       setComment("");
       setReplyTo(null);
     } catch (cause) {
       setToast({ kind: "error", message: cause instanceof Error ? cause.message : "Không thể gửi bình luận." });
     } finally {
       setSavingComment(false);
+      commentSubmissionRef.current = false;
+    }
+  }
+
+  async function handleDeleteContent() {
+    if (!detail || !user) return requireLogin();
+    setDeletingContent(true);
+    try {
+      await deleteHubContent(authFetch, detail.id);
+      router.replace("/community-hub");
+    } catch (cause) {
+      setToast({ kind: "error", message: cause instanceof Error ? cause.message : "Không thể xóa bài viết." });
+    } finally {
+      setDeletingContent(false);
+      setDeleteContentPending(false);
     }
   }
 
@@ -215,6 +240,7 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
         ...current,
         comments: current.comments.filter((item) => item.id !== deletedId && item.parentCommentId !== deletedId),
       } : current);
+      notifyHubContentCommentsChanged();
       setToast({ kind: "success", message: moderationTarget.action === "hide" ? "Đã ẩn bình luận." : "Đã xóa bình luận." });
     } catch (cause) {
       setToast({ kind: "error", message: cause instanceof Error ? cause.message : "Không thể xử lý bình luận." });
@@ -253,12 +279,20 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
                       <h1 className="mt-3 text-3xl font-bold tracking-[-0.04em] text-[#30343d]">{detail.title}</h1>
                       <p className="mt-2 text-sm text-stone-500">Chia sẻ bởi {detail.ownerName ?? "Ẩn danh"}{detail.reviewedAt ? ` · Duyệt lúc ${formatDateTime(detail.reviewedAt)}` : ""}</p>
                     </div>
-                    {canSaveToLibrary && (
-                      <button type="button" disabled={savingCopy} onClick={() => void handleCustomize()} className="inline-flex items-center gap-2 rounded-xl bg-[#e8724a] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#cf603d] disabled:cursor-not-allowed disabled:opacity-60">
-                        {savingCopy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                        Lưu vào thư viện
-                      </button>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {canSaveToLibrary && (
+                        <button type="button" disabled={savingCopy} onClick={() => void handleCustomize()} className="inline-flex items-center gap-2 rounded-xl bg-[#e8724a] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#cf603d] disabled:cursor-not-allowed disabled:opacity-60">
+                          {savingCopy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                          Lưu vào thư viện
+                        </button>
+                      )}
+                      {canDeleteContent && (
+                        <button type="button" disabled={deletingContent} onClick={() => setDeleteContentPending(true)} className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60">
+                          {deletingContent ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+                          Xóa bài viết
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </header>
 
@@ -350,6 +384,16 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
         </section>
       </div>
 
+      <ConfirmDialog
+        open={deleteContentPending}
+        title="Xóa bài viết này?"
+        description="Bài viết sẽ bị gỡ khỏi Community Hub và không còn hiển thị với người dùng khác."
+        confirmLabel="Xóa bài viết"
+        variant="danger"
+        loading={deletingContent}
+        onConfirm={() => void handleDeleteContent()}
+        onClose={() => setDeleteContentPending(false)}
+      />
       <ConfirmDialog
         open={pendingEditComment !== null}
         title="Lưu chỉnh sửa bình luận?"

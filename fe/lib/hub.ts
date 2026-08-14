@@ -33,6 +33,12 @@ export type HubPage<T> = { items: T[]; page: number; size: number; total: number
 
 type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
+export const HUB_CONTENT_COMMENTS_CHANGED_EVENT = "hub-content-comments-changed";
+
+export function notifyHubContentCommentsChanged() {
+  window.dispatchEvent(new Event(HUB_CONTENT_COMMENTS_CHANGED_EVENT));
+}
+
 async function unpack<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { message?: string } | null;
@@ -42,7 +48,7 @@ async function unpack<T>(res: Response): Promise<T> {
 }
 
 export function listHubContents(authFetch: AuthFetch, params: URLSearchParams) {
-  return authFetch(`/api/hub/contents?${params}`).then(unpack<HubPage<HubContentSummary>>);
+  return authFetch(`/api/hub/contents?${params}`, { cache: "no-store" }).then(unpack<HubPage<HubContentSummary>>);
 }
 
 export function getHubContent(authFetch: AuthFetch, id: string) {
@@ -51,6 +57,14 @@ export function getHubContent(authFetch: AuthFetch, id: string) {
 
 export function customizeHubContent(authFetch: AuthFetch, id: string) {
   return authFetch(`/api/hub/contents/${id}/customize`, { method: "POST" }).then(unpack<LibraryContent>);
+}
+
+export async function deleteHubContent(authFetch: AuthFetch, id: string) {
+  const res = await authFetch(`/api/hub/contents/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message ?? "Không thể xóa bài viết.");
+  }
 }
 
 export function createHubComment(authFetch: AuthFetch, contentId: string, content: string, parentCommentId?: string | null) {

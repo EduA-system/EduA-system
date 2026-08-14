@@ -176,6 +176,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   const [activeSubjectFilter, setActiveSubjectFilter] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
+  const commentSubmissionRef = useRef(false);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [commentToHide, setCommentToHide] = useState<Comment | null>(null);
   const [commentToDelete, setCommentToDelete] = useState<Comment | null>(null);
@@ -290,7 +291,8 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   }
 
   async function addComment() {
-    if (!detail || !comment.trim() || isCommentSubmitting) return;
+    if (!detail || !comment.trim() || commentSubmissionRef.current) return;
+    commentSubmissionRef.current = true;
     setIsCommentSubmitting(true);
     try {
       await api<Comment>(authFetch, `/blog-posts/${detail.id}/comments`, { method: "POST", body: JSON.stringify({ content: comment, parentCommentId: replyTo?.id ?? null }) });
@@ -300,6 +302,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
       setMsg(String(e));
     } finally {
       setIsCommentSubmitting(false);
+      commentSubmissionRef.current = false;
     }
   }
 

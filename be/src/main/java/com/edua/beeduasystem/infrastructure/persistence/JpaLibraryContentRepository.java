@@ -38,6 +38,7 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
     @Override @Transactional(readOnly = true) public Optional<LibraryContent> findApprovedForHubById(UUID id) {
         return jpa.findById(id)
                 .filter(e -> e.getStatus() == LibraryContentStatus.APPROVED)
+                .filter(e -> e.getDeletedAt() == null)
                 .map(JpaLibraryContentRepository::toDomain);
     }
     @Override @Transactional(readOnly = true) public SearchResult search(UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, boolean titleAscending) {
@@ -52,7 +53,7 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
         return new SearchResult(result.getContent().stream().map(JpaLibraryContentRepository::toDomain).toList(), result.getTotalElements());
     }
     @Override @Transactional(readOnly = true) public SearchResult searchApproved(LibraryContentType type, Subject subject, String q, int page, int size) {
-        Specification<LibraryContentEntity> spec = (root, cq, cb) -> { List<Predicate> ps = new ArrayList<>(); ps.add(cb.equal(root.get("status"), LibraryContentStatus.APPROVED));
+        Specification<LibraryContentEntity> spec = (root, cq, cb) -> { List<Predicate> ps = new ArrayList<>(); ps.add(cb.equal(root.get("status"), LibraryContentStatus.APPROVED)); ps.add(cb.isNull(root.get("deletedAt")));
             if (type != null) ps.add(cb.equal(root.get("type"), type)); if (subject != null) ps.add(cb.equal(root.get("subject"), subject));
             if (q != null && !q.isBlank()) ps.add(cb.like(cb.lower(root.get("title")), "%" + q.trim().toLowerCase() + "%")); return cb.and(ps.toArray(Predicate[]::new)); };
         Page<LibraryContentEntity> result = jpa.findAll(spec, PageRequest.of(Math.max(0,page), Math.min(Math.max(1,size),100), Sort.by("updatedAt").descending()));
@@ -115,7 +116,7 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
         return jpa.countByStatusAndDeletedAtIsNull(status);
     }
     private static String approvedHubWhere(LibraryContentType type, Subject subject, String q) {
-        StringBuilder where = new StringBuilder(" WHERE lc.status = 'APPROVED'");
+        StringBuilder where = new StringBuilder(" WHERE lc.status = 'APPROVED' AND lc.deleted_at IS NULL");
         if (type != null) where.append(" AND lc.type = :type");
         if (subject != null) where.append(" AND lc.subject = :subject");
         if (q != null && !q.isBlank()) where.append(" AND LOWER(lc.title) LIKE :q");

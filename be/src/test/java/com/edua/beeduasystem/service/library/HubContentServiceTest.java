@@ -1,6 +1,9 @@
 package com.edua.beeduasystem.service.library;
 
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
+import com.edua.beeduasystem.domain.model.auth.AccessTokenClaims;
+import com.edua.beeduasystem.domain.model.auth.Role;
+import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.library.LibraryContent;
 import com.edua.beeduasystem.domain.model.library.LibraryContentStatus;
 import com.edua.beeduasystem.domain.model.library.LibraryContentType;
@@ -15,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,6 +45,7 @@ class HubContentServiceTest {
         commentRepository = mock(HubCommentRepository.class);
         userRepository = mock(AppUserRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
+        when(currentUserProvider.require()).thenReturn(new AccessTokenClaims(UUID.randomUUID(), "principal@example.com", Set.of(Role.PRINCIPAL), null));
         service = new HubContentService(repository, commentRepository, userRepository, currentUserProvider);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(userRepository.findById(any())).thenReturn(Optional.empty());
@@ -106,6 +111,29 @@ class HubContentServiceTest {
         assertThat(result.items()).extracting(HubViews.ContentSummary::commentCount).containsExactly(3L, 1L);
         verify(userRepository, never()).findById(any());
         verify(commentRepository, never()).countByLibraryContentId(any());
+    }
+
+    @Test
+    void list_limitsTeacherToAssignedSubject() {
+        when(currentUserProvider.require()).thenReturn(new AccessTokenClaims(UUID.randomUUID(), "teacher@example.com", Set.of(Role.TEACHER), Subject.MATH));
+        when(repository.searchApprovedHubSummaries(null, Subject.MATH, null, 0, 30))
+                .thenReturn(new LibraryContentRepository.HubSearchResult(java.util.List.of(), 0));
+
+        service.list(null, "PHYSICS", null, 0, 30);
+
+        verify(repository).searchApprovedHubSummaries(null, Subject.MATH, null, 0, 30);
+    }
+
+    @Test
+    void get_hidesContentOutsideAssignedSubject() {
+        UUID id = UUID.randomUUID();
+        when(currentUserProvider.require()).thenReturn(new AccessTokenClaims(UUID.randomUUID(), "teacher@example.com", Set.of(Role.TEACHER), Subject.MATH));
+        Instant now = Instant.now();
+        LibraryContent physicsContent = new LibraryContent(id, ownerId, LibraryContentType.LESSON_PLAN, "Vat ly", Subject.PHYSICS,
+                LibraryContentStatus.APPROVED, JsonNodeFactory.instance.objectNode(), null, now, now, null, null, null, null, null);
+        when(repository.findApprovedForHubById(id)).thenReturn(Optional.of(physicsContent));
+
+        assertThatThrownBy(() -> service.get(id)).isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

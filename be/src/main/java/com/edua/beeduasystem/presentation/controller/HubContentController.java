@@ -55,6 +55,13 @@ public class HubContentController {
         return contentService.customize(id);
     }
 
+    @DeleteMapping("/contents/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
+    public void delete(@PathVariable UUID id) {
+        contentService.deleteByOwner(id);
+    }
+
     @PostMapping("/contents/{id}/comments")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")

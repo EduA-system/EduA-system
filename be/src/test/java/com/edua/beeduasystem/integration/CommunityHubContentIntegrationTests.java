@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -88,7 +89,7 @@ class CommunityHubContentIntegrationTests {
     }
 
     @Test
-    void IT_HC_001_authorizedUserViewsApprovedHubFeedIncludingContentRemovedFromPersonalLibrary() throws Exception {
+    void IT_HC_001_authorizedUserViewsOnlyActiveApprovedHubFeed() throws Exception {
         AppUser owner = user("owner-001@community-hub-content-it.edua.local", "Hub Owner", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
         UUID approvedId = seedLibraryContent("Alpha Math Hub", owner.id(), "LESSON_PLAN", Subject.MATH, "APPROVED",
                 "{\"source\":\"approved-alpha\"}", null);
@@ -112,11 +113,11 @@ class CommunityHubContentIntegrationTests {
                 .andExpect(jsonPath("$.items[*].title", not(hasItem("Alpha Private Hub"))))
                 .andExpect(jsonPath("$.items[*].title", not(hasItem("Alpha Submitted Hub"))))
                 .andExpect(jsonPath("$.items[*].title", not(hasItem("Alpha Rejected Hub"))))
-                .andExpect(jsonPath("$.items[*].title", hasItem("Alpha Deleted Hub")))
+                .andExpect(jsonPath("$.items[*].title", not(hasItem("Alpha Deleted Hub"))))
                 .andExpect(jsonPath("$.items[*].title", not(hasItem("Beta Chemistry Hub"))))
                 .andExpect(jsonPath("$.items[0].ownerName").value("Hub Owner"))
                 .andExpect(jsonPath("$.items[0].commentCount").value(1))
-                .andExpect(jsonPath("$.total").value(2));
+                .andExpect(jsonPath("$.total").value(1));
 
         assertThat(tableCounts()).isEqualTo(before);
     }
@@ -183,7 +184,32 @@ class CommunityHubContentIntegrationTests {
     }
 
     @Test
-    void IT_HC_004_deniesCustomizeForGuestAndNonTeacherRoles() throws Exception {
+    void IT_HC_004_ownerDeletesApprovedHubContentAndOtherTeacherIsDenied() throws Exception {
+        AppUser owner = user("owner-004@community-hub-content-it.edua.local", "Delete Owner", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
+        AppUser otherTeacher = user("other-004@community-hub-content-it.edua.local", "Other Teacher", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
+        UUID approvedId = seedLibraryContent("Delete From Hub", owner.id(), "LESSON_PLAN", Subject.MATH, "APPROVED",
+                "{\"source\":\"delete\"}", null);
+
+        mockMvc.perform(delete("/api/hub/contents/{id}", approvedId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(otherTeacher, Role.TEACHER)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete("/api/hub/contents/{id}", approvedId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER)))
+                .andExpect(status().isNoContent());
+
+        assertThat(requireLibraryContent(approvedId).get("deleted_at")).isNotNull();
+        mockMvc.perform(get("/api/hub/contents/{id}", approvedId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER)))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/hub/contents?q=Delete+From+Hub&page=0&size=20")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0));
+    }
+
+    @Test
+    void IT_HC_005_deniesCustomizeForGuestAndNonTeacherRoles() throws Exception {
         AppUser owner = user("owner-004@community-hub-content-it.edua.local", "Permission Owner", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
         AppUser student = user("student-004@community-hub-content-it.edua.local", "Student User", Subject.MATH, UserStatus.ACTIVE, Role.STUDENT);
         AppUser moderator = user("moderator-004@community-hub-content-it.edua.local", "Moderator User", Subject.MATH, UserStatus.ACTIVE, Role.MODERATOR);

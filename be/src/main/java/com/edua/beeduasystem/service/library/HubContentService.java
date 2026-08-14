@@ -1,5 +1,6 @@
 package com.edua.beeduasystem.service.library;
 
+import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Subject;
@@ -40,7 +41,9 @@ public class HubContentService {
 
     /** Danh sách content APPROVED, public — không lọc theo owner. */
     public HubViews.Page<HubViews.ContentSummary> list(String rawType, String rawSubject, String q, int page, int size) {
-        LibraryContentRepository.HubSearchResult result = repository.searchApprovedHubSummaries(parseType(rawType), parseSubject(rawSubject), q, page, size);
+        Subject assignedSubject = currentUser.require().subject();
+        Subject subject = assignedSubject != null ? assignedSubject : parseSubject(rawSubject);
+        LibraryContentRepository.HubSearchResult result = repository.searchApprovedHubSummaries(parseType(rawType), subject, q, page, size);
         return new HubViews.Page<>(result.items().stream().map(HubContentService::toSummary).toList(), Math.max(0, page), Math.min(Math.max(1, size), 100), result.total());
     }
 
@@ -63,9 +66,26 @@ public class HubContentService {
                 saved.updatedAt(), saved.submittedAt(), saved.rejectionReason());
     }
 
+    /** Chủ nội dung gỡ bài đã duyệt khỏi Community Hub bằng soft-delete. */
+    public void deleteByOwner(UUID id) {
+        LibraryContent content = requireApproved(id);
+        if (!content.ownerId().equals(currentUser.requireUserId())) {
+            throw new ForbiddenOperationException("Bạn chỉ có thể xóa nội dung do mình đăng.");
+        }
+        repository.save(new LibraryContent(content.id(), content.ownerId(), content.type(), content.title(), content.subject(),
+                content.grade(), content.textbookCode(), content.chapterCode(), content.status(), content.payload(), content.thumbnailUrl(),
+                content.createdAt(), Instant.now(), content.submittedAt(), Instant.now(), content.reviewedBy(), content.reviewedAt(),
+                content.rejectionReason(), content.version()));
+    }
+
     private LibraryContent requireApproved(UUID id) {
-        return repository.findApprovedForHubById(id)
+        LibraryContent content = repository.findApprovedForHubById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Content not found."));
+        Subject assignedSubject = currentUser.require().subject();
+        if (assignedSubject != null && content.subject() != assignedSubject) {
+            throw new ResourceNotFoundException("Content not found.");
+        }
+        return content;
     }
 
     private static HubViews.ContentSummary toSummary(LibraryContentRepository.HubContentSummary content) {

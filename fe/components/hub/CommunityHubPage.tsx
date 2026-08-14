@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { subjectBadgeClasses, subjectLabel } from "@/lib/blog";
-import { listHubContents, type HubContentSummary } from "@/lib/hub";
+import { HUB_CONTENT_COMMENTS_CHANGED_EVENT, listHubContents, type HubContentSummary } from "@/lib/hub";
 import type { LibraryType } from "@/lib/library";
 
 const tabs: [string, LibraryType | ""][] = [
@@ -29,7 +29,6 @@ const contentMeta: Record<LibraryType, { label: string; icon: typeof BookOpen; c
 function CommunityHubScreen() {
   const { user, authFetch } = useAuth();
   const [type, setType] = useState<LibraryType | "">("");
-  const [subject, setSubject] = useState("");
   const [q, setQ] = useState("");
   const [items, setItems] = useState<HubContentSummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -46,7 +45,6 @@ function CommunityHubScreen() {
     try {
       const params = new URLSearchParams({ page: String(nextPage), size: String(PAGE_SIZE) });
       if (type) params.set("type", type);
-      if (subject) params.set("subject", subject);
       if (q) params.set("q", q);
       const data = await listHubContents(authFetch, params);
       if (version !== requestVersion.current) return;
@@ -63,14 +61,23 @@ function CommunityHubScreen() {
         setLoadingMore(false);
       }
     }
-  }, [authFetch, q, subject, type]);
+  }, [authFetch, q, type]);
 
   useEffect(() => {
     const timer = setTimeout(() => void load(), 200);
     return () => clearTimeout(timer);
   }, [load]);
 
+  useEffect(() => {
+    const refreshCommentCounts = () => void load();
+    window.addEventListener(HUB_CONTENT_COMMENTS_CHANGED_EVENT, refreshCommentCounts);
+    return () => window.removeEventListener(HUB_CONTENT_COMMENTS_CHANGED_EVENT, refreshCommentCounts);
+  }, [load]);
+
   const hasMore = items.length < total;
+  const visibleTabs = user?.subject === "MATH"
+    ? tabs.filter(([, value]) => value !== "SIMULATION")
+    : tabs;
 
   return (
     <main className="min-h-screen bg-white text-[#2b2926]">
@@ -87,26 +94,19 @@ function CommunityHubScreen() {
           </header>
 
           <div className="mt-8 flex gap-1 overflow-x-auto border-b border-stone-200" role="tablist" aria-label="Loại nội dung">
-            {tabs.map(([label, value]) => (
+            {visibleTabs.map(([label, value]) => (
               <button key={value || "all"} type="button" role="tab" aria-selected={type === value} onClick={() => setType(value)} className={`shrink-0 border-b-2 px-3 py-3 text-sm transition ${type === value ? "border-[#e8724a] font-bold text-[#30343d]" : "border-transparent text-stone-500 hover:text-stone-900"}`}>
                 {label}
               </button>
             ))}
           </div>
 
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-5">
             <label className="relative min-w-0 flex-1">
               <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
               <span className="sr-only">Tìm theo tiêu đề</span>
               <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Tìm theo tiêu đề..." className="w-full rounded-xl border border-stone-300 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition placeholder:text-stone-400 focus:border-[#e8724a] focus:ring-2 focus:ring-[#fbe1d5]" />
             </label>
-            <label className="sr-only" htmlFor="hub-subject">Lọc theo môn học</label>
-            <select id="hub-subject" value={subject} onChange={(event) => setSubject(event.target.value)} className="rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#e8724a] focus:ring-2 focus:ring-[#fbe1d5]">
-              <option value="">Tất cả môn</option>
-              <option value="MATH">Toán</option>
-              <option value="CHEMISTRY">Hóa học</option>
-              <option value="PHYSICS">Vật lý</option>
-            </select>
           </div>
 
           {error && (
@@ -123,8 +123,8 @@ function CommunityHubScreen() {
           ) : items.length === 0 ? (
             <div className="mt-8 rounded-[26px] border-2 border-dashed border-stone-200 bg-stone-50 p-12 text-center">
               <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-stone-200 text-stone-500"><Search aria-hidden className="size-5" /></div>
-              <h2 className="mt-4 font-bold text-[#30343d]">{q || subject || type ? "Không tìm thấy nội dung phù hợp" : "Chưa có nội dung nào trên Hub"}</h2>
-              <p className="mt-1 text-sm text-stone-500">{q || subject || type ? "Hãy thử thay đổi từ khóa hoặc bộ lọc." : "Nội dung được duyệt từ cộng đồng sẽ xuất hiện tại đây."}</p>
+              <h2 className="mt-4 font-bold text-[#30343d]">{q || type ? "Không tìm thấy nội dung phù hợp" : "Chưa có nội dung nào trên Hub"}</h2>
+              <p className="mt-1 text-sm text-stone-500">{q || type ? "Hãy thử thay đổi từ khóa hoặc bộ lọc." : "Nội dung được duyệt từ cộng đồng sẽ xuất hiện tại đây."}</p>
             </div>
           ) : (
             <>
