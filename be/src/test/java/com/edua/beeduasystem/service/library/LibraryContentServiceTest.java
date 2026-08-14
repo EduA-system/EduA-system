@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -170,7 +172,7 @@ class LibraryContentServiceTest {
     }
 
     @Test
-    void approve_movesSubmittedContentToApprovedWhenModeratorSubjectMatches() {
+    void approve_createsApprovedHubSnapshotWhileKeepingSourceInLibrary() {
         UUID id = UUID.randomUUID();
         UUID moderatorId = UUID.randomUUID();
         when(currentUserProvider.requireUserId()).thenReturn(moderatorId);
@@ -181,10 +183,56 @@ class LibraryContentServiceTest {
         LibraryViews.Detail result = service.approve(id);
 
         ArgumentCaptor<LibraryContent> saved = ArgumentCaptor.forClass(LibraryContent.class);
-        verify(repository).save(saved.capture());
-        assertThat(saved.getValue().status()).isEqualTo(LibraryContentStatus.APPROVED);
-        assertThat(saved.getValue().reviewedBy()).isEqualTo(moderatorId);
+        verify(repository, times(2)).save(saved.capture());
+        LibraryContent source = saved.getAllValues().get(0);
+        LibraryContent snapshot = saved.getAllValues().get(1);
+        assertThat(source.id()).isEqualTo(id);
+        assertThat(source.status()).isEqualTo(LibraryContentStatus.APPROVED);
+        assertThat(source.reviewedBy()).isEqualTo(moderatorId);
+        assertThat(snapshot.id()).isNotEqualTo(id);
+        assertThat(snapshot.status()).isEqualTo(LibraryContentStatus.APPROVED);
+        assertThat(snapshot.sourceLibraryContentId()).isEqualTo(id);
+        assertThat(snapshot.payload()).isNotSameAs(source.payload());
         assertThat(result.status()).isEqualTo(LibraryContentStatus.APPROVED);
+    }
+
+    @Test
+    void update_returnsPublishedSourceToPrivateWithoutChangingSnapshot() {
+        UUID id = UUID.randomUUID();
+        LibraryContent publishedSource = contentWithStatus(id, ownerId, Subject.MATH, LibraryContentStatus.APPROVED, Instant.now());
+        when(repository.findActiveById(id)).thenReturn(Optional.of(publishedSource));
+        when(repository.hasAnySnapshotBySourceId(id)).thenReturn(true);
+
+        LibraryViews.Detail result = service.update(id, "Bài giảng đã sửa", null, false, null, false, null, false, null, false, null, false, null, false);
+
+        ArgumentCaptor<LibraryContent> saved = ArgumentCaptor.forClass(LibraryContent.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().status()).isEqualTo(LibraryContentStatus.PRIVATE);
+        assertThat(saved.getValue().reviewedBy()).isNull();
+        assertThat(result.status()).isEqualTo(LibraryContentStatus.PRIVATE);
+    }
+
+    @Test
+    void approve_replacesActiveSnapshotForTheSameSource() {
+        UUID id = UUID.randomUUID();
+        UUID moderatorId = UUID.randomUUID();
+        UUID previousSnapshotId = UUID.randomUUID();
+        Instant now = Instant.now();
+        LibraryContent previousSnapshot = new LibraryContent(previousSnapshotId, ownerId, LibraryContentType.LESSON_PLAN,
+                "Bản đã đăng", Subject.MATH, null, null, null, LibraryContentStatus.APPROVED,
+                JsonNodeFactory.instance.objectNode(), null, now, now, now, null, moderatorId, now, null, null, id);
+        when(currentUserProvider.requireUserId()).thenReturn(moderatorId);
+        when(currentUserProvider.require()).thenReturn(new AccessTokenClaims(moderatorId, "mod@edua.vn", null, Subject.MATH));
+        when(repository.findActiveById(id)).thenReturn(Optional.of(contentWithStatus(id, ownerId, Subject.MATH, LibraryContentStatus.SUBMITTED, now)));
+        when(repository.findActiveSnapshotsBySourceId(id)).thenReturn(List.of(previousSnapshot));
+
+        service.approve(id);
+
+        ArgumentCaptor<LibraryContent> saved = ArgumentCaptor.forClass(LibraryContent.class);
+        verify(repository, times(3)).save(saved.capture());
+        assertThat(saved.getAllValues().get(0).id()).isEqualTo(previousSnapshotId);
+        assertThat(saved.getAllValues().get(0).deletedAt()).isNotNull();
+        assertThat(saved.getAllValues().get(2).sourceLibraryContentId()).isEqualTo(id);
     }
 
     @Test

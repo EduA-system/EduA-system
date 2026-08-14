@@ -80,6 +80,7 @@ export function SlideMakerClient() {
   const [deckSubject, setDeckSubject] = useState<LibrarySubject>("PHYSICS");
   const [presentSlides, setPresentSlides] = useState<Slide[] | null>(null);
   const replaceSlides = useEditorStore((s) => s.replaceSlides);
+  const resetSlidesForNewGeneration = useEditorStore((s) => s.resetSlidesForNewGeneration);
 
   useEffect(() => {
     if (!saveNotice) return;
@@ -96,15 +97,16 @@ export function SlideMakerClient() {
 
     let cancelled = false;
     loadedLibraryIdRef.current = null;
+    setLibraryId(null);
     void getLibraryContent(authFetch, requestedLibraryId)
       .then((content) => {
         if (cancelled) return;
         if (content.type !== "SLIDE_DECK") throw new Error("Nội dung này không phải là bộ slide.");
         const slides = parseSlideDeck(content.payload);
         if (!slides) throw new Error("Bộ slide đã lưu có định dạng không hợp lệ.");
-        // Chỉ nạp khi store vẫn là seed; nếu đã có nội dung (quay lại từ trình
-        // chiếu) thì giữ nguyên slides hiện tại để không mất chỉnh sửa.
-        if (isSeedState()) replaceSlides(slides);
+        // `libraryId` đổi khi người dùng chọn deck khác mà không unmount route,
+        // nên phải thay toàn bộ store thay vì giữ deck vừa mở trước đó.
+        resetSlidesForNewGeneration(slides);
         loadedLibraryIdRef.current = content.id;
         setLibraryId(content.id);
         setFailedLibraryId(null);
@@ -117,7 +119,7 @@ export function SlideMakerClient() {
     return () => {
       cancelled = true;
     };
-  }, [authFetch, replaceSlides, requestedLibraryId]);
+  }, [authFetch, requestedLibraryId, resetSlidesForNewGeneration]);
 
   const libraryLoading = Boolean(
     requestedLibraryId && libraryId !== requestedLibraryId && failedLibraryId !== requestedLibraryId,

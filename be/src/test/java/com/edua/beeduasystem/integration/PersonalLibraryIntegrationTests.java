@@ -381,7 +381,8 @@ class PersonalLibraryIntegrationTests {
                     deleted_at TIMESTAMPTZ,
                     reviewed_by UUID,
                     reviewed_at TIMESTAMPTZ,
-                    rejection_reason TEXT
+                    rejection_reason TEXT,
+                    source_library_content_id UUID
                 )
                 """);
     }
