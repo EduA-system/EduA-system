@@ -9,15 +9,17 @@ import type { Element as PeriodicElement } from "@/components/periodic-table/typ
 type SlidePresentationOverlayProps = {
   slides: Slide[];
   onExit: () => void;
+  /** Slide mở đầu; dùng khi trình chiếu bắt đầu từ một thumbnail cụ thể. */
+  initialIndex?: number;
 };
 
 /**
  * Lớp phủ trình chiếu: chiếm trọn màn hình, không có thanh điều khiển.
  * Vào fullscreen ngay khi mount và chỉ thoát bằng phím Esc (hoặc khi rời fullscreen).
  */
-export function SlidePresentationOverlay({ slides, onExit }: SlidePresentationOverlayProps) {
+export function SlidePresentationOverlay({ slides, onExit, initialIndex = 0 }: SlidePresentationOverlayProps) {
   const stageRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(() => Math.max(0, Math.min(initialIndex, Math.max(0, slides.length - 1))));
   const [scale, setScale] = useState(1);
   const [selectedElement, setSelectedElement] = useState<PeriodicElement | null>(null);
 

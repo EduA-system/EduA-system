@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, EyeOff, Loader2, MessageCircle, Pencil, Reply, Save, Send, Trash2, X } from "lucide-react";
 import { Avatar } from "@/components/blog/Avatar";
 import { RichView } from "@/components/blog/RichView";
+import { SlideDeckPreview } from "@/components/hub/SlideDeckPreview";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -63,16 +64,7 @@ function HubContentBody({ detail }: { detail: HubContentDetail }) {
   }
 
   if (slides) {
-    return (
-      <div className="rounded-2xl border border-stone-200 bg-white p-5">
-        <p className="font-semibold text-[#30343d]">Bộ slide</p>
-        <p className="mt-1 text-sm text-stone-500">{slides.length} slide trong nội dung chia sẻ.</p>
-        {detail.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- hub thumbnails may originate from object storage
-          <img src={detail.thumbnailUrl} alt="" className="mt-4 aspect-video w-full rounded-xl border border-stone-200 object-cover" />
-        ) : null}
-      </div>
-    );
+    return <SlideDeckPreview slides={slides} caption={`${slides.length} slide trong nội dung chia sẻ.`} />;
   }
 
   return (
