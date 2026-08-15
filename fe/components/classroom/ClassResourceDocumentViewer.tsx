@@ -10,7 +10,7 @@ import { createEditorExtensions } from "@/components/LessonEditor/editorConfig";
 import { RichView } from "@/components/blog/RichView";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getClassResourceLibraryContent, type ClassResourceLibraryContent } from "@/lib/classroom";
-import { exportDocumentPdf, openExportedPdf } from "@/lib/document-export";
+import { openDocumentPrintDialog } from "@/lib/lesson-plan-pdf-export";
 import type { TiptapNode } from "@/lib/tiptap-to-text";
 
 type DocumentKind = "lesson" | "exam";
@@ -106,12 +106,9 @@ export function ClassResourceDocumentViewer({ kind }: { kind: DocumentKind }) {
     setExportingPdf(true);
     setExportError("");
     try {
-      const result = await exportDocumentPdf(authFetch, {
-        type: kind === "lesson" ? "LESSON_PLAN" : "TEST",
-        title: viewer.content.title,
-        documentHtml: documentToHtml(viewer.document),
-      });
-      openExportedPdf(result);
+      if (!openDocumentPrintDialog(viewer.content.title, documentToHtml(viewer.document))) {
+        throw new Error("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup và thử lại.");
+      }
     } catch (reason) {
       setExportError(reason instanceof Error ? reason.message : "Không thể xuất PDF.");
     } finally {

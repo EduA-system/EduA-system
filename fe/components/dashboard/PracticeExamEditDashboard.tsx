@@ -21,7 +21,7 @@ import {
   type PracticeExam,
 } from "@/services/practiceExamService";
 import { examHtml, examLoadingSkeletonHtml, type Metadata } from "@/lib/practice-exam-html";
-import { exportDocumentPdf, openExportedPdf } from "@/lib/document-export";
+import { openDocumentPrintDialog } from "@/lib/lesson-plan-pdf-export";
 
 function draftMetadata(): Metadata {
   const fallback: Metadata = { subject: "Vật lí", grade: "10", duration: 15, difficulty: "MEDIUM" };
@@ -129,14 +129,9 @@ export function PracticeExamEditDashboard() {
     setExportingPdf(true);
     setNotice(null);
     try {
-      const result = await exportDocumentPdf(authFetch, {
-        type: "TEST",
-        title,
-        documentHtml: editor.getHTML(),
-        marginLeft: margins.left,
-        marginRight: margins.right,
-      });
-      openExportedPdf(result);
+      if (!openDocumentPrintDialog(title, editor.getHTML(), { marginLeft: margins.left, marginRight: margins.right })) {
+        throw new Error("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup và thử lại.");
+      }
       setNotice("Đã xuất PDF bài kiểm tra.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Không thể xuất PDF bài kiểm tra.");

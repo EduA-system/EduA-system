@@ -347,6 +347,21 @@ function markerDef(
   }
 }
 
+/** Renders AI-provided `$...$` fragments as inline KaTeX while preserving normal Vietnamese text. */
+function InlineLatexText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\$[^$\n]+\$)/g).map((part, index) => {
+        if (part.startsWith("$") && part.endsWith("$")) {
+          const html = katex.renderToString(part.slice(1, -1), { throwOnError: false, strict: "ignore" });
+          return <span key={index} dangerouslySetInnerHTML={{ __html: html }} />;
+        }
+        return part;
+      })}
+    </>
+  );
+}
+
 export function ElementView({
   el,
   hideText,
@@ -424,9 +439,9 @@ export function ElementView({
                 listStyleType: "decimal",
                 width: "100%",
               }}
-            >
+              >
               {(el.text || "").split("\n").map((line, i) => (
-                <li key={i}>{line || " "}</li>
+                <li key={i}><InlineLatexText text={line || " "} /></li>
               ))}
             </ol>
           ) : (
@@ -438,14 +453,14 @@ export function ElementView({
                 listStyleType: "disc",
                 width: "100%",
               }}
-            >
+              >
               {(el.text || "").split("\n").map((line, i) => (
-                <li key={i}>{line || " "}</li>
+                <li key={i}><InlineLatexText text={line || " "} /></li>
               ))}
             </ul>
           ))
         ) : (
-          <span style={{ ...textStyle, width: "100%", display: "block" }}>{el.text}</span>
+          <span style={{ ...textStyle, width: "100%", display: "block" }}><InlineLatexText text={el.text} /></span>
         )}
       </div>
     );
