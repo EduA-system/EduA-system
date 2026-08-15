@@ -299,6 +299,11 @@ public class PrincipalModeratorService {
         }
 
         @Override
+        public int deactivateActiveByOwnerIdExcludingGrades(UUID ownerId, java.util.Collection<Integer> keepGrades) {
+            return 0;
+        }
+
+        @Override
         public SearchResult searchOwned(UUID ownerId, Subject subject, Integer grade, ClassStatus status,
                                         String q, int page, int size) {
             return new SearchResult(List.of(), 0);

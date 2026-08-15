@@ -164,6 +164,7 @@ public class ClassEnrollmentService {
                 currentUserProvider.requireUserId(),
                 StringUtils.hasText(reason) ? reason.trim() : null,
                 member.rejoinedAt()));
+        notifyRemoval(classroom, studentId);
         return new ClassMemberViews.RemoveResult("SOFT_REMOVE", false);
     }
 
@@ -333,6 +334,21 @@ public class ClassEnrollmentService {
                 saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt(),
                 saved.targetType(), saved.targetUrl());
         studentIds.forEach(id -> notificationStreamPort.publishNew(id, event));
+    }
+
+    private void notifyRemoval(Classroom classroom, UUID studentId) {
+        UUID senderId = currentUserProvider.requireUserId();
+        Instant now = Instant.now();
+        String title = "Bạn đã bị xóa khỏi lớp " + classroom.name();
+        String content = "Giáo viên đã xóa bạn khỏi lớp \"" + classroom.name() + "\".";
+        Notification saved = notificationRepository.createWithRecipients(
+                new Notification(UUID.randomUUID(), senderId, classroom.subject(), title, content, now, null, null),
+                List.of(studentId));
+        String senderName = resolveSenderName(senderId);
+        NotificationEvent event = new NotificationEvent(
+                saved.id(), saved.title(), saved.content(), saved.subject(), senderName, saved.createdAt(),
+                saved.targetType(), saved.targetUrl());
+        notificationStreamPort.publishNew(studentId, event);
     }
 
     private String resolveSenderName(UUID senderId) {

@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,6 +58,12 @@ public class JpaClassRepository implements ClassRepository {
     @Transactional
     public int archiveActiveByOwnerId(UUID ownerId) {
         return jpa.archiveActiveByOwnerId(ownerId, ClassStatus.INACTIVE, ClassStatus.ACTIVE);
+    }
+
+    @Override
+    @Transactional
+    public int deactivateActiveByOwnerIdExcludingGrades(UUID ownerId, Collection<Integer> keepGrades) {
+        return jpa.deactivateActiveByOwnerIdExcludingGrades(ownerId, keepGrades, ClassStatus.INACTIVE, ClassStatus.ACTIVE);
     }
 
     @Override

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.UUID;
 
 public interface ClassJpaRepository extends JpaRepository<ClassEntity, UUID>, JpaSpecificationExecutor<ClassEntity> {
@@ -17,5 +18,14 @@ public interface ClassJpaRepository extends JpaRepository<ClassEntity, UUID>, Jp
     int archiveActiveByOwnerId(
             @Param("ownerId") UUID ownerId,
             @Param("archivedStatus") ClassStatus archivedStatus,
+            @Param("activeStatus") ClassStatus activeStatus);
+
+    @Modifying
+    @Query("UPDATE ClassEntity c SET c.status = :inactiveStatus, c.updatedAt = CURRENT_TIMESTAMP "
+            + "WHERE c.ownerId = :ownerId AND c.status = :activeStatus AND c.grade NOT IN :keepGrades")
+    int deactivateActiveByOwnerIdExcludingGrades(
+            @Param("ownerId") UUID ownerId,
+            @Param("keepGrades") Collection<Integer> keepGrades,
+            @Param("inactiveStatus") ClassStatus inactiveStatus,
             @Param("activeStatus") ClassStatus activeStatus);
 }

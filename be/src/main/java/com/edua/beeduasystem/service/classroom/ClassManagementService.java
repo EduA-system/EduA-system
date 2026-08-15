@@ -138,6 +138,9 @@ public class ClassManagementService {
         if (classroom.status() == newStatus) {
             throw new IllegalArgumentException("Class already has status " + newStatus + ".");
         }
+        if (newStatus == ClassStatus.ACTIVE) {
+            requireOwnGrade(classroom.ownerId(), classroom.grade());
+        }
         Classroom saved = classRepository.save(new Classroom(
                 classroom.id(),
                 classroom.ownerId(),

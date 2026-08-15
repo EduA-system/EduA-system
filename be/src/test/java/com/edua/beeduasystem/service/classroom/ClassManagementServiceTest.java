@@ -244,6 +244,39 @@ class ClassManagementServiceTest {
         assertThat(result.status()).isEqualTo(ClassStatus.INACTIVE);
     }
 
+    @Test
+    void updateStatus_activatingRequiresOwnGrade() {
+        UUID ownerId = UUID.randomUUID();
+        UUID classId = UUID.randomUUID();
+        Classroom classroom = classroom(classId, ownerId, "10A1", null, Subject.CHEMISTRY, 10, ClassStatus.INACTIVE);
+        when(currentUserProvider.requireUserId()).thenReturn(ownerId);
+        when(classRepository.findById(classId)).thenReturn(Optional.of(classroom));
+        // Mod da doi khoi giao vien sang 11, khong con phu trach khoi 10 cua lop nay.
+        when(teacherGradeRepository.findGradesByUserIds(List.of(ownerId))).thenReturn(Map.of(ownerId, List.of(11)));
+
+        assertThatThrownBy(() -> service.updateStatus(classId, ClassStatus.ACTIVE))
+                .isInstanceOf(ForbiddenOperationException.class)
+                .hasMessage("Bạn chỉ được tạo hoặc chỉnh sửa lớp thuộc khối mình phụ trách.");
+
+        verify(classRepository, org.mockito.Mockito.never()).save(any(Classroom.class));
+    }
+
+    @Test
+    void updateStatus_activatingSucceedsWhenGradeStillAssigned() {
+        UUID ownerId = UUID.randomUUID();
+        UUID classId = UUID.randomUUID();
+        Classroom classroom = classroom(classId, ownerId, "10A1", null, Subject.CHEMISTRY, 10, ClassStatus.INACTIVE);
+        when(currentUserProvider.requireUserId()).thenReturn(ownerId);
+        when(classRepository.findById(classId)).thenReturn(Optional.of(classroom));
+        when(classRepository.save(any(Classroom.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.findById(ownerId)).thenReturn(Optional.of(user(ownerId, "owner@edua.vn", "Owner Name")));
+        when(teacherGradeRepository.findGradesByUserIds(List.of(ownerId))).thenReturn(Map.of(ownerId, List.of(10)));
+
+        ClassViews.ClassDetail result = service.updateStatus(classId, ClassStatus.ACTIVE);
+
+        assertThat(result.status()).isEqualTo(ClassStatus.ACTIVE);
+    }
+
     private static Classroom classroom(UUID id, UUID ownerId, String name, String description,
                                         Subject subject, Integer grade, ClassStatus status) {
         Instant now = Instant.parse("2026-07-25T00:00:00Z");

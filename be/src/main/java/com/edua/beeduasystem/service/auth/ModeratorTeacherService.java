@@ -210,6 +210,7 @@ public class ModeratorTeacherService {
                 user.lastLoginAt(),
                 AppUserFieldValidator.normalizeEducatorDateOfBirth(dateOfBirth)));
         teacherGradeRepository.replaceGrades(updated.id(), normalizedGrades);
+        classRepository.deactivateActiveByOwnerIdExcludingGrades(updated.id(), normalizedGrades);
         weeklyTaskService.assignOpenCurrentWeekTasks(updated.id(), moderatorSubject, normalizedGrades);
         activityLogService.record(currentUserProvider.requireUserId(), "MODERATOR", ActivityLogCategory.ACCOUNT,
                 ActivityLogAction.UPDATE_TEACHER, "APP_USER", updated.id(), null);

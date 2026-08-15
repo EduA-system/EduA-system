@@ -70,7 +70,8 @@ public class ModeratorController {
     @PatchMapping("/teachers/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Cập nhật thông tin Teacher",
-            description = "Moderator chỉ được sửa giáo viên cùng subject. Không sửa email/subject; lớp và task cũ giữ nguyên.")
+            description = "Moderator chỉ được sửa giáo viên cùng subject. Không sửa email/subject; "
+                    + "các lớp đang ACTIVE thuộc khối không còn được phân công sẽ tự động chuyển INACTIVE.")
     public TeacherDto updateTeacher(@PathVariable UUID id, @Valid @RequestBody UpdateTeacherRequest request) {
         var user = moderatorTeacherService.updateTeacher(
                 id, request.fullName(), request.phoneNumber(), request.dateOfBirth(), request.grades());

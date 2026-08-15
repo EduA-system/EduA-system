@@ -4,6 +4,7 @@ import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.classroom.ClassStatus;
 import com.edua.beeduasystem.domain.model.classroom.Classroom;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,6 +16,9 @@ public interface ClassRepository {
     Optional<Classroom> findById(UUID id);
 
     int archiveActiveByOwnerId(UUID ownerId);
+
+    /** Chuyen ve INACTIVE cac lop dang ACTIVE cua owner co khoi khong con nam trong danh sach khoi duoc giu lai. */
+    int deactivateActiveByOwnerIdExcludingGrades(UUID ownerId, Collection<Integer> keepGrades);
 
     SearchResult searchOwned(UUID ownerId, Subject subject, Integer grade, ClassStatus status, String q, int page, int size);
 
