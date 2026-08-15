@@ -34,4 +34,12 @@ describe("offline slide HTML export", () => {
     expect(html).toContain("H₂O");
     expect(html).not.toContain("[object Object]");
   });
+
+  it("renders a captured snapshot image for a simulation element when one was collected", () => {
+    const html = buildOfflineHtml([slide], "Demo", new Map(), new Map([["sim", "images/sim-molecule-1.png"]]));
+
+    expect(html).toContain('src="images/sim-molecule-1.png"');
+    expect(html).toContain("Nước &lt;3 · H₂O");
+    expect(html).not.toContain("🧪");
+  });
 });

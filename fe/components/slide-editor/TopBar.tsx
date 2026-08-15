@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/stores/slide-editor-store";
 import { isSlideLockedForGeneration, type Slide } from "./types";
-import { downloadOfflineHtml, exportOfflineHtml } from "@/lib/slide-html-export";
+import { downloadOfflineZip, exportOfflineZip } from "@/lib/slide-html-export";
 
 export type DesignStepStatus = "idle" | "running" | "complete" | "error";
 
@@ -307,11 +307,11 @@ export function TopBar({
     try {
       const state = useEditorStore.getState();
       const title = deckTitle(state.currentSlide());
-      const result = await exportOfflineHtml(state.slides, title);
-      downloadOfflineHtml(result.html, title);
-      setExportNotice(result.warnings.length ? `Đã xuất HTML; ${result.warnings.length} ảnh được thay bằng placeholder.` : "Đã tải file HTML offline.");
+      const result = await exportOfflineZip(state.slides, title);
+      downloadOfflineZip(result.blob, title);
+      setExportNotice(result.warnings.length ? `Đã xuất ZIP; ${result.warnings.length} ảnh được thay bằng placeholder.` : "Đã tải file ZIP (HTML + ảnh).");
     } catch {
-      setExportNotice("Không thể tạo file HTML offline. Vui lòng thử lại.");
+      setExportNotice("Không thể tạo file ZIP offline. Vui lòng thử lại.");
     } finally {
       setExportingHtml(false);
       setMenu(null);
@@ -407,7 +407,7 @@ export function TopBar({
         align="right"
       >
         <DropdownItem onClick={() => void exportHtml()} disabled={exportingHtml || hasLockedSlides}>
-          {exportingHtml ? "Đang đóng gói..." : "Export HTML offline"}
+          {exportingHtml ? "Đang đóng gói..." : "Export HTML + ảnh (ZIP)"}
         </DropdownItem>
         <DropdownItem onClick={() => { exportJSON(); setMenu(null); }} disabled={hasLockedSlides}>
           Export JSON
