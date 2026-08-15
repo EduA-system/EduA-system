@@ -663,7 +663,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
         )}
         {successMessage && <BlogSuccessToast message={successMessage} onClose={() => setSuccessMessage("")} />}
         {commentToHide && <BlogConfirmationDialog title="Ẩn bình luận này?" description="Bình luận sẽ không còn hiển thị với người xem bài viết. Bạn vẫn có thể xem lại dữ liệu này trong hệ thống." confirmLabel="Ẩn bình luận" onCancel={() => setCommentToHide(null)} onConfirm={hideComment} />}
-        {commentToDelete && <BlogConfirmationDialog title="Xóa bình luận này?" description="Bình luận sẽ bị xóa khỏi cuộc thảo luận. Nếu bình luận có phản hồi, hệ thống sẽ giữ vị trí để mạch trả lời không bị đứt." confirmLabel="Xóa bình luận" onCancel={() => setCommentToDelete(null)} onConfirm={() => void deleteComment(commentToDelete.id)} />}
+        {commentToDelete && <BlogConfirmationDialog title="Xóa bình luận này?" description="Bình luận sẽ bị xóa vĩnh viễn khỏi cuộc thảo luận. Nếu bình luận có phản hồi, các phản hồi trực tiếp cũng sẽ bị xóa theo." confirmLabel="Xóa bình luận" onCancel={() => setCommentToDelete(null)} onConfirm={() => void deleteComment(commentToDelete.id)} />}
         {editCommentConfirmOpen && <BlogConfirmationDialog title="Lưu thay đổi bình luận?" description="Nội dung bình luận sẽ được cập nhật và hiển thị lại trong cuộc thảo luận." confirmLabel="Lưu thay đổi" onCancel={() => setEditCommentConfirmOpen(false)} onConfirm={() => void updateComment()} />}
         {postToDelete && <BlogConfirmationDialog title="Xóa bài viết này?" description="Bài viết sẽ bị gỡ khỏi Blog và không còn hiển thị với người đọc." confirmLabel="Xóa bài viết" onCancel={() => setPostToDelete(null)} onConfirm={() => void deletePost(postToDelete.id)} />}
       </main>
