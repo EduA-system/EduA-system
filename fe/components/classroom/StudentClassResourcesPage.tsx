@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowLeft, BookOpen, Inbox, RefreshCw, Users } from "lucide-react";
+import { AlertCircle, ArrowLeft, BookOpen, Inbox, RefreshCw, Search, Users } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
+  CLASS_SUBJECTS,
   type ClassDetail,
   type ClassResourceSummary,
+  type ClassSubject,
   type ClassSummary,
   getClassDetail,
   isClassAccessRevoked,
@@ -19,6 +21,7 @@ import {
 import { ClassPickerCard, ResourceCard, statusClasses, subjectBannerClasses } from "./shared";
 
 const REDIRECT_SECONDS = 3;
+const GRADES = [10, 11, 12] as const;
 
 export function StudentClassResourcesPage() {
   const { user, status, authFetch } = useAuth();
@@ -28,6 +31,9 @@ export function StudentClassResourcesPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [classes, setClasses] = useState<ClassSummary[]>([]);
   const [classesLoading, setClassesLoading] = useState(false);
+  const [q, setQ] = useState("");
+  const [gradeFilter, setGradeFilter] = useState<number | "">("");
+  const [subjectFilter, setSubjectFilter] = useState<ClassSubject | "">("");
   const [selectedClass, setSelectedClass] = useState<ClassDetail | null>(null);
   const [classLoading, setClassLoading] = useState(false);
 
@@ -44,14 +50,19 @@ export function StudentClassResourcesPage() {
     if (status !== "authenticated") return;
     setClassesLoading(true);
     try {
-      const result = await listEnrolledClasses(authFetch, { size: 100 });
+      const result = await listEnrolledClasses(authFetch, {
+        q,
+        subject: subjectFilter,
+        grade: gradeFilter,
+        size: 100,
+      });
       setClasses(result.items);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tải danh sách lớp.");
     } finally {
       setClassesLoading(false);
     }
-  }, [authFetch, status]);
+  }, [authFetch, gradeFilter, q, status, subjectFilter]);
 
   const loadResources = useCallback(
     async (id: string) => {
@@ -96,7 +107,7 @@ export function StudentClassResourcesPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void loadClasses();
-    }, 0);
+    }, 250);
     return () => window.clearTimeout(timer);
   }, [loadClasses]);
 
@@ -201,6 +212,38 @@ export function StudentClassResourcesPage() {
                   Chọn một lớp bạn đã tham gia để xem tài liệu và bài tập giáo viên đã đăng.
                 </p>
 
+                <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_140px_140px]">
+                  <label className="relative block">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8a837b]" />
+                    <input
+                      value={q}
+                      onChange={(event) => setQ(event.target.value)}
+                      placeholder="Tìm tên lớp..."
+                      className="h-10 w-full rounded-lg border border-[#d8d1c9] bg-white pl-9 pr-3 text-[13px] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
+                    />
+                  </label>
+                  <select
+                    value={gradeFilter}
+                    onChange={(event) => setGradeFilter(event.target.value ? Number(event.target.value) : "")}
+                    className="h-10 rounded-lg border border-[#d8d1c9] bg-white px-3 text-[13px] outline-none focus:border-[#d97757]"
+                  >
+                    <option value="">Tất cả khối</option>
+                    {GRADES.map((grade) => (
+                      <option key={grade} value={grade}>Khối {grade}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={subjectFilter}
+                    onChange={(event) => setSubjectFilter(event.target.value as ClassSubject | "")}
+                    className="h-10 rounded-lg border border-[#d8d1c9] bg-white px-3 text-[13px] outline-none focus:border-[#d97757]"
+                  >
+                    <option value="">Tất cả môn</option>
+                    {CLASS_SUBJECTS.map((subject) => (
+                      <option key={subject} value={subject}>{subjectLabel(subject)}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {error && (
                   <div className="mt-6 flex items-start gap-2 rounded-[12px] border border-[#e8b4a4] bg-[#fdf3ef] px-4 py-3 text-[13px] text-[#c0492b]">
                     <AlertCircle className="mt-0.5 size-4 shrink-0" />
@@ -218,8 +261,17 @@ export function StudentClassResourcesPage() {
                   ) : classes.length === 0 ? (
                     <div className="rounded-[14px] border border-dashed border-[#d8d1c9] bg-white px-5 py-14 text-center">
                       <BookOpen className="mx-auto size-8 text-[#a8a097]" />
-                      <p className="mt-3 text-[13px] font-medium">Bạn chưa được thêm vào lớp nào</p>
-                      <p className="mt-1 text-[12px] text-[#6b6b6b]">Liên hệ giáo viên để được thêm vào lớp.</p>
+                      {q || gradeFilter || subjectFilter ? (
+                        <>
+                          <p className="mt-3 text-[13px] font-medium">Không tìm thấy lớp phù hợp</p>
+                          <p className="mt-1 text-[12px] text-[#6b6b6b]">Thử đổi từ khóa hoặc bộ lọc khác.</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="mt-3 text-[13px] font-medium">Bạn chưa được thêm vào lớp nào</p>
+                          <p className="mt-1 text-[12px] text-[#6b6b6b]">Liên hệ giáo viên để được thêm vào lớp.</p>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
