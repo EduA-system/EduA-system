@@ -8,10 +8,12 @@ import { RouteGuard } from "@/lib/auth/RouteGuard";
 export default function MoleculesPage() {
   return (
     <RouteGuard pathname="/molecules">
-      <Suspense fallback={<main className="min-h-screen bg-white p-5 text-slate-600">Đang tải mô phỏng...</main>}>
-        <div className="flex min-h-screen">
+      <Suspense fallback={<main className="grid min-h-screen place-items-center bg-[#f5f1ec] text-sm text-[#6b6b6b]">Đang tải mô phỏng...</main>}>
+        <div className="flex min-h-screen bg-[#f5f1ec]">
           <Sidebar activeHref="/molecules" />
-          <div className="min-w-0 flex-1"><MoleculeExplorer /></div>
+          <div className="min-w-0 flex-1">
+            <MoleculeExplorer />
+          </div>
         </div>
       </Suspense>
     </RouteGuard>

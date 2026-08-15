@@ -510,15 +510,15 @@ function WeeklyScheduleScreen() {
     .filter((week) => week.tasks.length > 0);
 
   return (
-    <main className="min-h-screen bg-[#f7f5f2] text-[#2b2926]">
+    <main className="min-h-screen bg-white text-[#171717]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/weekly-schedule" />
-        <section className="min-w-0 flex-1 p-5 sm:p-8">
-          <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[#e4ddd4] pb-5">
+        <section className="min-w-0 flex-1 bg-white px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
+          <header className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#e8724a]">Content</p>
-              <h1 className="mt-1 text-3xl font-semibold">Lịch nộp giáo án</h1>
-              <p className="mt-2 text-sm text-[#6b6b6b]">
+              <p className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#d97757]"><BookOpen aria-hidden className="size-3.5" /> Quản lý tiến độ giáo án</p>
+              <h1 className="mt-3 font-libertine text-[42px] font-normal leading-[1.08] text-[#1f1f1f] sm:text-[48px]">Lịch nộp giáo án</h1>
+              <p className="mt-3 text-[13px] leading-[23px] text-[#6b6b6b]">
                 {isModerator
                   ? "Lịch nộp giáo án theo khối, áp dụng cho giáo viên dạy khối đó cùng môn."
                   : "Lịch nộp giáo án được giao cho bạn."}
@@ -526,7 +526,7 @@ function WeeklyScheduleScreen() {
             </div>
           </header>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-[#e4ddd4] bg-white px-4 py-3 shadow-sm">
+          <div className="mt-9 flex flex-wrap items-center gap-3 rounded-[14px] border border-[#d8d1c9] bg-white px-4 py-3">
             <MonthPicker
               year={viewYear}
               month={viewMonth}
@@ -926,7 +926,7 @@ function WeeklyScheduleScreen() {
           {loading ? (
             <div className="mt-6 space-y-3">
               {[1, 2, 3].map((x) => (
-                <div key={x} className="h-24 animate-pulse rounded-2xl bg-[#e8e2db]" />
+                <div key={x} className="h-24 animate-pulse rounded-[14px] bg-[#f0ece7]" />
               ))}
             </div>
           ) : isModerator ? (
@@ -994,13 +994,13 @@ function WeeklyScheduleScreen() {
               </div>
             </div>
           ) : teacherWeeks.length === 0 ? (
-            <div className="mt-8 rounded-2xl border border-dashed bg-white p-12 text-center text-sm text-[#6b6b6b]">
+            <div className="mt-8 rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-12 text-center text-sm text-[#6b6b6b]">
               {teacherGradeFilter !== null
                 ? `Chưa có lịch nộp giáo án nào cho khối ${teacherGradeFilter}.`
                 : "Chưa có lịch nộp giáo án nào."}
             </div>
           ) : (
-            <div className="mt-6 overflow-x-auto rounded-2xl border bg-white">
+            <div className="mt-6 overflow-x-auto rounded-[14px] border border-[#d8d1c9] bg-white">
               <table className="w-full min-w-[520px] table-fixed border-collapse text-sm">
                 <colgroup>
                   <col className="w-32" />
