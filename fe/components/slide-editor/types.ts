@@ -9,6 +9,7 @@ export const CANVAS_H = 540;
 
 export type ElementType =
   | "text"
+  | "latex"
   | "shape"
   | "image"
   | "line"
@@ -75,6 +76,15 @@ export interface TextElement extends ElementBase {
   textShadow?: string;
   textBg?: string;
   listStyle?: ListStyle;
+}
+
+/** A display-math block rendered with KaTeX. The value excludes $ delimiters. */
+export interface LatexElement extends ElementBase {
+  type: "latex";
+  latex: string;
+  fontSize: number;
+  color: string;
+  align: "left" | "center" | "right";
 }
 
 export interface ShapeElement extends ElementBase {
@@ -200,6 +210,7 @@ export type SimulationElement =
 
 export type SlideElement =
   | TextElement
+  | LatexElement
   | ShapeElement
   | ImageElement
   | LineElement
@@ -212,6 +223,7 @@ export type SlideElement =
 // phép field chung nên không dùng được. Không dùng để vá `type`.
 type BaseElementPatch = Partial<
   Omit<TextElement, "type"> &
+    Omit<LatexElement, "type"> &
     Omit<ShapeElement, "type"> &
     Omit<ImageElement, "type"> &
     Omit<LineElement, "type"> &

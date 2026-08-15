@@ -1,6 +1,6 @@
 import { PLACEHOLDER_IMAGE } from "@/components/slide-editor/lib/be-mapper";
-import { makePeriodicSimulation, makeSandboxSimulation, makeSimulation } from "@/components/slide-editor/lib/factory";
-import type { ImageElement, LineElement, ShapeElement, SimulationElement, SlideElement, TextElement } from "@/components/slide-editor/types";
+import { makeLatex, makePeriodicSimulation, makeSandboxSimulation, makeSimulation } from "@/components/slide-editor/lib/factory";
+import type { ImageElement, LatexElement, LineElement, ShapeElement, SimulationElement, SlideElement, TextElement } from "@/components/slide-editor/types";
 import { MOLECULE_CATALOG } from "@/components/molecules/catalog";
 import { blendSurface, contrastingTextColor } from "./contrast";
 import type { LayoutSlot, LayoutStructure, Rect, SlideLayoutResult } from "./types";
@@ -93,7 +93,7 @@ function textStyle(slot: LayoutSlot): Pick<TextElement, "fontSize" | "bold" | "i
   };
 }
 
-function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string, backgroundColor?: string): TextElement | ImageElement | SimulationElement {
+function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string, backgroundColor?: string): TextElement | LatexElement | ImageElement | SimulationElement {
   if (slot.kind === "image") {
     return {
       ...base(`layout:${slot.id}`, slot.rect, slot.zIndex),
@@ -122,6 +122,16 @@ function slotElement(slot: LayoutSlot, palette: string[], surfaceColor?: string,
       { id: "", presetId: "", title: slot.sourceText },
       { ...base(`layout:${slot.id}`, slot.rect, slot.zIndex), contentSlot: slot.id },
     );
+  }
+  if (slot.zone === "formula") {
+    return makeLatex({
+      ...base(`layout:${slot.id}`, slot.rect, slot.zIndex),
+      contentSlot: slot.id,
+      latex: slot.sourceText,
+      fontSize: 24,
+      color: contrastingTextColor(blendSurface(surfaceColor ?? palette[1], backgroundColor, 0.6), palette[0]),
+      align: "center",
+    });
   }
   return {
     ...base(`layout:${slot.id}`, slot.rect, slot.zIndex),

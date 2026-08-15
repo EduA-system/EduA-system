@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type MouseEventHandler, type ReactElement } from "react";
 import dynamic from "next/dynamic";
+import katex from "katex";
 import type { SlideElement, SimulationElement, LineMarker, DashStyle } from "./types";
 import { isGradientCss } from "./lib/gradient";
 import { sandboxViewZoom } from "./lib/sandbox-scale";
@@ -447,6 +448,28 @@ export function ElementView({
           <span style={{ ...textStyle, width: "100%", display: "block" }}>{el.text}</span>
         )}
       </div>
+    );
+  }
+
+  if (el.type === "latex") {
+    const html = katex.renderToString(el.latex || "\\text{Công thức}", { displayMode: true, throwOnError: false, strict: "ignore" });
+    return (
+      <div
+        onMouseDown={onMouseDown}
+        onDoubleClick={onDoubleClick}
+        onContextMenu={onContextMenu}
+        style={{
+          ...base,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start",
+          color: el.color,
+          fontSize: el.fontSize,
+          overflow: "hidden",
+          padding: "4px 0",
+        }}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     );
   }
 

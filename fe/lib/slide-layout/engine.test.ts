@@ -216,7 +216,7 @@ describe("dynamic slide layout engine", () => {
     expect(concept.find((element) => element.contentSlot === "header-1")).toMatchObject({ type: "text", fontSize: 12 });
 
     const formula = renderSlideLayout(generateSlideLayout(fixture("formula")), { palette: ["#222222"] });
-    expect(formula.find((element) => element.contentSlot === "slot:formula:expression")).toMatchObject({ type: "text", fontSize: 24 });
+    expect(formula.find((element) => element.contentSlot === "slot:formula:expression")).toMatchObject({ type: "latex", fontSize: 24 });
   });
 
   it("gives formula expressions the full width above their supporting notes", () => {

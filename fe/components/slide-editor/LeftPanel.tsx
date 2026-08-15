@@ -874,6 +874,13 @@ export function LeftPanel({
           {visibleTab === "text" && (
             <div className="space-y-2 p-3">
               <div className="mb-3 text-[10px] font-bold uppercase tracking-[1px] text-[#2b2926]">Text</div>
+              <button
+                type="button"
+                onClick={() => addElement(makeByType("latex"))}
+                className="mb-2 w-full rounded-[8px] border border-[#e8e2d9] px-3 py-2 text-left font-serif text-lg font-semibold text-[#2b2926] transition-colors hover:border-[#d97757] hover:bg-[#f7f3ee]"
+              >
+                Chèn công thức LaTeX
+              </button>
               {TEXT_PRESETS.map((t, i) => (
                 <button
                   key={i}

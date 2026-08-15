@@ -25,6 +25,13 @@ function text(slot: string, overrides: Partial<Extract<SlideElement, { type: "te
   };
 }
 
+function latex(slot: string): Extract<SlideElement, { type: "latex" }> {
+  return {
+    id: slot, type: "latex", contentSlot: slot, x: 40, y: 40, w: 400, h: 100,
+    rotation: 0, zIndex: 10, opacity: 1, locked: false, latex: "F = ma", fontSize: 24, color: "#222222", align: "center",
+  };
+}
+
 describe("applyContentSlots", () => {
   it("updates matching content slots and preserves non-content elements", () => {
     const hero = text("hero-1", { w: 300, h: 140, fontSize: 36, bold: true });
@@ -101,6 +108,14 @@ describe("applyContentSlots", () => {
   it("keeps the outline title when no AI fill is requested for it", () => {
     const title = text("slot:s1:title", { text: "Bài học: Lực" });
     expect(applyContentSlots([title], { slots: [], latencyMs: 0, modelUsed: "test" })[0]).toMatchObject({ text: "Bài học: Lực" });
+  });
+
+  it("fills a formula slot as LaTeX and removes accidental dollar delimiters", () => {
+    const formula = latex("slot:formula:expression");
+    const result = applyContentSlots([formula], {
+      slots: [{ slotId: "slot:formula:expression", text: "$$\\frac{F}{m}$$", imagePrompt: null }], latencyMs: 0, modelUsed: "test",
+    });
+    expect(result[0]).toMatchObject({ type: "latex", latex: "\\frac{F}{m}" });
   });
 
   it("reduces font size to keep generated text inside its fixed box", () => {

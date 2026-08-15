@@ -502,6 +502,7 @@ function ElementControls({ el, upd, onOpenProperties }: { el: SlideElement; upd:
   else if (el.type === "image") controls = <ImageControls el={el} upd={upd} />;
   else if (el.type === "line" || el.type === "arrow") controls = <LineControls el={el} upd={upd} />;
   else if (el.type === "draw") controls = <DrawControls el={el} upd={upd} />;
+  else if (el.type === "latex") controls = <><ColorPicker value={el.color} onChange={(color) => upd({ color })} size="sm" /><OpacityControl opacity={el.opacity} upd={upd} /></>;
 
   if (!controls) return null;
 
