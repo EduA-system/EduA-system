@@ -61,6 +61,13 @@ const contentMeta: Record<LibraryType, { label: string; icon: typeof BookOpen; c
   SIMULATION: { label: "Mô phỏng", icon: Atom, color: "from-violet-100 via-fuchsia-50 to-stone-100" },
 };
 
+const emptyContentLabel: Record<LibraryType, string> = {
+  LESSON_PLAN: "bài giảng",
+  SLIDE_DECK: "slide",
+  TEST: "bài kiểm tra",
+  SIMULATION: "mô phỏng",
+};
+
 type PendingAction = { content: LibraryContent; kind: "submit" | "unsubmit" | "delete" };
 
 function statusMeta(status: "PRIVATE" | "SUBMITTED" | "APPROVED" | "REJECTED", source: "hub" | "weeklyTask") {
@@ -277,7 +284,7 @@ function LibraryScreen() {
 
           {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           {loading ? <div className="mt-6 grid grid-cols-3 gap-5">{[1, 2, 3].map((item) => <div key={item} className="h-80 animate-pulse rounded-2xl bg-[#e8e2db]" />)}</div>
-            : items.length === 0 ? <div className="mt-6 grid grid-cols-3 gap-5">{createTile}<div className="col-span-2 flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-white p-8 text-center text-sm text-stone-600">{type === "TEST" ? "Tính năng tạo bài kiểm tra đang được phát triển." : q || subject ? "Không tìm thấy nội dung phù hợp. Hãy thử thay đổi bộ lọc." : "Chưa có nội dung nào trong thư viện này."}</div></div>
+            : items.length === 0 ? <div className="mt-6 grid grid-cols-3 gap-5">{createTile}<div className="col-span-2 flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-white p-8 text-center text-sm text-stone-600">Chưa có {emptyContentLabel[type]} trong thư viện cá nhân.</div></div>
             : <div className="mt-6 grid grid-cols-3 gap-5">{createTile}{items.map((content) => {
               const meta = contentMeta[content.type];
               const Icon = meta.icon;

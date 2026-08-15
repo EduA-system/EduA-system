@@ -35,6 +35,10 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
     @Override @Transactional(readOnly = true) public Optional<LibraryContent> findActiveById(UUID id) {
         return jpa.findById(id).filter(e -> e.getDeletedAt() == null).map(JpaLibraryContentRepository::toDomain);
     }
+    @Override @Transactional(readOnly = true) public Optional<LibraryContent> findActiveByOwnerTypeSubjectAndPayload(UUID ownerId, LibraryContentType type, Subject subject, String payloadJson) {
+        return jpa.findActiveByOwnerTypeSubjectAndPayload(ownerId, type.name(), subject.name(), payloadJson)
+                .map(JpaLibraryContentRepository::toDomain);
+    }
     @Override @Transactional(readOnly = true) public List<LibraryContent> findActiveSnapshotsBySourceId(UUID sourceLibraryContentId) {
         return jpa.findBySourceLibraryContentIdAndDeletedAtIsNull(sourceLibraryContentId).stream()
                 .map(JpaLibraryContentRepository::toDomain)

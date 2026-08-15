@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -50,6 +50,8 @@ export function PracticeExamEditDashboard() {
   const [savedExam, setSavedExam] = useState<PracticeExam | null>(null);
   const [streamedExam, setStreamedExam] = useState<PracticeExam | null>(null);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [documentReady, setDocumentReady] = useState(() => !(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("libraryId")));
   const [extensions] = useState(() =>
@@ -65,8 +67,8 @@ export function PracticeExamEditDashboard() {
           "lesson-document-editor min-h-[calc(100vh-230px)] text-[#2b2926] outline-none",
       },
     },
+    onUpdate: () => setIsDirty(true),
   });
-  usePracticeExamStream(editor, (exam) => setStreamedExam(exam), !readOnlyClassResource);
 
   useEffect(() => {
     const contentId = searchParams.get("libraryId");
@@ -85,6 +87,7 @@ export function PracticeExamEditDashboard() {
       const payload = content.payload as { exam?: PracticeExam; documentHtml?: string; grade?: number } | undefined;
       if (!payload?.documentHtml) return;
       editor.commands.setContent(payload.documentHtml);
+      setIsDirty(false);
       setSavedExam(payload.exam ?? null);
       setLibraryId(content.id);
       setLibraryTitle(content.title);
@@ -102,11 +105,13 @@ export function PracticeExamEditDashboard() {
     });
   }, [authFetch, classId, editor, readOnlyClassResource, resourceId, searchParams]);
 
-  async function saveDraft() {
-    const exam = savedExam ?? streamedExam;
+  async function saveDraft(examToSave?: PracticeExam) {
+    if (savingRef.current) return;
+    const exam = examToSave ?? savedExam ?? streamedExam;
     if (!exam || !editor) { setNotice("Chưa có đề để lưu."); return; }
     const grade = Number(metadata.grade);
     if (![10, 11, 12].includes(grade)) { setNotice("Không xác định được lớp của đề. Vui lòng tạo đề lại từ màn cấu hình."); return; }
+    savingRef.current = true;
     setSaving(true);
     try {
       const payload = { exam, documentHtml: editor.getHTML(), grade };
@@ -116,11 +121,31 @@ export function PracticeExamEditDashboard() {
         ? await updateLibraryContent(authFetch, libraryId, { title, subject, payload })
         : await createLibraryContent(authFetch, { type: "TEST", title, subject, payload });
       setLibraryId(saved.id);
+      setIsDirty(false);
       setNotice("Đề đã được lưu vào Thư viện của tôi · Bài kiểm tra.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Không thể lưu đề vào thư viện.");
-    } finally { setSaving(false); }
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
+
+  // Đề mới tạo được tự lưu một lần sau sự kiện DONE; các lần sửa sau vẫn do giáo viên bấm Lưu.
+  usePracticeExamStream(editor, (exam) => {
+    setStreamedExam(exam);
+    void saveDraft(exam);
+  }, !readOnlyClassResource && !libraryId);
+
+  useEffect(() => {
+    if (!isDirty || readOnlyClassResource) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [isDirty, readOnlyClassResource]);
 
   async function exportPdf() {
     if (!editor) { setNotice("Chưa có đề để xuất PDF."); return; }
