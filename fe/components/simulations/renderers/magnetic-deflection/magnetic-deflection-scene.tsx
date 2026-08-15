@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useCallback, useEffect, useRef } from "react";
 import { useContainerSize } from "../../shared/use-container-size";
 import {
@@ -82,7 +84,7 @@ function drawLabel(
   anchor?: Vector2,
 ) {
   context.save();
-  context.font = "600 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   const width = context.measureText(text).width + 18;
   if (anchor) {
     context.strokeStyle = "rgba(203,213,225,0.62)";
@@ -171,7 +173,7 @@ function drawParticleTrail(
     context.fill();
     context.shadowBlur = 0;
     context.fillStyle = "#f8fafc";
-    context.font = "800 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     const mark = particle.type === "alpha" ? "α" : particle.type === "beta" ? "β" : "γ";
     context.fillText(mark, particle.position.x + 8, particle.position.y - 7);
   }
@@ -197,7 +199,7 @@ function drawLorentzForce(
   };
   drawArrow(context, particle.position, end, "rgba(248,250,252,0.72)", 1.5);
   context.fillStyle = "#e2e8f0";
-  context.font = "700 9px Inter, sans-serif";
+  context.font = simulationCanvasFont("9px", 500);
   context.fillText("Fₗ", end.x + 4, end.y - 3);
 }
 
@@ -301,7 +303,7 @@ export function MagneticDeflectionScene({
     context.fill();
     context.shadowBlur = 0;
     context.fillStyle = "#fef3c7";
-    context.font = "800 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     context.fillText("αβγ", 132, 314);
 
     context.fillStyle = "#64748b";
@@ -342,7 +344,7 @@ export function MagneticDeflectionScene({
       context.fillText(`${Math.round((PARTICLE_START.y - y) / 4)}`, SCREEN_X + 36, y + 3);
     }
     context.fillStyle = "#cbd5e1";
-    context.font = "700 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     context.fillText("ĐỘ LỆCH (cm quy ước)", SCREEN_X - 42, 565);
 
     for (const particle of state.particles) {
@@ -382,7 +384,7 @@ export function MagneticDeflectionScene({
     roundedRect(context, 30, 548, 380, 42, 10);
     context.fill();
     context.fillStyle = "#cbd5e1";
-    context.font = "600 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     context.fillText("F = q(v × B) · α và β⁻ lệch ngược phía · γ không chịu lực Lorentz", 45, 568);
     context.fillStyle = "#94a3b8";
     context.fillText("Đường màu là quỹ đạo minh họa, không phải màu thật của bức xạ.", 45, 582);

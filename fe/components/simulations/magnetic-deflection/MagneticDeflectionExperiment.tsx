@@ -161,13 +161,13 @@ function AnalysisPanel({ metrics }: { metrics: MagneticDeflectionMetrics }) {
         </table>
       </div>
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
-        <p className="text-center font-libertine text-lg font-bold text-[#171717]">F⃗ = q(v⃗ × B⃗) &nbsp;·&nbsp; r = p/(|q|B)</p>
+        <p className="text-center font-sans text-lg font-bold text-[#171717]">F⃗ = q(v⃗ × B⃗) &nbsp;·&nbsp; r = p/(|q|B)</p>
         <p className="mt-2 text-xs leading-relaxed text-[#6b6b6b]">Tăng B làm bán kính quỹ đạo giảm nên tia cong mạnh hơn. Tăng động lượng p làm bán kính tăng nên tia lệch ít hơn. Với q = 0, tia γ không chịu lực Lorentz.</p>
       </div>
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
         <p className="mb-2 text-[13px] font-semibold">Timeline</p>
         {metrics.events.length > 0 ? metrics.events.map((event, index) => (
-          <div key={`${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-mono text-[#c96545]">{event.time.toFixed(1)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
+          <div key={`${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-sans text-[#c96545]">{event.time.toFixed(1)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
         )) : <p className="text-xs text-[#8a8178]">Nhấn Play để ghi lại quá trình.</p>}
       </div>
       <p className="rounded-[10px] bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-900">Trong từ trường, tia α và β⁻ bị lệch theo hai phía ngược nhau vì chúng mang điện trái dấu. Tia β⁻ cong mạnh hơn, còn tia γ không bị lệch vì không mang điện. Đảo chiều từ trường làm hai hướng lệch của α và β⁻ đổi chỗ.</p>

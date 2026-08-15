@@ -1,4 +1,6 @@
 "use client";
+
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
 import { memo, useEffect, useRef } from "react";
 import { emfMeasurement } from "../../engines/circuit/emf-measurement-physics";
 import type {
@@ -81,9 +83,9 @@ export const EmfMeasurementScene = memo(function EmfMeasurementScene({
       ctx.stroke();
       ctx.fillStyle = "#f8fafc";
       ctx.textAlign = "center";
-      ctx.font = "700 14px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("14px", 700);
       ctx.fillText(label, x, y + 2);
-      ctx.font = "600 10px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("10px", 500);
       ctx.fillStyle = "#cbd5e1";
       ctx.fillText(`${value.toFixed(2)} ${unit}`, x, y + 17);
     };
@@ -155,7 +157,7 @@ export const EmfMeasurementScene = memo(function EmfMeasurementScene({
       );
       ctx.stroke();
       ctx.fillStyle = "#e2e8f0";
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.textAlign = "left";
       ctx.fillText("K", 104, 166);
       // Pin E,r với hai bản cực và dây không chạy xuyên nguồn.
@@ -168,7 +170,7 @@ export const EmfMeasurementScene = memo(function EmfMeasurementScene({
       ctx.lineTo(147, 283);
       ctx.stroke();
       ctx.fillStyle = "#fda4af";
-      ctx.font = "700 12px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("12px", 500);
       ctx.fillText("+", 105, 266);
       ctx.fillStyle = "#93c5fd";
       ctx.fillText("−", 105, 288);
@@ -212,7 +214,7 @@ export const EmfMeasurementScene = memo(function EmfMeasurementScene({
       );
       ctx.fillStyle = "#f8fafc";
       ctx.textAlign = "center";
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("M", 305, 88);
       ctx.fillText("N", 305, 415);
       // Biến trở tải R.
@@ -224,7 +226,7 @@ export const EmfMeasurementScene = memo(function EmfMeasurementScene({
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = "#334155";
-      ctx.font = "700 14px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("14px", 700);
       ctx.fillText("R", 680, 252);
       // Điện trở bảo vệ R0.
       ctx.fillStyle = "#dbe4ec";
@@ -242,7 +244,7 @@ export const EmfMeasurementScene = memo(function EmfMeasurementScene({
         396,
       );
       ctx.fillStyle = "#67e8f9";
-      ctx.font = "600 12px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("12px", 500);
       ctx.fillText(`U = ${shownU.current.toFixed(2)} V`, 560, 345);
       ctx.fillText(`I = ${shownI.current.toFixed(2)} A`, 560, 365);
       ctx.fillStyle = "#fde68a";

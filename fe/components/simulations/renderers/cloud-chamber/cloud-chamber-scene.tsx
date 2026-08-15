@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useCallback, useEffect, useRef } from "react";
 import { useContainerSize } from "../../shared/use-container-size";
 import { createObservation } from "../../engines/cloud-chamber/analysis";
@@ -65,7 +67,7 @@ function drawLabel(
   anchor?: Vector2,
 ): void {
   context.save();
-  context.font = "600 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   const width = context.measureText(text).width + 18;
   if (anchor) {
     context.strokeStyle = "rgba(203,213,225,0.66)";
@@ -128,7 +130,7 @@ function drawRecordedImage(context: CanvasRenderingContext2D, state: CloudChambe
   context.lineWidth = 1.5;
   context.stroke();
   context.fillStyle = "#94a3b8";
-  context.font = "700 9px Inter, sans-serif";
+  context.font = simulationCanvasFont("9px", 500);
   context.fillText(state.hasPhotographed ? "ẢNH SỰ KIỆN" : "KHUNG GHI ẢNH", x + 10, y + 16);
   if (state.hasPhotographed) {
     const sx = (width - 22) / (CHAMBER_BOUNDS.right - CHAMBER_BOUNDS.left);
@@ -230,7 +232,7 @@ export function CloudChamberScene({
     context.arc(202, 350, 5, 0, Math.PI * 2);
     context.fill();
     context.fillStyle = "#f8fafc";
-    context.font = "800 18px Inter, sans-serif";
+    context.font = simulationCanvasFont("18px", 700);
     context.fillText("α", 139, 355);
 
     context.save();
@@ -259,7 +261,7 @@ export function CloudChamberScene({
     context.lineTo(CHAMBER_BOUNDS.right, 166);
     context.stroke();
     context.fillStyle = "#ffedd5";
-    context.font = "800 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     const feltLabel = "LỚP NỈ THẤM CỒN IPA 99%";
     context.fillText(feltLabel, 496 - context.measureText(feltLabel).width / 2, 151);
     context.restore();
@@ -366,7 +368,7 @@ export function CloudChamberScene({
     context.lineWidth = 1;
     context.strokeRect(CHAMBER_BOUNDS.left, 474, CHAMBER_BOUNDS.right - CHAMBER_BOUNDS.left, 8);
 
-    context.font = "700 9px Inter, sans-serif";
+    context.font = simulationCanvasFont("9px", 500);
     context.fillStyle = "#a5f3fc";
     const baseTemperatureLabel = state.phase === "idle" || state.phase === "preparing"
       ? `${currentParams.baseTemperature.toFixed(0)}°C · ĐÁY LẠNH`
@@ -387,7 +389,7 @@ export function CloudChamberScene({
       context.lineTo(727, 265);
       context.closePath();
       context.fill();
-      context.font = "700 9px Inter, sans-serif";
+      context.font = simulationCanvasFont("9px", 500);
       context.fillText("hơi IPA khuếch tán xuống", 626, 291);
     }
 
@@ -428,9 +430,9 @@ export function CloudChamberScene({
       drawRoundedRect(context, 822, 468, 154, 78, 10);
       context.fill();
       context.fillStyle = "#e2e8f0";
-      context.font = "700 10px Inter, sans-serif";
+      context.font = simulationCanvasFont("10px", 500);
       context.fillText("CHÚ GIẢI TRONG BUỒNG", 833, 486);
-      context.font = "600 9px Inter, sans-serif";
+      context.font = simulationCanvasFont("9px", 500);
       context.fillStyle = "#cbd5e1";
       context.fillText("• chấm trắng: giọt IPA", 833, 502);
       context.fillText("mũi tên: hơi IPA đi xuống", 833, 517);
@@ -442,7 +444,7 @@ export function CloudChamberScene({
       drawRoundedRect(context, 24, 548, 294, 32, 9);
       context.fill();
       context.fillStyle = "#cbd5e1";
-      context.font = "600 10px Inter, sans-serif";
+      context.font = simulationCanvasFont("10px", 500);
       context.fillText("Màu minh họa phân loại – không phải màu thật của hạt", 38, 568);
     }
 

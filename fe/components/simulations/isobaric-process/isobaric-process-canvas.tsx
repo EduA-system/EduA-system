@@ -65,7 +65,7 @@ function Thermometer({ temperatureC }: { temperatureC: number }) {
         textAnchor="middle"
         fill="#e2e8f0"
         fontSize="14"
-        fontWeight="800"
+        fontWeight="500"
       >
         Nhiệt kế T
       </text>
@@ -122,7 +122,7 @@ function Thermometer({ temperatureC }: { temperatureC: number }) {
         textAnchor="middle"
         fill="#f8fafc"
         fontSize="13"
-        fontWeight="800"
+        fontWeight="500"
       >
         {temperatureC.toFixed(1)} °C
       </text>
@@ -157,7 +157,7 @@ function PressureGauge({ pressure }: { pressure: number }) {
         textAnchor="middle"
         fill="#e2e8f0"
         fontSize="14"
-        fontWeight="800"
+        fontWeight="500"
       >
         Áp kế p
       </text>
@@ -199,7 +199,7 @@ function PressureGauge({ pressure }: { pressure: number }) {
         textAnchor="middle"
         fill="#334155"
         fontSize="12"
-        fontWeight="800"
+        fontWeight="500"
       >
         atm
       </text>
@@ -218,7 +218,7 @@ function PressureGauge({ pressure }: { pressure: number }) {
         textAnchor="middle"
         fill="#f8fafc"
         fontSize="13"
-        fontWeight="800"
+        fontWeight="500"
       >
         {pressure.toFixed(2)} atm
       </text>
@@ -228,7 +228,7 @@ function PressureGauge({ pressure }: { pressure: number }) {
         textAnchor="middle"
         fill="#67e8f9"
         fontSize="12"
-        fontWeight="800"
+        fontWeight="500"
       >
         p = const
       </text>
@@ -304,7 +304,7 @@ function HeatSource({
         textAnchor="middle"
         fill={heating ? "#fed7aa" : "#bae6fd"}
         fontSize="13"
-        fontWeight="800"
+        fontWeight="500"
       >
         {label}
       </text>
@@ -348,7 +348,7 @@ function PVGraph({
         textAnchor="middle"
         fill="#e2e8f0"
         fontSize="16"
-        fontWeight="800"
+        fontWeight="500"
       >
         Đồ thị quá trình p–V
       </text>
@@ -443,7 +443,7 @@ function PVGraph({
         textAnchor="middle"
         fill="#f8fafc"
         fontSize="13"
-        fontWeight="800"
+        fontWeight="500"
       >
         p (atm)
       </text>
@@ -453,7 +453,7 @@ function PVGraph({
         textAnchor="end"
         fill="#f8fafc"
         fontSize="13"
-        fontWeight="800"
+        fontWeight="500"
       >
         V (L)
       </text>
@@ -483,7 +483,7 @@ function PVGraph({
       ))}
       <g transform="translate(651 429)">
         <circle cx="7" cy="7" r="5" fill="#fb923c" />
-        <text x="19" y="11" fill="#fed7aa" fontSize="11" fontWeight="700">
+        <text x="19" y="11" fill="#fed7aa" fontSize="11" fontWeight="500">
           Trạng thái hiện tại
         </text>
         <circle
@@ -494,7 +494,7 @@ function PVGraph({
           stroke="#a5f3fc"
           strokeWidth="2"
         />
-        <text x="170" y="11" fill="#bae6fd" fontSize="11" fontWeight="700">
+        <text x="170" y="11" fill="#bae6fd" fontSize="11" fontWeight="500">
           Điểm so sánh
         </text>
       </g>
@@ -504,7 +504,7 @@ function PVGraph({
         textAnchor="middle"
         fill="#fbbf24"
         fontSize="13"
-        fontWeight="800"
+        fontWeight="500"
       >
         p = {pressure.toFixed(2)} atm = const
       </text>
@@ -601,7 +601,7 @@ export function IsobaricProcessCanvas({
         }}
       >
         <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="#0f172a" />
-        <text x="40" y="44" fill="#f8fafc" fontSize="20" fontWeight="800">
+        <text x="40" y="44" fill="#f8fafc" fontSize="20" fontWeight="500">
           Quá trình đẳng áp p–V
         </text>
         <text x="40" y="69" fill="#94a3b8" fontSize="12.5">
@@ -750,7 +750,7 @@ export function IsobaricProcessCanvas({
             textAnchor="middle"
             fill="#fed7aa"
             fontSize="12"
-            fontWeight="800"
+            fontWeight="500"
           >
             Tải cố định: {loadCount} quả cân
           </text>
@@ -781,7 +781,7 @@ export function IsobaricProcessCanvas({
             textAnchor="end"
             fill="#cffafe"
             fontSize="11.5"
-            fontWeight="800"
+            fontWeight="500"
           >
             h = {heightCentimeters.toFixed(1)} cm
           </text>
@@ -801,7 +801,7 @@ export function IsobaricProcessCanvas({
             textAnchor="middle"
             fill="#f8fafc"
             fontSize="14"
-            fontWeight="800"
+            fontWeight="500"
           >
             V = {state.volume.toFixed(2)} L
           </text>
@@ -833,7 +833,7 @@ export function IsobaricProcessCanvas({
             textAnchor="middle"
             fill="#e2e8f0"
             fontSize="12"
-            fontWeight="700"
+            fontWeight="500"
           >
             T tăng → khí nở → piston đi lên → V tăng
           </text>

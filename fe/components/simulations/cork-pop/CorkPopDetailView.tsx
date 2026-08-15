@@ -242,7 +242,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[9px] bg-[#faf9f7] px-2.5 py-2">
       <div className="text-[10px] text-[#8a8178]">{label}</div>
-      <div className="mt-0.5 font-mono text-[11px] font-semibold text-[#171717]">
+      <div className="mt-0.5 font-sans text-[11px] font-semibold text-[#171717]">
         {value}
       </div>
     </div>

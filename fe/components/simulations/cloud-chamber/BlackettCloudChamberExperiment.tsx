@@ -13,7 +13,6 @@ import type {
   CloudChamberMetrics,
   CloudChamberObservation,
   CloudChamberParams,
-  ObservationMode,
   ObservationTrack,
   ParticleType,
 } from "../engines/cloud-chamber/types";
@@ -27,27 +26,6 @@ const PARAM_SCHEMA: ParamDef[] = [
   { key: "topTemperature", label: "Nhiệt độ phần trên", unit: "°C", min: 15, max: 32, step: 1 },
   { key: "baseTemperature", label: "Nhiệt độ đáy lạnh", unit: "°C", min: -85, max: -35, step: 1 },
   { key: "ipaAmount", label: "Lượng IPA 99%", unit: "%", min: 25, max: 100, step: 1 },
-  { key: "airDensity", label: "Mật độ không khí", unit: "%", min: 35, max: 100, step: 1 },
-  { key: "alphaEnergy", label: "Năng lượng α tương đối", unit: "%", min: 35, max: 100, step: 1 },
-  { key: "chamberSensitivity", label: "Độ nhạy của buồng", unit: "%", min: 20, max: 100, step: 1 },
-  { key: "trackLifetime", label: "Thời gian tồn tại vệt", unit: "s", min: 2, max: 12, step: 0.5 },
-  { key: "naturalReactionProbability", label: "Xác suất phản ứng tự nhiên", unit: "%", min: 0, max: 15, step: 0.5 },
-  { key: "backgroundFog", label: "Mật độ sương nền", unit: "%", min: 0, max: 70, step: 1 },
-];
-
-const QUICK_PRESETS: Array<{
-  label: string;
-  patch: Partial<CloudChamberParams>;
-  mode?: ObservationMode;
-}> = [
-  { label: "Sự kiện Blackett", mode: "blackett", patch: { topTemperature: 22, baseTemperature: -70, ipaAmount: 86, backgroundFog: 24 } },
-  { label: "Vệt α thông thường", mode: "natural", patch: { naturalReactionProbability: 0 } },
-  { label: "Sương quá ít", patch: { baseTemperature: -42, ipaAmount: 32, backgroundFog: 6, chamberSensitivity: 35 } },
-  { label: "Sương tối ưu", patch: { topTemperature: 22, baseTemperature: -70, ipaAmount: 86, backgroundFog: 24, chamberSensitivity: 86 } },
-  { label: "Sương quá dày", patch: { baseTemperature: -78, ipaAmount: 100, backgroundFog: 68 } },
-  { label: "Hạt α năng lượng thấp", patch: { alphaEnergy: 42 } },
-  { label: "Hạt α năng lượng cao", patch: { alphaEnergy: 96 } },
-  { label: "Mặc định", mode: "blackett", patch: DEFAULT_CLOUD_CHAMBER_PARAMS },
 ];
 
 const TRACK_COLORS: Record<ParticleType, string> = {
@@ -115,7 +93,7 @@ function TrackDiagram({ tracks }: { tracks: ObservationTrack[] }) {
             strokeWidth={Math.max(1.2, track.width * 0.7)}
             strokeLinecap="round"
           />
-          <text x={Math.min(238, mapX(track.end.x) + 4)} y={Math.max(12, mapY(track.end.y) - 4)} fill="#e2e8f0" fontSize="9" fontWeight="700">
+          <text x={Math.min(238, mapX(track.end.x) + 4)} y={Math.max(12, mapY(track.end.y) - 4)} fill="#e2e8f0" fontSize="9" fontWeight="500">
             {TRACK_NAMES[track.particleType]}
           </text>
         </g>
@@ -193,11 +171,11 @@ function AnalysisPanel({
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
         <p className="mb-3 text-[13px] font-semibold text-[#171717]">Timeline quá trình</p>
         {observation?.events.length ? observation.events.map((event) => (
-          <div key={`${event.phase}-${event.time}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-mono text-[#c96545]">{event.time.toFixed(1)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
+          <div key={`${event.phase}-${event.time}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-sans text-[#c96545]">{event.time.toFixed(1)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
         )) : <p className="text-xs text-[#8a8178]">Timeline sẽ được ghi từ lần chạy hiện tại.</p>}
       </div>
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4 text-center">
-        <p className="font-libertine text-xl font-bold text-[#171717]">¹⁴₇N + ⁴₂He → ¹⁷₈O + ¹₁H</p>
+        <p className="font-sans text-xl font-bold text-[#171717]">¹⁴₇N + ⁴₂He → ¹⁷₈O + ¹₁H</p>
         <div className="mt-3 grid grid-cols-2 gap-2 text-left text-xs"><div className="rounded-[8px] bg-emerald-50 p-3 text-emerald-900"><b>Số khối</b><br />14 + 4 = 17 + 1</div><div className="rounded-[8px] bg-emerald-50 p-3 text-emerald-900"><b>Điện tích hạt nhân</b><br />7 + 2 = 8 + 1</div></div>
       </div>
       {observation?.eventType === "blackett" && (
@@ -220,7 +198,6 @@ export function BlackettCloudChamberExperiment({
   onBack: () => void;
 }) {
   const [params, setParams] = useState<CloudChamberParams>(DEFAULT_CLOUD_CHAMBER_PARAMS);
-  const [mode, setMode] = useState<ObservationMode>("blackett");
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [resetSignal, setResetSignal] = useState(0);
@@ -240,7 +217,6 @@ export function BlackettCloudChamberExperiment({
   };
   const restoreDefaults = () => {
     setParams(DEFAULT_CLOUD_CHAMBER_PARAMS);
-    setMode("blackett");
     setEdited(false);
     reset();
   };
@@ -249,13 +225,6 @@ export function BlackettCloudChamberExperiment({
     else sendCommand("pause");
     setRunning(next);
   };
-  const applyPreset = (item: (typeof QUICK_PRESETS)[number]) => {
-    setParams((current) => ({ ...current, ...item.patch }));
-    if (item.mode) setMode(item.mode);
-    setEdited(true);
-    reset();
-  };
-  const modeNote = mode === "blackett" ? "Sự kiện Blackett" : "Quan sát tự nhiên";
   const panelValues = useMemo<Record<string, number>>(() => ({ ...params }), [params]);
 
   return (
@@ -275,7 +244,7 @@ export function BlackettCloudChamberExperiment({
             <div className="relative min-h-0 flex-1 overflow-hidden rounded-[16px] border border-[#e8e2d9] shadow-sm">
               <CloudChamberScene
                 params={params}
-                mode={mode}
+                mode="blackett"
                 running={running}
                 speed={speed}
                 resetSignal={resetSignal}
@@ -307,8 +276,6 @@ export function BlackettCloudChamberExperiment({
                       <p><b>4.</b> Hạt mang điện ion hóa không khí; IPA ngưng tụ quanh chuỗi ion nên quỹ đạo hiện thành vệt.</p>
                     </div>
                   </div>
-                  <p className="rounded-[10px] bg-amber-50 p-3 text-xs leading-relaxed text-amber-800"><b>{modeNote}.</b> Chế độ giáo dục tăng xác suất xuất hiện phản ứng để dễ quan sát. Trong tự nhiên, phản ứng chỉ là một sự kiện hiếm.</p>
-                  <div className="flex flex-wrap gap-1.5">{QUICK_PRESETS.map((item) => <button key={item.label} type="button" onClick={() => applyPreset(item)} className="rounded-full border border-[#e8e2d9] px-3 py-1 text-xs text-[#6b6b6b] transition-colors hover:border-[#d97757] hover:text-[#c96545]">{item.label}</button>)}</div>
                   <ParamPanel schema={PARAM_SCHEMA} values={panelValues} onChange={(key, value) => { setParams((current) => ({ ...current, [key]: value })); setEdited(true); reset(); }} />
                   <p className="text-[10px] leading-relaxed text-[#8a8178]">Các hệ số trên là giá trị mô phỏng giáo dục để thể hiện quan hệ trực quan, không phải số liệu đo chính xác của thiết bị Blackett.</p>
                 </div>

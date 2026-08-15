@@ -391,7 +391,7 @@ export function SceneKonvaElectromagneticInduction({
         align: "center",
         fontFamily: "Arial, sans-serif",
         fontSize: 22,
-        fontStyle: "bold",
+        fontStyle: "normal",
         fill: "#fff",
       }),
       new Konva.Text({
@@ -402,7 +402,7 @@ export function SceneKonvaElectromagneticInduction({
         align: "center",
         fontFamily: "Arial, sans-serif",
         fontSize: 22,
-        fontStyle: "bold",
+        fontStyle: "normal",
         fill: "#fff",
       }),
     );
@@ -416,7 +416,7 @@ export function SceneKonvaElectromagneticInduction({
       text: `Cuộn dây · N = ${Math.round(scene.turns)} vòng`,
       fontFamily: "Arial, sans-serif",
       fontSize: 12,
-      fontStyle: "bold",
+      fontStyle: "normal",
       fill: "#fbbf24",
     });
     root.add(coilName);
@@ -483,7 +483,7 @@ export function SceneKonvaElectromagneticInduction({
       text: "\u0110I\u1EC6N K\u1EBE",
       fontFamily: "Arial, sans-serif",
       fontSize: 12,
-      fontStyle: "bold",
+      fontStyle: "normal",
       fill: "#cbd5e1",
     }));
     root.add(new Konva.Rect({
@@ -551,7 +551,7 @@ export function SceneKonvaElectromagneticInduction({
         align: "center",
         fontFamily: "Arial, sans-serif",
         fontSize: 14,
-        fontStyle: "bold",
+        fontStyle: "normal",
         fill: "#0f172a",
       }),
       new Konva.Text({
@@ -581,7 +581,7 @@ export function SceneKonvaElectromagneticInduction({
       text: "I = +0.0000 A",
       fontFamily: "Arial, sans-serif",
       fontSize: 17,
-      fontStyle: "bold",
+      fontStyle: "normal",
       fill: "#f8fafc",
     });
     root.add(
@@ -607,7 +607,7 @@ export function SceneKonvaElectromagneticInduction({
       align: "center",
       fontFamily: "Arial, sans-serif",
       fontSize: 11,
-      fontStyle: "bold",
+      fontStyle: "normal",
       fill: "#cbd5e1",
     }));
     const emfReading = new Konva.Text({

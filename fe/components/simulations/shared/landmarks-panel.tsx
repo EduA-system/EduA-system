@@ -38,7 +38,7 @@ function TimeMarkButton({
           : "border-[#e8e2d9] bg-white text-[#4f4943] hover:border-[#d97757] hover:text-[#c96545]"
       }`}
     >
-      <span className="font-mono text-[13px] font-semibold leading-none">{label}</span>
+      <span className="font-sans text-[13px] font-semibold leading-none">{label}</span>
       <span className={`mt-1 text-[9px] leading-none ${active ? "text-white/75" : "text-[#b8aea5]"}`}>
         {seconds}s
       </span>
@@ -49,7 +49,7 @@ function TimeMarkButton({
 function LandmarkBadge({ letter, active }: { letter: string; active: boolean }) {
   return (
     <span
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-[13px] font-bold ${
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-sans text-[13px] font-bold ${
         active ? "bg-[#e8724a] text-white" : "bg-[#f5f1ec] text-[#4f4943]"
       }`}
     >
@@ -155,7 +155,7 @@ export function LandmarksPanel({
                       <div className="text-[10px] uppercase tracking-wide text-[#8a8178]">
                         {v.label}
                       </div>
-                      <div className="mt-0.5 font-mono text-[14px] font-semibold text-[#171717]">
+                      <div className="mt-0.5 font-sans text-[14px] font-semibold text-[#171717]">
                         {v.value}
                         {v.unit && (
                           <span className="ml-1 text-[10px] font-normal text-[#8a8178]">

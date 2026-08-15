@@ -402,7 +402,7 @@ export function SceneCanvasPointChargeField({
       </div>
       <ZoomControls percent={zoomPct} onZoomIn={() => zoomActionsRef.current?.in()} onZoomOut={() => zoomActionsRef.current?.out()} />
       {readout && (
-        <div className="pointer-events-none absolute bottom-3 left-3 space-y-0.5 rounded-[8px] bg-black/50 px-3 py-2 font-mono text-[10.5px] leading-snug text-slate-200">
+        <div className="pointer-events-none absolute bottom-3 left-3 space-y-0.5 rounded-[8px] bg-black/50 px-3 py-2 font-sans text-[10.5px] leading-snug text-slate-200">
           <div className="text-slate-400">Tại trung điểm 2 điện tích:</div>
           <div>V = {readout.v.toExponential(2)} V</div>
           <div>

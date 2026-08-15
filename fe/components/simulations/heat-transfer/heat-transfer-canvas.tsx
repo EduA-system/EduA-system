@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HEAT_TRANSFER_DT, HeatTransferRuntime, calculateThermometerFill, temperatureToColor } from "./physics";
 import type { HeatTransferParams, HeatTransferSnapshot } from "./types";
@@ -91,7 +93,7 @@ export function HeatTransferCanvas({
       ctx.save();
       ctx.textAlign = "center";
       ctx.fillStyle = "rgba(226, 232, 240, 0.82)";
-      ctx.font = "600 11px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("11px", 500);
       ctx.fillText(label, x, top + 3);
 
       ctx.fillStyle = "rgba(226, 232, 240, 0.1)";
@@ -119,10 +121,10 @@ export function HeatTransferCanvas({
       }
 
       ctx.fillStyle = "#f8fafc";
-      ctx.font = "700 16px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("16px", 700);
       ctx.fillText(`${temperature.toFixed(1)}°C`, x, top + height + (compact ? 24 : 38));
       ctx.fillStyle = "rgba(226, 232, 240, 0.58)";
-      ctx.font = "9px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("9px");
       ctx.textAlign = "left";
       ctx.fillText("100°C", x + 25, tubeTop + 4);
       ctx.fillText("50°C", x + 25, (tubeTop + tubeBottom) / 2 + 3);
@@ -208,13 +210,13 @@ export function HeatTransferCanvas({
 
       ctx.textAlign = "center";
       ctx.fillStyle = "#fff7ed";
-      ctx.font = "700 15px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("15px", 700);
       ctx.fillText(label, x + width / 2, compact ? y + height - 28 : y + height + 24);
-      ctx.font = "600 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText(`${temperature.toFixed(1)}°C`, x + width / 2, compact ? y + height - 10 : y + height + 44);
       if (compact) return;
       ctx.fillStyle = "rgba(226, 232, 240, 0.72)";
-      ctx.font = "10px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("10px");
       ctx.fillText(`${mass.toFixed(1)} kg · c = ${specificHeat.toFixed(1)} kJ/kg°C`, x + width / 2, y + height + 62);
       ctx.fillText(status, x + width / 2, y + height + 80);
     };
@@ -253,11 +255,11 @@ export function HeatTransferCanvas({
       ctx.translate(-width / 2, -height / 2);
 
       ctx.fillStyle = "rgba(226, 232, 240, 0.94)";
-      ctx.font = "600 14px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("14px", 500);
       ctx.textAlign = "left";
       ctx.fillText("Nguyên lý truyền nhiệt", 18, 28);
       ctx.fillStyle = "rgba(148, 163, 184, 0.82)";
-      ctx.font = "11px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("11px");
       const statusText = snapshot.phase === "before-contact"
         ? "Hai vật chưa tiếp xúc"
         : snapshot.phase === "equilibrium"
@@ -301,7 +303,7 @@ export function HeatTransferCanvas({
 
       if (currentParams.contacted && snapshot.phase === "equilibrium") {
         ctx.fillStyle = "rgba(103, 232, 249, 0.95)";
-        ctx.font = "700 13px Inter, sans-serif";
+        ctx.font = simulationCanvasFont("13px", 500);
         ctx.textAlign = "center";
         ctx.fillText("Hai vật đã đạt cân bằng nhiệt", contactX, blockY - 16);
       } else {
@@ -313,10 +315,10 @@ export function HeatTransferCanvas({
         ctx.strokeStyle = "rgba(148, 163, 184, 0.16)";
         ctx.stroke();
         ctx.fillStyle = "rgba(226, 232, 240, 0.84)";
-        ctx.font = "600 11px Inter, sans-serif";
+        ctx.font = simulationCanvasFont("11px", 500);
         ctx.textAlign = "center";
         ctx.fillText("Chưa tiếp xúc", contactX, hintY - 4);
-        ctx.font = "10px Inter, sans-serif";
+        ctx.font = simulationCanvasFont("10px");
         ctx.fillText("Bấm nút ở panel", contactX, hintY + 13);
       }
 
@@ -333,7 +335,7 @@ export function HeatTransferCanvas({
 
       const tempBarWidth = narrowPanel ? Math.max(82, panelWidth * 0.32) : Math.max(95, panelWidth * 0.34);
       ctx.textAlign = "left";
-      ctx.font = "10px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("10px");
       ctx.fillStyle = "rgba(226, 232, 240, 0.78)";
       ctx.fillText(`TA: ${snapshot.temperatureA.toFixed(1)}°C`, panelX + 12, panelY + 19);
       ctx.fillText(`TB: ${snapshot.temperatureB.toFixed(1)}°C`, panelX + 12, panelY + 38);

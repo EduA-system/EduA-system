@@ -1,5 +1,7 @@
 "use client";
 
+import { getSimulationFontFamily } from "@/components/simulations/shared/typography";
+
 // Renderer 2D bằng Konva (imperative) cho SÓNG CƠ 1 CHIỀU TRÊN DÂY — dùng
 // chung cho 2 preset: "Sóng trên dây" (mode: traveling) và "Sóng dừng" (mode:
 // standing). Cùng triết lý với renderers/wave/scene-konva-wave-2d.tsx: biên độ là hàm
@@ -100,7 +102,7 @@ export function SceneKonvaStringWave({
       const x = toScreen(gx, 0).x;
       layer.add(new Konva.Line({ points: [x, 0, x, H], stroke: "#1e293b", strokeWidth: 1, listening: false }));
       layer.add(
-        new Konva.Text({ x: x + 2, y: H / 2 + 6, text: `${gx}`, fontSize: 10, fill: "#64748b", fontFamily: "monospace", listening: false }),
+        new Konva.Text({ x: x + 2, y: H / 2 + 6, text: `${gx}`, fontSize: 10, fill: "#64748b", fontFamily: getSimulationFontFamily(), listening: false }),
       );
     }
     layer.add(
@@ -133,7 +135,7 @@ export function SceneKonvaStringWave({
         const sp = toScreen(x, y);
         const badge = new Konva.Label({ x: sp.x - 8, y: y >= 0 ? sp.y - 24 : sp.y + 10, listening: false });
         badge.add(new Konva.Tag({ fill: "#0f172a", stroke: color, strokeWidth: 1, cornerRadius: 3, opacity: 0.9 }));
-        badge.add(new Konva.Text({ text, fontSize: 10, fontStyle: "bold", fill: color, fontFamily: "monospace", padding: 3 }));
+        badge.add(new Konva.Text({ text, fontSize: 10, fontStyle: "normal", fill: color, fontFamily: getSimulationFontFamily(), padding: 3 }));
         layer.add(badge);
       };
       for (const x of nodePositionsFixedFixed(length, harmonic)) {
@@ -153,19 +155,19 @@ export function SceneKonvaStringWave({
       // ── Vector biên độ A + bước sóng λ — chỉ 1 lần, gần đầu dây. ──
       const yA = toScreen(0, 0), yATop = toScreen(0, amplitude);
       layer.add(new Konva.Arrow({ points: [yA.x + 14, yA.y, yATop.x + 14, yATop.y], stroke: "#facc15", fill: "#facc15", strokeWidth: 1.5, pointerLength: 6, pointerWidth: 6, listening: false }));
-      layer.add(new Konva.Text({ x: yA.x + 20, y: (yA.y + yATop.y) / 2 - 6, text: "A", fontSize: 12, fontStyle: "bold", fill: "#facc15", fontFamily: "monospace", listening: false }));
+      layer.add(new Konva.Text({ x: yA.x + 20, y: (yA.y + yATop.y) / 2 - 6, text: "A", fontSize: 12, fontStyle: "normal", fill: "#facc15", fontFamily: getSimulationFontFamily(), listening: false }));
 
       const lamY = maxDisp * 1.2;
       const p0 = toScreen(0, lamY), p1 = toScreen(wavelength, lamY);
       layer.add(new Konva.Arrow({ points: [p0.x, p0.y, p1.x, p1.y], stroke: "#34d399", fill: "#34d399", strokeWidth: 1.5, pointerLength: 6, pointerWidth: 6, pointerAtBeginning: true, listening: false }));
-      layer.add(new Konva.Text({ x: (p0.x + p1.x) / 2 - 8, y: p0.y - 16, text: "λ", fontSize: 13, fontStyle: "bold", fill: "#34d399", fontFamily: "monospace", listening: false }));
+      layer.add(new Konva.Text({ x: (p0.x + p1.x) / 2 - 8, y: p0.y - 16, text: "λ", fontSize: 13, fontStyle: "normal", fill: "#34d399", fontFamily: getSimulationFontFamily(), listening: false }));
 
       // Mũi tên chiều truyền sóng, góc trên canvas.
       const arrowY = 20;
       const ax0 = direction === 1 ? padX : W - padX, ax1 = direction === 1 ? padX + 46 : W - padX - 46;
       layer.add(new Konva.Arrow({ points: [ax0, arrowY, ax1, arrowY], stroke: "#e8724a", fill: "#e8724a", strokeWidth: 2, pointerLength: 7, pointerWidth: 7, listening: false }));
       layer.add(
-        new Konva.Text({ x: Math.min(ax0, ax1), y: arrowY + 6, text: "chiều truyền sóng", fontSize: 10, fill: "#e8724a", fontFamily: "monospace", listening: false }),
+        new Konva.Text({ x: Math.min(ax0, ax1), y: arrowY + 6, text: "chiều truyền sóng", fontSize: 10, fill: "#e8724a", fontFamily: getSimulationFontFamily(), listening: false }),
       );
     }
 
@@ -209,7 +211,7 @@ export function SceneKonvaStringWave({
       const badge = new Konva.Label({ x: 14, y: 14, listening: false });
       badge.add(new Konva.Tag({ fill: "#e8724a", cornerRadius: 4 }));
       badge.add(
-        new Konva.Text({ text: `t = ${simTime.toFixed(2)}s (${markLabel})`, fontSize: 12, fontStyle: "bold", fill: "#ffffff", fontFamily: "monospace", padding: 4 }),
+        new Konva.Text({ text: `t = ${simTime.toFixed(2)}s (${markLabel})`, fontSize: 12, fontStyle: "normal", fill: "#ffffff", fontFamily: getSimulationFontFamily(), padding: 4 }),
       );
       layer.add(badge);
     }

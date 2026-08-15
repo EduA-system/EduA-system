@@ -168,7 +168,7 @@ function buildAnnotations(): SceneAnnotation[] {
       text,
       color,
       fontSize: 13,
-      fontStyle: "bold",
+      fontStyle: "normal",
     },
   ];
 
@@ -181,12 +181,12 @@ function buildAnnotations(): SceneAnnotation[] {
     markDot(D.x, D.y, "#38bdf8"),
     markDot(E.x, E.y, "#fbbf24"),
     // Chữ mốc đặt giữa chấm tròn: tiết kiệm diện tích và không va vào ghi chú.
-    { kind: "label", x: S.x, y: S.y, text: "S", color: "#f8fafc", fontSize: 13, fontStyle: "bold", align: "center", width: 0.52 },
-    { kind: "label", x: A.x, y: A.y, text: "A", color: "#78350f", fontSize: 13, fontStyle: "bold", align: "center", width: 0.52 },
-    { kind: "label", x: B.x, y: B.y, text: "B", color: "#082f49", fontSize: 13, fontStyle: "bold", align: "center", width: 0.52 },
-    { kind: "label", x: C.x, y: C.y, text: "C", color: "#064e3b", fontSize: 13, fontStyle: "bold", align: "center", width: 0.52 },
-    { kind: "label", x: D.x, y: D.y, text: "D", color: "#082f49", fontSize: 13, fontStyle: "bold", align: "center", width: 0.52 },
-    { kind: "label", x: E.x, y: E.y, text: "E", color: "#78350f", fontSize: 13, fontStyle: "bold", align: "center", width: 0.52 },
+    { kind: "label", x: S.x, y: S.y, text: "S", color: "#f8fafc", fontSize: 13, fontStyle: "normal", align: "center", width: 0.52 },
+    { kind: "label", x: A.x, y: A.y, text: "A", color: "#78350f", fontSize: 13, fontStyle: "normal", align: "center", width: 0.52 },
+    { kind: "label", x: B.x, y: B.y, text: "B", color: "#082f49", fontSize: 13, fontStyle: "normal", align: "center", width: 0.52 },
+    { kind: "label", x: C.x, y: C.y, text: "C", color: "#064e3b", fontSize: 13, fontStyle: "normal", align: "center", width: 0.52 },
+    { kind: "label", x: D.x, y: D.y, text: "D", color: "#082f49", fontSize: 13, fontStyle: "normal", align: "center", width: 0.52 },
+    { kind: "label", x: E.x, y: E.y, text: "E", color: "#78350f", fontSize: 13, fontStyle: "normal", align: "center", width: 0.52 },
     // Nhãn năng lượng tại các mốc chính.
     ...energyBadge(S.x, S.y, "Wt = 0", "#cbd5e1", -0.7, 0.65),
     ...energyBadge(A.x, A.y, "Wt max", "#fbbf24", -0.65, 0.72),
@@ -200,7 +200,7 @@ function buildAnnotations(): SceneAnnotation[] {
       text: "Wt > Wđ",
       color: "#7dd3fc",
       fontSize: 13,
-      fontStyle: "bold",
+      fontStyle: "normal",
     },
     {
       kind: "label",
@@ -209,7 +209,7 @@ function buildAnnotations(): SceneAnnotation[] {
       text: "Wđ > Wt",
       color: "#6ee7b7",
       fontSize: 13,
-      fontStyle: "bold",
+      fontStyle: "normal",
     },
     // Ghi chú bảo toàn cơ năng dưới đáy.
     {
@@ -219,7 +219,7 @@ function buildAnnotations(): SceneAnnotation[] {
       text: "W = Wđ + Wt = const",
       color: "#a5f3fc",
       fontSize: 13,
-      fontStyle: "bold",
+      fontStyle: "normal",
     },
   ];
 }

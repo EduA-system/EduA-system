@@ -1,5 +1,7 @@
 "use client";
 
+import { getSimulationFontFamily } from "@/components/simulations/shared/typography";
+
 import { useEffect, useRef } from "react";
 import Konva from "konva";
 import type { MagneticLoopScene, MagneticLoopState } from "../../engines/magnetic-loop/types";
@@ -92,8 +94,8 @@ export function SceneKonvaMagneticLoop({
       y: fieldTop - 30,
       text: "B⃗",
       fontSize: 21,
-      fontStyle: "bold",
-      fontFamily: "Arial",
+      fontStyle: "normal",
+      fontFamily: getSimulationFontFamily(),
       fill: FIELD_COLOR,
       listening: false,
       visible: scene.magneticField > 1e-6,
@@ -112,8 +114,8 @@ export function SceneKonvaMagneticLoop({
       dash: [8, 6],
       listening: false,
     });
-    const axisTop = new Konva.Text({ text: "O′", fontSize: 16, fontStyle: "bold", fill: INK });
-    const axisBottom = new Konva.Text({ text: "O", fontSize: 16, fontStyle: "bold", fill: INK });
+    const axisTop = new Konva.Text({ text: "O′", fontSize: 16, fontStyle: "normal", fill: INK });
+    const axisBottom = new Konva.Text({ text: "O", fontSize: 16, fontStyle: "normal", fill: INK });
     layer.add(axis, axisTop, axisBottom);
 
     const frame = new Konva.Line({
@@ -131,36 +133,36 @@ export function SceneKonvaMagneticLoop({
     layer.add(frame);
 
     const vertexNames = ["M", "N", "P", "Q"];
-    const vertexLabels = vertexNames.map((text) => new Konva.Text({ text, fontSize: 15, fontStyle: "bold", fill: INK, listening: false }));
+    const vertexLabels = vertexNames.map((text) => new Konva.Text({ text, fontSize: 15, fontStyle: "normal", fill: INK, listening: false }));
     layer.add(...vertexLabels);
 
     const currentLeft = new Konva.Arrow({ points: [], stroke: CURRENT_COLOR, fill: CURRENT_COLOR, strokeWidth: 3, pointerLength: 7, pointerWidth: 7 });
     const currentRight = new Konva.Arrow({ points: [], stroke: CURRENT_COLOR, fill: CURRENT_COLOR, strokeWidth: 3, pointerLength: 7, pointerWidth: 7 });
-    const currentLabel = new Konva.Text({ text: "I", fontSize: 14, fontStyle: "bold", fill: CURRENT_COLOR });
+    const currentLabel = new Konva.Text({ text: "I", fontSize: 14, fontStyle: "normal", fill: CURRENT_COLOR });
     layer.add(currentLeft, currentRight, currentLabel);
 
     const leftForce = new Konva.Arrow({ points: [], stroke: FORCE_COLOR, fill: FORCE_COLOR, strokeWidth: 3.5, pointerLength: 9, pointerWidth: 9, lineCap: "round" });
     const rightForce = new Konva.Arrow({ points: [], stroke: FORCE_COLOR, fill: FORCE_COLOR, strokeWidth: 3.5, pointerLength: 9, pointerWidth: 9, lineCap: "round" });
-    const leftForceLabel = new Konva.Text({ text: "F⃗MN", fontSize: 14, fontStyle: "bold", fill: FORCE_COLOR });
-    const rightForceLabel = new Konva.Text({ text: "F⃗QP", fontSize: 14, fontStyle: "bold", fill: FORCE_COLOR });
-    const leftForceSymbol = new Konva.Text({ fontSize: 25, fontStyle: "bold", fill: FORCE_COLOR, align: "center" });
-    const rightForceSymbol = new Konva.Text({ fontSize: 25, fontStyle: "bold", fill: FORCE_COLOR, align: "center" });
+    const leftForceLabel = new Konva.Text({ text: "F⃗MN", fontSize: 14, fontStyle: "normal", fill: FORCE_COLOR });
+    const rightForceLabel = new Konva.Text({ text: "F⃗QP", fontSize: 14, fontStyle: "normal", fill: FORCE_COLOR });
+    const leftForceSymbol = new Konva.Text({ fontSize: 25, fontStyle: "normal", fill: FORCE_COLOR, align: "center" });
+    const rightForceSymbol = new Konva.Text({ fontSize: 25, fontStyle: "normal", fill: FORCE_COLOR, align: "center" });
     layer.add(leftForce, rightForce, leftForceLabel, rightForceLabel, leftForceSymbol, rightForceSymbol);
 
     const normal = new Konva.Arrow({ points: [], stroke: INK, fill: INK, strokeWidth: 2.5, pointerLength: 8, pointerWidth: 8 });
-    const normalLabel = new Konva.Text({ text: "n⃗", fontSize: 16, fontStyle: "bold", fill: INK });
+    const normalLabel = new Konva.Text({ text: "n⃗", fontSize: 16, fontStyle: "normal", fill: INK });
     const angleArc = new Konva.Line({ stroke: "#7c3aed", strokeWidth: 2, lineCap: "round" });
-    const angleLabel = new Konva.Text({ text: "α", fontSize: 16, fontStyle: "bold", fill: "#6d28d9" });
+    const angleLabel = new Konva.Text({ text: "α", fontSize: 16, fontStyle: "normal", fill: "#6d28d9" });
     const centerDot = new Konva.Circle({ radius: 4, fill: INK });
-    const centerLabel = new Konva.Text({ text: "S", fontSize: 14, fontStyle: "bold", fill: INK });
+    const centerLabel = new Konva.Text({ text: "S", fontSize: 14, fontStyle: "normal", fill: INK });
     layer.add(angleArc, normal, normalLabel, centerDot, centerLabel, angleLabel);
 
-    const rotationArrow = new Konva.Text({ text: "↺", fontSize: 42, fill: "#7c3aed", opacity: 0.8, fontFamily: "Arial" });
-    const omegaLabel = new Konva.Text({ text: "ω", fontSize: 16, fontStyle: "bold", fill: "#6d28d9" });
+    const rotationArrow = new Konva.Text({ text: "↺", fontSize: 42, fill: "#7c3aed", opacity: 0.8, fontFamily: getSimulationFontFamily() });
+    const omegaLabel = new Konva.Text({ text: "ω", fontSize: 16, fontStyle: "normal", fill: "#6d28d9" });
     layer.add(rotationArrow, omegaLabel);
 
     const infoPanel = new Konva.Rect({ x: 16, y: 14, width: Math.min(236, W * 0.36), height: 105, fill: "#ffffff", stroke: "#d9e4e3", strokeWidth: 1, cornerRadius: 12, shadowColor: "#43615d", shadowBlur: 12, shadowOpacity: 0.1 });
-    const info = new Konva.Text({ x: 30, y: 27, width: Math.min(208, W * 0.32), fontSize: 12, lineHeight: 1.55, fill: INK, fontFamily: "Arial" });
+    const info = new Konva.Text({ x: 30, y: 27, width: Math.min(208, W * 0.32), fontSize: 12, lineHeight: 1.55, fill: INK, fontFamily: getSimulationFontFamily() });
     layer.add(infoPanel, info);
 
     const legend = new Konva.Text({
@@ -171,7 +173,7 @@ export function SceneKonvaMagneticLoop({
       text: "⊙: lực hướng ra khỏi màn hình    ⊗: lực hướng vào màn hình",
       fontSize: 12,
       fill: "#526777",
-      fontFamily: "Arial",
+      fontFamily: getSimulationFontFamily(),
     });
     layer.add(legend);
 

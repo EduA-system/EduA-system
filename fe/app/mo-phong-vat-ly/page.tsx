@@ -10,7 +10,7 @@
  *   bản gốc bất khả xâm phạm, luôn revert được.
  */
 
-import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -191,38 +191,6 @@ const REVIEWED_SIMULATION_IDS = new Set([
   "do-p-t-bang-luc-ke",
 ]);
 
-// Lĩnh vực chưa có kernel → hiển thị thẻ disabled để giữ bản đồ chương trình đầy đủ.
-type Placeholder = {
-  id: string;
-  title: string;
-  domain: Domain;
-  grade: 10 | 11 | 12;
-  desc: string;
-};
-const PLACEHOLDERS: Placeholder[] = [
-  {
-    id: "ohm",
-    title: "Định luật Ohm",
-    domain: "Điện & Từ",
-    grade: 11,
-    desc: "Mạch điện cơ bản, khảo sát quan hệ U – I – R.",
-  },
-  {
-    id: "boyle",
-    title: "Định luật Boyle",
-    domain: "Nhiệt & Khí",
-    grade: 12,
-    desc: "Nén khí đẳng nhiệt, quan sát quan hệ p – V.",
-  },
-  {
-    id: "decay",
-    title: "Phóng xạ & chu kỳ bán rã",
-    domain: "Hạt nhân",
-    grade: 12,
-    desc: "Mô phỏng phân rã ngẫu nhiên theo thời gian.",
-  },
-];
-
 /* ─────────────────────────── Thumbnail SVG ─────────────────────────── */
 
 function Thumb({ id }: { id: string }) {
@@ -243,7 +211,7 @@ function Thumb({ id }: { id: string }) {
             y="14"
             textAnchor="middle"
             fontSize="8"
-            fontWeight="800"
+            fontWeight="500"
             fill="#cbd5e1"
           >
             TÁC DỤNG – PHẢN LỰC
@@ -310,10 +278,10 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="33" y="29" fontSize="8" fontWeight="800" fill="#bae6fd">
+          <text x="33" y="29" fontSize="8" fontWeight="500" fill="#bae6fd">
             F_BA
           </text>
-          <text x="143" y="29" fontSize="8" fontWeight="800" fill="#fed7aa">
+          <text x="143" y="29" fontSize="8" fontWeight="500" fill="#fed7aa">
             F_AB
           </text>
           <text
@@ -321,7 +289,7 @@ function Thumb({ id }: { id: string }) {
             y="64"
             textAnchor="middle"
             fontSize="9"
-            fontWeight="900"
+            fontWeight="500"
             fill="#082f49"
           >
             A
@@ -331,7 +299,7 @@ function Thumb({ id }: { id: string }) {
             y="64"
             textAnchor="middle"
             fontSize="9"
-            fontWeight="900"
+            fontWeight="500"
             fill="#431407"
           >
             B
@@ -387,7 +355,7 @@ function Thumb({ id }: { id: string }) {
             y="88"
             textAnchor="middle"
             fontSize="8"
-            fontWeight="800"
+            fontWeight="500"
             fill="#bbf7d0"
           >
             CÂN BẰNG · ΣF = 0
@@ -446,7 +414,7 @@ function Thumb({ id }: { id: string }) {
 
           {/* Vật treo và hai lực tách riêng hai phía. */}
           <rect x="89" y="91" width="28" height="20" rx="4" fill="#334155" stroke="#64748b" strokeWidth="1.5" />
-          <text x="103" y="104" textAnchor="middle" fontSize="8" fontWeight="800" fill="#f8fafc">
+          <text x="103" y="104" textAnchor="middle" fontSize="8" fontWeight="500" fill="#f8fafc">
             m
           </text>
           <path
@@ -464,7 +432,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="63" y="82" fontSize="10" fontWeight="800" fill="#67e8f9">
+          <text x="63" y="82" fontSize="10" fontWeight="500" fill="#67e8f9">
             T
           </text>
           <path
@@ -482,12 +450,12 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="141" y="113" fontSize="10" fontWeight="800" fill="#fda4af">
+          <text x="141" y="113" fontSize="10" fontWeight="500" fill="#fda4af">
             P
           </text>
           <path d="M119 51 H128" stroke="#e2e8f0" strokeWidth="1.5" />
           <rect x="128" y="43" width="38" height="16" rx="6" fill="#071225" stroke="#38bdf8" />
-          <text x="147" y="54" textAnchor="middle" fontSize="7.5" fontWeight="800" fill="#f8fafc">
+          <text x="147" y="54" textAnchor="middle" fontSize="7.5" fontWeight="500" fill="#f8fafc">
             9,8 N
           </text>
         </>,
@@ -590,7 +558,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="35" y="21" fontSize="8" fontWeight="800" fill="#e2e8f0">
+          <text x="35" y="21" fontSize="8" fontWeight="500" fill="#e2e8f0">
             P₁
           </text>
           <path
@@ -607,7 +575,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="146" y="21" fontSize="8" fontWeight="800" fill="#e2e8f0">
+          <text x="146" y="21" fontSize="8" fontWeight="500" fill="#e2e8f0">
             P₂
           </text>
 
@@ -638,10 +606,10 @@ function Thumb({ id }: { id: string }) {
           ))}
           <path d="M77 49L92 29" stroke="#38bdf8" strokeWidth="1.8" />
           <path d="M77 49H38" stroke="#fbbf24" strokeWidth="1.8" />
-          <text x="82" y="36" fontSize="8" fontWeight="800" fill="#7dd3fc">d₁</text>
-          <text x="51" y="44" fontSize="8" fontWeight="800" fill="#fde68a">d₂</text>
-          <text x="111" y="42" fontSize="9" fontWeight="900" fill="#38bdf8">F₁</text>
-          <text x="21" y="69" fontSize="9" fontWeight="900" fill="#fbbf24">F₂</text>
+          <text x="82" y="36" fontSize="8" fontWeight="500" fill="#7dd3fc">d₁</text>
+          <text x="51" y="44" fontSize="8" fontWeight="500" fill="#fde68a">d₂</text>
+          <text x="111" y="42" fontSize="9" fontWeight="500" fill="#38bdf8">F₁</text>
+          <text x="21" y="69" fontSize="9" fontWeight="500" fill="#fbbf24">F₂</text>
           <rect x="31" y="109" width="143" height="5" rx="2.5" fill="#475569" />
         </>,
       );
@@ -781,7 +749,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="40" y="36" fontSize="10" fontWeight="800" fill="#bbf7d0">
+          <text x="40" y="36" fontSize="10" fontWeight="500" fill="#bbf7d0">
             F
           </text>
           <path
@@ -799,7 +767,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="123" y="22" fontSize="9" fontWeight="800" fill="#bae6fd">
+          <text x="123" y="22" fontSize="9" fontWeight="500" fill="#bae6fd">
             a
           </text>
 
@@ -819,7 +787,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="29" y="80" fontSize="10" fontWeight="800" fill="#bbf7d0">
+          <text x="29" y="80" fontSize="10" fontWeight="500" fill="#bbf7d0">
             F
           </text>
           <path
@@ -837,7 +805,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="123" y="66" fontSize="9" fontWeight="800" fill="#fed7aa">
+          <text x="123" y="66" fontSize="9" fontWeight="500" fill="#fed7aa">
             a
           </text>
 
@@ -846,7 +814,7 @@ function Thumb({ id }: { id: string }) {
             x="95"
             y="49"
             fontSize="8"
-            fontWeight="900"
+            fontWeight="500"
             textAnchor="middle"
             fill="#082f49"
           >
@@ -856,7 +824,7 @@ function Thumb({ id }: { id: string }) {
             x="95"
             y="93"
             fontSize="8"
-            fontWeight="900"
+            fontWeight="500"
             textAnchor="middle"
             fill="#431407"
           >
@@ -892,7 +860,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="30" y="52" fontSize="11" fontWeight="700" fill="#60a5fa">
+          <text x="30" y="52" fontSize="11" fontWeight="500" fill="#60a5fa">
             F₁
           </text>
           {/* F₂ sang phải (cam), dài hơn → hợp lực sang phải */}
@@ -911,7 +879,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="160" y="52" fontSize="11" fontWeight="700" fill="#f59e0b">
+          <text x="160" y="52" fontSize="11" fontWeight="500" fill="#f59e0b">
             F₂
           </text>
         </>,
@@ -945,7 +913,7 @@ function Thumb({ id }: { id: string }) {
           <path d="M64 38L115 13V38Z" fill="#334155" stroke="#94a3b8" strokeWidth="1" />
           <circle cx="17" cy="15" r="4.3" fill="#ef4444" stroke="#fecaca" strokeWidth="0.8" />
           <circle cx="111" cy="15" r="3.3" fill="#ef4444" opacity="0.45" />
-          <text x="125" y="27" fontSize="6.5" fontWeight="800" fill="#7dd3fc">dốc–dốc</text>
+          <text x="125" y="27" fontSize="6.5" fontWeight="500" fill="#7dd3fc">dốc–dốc</text>
 
           {/* 2. Nhánh phải thoải hơn. */}
           <path d="M13 47L64 72H13Z" fill="#334155" stroke="#94a3b8" strokeWidth="1" />
@@ -953,7 +921,7 @@ function Thumb({ id }: { id: string }) {
           <path d="M75 72L177 47V72Z" fill="#334155" stroke="#94a3b8" strokeWidth="1" />
           <circle cx="17" cy="49" r="4.3" fill="#ef4444" stroke="#fecaca" strokeWidth="0.8" />
           <circle cx="173" cy="49" r="3.3" fill="#ef4444" opacity="0.45" />
-          <text x="112" y="62" fontSize="6.5" fontWeight="800" fill="#fde68a">dốc–thoải</text>
+          <text x="112" y="62" fontSize="6.5" fontWeight="500" fill="#fde68a">dốc–thoải</text>
 
           {/* 3. Nhánh phải nằm ngang. */}
           <path d="M13 81L64 106H13Z" fill="#334155" stroke="#94a3b8" strokeWidth="1" />
@@ -961,9 +929,9 @@ function Thumb({ id }: { id: string }) {
           <circle cx="17" cy="83" r="4.3" fill="#ef4444" stroke="#fecaca" strokeWidth="0.8" />
           <circle cx="120" cy="102" r="3.6" fill="#ef4444" />
           <path d="M127 102H151M146 98L152 102L146 106" fill="none" stroke="#c084fc" strokeWidth="1.6" strokeLinecap="round" />
-          <text x="153" y="100" fontSize="6.5" fontWeight="800" fill="#ddd6fe">v = const</text>
+          <text x="153" y="100" fontSize="6.5" fontWeight="500" fill="#ddd6fe">v = const</text>
           <path d="M7 13V38M4 18L7 13L10 18M4 33L7 38L10 33" fill="none" stroke="#cbd5e1" strokeWidth="1" />
-          <text x="2" y="29" fontSize="7" fontWeight="900" fill="#f8fafc">h</text>
+          <text x="2" y="29" fontSize="7" fontWeight="500" fill="#f8fafc">h</text>
         </>,
       );
     case "dinh-luat-hooke":
@@ -994,7 +962,7 @@ function Thumb({ id }: { id: string }) {
             y="20"
             textAnchor="middle"
             fontSize="7"
-            fontWeight="900"
+            fontWeight="500"
             fill="#7dd3fc"
           >
             THẢ VẬT
@@ -1004,7 +972,7 @@ function Thumb({ id }: { id: string }) {
             y="20"
             textAnchor="middle"
             fontSize="7"
-            fontWeight="900"
+            fontWeight="500"
             fill="#fcd34d"
           >
             ÉP LÒ XO
@@ -1012,11 +980,11 @@ function Thumb({ id }: { id: string }) {
           <path d="M28 29H76" stroke="#cbd5e1" strokeWidth="4" strokeLinecap="round" />
           <path d="M52 31V38L44 43L60 49L44 55L60 61L44 67L60 73L52 80" fill="none" stroke="#e2e8f0" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round" />
           <rect x="42" y="80" width="20" height="17" rx="3" fill="#f97316" stroke="#fed7aa" strokeWidth="1.5" />
-          <text x="52" y="92" textAnchor="middle" fontSize="7" fontWeight="900" fill="#7c2d12">m</text>
+          <text x="52" y="92" textAnchor="middle" fontSize="7" fontWeight="500" fill="#7c2d12">m</text>
           <path d="M124 99H172" stroke="#cbd5e1" strokeWidth="4" strokeLinecap="round" />
           <path d="M148 96V91L140 87L156 82L140 77L156 72L140 67L148 63" fill="none" stroke="#e2e8f0" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round" />
           <rect x="138" y="43" width="20" height="17" rx="3" fill="#f59e0b" stroke="#fde68a" strokeWidth="1.5" />
-          <text x="148" y="55" textAnchor="middle" fontSize="7" fontWeight="900" fill="#78350f">m₂</text>
+          <text x="148" y="55" textAnchor="middle" fontSize="7" fontWeight="500" fill="#78350f">m₂</text>
           <path
             d="M39 94V109"
             stroke="#fb7185"
@@ -1049,7 +1017,7 @@ function Thumb({ id }: { id: string }) {
             strokeWidth="1.5"
             strokeDasharray="3 3"
           />
-          <text x="86" y="64" fontSize="8" fontWeight="900" fill="#67e8f9">
+          <text x="86" y="64" fontSize="8" fontWeight="500" fill="#67e8f9">
             Δl
           </text>
           <path d="M116 48V68" stroke="#fbbf24" strokeWidth="1.5" strokeDasharray="3 3" />
@@ -1058,7 +1026,7 @@ function Thumb({ id }: { id: string }) {
             y="61"
             textAnchor="end"
             fontSize="8"
-            fontWeight="900"
+            fontWeight="500"
             fill="#fde68a"
           >
             Δl
@@ -1120,7 +1088,7 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <text x="150" y="40" fontSize="10" fontWeight="700" fill="#60a5fa">
+          <text x="150" y="40" fontSize="10" fontWeight="500" fill="#60a5fa">
             v
           </text>
         </>,
@@ -1170,10 +1138,10 @@ function Thumb({ id }: { id: string }) {
           <circle cx="74" cy="25" r="2.8" fill="#fbbf24" stroke="#fff" strokeWidth="0.8" />
           <circle cx="99" cy="93" r="2.8" fill="#34d399" stroke="#fff" strokeWidth="0.8" />
           <circle cx="136" cy="50" r="2.8" fill="#38bdf8" stroke="#fff" strokeWidth="0.8" />
-          <text x="17" y="69" fontSize="7" fontWeight="800" fill="#cbd5e1">Wt = 0</text>
-          <text x="74" y="15" textAnchor="middle" fontSize="7" fontWeight="800" fill="#fde68a">Wt max</text>
-          <text x="99" y="116" textAnchor="middle" fontSize="7" fontWeight="800" fill="#6ee7b7">Wđ max</text>
-          <text x="136" y="40" textAnchor="middle" fontSize="7" fontWeight="800" fill="#7dd3fc">Wt lớn</text>
+          <text x="17" y="69" fontSize="7" fontWeight="500" fill="#cbd5e1">Wt = 0</text>
+          <text x="74" y="15" textAnchor="middle" fontSize="7" fontWeight="500" fill="#fde68a">Wt max</text>
+          <text x="99" y="116" textAnchor="middle" fontSize="7" fontWeight="500" fill="#6ee7b7">Wđ max</text>
+          <text x="136" y="40" textAnchor="middle" fontSize="7" fontWeight="500" fill="#7dd3fc">Wt lớn</text>
         </>,
       );
     case "nem-ngang":
@@ -1370,13 +1338,13 @@ function Thumb({ id }: { id: string }) {
           <circle cx="100" cy="17" r="4.5" fill="#0f172a" stroke="#e2e8f0" strokeWidth="1.6" />
           <circle cx="138" cy="75" r="8" fill="#f59e0b" stroke="#fde68a" strokeWidth="2" />
           <circle cx="100" cy="98" r="3.5" fill="#cbd5e1" />
-          <text x="49" y="74" fontSize="10" fontWeight="900" fill="#fbbf24">B′</text>
-          <text x="95" y="113" fontSize="10" fontWeight="900" fill="#e2e8f0">O</text>
-          <text x="148" y="78" fontSize="10" fontWeight="900" fill="#fb7185">B</text>
-          <text x="113" y="48" fontSize="10" fontWeight="900" fill="#bae6fd">ℓ</text>
+          <text x="49" y="74" fontSize="10" fontWeight="500" fill="#fbbf24">B′</text>
+          <text x="95" y="113" fontSize="10" fontWeight="500" fill="#e2e8f0">O</text>
+          <text x="148" y="78" fontSize="10" fontWeight="500" fill="#fb7185">B</text>
+          <text x="113" y="48" fontSize="10" fontWeight="500" fill="#bae6fd">ℓ</text>
           <path d="M138 84V108" stroke="#fb7185" strokeWidth="2.2" strokeLinecap="round" />
           <path d="M133 102L138 110L143 102" fill="none" stroke="#fb7185" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="146" y="108" fontSize="9" fontWeight="900" fill="#fb7185">P</text>
+          <text x="146" y="108" fontSize="9" fontWeight="500" fill="#fb7185">P</text>
         </>,
       );
     case "bao-toan-co-nang-con-lac":
@@ -1412,9 +1380,9 @@ function Thumb({ id }: { id: string }) {
           <circle cx="40" cy="39" r="3.8" fill="#fbbf24" stroke="#fef3c7" strokeWidth="0.9" />
           <circle cx="160" cy="39" r="3.8" fill="#38bdf8" stroke="#e0f2fe" strokeWidth="0.9" />
           <circle cx="100" cy="96" r="3.8" fill="#34d399" stroke="#d1fae5" strokeWidth="0.9" />
-          <text x="40" y="26" textAnchor="middle" fontSize="8" fontWeight="900" fill="#fde68a">A</text>
-          <text x="160" y="26" textAnchor="middle" fontSize="8" fontWeight="900" fill="#7dd3fc">B</text>
-          <text x="100" y="114" textAnchor="middle" fontSize="8" fontWeight="900" fill="#6ee7b7">C</text>
+          <text x="40" y="26" textAnchor="middle" fontSize="8" fontWeight="500" fill="#fde68a">A</text>
+          <text x="160" y="26" textAnchor="middle" fontSize="8" fontWeight="500" fill="#7dd3fc">B</text>
+          <text x="100" y="114" textAnchor="middle" fontSize="8" fontWeight="500" fill="#6ee7b7">C</text>
 
           {/* Một quả cầu thật tại trạng thái đầu A */}
           <circle cx="40" cy="39" r="7.2" fill="#991b1b" stroke="#fecaca" strokeWidth="1.3" />
@@ -1423,29 +1391,39 @@ function Thumb({ id }: { id: string }) {
 
           {/* Độ cao ban đầu h₁ */}
           <path d="M10 96V39M6 46L10 38L14 46M6 89L10 97L14 89" fill="none" stroke="#fbbf24" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="16" y="70" fontSize="7.5" fontWeight="900" fill="#fde68a">h₁</text>
-          <text x="126" y="52" fontSize="6.5" fontWeight="800" fill="#7dd3fc">Wₜ ↑ · Wđ ↓</text>
-          <text x="78" y="85" fontSize="6.5" fontWeight="800" fill="#6ee7b7">Wđ max</text>
+          <text x="16" y="70" fontSize="7.5" fontWeight="500" fill="#fde68a">h₁</text>
+          <text x="126" y="52" fontSize="6.5" fontWeight="500" fill="#7dd3fc">Wₜ ↑ · Wđ ↓</text>
+          <text x="78" y="85" fontSize="6.5" fontWeight="500" fill="#6ee7b7">Wđ max</text>
         </>,
       );
     case "con-lac-lo-xo":
       return frame(
         <>
-          <line
-            x1="60"
-            y1="20"
-            x2="140"
-            y2="20"
-            stroke="#475569"
-            strokeWidth="3"
-          />
-          <path
-            d="M100 20 l-8 6 l16 8 l-16 8 l16 8 l-16 8 l8 6"
-            fill="none"
-            stroke="#a78bfa"
-            strokeWidth="2"
-          />
-          <rect x="86" y="78" width="28" height="22" rx="3" fill="#f472b6" />
+          <defs>
+            <linearGradient id="spring-thumb-metal" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#64748b" />
+              <stop offset="42%" stopColor="#f8fafc" />
+              <stop offset="68%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor="#e2e8f0" />
+            </linearGradient>
+            <linearGradient id="spring-thumb-weight" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#7dd3fc" />
+              <stop offset="100%" stopColor="#0284c7" />
+            </linearGradient>
+          </defs>
+          <rect x="59" y="14" width="82" height="7" rx="3.5" fill="#334155" stroke="#64748b" strokeWidth="1.2" />
+          {[66, 82, 98, 114, 130].map((x) => (
+            <line key={x} x1={x - 5} y1="14" x2={x + 2} y2="7" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" />
+          ))}
+          <path d="M88 21H112L100 31Z" fill="#1e293b" stroke="#94a3b8" strokeWidth="1.4" />
+          <circle cx="100" cy="31" r="3.8" fill="#0f172a" stroke="#7dd3fc" strokeWidth="1.8" />
+          <path d="M100 35V40 L91 44 L109 50 L91 56 L109 62 L91 68 L109 74 L100 78V82" fill="none" stroke="#020617" strokeWidth="5" opacity=".55" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M100 35V40 L91 44 L109 50 L91 56 L109 62 L91 68 L109 74 L100 78V82" fill="none" stroke="url(#spring-thumb-metal)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="57" y1="91" x2="143" y2="91" stroke="#38bdf8" strokeWidth="1" strokeDasharray="4 4" opacity=".65" />
+          <circle cx="100" cy="84" r="4.5" fill="#0f172a" stroke="#bae6fd" strokeWidth="1.5" />
+          <path d="M82 89H118L121 111H79Z" fill="url(#spring-thumb-weight)" stroke="#bae6fd" strokeWidth="1.7" strokeLinejoin="round" />
+          <path d="M87 94H113" stroke="#e0f2fe" strokeWidth="1.4" strokeLinecap="round" opacity=".8" />
+          <text x="100" y="105" textAnchor="middle" fontSize="8" fontWeight="500" fill="#082f49">m</text>
         </>,
       );
     case "cong-huong-con-lac":
@@ -1485,7 +1463,7 @@ function Thumb({ id }: { id: string }) {
               <circle cx={bob.x - 2.2} cy={bob.y - 2.4} r="1.7" fill="#ffffff" opacity="0.58" />
             </g>
           ))}
-          <text x="100" y="112" textAnchor="middle" fontSize="8" fontWeight="800" fill="#cbd5e1">5 CON LẮC · THANH TREO CHUNG</text>
+          <text x="100" y="112" textAnchor="middle" fontSize="8" fontWeight="500" fill="#cbd5e1">5 CON LẮC · THANH TREO CHUNG</text>
         </>,
       );
     case "dao-dong-tat-dan":
@@ -1506,19 +1484,19 @@ function Thumb({ id }: { id: string }) {
 
           <path d="M106 68V96" stroke="#fb7185" strokeWidth="2.4" strokeLinecap="round" />
           <path d="M101 88L106 97L111 88" fill="none" stroke="#fb7185" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="113" y="96" fontSize="9" fontWeight="900" fill="#fb7185">P</text>
+          <text x="113" y="96" fontSize="9" fontWeight="500" fill="#fb7185">P</text>
 
           <path d="M106 68L118 42" stroke="#c084fc" strokeWidth="2.4" strokeLinecap="round" />
           <path d="M111 48L118 41L119 51" fill="none" stroke="#c084fc" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="121" y="43" fontSize="9" fontWeight="900" fill="#c084fc">N</text>
+          <text x="121" y="43" fontSize="9" fontWeight="500" fill="#c084fc">N</text>
 
           <path d="M106 68L94 94" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" />
           <path d="M94 84L94 94L102 88" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="78" y="97" fontSize="8.5" fontWeight="900" fill="#60a5fa">P₁</text>
+          <text x="78" y="97" fontSize="8.5" fontWeight="500" fill="#60a5fa">P₁</text>
 
           <path d="M106 68L137 80" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
           <path d="M130 73L138 80L128 81" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="140" y="85" fontSize="8.5" fontWeight="900" fill="#fbbf24">P₂</text>
+          <text x="140" y="85" fontSize="8.5" fontWeight="500" fill="#fbbf24">P₂</text>
         </>,
       );
     case "mat-nghieng-ma-sat":
@@ -1530,22 +1508,22 @@ function Thumb({ id }: { id: string }) {
 
           <path d="M121 67V92" stroke="#f8fafc" strokeWidth="2.3" strokeLinecap="round" />
           <path d="M116 84L121 93L126 84" fill="none" stroke="#f8fafc" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="128" y="93" fontSize="8.5" fontWeight="900" fill="#f8fafc">P</text>
+          <text x="128" y="93" fontSize="8.5" fontWeight="500" fill="#f8fafc">P</text>
 
           <path d="M121 67L110 42" stroke="#c084fc" strokeWidth="2.3" strokeLinecap="round" />
           <path d="M108 51L110 42L117 48" fill="none" stroke="#c084fc" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="101" y="40" fontSize="8.5" fontWeight="900" fill="#c084fc">N</text>
+          <text x="101" y="40" fontSize="8.5" fontWeight="500" fill="#c084fc">N</text>
 
           <path d="M121 67L158 54" stroke="#22d3ee" strokeWidth="2.4" strokeLinecap="round" />
           <path d="M149 52L158 54L151 60" fill="none" stroke="#22d3ee" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="161" y="53" fontSize="8.5" fontWeight="900" fill="#22d3ee">Fₖ</text>
+          <text x="161" y="53" fontSize="8.5" fontWeight="500" fill="#22d3ee">Fₖ</text>
 
           <path d="M121 67L91 78" stroke="#f43f5e" strokeWidth="2.4" strokeLinecap="round" />
           <path d="M99 72L90 78L100 80" fill="none" stroke="#f43f5e" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="72" y="85" fontSize="8.5" fontWeight="900" fill="#f43f5e">Fₘₛ</text>
+          <text x="72" y="85" fontSize="8.5" fontWeight="500" fill="#f43f5e">Fₘₛ</text>
 
           <path d="M46 101A26 26 0 0 0 44.3 92" fill="none" stroke="#fbbf24" strokeWidth="2.2" strokeLinecap="round" />
-          <text x="39" y="96" textAnchor="middle" fontSize="10" fontWeight="900" fill="#fde68a">α</text>
+          <text x="39" y="96" textAnchor="middle" fontSize="10" fontWeight="500" fill="#fde68a">α</text>
         </>,
       );
     case "giao-thoa-song-nuoc":
@@ -1743,16 +1721,16 @@ function Thumb({ id }: { id: string }) {
           <path d="M10 94H26M174 94H190" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" />
           <rect x="44" y="65" width="42" height="22" rx="5" fill="#38bdf8" stroke="#e0f2fe" strokeWidth="1.5" />
           <rect x="114" y="65" width="42" height="22" rx="5" fill="#fb923c" stroke="#ffedd5" strokeWidth="1.5" />
-          <text x="65" y="79" textAnchor="middle" fontSize="7" fontWeight="900" fill="#082f49">m₁</text>
-          <text x="135" y="79" textAnchor="middle" fontSize="7" fontWeight="900" fill="#7c2d12">m₂</text>
+          <text x="65" y="79" textAnchor="middle" fontSize="7" fontWeight="500" fill="#082f49">m₁</text>
+          <text x="135" y="79" textAnchor="middle" fontSize="7" fontWeight="500" fill="#7c2d12">m₂</text>
           {[54, 76, 124, 146].map((x) => <circle key={x} cx={x} cy="91" r="5" fill="#0f172a" stroke="#cbd5e1" strokeWidth="1.3" />)}
           <path d="M40 53H72L66 49M72 53L66 57" fill="none" stroke="#38bdf8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
           {id === "va-cham-dan-hoi" ? (
             <path d="M160 53H128L134 49M128 53L134 57" fill="none" stroke="#fb923c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
           ) : (
-            <text x="135" y="53" textAnchor="middle" fontSize="7" fontWeight="900" fill="#fb923c">v₂ = 0</text>
+            <text x="135" y="53" textAnchor="middle" fontSize="7" fontWeight="500" fill="#fb923c">v₂ = 0</text>
           )}
-          <text x="100" y="18" textAnchor="middle" fontSize="8" fontWeight="900" fill={id === "va-cham-dan-hoi" ? "#bae6fd" : "#fed7aa"}>
+          <text x="100" y="18" textAnchor="middle" fontSize="8" fontWeight="500" fill={id === "va-cham-dan-hoi" ? "#bae6fd" : "#fed7aa"}>
             {id === "va-cham-dan-hoi" ? "VA CHẠM ĐÀN HỒI" : "VA CHẠM MỀM"}
           </text>
         </>,
@@ -2180,14 +2158,14 @@ function Thumb({ id }: { id: string }) {
           <circle cx="32" cy="29" r="2" fill="#e2e8f0" />
           <circle cx="47" cy="29" r="2" fill="#e2e8f0" />
           <path d="M32 29L47 29" stroke="#f59e0b" strokeWidth="2.8" strokeLinecap="round" />
-          <text x="39" y="22" textAnchor="middle" fontSize="5.5" fontWeight="900" fill="#fde68a">K</text>
+          <text x="39" y="22" textAnchor="middle" fontSize="5.5" fontWeight="500" fill="#fde68a">K</text>
           <rect x="44" y="45" width="12" height="22" rx="2" fill="#dbe4ee" stroke="#f8fafc" strokeWidth="1" />
           <path d="M50 48L46 52L54 56L46 60L50 64" fill="none" stroke="#475569" strokeWidth="1" />
-          <text x="50" y="42" textAnchor="middle" fontSize="6" fontWeight="900" fill="#f8fafc">X</text>
+          <text x="50" y="42" textAnchor="middle" fontSize="6" fontWeight="500" fill="#f8fafc">X</text>
           <circle cx="50" cy="79" r="7" fill="#e2e8f0" stroke="#f8fafc" />
-          <text x="50" y="81" textAnchor="middle" fontSize="6" fontWeight="900" fill="#0f172a">A</text>
+          <text x="50" y="81" textAnchor="middle" fontSize="6" fontWeight="500" fill="#0f172a">A</text>
           <circle cx="70" cy="57" r="7" fill="#e2e8f0" stroke="#f8fafc" />
-          <text x="70" y="59" textAnchor="middle" fontSize="6" fontWeight="900" fill="#0f172a">V</text>
+          <text x="70" y="59" textAnchor="middle" fontSize="6" fontWeight="500" fill="#0f172a">V</text>
 
           {/* Hai màn hình u(t), i(t) đồng bộ theo thời gian. */}
           {[15, 67].map((y) => (
@@ -2199,8 +2177,8 @@ function Thumb({ id }: { id: string }) {
           ))}
           <path d="M101 36C106 20 111 20 116 36S126 52 131 36S141 20 146 36S156 52 161 36S171 20 176 36S186 52 190 36" fill="none" stroke="#fb7185" strokeWidth="1.8" />
           <path d="M101 88C106 72 111 72 116 88S126 104 131 88S141 72 146 88S156 104 161 88S171 72 176 88S186 104 190 88" fill="none" stroke="#38bdf8" strokeWidth="1.8" />
-          <text x="98" y="21" fontSize="6" fontWeight="900" fill="#fda4af">u(V)</text>
-          <text x="98" y="73" fontSize="6" fontWeight="900" fill="#7dd3fc">i(mA)</text>
+          <text x="98" y="21" fontSize="6" fontWeight="500" fill="#fda4af">u(V)</text>
+          <text x="98" y="73" fontSize="6" fontWeight="500" fill="#7dd3fc">i(mA)</text>
         </>,
         "#081526",
       );
@@ -2254,7 +2232,7 @@ function Thumb({ id }: { id: string }) {
               y="66"
               textAnchor="middle"
               fontSize="10"
-              fontWeight="900"
+              fontWeight="500"
               fill="#fff"
             >
               N
@@ -2264,7 +2242,7 @@ function Thumb({ id }: { id: string }) {
               y="66"
               textAnchor="middle"
               fontSize="10"
-              fontWeight="900"
+              fontWeight="500"
               fill="#fff"
             >
               S
@@ -2369,7 +2347,7 @@ function Thumb({ id }: { id: string }) {
               y="58"
               textAnchor="middle"
               fontSize="8"
-              fontWeight="900"
+              fontWeight="500"
               fill="#0f172a"
             >
               G
@@ -2430,10 +2408,10 @@ function Thumb({ id }: { id: string }) {
             stroke="#d92d20"
             strokeWidth="3"
           />
-          <text x="55" y="57" fontSize="13" fontWeight="700" fill="#17324d">
+          <text x="55" y="57" fontSize="13" fontWeight="500" fill="#17324d">
             M
           </text>
-          <text x="171" y="20" fontSize="14" fontWeight="700" fill="#1596b8">
+          <text x="171" y="20" fontSize="14" fontWeight="500" fill="#1596b8">
             B
           </text>
         </>,
@@ -2534,7 +2512,7 @@ function Thumb({ id }: { id: string }) {
             stroke="#f8fafc"
             strokeWidth="2"
           />
-          <text x="52" y="32" fontSize="8" fontWeight="700" fill="#f8fafc">
+          <text x="52" y="32" fontSize="8" fontWeight="500" fill="#f8fafc">
             A
           </text>
           <path
@@ -2559,10 +2537,10 @@ function Thumb({ id }: { id: string }) {
           />
           <path d="M76 18 H151" stroke="#38bdf8" strokeWidth="2.5" />
           <path d="M151 8 V28 M160 12 V24" stroke="#f8fafc" strokeWidth="3" />
-          <text x="145" y="7" fontSize="7" fontWeight="700" fill="#fb7185">
+          <text x="145" y="7" fontSize="7" fontWeight="500" fill="#fb7185">
             +
           </text>
-          <text x="163" y="12" fontSize="7" fontWeight="700" fill="#93c5fd">
+          <text x="163" y="12" fontSize="7" fontWeight="500" fill="#93c5fd">
             −
           </text>
           <circle
@@ -2809,17 +2787,17 @@ function Thumb({ id }: { id: string }) {
             strokeLinecap="round"
           />
           <circle cx="154" cy="58" r="5" fill="#fb923c" stroke="#ffedd5" />
-          <text x="119" y="22" fill="#e2e8f0" fontSize="8" fontWeight="700">
+          <text x="119" y="22" fill="#e2e8f0" fontSize="8" fontWeight="500">
             p
           </text>
-          <text x="181" y="108" fill="#e2e8f0" fontSize="8" fontWeight="700">
+          <text x="181" y="108" fill="#e2e8f0" fontSize="8" fontWeight="500">
             V
           </text>
           <path
             d="M59 111 C50 102 57 92 65 85 C75 95 77 104 69 111 Z"
             fill="#f97316"
           />
-          <text x="10" y="18" fill="#67e8f9" fontSize="9" fontWeight="700">
+          <text x="10" y="18" fill="#67e8f9" fontSize="9" fontWeight="500">
             p = const
           </text>
         </>,
@@ -2845,7 +2823,7 @@ function Thumb({ id }: { id: string }) {
             fill="#334155"
             stroke="#94a3b8"
           />
-          <text x="31" y="66" fill="#f8fafc" fontSize="11" fontWeight="800">
+          <text x="31" y="66" fill="#f8fafc" fontSize="11" fontWeight="500">
             α
           </text>
           {Array.from({ length: 23 }, (_, index) => (
@@ -2958,7 +2936,7 @@ function Thumb({ id }: { id: string }) {
             stroke="#94a3b8"
             strokeWidth="2"
           />
-          <text x="93" y="113" fill="#cbd5e1" fontSize="8" fontWeight="700">
+          <text x="93" y="113" fill="#cbd5e1" fontSize="8" fontWeight="500">
             N₂ → proton → ZnS
           </text>
         </>,
@@ -3006,7 +2984,7 @@ function Thumb({ id }: { id: string }) {
           <circle cx="149" cy="43" r="3.5" fill="#67e8f9" />
           <circle cx="137" cy="100" r="3.5" fill="#fbbf24" />
           <circle cx="78" cy="39" r="3.5" fill="#fb7185" />
-          <text x="83" y="119" fill="#e2e8f0" fontSize="8" fontWeight="700">
+          <text x="83" y="119" fill="#e2e8f0" fontSize="8" fontWeight="500">
             lá Au · màn ZnS
           </text>
         </>,
@@ -3073,13 +3051,13 @@ function Thumb({ id }: { id: string }) {
             fill="#cbd5e1"
             stroke="#64748b"
           />
-          <text x="143" y="26" fill="#fbbf24" fontSize="9" fontWeight="700">
+          <text x="143" y="26" fill="#fbbf24" fontSize="9" fontWeight="500">
             α
           </text>
-          <text x="143" y="111" fill="#67e8f9" fontSize="9" fontWeight="700">
+          <text x="143" y="111" fill="#67e8f9" fontSize="9" fontWeight="500">
             β⁻
           </text>
-          <text x="150" y="59" fill="#bef264" fontSize="9" fontWeight="700">
+          <text x="150" y="59" fill="#bef264" fontSize="9" fontWeight="500">
             γ
           </text>
         </>,
@@ -3144,13 +3122,13 @@ function Thumb({ id }: { id: string }) {
             stroke="#fbbf24"
             strokeWidth="1.5"
           />
-          <text x="88" y="116" fill="#fde68a" fontSize="9" fontWeight="700">
+          <text x="88" y="116" fill="#fde68a" fontSize="9" fontWeight="500">
             θ
           </text>
-          <text x="145" y="53" fill="#fef3c7" fontSize="10" fontWeight="800">
+          <text x="145" y="53" fill="#fef3c7" fontSize="10" fontWeight="500">
             +
           </text>
-          <text x="181" y="94" fill="#fef3c7" fontSize="10" fontWeight="800">
+          <text x="181" y="94" fill="#fef3c7" fontSize="10" fontWeight="500">
             +
           </text>
         </>,
@@ -3297,7 +3275,7 @@ function Thumb({ id }: { id: string }) {
           <path d="M143 59V91" stroke="#fde68a" strokeDasharray="3 3" />
           <path d="M98 94H170" stroke="#fef08a" strokeWidth="1.5" />
           <path d="M98 89V99M170 89V99" stroke="#fef08a" strokeWidth="1.5" />
-          <text x="130" y="108" fill="#fef08a" fontSize="9" fontWeight="700">
+          <text x="130" y="108" fill="#fef08a" fontSize="9" fontWeight="500">
             λ
           </text>
         </>,
@@ -3390,7 +3368,7 @@ function Thumb({ id }: { id: string }) {
             strokeWidth="3"
             strokeLinecap="round"
           />
-          <text x="32" y="25" fill="#67e8f9" fontSize="10" fontWeight="700">
+          <text x="32" y="25" fill="#67e8f9" fontSize="10" fontWeight="500">
             T = const
           </text>
         </>,
@@ -3560,7 +3538,7 @@ function Thumb({ id }: { id: string }) {
             y="35"
             textAnchor="middle"
             fontSize="9.5"
-            fontWeight="700"
+            fontWeight="500"
             fill="#fffbd1"
           >
             URANIUM
@@ -3604,10 +3582,10 @@ function Thumb({ id }: { id: string }) {
             strokeLinejoin="round"
           />
           <path d="M35 15V33M43 18V30" stroke="#f8fafc" strokeWidth="3" />
-          <text x="33" y="10" fontSize="7" fontWeight="800" fill="#fb7185">
+          <text x="33" y="10" fontSize="7" fontWeight="500" fill="#fb7185">
             +
           </text>
-          <text x="42" y="10" fontSize="7" fontWeight="800" fill="#7dd3fc">
+          <text x="42" y="10" fontSize="7" fontWeight="500" fill="#7dd3fc">
             −
           </text>
           <circle cx="72" cy="24" r="3.4" fill="#dbeafe" />
@@ -3738,10 +3716,10 @@ function Thumb({ id }: { id: string }) {
             strokeWidth="3"
             strokeLinecap="round"
           />
-          <text x="36" y="57" fontSize="8" fontWeight="700" fill="#f8fafc">
+          <text x="36" y="57" fontSize="8" fontWeight="500" fill="#f8fafc">
             A
           </text>
-          <text x="161" y="57" fontSize="8" fontWeight="700" fill="#f8fafc">
+          <text x="161" y="57" fontSize="8" fontWeight="500" fill="#f8fafc">
             B
           </text>
           <rect
@@ -3797,7 +3775,7 @@ function Thumb({ id }: { id: string }) {
             strokeWidth="3"
             strokeLinecap="round"
           />
-          <text x="91" y="108" fontSize="8" fontWeight="700" fill="#fbbf24">
+          <text x="91" y="108" fontSize="8" fontWeight="500" fill="#fbbf24">
             K
           </text>
           <path
@@ -3805,7 +3783,7 @@ function Thumb({ id }: { id: string }) {
             stroke="#f8fafc"
             strokeWidth="3"
           />
-          <text x="145" y="78" fontSize="8" fontWeight="700" fill="#fda4af">
+          <text x="145" y="78" fontSize="8" fontWeight="500" fill="#fda4af">
             E
           </text>
         </>,
@@ -3934,7 +3912,7 @@ function Thumb({ id }: { id: string }) {
             stroke="#f8fafc"
             strokeWidth="2"
           />
-          <text x="51" y="32" fontSize="9" fontWeight="700" fill="#f8fafc">
+          <text x="51" y="32" fontSize="9" fontWeight="500" fill="#f8fafc">
             A₁
           </text>
           <rect
@@ -3954,7 +3932,7 @@ function Thumb({ id }: { id: string }) {
             stroke="#f8fafc"
             strokeWidth="2"
           />
-          <text x="51" y="76" fontSize="9" fontWeight="700" fill="#f8fafc">
+          <text x="51" y="76" fontSize="9" fontWeight="500" fill="#f8fafc">
             A₂
           </text>
           <circle
@@ -4015,7 +3993,7 @@ function Thumb({ id }: { id: string }) {
             stroke="#f8fafc"
             strokeWidth="2"
           />
-          <text x="92" y="28" fontSize="10" fontWeight="700" fill="#f8fafc">
+          <text x="92" y="28" fontSize="10" fontWeight="500" fill="#f8fafc">
             A
           </text>
           <circle
@@ -4026,7 +4004,7 @@ function Thumb({ id }: { id: string }) {
             stroke="#f8fafc"
             strokeWidth="2"
           />
-          <text x="92" y="61" fontSize="10" fontWeight="700" fill="#f8fafc">
+          <text x="92" y="61" fontSize="10" fontWeight="500" fill="#f8fafc">
             V
           </text>
           <path d="M96 38v5m0 28v15" stroke="#38bdf8" strokeWidth="2" />
@@ -4198,6 +4176,18 @@ function MoPhongHubContent() {
   const [savedPresetIds, setSavedPresetIds] = useState<Set<string>>(new Set());
   const [saveError, setSaveError] = useState("");
   const [libraryOpenError, setLibraryOpenError] = useState("");
+  const libraryScrollElementRef = useRef<HTMLDivElement | null>(null);
+  const savedLibraryScrollTopRef = useRef(0);
+
+  const setLibraryScrollElement = useCallback((element: HTMLDivElement | null) => {
+    libraryScrollElementRef.current = element;
+    if (element) element.scrollTop = savedLibraryScrollTopRef.current;
+  }, []);
+
+  const openPreset = (preset: Preset) => {
+    savedLibraryScrollTopRef.current = libraryScrollElementRef.current?.scrollTop ?? 0;
+    setSelected(preset);
+  };
 
   // Bản mở từ thư viện hoặc snapshot trong lớp là nội dung đã lưu; không cho lưu chồng thêm bản sao.
   const canSaveToLibrary = !savedSimulationId && user?.roles.includes("TEACHER") === true && user.subject === "PHYSICS";
@@ -4262,12 +4252,10 @@ function MoPhongHubContent() {
     domainFilter.has(domain) && title.toLowerCase().includes(q);
 
   const presets = PRESETS.filter((p) => matches(p.domain, p.title));
-  const placeholders = PLACEHOLDERS.filter((p) => matches(p.domain, p.title));
-  const total = presets.length + placeholders.length;
+  const total = presets.length;
 
   const countInDomain = (d: Domain) =>
-    PRESETS.filter((s) => s.domain === d).length +
-    PLACEHOLDERS.filter((s) => s.domain === d).length;
+    PRESETS.filter((s) => s.domain === d).length;
 
   const filtered = domainFilter.size < DOMAINS.length;
   // Resolve the stored selection back through PRESETS on every render. During
@@ -4306,7 +4294,7 @@ function MoPhongHubContent() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div>
-                <h1 className="font-libertine text-2xl font-bold text-[#171717]">
+                <h1 className="font-libertine text-2xl font-normal text-[#171717]">
                   Thư viện mô phỏng Vật lý
                 </h1>
                 <p className="mt-1 text-sm text-[#6b6b6b]">
@@ -4354,7 +4342,7 @@ function MoPhongHubContent() {
         </header>
 
         {/* Library grid */}
-        <div className="min-h-0 flex-1 overflow-y-auto p-8">
+        <div ref={setLibraryScrollElement} className="min-h-0 flex-1 overflow-y-auto p-8">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {(saveError || libraryOpenError) && <p className="col-span-full rounded-[12px] border border-[#f3c6bd] bg-[#fff4f1] px-4 py-3 text-[13px] text-[#c2483c]">{saveError || libraryOpenError}</p>}
             {presets.map((sim) => (
@@ -4362,7 +4350,7 @@ function MoPhongHubContent() {
                 key={sim.id}
                 className="group overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-white text-left shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[#d97757] hover:shadow-md"
               >
-                <button type="button" onClick={() => setSelected(sim)} className="block w-full text-left">
+                <button type="button" onClick={() => openPreset(sim)} className="block w-full text-left">
                 <div className="aspect-[5/3] w-full overflow-hidden bg-[#0f172a] p-2.5">
                   <div className="relative h-full w-full overflow-hidden rounded-[10px]">
                     <Thumb id={sim.id} />
@@ -4402,35 +4390,6 @@ function MoPhongHubContent() {
                     </button>
                   </div>
                 )}
-              </div>
-            ))}
-
-            {placeholders.map((sim) => (
-              <div
-                key={sim.id}
-                className="cursor-not-allowed overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-white opacity-60 shadow-sm"
-                title="Lĩnh vực này chưa có kernel"
-              >
-                <div className="aspect-[5/3] w-full overflow-hidden bg-[#0f172a] p-2.5">
-                  <div className="h-full w-full overflow-hidden rounded-[10px]">
-                    <Thumb id={sim.id} />
-                  </div>
-                </div>
-                <div className="space-y-1.5 p-5">
-                  <div className="flex items-center gap-2">
-                    <Badge tone="neutral">Lớp {sim.grade}</Badge>
-                    <Badge tone="neutral">{sim.domain}</Badge>
-                    <span className="ml-auto">
-                      <Badge tone="neutral">Đang phát triển</Badge>
-                    </span>
-                  </div>
-                  <h3 className="text-[15px] font-semibold text-[#171717]">
-                    {sim.title}
-                  </h3>
-                  <p className="line-clamp-2 text-[12px] leading-relaxed text-[#6b6b6b]">
-                    {sim.desc}
-                  </p>
-                </div>
               </div>
             ))}
 
@@ -4665,7 +4624,7 @@ function PendulumVelocityChart({
         <span className="font-semibold uppercase tracking-wide text-[#a7f3d0]">
           Đồ thị vận tốc v(t)
         </span>
-        <span className="font-mono tabular-nums text-[#cbd5e1]">
+        <span className="font-sans tabular-nums text-[#cbd5e1]">
           v = {latest?.velocity.toFixed(2) ?? "0.00"} m/s
         </span>
       </div>
@@ -4695,7 +4654,9 @@ function LegacyExperimentLayout({ children }: { children: ReactNode }) {
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
       <Sidebar activeHref="/mo-phong-vat-ly" />
-      <div className="min-w-0 flex-1 overflow-hidden">{children}</div>
+      <div className="flex h-full min-w-0 flex-1 overflow-hidden">
+        {children}
+      </div>
     </main>
   );
 }
@@ -4930,6 +4891,21 @@ function GenericDetailView({
     () => calculateSimplePendulumValues(params),
     [params],
   );
+
+  const springOscillatorValues = useMemo(() => {
+    const mass = params.m ?? 1;
+    const springConstant = params.k ?? 20;
+    const amplitude = params.A ?? 0.4;
+    const gravity = params.g ?? 9.8;
+    const angularFrequency = Math.sqrt(springConstant / mass);
+    return {
+      amplitude,
+      staticStretch: (mass * gravity) / springConstant,
+      angularFrequency,
+      period: (2 * Math.PI) / angularFrequency,
+      frequency: angularFrequency / (2 * Math.PI),
+    };
+  }, [params]);
 
   const handleReadout = (nextReadout: SceneReadout) => {
     setReadout(nextReadout);
@@ -5315,7 +5291,9 @@ function GenericDetailView({
                     {readout.bodies.map((b) => (
                       <tr key={b.id} className="border-t border-[#f0ece5]">
                         <td className="py-1 text-left text-[#4f4943]">
-                          {b.id}
+                          {preset.id === "con-lac-lo-xo" && b.id === "bob"
+                            ? "Quả nặng"
+                            : b.id}
                         </td>
                         <td className="py-1 text-right tabular-nums text-[#2b2926]">
                           {b.x.toFixed(2)}
@@ -5404,6 +5382,12 @@ function GenericDetailView({
                         Con lắc chuyển động qua <b>O</b>; trọng lực <b className="text-rose-500">P</b>
                         luôn hướng thẳng đứng xuống dưới.
                       </>
+                    ) : preset.id === "con-lac-lo-xo" ? (
+                      <>
+                        Kéo quả nặng theo phương thẳng đứng rồi thả. Đường xanh
+                        biểu diễn <b>vị trí cân bằng</b>; biên độ được giới hạn
+                        trong khoảng <b>±A</b> để thí nghiệm luôn đúng mô hình.
+                      </>
                     ) : (
                       <>
                         Rủi ro <b>bằng 0</b>: chỉ kéo slider, sim do dev build
@@ -5412,7 +5396,7 @@ function GenericDetailView({
                     )}
                   </p>
                   {preset.id === "mat-nghieng-ma-sat" && (
-                    <div className="space-y-2.5 rounded-[12px] border border-[#e8e2d9] bg-[#faf9f7] p-3 font-mono text-[13px] leading-relaxed text-[#2b2926]">
+                    <div className="space-y-2.5 rounded-[12px] border border-[#e8e2d9] bg-[#faf9f7] p-3 font-sans text-[13px] leading-relaxed text-[#2b2926]">
                       <p><b>P = m·g</b> = {inclinedValues.mass.toFixed(1)} × 9,8 = <b>{inclinedValues.weight.toFixed(2)} N</b></p>
                       <p className="text-[#60a5fa]"><b>P₁ = P·cos α</b> = {inclinedValues.weight.toFixed(2)} × cos {inclinedValues.alpha.toFixed(0)}° = <b>{inclinedValues.normalComponent.toFixed(2)} N</b></p>
                       <p className="text-[#c084fc]"><b>N = P₁</b> = <b>{inclinedValues.normalComponent.toFixed(2)} N</b></p>
@@ -5424,12 +5408,21 @@ function GenericDetailView({
                     </div>
                   )}
                   {preset.id === "con-lac-don" && (
-                    <div className="space-y-2.5 rounded-[12px] border border-[#e8e2d9] bg-[#faf9f7] p-3 font-mono text-[13px] leading-relaxed text-[#2b2926]">
+                    <div className="space-y-2.5 rounded-[12px] border border-[#e8e2d9] bg-[#faf9f7] p-3 font-sans text-[13px] leading-relaxed text-[#2b2926]">
                       <p><b>h = ℓ(1 − cos góc lệch)</b> = <b>{pendulumValues.maximumHeight.toFixed(3)} m</b></p>
                       <p className="text-[#0e7490]"><b>T ≈ 2π√(ℓ/g)</b> = <b>{pendulumValues.period.toFixed(3)} s</b></p>
                       <p className="text-[#7c3aed]"><b>f = 1/T</b> = <b>{pendulumValues.frequency.toFixed(3)} Hz</b></p>
                       <p className="text-[#d97706]"><b>vmax = √(2gh)</b> = <b>{pendulumValues.maximumSpeed.toFixed(2)} m/s</b></p>
                       <p><b>W = mgh</b> = <b>{pendulumValues.mechanicalEnergy.toFixed(3)} J</b></p>
+                    </div>
+                  )}
+                  {preset.id === "con-lac-lo-xo" && (
+                    <div className="space-y-2.5 rounded-[12px] border border-[#e8e2d9] bg-[#faf9f7] p-3 font-sans text-[13px] leading-relaxed text-[#2b2926]">
+                      <p><b>Δℓ₀ = mg/k</b> = <b>{springOscillatorValues.staticStretch.toFixed(3)} m</b></p>
+                      <p className="text-[#0369a1]"><b>ω = √(k/m)</b> = <b>{springOscillatorValues.angularFrequency.toFixed(3)} rad/s</b></p>
+                      <p className="text-[#0f766e]"><b>T = 2π√(m/k)</b> = <b>{springOscillatorValues.period.toFixed(3)} s</b></p>
+                      <p className="text-[#7c3aed]"><b>f = 1/T</b> = <b>{springOscillatorValues.frequency.toFixed(3)} Hz</b></p>
+                      <p className="text-[#c2410c]"><b>vₘₐₓ = Aω</b> = <b>{(springOscillatorValues.amplitude * springOscillatorValues.angularFrequency).toFixed(3)} m/s</b></p>
                     </div>
                   )}
                   {preset.kind === "wave" && <WaveLegend />}

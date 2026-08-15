@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { memo, useEffect, useRef } from "react";
 import {
   createWaterCalorimetryState,
@@ -65,9 +67,9 @@ function drawMeter(
   ctx.stroke();
   ctx.fillStyle = "#f8fafc";
   ctx.textAlign = "center";
-  ctx.font = "700 14px Inter, sans-serif";
+  ctx.font = simulationCanvasFont("14px", 700);
   ctx.fillText(label, x, y + 2);
-  ctx.font = "600 10px Inter, sans-serif";
+  ctx.font = simulationCanvasFont("10px", 500);
   ctx.fillStyle = "#cbd5e1";
   ctx.fillText(`${value.toFixed(2)} ${unit}`, x, y + 17);
   ctx.restore();
@@ -124,7 +126,7 @@ function drawStopwatch(
   ctx.fill();
   ctx.fillStyle = "#e2e8f0";
   ctx.textAlign = "center";
-  ctx.font = "700 14px Inter, sans-serif";
+  ctx.font = simulationCanvasFont("14px", 700);
   ctx.fillText(`${time.toFixed(1)} s`, x, y + 92);
   ctx.restore();
 }
@@ -257,7 +259,7 @@ export const WaterCalorimetryScene = memo(function WaterCalorimetryScene({
       ctx.stroke();
       ctx.fillStyle = "#e2e8f0";
       ctx.textAlign = "center";
-      ctx.font = "700 14px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("14px", 700);
       ctx.fillText("K", 222, 52);
 
       // Nguồn điện: hai bản cực nằm đúng trên nhánh chính.
@@ -270,12 +272,12 @@ export const WaterCalorimetryScene = memo(function WaterCalorimetryScene({
       ctx.lineTo(417, 106);
       ctx.stroke();
       ctx.fillStyle = "#fb7185";
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("+", 376, 77);
       ctx.fillStyle = "#93c5fd";
       ctx.fillText("−", 431, 77);
       ctx.fillStyle = "#cbd5e1";
-      ctx.font = "600 11px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("11px", 500);
       ctx.fillText(`${current.params.voltage.toFixed(1)} V`, 403, 132);
 
       drawMeter(
@@ -367,7 +369,7 @@ export const WaterCalorimetryScene = memo(function WaterCalorimetryScene({
       ctx.shadowBlur = 0;
       ctx.fillStyle = "#fde68a";
       ctx.textAlign = "left";
-      ctx.font = "700 15px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("15px", 700);
       ctx.fillText("C", 505, 272);
 
       // Nhiệt kế ngập trong nước, cột đỏ phản ánh nhiệt độ thật.
@@ -394,9 +396,9 @@ export const WaterCalorimetryScene = memo(function WaterCalorimetryScene({
       ctx.fill();
       ctx.fillStyle = "#e2e8f0";
       ctx.textAlign = "center";
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("T", 275, 203);
-      ctx.font = "600 12px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("12px", 500);
       ctx.fillText(`${state.temperature.toFixed(1)} °C`, 275, 420);
 
       // Que khuấy độc lập, không bị nhầm với dây điện.
@@ -450,7 +452,7 @@ export const WaterCalorimetryScene = memo(function WaterCalorimetryScene({
       drawStopwatch(ctx, 735, 355, state.time);
 
       ctx.textAlign = "left";
-      ctx.font = "600 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillStyle = "#67e8f9";
       ctx.fillText(`UIt = ${state.electricalEnergy.toFixed(0)} J`, 105, 505);
       ctx.fillStyle = "#fde68a";

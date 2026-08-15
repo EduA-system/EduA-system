@@ -134,13 +134,13 @@ function AnalysisPanel({
         </table>
       </div>
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
-        <p className="text-center font-libertine text-lg font-bold text-[#171717]">T = Δt/N &nbsp;·&nbsp; f = 1/T = N/Δt</p>
+        <p className="text-center font-sans text-lg font-bold text-[#171717]">T = Δt/N &nbsp;·&nbsp; f = 1/T = N/Δt</p>
         <p className="mt-2 text-xs leading-relaxed text-[#6b6b6b]">TIME/DIV cho biết thời gian ứng với mỗi ô ngang. VOLT/DIV chỉ thay đổi chiều cao hiển thị, không làm thay đổi chu kì hay tần số của tín hiệu.</p>
       </div>
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
         <p className="mb-2 text-[13px] font-semibold">Tiến trình thí nghiệm</p>
         {metrics.events.length > 0 ? metrics.events.map((event, index) => (
-          <div key={`${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-mono text-[#c96545]">{event.time.toFixed(2)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
+          <div key={`${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-sans text-[#c96545]">{event.time.toFixed(2)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
         )) : <p className="text-xs text-[#8a8178]">Nhấn Play để gõ âm thoa và bắt đầu thu tín hiệu.</p>}
       </div>
       <p className="rounded-[10px] bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-900">Biên độ âm thoa quyết định độ cao của đường tín hiệu, còn tần số quyết định số chu kì xuất hiện trong cùng một khoảng thời gian. Đo nhiều chu kì rồi chia cho N giúp đọc chu kì rõ hơn.</p>

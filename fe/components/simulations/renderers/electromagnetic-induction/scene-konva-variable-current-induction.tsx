@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { memo, useEffect, useRef } from "react";
 import {
   initialVariableCurrentState,
@@ -101,9 +103,9 @@ function drawMeter(
 
   context.textAlign = "center";
   context.fillStyle = "#0f172a";
-  context.font = "800 16px Inter, sans-serif";
+  context.font = simulationCanvasFont("16px", 700);
   context.fillText(label, x, y - 2);
-  context.font = "700 10px Inter, sans-serif";
+  context.font = simulationCanvasFont("10px", 500);
   context.fillStyle = "#334155";
   context.fillText(reading, x, y + 19);
 }
@@ -183,12 +185,12 @@ function drawGraph(context: CanvasRenderingContext2D, options: GraphOptions) {
   context.stroke();
 
   context.fillStyle = "#cbd5e1";
-  context.font = "700 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.textAlign = "left";
   context.fillText(`${symbol} (${unit})`, left - 1, y + 21);
   context.textAlign = "right";
   context.fillText("t (s)", right, y + height - 11);
-  context.font = "600 9px Inter, sans-serif";
+  context.font = simulationCanvasFont("9px", 500);
   context.fillStyle = "#8fa5bf";
   context.textAlign = "right";
   context.fillText(axisAmplitude.toFixed(axisAmplitude >= 10 ? 0 : 1), left - 6, top + 4);
@@ -241,7 +243,7 @@ function drawGraph(context: CanvasRenderingContext2D, options: GraphOptions) {
   }
 
   context.fillStyle = "#8fa5bf";
-  context.font = "600 9px Inter, sans-serif";
+  context.font = simulationCanvasFont("9px", 500);
   context.textAlign = "right";
   context.fillText(`cửa sổ ${duration.toFixed(1)} s`, right - 4, top + 12);
   context.restore();
@@ -256,11 +258,11 @@ function drawCircuit(
 ) {
   drawPanel(context, 30, 28, 500, 594);
   context.fillStyle = "#e2e8f0";
-  context.font = "800 16px Inter, sans-serif";
+  context.font = simulationCanvasFont("16px", 700);
   context.textAlign = "left";
   context.fillText("MẠCH ĐIỆN XOAY CHIỀU", 55, 60);
   context.fillStyle = "#8fa5bf";
-  context.font = "600 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.fillText("Bấm khoá K; điều chỉnh Rₓ ở bảng Tham số", 55, 81);
 
   const activeLevel = switchClosed ? 0.55 + Math.abs(Math.sin(TAU * state.phase)) * 0.45 : 0;
@@ -309,7 +311,7 @@ function drawCircuit(
   }
   context.stroke();
   context.fillStyle = "#d9f99d";
-  context.font = "800 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   context.textAlign = "center";
   context.fillText(`${scene.frequency.toFixed(0)} Hz`, 90, 351);
 
@@ -326,7 +328,7 @@ function drawCircuit(
   context.lineTo(switchClosed ? 250 : 236, switchClosed ? 160 : 130);
   context.stroke();
   context.fillStyle = switchClosed ? "#6ee7b7" : "#fda4af";
-  context.font = "800 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   context.fillText(switchClosed ? "K đóng" : "K mở", 214, 116);
 
   // Biến trở X trên nhánh chính.
@@ -361,7 +363,7 @@ function drawCircuit(
   context.arc(352, sliderY - 13, 5, 0, TAU);
   context.fill();
   context.fillStyle = "#e2e8f0";
-  context.font = "900 14px Inter, sans-serif";
+  context.font = simulationCanvasFont("14px", 700);
   context.fillText("X", 310, 207);
 
   const peakCurrent = peakCircuitCurrent(scene, true);
@@ -411,14 +413,14 @@ function drawCircuit(
   context.fill();
   context.stroke();
   context.fillStyle = "#8fa5bf";
-  context.font = "700 10px Inter, sans-serif";
+  context.font = simulationCanvasFont("10px", 500);
   context.textAlign = "left";
   context.fillText("GIÁ TRỊ TỪ BẢNG THAM SỐ", 82, 504);
   context.fillStyle = "#fde68a";
-  context.font = "900 18px Inter, sans-serif";
+  context.font = simulationCanvasFont("18px", 700);
   context.fillText(`Rₓ = ${scene.resistance.toFixed(0)} Ω`, 82, 535);
   context.fillStyle = "#7dd3fc";
-  context.font = "800 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   context.fillText(`I₀ = U₀/Rₓ = ${(peakCurrent * 1000).toFixed(1)} mA`, 270, 533);
 
   context.fillStyle = switchClosed ? "rgba(16,185,129,.16)" : "rgba(244,63,94,.14)";
@@ -428,7 +430,7 @@ function drawCircuit(
   context.fill();
   context.stroke();
   context.fillStyle = switchClosed ? "#a7f3d0" : "#fecdd3";
-  context.font = "800 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.fillText(
     switchClosed
       ? `Mạch kín · u và i cùng pha · I₀ = ${(peakCurrent * 1000).toFixed(1)} mA`

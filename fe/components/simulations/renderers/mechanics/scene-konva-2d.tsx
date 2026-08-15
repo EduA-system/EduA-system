@@ -1,5 +1,7 @@
 "use client";
 
+import { getSimulationFontFamily } from "@/components/simulations/shared/typography";
+
 // Renderer 2D bằng Konva (imperative) cho Kernel Cơ học 2D.
 // Đọc Scene + engine mechanics, chạy vòng lặp vật lý, vẽ vật/lò xo/dây.
 //
@@ -97,6 +99,13 @@ function springPoints(ax: number, ay: number, bx: number, by: number): number[] 
   }
   pts.push(bx, by);
   return pts;
+}
+
+/** Hiển thị tick theo đúng độ chính xác của bước lưới, tránh 1.9999999999998. */
+function formatGridTick(value: number, step: number): string {
+  const decimals = step < 1 ? Math.ceil(-Math.log10(step)) : 0;
+  const rounded = Number(value.toFixed(decimals));
+  return Object.is(rounded, -0) ? "0" : rounded.toFixed(decimals);
 }
 
 // Cùng đúng quy tắc tạo hình của thí nghiệm Định luật Hooke: bề rộng vòng xoắn
@@ -361,17 +370,17 @@ export function SceneKonva2D({
       }
       for (let gx = Math.ceil(wl / step) * step; gx <= wr; gx += step) {
         if (gx === 0) continue;
-        layer.add(new Konva.Text({ x: toScreen(gx, 0).x + 2, y: groundY - 15, text: `${gx}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
+        layer.add(new Konva.Text({ x: toScreen(gx, 0).x + 2, y: groundY - 15, text: formatGridTick(gx, step), fontSize: 11, fill: labelColor, fontFamily: getSimulationFontFamily() }));
       }
       if (yAxisOnScreen) {
         for (let gy = Math.ceil(wb / step) * step; gy <= wt; gy += step) {
           if (gy <= 0) continue;
-          layer.add(new Konva.Text({ x: yAxisX + 4, y: toScreen(0, gy).y - 6, text: `${gy}`, fontSize: 11, fill: labelColor, fontFamily: "monospace" }));
+          layer.add(new Konva.Text({ x: yAxisX + 4, y: toScreen(0, gy).y - 6, text: formatGridTick(gy, step), fontSize: 11, fill: labelColor, fontFamily: getSimulationFontFamily() }));
         }
       }
       const o = toScreen(0, 0); // gốc toạ độ O
       layer.add(new Konva.Circle({ x: o.x, y: o.y, radius: 3, fill: "#94a3b8" }));
-      layer.add(new Konva.Text({ x: o.x + 5, y: o.y - 17, text: "O", fontSize: 12, fill: "#94a3b8", fontFamily: "monospace" }));
+      layer.add(new Konva.Text({ x: o.x + 5, y: o.y - 17, text: "O", fontSize: 12, fill: "#94a3b8", fontFamily: getSimulationFontFamily() }));
     }
 
     // Thanh treo trang trí — khi ≥2 vật fixed cùng độ cao (vd nhiều con lắc
@@ -677,9 +686,9 @@ export function SceneKonva2D({
             align: centered ? "center" : ann.align,
             text: ann.text,
             fontSize: ann.fontSize ?? 16,
-            fontStyle: ann.fontStyle ?? "bold",
+            fontStyle: ann.fontStyle ?? "normal",
             fill: ann.color ?? "#e2e8f0",
-            fontFamily: ann.fontFamily ?? "monospace",
+            fontFamily: getSimulationFontFamily(),
             listening: false,
           }),
         );
@@ -965,9 +974,9 @@ export function SceneKonva2D({
           width: 62,
           text: visual.reading ?? "0.0 N",
           fontSize: 12,
-          fontStyle: "bold",
+          fontStyle: "normal",
           fill: "#f8fafc",
-          fontFamily: "monospace",
+          fontFamily: getSimulationFontFamily(),
           align: "center",
           listening: false,
         });
@@ -1012,7 +1021,7 @@ export function SceneKonva2D({
       group.add(new Konva.Line({ points: [bodyW / 2, 0, bodyW / 2 + handleW, 0], stroke: "#cbd5e1", strokeWidth: 4, lineCap: "round" }));
       group.add(new Konva.Circle({ x: bodyW / 2 + handleW + 6, y: 0, radius: 5, stroke: "#cbd5e1", strokeWidth: 3 }));
       group.add(new Konva.Line({ points: [-bodyW / 2 - handleW, 0, -bodyW / 2, 0], stroke: "#cbd5e1", strokeWidth: 4, lineCap: "round" }));
-      group.add(new Konva.Text({ x: -bodyW / 2, y: -8, width: bodyW, align: "center", text: reading || visual?.label || "F", fontSize: 12, fontStyle: "bold", fill: "#0f172a", fontFamily: "monospace" }));
+      group.add(new Konva.Text({ x: -bodyW / 2, y: -8, width: bodyW, align: "center", text: reading || visual?.label || "F", fontSize: 12, fontStyle: "normal", fill: "#0f172a", fontFamily: getSimulationFontFamily() }));
       return group;
     };
 
@@ -1219,8 +1228,8 @@ export function SceneKonva2D({
             text: b.visual?.label ?? "",
             align: "center",
             fontSize: 14,
-            fontStyle: "bold",
-            fontFamily: "monospace",
+            fontStyle: "normal",
+            fontFamily: getSimulationFontFamily(),
             fill: "#042f2e",
           }),
         );
@@ -1275,8 +1284,8 @@ export function SceneKonva2D({
             text: b.visual?.label ?? "m",
             align: "center",
             fontSize: 16,
-            fontStyle: "bold",
-            fontFamily: "monospace",
+            fontStyle: "normal",
+            fontFamily: getSimulationFontFamily(),
             fill: "#082f49",
           }),
         );
@@ -1322,8 +1331,8 @@ export function SceneKonva2D({
             text: b.visual?.label ?? "",
             align: "center",
             fontSize: 13,
-            fontStyle: "bold",
-            fontFamily: "monospace",
+            fontStyle: "normal",
+            fontFamily: getSimulationFontFamily(),
             fill: "#082f49",
           }),
           new Konva.Line({
@@ -1540,8 +1549,8 @@ export function SceneKonva2D({
               verticalAlign: "middle",
               lineHeight: 0.9,
               fontSize: Math.max(8, Math.min(11, radius * 0.34)),
-              fontStyle: "bold",
-              fontFamily: "monospace",
+              fontStyle: "normal",
+              fontFamily: getSimulationFontFamily(),
               fill: "#082f49",
               listening: false,
             }),
@@ -1643,7 +1652,7 @@ export function SceneKonva2D({
               text: b.visual.label,
               align: "center",
               fontSize: 12,
-              fontStyle: "bold",
+              fontStyle: "normal",
               fill: "#e2e8f0",
             }),
           );
@@ -1703,7 +1712,7 @@ export function SceneKonva2D({
               fontStyle: "italic",
               fill: "#f472b6",
               opacity: 0.65,
-              fontFamily: "monospace",
+              fontFamily: getSimulationFontFamily(),
               listening: false,
             }),
           );
@@ -1834,8 +1843,8 @@ export function SceneKonva2D({
             align: "center",
             fill: "#67e8f9",
             fontSize: 15,
-            fontStyle: "bold",
-            fontFamily: "monospace",
+            fontStyle: "normal",
+            fontFamily: getSimulationFontFamily(),
             listening: false,
           });
           const weightArrow = new Konva.Arrow({
@@ -1851,8 +1860,8 @@ export function SceneKonva2D({
             text: "P = mg",
             fill: "#fda4af",
             fontSize: 13,
-            fontStyle: "bold",
-            fontFamily: "monospace",
+            fontStyle: "normal",
+            fontFamily: getSimulationFontFamily(),
             listening: false,
           });
           const handArrow = new Konva.Arrow({
@@ -1869,8 +1878,8 @@ export function SceneKonva2D({
             text: "",
             fill: "#fde68a",
             fontSize: 12,
-            fontStyle: "bold",
-            fontFamily: "monospace",
+            fontStyle: "normal",
+            fontFamily: getSimulationFontFamily(),
             listening: false,
             visible: false,
           });
@@ -1910,7 +1919,7 @@ export function SceneKonva2D({
       if (!b.fixed && seekToken && markLabel) {
         const badge = new Konva.Label({ x: p.x + radius + 4, y: p.y - radius - 22, listening: false });
         badge.add(new Konva.Tag({ fill: "#e8724a", cornerRadius: 4 }));
-        badge.add(new Konva.Text({ text: markLabel, fontSize: 12, fontStyle: "bold", fill: "#ffffff", fontFamily: "monospace", padding: 4 }));
+        badge.add(new Konva.Text({ text: markLabel, fontSize: 12, fontStyle: "normal", fill: "#ffffff", fontFamily: getSimulationFontFamily(), padding: 4 }));
         layer.add(badge);
       }
 
@@ -2029,7 +2038,7 @@ export function SceneKonva2D({
     if (!minimalOverlay && !hideBodyCoordinates) {
       for (const b of work.bodies) {
         if (b.fixed) continue;
-        const t = new Konva.Text({ text: "", fontSize: 11, fill: "#cbd5e1", fontFamily: "monospace" });
+        const t = new Konva.Text({ text: "", fontSize: 11, fill: "#cbd5e1", fontFamily: getSimulationFontFamily() });
         layer.add(t);
         coordLabels[b.id] = t;
       }
@@ -2042,9 +2051,9 @@ export function SceneKonva2D({
       const t = new Konva.Text({
         text: `(${bodyLabels[b.id]})`,
         fontSize: 13,
-        fontStyle: "bold",
+        fontStyle: "normal",
         fill: "#e2e8f0",
-        fontFamily: "monospace",
+        fontFamily: getSimulationFontFamily(),
         listening: false,
       });
       layer.add(t);
@@ -2058,9 +2067,9 @@ export function SceneKonva2D({
       const t = new Konva.Text({
         text: bodySigns[b.id],
         fontSize: 15,
-        fontStyle: "bold",
+        fontStyle: "normal",
         fill: "#ffffff",
-        fontFamily: "monospace",
+        fontFamily: getSimulationFontFamily(),
         listening: false,
       });
       layer.add(t);
@@ -2096,9 +2105,9 @@ export function SceneKonva2D({
         ? new Konva.Text({
             text: ann.label ?? "v",
             fontSize: ann.labelSize ?? 14,
-            fontStyle: "bold",
+            fontStyle: "normal",
             fill: color,
-            fontFamily: "monospace",
+            fontFamily: getSimulationFontFamily(),
             listening: false,
           })
         : null;
@@ -2151,9 +2160,9 @@ export function SceneKonva2D({
           align: "center",
           text: "0.000 s",
           fontSize: 14,
-          fontStyle: "bold",
+          fontStyle: "normal",
           fill: ann.color ?? "#86efac",
-          fontFamily: "monospace",
+          fontFamily: getSimulationFontFamily(),
           listening: false,
         });
         layer.add(timer);
@@ -2225,17 +2234,17 @@ export function SceneKonva2D({
         const tangentLabel = new Konva.Text({
           text: ann.tangentLabel ?? "v",
           fontSize: 14,
-          fontStyle: "bold",
+          fontStyle: "normal",
           fill: tangentColor,
-          fontFamily: "monospace",
+          fontFamily: getSimulationFontFamily(),
           listening: false,
         });
         const tensionLabel = new Konva.Text({
           text: ann.tensionLabel ?? "T",
           fontSize: 14,
-          fontStyle: "bold",
+          fontStyle: "normal",
           fill: tensionColor,
-          fontFamily: "monospace",
+          fontFamily: getSimulationFontFamily(),
           listening: false,
         });
         layer.add(orbit, tangentArrow, tensionArrow, tangentLabel, tensionLabel);
@@ -2301,9 +2310,9 @@ export function SceneKonva2D({
         const label = new Konva.Text({
           text: ann.label ?? "Fhợp",
           fontSize: 13,
-          fontStyle: "bold",
+          fontStyle: "normal",
           fill: color,
-          fontFamily: "monospace",
+          fontFamily: getSimulationFontFamily(),
           listening: false,
         });
         layer.add(arrow, label);
@@ -2373,9 +2382,9 @@ export function SceneKonva2D({
           ? new Konva.Text({
               text: ann.label,
               fontSize: ann.labelSize ?? 13,
-              fontStyle: "bold",
+              fontStyle: "normal",
               fill: color,
-              fontFamily: "monospace",
+              fontFamily: getSimulationFontFamily(),
               listening: false,
             })
           : null;
@@ -2423,8 +2432,8 @@ export function SceneKonva2D({
           text: "",
           fill: color,
           fontSize: 13,
-          fontStyle: "bold",
-          fontFamily: "monospace",
+          fontStyle: "normal",
+          fontFamily: getSimulationFontFamily(),
           listening: false,
           visible: false,
         });
@@ -2491,10 +2500,10 @@ export function SceneKonva2D({
         const arrowA = makeForceArrow(ann.colorA ?? "#60a5fa");
         const arrowB = makeForceArrow(ann.colorB ?? "#f59e0b");
         const labelA = ann.labelA
-          ? new Konva.Text({ text: ann.labelA, fontSize: 13, fontStyle: "bold", fill: ann.colorA ?? "#60a5fa", fontFamily: "monospace", listening: false })
+          ? new Konva.Text({ text: ann.labelA, fontSize: 13, fontStyle: "normal", fill: ann.colorA ?? "#60a5fa", fontFamily: getSimulationFontFamily(), listening: false })
           : null;
         const labelB = ann.labelB
-          ? new Konva.Text({ text: ann.labelB, fontSize: 13, fontStyle: "bold", fill: ann.colorB ?? "#f59e0b", fontFamily: "monospace", listening: false })
+          ? new Konva.Text({ text: ann.labelB, fontSize: 13, fontStyle: "normal", fill: ann.colorB ?? "#f59e0b", fontFamily: getSimulationFontFamily(), listening: false })
           : null;
         layer.add(arrowA, arrowB);
         if (labelA) layer.add(labelA);
@@ -2564,9 +2573,9 @@ export function SceneKonva2D({
             ? new Konva.Text({
                 text: ann.stretchLabel,
                 fontSize: 13,
-                fontStyle: "bold",
+                fontStyle: "normal",
                 fill: ann.stretchColor ?? "#34d399",
-                fontFamily: "monospace",
+                fontFamily: getSimulationFontFamily(),
                 listening: false,
               })
             : null;
@@ -2575,9 +2584,9 @@ export function SceneKonva2D({
             ? new Konva.Text({
                 text: ann.forceLabel,
                 fontSize: 13,
-                fontStyle: "bold",
+                fontStyle: "normal",
                 fill: ann.forceColor ?? "#f59e0b",
-                fontFamily: "monospace",
+                fontFamily: getSimulationFontFamily(),
                 listening: false,
               })
             : null;

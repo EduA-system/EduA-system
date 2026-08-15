@@ -116,13 +116,13 @@ function AnalysisPanel({ metrics }: { metrics: WaterWaveMetrics }) {
         </table>
       </div>
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
-        <p className="text-center font-libertine text-lg font-bold text-[#171717]">v = λf &nbsp;·&nbsp; T = 1/f</p>
+        <p className="text-center font-sans text-lg font-bold text-[#171717]">v = λf &nbsp;·&nbsp; T = 1/f</p>
         <p className="mt-2 text-xs leading-relaxed text-[#6b6b6b]">Khi tốc độ truyền không đổi, tăng tần số làm các đỉnh sóng gần nhau hơn nên bước sóng giảm. Biên độ làm gợn mạnh hoặc yếu nhưng không quyết định tốc độ truyền.</p>
       </div>
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
         <p className="mb-2 text-[13px] font-semibold">Tiến trình thí nghiệm</p>
         {metrics.events.length > 0 ? metrics.events.map((event, index) => (
-          <div key={`${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-mono text-[#c96545]">{event.time.toFixed(2)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
+          <div key={`${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-sans text-[#c96545]">{event.time.toFixed(2)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
         )) : <p className="text-xs text-[#8a8178]">Nguồn đang chuẩn bị tạo sóng.</p>}
       </div>
       <p className="rounded-[10px] bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-900">Sóng truyền năng lượng và trạng thái dao động ra xa nguồn. Nước không chạy theo các vòng sóng: mỗi phần tử nước và chiếc phao chỉ dao động quanh vị trí cân bằng của nó.</p>

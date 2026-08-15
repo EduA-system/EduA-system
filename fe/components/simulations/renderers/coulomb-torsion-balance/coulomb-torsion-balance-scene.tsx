@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useCallback, useEffect, useRef } from "react";
 import { useContainerSize } from "../../shared/use-container-size";
 import { VIEW_HEIGHT, VIEW_WIDTH } from "../../engines/coulomb-torsion-balance/constants";
@@ -78,7 +80,7 @@ function drawLabel(
   anchorY?: number,
 ) {
   context.save();
-  context.font = "600 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   const width = context.measureText(text).width + 20;
   if (anchorX !== undefined && anchorY !== undefined) {
     context.strokeStyle = "rgba(203,213,225,.56)";
@@ -124,7 +126,7 @@ function drawSphere(
   context.shadowBlur = 0;
   if (chargeProgress > 0.05 && Math.abs(charge) > 0.02) {
     context.fillStyle = charge > 0 ? "#fff7cc" : "#d9f6ff";
-    context.font = "800 14px Inter, sans-serif";
+    context.font = simulationCanvasFont("14px", 700);
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillText(charge > 0 ? "+" : "−", x, y + 0.5);
@@ -143,7 +145,7 @@ function drawChargeCloud(
   if (amount < 0.04 || Math.abs(charge) < 0.02) return;
   context.save();
   context.fillStyle = charge > 0 ? "rgba(253,224,71,.82)" : "rgba(103,232,249,.82)";
-  context.font = "700 8px Inter, sans-serif";
+  context.font = simulationCanvasFont("8px", 500);
   context.textAlign = "center";
   for (let index = 0; index < 7; index += 1) {
     const angle = (index / 7) * TAU + time * 0.18;
@@ -449,7 +451,7 @@ export function CoulombTorsionBalanceScene({
     context.stroke();
     context.setLineDash([]);
     context.fillStyle = "#bae6fd";
-    context.font = "700 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     context.textAlign = "center";
     context.fillText(`${(forces.distance * 100).toFixed(1)} cm`, (moving.x + fixed.x) / 2 + nx * 35, (moving.y + fixed.y) / 2 + ny * 35);
 
@@ -468,7 +470,7 @@ export function CoulombTorsionBalanceScene({
         2.4,
       );
       context.fillStyle = "#fecdd3";
-      context.font = "700 11px Inter, sans-serif";
+      context.font = simulationCanvasFont("11px", 500);
       context.textAlign = "left";
       context.fillText("Fₑ", moving.x + unitX * forceLength * direction + 8, moving.y + unitY * forceLength * direction - 4);
     }
@@ -480,7 +482,7 @@ export function CoulombTorsionBalanceScene({
       context.ellipse(500, 405, 91, 53, 0, 0, state.angle, state.angle < 0);
       context.stroke();
       context.fillStyle = "#fde68a";
-      context.font = "700 11px Inter, sans-serif";
+      context.font = simulationCanvasFont("11px", 500);
       context.fillText(`θ = ${Math.abs((state.angle * 180) / Math.PI).toFixed(1)}°`, 582, 382);
 
       const restoringSign = state.angle > 0 ? -1 : 1;
@@ -512,7 +514,7 @@ export function CoulombTorsionBalanceScene({
         2,
       );
       context.fillStyle = "#a5f3fc";
-      context.font = "700 10px Inter, sans-serif";
+      context.font = simulationCanvasFont("10px", 500);
       context.fillText("τxoắn", 514, 351);
     }
 
@@ -539,11 +541,11 @@ export function CoulombTorsionBalanceScene({
     context.strokeStyle = "rgba(148,163,184,.28)";
     context.stroke();
     context.fillStyle = "#f1f5f9";
-    context.font = "700 13px Inter, sans-serif";
+    context.font = simulationCanvasFont("13px", 500);
     context.textAlign = "left";
     context.fillText("CÂN XOẮN COULOMB", 44, 47);
     context.fillStyle = "#a7b5c8";
-    context.font = "500 11px Inter, sans-serif";
+    context.font = simulationCanvasFont("11px");
     context.fillText("Lực điện làm thanh quay; dây bạc xoắn lại", 44, 68);
     context.fillText("đến khi hai mô-men cân bằng.", 44, 84);
 
@@ -557,7 +559,7 @@ export function CoulombTorsionBalanceScene({
     context.textAlign = "center";
     context.fillText("F = k|q₁q₂| / r²", 857, 49);
     context.fillStyle = "#9fb0c5";
-    context.font = "500 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px");
     context.fillText("r giảm một nửa → lực tăng khoảng 4 lần", 857, 70);
     context.fillText("Cân bằng: τđiện + τxoắn = 0", 857, 88);
 

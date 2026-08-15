@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useCallback, useEffect, useRef } from "react";
 import { useContainerSize } from "../../shared/use-container-size";
 import { VIEW_HEIGHT, VIEW_WIDTH } from "../../engines/oscilloscope-frequency/constants";
@@ -61,7 +63,7 @@ function drawLabel(
   anchorY?: number,
 ) {
   context.save();
-  context.font = "600 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   const width = context.measureText(text).width + 20;
   if (anchorX !== undefined && anchorY !== undefined) {
     context.strokeStyle = "rgba(203,213,225,.56)";
@@ -108,7 +110,7 @@ function drawKnob(
   context.lineTo(x + Math.cos(angle) * radius * 0.72, y + Math.sin(angle) * radius * 0.72);
   context.stroke();
   context.fillStyle = "#5b3b13";
-  context.font = "700 8px Inter, sans-serif";
+  context.font = simulationCanvasFont("8px", 500);
   context.textAlign = "center";
   context.fillText(label, x, y + radius + 15);
 }
@@ -228,7 +230,7 @@ function drawSoundField(
     context.stroke();
   }
   context.fillStyle = "rgba(165,243,252,.82)";
-  context.font = "600 9px Inter, sans-serif";
+  context.font = simulationCanvasFont("9px", 500);
   context.textAlign = "center";
   context.fillText("mặt sóng âm (minh họa)", 326, 370);
   context.restore();
@@ -412,7 +414,7 @@ function drawOscilloscope(
     }
     context.setLineDash([]);
     context.fillStyle = "#fde68a";
-    context.font = "700 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     context.textAlign = "center";
     context.fillText("X₁", x1, screenY + 14);
     context.fillText("X₂", x2, screenY + 14);
@@ -421,7 +423,7 @@ function drawOscilloscope(
   context.restore();
 
   context.fillStyle = "#5b3615";
-  context.font = "800 13px Inter, sans-serif";
+  context.font = simulationCanvasFont("13px", 500);
   context.textAlign = "left";
   context.fillText("MÁY DAO ĐỘNG KÍ", 570, 455);
   context.font = "600 10px ui-monospace, monospace";
@@ -440,7 +442,7 @@ function drawOscilloscope(
   context.fill();
   context.shadowBlur = 0;
   context.fillStyle = "#5b3615";
-  context.font = "700 9px Inter, sans-serif";
+  context.font = simulationCanvasFont("9px", 500);
   context.textAlign = "center";
   context.fillText(state.phase === "complete" ? "ĐÃ ĐO" : state.phase === "measuring" ? "ĐANG ĐO" : state.phase === "noSignal" ? "NO SIGNAL" : state.phase === "invalidTimebase" ? "TIME/DIV" : "ACQUIRE", 904, 480);
 
@@ -551,11 +553,11 @@ export function OscilloscopeFrequencyScene({
     context.strokeStyle = "rgba(148,163,184,.28)";
     context.stroke();
     context.fillStyle = "#f1f5f9";
-    context.font = "700 13px Inter, sans-serif";
+    context.font = simulationCanvasFont("13px", 500);
     context.textAlign = "left";
     context.fillText("ĐO TẦN SỐ BẰNG DAO ĐỘNG KÍ", 42, 48);
     context.fillStyle = "#a7b5c8";
-    context.font = "500 11px Inter, sans-serif";
+    context.font = simulationCanvasFont("11px");
     context.fillText("Micro biến dao động âm thành điện áp.", 42, 69);
     context.fillText("Đếm N chu kì trong khoảng thời gian Δt.", 42, 86);
 
@@ -584,7 +586,7 @@ export function OscilloscopeFrequencyScene({
       571,
     );
     context.fillStyle = amplitude < 0.035 ? "#fda4af" : "#9fb0c5";
-    context.font = "500 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px");
     context.fillText(amplitude < 0.035 ? "Biên độ tín hiệu quá nhỏ: chưa thể đo." : "Độ cao vệt cho biết biên độ; khoảng ngang cho biết thời gian.", 762, 589);
 
     context.restore();

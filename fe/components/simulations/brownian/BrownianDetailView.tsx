@@ -334,7 +334,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[9px] bg-[#faf9f7] px-2.5 py-2">
       <div className="text-[10px] text-[#8a8178]">{label}</div>
-      <div className="mt-0.5 font-mono text-[12px] font-semibold text-[#171717]">
+      <div className="mt-0.5 font-sans text-[12px] font-semibold text-[#171717]">
         {value}
       </div>
     </div>
@@ -754,7 +754,7 @@ export function BrownianPanel({
                       min={1}
                       value={params.seed}
                       onChange={handleSeed}
-                      className="min-w-0 w-full rounded-[8px] border border-[#e8e2d9] px-2 py-1.5 font-mono text-[11px] outline-none focus:border-[#d97757]"
+                      className="min-w-0 w-full rounded-[8px] border border-[#e8e2d9] px-2 py-1.5 font-sans text-[11px] outline-none focus:border-[#d97757]"
                     />
                   </label>
                   <button
@@ -942,7 +942,7 @@ export function BrownianPanel({
                 lớn hơn làm chuyển động yếu hơn.
               </p>
             </div>
-            <div className="rounded-[10px] border border-[#e8e2d9] p-3 font-mono text-[12px] text-[#c96545]">
+            <div className="rounded-[10px] border border-[#e8e2d9] p-3 font-sans text-[12px] text-[#c96545]">
               <p>D = kBT / (6πηR)</p>
               <p className="mt-1">MSD(t) ≈ 4Dt</p>
             </div>

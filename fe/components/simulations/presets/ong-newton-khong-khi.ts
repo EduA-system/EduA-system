@@ -116,8 +116,8 @@ export const ongNewton: Preset = {
     return [
       ...makeTube(leftTubeX, "rgba(251, 191, 36, 0.045)"),
       ...makeTube(rightTubeX, "rgba(125, 211, 252, 0.07)"),
-      { kind: "label", x: leftTubeX - tubeWidth * 0.38, y: tubeTop + 0.15, text: "KHÔNG KHÍ", color: "#fbbf24", fontSize: 13, fontStyle: "bold" },
-      { kind: "label", x: rightTubeX - tubeWidth * 0.4, y: tubeTop + 0.15, text: "CHÂN KHÔNG", color: "#7dd3fc", fontSize: 13, fontStyle: "bold" },
+      { kind: "label", x: leftTubeX - tubeWidth * 0.38, y: tubeTop + 0.15, text: "KHÔNG KHÍ", color: "#fbbf24", fontSize: 13, fontStyle: "normal" },
+      { kind: "label", x: rightTubeX - tubeWidth * 0.4, y: tubeTop + 0.15, text: "CHÂN KHÔNG", color: "#7dd3fc", fontSize: 13, fontStyle: "normal" },
     ];
   },
   minimalOverlay: true,

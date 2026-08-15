@@ -162,8 +162,8 @@ export const dienTruong2BanSongSong: Preset = {
     const leftSignX = xLeft - plateThk - signGap;
     const rightSignX = xRight + plateThk + signGap;
     const signs: SceneAnnotation[] = signRows.flatMap((y) => [
-      { kind: "label", x: leftSignX, y, text: leftText, color: leftColor, fontSize: 15, fontStyle: "bold" },
-      { kind: "label", x: rightSignX, y, text: rightText, color: rightColor, fontSize: 15, fontStyle: "bold" },
+      { kind: "label", x: leftSignX, y, text: leftText, color: leftColor, fontSize: 15, fontStyle: "normal" },
+      { kind: "label", x: rightSignX, y, text: rightText, color: rightColor, fontSize: 15, fontStyle: "normal" },
     ]);
 
     // 9 đường sức thẳng song song ở giữa, CĂN ĐỀU trong khoảng [0.12, 0.88] —

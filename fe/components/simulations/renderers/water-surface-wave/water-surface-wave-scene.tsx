@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useCallback, useEffect, useRef } from "react";
 import { useContainerSize } from "../../shared/use-container-size";
 import {
@@ -95,7 +97,7 @@ function drawLabel(
   anchorY?: number,
 ) {
   context.save();
-  context.font = "600 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   const width = context.measureText(text).width + 20;
   if (anchorX !== undefined && anchorY !== undefined) {
     context.strokeStyle = "rgba(203,213,225,.58)";
@@ -316,7 +318,7 @@ function drawProbe(
   context.stroke();
   drawArrow(context, baseX + 28, baseY + 22, baseX + 28, baseY - 23, "#fde68a");
   context.fillStyle = "#fff1b8";
-  context.font = "700 10px Inter, sans-serif";
+  context.font = simulationCanvasFont("10px", 500);
   context.fillText("dao động tại chỗ", baseX + 38, baseY + 3);
   context.restore();
 }
@@ -349,7 +351,7 @@ function drawWavelengthBracket(
   context.moveTo(x1, y);
   context.lineTo(x2, y);
   context.stroke();
-  context.font = "700 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.textAlign = "center";
   context.fillText(`λ = ${wavelength.toFixed(1)} cm`, (x1 + x2) / 2, y - 9);
   context.restore();
@@ -452,7 +454,7 @@ export function WaterSurfaceWaveScene({
 
     drawArrow(context, 305, 390, 420, 390, "#a5f3fc");
     context.fillStyle = "#cffafe";
-    context.font = "700 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     context.fillText("hướng truyền năng lượng", 321, 409);
 
     drawLabel(context, "Nguồn dao động", 104, 82, 184, 105);
@@ -466,10 +468,10 @@ export function WaterSurfaceWaveScene({
     context.strokeStyle = "rgba(148,163,184,.28)";
     context.stroke();
     context.fillStyle = "#f1f5f9";
-    context.font = "700 13px Inter, sans-serif";
+    context.font = simulationCanvasFont("13px", 500);
     context.fillText("SÓNG TRÊN MẶT NƯỚC", 40, 46);
     context.fillStyle = "#a7b5c8";
-    context.font = "500 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px");
     context.fillText("Phần tử nước dao động; trạng thái sóng lan ra xa.", 40, 64);
 
     const wavelength = waterWavelength(currentParams);
@@ -483,7 +485,7 @@ export function WaterSurfaceWaveScene({
     context.textAlign = "center";
     context.fillText("v = λf", 845, 49);
     context.fillStyle = "#9fb0c5";
-    context.font = "500 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px");
     context.fillText(`v = ${currentParams.waveSpeed.toFixed(1)} cm/s · λ = ${wavelength.toFixed(1)} cm`, 845, 69);
     context.fillText(`f = ${currentParams.frequency.toFixed(1)} Hz · T = ${(1 / Math.max(0.1, currentParams.frequency)).toFixed(2)} s`, 845, 84);
 

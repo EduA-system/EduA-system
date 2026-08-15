@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useCallback, useEffect, useRef } from "react";
 import { useContainerSize } from "../shared/use-container-size";
 import {
@@ -403,7 +405,7 @@ function drawForceVector(
 
   context.save();
   context.fillStyle = "#bbf7d0";
-  context.font = "800 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.textAlign = "center";
   context.fillText(`F = ${state.appliedForce.toFixed(0)} N`, (startX + endX) / 2, y - 13);
   context.restore();
@@ -428,7 +430,7 @@ function drawMassBlock(
   context.stroke();
   if (size >= 34) {
     context.fillStyle = "#f8fafc";
-    context.font = `800 ${size >= 50 ? 11 : 9}px Inter, sans-serif`;
+    context.font = simulationCanvasFont(`${size >= 50 ? 11 : 9}px`, 500);
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillText(`${mass.toFixed(0)} kg`, centerX, y + size / 2);
@@ -525,7 +527,7 @@ function drawAccelerationVector(
   drawArrow(context, startX, y, startX + length, y, theme.accent);
   context.save();
   context.fillStyle = "#e2e8f0";
-  context.font = "700 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.textAlign = "left";
   context.fillText(`a = ${state.acceleration.toFixed(2)} m/s²`, startX, y - 11);
   context.restore();
@@ -547,11 +549,11 @@ function drawComparisonHud(
   context.stroke();
 
   context.fillStyle = "#f8fafc";
-  context.font = "800 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.textAlign = "left";
   context.fillText("SO SÁNH HAI XE HÀNG", x + 17, y + 22);
   context.fillStyle = "#94a3b8";
-  context.font = "600 10px Inter, sans-serif";
+  context.font = simulationCanvasFont("10px", 500);
   context.textAlign = "right";
   context.fillText("a = F / m", x + 593, y + 22);
 
@@ -568,19 +570,19 @@ function drawComparisonHud(
     context.fillStyle = theme.accent;
     context.fill();
     context.fillStyle = "#020617";
-    context.font = "900 12px Inter, sans-serif";
+    context.font = simulationCanvasFont("12px", 500);
     context.textAlign = "center";
     context.fillText(shortLabel, x + 29.5, rowY + 1);
 
     context.fillStyle = "#e2e8f0";
-    context.font = "700 12px Inter, sans-serif";
+    context.font = simulationCanvasFont("12px", 500);
     context.textAlign = "left";
     context.fillText(`m = ${state.totalMass.toFixed(0)} kg`, x + 57, rowY);
     context.fillText(`F = ${state.appliedForce.toFixed(0)} N`, x + 178, rowY);
     context.fillText(`a = ${state.acceleration.toFixed(2)} m/s²`, x + 288, rowY);
 
     context.textAlign = "right";
-    context.font = "700 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     context.fillStyle = state.finished ? "#86efac" : state.forceLimited ? "#fda4af" : "#94a3b8";
     const status = state.finished
       ? `${state.finishTime.toFixed(2)} s`
@@ -671,7 +673,7 @@ export function NewtonSecondLawRaceScene({
       context.stroke();
       context.fillStyle = "#ddd6fe";
       context.textAlign = "center";
-      context.font = "700 11px Inter, sans-serif";
+      context.font = simulationCanvasFont("11px", 500);
       context.fillText(`${markLabel} · t = ${elapsedRef.current.toFixed(2)} s`, 187.5, 166);
     }
     context.restore();

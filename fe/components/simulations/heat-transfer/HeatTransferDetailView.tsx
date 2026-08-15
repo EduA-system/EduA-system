@@ -564,7 +564,7 @@ export function HeatTransferPanel({
                 </li>
               </ul>
             </div>
-            <div className="rounded-[10px] border border-[#e8e2d9] p-3 font-mono text-[12px] text-[#c96545]">
+            <div className="rounded-[10px] border border-[#e8e2d9] p-3 font-sans text-[12px] text-[#c96545]">
               <p>Q = mcΔT</p>
               <p className="mt-1">T cân bằng = (CₐTₐ + CᵦTᵦ) / (Cₐ + Cᵦ)</p>
             </div>

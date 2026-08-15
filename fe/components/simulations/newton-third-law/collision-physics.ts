@@ -204,7 +204,13 @@ export function simulateCollisionTrack(input: TrackSimulationInput): TrackSimula
       lastCartImpulse = Math.abs(input.mA * lastCartDeltaVelocityA);
       lastCartImpactTime = elapsed;
       cartCollisionCount += 1;
-      if (firstCartImpactTime === null) firstCartImpactTime = elapsed;
+      if (firstCartImpactTime === null) {
+        firstCartImpactTime = elapsed;
+        // Sau va chạm đầu tiên, lực cản lăn bắt đầu làm hai xe chậm dần.
+        // Xung lực va chạm vẫn được giải tức thời ở phía trên, nên quan hệ
+        // lực–phản lực và bảo toàn động lượng tại thời điểm tiếp xúc không đổi.
+        settlingActive = true;
+      }
     }
   }
 

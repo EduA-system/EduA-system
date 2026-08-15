@@ -43,6 +43,18 @@ describe("Định luật III Newton — va chạm một chiều", () => {
     expect(after.xB).toBeGreaterThan(impact.xB);
   });
 
+  it("làm hai xe giảm tốc dần ngay sau lần va chạm đầu tiên", () => {
+    const values = { mA: 1, mB: 1, speedA: 2.2, speedB: 2.2 };
+    const initial = stateAt(values, 0);
+    const shortlyAfter = stateAt(values, initial.collisionTime + 0.4);
+    const later = stateAt(values, initial.collisionTime + 1.4);
+
+    expect(Math.abs(later.velocityA)).toBeLessThan(Math.abs(shortlyAfter.velocityA));
+    expect(Math.abs(later.velocityB)).toBeLessThan(Math.abs(shortlyAfter.velocityB));
+    expect(later.accelerationA).toBeGreaterThan(0);
+    expect(later.accelerationB).toBeLessThan(0);
+  });
+
   it("cho xe nảy ngược hướng sau khi chạm tường", () => {
     const beforeWall = motionWithWall(557, -2, 2, 153, 1047, 52);
     const afterWall = motionWithWall(557, -2, 5, 153, 1047, 52);
@@ -67,12 +79,12 @@ describe("Định luật III Newton — va chạm một chiều", () => {
     expect(wallImpact.accelerationB).toBeLessThan(0);
   });
 
-  it("xử lý va chạm lặp lại và chỉ kết thúc khi cả hai xe đứng yên", () => {
+  it("không lặp va chạm vô hạn và chỉ kết thúc khi cả hai xe đứng yên", () => {
     const values = { mA: 1, mB: 1, speedA: 5, speedB: 5 };
-    const repeatedImpact = stateAt(values, 10);
+    const afterFirstImpact = stateAt(values, 10);
     const finalState = stateAt(values, 20);
 
-    expect(repeatedImpact.cartCollisionCount).toBeGreaterThanOrEqual(2);
+    expect(afterFirstImpact.cartCollisionCount).toBe(1);
     expect(finalState.settled).toBe(true);
     expect(finalState.velocityA).toBe(0);
     expect(finalState.velocityB).toBe(0);

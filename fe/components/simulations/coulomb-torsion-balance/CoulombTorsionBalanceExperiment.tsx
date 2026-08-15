@@ -25,26 +25,6 @@ const PARAM_SCHEMA: ParamDef[] = [
   { key: "movingCharge", label: "Điện tích quả cầu di động", unit: "nC", min: -1.2, max: 1.2, step: 0.05 },
   { key: "fixedCharge", label: "Điện tích quả cầu cố định", unit: "nC", min: -1.2, max: 1.2, step: 0.05 },
   { key: "initialSeparation", label: "Khoảng cách ban đầu", unit: "cm", min: 2.2, max: 10, step: 0.2 },
-  { key: "torsionConstant", label: "Độ cứng xoắn của dây", unit: "nN·m/rad", min: 80, max: 560, step: 10 },
-  { key: "damping", label: "Mức cản dao động", unit: "%", min: 5, max: 95, step: 1 },
-  { key: "armLength", label: "Chiều dài tay đòn", unit: "cm", min: 8, max: 16, step: 0.5 },
-  { key: "chargeRetention", label: "Khả năng giữ điện tích", unit: "%", min: 55, max: 100, step: 1 },
-  { key: "instrumentSensitivity", label: "Độ nhạy của cân", unit: "%", min: 35, max: 100, step: 1 },
-];
-
-const QUICK_PRESETS: Array<{
-  label: string;
-  patch: Partial<TorsionBalanceParams>;
-}> = [
-  { label: "Cùng dấu — đẩy nhau", patch: { movingCharge: 0.45, fixedCharge: 0.45 } },
-  { label: "Trái dấu — hút nhau", patch: { movingCharge: 0.45, fixedCharge: -0.45 } },
-  { label: "Không tích điện", patch: { movingCharge: 0, fixedCharge: 0 } },
-  { label: "Khoảng cách 1/2", patch: { initialSeparation: 2.4 } },
-  { label: "Khoảng cách gấp đôi", patch: { initialSeparation: 9.6 } },
-  { label: "Điện tích lớn", patch: { movingCharge: 0.8, fixedCharge: 0.8 } },
-  { label: "Dây xoắn mềm", patch: { torsionConstant: 130 } },
-  { label: "Dây xoắn cứng", patch: { torsionConstant: 480 } },
-  { label: "Mặc định", patch: DEFAULT_TORSION_BALANCE_PARAMS },
 ];
 
 const interactionLabel = (value: TorsionBalanceMetrics["interaction"]) =>
@@ -143,15 +123,15 @@ function AnalysisPanel({
       <AngleChart metrics={metrics} />
       <InverseSquareTable params={params} />
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
-        <p className="text-center font-libertine text-lg font-bold text-[#171717]">F = k|q₁q₂|/r²</p>
-        <p className="mt-2 text-center font-libertine text-base font-bold text-[#4f4943]">τ<sub>điện</sub> + τ<sub>xoắn</sub> = 0</p>
+        <p className="text-center font-sans text-lg font-bold text-[#171717]">F = k|q₁q₂|/r²</p>
+        <p className="mt-2 text-center font-sans text-base font-bold text-[#4f4943]">τ<sub>điện</sub> + τ<sub>xoắn</sub> = 0</p>
         <p className="mt-2 text-xs leading-relaxed text-[#6b6b6b]">Lực điện làm thanh quay, đồng thời sợi bạc bị xoắn và tạo mô-men ngược chiều. Khi hai mô-men cân bằng, góc lệch ổn định cho phép suy ra lực điện.</p>
       </div>
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
         <p className="mb-2 text-[13px] font-semibold">Tiến trình thí nghiệm</p>
         {metrics.events.length > 0 ? metrics.events.map((event, index) => (
           <div key={`${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs">
-            <span className="w-12 shrink-0 font-mono text-[#c96545]">{event.time.toFixed(1)} s</span>
+            <span className="w-12 shrink-0 font-sans text-[#c96545]">{event.time.toFixed(1)} s</span>
             <span className="text-[#4f4943]">{event.label}</span>
           </div>
         )) : <p className="text-xs text-[#8a8178]">Nhấn Play để bắt đầu chỉnh 0, tích điện và thả cân.</p>}
@@ -195,12 +175,6 @@ export function CoulombTorsionBalanceExperiment({
     else sendCommand("pause");
     setRunning(next);
   };
-  const applyPreset = (patch: Partial<TorsionBalanceParams>) => {
-    setParams((current) => ({ ...current, ...patch }));
-    setEdited(true);
-    reset();
-  };
-
   return (
     <main className="flex h-screen w-full overflow-hidden bg-[#f5f1ec]">
       <Sidebar activeHref="/mo-phong-vat-ly" />
@@ -228,8 +202,7 @@ export function CoulombTorsionBalanceExperiment({
               {tab === "params" && (
                 <div className="space-y-4">
                   <p className="rounded-[10px] bg-[#faf9f7] p-3 text-xs leading-relaxed text-[#6b6b6b]">Hai quả cầu nhỏ được tích điện. Quả cầu cố định tác dụng lực lên quả cầu gắn ở đầu thanh. Thanh quay làm sợi bạc bị xoắn; mô-men xoắn tăng dần cho tới khi cân bằng lực điện.</p>
-                  <div className="rounded-[10px] border border-[#e8e2d9] bg-white p-3 text-xs leading-relaxed text-[#6b6b6b]"><b className="text-[#4f4943]">Cách quan sát</b><p className="mt-2">Nhấn Play để cân tự chỉnh vạch 0, nạp điện rồi thả thanh. Theo dõi quả cầu dao động tắt dần và dừng ở góc cân bằng. Chọn “Khoảng cách 1/2” để thấy lực tăng mạnh.</p></div>
-                  <div className="flex flex-wrap gap-1.5">{QUICK_PRESETS.map((item) => <button key={item.label} type="button" onClick={() => applyPreset(item.patch)} className="rounded-full border border-[#e8e2d9] px-3 py-1 text-xs text-[#6b6b6b] transition-colors hover:border-[#d97757] hover:text-[#c96545]">{item.label}</button>)}</div>
+                  <div className="rounded-[10px] border border-[#e8e2d9] bg-white p-3 text-xs leading-relaxed text-[#6b6b6b]"><b className="text-[#4f4943]">Ba phép thử cần quan sát</b><div className="mt-2 space-y-1.5"><p>• Đổi dấu một điện tích → lực đổi từ đẩy sang hút.</p><p>• Tăng gấp đôi một điện tích → lực tăng gấp đôi.</p><p>• Tăng khoảng cách gấp đôi → lực giảm còn khoảng 1/4.</p></div></div>
                   <ParamPanel schema={PARAM_SCHEMA} values={panelValues} onChange={(key, value) => { setParams((current) => ({ ...current, [key]: value })); setEdited(true); reset(); }} />
                   <p className="text-[10px] leading-relaxed text-[#8a8178]">Kích thước quả cầu và hình học được phóng đại để dễ quan sát. Lực điện, chiều hút/đẩy và quan hệ nghịch đảo bình phương được tính từ các tham số hiện tại.</p>
                 </div>

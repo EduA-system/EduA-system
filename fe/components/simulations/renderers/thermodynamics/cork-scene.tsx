@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { memo, useEffect, useRef } from "react";
 import { createThermalState, metrics, stepThermal } from "../../engines/thermodynamics/physics";
 import type { ThermalMetrics, ThermalParams, ThermalState } from "../../engines/thermodynamics/types";
@@ -23,7 +25,7 @@ function overlaps(a: AnnotationRect, b: AnnotationRect, gap = 12) {
 }
 
 function getAnnotationLayout(context: CanvasRenderingContext2D, text: string, preferredX: number, preferredY: number, sceneWidth: number, sceneHeight: number, occupied: AnnotationRect[]) {
-  context.font = "600 13px Inter, sans-serif";
+  context.font = simulationCanvasFont("13px", 500);
   const width = Math.ceil(context.measureText(text).width) + 16, height = 25, safe = 20;
   const candidates = [[preferredX, preferredY], [preferredX, preferredY - 34], [preferredX, preferredY + 34], [preferredX + 42, preferredY], [preferredX - 42, preferredY]];
   for (const [candidateX, candidateY] of candidates) {
@@ -37,7 +39,7 @@ function getAnnotationLayout(context: CanvasRenderingContext2D, text: string, pr
 function drawAnnotationLabel(context: CanvasRenderingContext2D, rect: AnnotationRect, text: string, color: string) {
   context.fillStyle = "rgba(7,20,38,.84)"; context.strokeStyle = "rgba(148,163,184,.3)"; context.lineWidth = 1;
   context.beginPath(); context.roundRect(rect.x, rect.y, rect.width, rect.height, 7); context.fill(); context.stroke();
-  context.fillStyle = color; context.font = "600 13px Inter, sans-serif"; context.textBaseline = "middle"; context.fillText(text, rect.x + 8, rect.y + rect.height / 2 + 0.5); context.textBaseline = "alphabetic";
+  context.fillStyle = color; context.font = simulationCanvasFont("13px", 500); context.textBaseline = "middle"; context.fillText(text, rect.x + 8, rect.y + rect.height / 2 + 0.5); context.textBaseline = "alphabetic";
 }
 
 function createGasParticles(): GasParticle[] {
@@ -118,7 +120,7 @@ export const CorkScene = memo(function CorkScene({ params, running, speed, reset
       const capWidth = tubeWidth - 2; context.fillStyle = "#c58b55"; context.beginPath(); context.moveTo(-capWidth / 2 + 7, -18); context.quadraticCurveTo(-capWidth / 2, -18, -capWidth / 2, -10); context.lineTo(-stemWidth / 2, 7); context.lineTo(stemWidth / 2, 7); context.lineTo(capWidth / 2, -10); context.quadraticCurveTo(capWidth / 2, -18, capWidth / 2 - 7, -18); context.closePath(); context.fill(); context.strokeStyle = "#8a5a32"; context.stroke();
       context.strokeStyle = "rgba(112,65,31,.6)"; context.lineWidth = 1.5; for (let x = -capWidth * 0.38; x < capWidth * 0.4; x += 15) { context.beginPath(); context.moveTo(x, -13); context.lineTo(x + 5, 2); context.stroke(); } context.restore();
 
-      if (releaseAge >= 0 && releaseAge < 0.5) { const radius = 30 + releaseAge * 190; context.strokeStyle = `rgba(110,231,211,${1 - releaseAge * 2})`; context.lineWidth = 3; context.beginPath(); context.arc(centerX, tubeTop, radius, 0, Math.PI * 2); context.stroke(); context.fillStyle = "#fde68a"; context.font = "600 13px Inter, sans-serif"; context.fillText("Khí thực hiện công · W tăng", centerX + tubeWidth * 0.48, tubeTop - 32); }
+      if (releaseAge >= 0 && releaseAge < 0.5) { const radius = 30 + releaseAge * 190; context.strokeStyle = `rgba(110,231,211,${1 - releaseAge * 2})`; context.lineWidth = 3; context.beginPath(); context.arc(centerX, tubeTop, radius, 0, Math.PI * 2); context.stroke(); context.fillStyle = "#fde68a"; context.font = simulationCanvasFont("13px", 500); context.fillText("Khí thực hiện công · W tăng", centerX + tubeWidth * 0.48, tubeTop - 32); }
       if (current.showLabels) {
         const occupied: AnnotationRect[] = [];
 
