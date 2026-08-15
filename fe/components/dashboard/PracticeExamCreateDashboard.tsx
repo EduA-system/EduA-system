@@ -186,7 +186,8 @@ export function PracticeExamCreateDashboard() {
     [books, bookCode],
   );
   const subjectLocked = Boolean(subjectRestriction);
-  const step1Valid = hasValidDuration;
+  const hasLibraryTitle = libraryTitle.trim().length > 0;
+  const step1Valid = hasValidDuration && hasLibraryTitle;
   const step2Valid = Boolean(bookCode) && selectedLessons.length > 0;
   useEffect(() => {
     if (!subjectRestriction || subject === subjectRestriction) return;
@@ -356,17 +357,19 @@ export function PracticeExamCreateDashboard() {
                     </label>
                   </div>
                   <label className="mt-4 block text-xs font-semibold">
-                    Tên bài kiểm tra
+                    Tên bài kiểm tra <span className="text-[#bf5139]">*</span>
                     <input
                       type="text"
                       value={libraryTitle}
                       disabled={loading}
                       onChange={(event) => setLibraryTitle(event.target.value)}
                       placeholder="Ví dụ: Kiểm tra chương 2 - Hàm số bậc hai"
+                      required
+                      aria-required="true"
                       className="mt-2 h-10 w-full rounded-lg border border-[#ddd5cc] px-3 text-sm"
                     />
                     <span className="mt-1 block font-normal text-[#81776e]">
-                      Chỉ dùng để nhận biết bài trong thư viện và khi chọn tài liệu; không dùng để tạo đề bằng AI.
+                      Hãy nhập tiêu đề cho bài kiểm tra.
                     </span>
                   </label>
                   <div className="mt-4">
@@ -405,7 +408,7 @@ export function PracticeExamCreateDashboard() {
                         />
                       )}
                     </div>
-                    {!step1Valid && (
+                    {!hasValidDuration && (
                       <p className="mt-2 text-xs text-[#bf5139]">
                         Thời lượng phải là số nguyên từ 1 đến 90 phút.
                       </p>

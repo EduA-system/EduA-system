@@ -10,6 +10,23 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.UUID;
 public interface LibraryContentJpaRepository extends JpaRepository<LibraryContentEntity, UUID>, JpaSpecificationExecutor<LibraryContentEntity> {
+    @Query(value = """
+            SELECT * FROM library_contents
+            WHERE owner_id = :ownerId
+              AND type = :type
+              AND subject = :subject
+              AND source_library_content_id IS NULL
+              AND deleted_at IS NULL
+              AND payload = CAST(:payloadJson AS jsonb)
+            ORDER BY created_at ASC
+            LIMIT 1
+            """, nativeQuery = true)
+    java.util.Optional<LibraryContentEntity> findActiveByOwnerTypeSubjectAndPayload(
+            @Param("ownerId") UUID ownerId,
+            @Param("type") String type,
+            @Param("subject") String subject,
+            @Param("payloadJson") String payloadJson);
+
     List<LibraryContentEntity> findBySourceLibraryContentIdAndDeletedAtIsNull(UUID sourceLibraryContentId);
     boolean existsBySourceLibraryContentId(UUID sourceLibraryContentId);
     long countByStatusAndSubjectAndSourceLibraryContentIdIsNullAndDeletedAtIsNull(LibraryContentStatus status, Subject subject);

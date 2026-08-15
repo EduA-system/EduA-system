@@ -12,6 +12,7 @@ import java.util.UUID;
 public interface LibraryContentRepository {
     LibraryContent save(LibraryContent content);
     Optional<LibraryContent> findActiveById(UUID id);
+    Optional<LibraryContent> findActiveByOwnerTypeSubjectAndPayload(UUID ownerId, LibraryContentType type, Subject subject, String payloadJson);
     List<LibraryContent> findActiveSnapshotsBySourceId(UUID sourceLibraryContentId);
     boolean hasAnySnapshotBySourceId(UUID sourceLibraryContentId);
     /**

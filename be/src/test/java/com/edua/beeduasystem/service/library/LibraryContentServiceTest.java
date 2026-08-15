@@ -4,6 +4,7 @@ import com.edua.beeduasystem.domain.exception.ForbiddenOperationException;
 import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.exception.StateConflictException;
 import com.edua.beeduasystem.domain.model.auth.AccessTokenClaims;
+import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.Subject;
 import com.edua.beeduasystem.domain.model.library.LibraryContent;
 import com.edua.beeduasystem.domain.model.library.LibraryContentStatus;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -295,5 +297,24 @@ class LibraryContentServiceTest {
         LibraryViews.Detail result = service.update(id, null, null, true, null, false, null, false, null, false, null, false, null, false);
 
         assertThat(result.subject()).isNull();
+    }
+
+    @Test
+    void create_returnsExistingChemistryMoleculeInsteadOfDuplicatingIt() {
+        var payload = JsonNodeFactory.instance.objectNode();
+        payload.putObject("molecule").put("name", "Etan").put("formula", "C2H6");
+        UUID existingId = UUID.randomUUID();
+        Instant now = Instant.now();
+        LibraryContent existing = new LibraryContent(existingId, ownerId, LibraryContentType.SIMULATION,
+                "Etan", Subject.CHEMISTRY, LibraryContentStatus.PRIVATE, payload, null,
+                now, now, null, null, null, null, null);
+        when(currentUserProvider.require()).thenReturn(new AccessTokenClaims(ownerId, "chemistry@edua.vn", Set.of(Role.TEACHER), Subject.CHEMISTRY));
+        when(repository.findActiveByOwnerTypeSubjectAndPayload(ownerId, LibraryContentType.SIMULATION, Subject.CHEMISTRY, payload.toString()))
+                .thenReturn(Optional.of(existing));
+
+        LibraryViews.Detail result = service.create("SIMULATION", "Etan", "CHEMISTRY", null, null, null, payload, null);
+
+        assertThat(result.id()).isEqualTo(existingId);
+        verify(repository, never()).save(any());
     }
 }

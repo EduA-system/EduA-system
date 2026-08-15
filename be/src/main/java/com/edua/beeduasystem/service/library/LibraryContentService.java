@@ -36,9 +36,16 @@ public class LibraryContentService {
     public LibraryViews.Detail get(UUID id) { return toDetail(requireOwner(id)); }
     @Transactional
     public LibraryViews.Detail create(String rawType, String title, String rawSubject, Integer grade, String textbookCode, String chapterCode, JsonNode payload, String thumbnailUrl) {
-        LibraryContentType type = parseTypeRequired(rawType); Instant now = Instant.now();
+        LibraryContentType type = parseTypeRequired(rawType); Subject subject = parseSubject(rawSubject); Instant now = Instant.now();
         requirePhysicsTeacherForPreset(type, payload);
-        return toDetail(repository.save(new LibraryContent(UUID.randomUUID(), currentUser.requireUserId(), type, requiredTitle(title), parseSubject(rawSubject), cleanGrade(grade), cleanCode(textbookCode), cleanCode(chapterCode), LibraryContentStatus.PRIVATE, payload == null ? JsonNodeFactory.instance.objectNode() : payload, cleanUrl(thumbnailUrl), now, now, null, null, null, null, null, null)));
+        requireChemistryTeacherForMolecule(type, subject, payload);
+        JsonNode resolvedPayload = payload == null ? JsonNodeFactory.instance.objectNode() : payload;
+        UUID ownerId = currentUser.requireUserId();
+        if (isChemistryMoleculeSimulation(type, subject, resolvedPayload)) {
+            var existing = repository.findActiveByOwnerTypeSubjectAndPayload(ownerId, type, subject, resolvedPayload.toString());
+            if (existing.isPresent()) return toDetail(existing.get());
+        }
+        return toDetail(repository.save(new LibraryContent(UUID.randomUUID(), ownerId, type, requiredTitle(title), subject, cleanGrade(grade), cleanCode(textbookCode), cleanCode(chapterCode), LibraryContentStatus.PRIVATE, resolvedPayload, cleanUrl(thumbnailUrl), now, now, null, null, null, null, null, null)));
     }
     @Transactional
     public LibraryViews.Detail update(UUID id, String title, String rawSubject, boolean subjectProvided, Integer grade, boolean gradeProvided, String textbookCode, boolean textbookCodeProvided, String chapterCode, boolean chapterCodeProvided, JsonNode payload, boolean payloadProvided, String thumbnailUrl, boolean thumbnailProvided) {
@@ -155,6 +162,17 @@ public class LibraryContentService {
         if (!claims.roles().contains(Role.TEACHER) || claims.subject() != Subject.PHYSICS) {
             throw new ForbiddenOperationException("Chỉ giáo viên Vật lý mới có thể lưu mô phỏng Vật lý vào thư viện cá nhân.");
         }
+    }
+    private void requireChemistryTeacherForMolecule(LibraryContentType type, Subject subject, JsonNode payload) {
+        if (type != LibraryContentType.SIMULATION || payload == null || !payload.path("molecule").isObject()) return;
+        var claims = currentUser.require();
+        if (subject != Subject.CHEMISTRY || claims.subject() != Subject.CHEMISTRY
+                || (!claims.roles().contains(Role.TEACHER) && !claims.roles().contains(Role.MODERATOR))) {
+            throw new ForbiddenOperationException("Chỉ giáo viên hoặc Moderator Hóa học mới có thể lưu mô phỏng cấu tạo chất.");
+        }
+    }
+    private static boolean isChemistryMoleculeSimulation(LibraryContentType type, Subject subject, JsonNode payload) {
+        return type == LibraryContentType.SIMULATION && subject == Subject.CHEMISTRY && payload.path("molecule").isObject();
     }
     private static boolean isPhysicsSimulation(LibraryContent content) {
         return content.type() == LibraryContentType.SIMULATION && content.subject() == Subject.PHYSICS;
