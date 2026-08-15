@@ -1,132 +1,45 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import styles from "./landing.module.css";
 
 const WORDS = [
-  { subject: "Khoa học tự nhiên", color: "#E07840" },
-  { subject: "Toán học", color: "#52A878" },
-  { subject: "Hóa học", color: "#4A8EC2" },
+  { subject: "Vật lý", color: "#e07840" },
+  { subject: "Toán học", color: "#52a878" },
+  { subject: "Hóa học", color: "#4a8ec2" },
 ] as const;
 
-const FS  = 56; // font-size / line-height of the text
-const ROW = 72; // row container height — FS + 16px descent clearance
-
-export function TitleTicker({
-  serifClass,
-  inkColor,
-}: {
-  serifClass: string;
-  inkColor: string;
-}) {
-  const [idx, setIdx]         = useState(0);
+export function TitleTicker() {
+  const [index, setIndex] = useState(0);
   const [rolling, setRolling] = useState(false);
-  const [widths, setWidths]   = useState<number[]>([]);
-  const [slotW, setSlotW]     = useState<number | undefined>(undefined);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const idxRef    = useRef(0);
-  const measureRef = useRef<HTMLSpanElement>(null);
-
-  // Measure "[WORD] Teachers" width for each word
   useEffect(() => {
-    const el = measureRef.current;
-    if (!el) return;
-    const measured = WORDS.map(({ subject }) => {
-      el.textContent = subject;
-      return Math.ceil(el.getBoundingClientRect().width) + 2;
-    });
-    el.textContent = WORDS[0].subject;
-    setWidths(measured);
-    setSlotW(measured[0]);
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) return;
+    const interval = window.setInterval(() => {
+      setRolling(true);
+      timeoutRef.current = setTimeout(() => {
+        setIndex((current) => (current + 1) % WORDS.length);
+        setRolling(false);
+      }, 520);
+    }, 3400);
+    return () => {
+      window.clearInterval(interval);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
-  useEffect(() => {
-    if (widths.length === 0) return;
-
-    let t1: ReturnType<typeof setTimeout>;
-
-    const cycle = () => {
-      const next = (idxRef.current + 1) % WORDS.length;
-      setSlotW(widths[next]);
-      setRolling(true);
-
-      t1 = setTimeout(() => {
-        idxRef.current = next;
-        setIdx(next);
-        setRolling(false);
-      }, 500);
-    };
-
-    const id = setInterval(cycle, 3200);
-    return () => {
-      clearInterval(id);
-      clearTimeout(t1);
-    };
-  }, [widths]);
-
-  const nextIdx = (idx + 1) % WORDS.length;
+  const next = (index + 1) % WORDS.length;
 
   return (
-    <span style={{ display: "inline-flex", alignItems: "flex-start" }}>
-      {/* Static prefix — baseline-aligned with the rolling text */}
-      <span
-        className={serifClass}
-        style={{ fontSize: FS, lineHeight: `${FS}px`, whiteSpace: "nowrap", color: inkColor }}
-      >
-        Giáo viên&nbsp;
-      </span>
-
-      {/* Hidden measuring span */}
-      <span
-        ref={measureRef}
-        className={serifClass}
-        aria-hidden
-        style={{
-          position: "absolute",
-          visibility: "hidden",
-          fontSize: FS,
-          lineHeight: `${FS}px`,
-          whiteSpace: "nowrap",
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* Clip window — ROW tall (includes descent space); width transitions per word */}
-      <span
-        style={{
-          display: "inline-block",
-          width: slotW ?? "auto",
-          height: ROW,
-          overflow: "hidden",
-          flexShrink: 0,
-          transition: "width 0.48s cubic-bezier(0.4, 0, 0.2, 1)",
-        }}
-      >
-        {/* Drum — two ROW-tall rows stacked; rolls up by ROW on each cycle */}
-        <span
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            transform: rolling ? `translateY(-${ROW}px)` : "translateY(0)",
-            transition: rolling ? `transform 0.46s cubic-bezier(0.4, 0, 0.2, 1)` : "none",
-          }}
-        >
-          {([idx, nextIdx] as const).map((wi, row) => (
-            <span
-              key={row}
-              style={{
-                height: ROW,
-                display: "flex",
-                alignItems: "flex-start", // text sits at top; bottom 16px = descent clearance
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              <span
-                className={serifClass}
-                style={{ fontSize: FS, lineHeight: `${FS}px`, color: WORDS[wi].color }}
-              >
-                {WORDS[wi].subject}
-              </span>
+    <span className={styles.tickerRoot}>
+      <span className={styles.tickerPrefix}>cho giáo viên</span>
+      <span className={styles.tickerSlot} aria-live="polite">
+        <span className={`${styles.tickerDrum} ${rolling ? styles.tickerDrumRolling : ""}`}>
+          {[index, next].map((wordIndex, row) => (
+            <span key={`${wordIndex}-${row}`} className={styles.tickerWord} style={{ color: WORDS[wordIndex].color }}>
+              {WORDS[wordIndex].subject}
             </span>
           ))}
         </span>

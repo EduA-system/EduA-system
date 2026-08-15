@@ -26,6 +26,9 @@ type Props = {
   seekSeconds?: number;
   seekToken?: number;
   markLabel?: string;
+  appearance?: "dark" | "light";
+  autoReplay?: boolean;
+  minimal?: boolean;
 };
 
 type State = {
@@ -177,11 +180,11 @@ export function stateAt(values: Record<string, number>, time: number): State {
   };
 }
 
-function drawBackground(context: CanvasRenderingContext2D) {
-  context.fillStyle = "#0f172a";
+function drawBackground(context: CanvasRenderingContext2D, light: boolean) {
+  context.fillStyle = light ? "#f7fbf8" : "#0f172a";
   context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
-  context.strokeStyle = "#263449";
-  context.globalAlpha = 0.42;
+  context.strokeStyle = light ? "#cddedb" : "#263449";
+  context.globalAlpha = light ? 0.55 : 0.42;
   context.lineWidth = 1;
   for (let x = 0; x <= VIEW_WIDTH; x += 48) {
     context.beginPath();
@@ -198,14 +201,14 @@ function drawBackground(context: CanvasRenderingContext2D) {
   context.globalAlpha = 1;
 }
 
-function drawTrack(context: CanvasRenderingContext2D) {
+function drawTrack(context: CanvasRenderingContext2D, light: boolean) {
   roundedRect(context, 48, TRACK_Y - 44, VIEW_WIDTH - 96, 92, 22);
-  context.fillStyle = "#0b1220";
+  context.fillStyle = light ? "#eef4f1" : "#0b1220";
   context.fill();
-  context.strokeStyle = "#334155";
+  context.strokeStyle = light ? "#b9cbc8" : "#334155";
   context.lineWidth = 1.5;
   context.stroke();
-  context.strokeStyle = "#475569";
+  context.strokeStyle = light ? "#789092" : "#475569";
   context.lineWidth = 3;
   context.beginPath();
   context.moveTo(72, TRACK_Y + 22);
@@ -216,12 +219,12 @@ function drawTrack(context: CanvasRenderingContext2D) {
     { x: RIGHT_WALL_FACE, faceX: RIGHT_WALL_FACE },
   ]) {
     roundedRect(context, wall.x, TRACK_Y - 138, 36, 162, 5);
-    context.fillStyle = "#334155";
+    context.fillStyle = light ? "#dce6e3" : "#334155";
     context.fill();
-    context.strokeStyle = "#cbd5e1";
+    context.strokeStyle = light ? "#71878a" : "#cbd5e1";
     context.lineWidth = 2.5;
     context.stroke();
-    context.strokeStyle = "#64748b";
+    context.strokeStyle = light ? "#a7b7b6" : "#64748b";
     context.lineWidth = 4;
     for (let y = TRACK_Y - 122; y < TRACK_Y + 8; y += 24) {
       context.beginPath();
@@ -229,7 +232,7 @@ function drawTrack(context: CanvasRenderingContext2D) {
       context.lineTo(wall.x + 30, y + 14);
       context.stroke();
     }
-    context.strokeStyle = "#f8fafc";
+    context.strokeStyle = light ? "#526a6e" : "#f8fafc";
     context.lineWidth = 3;
     context.beginPath();
     context.moveTo(wall.faceX, TRACK_Y - 132);
@@ -238,7 +241,7 @@ function drawTrack(context: CanvasRenderingContext2D) {
   }
 }
 
-function drawCart(context: CanvasRenderingContext2D, x: number, color: string, label: string, mass: number, velocity: number) {
+function drawCart(context: CanvasRenderingContext2D, x: number, color: string, label: string, mass: number, velocity: number, light: boolean) {
   const left = x - CART_WIDTH / 2;
   const top = TRACK_Y - CART_HEIGHT - 4;
   const blockSize = Math.min(52, 26 + Math.sqrt(Math.min(mass, 8) / 8) * 26);
@@ -246,12 +249,12 @@ function drawCart(context: CanvasRenderingContext2D, x: number, color: string, l
   const blockY = top - blockSize + 4;
   context.save();
   roundedRect(context, blockX, blockY, blockSize, blockSize, 7);
-  context.fillStyle = "#475569";
+  context.fillStyle = light ? "#ffffff" : "#475569";
   context.fill();
-  context.strokeStyle = "#cbd5e1";
+  context.strokeStyle = light ? "#8ea2a3" : "#cbd5e1";
   context.lineWidth = 3;
   context.stroke();
-  context.fillStyle = "#f8fafc";
+  context.fillStyle = light ? "#173746" : "#f8fafc";
   context.font = "800 11px Inter, sans-serif";
   context.textAlign = "center";
   context.textBaseline = "middle";
@@ -260,18 +263,18 @@ function drawCart(context: CanvasRenderingContext2D, x: number, color: string, l
   roundedRect(context, left, top, CART_WIDTH, CART_HEIGHT, 8);
   context.fillStyle = color;
   context.fill();
-  context.strokeStyle = "#f8fafc";
+  context.strokeStyle = light ? "#ffffff" : "#f8fafc";
   context.lineWidth = 2.5;
   context.stroke();
-  context.fillStyle = "#0f172a";
+  context.fillStyle = light ? "#0b2c3b" : "#0f172a";
   context.font = "900 14px Inter, sans-serif";
   context.fillText(label, x, top + CART_HEIGHT / 2 + 1);
   for (const wheelX of [left + 18, left + CART_WIDTH - 18]) {
-    context.fillStyle = "#020617";
+    context.fillStyle = light ? "#173746" : "#020617";
     context.beginPath();
     context.arc(wheelX, TRACK_Y + 1, 11, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = "#94a3b8";
+    context.strokeStyle = light ? "#d8e4e1" : "#94a3b8";
     context.lineWidth = 3;
     context.stroke();
     context.fillStyle = color;
@@ -285,14 +288,14 @@ function drawCart(context: CanvasRenderingContext2D, x: number, color: string, l
   context.restore();
 }
 
-function drawInteraction(context: CanvasRenderingContext2D, state: State) {
+function drawInteraction(context: CanvasRenderingContext2D, state: State, light: boolean) {
   const leftEdge = state.xA + CART_WIDTH / 2;
   const rightEdge = state.xB - CART_WIDTH / 2;
   const contact = (leftEdge + rightEdge) / 2;
   const alpha = state.forceAlpha;
   context.save();
   context.globalAlpha = alpha;
-  context.fillStyle = "#f8fafc";
+  context.fillStyle = light ? "#fff7e9" : "#f8fafc";
   context.beginPath();
   context.arc(contact, TRACK_Y - 18, 8 + alpha * 5, 0, Math.PI * 2);
   context.fill();
@@ -309,11 +312,11 @@ function drawInteraction(context: CanvasRenderingContext2D, state: State) {
   const arrowLength = Math.min(132, 32 + state.contactForce * 0.18);
   drawArrow(context, contact - 6, TRACK_Y - 112, contact - arrowLength, TRACK_Y - 112, `rgba(56,189,248,${alpha})`, 5);
   drawArrow(context, contact + 6, TRACK_Y - 112, contact + arrowLength, TRACK_Y - 112, `rgba(251,146,60,${alpha})`, 5);
-  context.fillStyle = `rgba(186,230,253,${alpha})`;
+  context.fillStyle = light ? `rgba(24,104,143,${alpha})` : `rgba(186,230,253,${alpha})`;
   context.font = "800 13px Inter, sans-serif";
   context.textAlign = "right";
   context.fillText("F_B→A", contact - 20, TRACK_Y - 130);
-  context.fillStyle = `rgba(254,215,170,${alpha})`;
+  context.fillStyle = light ? `rgba(174,72,33,${alpha})` : `rgba(254,215,170,${alpha})`;
   context.textAlign = "left";
   context.fillText("F_A→B", contact + 20, TRACK_Y - 130);
   context.restore();
@@ -325,12 +328,13 @@ function drawWallImpact(
   alpha: number,
   cartLabel: "A" | "B",
   cartColor: string,
+  light: boolean,
 ) {
   if (alpha <= 0) return;
   const y = TRACK_Y - 18;
   context.save();
   context.globalAlpha = alpha;
-  context.fillStyle = "#f8fafc";
+  context.fillStyle = light ? "#fff7e9" : "#f8fafc";
   context.beginPath();
   context.arc(wallX, y, 8 + alpha * 7, 0, Math.PI * 2);
   context.fill();
@@ -340,9 +344,9 @@ function drawWallImpact(
   context.arc(wallX, y, 21 + (1 - alpha) * 14, 0, Math.PI * 2);
   context.stroke();
   const inward = wallX < VIEW_WIDTH / 2 ? 1 : -1;
-  drawArrow(context, wallX - inward * 5, y - 64, wallX - inward * 65, y - 64, "#94a3b8", 4);
+  drawArrow(context, wallX - inward * 5, y - 64, wallX - inward * 65, y - 64, light ? "#70878a" : "#94a3b8", 4);
   drawArrow(context, wallX + inward * 5, y - 64, wallX + inward * 65, y - 64, cartColor, 4);
-  context.fillStyle = "#f8fafc";
+  context.fillStyle = light ? "#173746" : "#f8fafc";
   context.font = "800 10px Inter, sans-serif";
   context.textAlign = "center";
   context.fillText(`VA CHẠM TƯỜNG · XE ${cartLabel}`, wallX, y - 84);
@@ -379,24 +383,24 @@ function drawHud(context: CanvasRenderingContext2D, state: State) {
   context.fillText("Cặp lực tác dụng lên hai vật khác nhau", 710, 125);
 }
 
-function drawCollisionHud(context: CanvasRenderingContext2D, state: State) {
+function drawCollisionHud(context: CanvasRenderingContext2D, state: State, light: boolean) {
   const wallImpactVisible = state.wallAlphaA > 0 || state.wallAlphaB > 0;
   const returnedFromWall = state.wallHitA || state.wallHitB;
   roundedRect(context, 50, 22, 680, 170, 18);
-  context.fillStyle = "rgba(2,6,23,.88)";
+  context.fillStyle = light ? "rgba(255,255,255,.94)" : "rgba(2,6,23,.88)";
   context.fill();
-  context.strokeStyle = "rgba(148,163,184,.28)";
+  context.strokeStyle = light ? "rgba(87,116,119,.25)" : "rgba(148,163,184,.28)";
   context.lineWidth = 1.5;
   context.stroke();
-  context.fillStyle = "#f8fafc";
+  context.fillStyle = light ? "#123342" : "#f8fafc";
   context.font = "900 15px Inter, sans-serif";
   context.textAlign = "left";
   context.textBaseline = "alphabetic";
   context.fillText("ĐỊNH LUẬT III NEWTON · VA CHẠM HAI VẬT", 70, 49);
-  context.fillStyle = "#94a3b8";
+  context.fillStyle = light ? "#647b80" : "#94a3b8";
   context.font = "700 12px Inter, sans-serif";
   context.fillText("F_B→A = −F_A→B  ·  hai lực chỉ xuất hiện khi tiếp xúc", 70, 73);
-  const statusColor = state.settled ? "#86efac" : state.phase === "interaction" || wallImpactVisible ? "#fbbf24" : "#cbd5e1";
+  const statusColor = state.settled ? (light ? "#348a5b" : "#86efac") : state.phase === "interaction" || wallImpactVisible ? (light ? "#b86432" : "#fbbf24") : (light ? "#60777c" : "#cbd5e1");
   context.fillStyle = statusColor;
   context.font = "800 12px Inter, sans-serif";
   context.fillText(
@@ -418,8 +422,8 @@ function drawCollisionHud(context: CanvasRenderingContext2D, state: State) {
   );
 
   const metricCards = [
-    { x: 65, color: "#38bdf8", tint: "rgba(14,165,233,.12)", label: "XE A", velocity: state.velocityA / PIXELS_PER_METER, acceleration: state.accelerationA },
-    { x: 400, color: "#fb923c", tint: "rgba(249,115,22,.12)", label: "XE B", velocity: state.velocityB / PIXELS_PER_METER, acceleration: state.accelerationB },
+    { x: 65, color: light ? "#278aa8" : "#38bdf8", tint: light ? "rgba(39,138,168,.10)" : "rgba(14,165,233,.12)", label: "XE A", velocity: state.velocityA / PIXELS_PER_METER, acceleration: state.accelerationA },
+    { x: 400, color: light ? "#d96637" : "#fb923c", tint: light ? "rgba(217,102,55,.10)" : "rgba(249,115,22,.12)", label: "XE B", velocity: state.velocityB / PIXELS_PER_METER, acceleration: state.accelerationB },
   ];
   for (const card of metricCards) {
     roundedRect(context, card.x, 113, 315, 48, 10);
@@ -434,7 +438,7 @@ function drawCollisionHud(context: CanvasRenderingContext2D, state: State) {
     context.font = "900 11px Inter, sans-serif";
     context.textAlign = "left";
     context.fillText(card.label, card.x + 13, 133);
-    context.fillStyle = "#f8fafc";
+    context.fillStyle = light ? "#173746" : "#f8fafc";
     context.font = "800 12px Inter, sans-serif";
     context.fillText(`v  ${directionValue(card.velocity, "m/s")}`, card.x + 13, 151);
     context.fillText(`a  ${directionValue(card.acceleration, "m/s²")}`, card.x + 172, 151);
@@ -446,17 +450,18 @@ function directionValue(value: number, unit: string) {
   return `${Math.abs(value).toFixed(2)} ${unit} ${value < 0 ? "←" : "→"}`;
 }
 
-export function NewtonThirdLawScene({ params, running, speed, resetSignal, onRunningChange, seekSeconds, seekToken, markLabel }: Props) {
+export function NewtonThirdLawScene({ params, running, speed, resetSignal, onRunningChange, seekSeconds, seekToken, markLabel, appearance = "dark", autoReplay = false, minimal = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const elapsedRef = useRef(0);
+  const replayAtRef = useRef<number | null>(null);
   const paramsRef = useRef(params);
   const callbackRef = useRef(onRunningChange);
   const drawRef = useRef<() => void>(() => undefined);
   const { ref: containerRef, size } = useContainerSize<HTMLDivElement>();
 
   useEffect(() => { callbackRef.current = onRunningChange; }, [onRunningChange]);
-  useEffect(() => { paramsRef.current = params; elapsedRef.current = 0; drawRef.current(); }, [params]);
-  useEffect(() => { elapsedRef.current = 0; drawRef.current(); }, [resetSignal]);
+  useEffect(() => { paramsRef.current = params; elapsedRef.current = 0; replayAtRef.current = null; drawRef.current(); }, [params]);
+  useEffect(() => { elapsedRef.current = 0; replayAtRef.current = null; drawRef.current(); }, [resetSignal]);
   useEffect(() => {
     if (seekToken === undefined || seekSeconds === undefined) return;
     elapsedRef.current = Math.max(0, seekSeconds);
@@ -468,35 +473,38 @@ export function NewtonThirdLawScene({ params, running, speed, resetSignal, onRun
     if (!canvas || size.width <= 0 || size.height <= 0) return;
     const context = canvas.getContext("2d");
     if (!context) return;
-    const scale = Math.min(size.width / VIEW_WIDTH, size.height / VIEW_HEIGHT);
+    const virtualTop = minimal ? 225 : 0;
+    const virtualHeight = minimal ? 420 : VIEW_HEIGHT;
+    const scale = Math.min(size.width / VIEW_WIDTH, size.height / virtualHeight);
     const offsetX = (size.width - VIEW_WIDTH * scale) / 2;
-    const offsetY = (size.height - VIEW_HEIGHT * scale) / 2;
+    const offsetY = (size.height - virtualHeight * scale) / 2 - virtualTop * scale;
     const state = stateAt(paramsRef.current, elapsedRef.current);
+    const light = appearance === "light";
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.save();
     context.scale(canvas.width / size.width, canvas.height / size.height);
     context.translate(offsetX, offsetY);
     context.scale(scale, scale);
-    drawBackground(context);
-    drawTrack(context);
-    drawCollisionHud(context, state);
-    drawInteraction(context, state);
-    drawCart(context, state.xA, "#38bdf8", "A", state.mA, state.velocityA);
-    drawCart(context, state.xB, "#fb923c", "B", state.mB, state.velocityB);
-    drawWallImpact(context, state.wallImpactXA, state.wallAlphaA, "A", "#38bdf8");
-    drawWallImpact(context, state.wallImpactXB, state.wallAlphaB, "B", "#fb923c");
+    drawBackground(context, light);
+    drawTrack(context, light);
+    if (!minimal) drawCollisionHud(context, state, light);
+    drawInteraction(context, state, light);
+    drawCart(context, state.xA, light ? "#55bdd0" : "#38bdf8", "A", state.mA, state.velocityA, light);
+    drawCart(context, state.xB, light ? "#ed7546" : "#fb923c", "B", state.mB, state.velocityB, light);
+    drawWallImpact(context, state.wallImpactXA, state.wallAlphaA, "A", light ? "#55bdd0" : "#38bdf8", light);
+    drawWallImpact(context, state.wallImpactXB, state.wallAlphaB, "B", light ? "#ed7546" : "#fb923c", light);
     if (markLabel) {
       roundedRect(context, 50, 190, 250, 34, 10);
-      context.fillStyle = "rgba(2,6,23,.88)";
+      context.fillStyle = light ? "rgba(255,255,255,.94)" : "rgba(2,6,23,.88)";
       context.fill();
-      context.fillStyle = "#ddd6fe";
+      context.fillStyle = light ? "#5c4d88" : "#ddd6fe";
       context.font = "800 11px Inter, sans-serif";
       context.textAlign = "center";
       context.fillText(markLabel, 175, 212);
     }
     context.restore();
-  }, [markLabel, size.height, size.width]);
+  }, [appearance, markLabel, minimal, size.height, size.width]);
 
   useEffect(() => { drawRef.current = drawScene; }, [drawScene]);
   useEffect(() => {
@@ -523,17 +531,27 @@ export function NewtonThirdLawScene({ params, running, speed, resetSignal, onRun
       drawScene();
       const state = stateAt(paramsRef.current, elapsedRef.current);
       if (state.settled) {
-        callbackRef.current(false);
-        return;
+        if (!autoReplay) {
+          callbackRef.current(false);
+          return;
+        }
+        replayAtRef.current ??= now + 800;
+        if (now >= replayAtRef.current) {
+          elapsedRef.current = 0;
+          previous = now;
+          replayAtRef.current = null;
+        }
+      } else {
+        replayAtRef.current = null;
       }
       frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [drawScene, running, size.height, size.width, speed]);
+  }, [autoReplay, drawScene, running, size.height, size.width, speed]);
 
   return (
-    <div ref={containerRef} className="relative h-full min-h-[360px] w-full overflow-hidden bg-[#0f172a]">
+    <div ref={containerRef} className={`relative h-full min-h-[360px] w-full overflow-hidden ${appearance === "light" ? "bg-[#f7fbf8]" : "bg-[#0f172a]"}`}>
       <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full" role="img" aria-label="Mô phỏng Định luật III Newton: cặp lực tác dụng và phản lực" />
     </div>
   );

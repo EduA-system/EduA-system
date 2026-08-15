@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 export const rubik = { className: "font-sans" };
-export const serif = { className: "font-sans" };
+export const serif = { className: "font-serif" };
 
 export const FRAME_WIDTH = 1280;
 export const HEADER_HEIGHT = 68; // y of the header divider in the Figma hero frame
