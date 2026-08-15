@@ -9,8 +9,8 @@
  * - `next dev` (NODE_ENV=development) → BE local `localhost:8080`.
  * - `next build && next start` (Coolify deploy chạy production) → BE đã deploy.
  */
-const DEPLOYED_BACKEND_HTTP_URL = "https://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io";
-const DEPLOYED_BACKEND_WS_URL = "wss://q0k0k4c0ss00cc4004k4okss.103.72.56.152.sslip.io";
+const DEPLOYED_BACKEND_HTTP_URL = "https://api.edua.memore.vn";
+const DEPLOYED_BACKEND_WS_URL = "wss://api.edua.memore.vn";
 
 const isProd = process.env.NODE_ENV === "production";
 
