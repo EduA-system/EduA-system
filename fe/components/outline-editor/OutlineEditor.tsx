@@ -82,11 +82,11 @@ function TitleInput({
         onChange={(e) => onChange(e.target.value)}
         aria-label={ariaLabel}
         placeholder={placeholder}
-        className={`w-full rounded-lg border border-[rgba(26,26,46,0.08)] bg-white/50 px-2.5 py-1.5 pr-7 outline-none transition placeholder:text-[#b7b5c6] hover:border-[rgba(26,26,46,0.2)] hover:bg-white focus:border-[#8200db] focus:bg-white focus:shadow-[0_0_0_3px_rgba(130,0,219,0.12)] ${className ?? ""}`}
+        className={`w-full rounded-lg border border-[#e4ddd4] bg-white/60 px-2.5 py-1.5 pr-7 outline-none transition placeholder:text-[#a8a097] hover:border-[#cfc6bc] hover:bg-white focus:border-[#d97757] focus:bg-white focus:shadow-[0_0_0_3px_rgba(217,119,87,0.12)] ${className ?? ""}`}
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-[#c9c6d6] transition group-hover/title:text-[#8200db] group-focus-within/title:text-[#8200db]"
+        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-[#b9b0a7] transition group-hover/title:text-[#d97757] group-focus-within/title:text-[#d97757]"
       >
         ✎
       </span>
@@ -225,24 +225,24 @@ export function OutlineEditor({
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      <div className="overflow-hidden rounded-2xl border border-[rgba(26,26,46,0.09)] bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-[rgba(26,26,46,0.07)] px-5 py-4">
+    <div className="mx-auto max-w-[980px] px-5 py-8 sm:px-8">
+      <div className="overflow-hidden rounded-[14px] border border-[#d8d1c9] bg-white">
+        <div className="flex items-center justify-between border-b border-[#e8e2d9] px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#faf5ff]">
-              <span className="text-[#8200db] text-xs font-bold">AI</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#fff1e9]">
+              <span className="text-xs font-bold text-[#d97757]">AI</span>
             </div>
-            <span className="font-medium text-[#1a1a2e]">{lessonTitle}</span>
+            <span className="font-medium text-[#1f1f1f]">{lessonTitle}</span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <span className="rounded-lg bg-[#f9f8f3] px-2.5 py-1 text-xs font-medium text-[#5c5b6e]">
+            <span className="rounded-lg bg-[#f5f1ec] px-2.5 py-1 text-xs font-medium text-[#6b6b6b]">
               {parts.length} phần · {totalSlides} slides
             </span>
             <button
               type="button"
               onClick={() => downloadOutlineJson(lessonTitle, parts)}
               disabled={totalSlides === 0}
-              className="rounded-lg border border-[rgba(26,26,46,0.12)] px-2.5 py-1 text-xs font-medium text-[#5c5b6e] transition hover:border-[#8200db]/40 hover:text-[#8200db] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-[#d8d1c9] px-2.5 py-1 text-xs font-medium text-[#6b6b6b] transition hover:border-[#d97757]/50 hover:text-[#d97757] disabled:cursor-not-allowed disabled:opacity-50"
               title="Xuất toàn bộ outline ra file JSON"
             >
               Xuất JSON
@@ -250,7 +250,7 @@ export function OutlineEditor({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#faf9f5] px-5 py-2 text-[11px] text-[#9998be]">
+        <div className="flex items-center gap-2 bg-[#faf9f7] px-5 py-2 text-[11px] text-[#8a8178]">
           <span aria-hidden>✎</span>
           <span>Bấm vào tiêu đề phần hoặc slide để sửa trực tiếp; mở “Chi tiết” để chỉnh nội dung.</span>
         </div>
@@ -264,14 +264,14 @@ export function OutlineEditor({
             return (
               <section
                 key={part.id}
-                className="rounded-xl border border-[rgba(26,26,46,0.08)] bg-[#fdfdfb]"
+                className="rounded-[12px] border border-[#e4ddd4] bg-[#fdfcfb]"
               >
                 <div
                   draggable
                   onDragStart={() => onPartDragStart(partIndex)}
                   onDragOver={(e) => onPartDragOver(e, partIndex)}
                   onDragEnd={onPartDragEnd}
-                  className="flex items-center gap-2 border-b border-[rgba(26,26,46,0.06)] px-3 py-2.5"
+                  className="flex items-center gap-2 border-b border-[#eee8e1] px-3 py-2.5"
                 >
                   <span
                     className="cursor-grab select-none text-[#c9c6d6] active:cursor-grabbing"
@@ -279,7 +279,7 @@ export function OutlineEditor({
                   >
                     ⠿
                   </span>
-                  <span className="shrink-0 rounded-md bg-[#faf5ff] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#8200db]">
+                  <span className="shrink-0 rounded-md bg-[#fff1e9] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#d97757]">
                     Phần {partIndex + 1}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -289,12 +289,12 @@ export function OutlineEditor({
                       autoFocus={focusPartId === part.id}
                       ariaLabel={`Tiêu đề phần ${partIndex + 1}`}
                       placeholder="Tên phần"
-                      className="text-sm font-semibold text-[#1a1a2e]"
+                      className="text-sm font-semibold text-[#1f1f1f]"
                     />
                   </div>
                   {partExpanding ? (
-                    <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-[#9998be]">
-                      <span className="size-3 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
+                    <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-[#8a8178]">
+                      <span className="size-3 animate-spin rounded-full border-2 border-[#e8724a] border-t-transparent" />
                       đang soạn…
                     </span>
                   ) : null}
@@ -348,8 +348,8 @@ export function OutlineEditor({
                           invalid || slideFailure
                             ? "border-red-200"
                             : expanded
-                              ? "border-[#8200db]/40 shadow-sm"
-                              : "border-[rgba(26,26,46,0.09)] hover:border-[#8200db]/30"
+                              ? "border-[#e8724a]/50 shadow-sm"
+                              : "border-[#e4ddd4] hover:border-[#e8724a]/40"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -368,14 +368,14 @@ export function OutlineEditor({
                             <span className="shrink-0 rounded bg-red-50 px-1.5 py-0.5 text-[10px] text-red-600">Lỗi</span>
                           ) : null}
                           {slideExpanding ? (
-                            <span className="flex shrink-0 items-center gap-1.5 text-[10px] text-[#9998be]">
-                              <span className="size-3 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
+                            <span className="flex shrink-0 items-center gap-1.5 text-[10px] text-[#8a8178]">
+                              <span className="size-3 animate-spin rounded-full border-2 border-[#e8724a] border-t-transparent" />
                               đang soạn…
                             </span>
                           ) : null}
                           <div className="min-w-0 flex-1">
                             {expanded ? (
-                              <span className="block truncate px-2.5 py-1.5 text-sm font-medium text-[#1a1a2e]">
+                              <span className="block truncate px-2.5 py-1.5 text-sm font-medium text-[#1f1f1f]">
                                 {slide.title || "Slide chưa đặt tên"}
                               </span>
                             ) : (
@@ -384,7 +384,7 @@ export function OutlineEditor({
                                 onChange={(title) => updateSlide(part.id, slide.id, { title })}
                                 ariaLabel="Tiêu đề slide"
                                 placeholder="Tiêu đề slide"
-                                className="text-sm text-[#1a1a2e]"
+                                className="text-sm text-[#1f1f1f]"
                               />
                             )}
                           </div>
@@ -405,8 +405,8 @@ export function OutlineEditor({
                             aria-expanded={expanded}
                             className={`flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition ${
                               expanded
-                                ? "border-[#8200db]/40 bg-[#faf5ff] text-[#8200db]"
-                                : "border-[rgba(26,26,46,0.12)] text-[#5c5b6e] hover:border-[#8200db]/40 hover:text-[#8200db]"
+                                ? "border-[#e8724a]/50 bg-[#fff7f1] text-[#d97757]"
+                                : "border-[#d8d1c9] text-[#6b6b6b] hover:border-[#e8724a]/50 hover:text-[#d97757]"
                             }`}
                           >
                             <span className={`text-[9px] transition-transform ${expanded ? "rotate-90" : ""}`}>▸</span>
@@ -437,7 +437,7 @@ export function OutlineEditor({
                   <button
                     type="button"
                     onClick={() => addSlide(part.id)}
-                    className="w-full rounded-lg border border-dashed border-[rgba(26,26,46,0.15)] py-1.5 text-xs text-[#9998be] transition hover:border-[#8200db]/40 hover:text-[#8200db]"
+                    className="w-full rounded-lg border border-dashed border-[#d8d1c9] py-1.5 text-xs text-[#8a8178] transition hover:border-[#e8724a]/50 hover:text-[#d97757]"
                   >
                     + Thêm slide
                   </button>
@@ -449,7 +449,7 @@ export function OutlineEditor({
           <button
             type="button"
             onClick={addPart}
-            className="w-full rounded-xl border border-dashed border-[rgba(26,26,46,0.15)] py-2.5 text-sm text-[#9998be] transition hover:border-[#8200db]/40 hover:text-[#8200db]"
+            className="w-full rounded-xl border border-dashed border-[#d8d1c9] py-2.5 text-sm text-[#8a8178] transition hover:border-[#e8724a]/50 hover:text-[#d97757]"
           >
             + Thêm phần
           </button>
@@ -463,7 +463,7 @@ export function OutlineEditor({
             type="button"
             onClick={() => onConfirm(parts)}
             disabled={totalSlides === 0 || confirming || expanding || hasBlockingFailures || invalidSlides.length > 0}
-            className="flex h-[44px] w-full items-center justify-center rounded-xl bg-[#1c1b2e] text-sm font-medium text-[#f9f8f3] transition enabled:hover:bg-[#2a2940] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-[44px] w-full items-center justify-center rounded-[12px] bg-[#e8724a] text-sm font-medium text-white shadow-[0_4px_8px_rgba(232,114,74,0.24)] transition enabled:hover:bg-[#d96a42] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {confirming
               ? "Đang bắt đầu sinh slide…"

@@ -141,49 +141,52 @@ export function SlideCreateDashboard() {
   }
 
   return (
-    <main className="flex h-screen w-full overflow-hidden bg-[#f9f8f3] text-[#1a1a2e]">
+    <main className="flex h-screen w-full overflow-hidden bg-white text-[#171717]">
       <Sidebar />
       <section className="flex min-w-0 flex-1 flex-col">
         {/* Header / breadcrumb */}
-        <header className="flex items-center justify-between border-b border-[rgba(26,26,46,0.07)] px-8 py-4">
-          <nav className="flex items-center gap-2 text-[12px] leading-4 text-[#9998be]">
+        <header className="flex items-center justify-between border-b border-[#eee8e1] bg-[#fbfaf8] px-5 py-3 sm:px-8 lg:px-10">
+          <nav className="flex items-center gap-2 text-[12px] leading-4 text-[#8a8178]">
             <span>EDUA</span>
             <ChevronRight />
             <span>Slide Deck</span>
             <ChevronRight />
-            <span className="font-medium text-[#1a1a2e]">Mới</span>
+            <span className="font-medium text-[#1f1f1f]">Mới</span>
           </nav>
         </header>
 
         {/* Body: cards */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-8 py-8">
-          <div className="mx-auto w-full max-w-[1280px]">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
+          <div className="mx-auto w-full max-w-[1120px]">
             {/* Title */}
-            <h1 className="text-[30px] font-medium leading-[37.5px] text-[#1a1a2e]">
-              Tạo bộ Slide mới
+            <div className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 text-[11px] font-medium text-[#d97757]">
+              <DashboardIcon name="aiBadge" /> Tạo bài trình chiếu bằng AI
+            </div>
+            <h1 className="font-libertine mt-4 text-[48px] font-normal leading-none text-[#1f1f1f] sm:text-[64px]">
+              Tạo slide
             </h1>
-            <p className="mt-1 text-[14px] leading-5 text-[#9998be]">
+            <p className="mt-4 max-w-[440px] text-[13px] leading-[23px] text-[#6b6b6b]">
               Chọn giáo án và để AI lo phần còn lại cho bạn.
             </p>
 
             {/* Search + filter */}
-            <div className="mt-8 flex items-center gap-3">
-              <div className="flex h-[38px] flex-1 items-center gap-2 rounded-xl border border-[rgba(26,26,46,0.09)] bg-white px-[15px]">
-                <span className="text-[#aeacb8]">
+            <div className="mt-9 flex items-center gap-3 rounded-[14px] border border-[#d8d1c9] bg-white p-4">
+              <div className="flex h-[40px] flex-1 items-center gap-2 rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-[15px] focus-within:border-[#d97757]">
+                <span className="text-[#8a8178]">
                   <SearchIcon />
                 </span>
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Tìm kiếm giáo án..."
-                  className="h-full w-full bg-transparent text-[12px] text-[#1a1a2e] placeholder:text-[rgba(26,26,46,0.5)] focus:outline-none"
+                  className="h-full w-full bg-transparent text-[12px] text-[#171717] placeholder:text-[#a8a097] focus:outline-none"
                 />
               </div>
               <FilterSelect value={filter} onChange={setFilter} lockedSubject={subjectRestriction} />
             </div>
 
             {/* Cards */}
-            {loading ? <p className="mt-6 text-[13px] text-[#9998be]">Đang tải giáo án…</p> : libraryError ? <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-700">{libraryError} <button type="button" onClick={() => void loadLibrary()} className="underline">Thử lại</button></div> : <CardGrid lessons={visible} selectedId={selectedId} onOpen={(lesson) => void openPreview(lesson)} />}
+            {loading ? <p className="mt-6 text-[13px] text-[#6b6b6b]">Đang tải giáo án…</p> : libraryError ? <div className="mt-6 rounded-lg border border-[#e8b4a4] bg-[#fdf3ef] px-4 py-3 text-[12px] text-[#c0492b]">{libraryError} <button type="button" onClick={() => void loadLibrary()} className="underline">Thử lại</button></div> : <CardGrid lessons={visible} selectedId={selectedId} onOpen={(lesson) => void openPreview(lesson)} />}
           </div>
         </div>
       </section>
@@ -252,12 +255,12 @@ function FilterSelect({
       ];
 
   return (
-    <div className="relative h-[38px] w-[150px]">
+    <div className="relative h-[40px] w-[150px]">
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={Boolean(lockedSubject)}
-        className="h-full w-full cursor-pointer appearance-none rounded-xl border border-[rgba(26,26,46,0.09)] bg-white pl-[15px] pr-8 text-[12px] font-medium text-[#1a1a2e] focus:outline-none"
+        className="h-full w-full cursor-pointer appearance-none rounded-lg border border-[#d8d1c9] bg-[#faf9f7] pl-[15px] pr-8 text-[12px] font-medium text-[#171717] outline-none focus:border-[#d97757]"
       >
         {options.map(([optionValue, label]) => (
           <option key={optionValue} value={optionValue}>
@@ -283,13 +286,13 @@ function CardGrid({
 }) {
   if (lessons.length === 0) {
     return (
-      <div className="mt-6 rounded-2xl border border-dashed border-[rgba(26,26,46,0.12)] bg-white/40 px-6 py-12 text-center text-[13px] text-[#aeacb8]">
+      <div className="mt-6 rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] px-6 py-12 text-center text-[13px] text-[#6b6b6b]">
         Không tìm thấy giáo án phù hợp.
       </div>
     );
   }
   return (
-    <div className="mt-6 grid grid-cols-3 gap-5">
+    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {lessons.map((lesson) => (
         <LessonCardItem
           key={lesson.id}
@@ -316,23 +319,23 @@ function LessonCardItem({
       type="button"
       onClick={onClick}
       aria-label={`Xem trước ${lesson.title}`}
-      className={`group relative min-w-0 rounded-[26px] border bg-white text-left shadow-[0_8px_24px_rgba(43,41,38,0.10)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(43,41,38,0.16)] ${
-        active ? "border-[#8200db]/50" : "border-[#dfe7eb] hover:border-[#cbdde4]"
+      className={`group relative min-w-0 rounded-[14px] border bg-white text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(43,41,38,0.10)] ${
+        active ? "border-[#e8724a] ring-2 ring-[#e8724a]/15" : "border-[#d8d1c9] hover:border-[#d9a48f]"
       }`}
     >
-      <div className="flex h-full flex-col overflow-visible rounded-[26px] bg-[#f8fbfc] p-3">
+      <div className="flex h-full flex-col overflow-visible rounded-[14px] bg-white p-3">
         <div className="flex items-center gap-2 px-1 pb-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#dff8f3] text-[#167b70]">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#fff1e9] text-[#d97757]">
             <BookOpen aria-hidden className="size-5" />
           </div>
           <p className="min-w-0 flex-1 truncate text-sm font-bold text-[#363a43]">
-            Bài giảng {lesson.subject}
+            Giáo án {lesson.subject}
           </p>
         </div>
 
-        <div className="relative block aspect-[16/7] overflow-hidden rounded-2xl border border-[#d7e6eb] bg-gradient-to-br from-amber-100 via-orange-50 to-stone-100">
-          <div className="flex h-full flex-col items-center justify-center gap-4 text-[#275c68]">
-            <span className="flex size-20 items-center justify-center rounded-[28px] bg-white/60 shadow-sm">
+        <div className="relative block aspect-[16/7] overflow-hidden rounded-[10px] border border-[#eadfd7] bg-gradient-to-br from-[#fff7f1] via-[#faf9f7] to-[#f3efe9]">
+          <div className="flex h-full flex-col items-center justify-center gap-4 text-[#b65f40]">
+            <span className="flex size-16 items-center justify-center rounded-[14px] bg-white/75 shadow-sm">
               <BookOpen aria-hidden className="size-10" />
             </span>
             <span className="text-xs font-bold uppercase tracking-[0.2em]">Bài giảng</span>
@@ -340,15 +343,15 @@ function LessonCardItem({
         </div>
 
         <div className="px-2 pb-1 pt-2">
-          <p className="line-clamp-1 text-base font-bold leading-5 text-[#30343d]">{lesson.title}</p>
+          <p className="line-clamp-1 text-base font-semibold leading-5 text-[#1f1f1f]">{lesson.title}</p>
         </div>
 
-        <div className="mt-auto flex items-center gap-2 rounded-2xl bg-white p-2 shadow-[0_2px_8px_rgba(43,41,38,0.08)]">
+        <div className="mt-auto flex items-center gap-2 border-t border-[#eee8e1] p-2 pt-3">
           <div className="min-w-0 flex-1 px-2">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Cập nhật</p>
             <p className="truncate text-xs font-medium text-stone-600">{formatUpdatedAt(lesson.updatedAt)}</p>
           </div>
-          <span className="inline-flex items-center justify-center rounded-xl border border-[#1f2431] bg-[#292d3b] px-5 py-3 text-sm font-bold text-white transition group-hover:bg-[#141825]">
+          <span className="inline-flex items-center justify-center rounded-[10px] bg-[#e8724a] px-4 py-2.5 text-[13px] font-medium text-white transition group-hover:bg-[#d96a42]">
             Xem trước
           </span>
         </div>
@@ -381,24 +384,24 @@ function LessonPreviewModal({
       aria-modal="true"
       aria-label={title}
     >
-      <div className="flex h-[80vh] w-[80vw] max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <header className="flex items-center justify-between gap-4 border-b border-[rgba(26,26,46,0.08)] px-6 py-4">
+      <div className="flex h-[80vh] w-[80vw] max-w-[1400px] flex-col overflow-hidden rounded-[14px] border border-[#d8d1c9] bg-white shadow-2xl">
+        <header className="flex items-center justify-between gap-4 border-b border-[#e8e2d9] px-6 py-4">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
               onClick={onClose}
               aria-label="Đóng"
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#5c5b6e] transition hover:bg-[rgba(26,26,46,0.06)]"
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#6b6b6b] transition hover:bg-[#f5f1ec]"
             >
               <X className="size-4" />
             </button>
-            <h2 className="truncate text-[15px] font-semibold text-[#1a1a2e]">{title}</h2>
+            <h2 className="truncate text-[15px] font-semibold text-[#1f1f1f]">{title}</h2>
           </div>
           <button
             type="button"
             onClick={onCreate}
             disabled={loading || creating || !document}
-            className="flex h-[38px] shrink-0 items-center gap-2 rounded-xl bg-[#1c1b2e] px-4 text-[13px] font-medium text-[#f9f8f3] transition enabled:hover:bg-[#2a2940] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-[38px] shrink-0 items-center gap-2 rounded-[10px] bg-[#e8724a] px-4 text-[13px] font-medium text-white transition enabled:hover:bg-[#d96a42] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <DashboardIcon name="createSlide" className="size-4" />
             {creating ? "Đang xử lý…" : "Tạo Slide"}
@@ -407,13 +410,13 @@ function LessonPreviewModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-10 py-8">
           {loading ? (
-            <p className="text-[13px] text-[#9998be]">Đang tải nội dung giáo án…</p>
+            <p className="text-[13px] text-[#8a8178]">Đang tải nội dung giáo án…</p>
           ) : error ? (
             <p className="text-[13px] text-red-600">{error}</p>
           ) : document ? (
             <RichView html={document} variant="document" />
           ) : (
-            <p className="text-[13px] text-[#9998be]">Không thể hiển thị nội dung giáo án này.</p>
+            <p className="text-[13px] text-[#8a8178]">Không thể hiển thị nội dung giáo án này.</p>
           )}
         </div>
       </div>
