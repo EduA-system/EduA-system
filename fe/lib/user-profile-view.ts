@@ -1,5 +1,7 @@
-// Hồ sơ read-only của người khác (Moderator xem Teacher cùng môn, Teacher xem Student trong lớp mình dạy,
-// Principal xem Moderator/IT Staff) — khác `saveProfile`/`/api/users/me` vốn chỉ sửa hồ sơ của chính mình.
+// Hồ sơ read-only của người khác (Moderator xem Teacher cùng môn hoặc Student trong lớp mình quản lý,
+// Teacher xem Student trong lớp mình dạy,
+// Principal xem Moderator/IT Staff) — học sinh không được xem hồ sơ người khác. Khác `saveProfile`/
+// `/api/users/me` vốn chỉ sửa hồ sơ của chính mình.
 export type UserProfileView = {
   id: string;
   fullName: string | null;

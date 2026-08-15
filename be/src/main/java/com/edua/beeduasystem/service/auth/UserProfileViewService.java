@@ -5,11 +5,9 @@ import com.edua.beeduasystem.domain.exception.ResourceNotFoundException;
 import com.edua.beeduasystem.domain.model.auth.AppUser;
 import com.edua.beeduasystem.domain.model.auth.Role;
 import com.edua.beeduasystem.domain.model.auth.UserStatus;
-import com.edua.beeduasystem.domain.model.classroom.ClassMember;
 import com.edua.beeduasystem.domain.model.classroom.Classroom;
 import com.edua.beeduasystem.presentation.dto.auth.UserProfileViewDto;
 import com.edua.beeduasystem.repository.repositories.AppUserRepository;
-import com.edua.beeduasystem.repository.repositories.ClassMemberRepository;
 import com.edua.beeduasystem.repository.repositories.ClassRepository;
 import com.edua.beeduasystem.repository.repositories.TeacherGradeRepository;
 import com.edua.beeduasystem.repository.repositories.UserRoleRepository;
@@ -19,15 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Xem hồ sơ read-only của người khác theo quan hệ được cấp quyền:
- * Moderator → Teacher cùng môn; Teacher → Student trong lớp mình dạy; Student → Student cùng lớp;
- * Principal → Moderator/IT Staff.
+ * Moderator → Teacher cùng môn hoặc Student trong lớp mình quản lý; Teacher → Student trong lớp mình dạy;
+ * Principal → Moderator/IT Staff. Student không được xem hồ sơ người khác.
  * Tài khoản đã bị thu hồi (DISABLED) không xem được. Việc sửa hồ sơ của chính mình dùng
  * {@code ProfileService}/{@code PATCH /api/users/me}, không đi qua service này.
  */
@@ -38,20 +34,17 @@ public class UserProfileViewService {
     private final UserRoleRepository userRoleRepository;
     private final TeacherGradeRepository teacherGradeRepository;
     private final ClassRepository classRepository;
-    private final ClassMemberRepository classMemberRepository;
     private final CurrentUserProvider currentUser;
 
     public UserProfileViewService(AppUserRepository userRepository,
                                   UserRoleRepository userRoleRepository,
                                   TeacherGradeRepository teacherGradeRepository,
                                   ClassRepository classRepository,
-                                  ClassMemberRepository classMemberRepository,
                                   CurrentUserProvider currentUser) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.teacherGradeRepository = teacherGradeRepository;
         this.classRepository = classRepository;
-        this.classMemberRepository = classMemberRepository;
         this.currentUser = currentUser;
     }
 
@@ -82,7 +75,8 @@ public class UserProfileViewService {
             return toDto(target, Role.TEACHER, grades, grantedAt(targetId, Role.TEACHER), grantedByName(targetId, Role.TEACHER));
         }
 
-        if (viewerRoles.contains(Role.TEACHER) && targetRoles.contains(Role.STUDENT)) {
+        if ((viewerRoles.contains(Role.TEACHER) || viewerRoles.contains(Role.MODERATOR))
+                && targetRoles.contains(Role.STUDENT)) {
             List<Classroom> ownedClassesWithStudent = classRepository
                     .searchEnrolled(targetId, null, null, null, null, 0, 100)
                     .items().stream()
@@ -93,40 +87,7 @@ public class UserProfileViewService {
             }
             List<Integer> grades = ownedClassesWithStudent.stream()
                     .map(Classroom::grade).filter(Objects::nonNull).distinct().sorted().toList();
-            Instant joinedAt = ownedClassesWithStudent.stream()
-                    .map(c -> classMemberRepository.findAnyByClassIdAndStudentId(c.id(), targetId))
-                    .flatMap(Optional::stream)
-                    .map(ClassMember::joinedAt)
-                    .filter(Objects::nonNull)
-                    .min(Instant::compareTo)
-                    .orElse(null);
-            return toDto(target, Role.STUDENT, grades, joinedAt, null);
-        }
-
-        if (viewerRoles.contains(Role.STUDENT) && targetRoles.contains(Role.STUDENT)) {
-            Set<UUID> viewerClassIds = classRepository
-                    .searchEnrolled(viewerId, null, null, null, null, 0, 100)
-                    .items().stream()
-                    .map(Classroom::id)
-                    .collect(Collectors.toSet());
-            List<Classroom> sharedClasses = classRepository
-                    .searchEnrolled(targetId, null, null, null, null, 0, 100)
-                    .items().stream()
-                    .filter(classroom -> viewerClassIds.contains(classroom.id()))
-                    .toList();
-            if (sharedClasses.isEmpty()) {
-                throw new ForbiddenOperationException("Bạn chỉ có thể xem hồ sơ học sinh cùng lớp.");
-            }
-            List<Integer> grades = sharedClasses.stream()
-                    .map(Classroom::grade).filter(Objects::nonNull).distinct().sorted().toList();
-            Instant joinedAt = sharedClasses.stream()
-                    .map(classroom -> classMemberRepository.findAnyByClassIdAndStudentId(classroom.id(), targetId))
-                    .flatMap(Optional::stream)
-                    .map(ClassMember::joinedAt)
-                    .filter(Objects::nonNull)
-                    .min(Instant::compareTo)
-                    .orElse(null);
-            return toDto(target, Role.STUDENT, grades, joinedAt, null);
+            return toDto(target, Role.STUDENT, grades, null, null);
         }
 
         if (viewerRoles.contains(Role.PRINCIPAL) && targetRoles.contains(Role.MODERATOR)) {

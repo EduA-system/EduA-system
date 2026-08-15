@@ -62,7 +62,7 @@ public class UserController {
     @Operation(
             summary = "Xem hồ sơ read-only của người khác",
             description = "Theo quan hệ được cấp quyền: Moderator xem Teacher cùng môn, Teacher xem "
-                    + "Student trong lớp mình dạy, Student xem Student cùng lớp, Principal xem Moderator/IT Staff. "
+                    + "Student trong lớp mình quản lý, Principal xem Moderator/IT Staff. Học sinh không được xem hồ sơ người khác. "
                     + "không xem được tài khoản đã bị thu hồi."
     )
     public UserProfileViewDto viewProfile(@PathVariable UUID id) {
