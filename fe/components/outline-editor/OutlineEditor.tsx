@@ -8,7 +8,7 @@ import {
   type OutlinePart,
   type SlideItem,
 } from "@/lib/api/slides";
-import { SlideBasicFields, SlideDetailPanel } from "@/components/outline-editor/SlideDetailModal";
+import { SlideBasicFields } from "@/components/outline-editor/SlideDetailModal";
 
 function createDefaultSlide(id: string): SlideItem {
   return {
@@ -122,7 +122,6 @@ export function OutlineEditor({
     if (!first) return new Set();
     return new Set((first.slides ?? []).map((slide) => `${first.id}:${slide.id}`));
   });
-  const [advanced, setAdvanced] = useState(false);
   const [focusPartId, setFocusPartId] = useState<string | null>(null);
   const dragPartIndex = useRef<number | null>(null);
 
@@ -426,17 +425,10 @@ export function OutlineEditor({
 
                         {expanded ? (
                           <div className="mt-3 border-t border-[rgba(26,26,46,0.08)] pt-3">
-                            {advanced ? (
-                              <SlideDetailPanel
-                                slide={slide}
-                                onChange={(updated) => updateSlide(part.id, slide.id, updated)}
-                              />
-                            ) : (
-                              <SlideBasicFields
-                                slide={slide}
-                                onChange={(updated) => updateSlide(part.id, slide.id, updated)}
-                              />
-                            )}
+                            <SlideBasicFields
+                              slide={slide}
+                              onChange={(updated) => updateSlide(part.id, slide.id, updated)}
+                            />
                           </div>
                         ) : null}
                       </article>
@@ -482,28 +474,6 @@ export function OutlineEditor({
         </div>
       </div>
 
-      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full border border-[rgba(26,26,46,0.12)] bg-white/95 p-1 shadow-lg backdrop-blur">
-        <span className="pl-2 text-[11px] font-medium text-[#9998be]">Chế độ</span>
-        <div className="inline-flex rounded-full bg-[#f9f8f3] p-0.5 text-[11px] font-medium">
-          <button
-            type="button"
-            onClick={() => setAdvanced(false)}
-            aria-pressed={!advanced}
-            className={`rounded-full px-3 py-1 transition ${!advanced ? "bg-[#1c1b2e] text-white" : "text-[#5c5b6e] hover:text-[#1a1a2e]"}`}
-          >
-            Cơ bản
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdvanced(true)}
-            aria-pressed={advanced}
-            className={`rounded-full px-3 py-1 transition ${advanced ? "bg-[#1c1b2e] text-white" : "text-[#5c5b6e] hover:text-[#1a1a2e]"}`}
-            title="Chỉnh cấu trúc, loại block, quan hệ (dành cho tùy biến sâu)"
-          >
-            Nâng cao
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
