@@ -331,7 +331,7 @@ export function CommunityHubDetailPage({ contentId }: { contentId: string }) {
                       const isReply = !!item.parentCommentId;
                       return (
                         <li key={item.id} className={`flex items-start gap-3 ${isReply ? "ml-8 sm:ml-12" : ""}`}>
-                          <Avatar name={item.authorName ?? "Ẩn danh"} seed={item.authorId} size={32} />
+                          <Avatar name={item.authorName ?? "Ẩn danh"} seed={item.authorId} imageUrl={item.authorAvatarUrl} size={32} />
                           <div className="min-w-0 flex-1">
                             <div className="rounded-[14px] bg-[#f7f7f5] px-4 py-3">
                               <div className="flex items-center gap-3">

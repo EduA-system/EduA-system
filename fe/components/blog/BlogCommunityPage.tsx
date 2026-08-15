@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -19,6 +19,13 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { hasAnyRole } from "@/lib/auth/permissions";
 import { SUBJECT_CODES, SUBJECT_LABELS } from "@/lib/auth/subject-access";
+
+const COMMENT_MAX_WORDS = 200;
+
+function countWords(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed.split(/\s+/).length : 0;
+}
 
 function BackIcon() {
   return (
@@ -183,6 +190,8 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState("");
   const [editCommentConfirmOpen, setEditCommentConfirmOpen] = useState(false);
+  const commentWordCount = useMemo(() => countWords(comment), [comment]);
+  const editCommentWordCount = useMemo(() => countWords(editCommentText), [editCommentText]);
   const [postToDelete, setPostToDelete] = useState<{ id: string } | null>(null);
   const detailLoadSeqRef = useRef(0);
   const showSuccess = useCallback((message: string) => setSuccessMessage(message), []);
@@ -291,7 +300,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   }
 
   async function addComment() {
-    if (!detail || !comment.trim() || commentSubmissionRef.current) return;
+    if (!detail || !comment.trim() || commentWordCount > COMMENT_MAX_WORDS || commentSubmissionRef.current) return;
     commentSubmissionRef.current = true;
     setIsCommentSubmitting(true);
     try {
@@ -327,12 +336,12 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
   }
 
   function requestUpdateComment() {
-    if (!editingCommentId || !editCommentText.trim()) return;
+    if (!editingCommentId || !editCommentText.trim() || editCommentWordCount > COMMENT_MAX_WORDS) return;
     setEditCommentConfirmOpen(true);
   }
 
   async function updateComment() {
-    if (!detail || !editingCommentId || !editCommentText.trim()) return;
+    if (!detail || !editingCommentId || !editCommentText.trim() || editCommentWordCount > COMMENT_MAX_WORDS) return;
     try {
       await api<Comment>(authFetch, `/blog-comments/${editingCommentId}`, { method: "PATCH", body: JSON.stringify({ content: editCommentText }) });
       cancelEditComment();
@@ -507,7 +516,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                         />
                         <button
                           type="button"
-                          disabled={isCommentSubmitting || !comment.trim()}
+                          disabled={isCommentSubmitting || !comment.trim() || commentWordCount > COMMENT_MAX_WORDS}
                           onClick={addComment}
                           title="Gửi bình luận"
                           className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-[10px] text-[#b0b1c2] transition-colors hover:bg-white hover:text-[#4a4b5e] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-[#b0b1c2]"
@@ -515,6 +524,7 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                           <span className="size-3"><SendIcon /></span>
                         </button>
                       </div>
+                      <p className={`mt-1 text-right text-[11px] ${commentWordCount > COMMENT_MAX_WORDS ? "text-red-500" : "text-[#9b9caf]"}`}>{commentWordCount}/{COMMENT_MAX_WORDS} từ</p>
                     </div>
 
                     <ul className="space-y-4 pt-5">
@@ -545,10 +555,11 @@ export function BlogCommunityPage({ postId }: { postId?: string }) {
                                     className="mt-1.5 h-10 w-full rounded-[10px] border-[0.8px] border-[#eaeae7] bg-white px-3 text-[13px] leading-[21px] text-[#4a4b5e] outline-none transition-colors focus:border-[#d8d8d5]"
                                   />
                                   <div className="mt-2 flex justify-end gap-2">
+                                    <span className={`mr-auto self-center text-[11px] ${editCommentWordCount > COMMENT_MAX_WORDS ? "text-red-500" : "text-[#9b9caf]"}`}>{editCommentWordCount}/{COMMENT_MAX_WORDS} từ</span>
                                     <button type="button" onClick={cancelEditComment} className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-[#9b9caf] transition-colors hover:text-[#4a4b5e]">
                                       Hủy
                                     </button>
-                                    <button type="button" onClick={requestUpdateComment} disabled={!editCommentText.trim()} className="rounded-lg bg-[#1c1e2e] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#35374b] disabled:cursor-not-allowed disabled:opacity-50">
+                                    <button type="button" onClick={requestUpdateComment} disabled={!editCommentText.trim() || editCommentWordCount > COMMENT_MAX_WORDS} className="rounded-lg bg-[#1c1e2e] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#35374b] disabled:cursor-not-allowed disabled:opacity-50">
                                       Lưu
                                     </button>
                                   </div>

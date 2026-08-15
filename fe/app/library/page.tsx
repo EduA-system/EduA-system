@@ -136,7 +136,8 @@ function LibraryScreen() {
   const [total, setTotal] = useState(0);
   const [q, setQ] = useState("");
   const [subject, setSubject] = useState(() => subjectRestriction ?? "");
-  const [sort, setSort] = useState("updatedAt");
+  const [grade, setGrade] = useState("");
+  const [status, setStatus] = useState<"" | "WEEKLY_TASK_APPROVED" | "APPROVED">("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rename, setRename] = useState<LibraryContent | null>(null);
@@ -181,8 +182,10 @@ function LibraryScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ type, sort, size: "50" });
+      const params = new URLSearchParams({ type, sort: "createdAt", size: "50" });
       if (q) params.set("q", q);
+      if (grade) params.set("grade", grade);
+      if (status === "APPROVED") params.set("status", status);
       const effectiveSubject = subjectRestriction ?? subject;
       if (effectiveSubject) params.set("subject", effectiveSubject);
       const data = await listLibrary(authFetch, params);
@@ -194,7 +197,7 @@ function LibraryScreen() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, q, sort, subject, subjectRestriction, type]);
+  }, [authFetch, grade, q, status, subject, subjectRestriction, type]);
 
   useEffect(() => {
     const timer = setTimeout(() => void load(), 200);
@@ -246,6 +249,10 @@ function LibraryScreen() {
     }
   };
   const createPath = createPaths[type];
+  const visibleItems = status === "WEEKLY_TASK_APPROVED"
+    ? items.filter((content) => content.type === "LESSON_PLAN" && weeklyTaskStatusByContentId.get(content.id) === "APPROVED")
+    : items;
+  const visibleTotal = status === "WEEKLY_TASK_APPROVED" ? visibleItems.length : total;
   const createTile = createPath
     ? <Link href={createPath} className="group flex aspect-[4/3] flex-col items-center justify-center rounded-[14px] border border-dashed border-[#d9a58f] bg-[#fffaf7] p-6 text-center transition hover:border-[#e8724a] hover:bg-[#fff4ee]"><span className="flex size-12 items-center justify-center rounded-full bg-[#fbe1d5] text-3xl font-light leading-none text-[#c65838] transition group-hover:scale-110 group-hover:bg-[#e8724a] group-hover:text-white">+</span><span className="mt-4 font-semibold text-[#75402e]">Tạo {contentMeta[type].label.toLowerCase()} mới</span><span className="mt-1 text-sm text-stone-500">Bắt đầu một nội dung mới</span></Link>
     : <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-6 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-stone-200 text-3xl font-light leading-none text-stone-500">+</span><span className="mt-4 font-semibold text-stone-600">Tạo bài kiểm tra</span><span className="mt-1 text-sm text-stone-500">Tính năng đang được phát triển</span></div>;
@@ -259,13 +266,13 @@ function LibraryScreen() {
             <div>
               <p className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#d97757]"><BookOpen aria-hidden className="size-3.5" /> Không gian học liệu</p>
               <h1 className="mt-3 font-libertine text-[42px] font-normal leading-[1.08] text-[#1f1f1f] sm:text-[48px]">Thư viện của tôi</h1>
-              <p className="mt-3 text-[13px] leading-[23px] text-[#6b6b6b]">{total} nội dung trong không gian riêng của bạn</p>
+              <p className="mt-3 text-[13px] leading-[23px] text-[#6b6b6b]">{visibleTotal} nội dung trong không gian riêng của bạn</p>
             </div>
           </header>
 
           <div className="mt-9 flex overflow-x-auto border-b border-[#d8d1c9]" role="tablist" aria-label="Loại nội dung">
             {tabs.map(([label, value]) => (
-              <button key={value} type="button" role="tab" aria-selected={type === value} onClick={() => setType(value)} className={`shrink-0 border-b-2 px-3 py-3 text-sm transition ${type === value ? "border-[#e8724a] font-semibold text-[#2b2926]" : "border-transparent text-[#6b6b6b] hover:text-[#2b2926]"}`}>{label}</button>
+              <button key={value} type="button" role="tab" aria-selected={type === value} onClick={() => { setType(value); if (value === "SIMULATION") setStatus(""); }} className={`shrink-0 border-b-2 px-3 py-3 text-sm transition ${type === value ? "border-[#e8724a] font-semibold text-[#2b2926]" : "border-transparent text-[#6b6b6b] hover:text-[#2b2926]"}`}>{label}</button>
             ))}
           </div>
 
@@ -278,14 +285,15 @@ function LibraryScreen() {
             ) : (
               <select aria-label="Lọc theo môn" value={subject} onChange={(event) => setSubject(event.target.value)} className="rounded-xl border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="">Tất cả môn</option><option value="MATH">Toán</option><option value="CHEMISTRY">Hóa học</option><option value="PHYSICS">Vật lý</option></select>
             )}
-            <select aria-label="Sắp xếp nội dung" value={sort} onChange={(event) => setSort(event.target.value)} className="rounded-xl border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="updatedAt">Mới cập nhật</option><option value="title">Tên A–Z</option></select>
-            {!loading && <p className="text-sm text-stone-500">Hiển thị {items.length} / {total} nội dung</p>}
+            <select aria-label="Lọc theo khối lớp" value={grade} onChange={(event) => setGrade(event.target.value)} className="rounded-xl border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="">Tất cả khối</option><option value="10">Khối 10</option><option value="11">Khối 11</option><option value="12">Khối 12</option></select>
+            {type !== "SIMULATION" && <select aria-label="Lọc theo trạng thái duyệt" value={status} onChange={(event) => setStatus(event.target.value as "" | "WEEKLY_TASK_APPROVED" | "APPROVED")} className="rounded-xl border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="">Mới thêm</option><option value="WEEKLY_TASK_APPROVED">Đã duyệt lên Weekly Task</option><option value="APPROVED">Đã được duyệt lên Community Hub</option></select>}
+            {!loading && <p className="text-sm text-stone-500">Hiển thị {visibleItems.length} / {visibleTotal} nội dung</p>}
           </div>
 
           {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           {loading ? <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-80 animate-pulse rounded-[14px] bg-[#f0ece7]" />)}</div>
-            : items.length === 0 ? <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{createTile}<div className="flex min-h-[220px] items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-8 text-center text-sm text-stone-600 sm:col-span-1 xl:col-span-2">Chưa có {emptyContentLabel[type]} trong thư viện cá nhân.</div></div>
-            : <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{createTile}{items.map((content) => {
+            : visibleItems.length === 0 ? <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{createTile}<div className="flex min-h-[220px] items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-8 text-center text-sm text-stone-600 sm:col-span-1 xl:col-span-2">Chưa có {emptyContentLabel[type]} trong thư viện cá nhân.</div></div>
+            : <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{createTile}{visibleItems.map((content) => {
               const meta = contentMeta[content.type];
               const Icon = meta.icon;
               const weeklyTaskStatus = content.type === "LESSON_PLAN" ? weeklyTaskStatusByContentId.get(content.id) : undefined;

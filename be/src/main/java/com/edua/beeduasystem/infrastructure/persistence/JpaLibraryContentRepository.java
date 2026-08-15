@@ -54,8 +54,9 @@ public class JpaLibraryContentRepository implements LibraryContentRepository {
                 .filter(e -> e.getSourceLibraryContentId() != null || !jpa.existsBySourceLibraryContentId(e.getId()))
                 .map(JpaLibraryContentRepository::toDomain);
     }
-    @Override @Transactional(readOnly = true) public SummarySearchResult searchSummaries(UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, boolean titleAscending) {
-        return searchSummaries(ownerId, type, subject, grade, textbookCode, chapterCode, q, null, page, size, titleAscending ? Sort.by("title").ascending() : Sort.by("updatedAt").descending());
+    @Override @Transactional(readOnly = true) public SummarySearchResult searchSummaries(UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, LibraryContentStatus status, int page, int size, boolean titleAscending, boolean createdAtDescending) {
+        Sort sort = titleAscending ? Sort.by("title").ascending() : createdAtDescending ? Sort.by("createdAt").descending() : Sort.by("updatedAt").descending();
+        return searchSummaries(ownerId, type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort);
     }
     @Override @Transactional(readOnly = true) public SearchResult searchApproved(LibraryContentType type, Subject subject, String q, int page, int size) {
         Specification<LibraryContentEntity> spec = (root, cq, cb) -> { List<Predicate> ps = new ArrayList<>(); ps.add(cb.equal(root.get("status"), LibraryContentStatus.APPROVED)); ps.add(cb.isNull(root.get("deletedAt")));

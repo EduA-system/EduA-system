@@ -172,8 +172,10 @@ public class HubCommentService {
     }
 
     private HubViews.CommentView toView(HubComment comment) {
-        String authorName = displayName(comment.authorId());
-        return new HubViews.CommentView(comment.id(), comment.content(), comment.authorId(), comment.parentCommentId(), authorName, comment.createdAt(), comment.updatedAt());
+        AppUser author = userRepository.findById(comment.authorId()).orElse(null);
+        String authorName = author != null ? displayName(author) : null;
+        String authorAvatarUrl = author != null ? author.avatarUrl() : null;
+        return new HubViews.CommentView(comment.id(), comment.content(), comment.authorId(), comment.parentCommentId(), authorName, authorAvatarUrl, comment.createdAt(), comment.updatedAt());
     }
 
     private String displayName(UUID userId) {

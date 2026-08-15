@@ -19,7 +19,7 @@ public interface LibraryContentRepository {
      * Community Hub keeps approved publications visible after they are removed from Personal Library.
      */
     Optional<LibraryContent> findApprovedForHubById(UUID id);
-    SummarySearchResult searchSummaries(UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, boolean titleAscending);
+    SummarySearchResult searchSummaries(UUID ownerId, LibraryContentType type, Subject subject, Integer grade, String textbookCode, String chapterCode, String q, LibraryContentStatus status, int page, int size, boolean titleAscending, boolean createdAtDescending);
     /** Nội dung đang APPROVED, không giới hạn owner — dùng cho Community Hub feed + detail. */
     SearchResult searchApproved(LibraryContentType type, Subject subject, String q, int page, int size);
     /** Community Hub feed projection: page content, author name, and visible comment totals in one query. */

@@ -9,6 +9,7 @@ import com.edua.beeduasystem.repository.repositories.BlogPostRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import com.edua.beeduasystem.service.notification.NotificationService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -22,7 +23,7 @@ import java.util.UUID;
 @Service
 public class BlogCommentService {
 
-    private static final String DELETED_COMMENT_PLACEHOLDER = "<p>Bình luận đã bị xóa.</p>";
+    private static final int COMMENT_MAX_WORDS = 200;
 
     private final BlogCommentRepository commentRepository;
     private final BlogPostRepository postRepository;
@@ -106,17 +107,16 @@ public class BlogCommentService {
         return toView(saved);
     }
 
-    /** Xóa mềm bình luận của chính mình để không làm đứt cây reply. */
+    /** Xóa vĩnh viễn bình luận của chính mình. */
+    @Transactional
     public void delete(UUID commentId) {
         BlogComment comment = requireComment(commentId);
         requireOwner(comment.authorId());
-        UUID userId = currentUser.requireUserId();
-        commentRepository.save(new BlogComment(
-                comment.id(), comment.postId(), comment.authorId(), comment.parentCommentId(), comment.content(),
-                comment.createdAt(), Instant.now(), Instant.now(), userId));
+        commentRepository.deleteById(commentId);
     }
 
-    /** Chủ bài viết có thể ẩn mềm bình luận của người khác trên bài của mình. */
+    /** Chủ bài viết có thể ẩn mềm bình luận của người khác cùng các phản hồi trực tiếp của nó. */
+    @Transactional
     public void hideByPostAuthor(UUID commentId) {
         BlogComment comment = requireComment(commentId);
         UUID userId = currentUser.requireUserId();
@@ -128,18 +128,25 @@ public class BlogCommentService {
         if (!post.authorId().equals(userId)) {
             throw new ForbiddenOperationException("You can only hide comments on your own blog post.");
         }
+        Instant now = Instant.now();
         commentRepository.save(new BlogComment(
                 comment.id(), comment.postId(), comment.authorId(), comment.parentCommentId(), comment.content(),
-                comment.createdAt(), Instant.now(), Instant.now(), userId));
+                comment.createdAt(), now, now, userId));
+        if (comment.parentCommentId() == null) {
+            commentRepository.findByPostId(comment.postId()).stream()
+                    .filter(reply -> comment.id().equals(reply.parentCommentId()))
+                    .forEach(reply -> commentRepository.save(new BlogComment(
+                            reply.id(), reply.postId(), reply.authorId(), reply.parentCommentId(), reply.content(),
+                            reply.createdAt(), now, now, userId)));
+        }
     }
 
     private BlogViews.CommentView toView(BlogComment comment) {
         BlogAuthorResolver.Profile author = authorResolver.profile(comment.authorId());
-        boolean hidden = comment.hiddenAt() != null;
         return new BlogViews.CommentView(
-                comment.id(), hidden ? DELETED_COMMENT_PLACEHOLDER : comment.content(),
+                comment.id(), comment.content(),
                 comment.authorId(), comment.parentCommentId(),
-                author.name(), author.avatarUrl(), comment.createdAt(), comment.updatedAt(), hidden);
+                author.name(), author.avatarUrl(), comment.createdAt(), comment.updatedAt(), false);
     }
 
     private BlogComment requireComment(UUID commentId) {
@@ -162,6 +169,14 @@ public class BlogCommentService {
         if (sanitizer.isEmpty(clean)) {
             throw new IllegalArgumentException("Comment content is required.");
         }
+        if (wordCount(clean) > COMMENT_MAX_WORDS) {
+            throw new IllegalArgumentException("Comment must not exceed " + COMMENT_MAX_WORDS + " words.");
+        }
         return clean;
+    }
+
+    private static int wordCount(String value) {
+        String plainText = value.replaceAll("<[^>]+>", " ").trim();
+        return plainText.isEmpty() ? 0 : plainText.split("\\s+").length;
     }
 }

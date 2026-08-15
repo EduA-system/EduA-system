@@ -111,6 +111,20 @@ class PersonalLibraryIntegrationTests {
     }
 
     @Test
+    void IT_PL_001a_filtersOwnLibraryContentByHubReviewStatus() throws Exception {
+        AppUser teacher = user("teacher-status@personal-library-it.edua.local", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
+        seedLibraryContent("Awaiting Hub Review", teacher.id(), "LESSON_PLAN", Subject.MATH, "SUBMITTED", "{\"source\":\"submitted\"}", Instant.now(), null);
+        seedLibraryContent("Published to Community Hub", teacher.id(), "LESSON_PLAN", Subject.MATH, "APPROVED", "{\"source\":\"approved\"}", Instant.now(), null);
+
+        mockMvc.perform(get("/api/library/contents?type=LESSON_PLAN&status=APPROVED")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(teacher, Role.TEACHER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[*].title", hasItem("Published to Community Hub")))
+                .andExpect(jsonPath("$.items[*].title", not(hasItem("Awaiting Hub Review"))))
+                .andExpect(jsonPath("$.total").value(1));
+    }
+
+    @Test
     void IT_PL_002_ownerOpensLibraryContentDetail() throws Exception {
         AppUser teacher = user("teacher-002@personal-library-it.edua.local", Subject.PHYSICS, UserStatus.ACTIVE, Role.TEACHER);
         UUID contentId = seedLibraryContent("Physics Detail", teacher.id(), "LESSON_PLAN", Subject.PHYSICS, "PRIVATE",

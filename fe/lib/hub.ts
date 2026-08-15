@@ -2,7 +2,7 @@ import type { LibraryContent, LibrarySubject, LibraryType } from "@/lib/library"
 
 export type HubContentStatus = "PRIVATE" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
-export type HubComment = { id: string; content: string; authorId: string; parentCommentId: string | null; authorName: string | null; createdAt: string; updatedAt: string };
+export type HubComment = { id: string; content: string; authorId: string; parentCommentId: string | null; authorName: string | null; authorAvatarUrl: string | null; createdAt: string; updatedAt: string };
 
 export type HubContentSummary = {
   id: string;

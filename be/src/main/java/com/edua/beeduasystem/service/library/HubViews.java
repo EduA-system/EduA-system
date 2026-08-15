@@ -53,6 +53,7 @@ public final class HubViews {
             UUID authorId,
             UUID parentCommentId,
             String authorName,
+            String authorAvatarUrl,
             Instant createdAt,
             Instant updatedAt
     ) {

@@ -29,8 +29,8 @@ public class LibraryContentService {
     private final NotificationService notificationService;
     public LibraryContentService(LibraryContentRepository repository, CurrentUserProvider currentUser, ActivityLogService activityLogService, NotificationService notificationService) { this.repository = repository; this.currentUser = currentUser; this.activityLogService = activityLogService; this.notificationService = notificationService; }
     @Transactional(readOnly = true)
-    public LibraryViews.Page list(String rawType, String rawSubject, Integer grade, String textbookCode, String chapterCode, String q, int page, int size, String sort) {
-        return toPage(repository.searchSummaries(currentUser.requireUserId(), parseType(rawType), parseSubject(rawSubject), grade, cleanCode(textbookCode), cleanCode(chapterCode), q, page, size, "title".equalsIgnoreCase(sort)), page, size);
+    public LibraryViews.Page list(String rawType, String rawSubject, Integer grade, String textbookCode, String chapterCode, String q, String rawStatus, int page, int size, String sort) {
+        return toPage(repository.searchSummaries(currentUser.requireUserId(), parseType(rawType), parseSubject(rawSubject), grade, cleanCode(textbookCode), cleanCode(chapterCode), q, parseStatus(rawStatus), page, size, "title".equalsIgnoreCase(sort), "createdAt".equalsIgnoreCase(sort)), page, size);
     }
     @Transactional(readOnly = true)
     public LibraryViews.Detail get(UUID id) { return toDetail(requireOwner(id)); }
@@ -180,4 +180,5 @@ public class LibraryContentService {
     private static LibraryContentType parseTypeRequired(String value) { LibraryContentType type = parseType(value); if(type == null) throw new IllegalArgumentException("Type is required. Allowed: LESSON_PLAN, SLIDE_DECK, TEST, SIMULATION."); return type; }
     private static LibraryContentType parseType(String value) { if(value == null || value.isBlank()) return null; try { return LibraryContentType.valueOf(value.trim().toUpperCase()); } catch(IllegalArgumentException e) { throw new IllegalArgumentException("Invalid type."); } }
     private static Subject parseSubject(String value) { if(value == null || value.isBlank()) return null; try { return Subject.valueOf(value.trim().toUpperCase()); } catch(IllegalArgumentException e) { throw new IllegalArgumentException("Invalid subject. Allowed: MATH, CHEMISTRY, PHYSICS."); } }
+    private static LibraryContentStatus parseStatus(String value) { if(value == null || value.isBlank()) return null; try { return LibraryContentStatus.valueOf(value.trim().toUpperCase()); } catch(IllegalArgumentException e) { throw new IllegalArgumentException("Invalid status. Allowed: PRIVATE, SUBMITTED, APPROVED, REJECTED."); } }
 }

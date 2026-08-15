@@ -100,7 +100,12 @@ public class HubContentService {
                 .filter(cm -> cm.parentCommentId() == null || visibleCommentIds.contains(cm.parentCommentId()))
                 .toList();
         var comments = storedComments.stream()
-                .map(cm -> new HubViews.CommentView(cm.id(), cm.content(), cm.authorId(), cm.parentCommentId(), ownerName(cm.authorId()), cm.createdAt(), cm.updatedAt()))
+                .map(cm -> {
+                    AppUser author = userRepository.findById(cm.authorId()).orElse(null);
+                    return new HubViews.CommentView(cm.id(), cm.content(), cm.authorId(), cm.parentCommentId(),
+                            author != null ? displayName(author) : null, author != null ? author.avatarUrl() : null,
+                            cm.createdAt(), cm.updatedAt());
+                })
                 .toList();
         return new HubViews.ContentDetail(c.id(), c.type(), c.title(), c.subject(), c.ownerId(), ownerName(c.ownerId()),
                 c.payload(), c.thumbnailUrl(), c.reviewedAt(), comments);
