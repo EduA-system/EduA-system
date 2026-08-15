@@ -151,7 +151,16 @@ function SimulationBlock({
 }) {
   const [activated, setActivated] = useState(false);
   const isPeriodic = el.kind === "periodic-element" || el.kind === "periodic-table";
-  const showLiveViewer = el.kind === "molecule" && Boolean(previewLive || (interactive && activated));
+  // Trong editor (`previewLive`) mô hình giữ kích thước bình thường; khi trình chiếu thật
+  // (không có `previewLive`, chỉ kích hoạt qua click) thu nhỏ còn 1/4 theo yêu cầu.
+  const isLivePresentation = !previewLive && interactive && activated;
+  // Mount Canvas ngay từ khi slide còn ở editor/trình chiếu (không đợi click) để nó layout
+  // cùng lúc với cả slide, trước khi stage trình chiếu áp CSS transform — mount muộn ngay lúc
+  // click, giữa chừng lúc transform đã áp, là lý do phép đo kích thước ban đầu từng bị sai.
+  // Chỉ khi KHÔNG preview lẫn KHÔNG interactive (vd. thumbnail danh sách ở hub) mới không mount,
+  // để không bật hàng loạt context WebGL ẩn cho các bản xem trước tĩnh.
+  const canMountMoleculeEarly = el.kind === "molecule" && Boolean(previewLive || interactive);
+  const showMoleculePoster = el.kind === "molecule" && !previewLive && !activated;
   const showPeriodicViewer = isPeriodic && Boolean(previewLive || (interactive && activated));
   /**
    * Sandbox KHÔNG bao giờ tự chạy theo `previewLive` như molecule/periodic.
@@ -216,18 +225,39 @@ function SimulationBlock({
     );
   }
 
-  if (showLiveViewer) {
+  if (canMountMoleculeEarly) {
+    const labels = simulationPosterLabels(el);
     return (
       <div
         onMouseDown={previewLive ? onMouseDown : undefined}
         onDoubleClick={previewLive ? onDoubleClick : undefined}
         onContextMenu={previewLive ? onContextMenu : undefined}
-        style={{ ...style, cursor: previewLive ? style.cursor : "auto" }}
-        className="overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700"
+        onClick={showMoleculePoster && interactive ? handleInteractiveClick : undefined}
+        role={showMoleculePoster && interactive ? "button" : undefined}
+        style={{ ...style, cursor: previewLive ? style.cursor : showMoleculePoster ? "pointer" : "auto" }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700"
       >
         <div className={previewLive ? "pointer-events-none h-full w-full" : "h-full w-full"}>
-          <MoleculeViewer molecule={el.molecule} mode={el.mode} rotating={el.rotating} />
+          {/* Không cho pan/zoom: khi trình chiếu, một cú kéo hoặc cuộn chuột lỡ tay sẽ đẩy mô hình
+              lệch khỏi khung hoặc phóng to vào một phần (không có cách reset). Chỉ để lại xoay. */}
+          <MoleculeViewer
+            molecule={el.molecule}
+            mode={el.mode}
+            rotating={el.rotating}
+            pannable={false}
+            contentScale={isLivePresentation ? 0.25 : 1}
+          />
         </div>
+        {/* Poster chỉ là lớp phủ tuyệt đối bên trên — Canvas bên dưới đã mount và layout
+            xong sẵn từ trước đó. Bấm chỉ gỡ lớp phủ này, không mount lại Canvas. */}
+        {showMoleculePoster && (
+          <div className="absolute inset-0 flex select-none flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-900 to-slate-700 text-white">
+            <span className="text-3xl" aria-hidden>🧪</span>
+            <span className="px-2 text-center text-sm font-semibold">{labels.title}</span>
+            <span className="text-xs text-white/70">{labels.subtitle}</span>
+            {interactive && <span className="mt-1 text-[11px] text-white/80">▶ Nhấn để mô phỏng</span>}
+          </div>
+        )}
       </div>
     );
   }

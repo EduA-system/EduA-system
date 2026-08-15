@@ -640,3 +640,16 @@ body::-webkit-scrollbar {
 .pt-thumb { transition: box-shadow 0.18s ease; }
 .pt-shimmer { background-image: linear-gradient(110deg, rgba(243, 232, 255, 0) 20%, rgba(196, 181, 253, 0.45) 50%, rgba(243, 232, 255, 0) 80%); background-size: 200% 100%; animation: ptShimmer 2.4s linear infinite; }
 .filter-panel-enter { animation: ptFilterPanelIn 0.2s ease-out; }
+
+/* React Three Fiber đo khung chứa bằng getBoundingClientRect — giá trị này ĐÃ nhân
+   transform scale của tổ tiên (stage trình chiếu, world div của editor) — rồi three.js
+   gán lại đúng số px đó vào style của <canvas>. Vì <canvas> vẫn nằm trong tổ tiên đã
+   scale, kích thước px đó bị nhân scale thêm lần nữa, nên canvas phình to gấp `scale`
+   lần khung cha và tràn ra ngoài. Ép canvas bám đúng 100% khung cha; drawing buffer
+   vẫn giữ độ phân giải R3F tính ra (thành ra render nét hơn, không méo vì tỉ lệ khung
+   không đổi). !important là bắt buộc — three.js ghi thẳng vào inline style. */
+.r3f-fit-parent canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
