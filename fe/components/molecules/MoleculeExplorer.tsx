@@ -205,7 +205,7 @@ export function MoleculeExplorer() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input }),
       });
-      const body = await response.json() as Molecule & { message?: string };
+      const body = await response.json() as Omit<Molecule, "formula"> & { formula?: string; message?: string };
       const aiResult = {
         input,
         ok: response.ok,
@@ -216,7 +216,7 @@ export function MoleculeExplorer() {
       logMoleculeAiBuildResponse(aiResult);
       const diagnostics = getMoleculeAiBuildDiagnostics(aiResult);
       if (!diagnostics.success) throw new Error(diagnostics.userMessage);
-      setMolecule(body);
+      setMolecule({ ...body, formula: body.formula ?? "AI tạo" });
       setGeneratedByAi(true);
       setMessageTone("info");
       setMessage(`Đã tạo mô hình ${body.name}.`);
