@@ -125,7 +125,7 @@ public class DocumentExportService {
                     body {
                       margin: 0;
                       color: #111;
-                      font-family: "Times New Roman", "DejaVu Serif", serif;
+                      font-family: "Arial", "DejaVu Serif", sans-serif;
                       font-size: 12pt;
                       line-height: 1.45;
                     }
@@ -133,7 +133,12 @@ public class DocumentExportService {
                       padding-left: %dpx;
                       padding-right: %dpx;
                     }
-                    .document-page, .document-page * { color: #111 !important; }
+                    /* Editor có thể lưu font-family inline. Ép font đã được renderer nhúng để
+                       không rơi về font PDF mặc định thiếu ký tự tiếng Việt. */
+                    .document-page, .document-page * {
+                      color: #111 !important;
+                      font-family: "Arial", "DejaVu Serif", sans-serif !important;
+                    }
                     h1 { font-size: 16pt; text-align: center; margin: 0 0 6pt; }
                     h2 { font-size: 14pt; margin: 18pt 0 8pt; }
                     h3 { font-size: 12pt; margin: 14pt 0 6pt; }
@@ -146,8 +151,8 @@ public class DocumentExportService {
                     img { max-width: 100%%; height: auto; }
                     .document-meta { text-align: center; color: #444; margin-bottom: 16pt; }
                     .mc-option { margin: 2pt 0; }
-                    .math-inline { font-family: "Times New Roman", "DejaVu Serif", serif; }
-                    .math-block { margin: 8pt 0; text-align: center; font-family: "Times New Roman", "DejaVu Serif", serif; }
+                    .math-inline { font-family: "Arial", "DejaVu Serif", sans-serif; }
+                    .math-block { margin: 8pt 0; text-align: center; font-family: "Arial", "DejaVu Serif", sans-serif; }
                   </style>
                 </head>
                 <body><div class="document-page">%s</div></body>

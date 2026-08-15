@@ -24,6 +24,8 @@ public class OpenHtmlDocumentPdfRenderer implements DocumentPdfRenderer {
             new FontCandidate("Times New Roman", Path.of("C:/Windows/Fonts/timesbi.ttf"), 700, FontStyle.ITALIC),
             new FontCandidate("Arial", Path.of("C:/Windows/Fonts/arial.ttf"), 400, FontStyle.NORMAL),
             new FontCandidate("Arial", Path.of("C:/Windows/Fonts/arialbd.ttf"), 700, FontStyle.NORMAL),
+            new FontCandidate("Arial", Path.of("C:/Windows/Fonts/ariali.ttf"), 400, FontStyle.ITALIC),
+            new FontCandidate("Arial", Path.of("C:/Windows/Fonts/arialbi.ttf"), 700, FontStyle.ITALIC),
             new FontCandidate("DejaVu Serif", Path.of("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"), 400, FontStyle.NORMAL),
             new FontCandidate("DejaVu Serif", Path.of("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"), 700, FontStyle.NORMAL)
     );
