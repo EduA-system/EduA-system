@@ -8,11 +8,11 @@ import type { CSSProperties } from "react";
 export type BoundRect = { top: number; left: number; right: number; bottom: number };
 
 // ─── Cấu hình lưới ──────────────────────────────────────────────────────────
-const CELL = 20;   // kích thước mỗi ô (px)
+const CELL = 26;   // lưới thưa hơn để giảm số node SVG và chi phí repaint
 const GAP = 0;    // khoảng cách giữa các ô
 const TILE_RADIUS = 3;    // bo góc ô (~15% cạnh, khớp ô mẫu)
 const GLOW_RADIUS = 70;  // bán kính vùng glow blob
-const STRENGTH_STEPS = 30;
+const STRENGTH_STEPS = 18;
 const MIN_STRENGTH = 0.04;
 
 // ─── Cấu hình glow nền (4 ellipse blur bên dưới lưới) ────────────────────────
@@ -25,6 +25,8 @@ const MIN_STRENGTH = 0.04;
 // CHÚ Ý: đặt GLOW_BG_STRENGTH = 0 sẽ tắt glow nền.
 const GLOW_CORE_COLOR = "#ffacacff";
 const GLOW_EDGE_COLOR = "#ff8800ff";
+// Giữ độ rực của glow nguyên bản. Giá trị này chỉ tác động opacity đã được
+// clamp, không làm tăng số node hay số phép tính trong animation loop.
 const GLOW_BG_STRENGTH = 100;
 const GLOW_BG_RADIUS = 70;
 
@@ -51,6 +53,7 @@ const BOUNCE_RADIUS = 30;
 type GlassTile = SVGRectElement & {
   _cx?: number;
   _cy?: number;
+  _strength?: number;
   _base?: SVGRectElement;   // nền ô kính (luôn hiện) — đổi viền khi lit
   _tint?: SVGRectElement;   // lớp màu peachy #FFD699 khi glow chạm
   _sheen?: SVGRectElement;  // lớp kính highlight góc trên-trái
@@ -172,9 +175,11 @@ function tintColor(s: number) {
 export function HeroGlow({
   bounds = [],
   contentFrameWidth = 1280,
+  exclusionSelector = "[data-glow-exclusion]",
 }: {
   bounds?: BoundRect[];
   contentFrameWidth?: number;
+  exclusionSelector?: string;
 } = {}) {
   const svgRef = useRef<SVGSVGElement>(null);
   const tileRefs = useRef<GlassTile[]>([]);
@@ -218,6 +223,9 @@ export function HeroGlow({
       for (const tile of tileRefs.current) {
         const s = tileStrength(tile._cx ?? 0, tile._cy ?? 0, curX, curY, boundsRef.current);
 
+        if (tile._strength === s) continue;
+        tile._strength = s;
+
         // Nền: khi glow chạm → peachy #FFD699 đặc dần; không → kính trắng mờ
         // Viền LUÔN giữ màu trắng (theo yêu cầu), chỉ đổi độ dày khi lit
         if (tile._base) {
@@ -253,6 +261,7 @@ export function HeroGlow({
 
     function clearEffect() {
       for (const tile of tileRefs.current) {
+        tile._strength = 0;
         tile._base?.setAttribute("fill", rgba(TILE_BASE_COLOR, TILE_BASE_ALPHA));
         tile._base?.setAttribute("stroke", "rgba(255,255,255,0.60)");
         tile._base?.setAttribute("stroke-width", "1");
@@ -264,10 +273,16 @@ export function HeroGlow({
     }
 
     // ── Xây dựng lại SVG ──────────────────────────────────────────────────
+    let lastGridWidth = 0;
+    let lastGridHeight = 0;
+
     function buildGrid() {
       if (!svg) return;
       const W = svg.clientWidth;
       const H = svg.clientHeight;
+      if (Math.abs(W - lastGridWidth) < 1 && Math.abs(H - lastGridHeight) < 1 && tileRefs.current.length > 0) return;
+      lastGridWidth = W;
+      lastGridHeight = H;
       const cols = Math.ceil(W / CELL) + 1;
       const rows = Math.ceil(H / CELL) + 1;
       const tileSize = CELL - GAP;
@@ -288,7 +303,20 @@ export function HeroGlow({
         top: b.top,
         bottom: b.bottom,
       }));
-      boundsRef.current = svgBounds;
+      const svgRect = svg.getBoundingClientRect();
+      const exclusionRoot = svg.closest("section") ?? svg.parentElement;
+      const measuredBounds = exclusionRoot
+        ? Array.from(exclusionRoot.querySelectorAll<HTMLElement>(exclusionSelector)).map((element) => {
+            const rect = element.getBoundingClientRect();
+            return {
+              left: rect.left - svgRect.left,
+              right: rect.right - svgRect.left,
+              top: rect.top - svgRect.top,
+              bottom: rect.bottom - svgRect.top,
+            };
+          })
+        : [];
+      boundsRef.current = [...svgBounds, ...measuredBounds];
 
       // ── defs ──────────────────────────────────────────────────────────
       const defs = document.createElementNS(ns, "defs");
@@ -384,7 +412,7 @@ export function HeroGlow({
           const cy = y + tileSize / 2;
 
           // Nền ô kính — trắng bán trong suốt, luôn hiện
-          const base = document.createElementNS(ns, "rect");
+          const base = document.createElementNS(ns, "rect") as GlassTile;
           base.setAttribute("x", String(x));
           base.setAttribute("y", String(y));
           base.setAttribute("width", String(tileSize));
@@ -396,38 +424,10 @@ export function HeroGlow({
           base.setAttribute("stroke-width", "1");
           gridLayer.appendChild(base);
 
-          // Lớp tint ấm (ánh sáng xuyên qua kính)
-          const tint = document.createElementNS(ns, "rect") as GlassTile;
-          tint.setAttribute("x", String(x));
-          tint.setAttribute("y", String(y));
-          tint.setAttribute("width", String(tileSize));
-          tint.setAttribute("height", String(tileSize));
-          tint.setAttribute("rx", String(TILE_RADIUS));
-          tint.setAttribute("ry", String(TILE_RADIUS));
-          tint.setAttribute("fill", "#ff9c63ff");
-          tint.setAttribute("fill-opacity", "1");
-          gridLayer.appendChild(tint);
-
-          // Sheen: dải sáng góc trên-trái của ô (hiệu ứng mặt kính bóng)
-          // Khớp ô mẫu: ~30% kích thước, #FFF8E1 ấm, nằm góc trên-trái
-          const sheenSize = Math.round(tileSize * 0.30);
-          const sheen = document.createElementNS(ns, "rect");
-          sheen.setAttribute("x", String(x + 1.5));
-          sheen.setAttribute("y", String(y + 1.5));
-          sheen.setAttribute("width", String(sheenSize));
-          sheen.setAttribute("height", String(sheenSize));
-          sheen.setAttribute("rx", String(Math.max(1, TILE_RADIUS - 1)));
-          sheen.setAttribute("ry", String(Math.max(1, TILE_RADIUS - 1)));
-          sheen.setAttribute("fill", "rgba(255,255,255,0.75)");
-          sheen.setAttribute("fill-opacity", "0.06");
-          gridLayer.appendChild(sheen);
-
-          const gt = tint as GlassTile;
+          const gt = base;
           gt._cx = cx;
           gt._cy = cy;
           gt._base = base;
-          gt._tint = tint;
-          gt._sheen = sheen as SVGRectElement;
           tileRefs.current.push(gt);
         }
       }
@@ -494,19 +494,22 @@ export function HeroGlow({
 
     buildGrid();
 
+    const pointerRoot = svg.closest<HTMLElement>("section");
     const ro = new ResizeObserver(handleResize);
     ro.observe(svg);
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
-    window.addEventListener("pointerout", handlePointerLeave, { passive: true });
+    if (pointerRoot) {
+      pointerRoot.addEventListener("pointermove", handlePointerMove, { passive: true });
+      pointerRoot.addEventListener("pointerleave", handlePointerLeave, { passive: true });
+    }
 
     return () => {
       ro.disconnect();
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerout", handlePointerLeave);
+      pointerRoot?.removeEventListener("pointermove", handlePointerMove);
+      pointerRoot?.removeEventListener("pointerleave", handlePointerLeave);
       if (raf) cancelAnimationFrame(raf);
       if (resizeRaf) cancelAnimationFrame(resizeRaf);
     };
-  }, []);
+  }, [exclusionSelector]);
 
   return (
     <div

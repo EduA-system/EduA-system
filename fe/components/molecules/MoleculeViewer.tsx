@@ -25,9 +25,12 @@ function Scene({ molecule, mode, rotating }: { molecule: Molecule; mode: RenderM
   return <group ref={group}>{geometry.bonds.map((bond, i) => <Bond key={i} start={geometry.atoms[bond.from].position} end={geometry.atoms[bond.to].position} order={bond.order} visible={mode === "ball-and-stick"} />)}{geometry.atoms.map((atom, i) => <mesh key={i} position={atom.position}><sphereGeometry args={[mode === "space-filling" ? RADII[atom.element] * 1.7 : RADII[atom.element], 28, 20]} /><meshStandardMaterial color={COLORS[atom.element]} roughness={.35} metalness={.08} /></mesh>)}</group>;
 }
 
-export function MoleculeViewer({ molecule, mode, rotating }: { molecule: Molecule; mode: RenderMode; rotating: boolean }) {
+export function MoleculeViewer({ molecule, mode, rotating, theme = "dark", interactive = true, compact = false }: { molecule: Molecule; mode: RenderMode; rotating: boolean; theme?: "dark" | "light"; interactive?: boolean; compact?: boolean }) {
   // Không đặt min-height: slot molecule trên slide thường thấp hơn 180px, canvas bị tràn xuống dưới
   // và bị cha overflow-hidden cắt đáy, làm phân tử trông lệch xuống. Cả hai nơi dùng viewer đều đã
   // có chiều cao xác định.
-  return <div className="h-full w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700"><Canvas camera={{ position: [0, 0, 7], fov: 45 }}><ambientLight intensity={1.5} /><directionalLight position={[5, 5, 5]} intensity={2} /><Scene molecule={molecule} mode={mode} rotating={rotating} /><OrbitControls enablePan enableZoom /></Canvas></div>;
+  const surface = theme === "light"
+    ? "bg-[radial-gradient(circle_at_45%_38%,#ffffff_0%,#eef7f3_58%,#e4efec_100%)]"
+    : "bg-gradient-to-br from-slate-900 to-slate-700";
+  return <div className={`h-full w-full overflow-hidden ${compact ? "rounded-xl" : "rounded-2xl"} ${surface}`}><Canvas dpr={compact ? [1, 1.35] : [1, 2]} camera={{ position: [0, 0, compact ? 7.8 : 7], fov: compact ? 39 : 45 }}><ambientLight intensity={theme === "light" ? 2.2 : 1.5} /><directionalLight position={[5, 5, 5]} intensity={theme === "light" ? 2.7 : 2} /><directionalLight position={[-4, -2, 3]} intensity={theme === "light" ? .8 : 0} /><Scene molecule={molecule} mode={mode} rotating={rotating} />{interactive ? <OrbitControls enablePan enableZoom /> : null}</Canvas></div>;
 }
