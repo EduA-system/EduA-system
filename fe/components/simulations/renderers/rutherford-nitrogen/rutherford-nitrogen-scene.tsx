@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useCallback, useEffect, useRef } from "react";
 import { useContainerSize } from "../../shared/use-container-size";
 import {
@@ -61,7 +63,7 @@ function drawLabel(
   anchor?: Vec2,
 ) {
   context.save();
-  context.font = "600 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   const width = context.measureText(text).width + 20;
   if (anchor) {
     context.strokeStyle = "rgba(203,213,225,.62)";
@@ -175,7 +177,7 @@ function drawNuclearTarget(
   }
   context.shadowBlur = 0;
   context.fillStyle = "#f8fafc";
-  context.font = `800 ${enlarged ? 8 : 6}px Inter, sans-serif`;
+  context.font = simulationCanvasFont(`${enlarged ? 8 : 6}px`, 500);
   context.textAlign = "center";
   const mark = target.nucleusType === "nitrogen14" ? "N" : target.nucleusType === "oxygen16" ? "O" : "C";
   context.fillText(mark, target.position.x, target.position.y + (enlarged ? 3 : 2));
@@ -245,7 +247,7 @@ function drawParticle(
     context.shadowBlur = 0;
     if (explanation) {
       context.fillStyle = "#f8fafc";
-      context.font = "800 10px Inter, sans-serif";
+      context.font = simulationCanvasFont("10px", 500);
       const mark = particle.particleType === "alpha" ? "α" : particle.particleType === "proton" ? "p" : "¹⁷O";
       context.fillText(mark, particle.position.x + 10, particle.position.y - 8);
     }
@@ -301,7 +303,7 @@ function drawApparatus(
   context.fill();
   context.shadowBlur = 0;
   context.fillStyle = "#fef3c7";
-  context.font = "800 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.fillText("α", 128.5, RUTHERFORD_VIEW.beamY + 4);
 
   context.fillStyle = "#64748b";
@@ -407,7 +409,7 @@ function drawApparatus(
   context.strokeStyle = "rgba(148,163,184,.35)";
   context.stroke();
   context.fillStyle = "#94a3b8";
-  context.font = "700 9px Inter, sans-serif";
+  context.font = simulationCanvasFont("9px", 500);
   context.fillText("BỘ ĐẾM CHỚP", 810, 478);
   context.fillStyle = "#d9ff57";
   context.font = "800 20px ui-monospace, monospace";
@@ -444,10 +446,10 @@ function drawApparatus(
   }
 
   context.fillStyle = "#cbd5e1";
-  context.font = "600 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   context.fillText(`Khí hiện tại: ${GAS_LABELS[state.currentGas]}`, 52, 65);
   context.fillStyle = "#94a3b8";
-  context.font = "500 10px Inter, sans-serif";
+  context.font = simulationCanvasFont("10px");
   context.fillText("Trong chế độ thiết bị, proton được nhận biết qua chớp ZnS; ¹⁷O không phải quan sát trực tiếp.", 52, 562);
 }
 
@@ -510,7 +512,7 @@ function drawExplanation(
 
   drawArrow(context, { x: 140, y: 416 }, { x: 310, y: 416 }, "rgba(251,191,36,.75)");
   context.fillStyle = "#fde68a";
-  context.font = "600 10px Inter, sans-serif";
+  context.font = simulationCanvasFont("10px", 500);
   context.fillText("α đi vào", 188, 407);
   drawArrow(context, { x: 690, y: 416 }, { x: 855, y: 416 }, "rgba(103,232,249,.75)");
   context.fillStyle = "#a5f3fc";
@@ -520,7 +522,7 @@ function drawExplanation(
   roundedRect(context, 92, 474, 816, 42, 11);
   context.fill();
   context.fillStyle = "#cbd5e1";
-  context.font = "600 10px Inter, sans-serif";
+  context.font = simulationCanvasFont("10px", 500);
   context.textAlign = "center";
   context.fillText("Các hạt nhân và quỹ đạo được phóng đại để minh họa; thiết bị Rutherford không quan sát trực tiếp toàn bộ phản ứng này.", 500, 499);
   context.textAlign = "left";
@@ -624,7 +626,7 @@ export function RutherfordNitrogenScene({
     roundedRect(context, 760, 20, 205, 38, 10);
     context.fill();
     context.fillStyle = "#cbd5e1";
-    context.font = "700 10px Inter, sans-serif";
+    context.font = simulationCanvasFont("10px", 500);
     context.fillText(`${GAS_SHORT_LABELS[state.currentGas]} · ${state.counters.alphasEmitted} α · ${state.counters.flashes} chớp`, 777, 43);
     context.restore();
   }, [size.height, size.width]);

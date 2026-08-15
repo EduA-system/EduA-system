@@ -199,11 +199,11 @@ function AnalysisPanel({ metrics }: { metrics: RutherfordMetrics }) {
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
         <p className="mb-3 text-[13px] font-semibold text-[#171717]">Timeline sự kiện thực tế gần nhất</p>
         {metrics.events.length > 0 ? metrics.events.slice(-12).map((event, index) => (
-          <div key={`${event.time}-${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-mono text-[#c96545]">{event.time.toFixed(1)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
+          <div key={`${event.time}-${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-sans text-[#c96545]">{event.time.toFixed(1)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
         )) : <p className="text-xs text-[#8a8178]">Nhấn Play hoặc “Phát một hạt α” để ghi timeline.</p>}
       </div>
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4 text-center">
-        <p className="font-libertine text-xl font-bold text-[#171717]">¹⁴₇N + ⁴₂He → ¹⁷₈O + ¹₁H</p>
+        <p className="font-sans text-xl font-bold text-[#171717]">¹⁴₇N + ⁴₂He → ¹⁷₈O + ¹₁H</p>
         <div className="mt-3 grid grid-cols-2 gap-2 text-left text-xs"><div className="rounded-[8px] bg-emerald-50 p-3 text-emerald-900"><b>Số khối</b><br />14 + 4 = 17 + 1</div><div className="rounded-[8px] bg-emerald-50 p-3 text-emerald-900"><b>Điện tích hạt nhân</b><br />7 + 2 = 8 + 1</div></div>
       </div>
       <p className="rounded-[10px] bg-[#faf9f7] p-3 text-xs leading-relaxed text-[#4f4943]">{rutherfordConclusion(metrics)}</p>

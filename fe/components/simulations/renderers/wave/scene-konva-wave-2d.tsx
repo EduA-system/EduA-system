@@ -1,5 +1,7 @@
 "use client";
 
+import { getSimulationFontFamily } from "@/components/simulations/shared/typography";
+
 // Renderer 2D bằng Konva (imperative) cho GIAO THOA SÓNG NƯỚC — khác kernel Cơ
 // học: không tích phân ODE, biên độ/pha là hàm giải tích của (x, y, t) nên
 // "thời gian" ở đây chỉ là một số, nhảy tới t bất kỳ là tức thời (không cần
@@ -134,15 +136,15 @@ export function SceneKonvaWave2D({
     layer.add(new Konva.Line({ points: [toScreen(0, midY).x, toScreen(0, gy1).y, toScreen(0, midY).x, toScreen(0, gy0).y], stroke: axisColor, strokeWidth: 1.5, listening: false }));
     for (let gx = Math.ceil(wl / step) * step; gx <= wr; gx += step) {
       if (Math.abs(gx - midX) < 1e-9) continue;
-      layer.add(new Konva.Text({ x: toScreen(gx, 0).x + 2, y: toScreen(0, midY).y + 4, text: `${(gx - midX).toFixed(step < 1 ? 1 : 0)}`, fontSize: 10, fill: labelColor, fontFamily: "monospace", listening: false }));
+      layer.add(new Konva.Text({ x: toScreen(gx, 0).x + 2, y: toScreen(0, midY).y + 4, text: `${(gx - midX).toFixed(step < 1 ? 1 : 0)}`, fontSize: 10, fill: labelColor, fontFamily: getSimulationFontFamily(), listening: false }));
     }
     for (let gy = Math.ceil(wb / step) * step; gy <= wt; gy += step) {
       if (Math.abs(gy - midY) < 1e-9) continue;
-      layer.add(new Konva.Text({ x: toScreen(0, midY).x + 4, y: toScreen(0, gy).y - 6, text: `${(gy - midY).toFixed(step < 1 ? 1 : 0)}`, fontSize: 10, fill: labelColor, fontFamily: "monospace", listening: false }));
+      layer.add(new Konva.Text({ x: toScreen(0, midY).x + 4, y: toScreen(0, gy).y - 6, text: `${(gy - midY).toFixed(step < 1 ? 1 : 0)}`, fontSize: 10, fill: labelColor, fontFamily: getSimulationFontFamily(), listening: false }));
     }
     const o = toScreen(midX, midY);
     layer.add(new Konva.Circle({ x: o.x, y: o.y, radius: 3, fill: "#94a3b8", listening: false }));
-    layer.add(new Konva.Text({ x: o.x + 5, y: o.y - 17, text: "O", fontSize: 12, fill: "#94a3b8", fontFamily: "monospace", listening: false }));
+    layer.add(new Konva.Text({ x: o.x + 5, y: o.y - 17, text: "O", fontSize: 12, fill: "#94a3b8", fontFamily: getSimulationFontFamily(), listening: false }));
 
     // ── Zoom (lăn chuột quanh con trỏ, hoặc nút +/−/reset) — chỉ scale + dịch
     // stage, KHÔNG vẽ lại nội dung → mượt, không tốn tính toán lại hypebol/điểm giao. ──
@@ -183,7 +185,7 @@ export function SceneKonvaWave2D({
         const onRight = sp.x >= W / 2;
         const badge = new Konva.Label({ x: onRight ? sp.x + 4 : sp.x - 4, y: sp.y - 10, listening: false });
         badge.add(new Konva.Tag({ fill: "#0f172a", stroke: color, strokeWidth: 1, cornerRadius: 3, opacity: 0.9 }));
-        const text = new Konva.Text({ text: label, fontSize: 10.5, fontStyle: "bold", fill: color, fontFamily: "monospace", padding: 3 });
+        const text = new Konva.Text({ text: label, fontSize: 10.5, fontStyle: "normal", fill: color, fontFamily: getSimulationFontFamily(), padding: 3 });
         badge.add(text);
         if (!onRight) badge.x(sp.x - 4 - text.width() - 6);
         layer.add(badge);
@@ -259,9 +261,9 @@ export function SceneKonvaWave2D({
           y: sp.y + 10,
           text: `S${i + 1}`,
           fontSize: 12,
-          fontStyle: "bold",
+          fontStyle: "normal",
           fill: sourceColor,
-          fontFamily: "monospace",
+          fontFamily: getSimulationFontFamily(),
           listening: false,
         }),
       );
@@ -271,7 +273,7 @@ export function SceneKonvaWave2D({
       const badge = new Konva.Label({ x: 14, y: 14, listening: false });
       badge.add(new Konva.Tag({ fill: "#e8724a", cornerRadius: 4 }));
       badge.add(
-        new Konva.Text({ text: `t = ${simTime.toFixed(2)}s (${markLabel})`, fontSize: 12, fontStyle: "bold", fill: "#ffffff", fontFamily: "monospace", padding: 4 }),
+        new Konva.Text({ text: `t = ${simTime.toFixed(2)}s (${markLabel})`, fontSize: 12, fontStyle: "normal", fill: "#ffffff", fontFamily: getSimulationFontFamily(), padding: 4 }),
       );
       layer.add(badge);
     }

@@ -1,4 +1,6 @@
 "use client";
+
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
 import { memo, useEffect, useRef } from "react";
 import {
   createVaState,
@@ -100,7 +102,7 @@ export const VaCharacteristicScene = memo(function VaCharacteristicScene({
       ctx.lineTo(555, 423);
       ctx.stroke();
       ctx.fillStyle = "#fda4af";
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.textAlign = "center";
       ctx.fillText(`U = ${c.params.voltage.toFixed(1)} V`, 545, 462);
       ctx.fillStyle = "#cbd5e1";
@@ -131,7 +133,7 @@ export const VaCharacteristicScene = memo(function VaCharacteristicScene({
       ctx.lineWidth = 3;
       ctx.strokeRect(245, 87, 150, 36);
       ctx.fillStyle = "#cbd5e1";
-      ctx.font = "700 14px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("14px", 700);
       ctx.textAlign = "center";
       ctx.fillText(`R = ${c.params.resistorOhms.toFixed(1)} Ω`, 320, 111);
       const glow = Math.max(0, Math.min(1, (s.lampTemperature - 100) / 1800));
@@ -166,7 +168,7 @@ export const VaCharacteristicScene = memo(function VaCharacteristicScene({
       }
       ctx.stroke();
       ctx.fillStyle = "#e2e8f0";
-      ctx.font = "600 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.textAlign = "center";
       ctx.fillText("Bóng đèn dây tóc", 320, 352);
       // Ampe kế riêng từng nhánh và vôn kế mắc song song.
@@ -182,7 +184,7 @@ export const VaCharacteristicScene = memo(function VaCharacteristicScene({
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = "#f8fafc";
-        ctx.font = "700 13px Inter, sans-serif";
+        ctx.font = simulationCanvasFont("13px", 500);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(text, x, y);
@@ -207,7 +209,7 @@ export const VaCharacteristicScene = memo(function VaCharacteristicScene({
       ctx.stroke();
       ctx.textBaseline = "alphabetic";
       ctx.fillStyle = "#67e8f9";
-      ctx.font = "600 13px Inter";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText(`I điện trở = ${s.resistorCurrent.toFixed(2)} A`, 470, 82);
       ctx.fillText(`I đèn = ${s.lampCurrent.toFixed(2)} A`, 470, 316);
       ctx.fillStyle = "#fde68a";

@@ -362,7 +362,7 @@ function IsobaricProcessPanel({
                 </li>
               </ul>
             </div>
-            <div className="rounded-[10px] border border-[#e8e2d9] p-3 font-mono text-[12px] text-[#c96545]">
+            <div className="rounded-[10px] border border-[#e8e2d9] p-3 font-sans text-[12px] text-[#c96545]">
               <p>p = const</p>
               <p className="mt-1">V/Tₖ = const</p>
               <p className="mt-1 text-[10px] text-[#8a8178]">

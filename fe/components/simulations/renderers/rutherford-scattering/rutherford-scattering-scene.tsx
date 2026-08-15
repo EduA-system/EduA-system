@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useCallback, useEffect, useRef } from "react";
 import { useContainerSize } from "../../shared/use-container-size";
 import {
@@ -54,7 +56,7 @@ function drawLabel(
   anchor?: Vector2,
 ) {
   context.save();
-  context.font = "600 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   const width = context.measureText(text).width + 20;
   if (anchor) {
     context.strokeStyle = "rgba(203,213,225,.62)";
@@ -130,7 +132,7 @@ function drawParticle(
   context.fill();
   context.shadowBlur = 0;
   context.fillStyle = "#fff7d6";
-  context.font = "800 8px Inter, sans-serif";
+  context.font = simulationCanvasFont("8px", 500);
   context.fillText("α", particle.position.x + 6, particle.position.y - 5);
   context.restore();
 }
@@ -290,7 +292,7 @@ export function RutherfordScatteringScene({
     context.fill();
     context.shadowBlur = 0;
     context.fillStyle = "#fff7d6";
-    context.font = "800 11px Inter, sans-serif";
+    context.font = simulationCanvasFont("11px", 500);
     context.fillText("α", 114, 314);
 
     context.fillStyle = "#64748b";
@@ -353,14 +355,14 @@ export function RutherfordScatteringScene({
       context.arc(legendX, 547, 4, 0, Math.PI * 2);
       context.fill();
       context.fillStyle = "#cbd5e1";
-      context.font = "600 9px Inter, sans-serif";
+      context.font = simulationCanvasFont("9px", 500);
       context.fillText(CATEGORY_LABELS[category], legendX + 9, 550);
       legendX += category === "straight" ? 105 : category === "backscatter" ? 0 : 98;
     }
 
     drawArrow(context, { x: 320, y: 92 }, { x: 402, y: 92 }, "rgba(251,191,36,.7)");
     context.fillStyle = "#fde68a";
-    context.font = "600 9px Inter, sans-serif";
+    context.font = simulationCanvasFont("9px", 500);
     context.fillText("Chùm α tới", 326, 82);
     context.restore();
   }, [size.height, size.width]);

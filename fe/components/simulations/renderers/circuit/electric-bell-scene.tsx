@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { memo, useEffect, useRef } from "react";
 import { CIRCUIT_DT } from "../../engines/circuit/constants";
 import {
@@ -68,7 +70,7 @@ export const ElectricBellScene = memo(function ElectricBellScene({
       ctx.stroke();
     };
     const label = (text: string, x: number, y: number, color = "#e2e8f0") => {
-      ctx.font = "600 12px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("12px", 500);
       ctx.fillStyle = color;
       ctx.textAlign = "center";
       ctx.fillText(text, x, y);

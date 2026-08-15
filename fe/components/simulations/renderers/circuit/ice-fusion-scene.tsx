@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { memo, useEffect, useRef } from "react";
 import {
   createIceFusionState,
@@ -125,7 +127,7 @@ export const IceFusionScene = memo(function IceFusionScene({
       ctx.lineWidth = 2;
       ctx.strokeRect(72, 112, 34, 24);
       ctx.fillStyle = "#e2e8f0";
-      ctx.font = "600 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("Giá đỡ", 112, 89);
 
       // Nhiệt lượng kế trong suốt, treo đúng dưới thanh ngang.
@@ -214,7 +216,7 @@ export const IceFusionScene = memo(function IceFusionScene({
       ctx.stroke();
       ctx.shadowBlur = 0;
       ctx.fillStyle = "#fde68a";
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("Dây nung", 343, 253);
 
       // Lỗ thoát và giọt nước chuyển động liên tục xuống cốc hứng.
@@ -279,10 +281,10 @@ export const IceFusionScene = memo(function IceFusionScene({
       ctx.fill();
       ctx.fillStyle = "#172235";
       ctx.textAlign = "center";
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText(`${(snapshot.collectedMass * 1000).toFixed(1)} g`, 372, 482);
       ctx.fillStyle = "#e2e8f0";
-      ctx.font = "600 12px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("12px", 500);
       ctx.fillText("Cân điện tử", 372, 518);
 
       // Biến áp nguồn riêng bên phải; dây đi vuông góc, không cắt thiết bị.
@@ -294,7 +296,7 @@ export const IceFusionScene = memo(function IceFusionScene({
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = "#e2e8f0";
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.textAlign = "center";
       ctx.fillText("BIẾN ÁP NGUỒN", 732, 343);
       ctx.fillStyle = "#0f172a";
@@ -305,7 +307,7 @@ export const IceFusionScene = memo(function IceFusionScene({
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = "#67e8f9";
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText(`${current.params.voltage.toFixed(1)} V`, 732, 383);
       ctx.fillStyle = "#fb7185";
       ctx.beginPath();
@@ -316,7 +318,7 @@ export const IceFusionScene = memo(function IceFusionScene({
       ctx.arc(775, 420, 7, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#cbd5e1";
-      ctx.font = "600 11px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("11px", 500);
       ctx.fillText(
         `I = ${active ? current.params.current.toFixed(2) : "0.00"} A`,
         732,
@@ -352,7 +354,7 @@ export const IceFusionScene = memo(function IceFusionScene({
       ctx.arc(420, 92, 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#fb7185";
-      ctx.font = "700 16px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("16px", 700);
       ctx.textAlign = "right";
       ctx.fillText("+", 313, 97);
       ctx.fillStyle = "#93c5fd";
@@ -360,7 +362,7 @@ export const IceFusionScene = memo(function IceFusionScene({
       ctx.fillText("−", 432, 97);
 
       ctx.textAlign = "left";
-      ctx.font = "600 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillStyle = "#67e8f9";
       ctx.fillText(`t = ${state.time.toFixed(1)} s`, 565, 488);
       ctx.fillStyle = "#fde68a";

@@ -97,8 +97,8 @@ function AnalysisPanel({
       <MetricGrid metrics={metrics} />
       <FluxEmfChart metrics={metrics} />
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
-        <p className="text-center font-libertine text-lg font-bold text-[#171717]">Φ = ∫ B⃗·dA⃗</p>
-        <p className="mt-1 text-center font-libertine text-lg font-bold text-[#171717]">ε = − d(NΦ)/dt &nbsp;·&nbsp; I = ε/R</p>
+        <p className="text-center font-sans text-lg font-bold text-[#171717]">Φ = ∫ B⃗·dA⃗</p>
+        <p className="mt-1 text-center font-sans text-lg font-bold text-[#171717]">ε = − d(NΦ)/dt &nbsp;·&nbsp; I = ε/R</p>
         <p className="mt-3 text-xs leading-relaxed text-[#6b6b6b]">Dấu trừ là nội dung của định luật Lenz: từ trường do dòng cảm ứng sinh ra luôn chống lại sự biến thiên từ thông, không phải luôn chống lại chính từ trường của nam châm.</p>
       </div>
       <div className="overflow-hidden rounded-[12px] border border-[#e8e2d9] bg-white">
@@ -115,7 +115,7 @@ function AnalysisPanel({
       <div className="rounded-[12px] border border-[#e8e2d9] bg-white p-4">
         <p className="mb-2 text-[13px] font-semibold">Timeline lần quan sát</p>
         {metrics.events.length > 0 ? metrics.events.slice(-10).map((event, index) => (
-          <div key={`${event.time}-${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-mono text-[#c96545]">{event.time.toFixed(1)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
+          <div key={`${event.time}-${event.phase}-${index}`} className="mt-2 flex gap-2 text-xs"><span className="w-12 shrink-0 font-sans text-[#c96545]">{event.time.toFixed(1)} s</span><span className="text-[#4f4943]">{event.label}</span></div>
         )) : <p className="text-xs text-[#8a8178]">Nhấn Play hoặc kéo nam châm để ghi dữ liệu.</p>}
       </div>
       <p className="rounded-[10px] bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-900">

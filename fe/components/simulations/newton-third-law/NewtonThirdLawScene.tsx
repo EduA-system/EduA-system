@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useCallback, useEffect, useRef } from "react";
 import { useContainerSize } from "../shared/use-container-size";
 import { collisionOutcome, collisionParams, simulateCollisionTrack } from "./collision-physics";
@@ -255,7 +257,7 @@ function drawCart(context: CanvasRenderingContext2D, x: number, color: string, l
   context.lineWidth = 3;
   context.stroke();
   context.fillStyle = light ? "#173746" : "#f8fafc";
-  context.font = "800 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillText(`${mass.toFixed(1)} kg`, x, blockY + blockSize / 2);
@@ -267,7 +269,7 @@ function drawCart(context: CanvasRenderingContext2D, x: number, color: string, l
   context.lineWidth = 2.5;
   context.stroke();
   context.fillStyle = light ? "#0b2c3b" : "#0f172a";
-  context.font = "900 14px Inter, sans-serif";
+  context.font = simulationCanvasFont("14px", 700);
   context.fillText(label, x, top + CART_HEIGHT / 2 + 1);
   for (const wheelX of [left + 18, left + CART_WIDTH - 18]) {
     context.fillStyle = light ? "#173746" : "#020617";
@@ -313,7 +315,7 @@ function drawInteraction(context: CanvasRenderingContext2D, state: State, light:
   drawArrow(context, contact - 6, TRACK_Y - 112, contact - arrowLength, TRACK_Y - 112, `rgba(56,189,248,${alpha})`, 5);
   drawArrow(context, contact + 6, TRACK_Y - 112, contact + arrowLength, TRACK_Y - 112, `rgba(251,146,60,${alpha})`, 5);
   context.fillStyle = light ? `rgba(24,104,143,${alpha})` : `rgba(186,230,253,${alpha})`;
-  context.font = "800 13px Inter, sans-serif";
+  context.font = simulationCanvasFont("13px", 500);
   context.textAlign = "right";
   context.fillText("F_B→A", contact - 20, TRACK_Y - 130);
   context.fillStyle = light ? `rgba(174,72,33,${alpha})` : `rgba(254,215,170,${alpha})`;
@@ -347,9 +349,9 @@ function drawWallImpact(
   drawArrow(context, wallX - inward * 5, y - 64, wallX - inward * 65, y - 64, light ? "#70878a" : "#94a3b8", 4);
   drawArrow(context, wallX + inward * 5, y - 64, wallX + inward * 65, y - 64, cartColor, 4);
   context.fillStyle = light ? "#173746" : "#f8fafc";
-  context.font = "800 10px Inter, sans-serif";
+  context.font = simulationCanvasFont("10px", 500);
   context.textAlign = "center";
-  context.fillText(`VA CHẠM TƯỜNG · XE ${cartLabel}`, wallX, y - 84);
+  context.fillText(`Va chạm tường · Xe ${cartLabel}`, wallX, y - 84);
   context.restore();
 }
 
@@ -363,23 +365,23 @@ function drawHud(context: CanvasRenderingContext2D, state: State) {
   context.lineWidth = 1.5;
   context.stroke();
   context.fillStyle = "#f8fafc";
-  context.font = "900 13px Inter, sans-serif";
+  context.font = simulationCanvasFont("13px", 500);
   context.textAlign = "left";
-  context.fillText("ĐỊNH LUẬT III NEWTON · TÁC DỤNG – PHẢN LỰC", 70, 49);
+  context.fillText("Định luật III Newton · Tác dụng và phản lực", 70, 49);
   context.fillStyle = "#94a3b8";
-  context.font = "700 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.fillText("|F_B→A| = |F_A→B|  ·  F_B→A = −F_A→B", 70, 72);
   context.fillStyle = state.phase === "balance" ? "#86efac" : state.phase === "interaction" ? "#fbbf24" : "#cbd5e1";
-  context.font = "800 12px Inter, sans-serif";
-  context.fillText(state.phase === "balance" ? "CÂN BẰNG BAN ĐẦU · SẴN SÀNG TÁC ĐỘNG" : state.phase === "interaction" ? "ĐANG TÁC ĐỘNG · HAI LỰC ĐỐI" : "SAU TƯƠNG TÁC · HAI XE TÁCH RA", 70, 101);
+  context.font = simulationCanvasFont("12px", 500);
+  context.fillText(state.phase === "balance" ? "Cân bằng ban đầu · Sẵn sàng tác động" : state.phase === "interaction" ? "Đang tác động · Hai lực đối" : "Sau tương tác · Hai xe tách ra", 70, 101);
   context.fillStyle = "#64748b";
-  context.font = "600 10px Inter, sans-serif";
+  context.font = simulationCanvasFont("10px", 500);
   context.fillText(`F = ${state.force.toFixed(1)} N`, 70, 125);
   context.fillText(`a_A = ${state.accelerationA.toFixed(2)} m/s²`, 180, 125);
   context.fillText(`a_B = ${state.accelerationB.toFixed(2)} m/s²`, 330, 125);
   context.fillStyle = "#e2e8f0";
   context.textAlign = "right";
-  context.font = "700 11px Inter, sans-serif";
+  context.font = simulationCanvasFont("11px", 500);
   context.fillText("Cặp lực tác dụng lên hai vật khác nhau", 710, 125);
 }
 
@@ -393,37 +395,37 @@ function drawCollisionHud(context: CanvasRenderingContext2D, state: State, light
   context.lineWidth = 1.5;
   context.stroke();
   context.fillStyle = light ? "#123342" : "#f8fafc";
-  context.font = "900 15px Inter, sans-serif";
+  context.font = simulationCanvasFont("15px", 700);
   context.textAlign = "left";
   context.textBaseline = "alphabetic";
-  context.fillText("ĐỊNH LUẬT III NEWTON · VA CHẠM HAI VẬT", 70, 49);
+  context.fillText("Định luật III Newton · Va chạm hai vật", 70, 49);
   context.fillStyle = light ? "#647b80" : "#94a3b8";
-  context.font = "700 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   context.fillText("F_B→A = −F_A→B  ·  hai lực chỉ xuất hiện khi tiếp xúc", 70, 73);
   const statusColor = state.settled ? (light ? "#348a5b" : "#86efac") : state.phase === "interaction" || wallImpactVisible ? (light ? "#b86432" : "#fbbf24") : (light ? "#60777c" : "#cbd5e1");
   context.fillStyle = statusColor;
-  context.font = "800 12px Inter, sans-serif";
+  context.font = simulationCanvasFont("12px", 500);
   context.fillText(
     state.settled
-      ? "KẾT THÚC · HAI XE ĐÃ ĐỨNG YÊN"
+      ? "Kết thúc · Hai xe đã đứng yên"
       : wallImpactVisible
-      ? "ĐANG VA CHẠM TƯỜNG · LỰC VÀ PHẢN LỰC"
+      ? "Đang va chạm tường · Lực và phản lực"
       : state.phase === "interaction"
         ? state.cartCollisionCount > 1
-          ? `VA CHẠM LẶP LẠI LẦN ${state.cartCollisionCount} · LỰC VÀ PHẢN LỰC`
-          : "ĐANG VA CHẠM · LỰC VÀ PHẢN LỰC"
+          ? `Va chạm lặp lại lần ${state.cartCollisionCount} · Lực và phản lực`
+          : "Đang va chạm · Lực và phản lực"
       : returnedFromWall
-        ? "SAU VA CHẠM TƯỜNG · HAI XE TIẾP TỤC CHUYỂN ĐỘNG"
+        ? "Sau va chạm tường · Hai xe tiếp tục chuyển động"
       : state.phase === "balance"
-      ? "TRƯỚC VA CHẠM · HAI VẬT ĐANG TIẾN LẠI"
-        : "SAU VA CHẠM · HAI VẬT BẬT RA",
+      ? "Trước va chạm · Hai vật đang tiến lại"
+        : "Sau va chạm · Hai vật bật ra",
     70,
     101,
   );
 
   const metricCards = [
-    { x: 65, color: light ? "#278aa8" : "#38bdf8", tint: light ? "rgba(39,138,168,.10)" : "rgba(14,165,233,.12)", label: "XE A", velocity: state.velocityA / PIXELS_PER_METER, acceleration: state.accelerationA },
-    { x: 400, color: light ? "#d96637" : "#fb923c", tint: light ? "rgba(217,102,55,.10)" : "rgba(249,115,22,.12)", label: "XE B", velocity: state.velocityB / PIXELS_PER_METER, acceleration: state.accelerationB },
+    { x: 65, color: light ? "#278aa8" : "#38bdf8", tint: light ? "rgba(39,138,168,.10)" : "rgba(14,165,233,.12)", label: "Xe A", velocity: state.velocityA / PIXELS_PER_METER, acceleration: state.accelerationA },
+    { x: 400, color: light ? "#d96637" : "#fb923c", tint: light ? "rgba(217,102,55,.10)" : "rgba(249,115,22,.12)", label: "Xe B", velocity: state.velocityB / PIXELS_PER_METER, acceleration: state.accelerationB },
   ];
   for (const card of metricCards) {
     roundedRect(context, card.x, 113, 315, 48, 10);
@@ -435,11 +437,11 @@ function drawCollisionHud(context: CanvasRenderingContext2D, state: State, light
     context.stroke();
     context.globalAlpha = 1;
     context.fillStyle = card.color;
-    context.font = "900 11px Inter, sans-serif";
+    context.font = simulationCanvasFont("11px", 500);
     context.textAlign = "left";
     context.fillText(card.label, card.x + 13, 133);
     context.fillStyle = light ? "#173746" : "#f8fafc";
-    context.font = "800 12px Inter, sans-serif";
+    context.font = simulationCanvasFont("12px", 500);
     context.fillText(`v  ${directionValue(card.velocity, "m/s")}`, card.x + 13, 151);
     context.fillText(`a  ${directionValue(card.acceleration, "m/s²")}`, card.x + 172, 151);
   }
@@ -499,7 +501,7 @@ export function NewtonThirdLawScene({ params, running, speed, resetSignal, onRun
       context.fillStyle = light ? "rgba(255,255,255,.94)" : "rgba(2,6,23,.88)";
       context.fill();
       context.fillStyle = light ? "#5c4d88" : "#ddd6fe";
-      context.font = "800 11px Inter, sans-serif";
+      context.font = simulationCanvasFont("11px", 500);
       context.textAlign = "center";
       context.fillText(markLabel, 175, 212);
     }

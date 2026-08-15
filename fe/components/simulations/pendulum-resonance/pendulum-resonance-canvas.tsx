@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PendulumResonanceRuntime, PENDULUM_DT, projectWorldToScreen, sortByDepth } from "./physics";
 import { PENDULUM_COUNT, type PendulumResonanceParams, type PendulumResonanceSnapshot } from "./types";
@@ -199,7 +201,7 @@ export function PendulumResonanceCanvas({
         ctx.globalAlpha = 1;
         if (current.showLabels) {
           ctx.fillStyle = "rgba(226, 232, 240, 0.86)";
-          ctx.font = "600 11px Inter, sans-serif";
+          ctx.font = simulationCanvasFont("11px", 500);
           ctx.textAlign = "center";
           ctx.fillText(`${bob.index + 1}`, point.x, point.y + radius + 16);
         }
@@ -210,7 +212,7 @@ export function PendulumResonanceCanvas({
 
       if (current.showSupportMotion && Math.abs(runtime.supportDisplacement) > 0.00001) {
         ctx.fillStyle = "rgba(103, 232, 249, 0.78)";
-        ctx.font = "10px Inter, sans-serif";
+        ctx.font = simulationCanvasFont("10px");
         ctx.textAlign = "left";
         ctx.fillText("Thanh treo cố định, phản lực được tính trong mô hình ghép", 16, 48);
       }
@@ -223,7 +225,7 @@ export function PendulumResonanceCanvas({
       ctx.fillStyle = "rgba(2, 6, 23, 0.8)";
       ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, 82, 8); ctx.fill();
       ctx.fillStyle = "rgba(226, 232, 240, 0.72)";
-      ctx.font = "10px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("10px");
       ctx.textAlign = "left";
       ctx.fillText("Cộng hưởng qua thanh treo chung", boxX + 10, boxY + 16);
       ctx.fillStyle = "#e2e8f0";

@@ -1,4 +1,6 @@
 "use client";
+
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
 import { memo, useEffect, useRef } from "react";
 import {
   createThermalWireState,
@@ -110,7 +112,7 @@ export const ThermalWireScene = memo(function ThermalWireScene({
       ctx.lineTo(564, 408);
       ctx.stroke();
       ctx.fillStyle = "#fda4af";
-      ctx.font = "700 13px Inter";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("+", 530, 383);
       ctx.fillText("−", 572, 383);
       ctx.fillText("E", 550, 445);
@@ -129,7 +131,7 @@ export const ThermalWireScene = memo(function ThermalWireScene({
       );
       ctx.stroke();
       ctx.fillStyle = "#e2e8f0";
-      ctx.font = "600 13px Inter";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("Chốt K", 360, 360);
       // Điện trở bảo vệ R.
       ctx.fillStyle = "#e2e8f0";
@@ -140,7 +142,7 @@ export const ThermalWireScene = memo(function ThermalWireScene({
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = "#172235";
-      ctx.font = "700 14px Inter";
+      ctx.font = simulationCanvasFont("14px", 700);
       ctx.fillText("R", 104, 290);
       // Dây sắt AB, đỏ dần theo nhiệt độ và có glow liên tục, không nhấp nháy.
       const wireColor =
@@ -155,11 +157,11 @@ export const ThermalWireScene = memo(function ThermalWireScene({
       ctx.stroke();
       ctx.shadowBlur = 0;
       ctx.fillStyle = "#f8fafc";
-      ctx.font = "700 14px Inter";
+      ctx.font = simulationCanvasFont("14px", 700);
       ctx.fillText("A", 88, 155);
       ctx.fillText("B", 702, 155);
       ctx.fillStyle = "#bae6fd";
-      ctx.font = "600 13px Inter";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("Dây sắt", 120, 125);
       // Ba mảnh giấy: sáng -> vàng nâu -> than hóa -> cháy thủng.
       const centers = [250, 400, 550];
@@ -280,7 +282,7 @@ export const ThermalWireScene = memo(function ThermalWireScene({
         }
       });
       ctx.fillStyle = "#fde68a";
-      ctx.font = "600 13px Inter";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText(`T dây = ${state.temperature.toFixed(0)} °C`, 310, 225);
       ctx.fillStyle = "#67e8f9";
       ctx.fillText(`I = ${state.current.toFixed(2)} A`, 310, 250);

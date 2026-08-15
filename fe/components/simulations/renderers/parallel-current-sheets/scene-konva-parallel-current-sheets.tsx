@@ -49,7 +49,7 @@ export function SceneKonvaParallelCurrentSheets({ scene, running, resetSignal, o
       group.add(new Konva.Rect({ x: -27, y: 0, width: 54, height: plateH, cornerRadius: 4, fill: "#b9c3cc", stroke: "#475569", strokeWidth: 2, shadowColor: "#64748b", shadowBlur: 5, shadowOpacity: .22 }));
       group.add(new Konva.Rect({ x: -16, y: 4, width: 32, height: 11, cornerRadius: 2, fill: "#94a3b8" }));
       group.add(new Konva.Arrow({ points: [0, plateH - 22, 0, 34], stroke: color, fill: color, strokeWidth: 4, pointerLength: 10, pointerWidth: 10 }));
-      group.add(new Konva.Text({ x: -38, y: plateH + 12, width: 76, align: "center", text: label, fontSize: 14, fontStyle: "bold", fill: "#334155" }));
+      group.add(new Konva.Text({ x: -38, y: plateH + 12, width: 76, align: "center", text: label, fontSize: 14, fontStyle: "normal", fill: "#334155" }));
     };
     addPlate(left, "Tấm trái", "#e11d48"); addPlate(right, "Tấm phải", "#2563eb");
     const leftCurrentArrow = left.findOne("Arrow") as Konva.Arrow;
@@ -67,7 +67,7 @@ export function SceneKonvaParallelCurrentSheets({ scene, running, resetSignal, o
     const terminalY = H * .79;
     layer.add(new Konva.Circle({ x: 30, y: terminalY, radius: 11, fill: "#e11d48", stroke: "#881337", strokeWidth: 2 }));
     layer.add(new Konva.Circle({ x: W - 30, y: terminalY, radius: 11, fill: "#2563eb", stroke: "#1e3a8a", strokeWidth: 2 }));
-    const status = new Konva.Text({ x: 0, y: H - 42, width: W, align: "center", fontSize: 15, fontStyle: "bold", fill: "#334155" }); layer.add(status);
+    const status = new Konva.Text({ x: 0, y: H - 42, width: W, align: "center", fontSize: 15, fontStyle: "normal", fill: "#334155" }); layer.add(status);
 
     let state = initialCurrentSheetsState();
     const draw = () => {

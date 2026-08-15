@@ -47,8 +47,8 @@ export function SceneKonvaMagnetism({
     needle.add(new Konva.Line({ points: [0, -8, half, 0, 0, 8], closed: true, fill: "#dc2626", stroke: "#991b1b", strokeWidth: 1.5 }));
     needle.add(new Konva.Line({ points: [-half, 0, 0, -8, 0, 8], closed: true, fill: "#2563eb", stroke: "#1d4ed8", strokeWidth: 1.5 }));
     needle.add(new Konva.Circle({ radius: 8, fill: "#f8fafc", stroke: "#475569", strokeWidth: 2 }));
-    needle.add(new Konva.Text({ x: half - 16, y: -28, text: "N", fontSize: 15, fontStyle: "bold", fill: "#dc2626" }));
-    needle.add(new Konva.Text({ x: -half - 4, y: 12, text: "S", fontSize: 15, fontStyle: "bold", fill: "#2563eb" }));
+    needle.add(new Konva.Text({ x: half - 16, y: -28, text: "N", fontSize: 15, fontStyle: "normal", fill: "#dc2626" }));
+    needle.add(new Konva.Text({ x: -half - 4, y: 12, text: "S", fontSize: 15, fontStyle: "normal", fill: "#2563eb" }));
     layer.add(needle);
 
     const bar = new Konva.Group({ draggable: true });
@@ -57,11 +57,11 @@ export function SceneKonvaMagnetism({
     const north = new Konva.Rect({ x: -magnetHalf, y: -magnetHeight / 2, width: magnetHalf, height: magnetHeight, fill: "#dc2626", stroke: "#7f1d1d", strokeWidth: 2, cornerRadius: 4 });
     const south = new Konva.Rect({ x: 0, y: -magnetHeight / 2, width: magnetHalf, height: magnetHeight, fill: "#2563eb", stroke: "#1e3a8a", strokeWidth: 2, cornerRadius: 4 });
     bar.add(north, south);
-    bar.add(new Konva.Text({ x: -magnetHalf, y: -8, width: magnetHalf, text: "N", align: "center", fontSize: 18, fontStyle: "bold", fill: "white", listening: false }));
-    bar.add(new Konva.Text({ x: 0, y: -8, width: magnetHalf, text: "S", align: "center", fontSize: 18, fontStyle: "bold", fill: "white", listening: false }));
+    bar.add(new Konva.Text({ x: -magnetHalf, y: -8, width: magnetHalf, text: "N", align: "center", fontSize: 18, fontStyle: "normal", fill: "white", listening: false }));
+    bar.add(new Konva.Text({ x: 0, y: -8, width: magnetHalf, text: "S", align: "center", fontSize: 18, fontStyle: "normal", fill: "white", listening: false }));
     layer.add(bar);
 
-    const status = new Konva.Text({ x: 0, y: H - 36, width: W, align: "center", fontSize: 14, fontStyle: "bold", fill: "#475569" });
+    const status = new Konva.Text({ x: 0, y: H - 36, width: W, align: "center", fontSize: 14, fontStyle: "normal", fill: "#475569" });
     layer.add(status);
 
     let magnet = { ...scene.barMagnet };

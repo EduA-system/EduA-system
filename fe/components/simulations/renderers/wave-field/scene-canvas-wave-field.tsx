@@ -680,7 +680,7 @@ export function SceneCanvasWaveField({
         onZoomOut={() => zoomActionsRef.current?.out()}
       />
       {readout && (
-        <div className="pointer-events-none absolute bottom-3 left-3 space-y-0.5 rounded-[8px] bg-black/50 px-3 py-2 font-mono text-[10.5px] leading-snug text-slate-200">
+        <div className="pointer-events-none absolute bottom-3 left-3 space-y-0.5 rounded-[8px] bg-black/50 px-3 py-2 font-sans text-[10.5px] leading-snug text-slate-200">
           <div>R1 = {readout.R1.toFixed(1)} · R2 = {readout.R2.toFixed(1)}</div>
           <div>r1 = {readout.r1.toFixed(1)} · r2 = {readout.r2.toFixed(1)}</div>
           <div>L1 = {readout.L1.toFixed(1)} · L2 = {readout.L2.toFixed(1)}</div>

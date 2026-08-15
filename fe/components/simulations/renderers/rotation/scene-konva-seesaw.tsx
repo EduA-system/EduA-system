@@ -1,5 +1,7 @@
 "use client";
 
+import { getSimulationFontFamily } from "@/components/simulations/shared/typography";
+
 import { useEffect, useRef } from "react";
 import Konva from "konva";
 import type { RotationScene, RotationState } from "../../engines/rotation/types";
@@ -99,14 +101,14 @@ export function SceneKonvaSeesaw({
     const leftTick = new Konva.Line({ stroke: "#94a3b8", strokeWidth: 1.5, listening: false });
     const centerTick = new Konva.Line({ stroke: "#94a3b8", strokeWidth: 1.5, listening: false });
     const rightTick = new Konva.Line({ stroke: "#94a3b8", strokeWidth: 1.5, listening: false });
-    const leftDistance = new Konva.Text({ fontSize: 13, fontStyle: "bold", fill: "#cbd5e1", fontFamily: "monospace", align: "center", listening: false });
-    const rightDistance = new Konva.Text({ fontSize: 13, fontStyle: "bold", fill: "#cbd5e1", fontFamily: "monospace", align: "center", listening: false });
+    const leftDistance = new Konva.Text({ fontSize: 13, fontStyle: "normal", fill: "#cbd5e1", fontFamily: getSimulationFontFamily(), align: "center", listening: false });
+    const rightDistance = new Konva.Text({ fontSize: 13, fontStyle: "normal", fill: "#cbd5e1", fontFamily: getSimulationFontFamily(), align: "center", listening: false });
     seesaw.add(dimensionLine, leftTick, centerTick, rightTick, leftDistance, rightDistance);
 
     const makeMassBadge = () => {
       const group = new Konva.Group({ listening: false });
       const box = new Konva.Rect({ width: 76, height: 25, x: -38, y: 0, fill: "#162238", stroke: "#475569", strokeWidth: 1, cornerRadius: 7 });
-      const text = new Konva.Text({ width: 76, x: -38, y: 6, align: "center", fontSize: 11, fontStyle: "bold", fill: "#f1f5f9", fontFamily: "monospace" });
+      const text = new Konva.Text({ width: 76, x: -38, y: 6, align: "center", fontSize: 11, fontStyle: "normal", fill: "#f1f5f9", fontFamily: getSimulationFontFamily() });
       group.add(box, text);
       seesaw.add(group);
       return { group, text };
@@ -121,13 +123,13 @@ export function SceneKonvaSeesaw({
 
     const leftWeight = new Konva.Arrow({ points: [0, 0, 0, 0], stroke: "#e2e8f0", fill: "#e2e8f0", strokeWidth: 2.2, pointerLength: 8, pointerWidth: 8, listening: false });
     const rightWeight = new Konva.Arrow({ points: [0, 0, 0, 0], stroke: "#e2e8f0", fill: "#e2e8f0", strokeWidth: 2.2, pointerLength: 8, pointerWidth: 8, listening: false });
-    const leftWeightLabel = new Konva.Text({ text: "P₁", fontSize: 13, fontStyle: "bold", fill: "#e2e8f0", fontFamily: "monospace", listening: false });
-    const rightWeightLabel = new Konva.Text({ text: "P₂", fontSize: 13, fontStyle: "bold", fill: "#e2e8f0", fontFamily: "monospace", listening: false });
+    const leftWeightLabel = new Konva.Text({ text: "P₁", fontSize: 13, fontStyle: "normal", fill: "#e2e8f0", fontFamily: getSimulationFontFamily(), listening: false });
+    const rightWeightLabel = new Konva.Text({ text: "P₂", fontSize: 13, fontStyle: "normal", fill: "#e2e8f0", fontFamily: getSimulationFontFamily(), listening: false });
     layer.add(leftWeight, rightWeight, leftWeightLabel, rightWeightLabel);
 
     const infoPanel = new Konva.Rect({ x: 16, y: 16, width: 220, height: 90, fill: "#111c2f", opacity: 0.94, stroke: "#334155", strokeWidth: 1, cornerRadius: 12, listening: false });
-    const info = new Konva.Text({ x: 30, y: 29, width: 196, fontSize: 12, fill: "#cbd5e1", fontFamily: "monospace", lineHeight: 1.55, listening: false });
-    const status = new Konva.Text({ x: 250, y: 22, width: Math.max(180, W - 500), align: "center", fontSize: 13, fontStyle: "bold", fill: "#5eead4", fontFamily: "monospace", listening: false });
+    const info = new Konva.Text({ x: 30, y: 29, width: 196, fontSize: 12, fill: "#cbd5e1", fontFamily: getSimulationFontFamily(), lineHeight: 1.55, listening: false });
+    const status = new Konva.Text({ x: 250, y: 22, width: Math.max(180, W - 500), align: "center", fontSize: 13, fontStyle: "normal", fill: "#5eead4", fontFamily: getSimulationFontFamily(), listening: false });
     layer.add(infoPanel, info, status);
 
     const localToStage = (x: number, y: number, theta: number) => {

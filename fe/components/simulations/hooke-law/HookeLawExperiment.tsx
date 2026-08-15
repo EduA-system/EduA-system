@@ -130,7 +130,7 @@ function DoubleArrow({
         textAnchor="middle"
         fill={color}
         fontSize="11.5"
-        fontWeight="800"
+        fontWeight="500"
       >
         {label}
       </text>
@@ -174,7 +174,7 @@ function ForceArrow({
         y={(y1 + y2) / 2 + 5}
         fill={color}
         fontSize="12.5"
-        fontWeight="900"
+        fontWeight="500"
       >
         {label}
         {labelSubscript && (
@@ -346,7 +346,7 @@ function Mass({
         textAnchor="middle"
         fill="#7c2d12"
         fontSize="15"
-        fontWeight="900"
+        fontWeight="500"
       >
         {label}
       </text>
@@ -417,7 +417,7 @@ function ApparatusCard({
         textAnchor="middle"
         fill={isStretch ? "#7dd3fc" : "#fcd34d"}
         fontSize="11.5"
-        fontWeight="900"
+        fontWeight="500"
         letterSpacing="1"
       >
         {isStretch ? "THÍ NGHIỆM 1 · THẢ VẬT" : "THÍ NGHIỆM 2 · ÉP LÒ XO"}
@@ -450,7 +450,7 @@ function ApparatusCard({
         y={isStretch ? naturalEnd - 8 : naturalEnd + 18}
         fill="#94a3b8"
         fontSize="9.5"
-        fontWeight="700"
+        fontWeight="500"
       >
         Vị trí lò xo tự nhiên
       </text>
@@ -700,13 +700,13 @@ function HookeGraph({ springConstant }: { springConstant: number }) {
           strokeLinecap="round"
         />
         <circle cx="30" cy="92" r="3.5" fill="#e8724a" />
-        <text x="13" y="15" fill="#6b6b6b" fontSize="10" fontWeight="700">
+        <text x="13" y="15" fill="#6b6b6b" fontSize="10" fontWeight="500">
           Fđh
         </text>
-        <text x="246" y="108" fill="#6b6b6b" fontSize="10" fontWeight="700">
+        <text x="246" y="108" fill="#6b6b6b" fontSize="10" fontWeight="500">
           Δl
         </text>
-        <text x="170" y="44" fill="#c96545" fontSize="10.5" fontWeight="800">
+        <text x="170" y="44" fill="#c96545" fontSize="10.5" fontWeight="500">
           Hệ số góc = k
         </text>
       </svg>
@@ -895,7 +895,7 @@ export function HookeLawExperiment({
                     {(values.compressionEquilibrium * 100).toFixed(2)} cm.
                   </p>
                 </div>
-                <div className="rounded-[10px] border border-[#e8e2d9] p-3 font-mono text-[12px] text-[#c96545]">
+                <div className="rounded-[10px] border border-[#e8e2d9] p-3 font-sans text-[12px] text-[#c96545]">
                   <p>Fđh = −k·Δl</p>
                   <p className="mt-1 text-[10px] font-sans text-[#8a8178]">
                     Dấu “−” cho biết lực đàn hồi luôn ngược chiều biến dạng.

@@ -66,7 +66,7 @@ function MiniThermometer({
         textAnchor="middle"
         fill="#e2e8f0"
         fontSize="11"
-        fontWeight="800"
+        fontWeight="500"
       >
         {label}
       </text>
@@ -94,7 +94,7 @@ function MiniThermometer({
         textAnchor="middle"
         fill="#f8fafc"
         fontSize="13"
-        fontWeight="800"
+        fontWeight="500"
       >
         {temperatureC.toFixed(1)} °C
       </text>
@@ -104,7 +104,7 @@ function MiniThermometer({
         textAnchor="middle"
         fill="#67e8f9"
         fontSize="10.5"
-        fontWeight="800"
+        fontWeight="500"
       >
         T = const
       </text>
@@ -142,7 +142,7 @@ function PressureGauge({
         textAnchor="middle"
         fill="#e2e8f0"
         fontSize="11"
-        fontWeight="800"
+        fontWeight="500"
       >
         {label}
       </text>
@@ -190,7 +190,7 @@ function PressureGauge({
         textAnchor="middle"
         fill="#f8fafc"
         fontSize="17"
-        fontWeight="800"
+        fontWeight="500"
       >
         {pressure.toFixed(2)} atm
       </text>
@@ -247,7 +247,7 @@ function AlcoholLamp({
         textAnchor="middle"
         fill="#fed7aa"
         fontSize="11"
-        fontWeight="800"
+        fontWeight="500"
       >
         Đèn cồn cấp nhiệt Q
       </text>
@@ -363,7 +363,7 @@ export function IsothermalBoyleCanvas({
           textAnchor="middle"
           fill="#e2e8f0"
           fontSize="16"
-          fontWeight="800"
+          fontWeight="500"
         >
           Trạng thái {spec.label}
         </text>
@@ -515,7 +515,7 @@ export function IsothermalBoyleCanvas({
           textAnchor="middle"
           fill="#e2e8f0"
           fontSize="14"
-          fontWeight="800"
+          fontWeight="500"
         >
           Xi lanh {spec.label}
         </text>
@@ -562,7 +562,7 @@ export function IsothermalBoyleCanvas({
               textAnchor="middle"
               fill="#fbbf24"
               fontSize="13"
-              fontWeight="800"
+              fontWeight="500"
             >
               pV = const = {stateAValue.constant.toFixed(2)} atm·L
             </text>
@@ -572,7 +572,7 @@ export function IsothermalBoyleCanvas({
               textAnchor="middle"
               fill="#67e8f9"
               fontSize="10.5"
-              fontWeight="700"
+              fontWeight="500"
             >
               A: {statusLabel(stateAValue.status)} · B:{" "}
               {statusLabel(stateBValue.status)}

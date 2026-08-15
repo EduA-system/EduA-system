@@ -1,5 +1,7 @@
 "use client";
 
+import { getSimulationFontFamily } from "@/components/simulations/shared/typography";
+
 import { useEffect, useRef } from "react";
 import Konva from "konva";
 import type {
@@ -95,8 +97,8 @@ function addTag(
     new Konva.Text({
       text,
       fill: color,
-      fontFamily: "monospace",
-      fontStyle: "bold",
+      fontFamily: getSimulationFontFamily(),
+      fontStyle: "normal",
       fontSize: 13,
       padding: 6,
     }),
@@ -148,8 +150,8 @@ function createSingleWeight(
       text: label,
       align: "center",
       fill: "#082f49",
-      fontFamily: "monospace",
-      fontStyle: "bold",
+      fontFamily: getSimulationFontFamily(),
+      fontStyle: "normal",
       fontSize: 13,
     }),
     new Konva.Text({
@@ -159,8 +161,8 @@ function createSingleWeight(
       text: `${mass.toFixed(1)} kg`,
       align: "center",
       fill: "#082f49",
-      fontFamily: "monospace",
-      fontStyle: "bold",
+      fontFamily: getSimulationFontFamily(),
+      fontStyle: "normal",
       fontSize: 11,
     }),
   );
@@ -213,8 +215,8 @@ function createWeightStack(
       text: `${label} · ${mass.toFixed(1)} kg`,
       align: "center",
       fill: color,
-      fontFamily: "monospace",
-      fontStyle: "bold",
+      fontFamily: getSimulationFontFamily(),
+      fontStyle: "normal",
       fontSize: 12,
     }),
   );
@@ -401,8 +403,8 @@ function SceneKonvaMomentDisk({
         align: "center",
         fill: "#6ee7b7",
         fontSize: 11,
-        fontFamily: "monospace",
-        fontStyle: "bold",
+        fontFamily: getSimulationFontFamily(),
+        fontStyle: "normal",
         listening: false,
       }),
     );
@@ -609,8 +611,8 @@ function SceneKonvaMomentDisk({
         text: "F₂",
         fill: FORCE_2,
         fontSize: 19,
-        fontStyle: "bold",
-        fontFamily: "monospace",
+        fontStyle: "normal",
+        fontFamily: getSimulationFontFamily(),
         listening: false,
       });
     const rightForceLabel = new Konva.Text({
@@ -619,8 +621,8 @@ function SceneKonvaMomentDisk({
         text: "F₁",
         fill: FORCE_1,
         fontSize: 19,
-        fontStyle: "bold",
-        fontFamily: "monospace",
+        fontStyle: "normal",
+        fontFamily: getSimulationFontFamily(),
         listening: false,
       });
     layer.add(
@@ -648,8 +650,8 @@ function SceneKonvaMomentDisk({
         text: "O",
         fill: "#f8fafc",
         fontSize: 16,
-        fontStyle: "bold",
-        fontFamily: "monospace",
+        fontStyle: "normal",
+        fontFamily: getSimulationFontFamily(),
         listening: false,
       }),
     );
@@ -681,8 +683,8 @@ function SceneKonvaMomentDisk({
         text: "MOMENT QUANH TRỤC O",
         fill: "#f8fafc",
         fontSize: 13,
-        fontStyle: "bold",
-        fontFamily: "monospace",
+        fontStyle: "normal",
+        fontFamily: getSimulationFontFamily(),
         listening: false,
       }),
     );
@@ -692,8 +694,8 @@ function SceneKonvaMomentDisk({
       width: cardWidth - 30,
       fill: FORCE_1,
       fontSize: 12,
-      fontStyle: "bold",
-      fontFamily: "monospace",
+      fontStyle: "normal",
+      fontFamily: getSimulationFontFamily(),
       listening: false,
     });
     const moment2Text = new Konva.Text({
@@ -702,8 +704,8 @@ function SceneKonvaMomentDisk({
       width: cardWidth - 30,
       fill: FORCE_2,
       fontSize: 12,
-      fontStyle: "bold",
-      fontFamily: "monospace",
+      fontStyle: "normal",
+      fontFamily: getSimulationFontFamily(),
       listening: false,
     });
     const netText = new Konva.Text({
@@ -712,7 +714,7 @@ function SceneKonvaMomentDisk({
       width: cardWidth - 30,
       fill: "#e2e8f0",
       fontSize: 12,
-      fontFamily: "monospace",
+      fontFamily: getSimulationFontFamily(),
       listening: false,
     });
     const statusText = new Konva.Text({
@@ -721,8 +723,8 @@ function SceneKonvaMomentDisk({
       width: cardWidth - 30,
       fill: "#6ee7b7",
       fontSize: 12,
-      fontStyle: "bold",
-      fontFamily: "monospace",
+      fontStyle: "normal",
+      fontFamily: getSimulationFontFamily(),
       listening: false,
     });
     layer.add(moment1Text, moment2Text, netText, statusText);

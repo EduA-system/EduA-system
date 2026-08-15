@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CORK_POP_DT, CorkPopRuntime } from "./physics";
 import type { CorkPopParams, CorkPopSnapshot } from "./types";
@@ -103,10 +105,10 @@ export function CorkPopCanvas({ params, running, resetSignal, stepSignal, onSnap
       ctx.textBaseline = "alphabetic";
       ctx.textAlign = "left";
       ctx.fillStyle = "rgba(226, 232, 240, 0.92)";
-      ctx.font = "600 13px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("Nút bấc bật: Nội năng chuyển thành công", 16, 25);
       ctx.fillStyle = "rgba(148, 163, 184, 0.82)";
-      ctx.font = "11px Inter, sans-serif";
+      ctx.font = simulationCanvasFont("11px");
       ctx.fillText("Khí nhận nhiệt và đẩy nút bấc ra khỏi bình", 16, 43);
 
       // Bình thủy tinh kín và cổ bình.
@@ -148,28 +150,28 @@ export function CorkPopCanvas({ params, running, resetSignal, stepSignal, onSnap
         ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(corkX, corkY, 25, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       }
       if (currentParams.showLabels) {
-        ctx.fillStyle = "rgba(255, 247, 237, 0.92)"; ctx.font = "600 11px Inter, sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "rgba(255, 247, 237, 0.92)"; ctx.font = simulationCanvasFont("11px", 500); ctx.textAlign = "left";
         ctx.fillText("Nút bấc", corkX + corkW / 2 + 8, corkY + 4);
       }
 
       if (snapshot.popped) {
         ctx.strokeStyle = "rgba(251, 146, 60, 0.75)"; ctx.lineWidth = 1.5;
         for (let i = 0; i < 3; i += 1) { ctx.beginPath(); ctx.moveTo(corkX - 16 + i * 14, neckTop + 8); ctx.quadraticCurveTo(corkX - 28 + i * 20, neckTop - 18, corkX - 12 + i * 22, neckTop - 34); ctx.stroke(); }
-        ctx.fillStyle = "#fb7185"; ctx.font = "600 12px Inter, sans-serif"; ctx.textAlign = "center"; ctx.fillText("Khí thực hiện công lên nút", corkX, Math.max(62, neckTop - 55));
+        ctx.fillStyle = "#fb7185"; ctx.font = simulationCanvasFont("12px", 500); ctx.textAlign = "center"; ctx.fillText("Khí thực hiện công lên nút", corkX, Math.max(62, neckTop - 55));
       }
 
       // Bếp nhiệt tối giản.
       ctx.strokeStyle = "rgba(148, 163, 184, 0.8)"; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.moveTo(bodyX + bodyW * 0.18, bodyBottom + 18); ctx.lineTo(bodyX + bodyW * 0.82, bodyBottom + 18); ctx.stroke();
       ctx.fillStyle = "#fb923c"; ctx.beginPath(); ctx.moveTo(corkX, bodyBottom + 45); ctx.bezierCurveTo(corkX - 22, bodyBottom + 24, corkX - 10, bodyBottom + 10, corkX, bodyBottom - 4); ctx.bezierCurveTo(corkX + 10, bodyBottom + 10, corkX + 22, bodyBottom + 24, corkX, bodyBottom + 45); ctx.fill();
-      ctx.fillStyle = "rgba(255, 247, 237, 0.75)"; ctx.font = "10px Inter, sans-serif"; ctx.textAlign = "center"; ctx.fillText("Nguồn nhiệt", corkX, bodyBottom + 62);
+      ctx.fillStyle = "rgba(255, 247, 237, 0.75)"; ctx.font = simulationCanvasFont("10px"); ctx.textAlign = "center"; ctx.fillText("Nguồn nhiệt", corkX, bodyBottom + 62);
 
       // Nhiệt kế cạnh bình.
       const thermometerX = bodyX - 22;
       ctx.strokeStyle = "rgba(251, 113, 133, 0.86)"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(thermometerX, bodyTop + 35); ctx.lineTo(thermometerX, bodyBottom - 22); ctx.stroke();
       ctx.fillStyle = "#fb7185"; ctx.beginPath(); ctx.arc(thermometerX, bodyBottom - 18, 6, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "rgba(226, 232, 240, 0.74)"; ctx.font = "10px Inter, sans-serif"; ctx.textAlign = "center"; ctx.fillText("T", thermometerX, bodyTop + 22);
+      ctx.fillStyle = "rgba(226, 232, 240, 0.74)"; ctx.font = simulationCanvasFont("10px"); ctx.textAlign = "center"; ctx.fillText("T", thermometerX, bodyTop + 22);
 
       // Gauge áp suất.
       const gaugeX = Math.min(size.width - 54, bodyX + bodyW + 48);
@@ -178,7 +180,7 @@ export function CorkPopCanvas({ params, running, resetSignal, stepSignal, onSnap
       ctx.strokeStyle = "rgba(148, 163, 184, 0.5)"; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(gaugeX, gaugeY, 28, Math.PI * 0.75, Math.PI * 2.25); ctx.stroke();
       ctx.strokeStyle = pressureRatio > 0.8 ? "#fb7185" : "#67e8f9"; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(gaugeX, gaugeY, 28, Math.PI * 0.75, Math.PI * (0.75 + 1.5 * pressureRatio)); ctx.stroke();
       const needleAngle = Math.PI * (0.75 + 1.5 * pressureRatio); ctx.strokeStyle = "#fed7aa"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(gaugeX, gaugeY); ctx.lineTo(gaugeX + Math.cos(needleAngle) * 22, gaugeY + Math.sin(needleAngle) * 22); ctx.stroke();
-      ctx.fillStyle = "rgba(226, 232, 240, 0.8)"; ctx.font = "10px Inter, sans-serif"; ctx.textAlign = "center"; ctx.fillText("P", gaugeX, gaugeY + 43); ctx.fillText(`${snapshot.pressure.toFixed(0)} kPa`, gaugeX, gaugeY + 56);
+      ctx.fillStyle = "rgba(226, 232, 240, 0.8)"; ctx.font = simulationCanvasFont("10px"); ctx.textAlign = "center"; ctx.fillText("P", gaugeX, gaugeY + 43); ctx.fillText(`${snapshot.pressure.toFixed(0)} kPa`, gaugeX, gaugeY + 56);
 
       if (currentParams.showCorkForce) { ctx.fillStyle = "#fbbf24"; ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace"; ctx.fillText(`F = ${snapshot.force.toFixed(2)} N`, gaugeX, gaugeY - 43); }
 
@@ -192,7 +194,7 @@ export function CorkPopCanvas({ params, running, resetSignal, stepSignal, onSnap
       // gọn, còn các con số chi tiết nằm trong panel bên phải.
       const energyY = size.height - 22; const energyW = Math.max(100, size.width - 28); const q = Math.max(1, snapshot.heatAdded); const u = Math.max(0, snapshot.internalEnergy); const a = Math.max(0, snapshot.work); const totalEnergy = Math.max(q, u + a, 1);
       ctx.fillStyle = "rgba(148, 163, 184, 0.2)"; ctx.fillRect(14, energyY - 7, energyW, 7); ctx.fillStyle = "#fb923c"; ctx.fillRect(14, energyY - 7, energyW * Math.min(1, q / totalEnergy), 7); ctx.fillStyle = "#67e8f9"; ctx.fillRect(14, energyY - 7, energyW * Math.min(1, u / totalEnergy), 4); ctx.fillStyle = "#fbbf24"; ctx.fillRect(14, energyY - 3, energyW * Math.min(1, a / totalEnergy), 3);
-      ctx.fillStyle = "rgba(226, 232, 240, 0.7)"; ctx.font = "9px Inter, sans-serif"; ctx.fillText("Q nhiệt", 14, energyY - 11); ctx.fillText("U nội năng", Math.min(size.width - 74, 14 + energyW * 0.45), energyY - 11); ctx.textAlign = "right"; ctx.fillText("A công cơ học", size.width - 14, energyY - 11);
+      ctx.fillStyle = "rgba(226, 232, 240, 0.7)"; ctx.font = simulationCanvasFont("9px"); ctx.fillText("Q nhiệt", 14, energyY - 11); ctx.fillText("U nội năng", Math.min(size.width - 74, 14 + energyW * 0.45), energyY - 11); ctx.textAlign = "right"; ctx.fillText("A công cơ học", size.width - 14, energyY - 11);
     };
 
     const recordStep = () => {

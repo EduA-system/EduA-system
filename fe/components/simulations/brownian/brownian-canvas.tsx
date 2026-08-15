@@ -1,5 +1,7 @@
 "use client";
 
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrownianRuntime, getPhysicsDt, getWorldBounds } from "./physics";
 import type { BrownianParams, BrownianSnapshot, BrownianViewMode } from "./types";
@@ -209,7 +211,7 @@ export function BrownianCanvas({
 
       if (currentParams.showLabel) {
         ctx.fillStyle = "rgba(255, 247, 237, 0.92)";
-        ctx.font = "600 12px Inter, sans-serif";
+        ctx.font = simulationCanvasFont("12px", 500);
         ctx.fillText("Hạt phấn hoa", pollen.x + pollenRadius + 8, pollen.y - pollenRadius - 8);
       }
       ctx.fillStyle = "rgba(226, 232, 240, 0.78)";
@@ -220,7 +222,7 @@ export function BrownianCanvas({
       if (currentParams.showDragForce) drawArrow(pollen.x, pollen.y, runtime.dragForce.x, runtime.dragForce.y, "#67e8f9", 2e8);
       if (currentParams.showMolecules && viewMode === "micro") {
         ctx.fillStyle = "rgba(165, 243, 252, 0.78)";
-        ctx.font = "11px Inter, sans-serif";
+        ctx.font = simulationCanvasFont("11px");
         ctx.fillText("Phân tử nước", 16, size.height - 16);
       }
     };

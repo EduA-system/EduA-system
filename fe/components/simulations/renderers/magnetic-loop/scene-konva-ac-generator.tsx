@@ -1,5 +1,7 @@
 "use client";
 
+import { getSimulationFontFamily } from "@/components/simulations/shared/typography";
+
 import { useEffect, useRef } from "react";
 import Konva from "konva";
 import type { MagneticLoopScene } from "../../engines/magnetic-loop/types";
@@ -132,8 +134,8 @@ export function SceneKonvaAcGenerator({
         text: pole,
         align: "center",
         fontSize: Math.min(62, width * 0.42),
-        fontStyle: "bold",
-        fontFamily: "Arial",
+        fontStyle: "normal",
+        fontFamily: getSimulationFontFamily(),
         fill: "#f4f8fb",
         shadowColor: "#020617",
         shadowBlur: 5,
@@ -147,7 +149,7 @@ export function SceneKonvaAcGenerator({
         text: pole === "N" ? "CỰC BẮC" : "CỰC NAM",
         align: "center",
         fontSize: 11,
-        fontStyle: "bold",
+        fontStyle: "normal",
         fill: MUTED,
         listening: false,
       }));
@@ -171,7 +173,7 @@ export function SceneKonvaAcGenerator({
         listening: false,
       }));
     }
-    const fieldLabel = new Konva.Text({ x: center.x - 10, y: magnetTop - 30, text: "B", fontSize: 20, fontStyle: "bold", fill: FIELD, visible: fieldVisible, listening: false });
+    const fieldLabel = new Konva.Text({ x: center.x - 10, y: magnetTop - 30, text: "B", fontSize: 20, fontStyle: "normal", fill: FIELD, visible: fieldVisible, listening: false });
     const fieldNotationArrow = new Konva.Arrow({ points: [center.x - 12, magnetTop - 33, center.x + 10, magnetTop - 33], stroke: FIELD, fill: FIELD, strokeWidth: 1.4, pointerLength: 4, pointerWidth: 4, visible: fieldVisible, listening: false });
     layer.add(fieldLabel, fieldNotationArrow);
 
@@ -183,24 +185,24 @@ export function SceneKonvaAcGenerator({
 
     const frame = new Konva.Line({ points: [], closed: true, stroke: COPPER, strokeWidth: 6, lineCap: "round", lineJoin: "round", shadowColor: COPPER, shadowBlur: 8, shadowOpacity: 0.32, listening: false });
     layer.add(frame);
-    const labels = ["M", "N", "P", "Q"].map((text) => new Konva.Text({ text, fontSize: 14, fontStyle: "bold", fill: INK, listening: false }));
+    const labels = ["M", "N", "P", "Q"].map((text) => new Konva.Text({ text, fontSize: 14, fontStyle: "normal", fill: INK, listening: false }));
     layer.add(...labels);
 
     const currentLeft = new Konva.Arrow({ points: [], stroke: CURRENT, fill: CURRENT, strokeWidth: 3, pointerLength: 7, pointerWidth: 7 });
     const currentRight = new Konva.Arrow({ points: [], stroke: CURRENT, fill: CURRENT, strokeWidth: 3, pointerLength: 7, pointerWidth: 7 });
     const forceLeft = new Konva.Arrow({ points: [], stroke: FORCE, fill: FORCE, strokeWidth: 3.5, pointerLength: 9, pointerWidth: 9 });
     const forceRight = new Konva.Arrow({ points: [], stroke: FORCE, fill: FORCE, strokeWidth: 3.5, pointerLength: 9, pointerWidth: 9 });
-    const forceLeftLabel = new Konva.Text({ text: "F_MN", fontSize: 13, fontStyle: "bold", fill: FORCE });
-    const forceRightLabel = new Konva.Text({ text: "F_QP", fontSize: 13, fontStyle: "bold", fill: FORCE });
-    const forceLeftSymbol = new Konva.Text({ fontSize: 23, fontStyle: "bold", fill: FORCE });
-    const forceRightSymbol = new Konva.Text({ fontSize: 23, fontStyle: "bold", fill: FORCE });
+    const forceLeftLabel = new Konva.Text({ text: "F_MN", fontSize: 13, fontStyle: "normal", fill: FORCE });
+    const forceRightLabel = new Konva.Text({ text: "F_QP", fontSize: 13, fontStyle: "normal", fill: FORCE });
+    const forceLeftSymbol = new Konva.Text({ fontSize: 23, fontStyle: "normal", fill: FORCE });
+    const forceRightSymbol = new Konva.Text({ fontSize: 23, fontStyle: "normal", fill: FORCE });
     layer.add(currentLeft, currentRight, forceLeft, forceRight, forceLeftLabel, forceRightLabel, forceLeftSymbol, forceRightSymbol);
 
     const normal = new Konva.Arrow({ points: [], stroke: "#d8b4fe", fill: "#d8b4fe", strokeWidth: 2.2, pointerLength: 7, pointerWidth: 7 });
-    const normalLabel = new Konva.Text({ text: "n", fontSize: 14, fontStyle: "bold", fill: "#d8b4fe" });
+    const normalLabel = new Konva.Text({ text: "n", fontSize: 14, fontStyle: "normal", fill: "#d8b4fe" });
     const normalNotationArrow = new Konva.Arrow({ points: [], stroke: "#d8b4fe", fill: "#d8b4fe", strokeWidth: 1.2, pointerLength: 3.5, pointerWidth: 3.5 });
     const angleArc = new Konva.Line({ points: [], stroke: "#c084fc", strokeWidth: 1.8, lineCap: "round", listening: false });
-    const angleLabel = new Konva.Text({ text: "α", fontSize: 15, fontStyle: "bold", fill: "#c084fc", listening: false });
+    const angleLabel = new Konva.Text({ text: "α", fontSize: 15, fontStyle: "normal", fill: "#c084fc", listening: false });
     layer.add(angleArc, angleLabel, normal, normalLabel, normalNotationArrow);
 
     const ringUpperY = shaftBottom - 40;
@@ -212,9 +214,9 @@ export function SceneKonvaAcGenerator({
     const ringHighlights = ringYs.map(() => new Konva.Circle({ radius: 3.5, fill: "#fff7ae", shadowColor: COPPER_LIGHT, shadowBlur: 7, shadowOpacity: 0.8 }));
     layer.add(...ringHighlights);
     layer.add(
-      new Konva.Text({ x: center.x + 34, y: ringUpperY - 17, text: "2 VÀNH TRƯỢT", fontSize: 10, fontStyle: "bold", fill: COPPER_LIGHT, listening: false }),
+      new Konva.Text({ x: center.x + 34, y: ringUpperY - 17, text: "2 VÀNH TRƯỢT", fontSize: 10, fontStyle: "normal", fill: COPPER_LIGHT, listening: false }),
       new Konva.Line({ points: [center.x + 31, ringUpperY - 4, center.x + 18, ringUpperY], stroke: COPPER_LIGHT, strokeWidth: 1.3, listening: false }),
-      new Konva.Text({ x: center.x - 132, y: ringLowerY + 18, text: "CHỔI TIẾP ĐIỆN", fontSize: 10, fontStyle: "bold", fill: "#cbd5e1", listening: false }),
+      new Konva.Text({ x: center.x - 132, y: ringLowerY + 18, text: "CHỔI TIẾP ĐIỆN", fontSize: 10, fontStyle: "normal", fill: "#cbd5e1", listening: false }),
       new Konva.Line({ points: [center.x - 34, ringLowerY + 19, center.x - 26, ringUpperY], stroke: "#cbd5e1", strokeWidth: 1.3, listening: false }),
     );
 
@@ -244,20 +246,20 @@ export function SceneKonvaAcGenerator({
       listening: false,
     }));
     const load = new Konva.Rect({ x: loadX - 58, y: loadY - 40, width: 116, height: 46, fill: "#134e4a", stroke: "#5eead4", strokeWidth: 2, cornerRadius: 9, shadowColor: "#2dd4bf", shadowBlur: 14, shadowOpacity: 0.28 });
-    const loadText = new Konva.Text({ x: loadX - 58, y: loadY - 31, width: 116, align: "center", text: `TẢI ${scene.loadResistance.toFixed(0)} Ω`, fontSize: 13, fontStyle: "bold", fill: "#ccfbf1" });
+    const loadText = new Konva.Text({ x: loadX - 58, y: loadY - 31, width: 116, align: "center", text: `TẢI ${scene.loadResistance.toFixed(0)} Ω`, fontSize: 13, fontStyle: "normal", fill: "#ccfbf1" });
     layer.add(load, loadText);
 
     const graph = { x: W - graphW + 8, y: 26, width: graphW - 22, height: Math.min(205, H * 0.28) };
     layer.add(new Konva.Rect({ x: graph.x, y: graph.y, width: graph.width, height: graph.height, fill: "#03090f", stroke: "#28445b", strokeWidth: 1.2, cornerRadius: 12, shadowColor: "#020617", shadowBlur: 18, shadowOpacity: 0.45 }));
-    layer.add(new Konva.Text({ x: graph.x + 14, y: graph.y + 12, text: "SUẤT ĐIỆN ĐỘNG e(t)", fontSize: 11, fontStyle: "bold", fill: MUTED }));
+    layer.add(new Konva.Text({ x: graph.x + 14, y: graph.y + 12, text: "SUẤT ĐIỆN ĐỘNG e(t)", fontSize: 11, fontStyle: "normal", fill: MUTED }));
     const gx0 = graph.x + 30;
     const gy0 = graph.y + graph.height * 0.55;
     const gx1 = graph.x + graph.width - 12;
     layer.add(
       new Konva.Arrow({ points: [gx0, graph.y + graph.height - 20, gx0, graph.y + 32], stroke: "#dbeafe", fill: "#dbeafe", strokeWidth: 1.5, pointerLength: 6, pointerWidth: 6 }),
       new Konva.Arrow({ points: [gx0, gy0, gx1, gy0], stroke: "#dbeafe", fill: "#dbeafe", strokeWidth: 1.5, pointerLength: 6, pointerWidth: 6 }),
-      new Konva.Text({ x: gx0 - 17, y: graph.y + 27, text: "e", fontSize: 13, fontStyle: "bold", fill: INK }),
-      new Konva.Text({ x: gx1 - 6, y: gy0 + 6, text: "t", fontSize: 13, fontStyle: "bold", fill: INK }),
+      new Konva.Text({ x: gx0 - 17, y: graph.y + 27, text: "e", fontSize: 13, fontStyle: "normal", fill: INK }),
+      new Konva.Text({ x: gx1 - 6, y: gy0 + 6, text: "t", fontSize: 13, fontStyle: "normal", fill: INK }),
     );
     const waveform = new Konva.Line({ points: [], stroke: "#86efac", strokeWidth: 2.5, lineCap: "round", lineJoin: "round", shadowColor: "#4ade80", shadowBlur: 8, shadowOpacity: 0.45 });
     const waveDot = new Konva.Circle({ radius: 4.5, fill: "#fef08a", stroke: "#facc15", strokeWidth: 1, shadowColor: "#fde047", shadowBlur: 9, shadowOpacity: 0.8 });
@@ -265,7 +267,7 @@ export function SceneKonvaAcGenerator({
     layer.add(waveform, waveDot, graphValue);
 
     const infoPanel = new Konva.Rect({ x: 16, y: 16, width: Math.min(255, apparatusRight * 0.35), height: 116, fill: "#08141f", opacity: 0.92, stroke: "#29465c", strokeWidth: 1, cornerRadius: 12, shadowColor: "#020617", shadowBlur: 14, shadowOpacity: 0.5 });
-    const info = new Konva.Text({ x: 30, y: 29, width: Math.min(227, apparatusRight * 0.31), fontSize: 12, lineHeight: 1.52, fill: INK, fontFamily: "Arial" });
+    const info = new Konva.Text({ x: 30, y: 29, width: Math.min(227, apparatusRight * 0.31), fontSize: 12, lineHeight: 1.52, fill: INK, fontFamily: getSimulationFontFamily() });
     layer.add(infoPanel, info);
 
     layer.add(new Konva.Text({

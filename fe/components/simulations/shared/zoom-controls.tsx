@@ -49,7 +49,7 @@ export function ZoomControls({
         >
           <ZoomOut className="h-4 w-4" strokeWidth={2} />
         </ZoomButton>
-        <span className="w-11 select-none text-center font-mono text-[11px] text-slate-300">{percent}%</span>
+        <span className="w-11 select-none text-center font-sans text-[11px] text-slate-300">{percent}%</span>
         <ZoomButton title="Phóng to" onClick={onZoomIn}>
           <ZoomIn className="h-4 w-4" strokeWidth={2} />
         </ZoomButton>

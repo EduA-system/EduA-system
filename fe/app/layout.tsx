@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Be_Vietnam_Pro, Merriweather } from "next/font/google";
+import { Inter, Merriweather } from "next/font/google";
 import localFont from "next/font/local";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { AppRouteGuard } from "@/lib/auth/AppRouteGuard";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 
-const beVietnamPro = Be_Vietnam_Pro({
+const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700"],
@@ -44,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${beVietnamPro.variable} ${merriweather.variable} ${linuxLibertine.variable} h-full antialiased`}
+      className={`${inter.variable} ${merriweather.variable} ${linuxLibertine.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <AuthProvider><AppRouteGuard>{children}</AppRouteGuard></AuthProvider>

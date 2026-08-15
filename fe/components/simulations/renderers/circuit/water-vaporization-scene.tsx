@@ -1,4 +1,6 @@
 "use client";
+
+import { simulationCanvasFont } from "@/components/simulations/shared/typography";
 import { memo, useEffect, useRef } from "react";
 import {
   createWaterVaporizationState,
@@ -238,7 +240,7 @@ export const WaterVaporizationScene = memo(function WaterVaporizationScene({
       ctx.fill();
       ctx.fillStyle = "#172235";
       ctx.textAlign = "center";
-      ctx.font = "700 13px Inter";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText(`${(snap.collectedMass * 1000).toFixed(2)} g`, 575, 486);
       // Biến áp nguồn và oát kế, dây vuông góc gọn.
       ctx.fillStyle = "#132a40";
@@ -249,7 +251,7 @@ export const WaterVaporizationScene = memo(function WaterVaporizationScene({
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = "#e2e8f0";
-      ctx.font = "700 13px Inter";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("BIẾN ÁP NGUỒN", 750, 196);
       ctx.fillStyle = "#0f172a";
       ctx.beginPath();
@@ -267,7 +269,7 @@ export const WaterVaporizationScene = memo(function WaterVaporizationScene({
       ctx.arc(795, 270, 7, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#cbd5e1";
-      ctx.font = "600 11px Inter";
+      ctx.font = simulationCanvasFont("11px", 500);
       ctx.fillText(`P = ${snap.power.toFixed(1)} W`, 750, 286);
       wire(
         [
@@ -289,7 +291,7 @@ export const WaterVaporizationScene = memo(function WaterVaporizationScene({
       );
       ctx.fillStyle = "#e2e8f0";
       ctx.textAlign = "left";
-      ctx.font = "600 13px Inter";
+      ctx.font = simulationCanvasFont("13px", 500);
       ctx.fillText("Nhiệt lượng kế", 285, 382);
       ctx.fillStyle = "#67e8f9";
       ctx.fillText(`t = ${state.time.toFixed(1)} s`, 690, 330);
