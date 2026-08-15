@@ -247,45 +247,45 @@ function LibraryScreen() {
   };
   const createPath = createPaths[type];
   const createTile = createPath
-    ? <Link href={createPath} className="group flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#e6b5a2] bg-[#fffaf7] p-6 text-center transition hover:border-[#e8724a] hover:bg-[#fff4ee]"><span className="flex size-12 items-center justify-center rounded-full bg-[#fbe1d5] text-3xl font-light leading-none text-[#c65838] transition group-hover:scale-110 group-hover:bg-[#e8724a] group-hover:text-white">+</span><span className="mt-4 font-semibold text-[#75402e]">Tạo {contentMeta[type].label.toLowerCase()} mới</span><span className="mt-1 text-sm text-stone-500">Bắt đầu một nội dung mới</span></Link>
-    : <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50 p-6 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-stone-200 text-3xl font-light leading-none text-stone-500">+</span><span className="mt-4 font-semibold text-stone-600">Tạo bài kiểm tra</span><span className="mt-1 text-sm text-stone-500">Tính năng đang được phát triển</span></div>;
+    ? <Link href={createPath} className="group flex aspect-[4/3] flex-col items-center justify-center rounded-[14px] border border-dashed border-[#d9a58f] bg-[#fffaf7] p-6 text-center transition hover:border-[#e8724a] hover:bg-[#fff4ee]"><span className="flex size-12 items-center justify-center rounded-full bg-[#fbe1d5] text-3xl font-light leading-none text-[#c65838] transition group-hover:scale-110 group-hover:bg-[#e8724a] group-hover:text-white">+</span><span className="mt-4 font-semibold text-[#75402e]">Tạo {contentMeta[type].label.toLowerCase()} mới</span><span className="mt-1 text-sm text-stone-500">Bắt đầu một nội dung mới</span></Link>
+    : <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-6 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-stone-200 text-3xl font-light leading-none text-stone-500">+</span><span className="mt-4 font-semibold text-stone-600">Tạo bài kiểm tra</span><span className="mt-1 text-sm text-stone-500">Tính năng đang được phát triển</span></div>;
 
   return (
-    <main className="min-h-screen bg-[#f5f1ec] text-[#2b2926]">
+    <main className="min-h-screen bg-white text-[#171717]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/library" />
-        <section className="min-w-0 flex-1 p-5 sm:p-8">
+        <section className="min-w-0 flex-1 bg-white px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
           <header>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#e8724a]">Content</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight">Thư viện của tôi</h1>
-              <p className="mt-2 text-sm text-[#6b6b6b]">{total} nội dung trong không gian riêng của bạn</p>
+              <p className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#d97757]"><BookOpen aria-hidden className="size-3.5" /> Không gian học liệu</p>
+              <h1 className="mt-3 font-libertine text-[42px] font-normal leading-[1.08] text-[#1f1f1f] sm:text-[48px]">Thư viện của tôi</h1>
+              <p className="mt-3 text-[13px] leading-[23px] text-[#6b6b6b]">{total} nội dung trong không gian riêng của bạn</p>
             </div>
           </header>
 
-          <div className="mt-7 flex overflow-x-auto border-b border-stone-300" role="tablist" aria-label="Loại nội dung">
+          <div className="mt-9 flex overflow-x-auto border-b border-[#d8d1c9]" role="tablist" aria-label="Loại nội dung">
             {tabs.map(([label, value]) => (
               <button key={value} type="button" role="tab" aria-selected={type === value} onClick={() => setType(value)} className={`shrink-0 border-b-2 px-3 py-3 text-sm transition ${type === value ? "border-[#e8724a] font-semibold text-[#2b2926]" : "border-transparent text-[#6b6b6b] hover:text-[#2b2926]"}`}>{label}</button>
             ))}
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <input aria-label="Tìm theo tiêu đề" value={q} onChange={(event) => setQ(event.target.value)} placeholder="Tìm theo tiêu đề..." className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-[#e8724a] sm:w-56" />
+            <input aria-label="Tìm theo tiêu đề" value={q} onChange={(event) => setQ(event.target.value)} placeholder="Tìm theo tiêu đề..." className="w-full rounded-xl border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-[#e8724a] focus:ring-2 focus:ring-[#fbe1d5] sm:w-64" />
             {subjectRestriction ? (
-              <div className="rounded-xl border border-stone-300 bg-[#f1ede7] px-3 py-2.5 text-sm text-[#4b453f]">
+              <div className="rounded-xl border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-sm text-[#4b453f]">
                 {SUBJECT_LABELS[subjectRestriction]}
               </div>
             ) : (
-              <select aria-label="Lọc theo môn" value={subject} onChange={(event) => setSubject(event.target.value)} className="rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="">Tất cả môn</option><option value="MATH">Toán</option><option value="CHEMISTRY">Hóa học</option><option value="PHYSICS">Vật lý</option></select>
+              <select aria-label="Lọc theo môn" value={subject} onChange={(event) => setSubject(event.target.value)} className="rounded-xl border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="">Tất cả môn</option><option value="MATH">Toán</option><option value="CHEMISTRY">Hóa học</option><option value="PHYSICS">Vật lý</option></select>
             )}
-            <select aria-label="Sắp xếp nội dung" value={sort} onChange={(event) => setSort(event.target.value)} className="rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="updatedAt">Mới cập nhật</option><option value="title">Tên A–Z</option></select>
+            <select aria-label="Sắp xếp nội dung" value={sort} onChange={(event) => setSort(event.target.value)} className="rounded-xl border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-sm outline-none focus:border-[#e8724a]"><option value="updatedAt">Mới cập nhật</option><option value="title">Tên A–Z</option></select>
             {!loading && <p className="text-sm text-stone-500">Hiển thị {items.length} / {total} nội dung</p>}
           </div>
 
           {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-          {loading ? <div className="mt-6 grid grid-cols-3 gap-5">{[1, 2, 3].map((item) => <div key={item} className="h-80 animate-pulse rounded-2xl bg-[#e8e2db]" />)}</div>
-            : items.length === 0 ? <div className="mt-6 grid grid-cols-3 gap-5">{createTile}<div className="col-span-2 flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-white p-8 text-center text-sm text-stone-600">Chưa có {emptyContentLabel[type]} trong thư viện cá nhân.</div></div>
-            : <div className="mt-6 grid grid-cols-3 gap-5">{createTile}{items.map((content) => {
+          {loading ? <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-80 animate-pulse rounded-[14px] bg-[#f0ece7]" />)}</div>
+            : items.length === 0 ? <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{createTile}<div className="flex min-h-[220px] items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-8 text-center text-sm text-stone-600 sm:col-span-1 xl:col-span-2">Chưa có {emptyContentLabel[type]} trong thư viện cá nhân.</div></div>
+            : <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{createTile}{items.map((content) => {
               const meta = contentMeta[content.type];
               const Icon = meta.icon;
               const weeklyTaskStatus = content.type === "LESSON_PLAN" ? weeklyTaskStatusByContentId.get(content.id) : undefined;
@@ -294,10 +294,10 @@ function LibraryScreen() {
               const WeeklyStatusIcon = weeklyStatus?.icon;
               const grade = gradeLabel(content.grade);
               const isPhysicsSimulation = content.type === "SIMULATION" && content.subject === "PHYSICS";
-              return <article key={content.id} className="group relative min-w-0 rounded-[26px] border border-[#dfe7eb] bg-white shadow-[0_8px_24px_rgba(43,41,38,0.10)] transition duration-200 hover:-translate-y-1 hover:border-[#cbdde4] hover:shadow-[0_14px_30px_rgba(43,41,38,0.16)]">
-                <div className="flex h-full flex-col overflow-visible rounded-[26px] bg-[#f8fbfc] p-3">
+              return <article key={content.id} className="group relative min-w-0 rounded-[14px] border border-[#d8d1c9] bg-white transition duration-200 hover:-translate-y-0.5 hover:border-[#c9bdb3] hover:shadow-[0_10px_24px_rgba(43,41,38,0.08)]">
+                <div className="flex h-full flex-col overflow-visible rounded-[14px] bg-white p-3">
                   <div className="flex items-center gap-2 px-1 pb-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#dff8f3] text-[#167b70]"><Icon aria-hidden className="size-5" /></div>
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#fff7f1] text-[#c65838]"><Icon aria-hidden className="size-5" /></div>
                     <div className="flex min-w-0 flex-1 items-center gap-1.5">
                       <p className="min-w-0 truncate text-sm font-bold text-[#363a43]">{meta.label} {subjectLabel(content.subject)}</p>
                       {grade && <span className="shrink-0 rounded-full bg-[#edf4ff] px-2 py-1 text-[10px] font-semibold text-[#2f5f9b]">{grade}</span>}
@@ -305,11 +305,11 @@ function LibraryScreen() {
                     {!isPhysicsSimulation && <span title={hubStatus.title} className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-semibold ${hubStatus.className}`}><hubStatus.icon className="size-3.5" />Hub: {hubStatus.label}</span>}
                     {!isPhysicsSimulation && content.status !== "APPROVED" && <div className="group/approval relative"><button type="button" aria-label={content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"} onClick={() => requestAction(content, content.status === "SUBMITTED" ? "unsubmit" : "submit")} className="flex size-9 items-center justify-center rounded-xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900">{content.status === "SUBMITTED" ? <Undo2 className="size-4" /> : <Send className="size-4" />}</button><span role="tooltip" className="pointer-events-none absolute right-0 top-11 z-20 w-max max-w-48 rounded-lg bg-[#292d3b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition group-hover/approval:opacity-100">{content.status === "SUBMITTED" ? "Thu hồi khỏi hàng chờ duyệt" : "Gửi duyệt lên Hub cộng đồng"}</span></div>}
                   </div>
-                  <Link href={open(content)} aria-label={`Mở ${content.title}`} className={`relative block aspect-[16/7] overflow-hidden rounded-2xl border border-[#d7e6eb] bg-gradient-to-br ${meta.color}`}>
+                  <Link href={open(content)} aria-label={`Mở ${content.title}`} className={`relative block aspect-[16/7] overflow-hidden rounded-[10px] border border-[#e2dbd3] bg-gradient-to-br ${meta.color}`}>
                     {content.thumbnailUrl ? <img src={content.thumbnailUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" /> : <div className="flex h-full flex-col items-center justify-center gap-4 text-[#275c68]"><span className="flex size-20 items-center justify-center rounded-[28px] bg-white/60 shadow-sm"><Icon aria-hidden className="size-10" /></span><span className="text-xs font-bold uppercase tracking-[0.2em]">{meta.label}</span></div>}
                   </Link>
-                  <div className="px-2 pb-1 pt-2"><Link href={open(content)} className="line-clamp-1 text-base font-bold leading-5 text-[#30343d] transition hover:text-sky-700 hover:underline">{content.title}</Link></div>
-                  <div className="mt-auto flex items-center gap-2 rounded-2xl bg-white p-2 shadow-[0_2px_8px_rgba(43,41,38,0.08)]">
+                  <div className="px-2 pb-2 pt-3"><Link href={open(content)} className="line-clamp-1 text-base font-semibold leading-5 text-[#1f1f1f] transition hover:text-[#c65838]">{content.title}</Link></div>
+                  <div className="mt-auto flex items-center gap-2 border-t border-[#eee7df] p-2 pt-3">
                     <div className="min-w-0 flex-1 px-2">
                       <div className="flex flex-wrap items-end gap-2">
                         <div className="min-w-0">
@@ -324,7 +324,7 @@ function LibraryScreen() {
                         )}
                       </div>
                     </div>
-                    <Link href={open(content)} className="inline-flex items-center justify-center rounded-xl border border-[#1f2431] bg-[#292d3b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#141825]">Mở</Link><div className="relative"><button type="button" aria-label={`Thao tác với ${content.title}`} aria-expanded={menuId === content.id} onClick={() => setMenuId(menuId === content.id ? null : content.id)} className="flex size-11 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"><MoreHorizontal className="size-5" /></button>{menuId === content.id && <div className="absolute bottom-12 right-0 z-10 w-36 rounded-xl border border-stone-200 bg-white p-1 shadow-lg"><button type="button" onClick={() => openRename(content)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-stone-100"><Pencil className="size-3.5" />Đổi tên</button><button type="button" onClick={() => requestAction(content, "delete")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50"><Trash2 className="size-3.5" />Xóa</button></div>}</div>
+                    <Link href={open(content)} className="inline-flex items-center justify-center rounded-xl bg-[#e8724a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#d96a42]">Mở</Link><div className="relative"><button type="button" aria-label={`Thao tác với ${content.title}`} aria-expanded={menuId === content.id} onClick={() => setMenuId(menuId === content.id ? null : content.id)} className="flex size-11 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"><MoreHorizontal className="size-5" /></button>{menuId === content.id && <div className="absolute bottom-12 right-0 z-10 w-36 rounded-xl border border-stone-200 bg-white p-1 shadow-lg"><button type="button" onClick={() => openRename(content)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-stone-100"><Pencil className="size-3.5" />Đổi tên</button><button type="button" onClick={() => requestAction(content, "delete")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50"><Trash2 className="size-3.5" />Xóa</button></div>}</div>
                   </div>
                 </div>
               </article>;

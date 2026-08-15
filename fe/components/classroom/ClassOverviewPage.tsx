@@ -47,7 +47,7 @@ export function ClassOverviewPage() {
 
   return (
     <ClassHubFrame classId={classId} active="overview" header={<div><h1 className="font-libertine text-[40px] font-normal leading-[1.02] tracking-[-0.025em] sm:text-[52px]">Tổng quan lớp</h1><p className="mt-3 text-[14px] leading-6 text-[#6b6b6b]">Thông tin, hoạt động và tài nguyên của lớp học.</p></div>}>
-      <div className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-4">
+      <div className="hidden">
         <label className="block text-[12px] font-medium text-[#6b6b6b] sm:max-w-[340px]">
           Chuyển lớp nhanh
           <select value={classId} onChange={handleSelectClass} className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition focus:border-[#d97757]">

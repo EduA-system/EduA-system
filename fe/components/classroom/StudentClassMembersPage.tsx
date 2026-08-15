@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowLeft, Eye, Loader2, Users } from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2, Users } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
@@ -25,7 +25,7 @@ function initials(name: string): string {
 }
 
 export function StudentClassMembersPage() {
-  const { authFetch, user } = useAuth();
+  const { authFetch } = useAuth();
   const classId = useSearchParams().get("classId") ?? "";
   const [detail, setDetail] = useState<ClassDetail | null>(null);
   const [members, setMembers] = useState<ClassMember[]>([]);
@@ -112,7 +112,6 @@ export function StudentClassMembersPage() {
                         <div key={member.id} className="flex items-center gap-3 border-b border-[#d8d1c9] py-3 last:border-0">
                           <span className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${AVATAR_COLORS[index % AVATAR_COLORS.length]}`}>{initials(name)}</span>
                           <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{name}</span>
-                          {member.studentId !== user?.id && <Link href={`/user-profile/${member.studentId}`} aria-label={`Xem thông tin của ${name}`} title={`Xem thông tin của ${name}`} className="rounded-lg p-2 text-[#5f5953] transition hover:bg-[#f5f1ec] hover:text-[#1f1f1f]"><Eye className="size-4" /></Link>}
                         </div>
                       );
                     })}

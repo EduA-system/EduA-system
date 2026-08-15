@@ -1,6 +1,7 @@
 import { CANVAS_W, CANVAS_H } from "../types";
 import type {
   TextElement,
+  LatexElement,
   ShapeElement,
   LineElement,
   ImageElement,
@@ -34,6 +35,26 @@ export function makeText(overrides?: Partial<TextElement>): TextElement {
     italic: false,
     color: "#1f1f1f",
     align: "left",
+    ...overrides,
+  };
+}
+
+export function makeLatex(overrides?: Partial<LatexElement>): LatexElement {
+  return {
+    id: "",
+    type: "latex",
+    x: CANVAS_W / 2 - 180,
+    y: CANVAS_H / 2 - 35,
+    w: 360,
+    h: 70,
+    rotation: 0,
+    zIndex: 0,
+    opacity: 1,
+    locked: false,
+    latex: "F = m \\cdot a",
+    fontSize: 28,
+    color: "#1f1f1f",
+    align: "center",
     ...overrides,
   };
 }
@@ -225,6 +246,7 @@ export function makeDraw(overrides?: Partial<DrawElement>): DrawElement {
 // Loại element mà SidePanel có thể chèn (giống EType cũ của /test-slide).
 export type AddType =
   | "text"
+  | "latex"
   | "rect"
   | "ellipse"
   | "line"
@@ -239,6 +261,8 @@ export function makeByType(type: AddType, extra?: ElementPatch): SlideElement {
   switch (type) {
     case "text":
       return apply(makeText());
+    case "latex":
+      return apply(makeLatex());
     case "rect":
       return apply(makeShape("rect"));
     case "ellipse":

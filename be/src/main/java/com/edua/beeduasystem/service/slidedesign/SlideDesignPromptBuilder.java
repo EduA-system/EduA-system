@@ -22,6 +22,7 @@ public class SlideDesignPromptBuilder {
     private static final String CONTENT_SLOTS_INSTRUCTION = """
             You are filling existing presentation placeholders. Return JSON only, never HTML.
             Use only facts supplied in the outline, allocate distinct content across repeated zones, and keep text Vietnamese.
+            Formula-zone text is rendered as LaTeX: when it contains a mathematical, physics, chemistry, or scientific formula, return valid LaTeX without $ delimiters (for example, \\frac{F}{m} or \\mathrm{H_2O}). In normal text zones, wrap every formula in a single $...$ pair so it renders inline.
             """;
 
     // ----------------------------------------------------------------
@@ -935,6 +936,8 @@ public class SlideDesignPromptBuilder {
                 .append("- Text must be Vietnamese and MUST fit within maxChars/maxLines for its slot — these are hard limits, not suggestions. Never exceed maxChars. Rewrite concisely (drop secondary detail, keep the single most essential fact) rather than going over the limit or ending mid-sentence.\n")
                 .append("- When a text slot contains 2 or more distinct facts, steps, causes, features, examples, or answers, return 2–4 short lines beginning with `• `; do not write one long paragraph. Keep a single-sentence definition, conclusion, or transition as prose.\n")
                 .append("- For image slots, text must be null and imagePrompt must be a specific English image prompt; do not provide an image URL.\n")
+                .append("- For zone=formula, return valid LaTeX only, without $ delimiters. Use LaTeX for mathematical, physics, chemistry, and scientific notation; for example \\frac{F}{m}, \\sqrt{x}, or \\mathrm{H_2O}.\n")
+                .append("- In every non-image, non-formula text zone, every mathematical, physics, chemistry, or scientific formula MUST be valid LaTeX wrapped in one $...$ pair. Keep prose outside the delimiters. Examples: $\\mathrm{C_6H_6 + HNO_3 \\rightarrow C_6H_5NO_2 + H_2O}$, $\\Delta H$, and $v = \\frac{s}{t}$. Do not use raw forms such as C6H6, HNO3, CH3, v=s/t, or -> when they are part of a formula.\n")
                 .append("- The generated illustration must contain NO text. Never ask for labels, captions, titles, legends, annotations, units, or letter/number symbols inside the image; describe the scene so shapes, arrows, and color carry the meaning.\n")
                 .append("- Text style is optional. fontSize must suit the zone, color must be one of ALLOWED COLORS, align is left/center/right.\n")
                 .append("- Return every requested slot and no other slot.\n\n")

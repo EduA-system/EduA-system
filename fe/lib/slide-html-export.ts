@@ -1,5 +1,6 @@
 import { CANVAS_H, CANVAS_W, type DashStyle, type Slide, type SlideElement } from "@/components/slide-editor/types";
 import { normalizedLetterSpacing } from "@/components/slide-editor/lib/text-spacing";
+import katex from "katex";
 
 export type HtmlExportWarning = { source: string; reason: string };
 export type OfflineHtmlExport = { html: string; warnings: HtmlExportWarning[] };
@@ -33,6 +34,10 @@ function textHtml(element: Extract<SlideElement, { type: "text" }>): string {
 function elementHtml(element: SlideElement, imageSources: Map<string, string>): string {
   if (element.hidden) return "";
   if (element.type === "text") return textHtml(element);
+  if (element.type === "latex") {
+    const style = `${baseStyle(element)}display:flex;align-items:center;justify-content:${element.align === "center" ? "center" : element.align === "right" ? "flex-end" : "flex-start"};color:${css(element.color)};font-size:${element.fontSize}px;overflow:hidden;`;
+    return `<div style="${style}">${katex.renderToString(element.latex || "\\text{Công thức}", { displayMode: true, output: "mathml", throwOnError: false, strict: "ignore" })}</div>`;
+  }
   if (element.type === "shape") {
     const radius = element.shape === "ellipse" ? "50%" : `${element.borderRadius}px`;
     const border = element.strokeW ? `${element.strokeW}px ${element.dashStyle === "dashed" ? "dashed" : element.dashStyle === "dotted" || element.dashStyle === "fine" ? "dotted" : "solid"} ${css(element.stroke)}` : "none";

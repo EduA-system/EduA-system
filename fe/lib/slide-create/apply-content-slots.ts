@@ -77,6 +77,8 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
     const fill = fills.get(element.contentSlot!);
     return element.type === "text"
       ? Boolean(fill?.text?.trim() || element.text.trim())
+      : element.type === "latex"
+        ? Boolean(fill?.text?.trim() || element.latex.trim())
       : element.type === "image"
         ? Boolean(fill?.imagePrompt?.trim() || element.imagePrompt?.trim())
         : element.type === "simulation"
@@ -96,6 +98,15 @@ export function applyContentSlots(elements: SlideElement[], response: SlideConte
   const filledElements = elements.map((element) => {
     const fill = element.contentSlot ? fills.get(element.contentSlot) : undefined;
     if (!fill) return element;
+
+    if (element.type === "latex") {
+      return {
+        ...element,
+        ...(fill.text != null ? { latex: fill.text.replace(/^\$+|\$+$/g, "").trim() } : {}),
+        ...(fill.style?.color ? { color: fill.style.color } : {}),
+        ...(fill.style?.align ? { align: fill.style.align } : {}),
+      };
+    }
 
     if (element.type === "text") {
       if (element.contentSlot === "header-1") return element;

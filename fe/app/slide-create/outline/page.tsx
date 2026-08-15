@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { DashboardIcon } from "@/components/ui/DashboardIcon";
 import { OutlineEditor } from "@/components/outline-editor/OutlineEditor";
 import { skeletonSlidesFromParts } from "@/components/slide-editor/lib/be-mapper";
 import { generateOutline, retryOutlineSessionSlide, startOutlineSession, type OutlinePart } from "@/lib/api/slides";
@@ -60,7 +61,7 @@ function OutlineSkeleton() {
     <div className="mx-auto max-w-4xl px-4 py-6" aria-busy="true" aria-label="Đang tạo outline cho slide">
       <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-[#efeef7]">
         <div
-          className="h-full rounded-full bg-[#8200db] transition-[width] duration-300 ease-out"
+          className="h-full rounded-full bg-[#e8724a] transition-[width] duration-300 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -115,8 +116,8 @@ function OutlineSkeleton() {
           ))}
         </div>
       </div>
-      <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-[#9998be]">
-        <span className="size-2.5 animate-spin rounded-full border-2 border-[#8200db] border-t-transparent" />
+      <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-[#6b6b6b]">
+        <span className="size-2.5 animate-spin rounded-full border-2 border-[#e8724a] border-t-transparent" />
         AI đang tạo outline cho slide… {Math.round(progress)}%
       </p>
     </div>
@@ -429,29 +430,32 @@ function SlideOutlineScreen() {
   );
 
   return (
-    <main className="flex h-screen w-full overflow-hidden bg-[#f9f8f3] text-[#1a1a2e]">
+    <main className="flex h-screen w-full overflow-hidden bg-white text-[#171717]">
       <Sidebar activeHref="/slide-create" />
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-[rgba(26,26,46,0.07)] bg-white/45 px-5 py-4 sm:px-8">
+        <header className="border-b border-[#eee8e1] bg-white px-5 py-6 sm:px-8 lg:px-10 lg:py-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
-              <nav className="flex items-center gap-2 text-[12px] text-[#9998be]">
-                <Link href="/slide-create" className="hover:text-[#1a1a2e]">
+              <nav className="flex items-center gap-2 text-[12px] text-[#8a8178]">
+                <Link href="/slide-create" className="hover:text-[#1f1f1f]">
                   Tạo Slide
                 </Link>
                 <span>/</span>
-                <span className="font-medium text-[#1a1a2e]">Outline slide</span>
+                <span className="font-medium text-[#1f1f1f]">Outline slide</span>
               </nav>
-              <h1 className="mt-2 text-2xl font-semibold text-[#1a1a2e]">Outline slide</h1>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-[#5c5b6e]">
+              <div className="mt-3 inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#eadfd7] bg-[#fff7f1] px-3 text-[11px] font-medium text-[#d97757]">
+                <DashboardIcon name="aiBadge" /> Kiểm tra cấu trúc do AI đề xuất
+              </div>
+              <h1 className="font-libertine mt-3 text-[42px] font-normal leading-none text-[#1f1f1f] sm:text-[52px]">Outline slide</h1>
+              <p className="mt-3 max-w-3xl text-[13px] leading-[23px] text-[#6b6b6b]">
                 Kiểm tra cấu trúc bài giảng trước khi sinh slide hoàn chỉnh. Sửa tên phần hoặc slide trực tiếp, kéo thả phần để đổi thứ tự, mở Chi tiết để chỉnh nội dung từng slide, rồi bấm Tạo slides khi outline đã đúng.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs sm:flex sm:items-center">
-              <span className="rounded-lg bg-white px-3 py-2 font-medium text-[#5c5b6e] shadow-sm">
+              <span className="rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2 font-medium text-[#6b6b6b]">
                 {headerStatus}
               </span>
-              <span className="rounded-lg bg-[#faf5ff] px-3 py-2 font-medium text-[#8200db] shadow-sm">
+              <span className="rounded-lg border border-[#eadfd7] bg-[#fff7f1] px-3 py-2 font-medium text-[#d97757]">
                 {parts.length} phần · {totalSlides} slides
               </span>
             </div>
@@ -466,7 +470,7 @@ function SlideOutlineScreen() {
               <p className="text-sm text-red-600">{error ?? "Đã xảy ra lỗi."}</p>
               <Link
                 href="/slide-create"
-                className="mt-4 inline-block rounded-xl bg-[#1c1b2e] px-5 py-2 text-sm font-medium text-[#f9f8f3]"
+                className="mt-4 inline-block rounded-[10px] bg-[#e8724a] px-5 py-2 text-sm font-medium text-white"
               >
                 Quay lại
               </Link>

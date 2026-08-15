@@ -22,37 +22,28 @@ export const navGroups: NavGroup[] = [
   {
     label: "Kh\u00f4ng gian chung",
     items: [
-      { label: "Community Hub", icon: "community", href: "/community-hub", requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL"] },
-      { label: "Blog", icon: "community", href: "/blog", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "Thông báo", icon: "notification", href: "/notifications" },
+      { label: "Thư viện của tôi", icon: "sidebarLibrary", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "Cộng đồng", icon: "community", href: "/community-hub", requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL"] },
+      { label: "Blog", icon: "sidebarBlog", href: "/blog", requiredRole: ["TEACHER", "MODERATOR"] },
     ],
   },
   {
     label: "N\u1ed9i dung gi\u1ea3ng d\u1ea1y",
     items: [
-      { label: "Thư viện của tôi", icon: "book", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "Lớp học", icon: "book", href: "/list-class", requiredRole: ["STUDENT"] },
-      { label: "Lịch nộp giáo án", icon: "book", href: "/weekly-schedule", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "Lớp học", icon: "sidebarClass", href: "/list-class", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "Lớp học", icon: "sidebarClass", href: "/list-class", requiredRole: ["STUDENT"] },
       { label: "T\u1ea1o gi\u00e1o \u00e1n", icon: "book", href: "/lesson-create", active: true, requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "T\u1ea1o slide", icon: "slides", href: "/slide-create", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "T\u1ea1o \u0111\u1ec1 ki\u1ec3m tra", icon: "check", href: "/exam-create-new", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "Lịch nộp giáo án", icon: "sidebarCalendar", href: "/weekly-schedule", requiredRole: ["TEACHER", "MODERATOR"] },
     ],
   },
   {
-    label: "M\u00f4 ph\u1ecfng & kh\u00e1m ph\u00e1",
+    label: "M\u00f4 ph\u1ecfng",
     items: [
-      { label: "M\u00f4 ph\u1ecfng", icon: "atom", href: "/homepage", expanded: true, requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL", "STUDENT"], requiredSubjects: ["PHYSICS", "CHEMISTRY"] },
       { label: "V\u1eadt l\u00fd", icon: "physics", href: "/mo-phong-vat-ly", child: true, requiredRole: ["TEACHER", "MODERATOR"], requiredSubjects: ["PHYSICS"] },
       { label: "B\u1ea3ng tu\u1ea7n ho\u00e0n", icon: "grid", href: "/periodic-table", child: true, requiredRole: ["TEACHER", "MODERATOR"], requiredSubjects: ["CHEMISTRY"] },
       { label: "C\u1ea5u t\u1ea1o ch\u1ea5t", icon: "atom", href: "/molecules", child: true, requiredRole: ["TEACHER", "MODERATOR"], requiredSubjects: ["CHEMISTRY"] },
-    ],
-  },
-  {
-    label: "H\u1ec7 th\u1ed1ng & h\u1ed7 tr\u1ee3",
-    items: [
-      { label: "C\u00e0i \u0111\u1eb7t", icon: "settings", href: "/homepage" },
-      { label: "Tr\u1ee3 gi\u00fap", icon: "help", href: "/help" },
     ],
   },
   {

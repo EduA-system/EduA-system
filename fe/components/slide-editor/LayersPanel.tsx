@@ -12,6 +12,9 @@ const TYPE_ICONS: Record<string, ReactElement> = {
       <path d="M4 7V4h16v3M9 20h6M12 4v16" />
     </svg>
   ),
+  latex: (
+    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 4H6l5 8-5 8h12" /></svg>
+  ),
   shape: (
     <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -108,6 +111,7 @@ function PointerIcon() {
 
 function elemLabel(el: SlideElement): string {
   if (el.type === "text") return el.text.slice(0, 22) || "Empty text";
+  if (el.type === "latex") return el.latex.slice(0, 22) || "Công thức";
   if (el.type === "image") return el.src ? "Image" : "Image";
   if (el.type === "poly") return "Shape";
   if (el.type === "draw") return "Drawing";
@@ -398,6 +402,29 @@ export function PropertiesContent() {
         </div>
       ) : (
         <div className="space-y-4">
+          {selected.type === "latex" && (
+            <section>
+              <SectionTitle>Công thức LaTeX</SectionTitle>
+              <textarea
+                value={selected.latex}
+                onChange={(event) => upd({ latex: event.target.value })}
+                disabled={panelDisabled}
+                spellCheck={false}
+                placeholder="\\frac{a}{b}"
+                className="min-h-24 w-full resize-y rounded-[7px] border border-[#e8e2d9] bg-white px-2 py-2 font-mono text-[12px] text-[#2b2926] outline-none focus:border-[#d97757] focus:ring-2 focus:ring-[#d97757]/15 disabled:bg-[#f7f3ee]"
+              />
+              <p className="mt-1.5 text-[10px] text-[#8a8178]">Nhập mã LaTeX không kèm dấu $.</p>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                <UnitNumberInput label="Cỡ chữ" value={selected.fontSize} min={8} max={120} onChange={(fontSize) => upd({ fontSize })} disabled={panelDisabled} />
+                <label className="min-w-0">
+                  <span className="mb-1 block truncate text-[10px] font-medium text-[#6b625a]">Căn lề</span>
+                  <select value={selected.align} onChange={(event) => upd({ align: event.target.value as "left" | "center" | "right" })} disabled={panelDisabled} className="h-8 w-full rounded-[7px] border border-[#e8e2d9] bg-white px-2 text-[12px] text-[#2b2926] outline-none focus:border-[#d97757] disabled:bg-[#f7f3ee]">
+                    <option value="left">Trái</option><option value="center">Giữa</option><option value="right">Phải</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+          )}
           {selected.type === "simulation" && selected.kind === "sandbox" && (
             <section>
               <SectionTitle>Thí nghiệm vật lý</SectionTitle>

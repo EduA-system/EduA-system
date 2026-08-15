@@ -27,7 +27,7 @@ import { MathEditPopup } from "../LessonEditor/MathEditPopup";
 import { useLessonPlanStream } from "../LessonEditor/useLessonPlanStream";
 import { Ruler } from "../LessonEditor/Ruler";
 import { createLessonThumbnail } from "@/lib/library-thumbnail";
-import { exportDocumentPdf, openExportedPdf } from "@/lib/document-export";
+import { openDocumentPrintDialog } from "@/lib/lesson-plan-pdf-export";
 
 function parseLessonGrade(value: string | undefined): number | undefined {
   const match = value?.match(/\b(10|11|12)\b/);
@@ -272,21 +272,16 @@ export function LessonEditDashboard() {
     setSaveStatus("idle");
     setSaveError(null);
     try {
-      const result = await exportDocumentPdf(authFetch, {
-        type: "LESSON_PLAN",
-        title,
-        documentHtml: editor.getHTML(),
-        marginLeft: margins.left,
-        marginRight: margins.right,
-      });
-      openExportedPdf(result);
+      if (!openDocumentPrintDialog(title, editor.getHTML(), { marginLeft: margins.left, marginRight: margins.right })) {
+        throw new Error("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup và thử lại.");
+      }
     } catch (error) {
       setSaveStatus("error");
       setSaveError(error instanceof Error ? error.message : "Không thể xuất PDF.");
     } finally {
       setExportingPdf(false);
     }
-  }, [authFetch, documentReady, editor, isGeneratingLesson, margins.left, margins.right]);
+  }, [documentReady, editor, isGeneratingLesson, margins]);
 
   // Khi AI đã hoàn thành toàn bộ activity, lưu bản giáo án đầu tiên vào thư viện.
   useLessonPlanStream(editor, (session) => {
