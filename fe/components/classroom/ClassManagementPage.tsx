@@ -17,7 +17,6 @@ import {
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
-  CLASS_SUBJECTS,
   type ClassStatus,
   type ClassSubject,
   type ClassSummary,
@@ -132,7 +131,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
   const [createForm, setCreateForm] = useState<FormState>(() => emptyForm(defaultSubject));
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
-  const [subjectFilter, setSubjectFilter] = useState<ClassSubject | "">("");
+  const subjectFilter = isClassSubject(user?.subject) ? user.subject : "";
   const [gradeFilter, setGradeFilter] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -454,7 +453,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
                     </button>
                   </div>
 
-                  <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_150px_140px_140px]">
+                  <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_140px_140px]">
                     <label className="relative block">
                       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8a837b]" />
                       <input
@@ -464,10 +463,6 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
                         className="h-10 w-full rounded-lg border border-[#d8d1c9] bg-white pl-9 pr-3 text-[13px] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
                       />
                     </label>
-                    <select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value as ClassSubject | "")} className="h-10 rounded-lg border border-[#d8d1c9] bg-white px-3 text-[13px] outline-none focus:border-[#d97757]">
-                      <option value="">Tất cả môn</option>
-                      {CLASS_SUBJECTS.map((subject) => <option key={subject} value={subject}>{subjectLabel(subject)}</option>)}
-                    </select>
                     <select value={gradeFilter} onChange={(event) => setGradeFilter(event.target.value ? Number(event.target.value) : "")} className="h-10 rounded-lg border border-[#d8d1c9] bg-white px-3 text-[13px] outline-none focus:border-[#d97757]">
                       <option value="">Tất cả khối</option>
                       {GRADES.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}
