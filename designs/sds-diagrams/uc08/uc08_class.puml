@@ -1,0 +1,94 @@
+@startuml UC-08 View Personal Library - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-08 View Personal Library — Class Diagram
+
+class LibraryScreen <<client>> {
+  - type : LibraryType
+  - q : String
+  - subject : String
+  - grade : String
+  - status : String
+  - items : LibraryContent [0..*]
+  - total : long
+  + load() : void
+  + open(content : LibraryContent) : String
+}
+
+class "LibraryViews.Page" as LibraryPageView <<dto>> {
+  + items : List<Summary>
+  + page : int
+  + size : int
+  + total : long
+}
+
+class "LibraryViews.Summary" as LibrarySummaryView <<dto>> {
+  + id : UUID
+  + type : LibraryContentType
+  + title : String
+  + status : LibraryContentStatus
+  + thumbnailUrl : String
+  + updatedAt : Instant
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort) : LibraryViews.Page
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort) : LibraryViews.Page
+}
+
+interface LibraryContentRepository {
+  + searchSummaries(ownerId, type, subject, grade, textbookCode, chapterCode, q, status, page, size, titleAscending, createdAtDescending) : SummarySearchResult
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - grade : Integer
+  - status : LibraryContentStatus
+  - updatedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+enum LibraryContentType {
+  LESSON_PLAN
+  SLIDE_DECK
+  TEST
+  SIMULATION
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+LibraryScreen ..> LibraryContentController : calls API
+LibraryContentController ..> LibraryPageView : output
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+LibraryContentRepository ..> LibraryContent : uses
+LibraryPageView "1" *-- "0..*" LibrarySummaryView : contains
+LibraryContent ..> LibraryContentType : typed by
+LibraryContent ..> LibraryContentStatus : publish status
+
+@enduml

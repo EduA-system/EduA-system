@@ -1,0 +1,92 @@
+@startuml UC-09 View Personal Content Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-09 View Personal Content Detail — Class Diagram
+
+class LibraryScreen <<client>> {
+  - items : LibraryContent [0..*]
+  - menuId : String
+  + open(content : LibraryContent) : String
+  + load() : void
+}
+
+class LessonEditDashboard <<client>> {
+  - libraryId : String
+  - documentReady : boolean
+  - lessonSource : LessonSource
+  - saveError : String
+}
+
+class "LibraryViews.Detail" as LibraryDetailView <<dto>> {
+  + id : UUID
+  + type : LibraryContentType
+  + title : String
+  + subject : Subject
+  + grade : Integer
+  + status : LibraryContentStatus
+  + payload : JsonNode
+  + updatedAt : Instant
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + get(id : UUID) : LibraryViews.Detail
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + get(id : UUID) : LibraryViews.Detail
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - grade : Integer
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - updatedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+enum LibraryContentType {
+  LESSON_PLAN
+  SLIDE_DECK
+  TEST
+  SIMULATION
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+LibraryScreen ..> LessonEditDashboard : opens the editor route by content type
+LessonEditDashboard ..> LibraryContentController : calls API
+LibraryContentController ..> LibraryDetailView : output
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+LibraryContentRepository ..> LibraryContent : uses
+LibraryContent ..> LibraryContentType : typed by
+LibraryContent ..> LibraryContentStatus : publish status
+
+@enduml

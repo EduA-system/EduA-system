@@ -1,0 +1,49 @@
+@startuml UC-07 Export Lesson Plan - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-07 Export Lesson Plan — Class Diagram
+
+class LessonEditDashboard <<client>> {
+  - documentReady : boolean
+  - isGeneratingLesson : boolean
+  - exportingPdf : boolean
+  - margins : PageMargins
+  + exportPdf() : void
+}
+
+class Ruler <<client>> {
+  - margins : PageMargins
+  + onMarginsChange(margins : PageMargins) : void
+}
+
+class Editor <<client>> {
+  - state : EditorState
+  + getHTML() : String
+  + getJSON() : JSONContent
+}
+
+class LessonPlanPdfExport <<client>> {
+  + openLessonPlanPrintDialog(title : String, documentHtml : String) : boolean
+  + openDocumentPrintDialog(title : String, documentHtml : String, options : PrintOptions) : boolean
+}
+
+class PrintOptions <<dto>> {
+  + marginLeft : int
+  + marginRight : int
+}
+
+class Katex <<client>> {
+  + renderToString(latex : String, options : KatexOptions) : String
+}
+
+LessonEditDashboard "1" --> "1" Editor
+LessonEditDashboard ..> Ruler : reads the page margins
+LessonEditDashboard ..> LessonPlanPdfExport : uses
+LessonEditDashboard ..> PrintOptions : input
+LessonPlanPdfExport ..> PrintOptions : uses
+LessonPlanPdfExport ..> Katex : uses
+
+@enduml

@@ -1,0 +1,90 @@
+@startuml UC-02 Login - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-02 Login — Class Diagram
+
+class AuthFlow <<client>> {
+  - status : AuthStatus
+  - postLoginHref : String
+  + handleCredential(credential : String) : void
+}
+
+class GoogleLoginRequest <<dto>> {
+  + idToken : String
+}
+
+class AuthResponse <<dto>> {
+  + accessToken : String
+  + user : UserDto
+}
+
+class AuthController <<controller>> {
+  - authService : AuthService
+  + loginWithGoogle(request : GoogleLoginRequest) : ResponseEntity<AuthResponse>
+}
+
+class AuthService <<service>> {
+  - googleVerifier : GoogleIdentityVerifier
+  - tokenService : TokenService
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - refreshTokenRepository : RefreshTokenRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - activityLogService : ActivityLogService
+  + loginWithGoogle(idToken : String) : LoginResult
+  + refresh(rawRefreshToken : String) : RefreshResult
+}
+
+interface GoogleIdentityVerifier {
+  + verify(idToken : String) : GoogleIdentity
+}
+
+class GoogleIdTokenVerifierAdapter <<adapter>> {
+  - clientId : String
+}
+
+interface TokenService {
+  + issueAccessToken(user : AppUser, roles : Set<Role>) : String
+}
+
+class JwtTokenAdapter <<adapter>> {
+  - secret : String
+  - accessTtl : Duration
+}
+
+interface AppUserRepository {
+  + findByEmail(email : String) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+}
+
+interface RefreshTokenRepository {
+  + save(token : RefreshToken) : RefreshToken   // luu SHA-256 hash
+  + revoke(id : UUID) : void
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+  - lastLoginAt : Instant
+}
+
+AuthFlow ..> AuthController : calls API
+AuthController ..> GoogleLoginRequest : input
+AuthController ..> AuthResponse : output
+AuthController "1" --> "1" AuthService
+AuthService "1" --> "1" GoogleIdentityVerifier
+AuthService "1" --> "1" TokenService
+AuthService "1" --> "1" AppUserRepository
+AuthService "1" --> "1" RefreshTokenRepository
+GoogleIdTokenVerifierAdapter ..|> GoogleIdentityVerifier : implements
+JwtTokenAdapter ..|> TokenService : implements
+AppUserRepository ..> AppUser : uses
+
+@enduml

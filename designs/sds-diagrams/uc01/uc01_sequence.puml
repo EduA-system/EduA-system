@@ -1,0 +1,43 @@
+@startuml UC-01 View Landing Page - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+title UC-01 View Landing Page — Sequence Diagram
+
+actor User
+participant ":HomePage" as PAGE
+participant ":HeaderBar" as NAV
+participant ":AuthContext" as AUTH
+
+autonumber
+User -> PAGE : Open the platform URL
+activate PAGE
+PAGE -> PAGE : render hero section, feature highlights and demo previews
+PAGE -> NAV : render()
+activate NAV
+NAV -> AUTH : useAuth()
+activate AUTH
+AUTH --> NAV : session state (signed in / anonymous)
+deactivate AUTH
+NAV --> PAGE : header with "Sign in" call-to-action
+deactivate NAV
+
+alt all assets loaded
+  PAGE --> User : Show the landing page
+else one or more assets fail to load
+  PAGE --> User : Show available content and a load-failure message (MSG80)
+  User -> PAGE : Retry loading the page
+end
+
+deactivate PAGE
+
+opt user selects "Sign in"
+  User -> NAV : Click "Sign in"
+  activate NAV
+  NAV --> User : Open the Login screen (no session created yet)
+  deactivate NAV
+end
+@enduml

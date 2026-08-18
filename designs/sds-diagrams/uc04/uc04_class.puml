@@ -1,0 +1,89 @@
+@startuml UC-04 Update Profile Information - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-04 Update Profile Information — Class Diagram
+
+class UserProfilePage <<client>> {
+  - fullName : String
+  - avatarFile : File
+  - saving : boolean
+  + uploadAvatar(file : File) : String
+  + saveProfile() : void
+}
+
+class UpdateProfileRequest <<dto>> {
+  + fullName : String
+  + avatarUrl : String
+  + contactInfo : String
+  + bio : String
+  + phoneNumber : String
+  + dateOfBirth : LocalDate
+}
+
+class UserDto <<dto>> {
+  + email : String
+  + fullName : String
+  + roles : Set<String>
+}
+
+class UploadController <<controller>> {
+  - uploadService : UploadService
+  + upload(file : MultipartFile) : UploadResponse
+}
+
+class UploadService <<service>> {
+  - storageClient : StorageClient
+  + upload(data : byte[], fileName : String, contentType : String) : UploadResponse
+}
+
+class UserController <<controller>> {
+  - profileService : ProfileService
+  + updateMe(request : UpdateProfileRequest) : UserDto
+}
+
+class ProfileService <<service>> {
+  - userRepository : AppUserRepository
+  - currentUserProvider : CurrentUserProvider
+  + updateCurrentUserProfile(fullName, avatarUrl, contactInfo, bio, phoneNumber, dateOfBirth) : ProfileResult
+}
+
+interface StorageClient {
+  + store(key : String, data : byte[], contentType : String) : String
+}
+
+class R2StorageAdapter <<adapter>> {
+  - bucket : String
+  - publicUrl : String
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - avatarUrl : String
+  - contactInfo : String
+  - bio : String
+  - phoneNumber : String
+  - dateOfBirth : LocalDate
+}
+
+UserProfilePage ..> UploadController : calls API
+UserProfilePage ..> UserController : calls API
+UploadController "1" --> "1" UploadService
+UploadService "1" --> "1" StorageClient
+UserController ..> UpdateProfileRequest : input
+UserController ..> UserDto : output
+UserController "1" --> "1" ProfileService
+ProfileService "1" --> "1" AppUserRepository
+R2StorageAdapter ..|> StorageClient : implements
+AppUserRepository ..> AppUser : uses
+
+@enduml

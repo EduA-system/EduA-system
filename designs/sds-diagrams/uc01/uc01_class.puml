@@ -1,0 +1,48 @@
+@startuml UC-01 View Landing Page - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-01 View Landing Page — Class Diagram
+
+class Home <<client>> {
+  + render() : ReactNode
+}
+
+class HomePage <<client>> {
+  + metadata : Metadata
+  + render() : ReactNode
+}
+
+class HeaderBar <<client>> {
+  + render() : ReactNode
+}
+
+class HeroSection <<client>> {
+  + render() : ReactNode
+}
+
+class LandingExperience <<client>> {
+  - activeSection : string
+  + render() : ReactNode
+}
+
+class AuthContext <<client>> {
+  - user : AuthUser
+  - accessToken : String
+  + useAuth() : AuthState
+}
+
+class LoginPage <<client>> {
+  + render() : ReactNode
+}
+
+Home ..> HomePage : renders
+HomePage *-- HeaderBar : contains
+HomePage *-- HeroSection : contains
+HomePage *-- LandingExperience : contains
+HeaderBar ..> AuthContext : reads session
+HeaderBar ..> LoginPage : navigates to sign-in
+
+@enduml

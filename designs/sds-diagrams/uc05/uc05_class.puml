@@ -1,0 +1,107 @@
+@startuml UC-05 Create Lesson Plan - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-05 Create Lesson Plan — Class Diagram
+
+class UserDashboard <<client>> {
+  - bookId : String
+  - chapterId : String
+  - lessonId : String
+  - userPrompt : String
+  + handleGenerate() : void
+}
+
+class LessonEditDashboard <<client>> {
+  - isGeneratingLesson : boolean
+  - saveStatus : SaveStatus
+  + saveLesson(session : LessonPlanSession, allowDuringGeneration : boolean) : void
+}
+
+class GenerateLessonPlanStreamRequest <<dto>> {
+  + sessionId : String
+  + bookId : String
+  + chapterId : String
+  + lessonId : String
+  + userPrompt : String
+}
+
+class LessonPlanController <<controller>> {
+  - lessonPlanService : LessonPlanService
+  - generateLessonPlanStreamUseCase : GenerateLessonPlanStreamUseCase
+  - additionalRequestValidator : LessonPlanAdditionalRequestValidator
+  + generateStream(request : GenerateLessonPlanStreamRequest) : void
+}
+
+class GenerateLessonPlanStreamUseCase <<service>> {
+  - lessonPlanService : LessonPlanService
+  - additionalRequestValidator : LessonPlanAdditionalRequestValidator
+  - stream : LessonPlanStreamPort
+  - executor : ExecutorService
+  + start(request : GenerateLessonPlanStreamRequest) : void
+}
+
+class LessonPlanAdditionalRequestValidator <<service>> {
+  - aiClient : AiClient
+  + isAccepted(userPrompt : String) : boolean
+  + validateOrThrow(userPrompt : String) : void
+}
+
+class LessonPlanService <<service>> {
+  - catalogRepository : TextbookCatalogRepository
+  - aiClient : AiClient
+  - promptBuilder : LessonPlan5512PromptBuilder
+  - maxAttempts : int
+  + generateObjectives(request) : LessonPlan5512
+  + generateMaterials(request) : LessonPlan5512
+  + generateActivitiesFrame(request) : LessonPlan5512
+  + detailOne(activity, knowledge, objectivesJson, materialsJson, frameJson, userPrompt) : Activity5512
+  + loadKnowledge(bookId, chapterId, lessonId) : String
+}
+
+interface TextbookCatalogRepository {
+  + findLessonKnowledge(bookCode : String, chapterCode : String, lessonCode : String) : Optional<String>
+}
+
+interface AiClient {
+  + generate(prompt : String) : String
+}
+
+interface LessonPlanStreamPort {
+  + publishFrameReady(sessionId : String, frame : LessonPlan5512) : void
+  + publishActivityReady(sessionId : String, activityId : String, activity : Activity5512) : void
+  + publishActivityFailed(sessionId : String, activityId : String, reasons : List<String>) : void
+  + publishDone(sessionId : String, lessonPlanId : UUID) : void
+  + publishFailed(sessionId : String, message : String) : void
+}
+
+class StompLessonPlanStreamAdapter <<adapter>> {
+  - messagingTemplate : SimpMessagingTemplate
+  - topicPrefix : String
+}
+
+class LessonPlan5512 <<entity>> {
+  - title : String
+  - objectives : Objectives
+  - equipmentAndMaterials : Materials
+  - activities : List<Activity5512>
+}
+
+UserDashboard ..> LessonPlanController : calls API
+UserDashboard ..> LessonEditDashboard : opens the editor with the session
+LessonPlanController ..> GenerateLessonPlanStreamRequest : input
+LessonPlanController "1" --> "1" GenerateLessonPlanStreamUseCase
+GenerateLessonPlanStreamUseCase "1" --> "1" LessonPlanAdditionalRequestValidator
+GenerateLessonPlanStreamUseCase "1" --> "1" LessonPlanService
+GenerateLessonPlanStreamUseCase "1" --> "1" LessonPlanStreamPort
+LessonPlanAdditionalRequestValidator "1" --> "1" AiClient
+LessonPlanService "1" --> "1" TextbookCatalogRepository
+LessonPlanService "1" --> "1" AiClient
+LessonPlanService ..> LessonPlan5512 : output
+StompLessonPlanStreamAdapter ..|> LessonPlanStreamPort : implements
+LessonPlanStreamPort ..> LessonPlan5512 : uses
+LessonEditDashboard ..> StompLessonPlanStreamAdapter : subscribes to /topic/lesson-plan/{sessionId}
+
+@enduml

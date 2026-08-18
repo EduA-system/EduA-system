@@ -1,0 +1,77 @@
+@startuml UC-11 Delete Content - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-11 Delete Content — Class Diagram
+
+class LibraryScreen <<client>> {
+  - items : LibraryContent [0..*]
+  - pendingAction : PendingAction
+  - saving : boolean
+  - error : String
+  + requestAction(content : LibraryContent, kind : String) : void
+  + performAction() : void
+  + load() : void
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + delete(id : UUID) : void
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + delete(id : UUID) : void
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - status : LibraryContentStatus
+  - updatedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+  - version : Long
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - title : String
+  - status : LibraryContentStatus
+  - updatedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+  - version : Long
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+LibraryScreen ..> LibraryContentController : calls API
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+LibraryContentRepository ..> LibraryContent : soft-deletes by setting deletedAt
+JpaLibraryContentRepository ..> LibraryContentEntity : maps
+LibraryContentEntity "1" -- "1" LibraryContent : mapped to
+LibraryContent ..> LibraryContentStatus : publish status
+
+@enduml

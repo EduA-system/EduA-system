@@ -1,0 +1,98 @@
+@startuml UC-06 Edit Lesson Plan - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-06 Edit Lesson Plan — Class Diagram
+
+class LessonEditDashboard <<client>> {
+  - libraryContentId : String
+  - isDirty : boolean
+  - hasPendingAiDiff : boolean
+  - saveStatus : SaveStatus
+  + saveLesson(session : LessonPlanSession, allowDuringGeneration : boolean) : void
+}
+
+class AssistantPanel <<client>> {
+  - input : String
+  - pendingDiffs : PendingSectionDiff [0..*]
+  + handleSubmit(event : FormEvent) : void
+}
+
+class EditLessonSectionRequest <<dto>> {
+  + instruction : String
+  + sections : List<SectionInput>
+  + bookId : String
+  + chapterId : String
+  + lessonId : String
+}
+
+class EditLessonSectionResponse <<dto>> {
+  + targetId : String
+  + kind : String
+  + data : JsonNode
+}
+
+class LessonPlanController <<controller>> {
+  - lessonPlanService : LessonPlanService
+  - additionalRequestValidator : LessonPlanAdditionalRequestValidator
+  + editSection(request : EditLessonSectionRequest) : List<EditLessonSectionResponse>
+}
+
+class LessonPlanAdditionalRequestValidator <<service>> {
+  - aiClient : AiClient
+  + validateOrThrow(userPrompt : String) : void
+}
+
+class LessonPlanService <<service>> {
+  - aiClient : AiClient
+  - editPromptBuilder : LessonPlanEditPromptBuilder
+  - catalogRepository : TextbookCatalogRepository
+  + editSection(request : EditLessonSectionRequest) : List<EditLessonSectionResponse>
+}
+
+interface AiClient {
+  + generate(prompt : String) : String
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + update(id : UUID, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl) : LibraryViews.Detail
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+  + save(content : LibraryContent) : LibraryContent
+  + hasAnySnapshotBySourceId(sourceLibraryContentId : UUID) : boolean
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - updatedAt : Instant
+}
+
+LessonEditDashboard "1" --> "1" AssistantPanel
+AssistantPanel ..> LessonPlanController : calls API
+AssistantPanel ..> EditLessonSectionRequest : input
+AssistantPanel ..> EditLessonSectionResponse : output
+LessonPlanController "1" --> "1" LessonPlanAdditionalRequestValidator
+LessonPlanController "1" --> "1" LessonPlanService
+LessonPlanAdditionalRequestValidator "1" --> "1" AiClient
+LessonPlanService "1" --> "1" AiClient
+LessonEditDashboard ..> LibraryContentService : calls API
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+LibraryContentRepository ..> LibraryContent : uses
+
+@enduml

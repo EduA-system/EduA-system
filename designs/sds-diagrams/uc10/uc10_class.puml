@@ -1,0 +1,101 @@
+@startuml UC-10 Update Content - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-10 Update Content — Class Diagram
+
+class LessonEditDashboard <<client>> {
+  - libraryContentId : String
+  - isDirty : boolean
+  - saveStatus : String
+  - saveError : String
+  + saveLesson(allowDuringGeneration : boolean) : void
+}
+
+class UpdateLibraryContentRequest <<dto>> {
+  + title : String
+  + subject : String
+  + grade : Integer
+  + textbookCode : String
+  + chapterCode : String
+  + payload : JsonNode
+  + thumbnailUrl : String
+}
+
+class "LibraryViews.Detail" as LibraryDetailView <<dto>> {
+  + id : UUID
+  + title : String
+  + subject : Subject
+  + grade : Integer
+  + status : LibraryContentStatus
+  + payload : JsonNode
+  + updatedAt : Instant
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + update(id : UUID, request : UpdateLibraryContentRequest) : LibraryViews.Detail
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + update(id, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl) : LibraryViews.Detail
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+  + hasAnySnapshotBySourceId(sourceLibraryContentId : UUID) : boolean
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - subject : Subject
+  - grade : Integer
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - thumbnailUrl : String
+  - updatedAt : Instant
+  - version : Long
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - title : String
+  - payload : JsonNode
+  - status : LibraryContentStatus
+  - updatedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+  - version : Long
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+LessonEditDashboard ..> LibraryContentController : calls API
+LibraryContentController ..> UpdateLibraryContentRequest : input
+LibraryContentController ..> LibraryDetailView : output
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+LibraryContentRepository ..> LibraryContent : uses
+JpaLibraryContentRepository ..> LibraryContentEntity : maps and locks on version
+LibraryContentEntity "1" -- "1" LibraryContent : mapped to
+LibraryContent ..> LibraryContentStatus : publish status
+
+@enduml

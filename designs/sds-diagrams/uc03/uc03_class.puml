@@ -1,0 +1,54 @@
+@startuml UC-03 Logout - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-03 Logout — Class Diagram
+
+class AuthContext <<client>> {
+  - user : AuthUser
+  - accessToken : String
+  + logout() : void
+}
+
+class AuthApiClient <<client>> {
+  + logout() : void
+}
+
+class AuthController <<controller>> {
+  - authService : AuthService
+  - cookieSecure : boolean
+  + logout(refreshToken : String) : ResponseEntity<Void>
+}
+
+class AuthService <<service>> {
+  - refreshTokenRepository : RefreshTokenRepository
+  + logout(rawRefreshToken : String) : void
+}
+
+interface RefreshTokenRepository {
+  + findByTokenHash(tokenHash : String) : Optional<RefreshToken>
+  + revoke(id : UUID) : void
+}
+
+class JpaRefreshTokenRepository <<adapter>> {
+  - jpa : RefreshTokenJpaRepository
+}
+
+class RefreshToken <<entity>> {
+  - id : UUID
+  - userId : UUID
+  - tokenHash : String
+  - expiresAt : Instant
+  - revoked : boolean
+}
+
+AuthContext ..> AuthApiClient : uses
+AuthApiClient ..> AuthController : calls API
+AuthController "1" --> "1" AuthService
+AuthService "1" --> "1" RefreshTokenRepository
+JpaRefreshTokenRepository ..|> RefreshTokenRepository : implements
+RefreshTokenRepository ..> RefreshToken : uses
+
+@enduml

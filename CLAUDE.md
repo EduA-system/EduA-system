@@ -25,6 +25,7 @@ For Iter3 work, keep the docs synchronized with the code. The canonical status f
 ├── plans/                      Working implementation plans
 ├── review/                     Review notes
 ├── .codex/skills/              Codex-tool skills (backend layered architecture, read-docx); `/.codex/` is gitignored apart from already-tracked skills
+├── .claude/skills/            Claude Code skills (drawio-drive-edit: patching .drawio files synced from Google Drive)
 ├── WBS_CHECKLIST.md            Canonical code-vs-WBS status (Iter1–3)
 ├── UNIT_TEST_CHECKLIST.md      Test coverage plan
 ├── TEST_FUNCTION_INVENTORY.md  Per-function test inventory

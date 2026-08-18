@@ -1,0 +1,79 @@
+@startuml UC-20 Export Test - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-20 Export Test — Class Diagram
+
+class PracticeExamEditDashboard <<client>> {
+  - documentReady : boolean
+  - exportingPdf : boolean
+  - margins : PageMargins
+  - savedExam : PracticeExam
+  + exportPdf() : void
+}
+
+class LessonPlanPdfExport <<client>> {
+  + openDocumentPrintDialog(title : String, documentHtml : String, options : PrintOptions) : boolean
+  - renderedDocumentHtml(documentHtml : String) : String
+  - currentPageStyles() : String
+  - splitBlockLatex(latex : String) : String []
+}
+
+class PracticeExamHtml <<client>> {
+  + examHtml(metadata : Metadata, generated : PracticeExam) : String
+  + questionContentHtml(question : PracticeExam.Question) : String
+  + answersSectionHtml(questions : List<Question>) : String
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + get(id : UUID) : LibraryViews.Detail
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + get(id : UUID) : LibraryViews.Detail
+  - requireOwner(id : UUID) : LibraryContent
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+  - payload : JsonNode
+}
+
+class PracticeExam <<entity>> {
+  - title : String
+  - instructions : String
+  - durationMinutes : int
+  - totalScoreCentiPoints : int
+  - questions : List<Question>
+}
+
+PracticeExamEditDashboard "1" --> "1" LessonPlanPdfExport
+PracticeExamEditDashboard ..> PracticeExamHtml : uses
+PracticeExamEditDashboard ..> LibraryContentController : calls API
+PracticeExamHtml ..> PracticeExam : input
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+LibraryContentRepository ..> LibraryContent : uses
+LibraryContent "1" *-- "1" PracticeExam : payload contains
+
+@enduml

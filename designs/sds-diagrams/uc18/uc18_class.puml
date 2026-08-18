@@ -1,0 +1,119 @@
+@startuml UC-18 Create Test - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-18 Create Test — Class Diagram
+
+class PracticeExamCreateDashboard <<client>> {
+  - subject : Subject
+  - grade : int
+  - durationMinutes : int
+  - difficulty : Difficulty
+  - questionCounts : Map<QuestionType, int>
+  - selectedLessons : String [0..*]
+  - teacherConfirmedWarning : boolean
+  + generate() : void
+}
+
+class PracticeExamEditDashboard <<client>> {
+  - streamedExam : PracticeExam
+  - libraryId : UUID
+  + saveDraft(exam : PracticeExam) : void
+}
+
+class GeneratePracticeExamStreamRequest <<dto>> {
+  + sessionId : String
+  + request : PracticeExamRequest
+}
+
+class PracticeExamRequest <<dto>> {
+  + title : String
+  + subject : String
+  + grade : Integer
+  + durationMinutes : Integer
+  + difficulty : String
+  + totalQuestionCount : Integer
+  + totalScoreCentiPoints : Integer
+  + teacherConfirmedWarning : Boolean
+  + questionTypes : List<QuestionType>
+  + knowledgeScope : KnowledgeScope
+}
+
+class PracticeExamController <<controller>> {
+  - practiceExamService : PracticeExamService
+  - streamUseCase : GeneratePracticeExamStreamUseCase
+  + generateStream(request : GeneratePracticeExamStreamRequest) : void
+  + validate(request : PracticeExamRequest) : PracticeExamValidation
+  + regenerateQuestion(request : RegenerateQuestionRequest) : PracticeExam.Question
+}
+
+class GeneratePracticeExamStreamUseCase <<service>> {
+  - practiceExamService : PracticeExamService
+  - stream : PracticeExamStreamPort
+  - executor : ExecutorService
+  + start(request : GeneratePracticeExamStreamRequest) : void
+}
+
+class PracticeExamService <<service>> {
+  - catalogRepository : TextbookCatalogRepository
+  - aiClient : AiClient
+  - maxConcurrency : int
+  - totalTimeoutSeconds : long
+  + validate(request : PracticeExamRequest) : PracticeExamValidation
+  + generateStreaming(request, sessionId) : void
+  + generate(request : PracticeExamRequest) : PracticeExam
+  + regenerateQuestion(request, order, type, scoreCentiPoints) : PracticeExam.Question
+}
+
+interface TextbookCatalogRepository {
+  + findLessonKnowledge(bookCode, chapterCode, lessonCode) : Optional<String>
+}
+
+interface AiClient {
+  + generate(prompt : String) : String
+  + generate(prompt) : String
+}
+
+interface PracticeExamStreamPort {
+  + publishPlanReady(sessionId, title, instructions, durationMinutes, totalScoreCentiPoints, stubs) : void
+  + publishBatchReady(sessionId, questions) : void
+  + publishBatchFailed(sessionId : String, orders : List<Integer>, reason : String) : void
+  + publishDone(sessionId : String) : void
+  + publishFailed(sessionId : String, message : String) : void
+}
+
+class StompPracticeExamStreamAdapter <<adapter>> {
+  - messagingTemplate : SimpMessagingTemplate
+  - TOPIC_PREFIX : String
+}
+
+class PracticeExam <<entity>> {
+  - title : String
+  - instructions : String
+  - durationMinutes : int
+  - totalScoreCentiPoints : int
+  - questions : List<Question>
+}
+
+PracticeExamCreateDashboard ..> PracticeExamController : calls API
+PracticeExamCreateDashboard ..> GeneratePracticeExamStreamRequest : input
+PracticeExamCreateDashboard ..> PracticeExamEditDashboard : opens with the session
+PracticeExamEditDashboard ..> StompPracticeExamStreamAdapter : subscribes over STOMP
+PracticeExamEditDashboard ..> PracticeExam : output
+GeneratePracticeExamStreamRequest "1" *-- "1" PracticeExamRequest : contains
+PracticeExamController ..> GeneratePracticeExamStreamRequest : input
+PracticeExamController "1" --> "1" GeneratePracticeExamStreamUseCase
+PracticeExamController "1" --> "1" PracticeExamService
+GeneratePracticeExamStreamUseCase "1" --> "1" PracticeExamService
+GeneratePracticeExamStreamUseCase "1" --> "1" PracticeExamStreamPort
+PracticeExamService "1" --> "1" TextbookCatalogRepository
+PracticeExamService "1" --> "1" AiClient
+PracticeExamService ..> PracticeExamStreamPort : uses
+PracticeExamService ..> PracticeExam : output
+StompPracticeExamStreamAdapter ..|> PracticeExamStreamPort : implements
+PracticeExamStreamPort ..> PracticeExam : uses
+
+@enduml

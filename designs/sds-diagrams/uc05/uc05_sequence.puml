@@ -1,0 +1,92 @@
+@startuml UC-05 Create Lesson Plan - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-05 Create Lesson Plan — Sequence Diagram
+
+actor Teacher
+participant ":LessonPlanController" as CTL
+participant ":GenerateLessonPlanStreamUseCase" as UCASE
+participant ":LessonPlanService" as SVC
+participant ":AiClient" as AI
+participant ":LessonPlanStreamPort" as STREAM
+participant ":LessonEditDashboard" as EDIT
+database DB
+
+autonumber
+Teacher -> EDIT : Select the subject, grade, textbook, chapter and lesson, add an optional AI instruction and click "Create lesson plan"
+activate EDIT
+EDIT -> CTL : POST /api/lesson-plans/generate-stream
+activate CTL
+CTL -> UCASE : start(request)
+activate UCASE
+CTL --> EDIT : HTTP 202 Accepted
+deactivate CTL
+EDIT -> EDIT : open the Lesson Plan Editor and subscribe to /topic/lesson-plan/{sessionId}
+
+UCASE -> SVC : generateObjectives(request), generateMaterials(request) and generateActivitiesFrame(request) run in parallel
+activate SVC
+SVC -> AI : generate(prompt)
+activate AI
+AI --> SVC : Part I, Part II and the teaching-activity outline as JSON
+deactivate AI
+SVC --> UCASE : Objectives, Materials and List<Activity5512>
+deactivate SVC
+
+alt the teaching-activity outline cannot be generated
+  UCASE -> STREAM : publishFailed(sessionId, message)
+  activate STREAM
+  STREAM -> EDIT : ERROR on /topic/lesson-plan/{sessionId}
+  deactivate STREAM
+  EDIT -> Teacher : Show MSG85 and keep the selected content target for a retry
+else the teaching-activity outline is ready
+  UCASE -> STREAM : publishFrameReady(sessionId, frame)
+  activate STREAM
+  STREAM -> EDIT : FRAME_READY on /topic/lesson-plan/{sessionId} — the editor shows Part I, Part II and the activity outline
+  deactivate STREAM
+end
+
+UCASE -> SVC : loadKnowledge(bookId, chapterId, lessonId)
+activate SVC
+SVC -> DB : SELECT knowledge_json FROM lessons WHERE code = ?
+activate DB
+DB --> SVC : lesson knowledge
+deactivate DB
+SVC --> UCASE : textbook knowledge
+deactivate SVC
+UCASE -> SVC : detailOne(activity, knowledge, objectivesJson, materialsJson, frameJson, userPrompt)
+activate SVC
+SVC -> AI : generate(prompt)
+activate AI
+AI --> SVC : detail of one teaching activity as JSON
+deactivate AI
+SVC --> UCASE : Activity5512
+deactivate SVC
+
+alt the teaching activity was written
+  UCASE -> STREAM : publishActivityReady(sessionId, activityId, activity)
+  activate STREAM
+  STREAM -> EDIT : ACTIVITY_READY on /topic/lesson-plan/{sessionId}
+  deactivate STREAM
+else the teaching activity failed after the maximum attempts
+  UCASE -> STREAM : publishActivityFailed(sessionId, activityId, reasons)
+  activate STREAM
+  STREAM -> EDIT : ACTIVITY_FAILED on /topic/lesson-plan/{sessionId} — the editor marks it and offers "Retry"
+  deactivate STREAM
+end
+
+UCASE -> STREAM : publishDone(sessionId, lessonPlanId)
+activate STREAM
+STREAM -> EDIT : DONE on /topic/lesson-plan/{sessionId}
+deactivate STREAM
+deactivate UCASE
+EDIT -> EDIT : saveLesson(session, true)
+EDIT -> Teacher : Show the finished lesson plan, stored in the Personal Library as Draft
+deactivate EDIT
+@enduml

@@ -1,0 +1,84 @@
+@startuml UC-49 Submit Assignment - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam noteBackgroundColor #F5F5F5
+skinparam noteBorderColor #666666
+skinparam ArrowColor #000000
+title UC-49 Submit Assignment — Class Diagram
+
+class ResourceDetailPage <<client>> {
+  - textContent : String
+  - files : FileInput [0..*]
+  + handleSubmit() : void
+}
+
+class SubmitAssignmentRequest <<dto>> {
+  + textContent : String
+  + files : List<SubmissionFileRequest>
+}
+
+class SubmissionDetailDto <<dto>> {
+  + status : SubmissionStatus
+  + submittedAt : Instant
+  + files : List<FileDetail>
+}
+
+class ClassController <<controller>> {
+  - submissionService : SubmissionService
+  + submit(classId : UUID, resourceId : UUID, request : SubmitAssignmentRequest) : SubmissionDetailDto
+}
+
+class SubmissionService <<service>> {
+  - submissionRepository : SubmissionRepository
+  - classResourceRepository : ClassResourceRepository
+  - sanitizer : BlogContentSanitizer
+  + submit(classId, resourceId, textContent, files) : SubmissionViews.Detail
+  + unsubmit(classId, resourceId) : void
+}
+
+interface SubmissionRepository {
+  + upsert(submission, files) : SubmissionWithFiles
+  + findByResourceAndStudent(resourceId, studentId) : Optional<SubmissionWithFiles>
+}
+
+class JpaSubmissionRepository <<adapter>> {
+  - jpa : SubmissionJpaRepository
+}
+
+class Submission <<entity>> {
+  - id : UUID
+  - classResourceId : UUID
+  - studentId : UUID
+  - textContent : String
+  - status : SubmissionStatus
+  - submittedAt : Instant
+}
+
+class SubmissionFile <<entity>> {
+  - id : UUID
+  - url : String
+  - fileName : String
+  - contentType : String
+  - sizeBytes : long
+}
+
+class ClassResource <<entity>> {
+  - id : UUID
+  - submissionEnabled : boolean
+  - deadline : Instant
+}
+
+ResourceDetailPage ..> ClassController : calls API
+ClassController ..> SubmitAssignmentRequest : input
+ClassController ..> SubmissionDetailDto : output
+ClassController "1" --> "1" SubmissionService
+SubmissionService "1" --> "1" SubmissionRepository
+SubmissionService ..> ClassResource : reads deadline
+JpaSubmissionRepository ..|> SubmissionRepository : implements
+SubmissionRepository ..> Submission : uses
+Submission "1" *-- "0..*" SubmissionFile : contains
+ClassResource "1" -- "0..*" Submission : has
+
+@enduml
