@@ -1,0 +1,103 @@
+@startuml UC-36 View Class Members - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-36 View Class Members — Class Diagram
+
+class StudentClassMembersPage <<client>> {
+  - detail : ClassDetail
+  - members : ClassMember [0..*]
+  - loading : boolean
+  - error : String
+  + load() : void
+}
+
+class AddStudentPage <<client>> {
+  - members : ClassMember [0..*]
+  - membersTotal : long
+  - membersLoading : boolean
+  + loadMembers(id : String) : void
+}
+
+class ClassMemberPageDto <<dto>> {
+  + items : List<ClassMemberDto>
+  + page : int
+  + size : int
+  + total : long
+}
+
+class ClassMemberDto <<dto>> {
+  + id : UUID
+  + studentId : UUID
+  + studentEmail : String
+  + studentName : String
+  + studentStatus : UserStatus
+  + membershipStatus : ClassMemberStatus
+  + joinedAt : Instant
+}
+
+class ClassController <<controller>> {
+  - classEnrollmentService : ClassEnrollmentService
+  + members(id : UUID, page : int, size : int) : ClassMemberPageDto
+}
+
+class ClassEnrollmentService <<service>> {
+  - classRepository : ClassRepository
+  - classMemberRepository : ClassMemberRepository
+  - userRepository : AppUserRepository
+  - currentUserProvider : CurrentUserProvider
+  + listMembers(classId : UUID, page : int, size : int) : ClassMemberViews.Page
+}
+
+interface ClassMemberRepository {
+  + findByClassId(classId : UUID, page : int, size : int) : PageResult
+  + existsByClassIdAndStudentId(classId : UUID, studentId : UUID) : boolean
+}
+
+class JpaClassMemberRepository <<adapter>> {
+  - jpa : ClassMemberJpaRepository
+}
+
+interface AppUserRepository {
+  + findAllById(ids : Collection<UUID>) : List<AppUser>
+}
+
+class ClassMember <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - studentId : UUID
+  - status : ClassMemberStatus
+  - joinedAt : Instant
+  - removedAt : Instant
+  - rejoinedAt : Instant
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - status : UserStatus
+}
+
+enum ClassMemberStatus {
+  ENROLLED
+  REMOVED
+}
+
+StudentClassMembersPage ..> ClassController : calls API
+AddStudentPage ..> ClassController : calls API
+ClassController ..> ClassMemberPageDto : output
+ClassController "1" --> "1" ClassEnrollmentService
+ClassEnrollmentService "1" --> "1" ClassMemberRepository
+ClassEnrollmentService "1" --> "1" AppUserRepository
+JpaClassMemberRepository ..|> ClassMemberRepository : implements
+ClassMemberRepository ..> ClassMember : output
+AppUserRepository ..> AppUser : output
+ClassMemberPageDto "1" *-- "0..*" ClassMemberDto : contains
+ClassMember "0..*" -- "1" AppUser : enrolled student
+ClassMember ..> ClassMemberStatus : membership status
+
+@enduml

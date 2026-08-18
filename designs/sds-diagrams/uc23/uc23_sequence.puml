@@ -1,0 +1,68 @@
+@startuml UC-23 Create Blog Post - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-23 Create Blog Post — Sequence Diagram
+
+actor "Teacher or Moderator" as User
+participant ":CreateBlogPostPage" as UI
+participant ":UploadController" as UPL
+participant ":BlogController" as CTL
+participant ":BlogPostService" as SVC
+participant ":BlogPostRepository" as POSTS
+database DB
+
+autonumber
+User -> UI : Open the Blog Creation screen and enter the title, body and subject tag
+activate UI
+
+opt user adds a cover image or an image inside the body
+  User -> UI : Choose an image file
+  UI -> UI : handleCoverFile(file)
+  UI -> UPL : POST /api/uploads with the image file
+  activate UPL
+  UPL --> UI : HTTP 200 + public image URL
+  deactivate UPL
+end
+
+User -> UI : Click "Publish"
+UI -> UI : handleSubmit()
+UI -> CTL : POST /api/blog-posts
+activate CTL
+CTL -> SVC : create(title, content, subject, thumbnailUrl)
+activate SVC
+SVC -> SVC : trim the title, sanitize the body HTML against the editor allowlist and parse the subject tag
+
+alt the title, body or subject tag is missing
+  SVC --> CTL : IllegalArgumentException
+  CTL --> UI : HTTP 400
+  UI --> User : Highlight the missing fields, show MSG02 and keep the entered content
+
+else the blog post cannot be published
+  UI --> User : Show MSG25 and keep the entered content in the Blog Creation screen
+
+else the title, body and subject tag are valid
+  SVC -> POSTS : save(new post with status PUBLISHED)
+  activate POSTS
+  POSTS -> DB : INSERT INTO blog_posts with status = 'PUBLISHED'
+  activate DB
+  DB --> POSTS : Saved
+  deactivate DB
+  POSTS --> SVC : BlogPost
+  deactivate POSTS
+  SVC -> SVC : build the detail view with the author name and the empty comment list
+  SVC --> CTL : BlogViews.PostDetail
+  CTL --> UI : HTTP 201 + BlogViews.PostDetail
+  UI -> UI : clear the locally saved draft of this account
+  UI --> User : Show MSG08 and open the published blog post in the Blog screen
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

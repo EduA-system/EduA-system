@@ -1,0 +1,70 @@
+@startuml UC-15 Edit Slide Deck - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-15 Edit Slide Deck — Sequence Diagram
+
+actor Teacher
+participant ":SlideEditor" as ED
+participant ":SlideEditorStore" as STORE
+participant ":SlideMakerClient" as SMC
+participant ":LibraryContentController" as CTL
+participant ":LibraryContentService" as SVC
+participant ":LibraryContentRepository" as REPO
+database DB
+
+autonumber
+Teacher -> ED : Edit slide text, replace an image, move an element or drag a slide to reorder the deck
+activate ED
+ED -> STORE : updateElement(id, patch)
+activate STORE
+ED -> STORE : reorderSlides(from, to)
+STORE --> ED : updated slides and a new undo snapshot
+deactivate STORE
+ED -> ED : autosave the deck into the browser storage 400 ms after the last change
+Teacher -> ED : Click "Save"
+ED -> SMC : openSaveDialog()
+activate SMC
+SMC -> SMC : serialize the deck to the library payload and build its thumbnail
+SMC -> CTL : PATCH /api/library/contents/{id}
+activate CTL
+CTL -> SVC : update(id, title, subject, grade, payload, thumbnailUrl)
+activate SVC
+SVC -> REPO : findActiveById(id)
+activate REPO
+REPO -> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+activate DB
+DB --> REPO : row / null
+deactivate DB
+REPO --> SVC : Optional<LibraryContent>
+deactivate REPO
+
+alt the slide deck does not exist or is not owned by the teacher
+  SVC --> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL --> SMC : HTTP 404 / 403
+  SMC -> Teacher : Show MSG80 and keep the current edits open in the editor
+else the slide deck is owned by the teacher
+  SVC -> SVC : move the publish status back to PRIVATE when a published Hub version exists
+  SVC -> REPO : save(content)
+  activate REPO
+  REPO -> DB : UPDATE library_contents SET payload, thumbnail_url, status and updated_at
+  activate DB
+  DB --> REPO : Saved
+  deactivate DB
+  REPO --> SVC : LibraryContent
+  deactivate REPO
+  SVC --> CTL : LibraryViews.Detail
+  deactivate SVC
+  CTL --> SMC : HTTP 200 + LibraryViews.Detail
+  deactivate CTL
+  SMC -> Teacher : Show the saved-deck confirmation with the applied Publish Status
+  deactivate SMC
+end
+deactivate ED
+@enduml

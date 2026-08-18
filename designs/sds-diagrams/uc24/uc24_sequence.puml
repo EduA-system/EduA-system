@@ -1,0 +1,73 @@
+@startuml UC-24 Edit Own Blog Post - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-24 Edit Own Blog Post — Sequence Diagram
+
+actor "Teacher or Moderator" as User
+participant ":BlogCommunityPage" as UI
+participant ":CreatePostModal" as EDITOR
+participant ":BlogController" as CTL
+participant ":BlogPostService" as SVC
+participant ":BlogPostRepository" as POSTS
+database DB
+
+autonumber
+User -> UI : Open the three-dot menu of an own post and select "Edit"
+activate UI
+UI -> UI : openEdit(id)
+UI -> EDITOR : Open the Blog Editor with the current title, body, subject tag and cover
+activate EDITOR
+User -> EDITOR : Change the title, body or subject tag
+
+opt user cancels the editing
+  User -> EDITOR : Close the Blog Editor
+  EDITOR --> User : Close the editor and leave the published post unchanged
+end
+
+User -> EDITOR : Click "Save"
+EDITOR -> EDITOR : handleSubmit()
+EDITOR -> CTL : PATCH /api/blog-posts/{id}
+activate CTL
+CTL -> SVC : update(id, title, content, subject, thumbnailUrl)
+activate SVC
+SVC -> POSTS : findPublishedById(id)
+activate POSTS
+POSTS -> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
+activate DB
+DB --> POSTS : row / none
+deactivate DB
+POSTS --> SVC : Optional<BlogPost>
+deactivate POSTS
+SVC -> SVC : check that the signed-in user is the author, keep the untouched fields and sanitize the new body HTML
+
+alt the post is unavailable, the user is not the author, a required field is empty or saving fails
+  SVC --> CTL : ResourceNotFoundException / ForbiddenOperationException / IllegalArgumentException
+  CTL --> EDITOR : HTTP 404 / 403 / 400
+  EDITOR --> User : Show MSG02, MSG25 or the not-permitted message and keep the edits in the Blog Editor
+
+else the author saves valid content
+  SVC -> POSTS : save(updated post)
+  activate POSTS
+  POSTS -> DB : UPDATE blog_posts SET the edited fields and updated_at WHERE id = ?
+  activate DB
+  DB --> POSTS : Saved
+  deactivate DB
+  POSTS --> SVC : BlogPost
+  deactivate POSTS
+  SVC --> CTL : BlogViews.PostDetail
+  CTL --> EDITOR : HTTP 200 + BlogViews.PostDetail
+  EDITOR -> UI : Hand the saved post back and close the Blog Editor
+  deactivate EDITOR
+  UI --> User : Show MSG08 and display the updated blog post
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

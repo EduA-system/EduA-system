@@ -1,0 +1,103 @@
+@startuml UC-33 Edit Class Information - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-33 Edit Class Information — Class Diagram
+
+class ClassSettingsPage <<client>> {
+  - detail : ClassDetail
+  - pendingUpdate : UpdateClassPayload
+  - selectedGrade : Integer
+  - saving : boolean
+  - error : String
+  + load() : void
+  + submit(event : FormEvent) : void
+  + confirmSave() : void
+}
+
+class UpdateClassRequest <<dto>> {
+  + name : String
+  + subject : Subject
+  + grade : Integer
+  + description : String
+}
+
+class ClassDetailDto <<dto>> {
+  + id : UUID
+  + name : String
+  + description : String
+  + subject : Subject
+  + grade : Integer
+  + status : ClassStatus
+  + ownerName : String
+  + updatedAt : Instant
+}
+
+class ClassController <<controller>> {
+  - classManagementService : ClassManagementService
+  + detail(id : UUID) : ClassDetailDto
+  + update(id : UUID, request : UpdateClassRequest) : ClassDetailDto
+}
+
+class ClassManagementService <<service>> {
+  - classRepository : ClassRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - currentUserProvider : CurrentUserProvider
+  + getDetail(id : UUID) : ClassViews.ClassDetail
+  + updateClass(id, name, subject, grade, description) : ClassViews.ClassDetail
+}
+
+interface ClassRepository {
+  + findById(id : UUID) : Optional<Classroom>
+  + save(classroom : Classroom) : Classroom
+}
+
+class JpaClassRepository <<adapter>> {
+  - jpa : ClassJpaRepository
+}
+
+class Classroom <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - description : String
+  - subject : Subject
+  - grade : Integer
+  - status : ClassStatus
+  - updatedAt : Instant
+  + isActive() : boolean
+  + isOwnedBy(userId : UUID) : boolean
+}
+
+class ClassEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - description : String
+  - subject : Subject
+  - grade : Integer
+  - status : ClassStatus
+  - updatedAt : Instant
+}
+
+enum ClassStatus {
+  ACTIVE
+  INACTIVE
+}
+
+ClassSettingsPage ..> ClassController : calls API
+ClassSettingsPage ..> UpdateClassRequest : input
+ClassController ..> UpdateClassRequest : input
+ClassController ..> ClassDetailDto : output
+ClassController "1" --> "1" ClassManagementService
+ClassManagementService "1" --> "1" ClassRepository
+JpaClassRepository ..|> ClassRepository : implements
+JpaClassRepository ..> ClassEntity : maps
+ClassEntity "1" -- "1" Classroom : mapped to
+ClassRepository ..> Classroom : output
+Classroom ..> ClassStatus : editable only while ACTIVE
+
+@enduml

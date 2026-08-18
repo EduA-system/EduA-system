@@ -1,0 +1,104 @@
+@startuml UC-24 Edit Own Blog Post - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-24 Edit Own Blog Post — Class Diagram
+
+class BlogCommunityPage <<client>> {
+  - detail : Detail
+  - editOpen : boolean
+  - posts : Summary [0..*]
+  + openEdit(id : String) : void
+}
+
+class CreatePostModal <<client>> {
+  - title : String
+  - subject : SubjectValue
+  - content : String
+  - coverImageUrl : String
+  - submitting : boolean
+  - error : String
+  + handleSubmit() : void
+  + handleClose() : void
+}
+
+class BlogController <<controller>> {
+  - postService : BlogPostService
+  + update(id : UUID, request : UpdateBlogPostRequest) : BlogViews.PostDetail
+}
+
+class UpdateBlogPostRequest <<dto>> {
+  + title : String
+  + content : String
+  + subject : String
+  + thumbnailUrl : String
+}
+
+class BlogPostService <<service>> {
+  - postRepository : BlogPostRepository
+  - sanitizer : BlogContentSanitizer
+  + update(id, title, content, subject, thumbnailUrl) : BlogViews.PostDetail
+}
+
+class BlogContentSanitizer <<service>> {
+  - safelist : Safelist
+  + sanitize(html : String) : String
+  + isEmpty(sanitizedHtml : String) : boolean
+}
+
+interface BlogPostRepository {
+  + findPublishedById(id : UUID) : Optional<BlogPost>
+  + save(post : BlogPost) : BlogPost
+}
+
+class JpaBlogPostRepository <<adapter>> {
+  - jpa : BlogPostJpaRepository
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - content : String
+  - thumbnailUrl : String
+  - subject : Subject
+  - status : BlogPostStatus
+  - updatedAt : Instant
+}
+
+class BlogPostEntity <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - content : String
+  - subject : Subject
+  - status : BlogPostStatus
+  - updatedAt : Instant
+}
+
+class "BlogViews.PostDetail" as BlogPostDetailView <<dto>> {
+  + id : UUID
+  + title : String
+  + content : String
+  + subject : Subject
+  + authorName : String
+  + updatedAt : Instant
+}
+
+BlogCommunityPage "1" --> "1" CreatePostModal : opens with the loaded post
+CreatePostModal ..> BlogController : calls API
+CreatePostModal ..> UpdateBlogPostRequest : input
+BlogController ..> UpdateBlogPostRequest : input
+BlogController ..> BlogPostDetailView : output
+BlogController "1" --> "1" BlogPostService
+BlogPostService "1" --> "1" BlogContentSanitizer
+BlogPostService "1" --> "1" BlogPostRepository
+JpaBlogPostRepository ..|> BlogPostRepository : implements
+JpaBlogPostRepository ..> BlogPostEntity : maps
+BlogPostRepository ..> BlogPost : loads and saves
+BlogPostEntity "1" -- "1" BlogPost : mapped to
+
+@enduml

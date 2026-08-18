@@ -1,0 +1,97 @@
+@startuml UC-34 Set Class Status - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-34 Set Class Status — Class Diagram
+
+class ClassSettingsPage <<client>> {
+  - detail : ClassDetail
+  - pendingStatus : ClassStatus
+  - saving : boolean
+  + requestToggle() : void
+  + confirmToggle() : void
+}
+
+class ClassManagementPage <<client>> {
+  - items : ClassSummary [0..*]
+  - busyStatusId : String
+  + toggleStatus(item : ClassSummary) : void
+  + loadClasses() : void
+}
+
+class UpdateClassStatusRequest <<dto>> {
+  + status : ClassStatus
+}
+
+class ClassDetailDto <<dto>> {
+  + id : UUID
+  + name : String
+  + subject : Subject
+  + grade : Integer
+  + status : ClassStatus
+  + updatedAt : Instant
+}
+
+class ClassController <<controller>> {
+  - classManagementService : ClassManagementService
+  + updateStatus(id : UUID, request : UpdateClassStatusRequest) : ClassDetailDto
+}
+
+class ClassManagementService <<service>> {
+  - classRepository : ClassRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - currentUserProvider : CurrentUserProvider
+  + updateStatus(id : UUID, status : ClassStatus) : ClassViews.ClassDetail
+}
+
+interface ClassRepository {
+  + findById(id : UUID) : Optional<Classroom>
+  + save(classroom : Classroom) : Classroom
+}
+
+class JpaClassRepository <<adapter>> {
+  - jpa : ClassJpaRepository
+}
+
+class Classroom <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - subject : Subject
+  - grade : Integer
+  - status : ClassStatus
+  - updatedAt : Instant
+  + isActive() : boolean
+  + isOwnedBy(userId : UUID) : boolean
+}
+
+class ClassEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - status : ClassStatus
+  - updatedAt : Instant
+}
+
+enum ClassStatus {
+  ACTIVE
+  INACTIVE
+}
+
+ClassSettingsPage ..> ClassController : calls API
+ClassManagementPage ..> ClassController : calls API
+ClassSettingsPage ..> UpdateClassStatusRequest : input
+ClassController ..> UpdateClassStatusRequest : input
+ClassController ..> ClassDetailDto : output
+ClassController "1" --> "1" ClassManagementService
+ClassManagementService "1" --> "1" ClassRepository
+JpaClassRepository ..|> ClassRepository : implements
+JpaClassRepository ..> ClassEntity : maps
+ClassEntity "1" -- "1" Classroom : mapped to
+ClassRepository ..> Classroom : output
+Classroom ..> ClassStatus : target status
+
+@enduml

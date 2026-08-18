@@ -1,0 +1,100 @@
+@startuml UC-37 View Enrolled Classes List - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-37 View Enrolled Classes List — Class Diagram
+
+class StudentClassResourcesPage <<client>> {
+  - classes : ClassSummary [0..*]
+  - q : String
+  - gradeFilter : Integer
+  - subjectFilter : ClassSubject
+  - classesLoading : boolean
+  + loadClasses() : void
+  + selectClass(id : String) : void
+}
+
+class ClassPageDto <<dto>> {
+  + items : List<ClassSummaryDto>
+  + page : int
+  + size : int
+  + total : long
+}
+
+class ClassSummaryDto <<dto>> {
+  + id : UUID
+  + name : String
+  + subject : Subject
+  + grade : Integer
+  + memberCount : long
+  + status : ClassStatus
+  + updatedAt : Instant
+}
+
+class ClassController <<controller>> {
+  - classManagementService : ClassManagementService
+  + listEnrolled(subject, grade, status, q, page, size) : ClassPageDto
+}
+
+class ClassManagementService <<service>> {
+  - classRepository : ClassRepository
+  - classMemberRepository : ClassMemberRepository
+  - currentUserProvider : CurrentUserProvider
+  + listEnrolledClasses(subject, grade, status, q, page, size) : ClassViews.Page
+}
+
+interface ClassRepository {
+  + searchEnrolled(studentId, subject, grade, status, q, page, size) : SearchResult
+}
+
+class JpaClassRepository <<adapter>> {
+  - jpa : ClassJpaRepository
+}
+
+interface ClassMemberRepository {
+  + countByClassId(classId : UUID) : long
+}
+
+class Classroom <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - subject : Subject
+  - grade : Integer
+  - status : ClassStatus
+  - updatedAt : Instant
+}
+
+class ClassMemberEntity <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - studentId : UUID
+  - status : ClassMemberStatus
+  - joinedAt : Instant
+}
+
+class ClassEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - subject : Subject
+  - grade : Integer
+  - status : ClassStatus
+}
+
+StudentClassResourcesPage ..> ClassController : calls API
+ClassController ..> ClassPageDto : output
+ClassController "1" --> "1" ClassManagementService
+ClassManagementService "1" --> "1" ClassRepository
+ClassManagementService "1" --> "1" ClassMemberRepository
+JpaClassRepository ..|> ClassRepository : implements
+JpaClassRepository ..> ClassEntity : maps
+JpaClassRepository ..> ClassMemberEntity : filters by enrolled membership
+ClassEntity "1" -- "0..*" ClassMemberEntity : has
+ClassEntity "1" -- "1" Classroom : mapped to
+ClassPageDto "1" *-- "0..*" ClassSummaryDto : contains
+
+@enduml

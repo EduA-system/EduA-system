@@ -1,0 +1,90 @@
+@startuml UC-25 Delete Own Blog Post - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-25 Delete Own Blog Post — Class Diagram
+
+class BlogCommunityPage <<client>> {
+  - posts : Summary [0..*]
+  - detail : Detail
+  - postToDelete : PendingDeletion
+  - msg : String
+  + deletePost(id : String) : void
+  + loadPosts(subject : String) : void
+}
+
+class BlogConfirmationDialog <<client>> {
+  - title : String
+  - description : String
+  - confirmLabel : String
+  + onConfirm() : void
+  + onCancel() : void
+}
+
+class BlogController <<controller>> {
+  - postService : BlogPostService
+  + delete(id : UUID) : void
+}
+
+class BlogPostService <<service>> {
+  - postRepository : BlogPostRepository
+  - currentUser : CurrentUserProvider
+  + delete(id : UUID) : void
+}
+
+interface BlogPostRepository {
+  + findPublishedById(id : UUID) : Optional<BlogPost>
+  + save(post : BlogPost) : BlogPost
+}
+
+class JpaBlogPostRepository <<adapter>> {
+  - jpa : BlogPostJpaRepository
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - content : String
+  - subject : Subject
+  - status : BlogPostStatus
+  - updatedAt : Instant
+}
+
+class BlogPostEntity <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - status : BlogPostStatus
+  - updatedAt : Instant
+}
+
+class BlogCommentEntity <<entity>> {
+  - id : UUID
+  - postId : UUID
+  - authorId : UUID
+  - content : String
+  - hiddenAt : Instant
+}
+
+enum BlogPostStatus {
+  PUBLISHED
+  REMOVED_BY_MODERATOR
+  DELETED_BY_AUTHOR
+}
+
+BlogCommunityPage "1" --> "1" BlogConfirmationDialog : asks for confirmation
+BlogCommunityPage ..> BlogController : calls API
+BlogController "1" --> "1" BlogPostService
+BlogPostService "1" --> "1" BlogPostRepository
+JpaBlogPostRepository ..|> BlogPostRepository : implements
+JpaBlogPostRepository ..> BlogPostEntity : maps
+BlogPostRepository ..> BlogPost : soft-deletes by setting DELETED_BY_AUTHOR
+BlogPostEntity "1" -- "1" BlogPost : mapped to
+BlogPostEntity "1" -- "0..*" BlogCommentEntity : keeps the discussion rows
+BlogPost ..> BlogPostStatus : publish status
+
+@enduml

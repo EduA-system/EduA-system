@@ -1,0 +1,73 @@
+@startuml UC-96 View Assigned Subject Blog List - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-96 View Assigned Subject Blog List — Sequence Diagram
+
+actor Moderator
+participant ":BlogModerationPage" as UI
+participant ":BlogController" as CTL
+participant ":BlogPostService" as SVC
+participant ":BlogPostRepository" as PREPO
+participant ":BlogAuthorResolver" as RES
+participant ":BlogCommentRepository" as CREPO
+database DB
+
+autonumber
+Moderator -> UI : Open the Blog screen and select "Quản lý Blog"
+activate UI
+UI -> UI : loadPosts()
+UI -> CTL : GET /api/blog-posts?subject={assignedSubject}&size=50
+activate CTL
+CTL -> SVC : list(rawSubject, authorId, q, page, size)
+activate SVC
+
+SVC -> PREPO : search(subject, authorId, q, page, size)
+activate PREPO
+PREPO -> DB : SELECT * FROM blog_posts WHERE status = 'PUBLISHED' AND subject = ? ORDER BY created_at DESC
+activate DB
+DB --> PREPO : rows + total count
+deactivate DB
+PREPO --> SVC : SearchResult
+deactivate PREPO
+
+alt the published posts of the assigned subject cannot be retrieved
+  SVC --> CTL : DataAccessException
+  CTL --> UI : HTTP 500
+  UI --> Moderator : Show MSG25 and let the moderator retry loading the list
+
+else the published posts of the assigned subject are retrieved
+  SVC -> RES : profiles(authorIds)
+  activate RES
+  RES -> DB : SELECT id, full_name, avatar_url FROM app_users WHERE id IN (?)
+  activate DB
+  DB --> RES : rows
+  deactivate DB
+  RES --> SVC : Map<UUID, Profile>
+  deactivate RES
+
+  SVC -> CREPO : countByPostIds(postIds)
+  activate CREPO
+  CREPO -> DB : SELECT post_id, COUNT of visible comments FROM blog_comments GROUP BY post_id
+  activate DB
+  DB --> CREPO : rows
+  deactivate DB
+  CREPO --> SVC : Map<UUID, Long>
+  deactivate CREPO
+
+  SVC --> CTL : Page<PostSummary>
+  CTL --> UI : HTTP 200 + Page<PostSummary>
+  UI -> UI : filter the posts by the selected day or month
+  UI --> Moderator : Show title, author, subject tag, date and comment count of each post, or MSG01 when none exists
+end
+
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

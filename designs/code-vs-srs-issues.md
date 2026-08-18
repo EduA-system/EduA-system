@@ -96,3 +96,58 @@ Nhóm nguy hiểm nhất — chức năng chạy được nhưng **hành vi khá
 3. **Bảng 5.2 System Messages** (nhóm E) — mọi diagram đang trích mã MSG mà không có nguồn đối chiếu.
 4. **5 UC thiếu spec** (nhóm E) — chặn việc vẽ 10 hình.
 5. Còn lại là sửa câu chữ trong tài liệu, làm cùng đợt rà cuối.
+
+---
+
+# Đợt vẽ 2 — phát hiện thêm (Blog, Class, Presentation)
+
+Từ 4 subagent vẽ mục 2.4, 2.6, 2.7 (phần 1). Cùng cách phân loại như trên.
+
+## F. Code chạy khác đặc tả — bổ sung
+
+| Use case | SRS nói | Code làm | Đề xuất |
+|---|---|---|---|
+| **UC-25 Delete Own Blog Post** | "All comments associated with the blog post are deleted" | Chỉ soft-delete bài (`status = DELETED_BY_AUTHOR`); các dòng `blog_comments` **vẫn nằm trong DB**, chỉ không truy cập được vì bài bị lọc | 🔧 cùng kiểu lỗi với UC-11 — xoá mềm để lại dữ liệu con |
+| **UC-96 View Assigned Subject Blog List** | Có nhánh "Subject assignment cannot be identified" → báo lỗi | Moderator không có `subject` thì **liệt kê blog của mọi môn** (`user.subject ? "?subject=…" : "?size=50"`) | 🔧 hoặc 📄 |
+| **UC-34 Set Class Status** | Secondary actor Notification Service; BR-46: chuyển Inactive thì báo học sinh | `updateStatus` **không gửi thông báo**; chỗ gửi lại nằm ở `updateClass` (UC-33) — nơi SRS không ghi | 📄 đảo BR-46 sang UC-33, hoặc 🔧 bổ sung thông báo |
+| **UC-12 Create Slide Outline** | Bước 3 có popup xác nhận, kèm Alternative Flow "teacher cancels generation" | Code **không có popup**, bấm là chạy thẳng | 📄 hoặc 🔧 |
+| **UC-14 Create Slide Deck** | Bước 3 "validate the confirmed slide outline (BR-13)" | Backend không validate khi sinh deck; validate chỉ có ở outline editor (UC-13) | 📄 |
+| **UC-17 Export Slide** | Secondary actor: File Storage Service | Thuần client, không đụng dịch vụ lưu trữ | 📄 giống UC-07 và UC-20 |
+| **UC-33 Edit Class Information** | Normal Flow không có bước xác nhận | Code có `ConfirmDialog` "Lưu thay đổi lớp?" | 📄 |
+
+## G. Luật chỉ có trong code, SRS không nhắc — bổ sung
+
+| Chức năng | Bằng chứng |
+|---|---|
+| Bình luận blog tối đa **200 từ** | `COMMENT_MAX_WORDS` trong `BlogCommentService`; SRS chỉ nói "comment is empty" |
+| Giáo viên chỉ tạo/sửa lớp **trong môn và khối được phân công** | `requireOwnSubject`, `requireOwnGrade` → `TeacherGradeRepository`; SRS 2.7.2/2.7.3 không nhắc |
+| Bộ lọc theo môn ở màn Blog chung | FE luôn gửi `?subject=`; SRS 2.6.1 không nhắc (dễ lẫn với UC-96) |
+| Trả lời bình luận **chỉ 1 cấp** | `parent.postId == postId && parent.parentCommentId == null` |
+| Xoá bình luận cha thì xoá luôn trả lời | `ON DELETE CASCADE`, migration V50 |
+
+## H. Actor rộng hơn tài liệu — bổ sung
+
+| Endpoint | SRS ghi | Code cho phép |
+|---|---|---|
+| `GET/POST/PATCH /api/classes*` | Teacher | `hasAnyRole('TEACHER','MODERATOR')` |
+| UC-35 / UC-36 | "Teacher or Student" | Hai màn khác nhau cho hai vai, không phải một màn dùng chung |
+
+## I. Quyết định ký pháp đã áp dụng (không phải lỗi, ghi để nhất quán)
+
+- **Module TS không có class** (`lib/api/slides.ts`, `stores/slide-editor-store.ts`, `lib/slide-html-export.ts`…) được mô hình hoá thành class đặt tên PascalCase theo tên file: `SlideApi`, `SlideEditorStore`, `SlideHtmlExport`. Đã dùng từ UC-04 (`LessonPlanPdfExport`), giữ cho toàn bộ 112 UC.
+- **Không vẽ lifeline cho lớp chỉ làm một nhịp phụ trợ** (`BlogAuthorResolver` resolve tên tác giả) — viết thành bước nội bộ, giữ trong class diagram.
+- **Đặt tên hộp theo nơi khai báo method**, không theo tên route: `CreateBlogPostForm` thay vì `CreateBlogPostPage`.
+- **UC-14 auto-save** vẽ thành self-message; đường lưu đầy đủ (controller → service → repository → DB) đã có ở UC-15.
+- **UC-16** vẽ đường trình chiếu overlay ngay trong editor; đường `/slide-present?libraryId=` chỉ để ở class diagram.
+
+## J. Năm chính sách đang chờ chốt
+
+14 câu hỏi từ các subagent quy về 5 tình huống lặp lại. Chốt xong sẽ ghi vào `MASTER.md` để các đợt sau tự áp dụng.
+
+| # | Tình huống | Đề xuất |
+|---|---|---|
+| 1 | Thông báo: SRS và code gắn vào UC khác nhau | Không vẽ ở mọi UC (quy tắc 2), chỉ vẽ đủ ở UC-93; lệch lạc ghi vào file này |
+| 2 | Xoá mềm để lại dữ liệu con (UC-11 snapshot Hub, UC-25 comment) | Vẽ theo code, **ghi là lỗi cần sửa code** |
+| 3 | Actor trong code rộng hơn SRS | Vẽ đúng actor SRS ghi, không thêm; ghi vào file này |
+| 4 | Luật chỉ có trong code (200 từ, môn/khối, confirm dialog) | **Vẫn vẽ** — hệ thống thật; đồng thời bổ sung vào SRS |
+| 5 | UC chưa có spec (UC-27, 95, 98, 106, 112) | Vẽ theo code, đánh dấu "cần rà lại sau khi có spec" |

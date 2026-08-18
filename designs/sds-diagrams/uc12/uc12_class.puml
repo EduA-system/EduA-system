@@ -1,0 +1,117 @@
+@startuml UC-12 Create Slide Outline - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-12 Create Slide Outline — Class Diagram
+
+class SlideCreateDashboard <<client>> {
+  - lessons : LessonCard [0..*]
+  - previewDetail : LibraryContent
+  - creating : boolean
+  + createSlideFromDetail(lesson : LessonCard, detail : LibraryContent) : void
+}
+
+class SlideOutlineScreen <<client>> {
+  - session : SlideGenerationSession
+  - parts : OutlinePart [0..*]
+  - status : Status
+  + handleOutlineEvent(event : OutlineEvent) : void
+  + handleRetrySlide(partId : String, slideId : String) : void
+  + setParts(parts : OutlinePart[]) : void
+  + handleConfirm(editedParts : OutlinePart[]) : void
+}
+
+class GenerateOutlineRequest <<dto>> {
+  + lessonId : String
+  + lessonTitle : String
+  + lessonContent : String
+  + subject : String
+  + grade : String
+  + styleHint : String
+  + libraryContentId : String
+}
+
+class GenerateOutlineResponse <<dto>> {
+  + sessionId : String
+  + topic : String
+  + outlineTopic : String
+  + outline : OutlineDto
+}
+
+class PartDto <<dto>> {
+  + id : String
+  + title : String
+  + sourceChunkIds : List<String>
+}
+
+class SlideItemDto <<dto>> {
+  + id : String
+  + title : String
+  + pedagogicalRole : String
+  + durationMinutes : Integer
+  + contentPlan : ContentPlan
+}
+
+class SlideController <<controller>> {
+  - generateSlideOutlineUseCase : GenerateSlideOutlineUseCase
+  + generateOutline(request : GenerateOutlineRequest) : GenerateOutlineResponse
+  + startOutlineSession(sessionId : String) : void
+  + retryOutlineSessionSlide(request : RetryOutlineSessionSlideRequest) : void
+}
+
+class GenerateSlideOutlineUseCase <<service>> {
+  - aiClient : AiClient
+  - outlineStream : OutlineStreamPort
+  - sessions : OutlineGenerationSessionStore
+  - executor : ExecutorService
+  + execute(request : GenerateOutlineRequest) : GenerateOutlineResponse
+  + start(sessionId : String) : void
+  + retrySessionPart(sessionId : String, partId : String) : void
+  + retrySessionSlide(sessionId, partId, slideId) : void
+}
+
+class OutlineGenerationSessionStore <<service>> {
+  - sessions : Map<String, Session>
+  - TTL : Duration
+  + create(sessionId, request, source, parts) : void
+  + find(sessionId : String) : Optional<Session>
+}
+
+interface AiClient {
+  + generate(prompt : String) : String
+  + generate(prompt, image, mimeType) : String
+}
+
+interface OutlineStreamPort {
+  + publishPartSkeletonReady(sessionId : String, part : PartDto) : void
+  + publishPartReady(sessionId, partId, slides) : void
+  + publishPartError(sessionId, partId, message) : void
+  + publishSlideReady(sessionId, partId, slide) : void
+  + publishSlideError(sessionId, partId, slideId, message) : void
+  + publishDone(sessionId : String, partFailures : int) : void
+  + publishFailed(sessionId : String, message : String) : void
+}
+
+class StompOutlineStreamAdapter <<adapter>> {
+  - messagingTemplate : SimpMessagingTemplate
+  - TOPIC_PREFIX : String
+}
+
+SlideCreateDashboard ..> SlideOutlineScreen : opens with the lesson plan
+SlideOutlineScreen ..> SlideController : calls API
+SlideOutlineScreen ..> GenerateOutlineRequest : input
+SlideOutlineScreen ..> StompOutlineStreamAdapter : subscribes over STOMP
+SlideController ..> GenerateOutlineResponse : output
+SlideController "1" --> "1" GenerateSlideOutlineUseCase
+GenerateSlideOutlineUseCase "1" --> "1" AiClient
+GenerateSlideOutlineUseCase "1" --> "1" OutlineStreamPort
+GenerateSlideOutlineUseCase "1" --> "1" OutlineGenerationSessionStore
+GenerateOutlineResponse "1" *-- "0..*" PartDto : contains
+PartDto "1" *-- "0..*" SlideItemDto : contains
+OutlineStreamPort ..> PartDto : output
+StompOutlineStreamAdapter ..|> OutlineStreamPort : implements
+
+@enduml

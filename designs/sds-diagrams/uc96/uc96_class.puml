@@ -1,0 +1,95 @@
+@startuml UC-96 View Assigned Subject Blog List - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-96 View Assigned Subject Blog List — Class Diagram
+
+class BlogModerationPage <<client>> {
+  - posts : Summary [0..*]
+  - filterType : String
+  - selectedDay : String
+  - selectedMonth : String
+  - loading : boolean
+  + loadPosts() : void
+}
+
+class PostSummary <<dto>> {
+  + id : UUID
+  + title : String
+  + subject : Subject
+  + authorName : String
+  + createdAt : Instant
+  + commentCount : long
+  + excerpt : String
+  + thumbnailUrl : String
+}
+
+class Page <<dto>> {
+  + items : List<PostSummary>
+  + page : int
+  + size : int
+  + total : long
+}
+
+class BlogController <<controller>> {
+  - postService : BlogPostService
+  + list(subject, authorId, q, page, size) : Page<PostSummary>
+}
+
+class BlogPostService <<service>> {
+  - postRepository : BlogPostRepository
+  - commentRepository : BlogCommentRepository
+  - authorResolver : BlogAuthorResolver
+  + list(rawSubject, authorId, q, page, size) : Page<PostSummary>
+}
+
+class BlogAuthorResolver <<service>> {
+  - userRepository : AppUserRepository
+  + profiles(authorIds : Collection<UUID>) : Map<UUID, Profile>
+  + name(authorId : UUID) : String
+}
+
+interface BlogPostRepository {
+  + search(subject, authorId, q, page, size) : SearchResult
+}
+
+interface BlogCommentRepository {
+  + countByPostIds(postIds : List<UUID>) : Map<UUID, Long>
+}
+
+class JpaBlogPostRepository <<adapter>> {
+  - jpa : BlogPostJpaRepository
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - subject : Subject
+  - status : BlogPostStatus
+  - createdAt : Instant
+}
+
+enum Subject {
+  MATH
+  CHEMISTRY
+  PHYSICS
+}
+
+BlogModerationPage ..> BlogController : calls API
+BlogModerationPage ..> Page : output
+Page "1" *-- "0..*" PostSummary : contains
+BlogController ..> Page : output
+BlogController "1" --> "1" BlogPostService
+BlogPostService "1" --> "1" BlogPostRepository
+BlogPostService "1" --> "1" BlogCommentRepository
+BlogPostService "1" --> "1" BlogAuthorResolver
+JpaBlogPostRepository ..|> BlogPostRepository : implements
+BlogPostRepository ..> BlogPost : uses
+BlogPost ..> Subject : assigned subject filter
+PostSummary ..> Subject : subject tag
+
+@enduml

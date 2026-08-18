@@ -1,0 +1,67 @@
+@startuml UC-34 Set Class Status - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-34 Set Class Status — Sequence Diagram
+
+actor Teacher
+participant ":ClassSettingsPage" as UI
+participant ":ClassController" as CTL
+participant ":ClassManagementService" as SVC
+participant ":ClassRepository" as REPO
+database DB
+
+autonumber
+Teacher -> UI : Open "Class settings" of an owned class and select "Archive class" or "Reactivate class"
+activate UI
+UI -> UI : requestToggle()
+UI --> Teacher : Show the confirmation dialog with the target status and its effect
+
+opt teacher cancels the change
+  Teacher -> UI : Close the confirmation dialog
+  UI --> Teacher : Keep the current class status and end the use case
+end
+
+Teacher -> UI : Confirm the target status
+UI -> UI : confirmToggle()
+UI -> CTL : PATCH /api/classes/{id}/status
+activate CTL
+CTL -> SVC : updateStatus(id, status)
+activate SVC
+SVC -> REPO : findById(id)
+activate REPO
+REPO -> DB : SELECT * FROM classes WHERE id = ?
+activate DB
+DB --> REPO : row / none
+deactivate DB
+REPO --> SVC : Optional<Classroom>
+deactivate REPO
+SVC -> SVC : accept only an existing class owned by the teacher whose status really changes, and require an assigned grade when reactivating
+
+alt class is unavailable, not owned by the teacher or already in the target status
+  SVC --> CTL : ResourceNotFoundException / ForbiddenOperationException / IllegalArgumentException
+  CTL --> UI : HTTP 404 / 403 / 400
+  UI --> Teacher : Show that the action is unavailable and keep the current status
+else the target status differs and the teacher owns the class
+  SVC -> REPO : save(Classroom with the target status)
+  activate REPO
+  REPO -> DB : UPDATE classes SET status = ?, updated_at = ? WHERE id = ?
+  activate DB
+  DB --> REPO : Saved
+  deactivate DB
+  REPO --> SVC : Classroom
+  deactivate REPO
+  SVC --> CTL : ClassViews.ClassDetail
+  CTL --> UI : HTTP 200 + ClassDetailDto
+  UI --> Teacher : Show MSG08 and the updated status, INACTIVE turning the class read-only
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

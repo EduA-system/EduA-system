@@ -1,0 +1,104 @@
+@startuml UC-21 View Blog List - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-21 View Blog List — Class Diagram
+
+class BlogCommunityPage <<client>> {
+  - posts : Summary [0..*]
+  - activeSubjectFilter : String
+  - isPostsLoading : boolean
+  - msg : String
+  + loadPosts(subject : String) : void
+  + handleFilterChange(subject : String) : void
+  + openDetail(id : String) : void
+}
+
+class BlogController <<controller>> {
+  - postService : BlogPostService
+  + list(subject, authorId, q, page, size) : BlogViews.Page
+}
+
+class BlogPostService <<service>> {
+  - postRepository : BlogPostRepository
+  - commentRepository : BlogCommentRepository
+  - sanitizer : BlogContentSanitizer
+  - authorResolver : BlogAuthorResolver
+  + list(subject, authorId, q, page, size) : BlogViews.Page
+  + getDetail(id : UUID) : BlogViews.PostDetail
+}
+
+class BlogAuthorResolver <<service>> {
+  - userRepository : AppUserRepository
+  + profiles(authorIds : Collection<UUID>) : Map<UUID, Profile>
+  + name(authorId : UUID) : String
+}
+
+class BlogContentSanitizer <<service>> {
+  + plainTextExcerpt(sanitizedHtml : String, maxLength : int) : String
+  + firstImageSrc(sanitizedHtml : String) : String
+}
+
+interface BlogPostRepository {
+  + search(subject, authorId, q, page, size) : SearchResult
+  + findPublishedById(id : UUID) : Optional<BlogPost>
+}
+
+interface BlogCommentRepository {
+  + countByPostIds(postIds : List<UUID>) : Map<UUID, Long>
+}
+
+interface AppUserRepository {
+  + findAllById(ids : Collection<UUID>) : List<AppUser>
+}
+
+class JpaBlogPostRepository <<adapter>> {
+  - jpa : BlogPostJpaRepository
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - content : String
+  - thumbnailUrl : String
+  - subject : Subject
+  - status : BlogPostStatus
+  - createdAt : Instant
+}
+
+class "BlogViews.Page" as BlogPageView <<dto>> {
+  + items : List<PostSummary>
+  + page : int
+  + size : int
+  + total : long
+}
+
+class "BlogViews.PostSummary" as BlogPostSummaryView <<dto>> {
+  + id : UUID
+  + title : String
+  + subject : Subject
+  + authorName : String
+  + createdAt : Instant
+  + commentCount : long
+  + excerpt : String
+  + thumbnailUrl : String
+}
+
+BlogCommunityPage ..> BlogController : calls API
+BlogController ..> BlogPageView : output
+BlogController "1" --> "1" BlogPostService
+BlogPostService "1" --> "1" BlogPostRepository
+BlogPostService "1" --> "1" BlogCommentRepository
+BlogPostService "1" --> "1" BlogAuthorResolver
+BlogPostService "1" --> "1" BlogContentSanitizer
+BlogAuthorResolver "1" --> "1" AppUserRepository
+JpaBlogPostRepository ..|> BlogPostRepository : implements
+BlogPostRepository ..> BlogPost : reads PUBLISHED posts
+BlogPageView "1" *-- "0..*" BlogPostSummaryView : contains
+BlogPost ..> BlogPostSummaryView : summarized as
+
+@enduml

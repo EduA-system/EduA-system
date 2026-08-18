@@ -1,0 +1,111 @@
+@startuml UC-15 Edit Slide Deck - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-15 Edit Slide Deck — Class Diagram
+
+class SlideEditor <<client>> {
+  - skipInitialLoad : boolean
+  - savingToLibrary : boolean
+  + onSaveToLibrary() : void
+}
+
+class SlideEditorStore <<client>> {
+  - slides : Slide [0..*]
+  - currentSlideId : String
+  - selectedIds : String [0..*]
+  - history : Snapshot [0..*]
+  + updateElement(id : String, patch : ElementPatch) : void
+  + removeElements(ids : String[]) : void
+  + reorderSlides(from : int, to : int) : void
+  + setSlideBackground(bg : String) : void
+  + undo() : void
+  + redo() : void
+}
+
+class SlideMakerClient <<client>> {
+  - libraryId : String
+  - saveNotice : String
+  - saving : boolean
+  + openSaveDialog() : void
+  + saveDeck(metadata : DeckMetadata, auto : boolean) : void
+}
+
+class Slide <<dto>> {
+  + id : String
+  + bg : String
+  + aiPrompt : String
+  + generationStatus : SlideGenerationStatus
+}
+
+class SlideElement <<dto>> {
+  + id : String
+  + type : ElementType
+  + zIndex : int
+  + opacity : double
+  + locked : boolean
+}
+
+class SlideDeckLibraryPayload <<dto>> {
+  + version : int
+  + slides : Slide[]
+}
+
+class UpdateLibraryContentRequest <<dto>> {
+  + title : String
+  + subject : String
+  + grade : Integer
+  + payload : JsonNode
+  + thumbnailUrl : String
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + update(id : UUID, r : UpdateLibraryContentRequest) : LibraryViews.Detail
+  + get(id : UUID) : LibraryViews.Detail
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + update(id, title, subject, grade, payload, thumbnailUrl) : LibraryViews.Detail
+  + get(id : UUID) : LibraryViews.Detail
+}
+
+interface LibraryContentRepository {
+  + save(content : LibraryContent) : LibraryContent
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+  + hasAnySnapshotBySourceId(sourceLibraryContentId : UUID) : boolean
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - thumbnailUrl : String
+  - updatedAt : Instant
+}
+
+SlideEditor "1" --> "1" SlideEditorStore
+SlideEditor ..> SlideMakerClient : requests the save
+SlideEditorStore "1" --> "0..*" Slide
+Slide "1" *-- "0..*" SlideElement : contains
+SlideMakerClient ..> SlideDeckLibraryPayload : output
+SlideMakerClient ..> LibraryContentController : calls API
+SlideMakerClient ..> UpdateLibraryContentRequest : input
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+LibraryContentRepository ..> LibraryContent : uses
+LibraryContent ..> SlideDeckLibraryPayload : stores as payload
+
+@enduml

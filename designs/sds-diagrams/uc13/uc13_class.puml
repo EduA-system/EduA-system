@@ -1,0 +1,97 @@
+@startuml UC-13 Edit Slide Outline - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-13 Edit Slide Outline — Class Diagram
+
+class SlideOutlineScreen <<client>> {
+  - session : SlideGenerationSession
+  - parts : OutlinePart [0..*]
+  - confirming : boolean
+  + setParts(parts : OutlinePart[]) : void
+  + handleConfirm(editedParts : OutlinePart[]) : void
+}
+
+class OutlineEditor <<client>> {
+  - expandedKeys : Set<String>
+  - dragPartIndex : int
+  - invalidSlides : SlideItem [0..*]
+  + updatePartTitle(partId : String, title : String) : void
+  + addPart() : void
+  + deletePart(partId : String) : void
+  + onPartDragOver(event : DragEvent, index : int) : void
+  + addSlide(partId : String) : void
+  + updateSlide(partId, slideId, patch) : void
+  + deleteSlide(partId : String, slideId : String) : void
+}
+
+class SlideDetailModal <<client>> {
+  - slide : SlideItem
+  + onClose() : void
+}
+
+class SlideDetailPanel <<client>> {
+  - errors : String [0..*]
+  + setBlocks(blocks : ContentBlock[]) : void
+  + onChange(slide : SlideItem) : void
+}
+
+class SlideApi <<client>> {
+  + validateContentPlan(plan : SlideContentPlan) : String[]
+  + slideRoleLabel(slide : SlideItem) : String
+  + generateOutline(authFetch, request) : GenerateOutlineResponse
+  + retryOutlineSessionSlide(authFetch, sessionId, partId, slideId) : void
+}
+
+class SlideCreateSession <<client>> {
+  - SLIDE_CREATE_SESSION_KEY : String
+  - SLIDE_GENERATION_ACTIVE_KEY : String
+  + readSlideCreateSession() : SlideGenerationSession
+  + patchSlideCreateSession(patch : SlideGenerationSession) : void
+  + writeActiveGeneration(active : ActiveGeneration) : void
+}
+
+class OutlinePart <<dto>> {
+  + id : String
+  + title : String
+  + sourceChunkIds : String[]
+}
+
+class SlideItem <<dto>> {
+  + id : String
+  + title : String
+  + pedagogicalRole : String
+  + durationMinutes : int
+  + aiNote : String
+}
+
+class SlideContentPlan <<dto>> {
+  + slideType : SlideType
+  + headerMode : HeaderMode
+  + relationships : ContentRelationship[]
+}
+
+class ContentBlock <<dto>> {
+  + id : String
+  + kind : BlockKind
+  + semanticType : String
+  + priority : ContentPriority
+  + required : boolean
+}
+
+SlideOutlineScreen "1" --> "1" OutlineEditor
+SlideOutlineScreen ..> SlideCreateSession : uses
+OutlineEditor "1" --> "0..*" OutlinePart
+OutlineEditor ..> SlideDetailModal : opens for one slide
+OutlineEditor ..> SlideApi : uses
+SlideDetailModal "1" --> "1" SlideDetailPanel
+SlideDetailPanel ..> SlideApi : uses
+SlideDetailPanel ..> ContentBlock : edits
+OutlinePart "1" *-- "0..*" SlideItem : contains
+SlideItem "1" *-- "1" SlideContentPlan : contains
+SlideContentPlan "1" *-- "0..*" ContentBlock : contains
+
+@enduml

@@ -1,0 +1,78 @@
+@startuml UC-17 Export Slide - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-17 Export Slide — Class Diagram
+
+class TopBar <<client>> {
+  - exportingHtml : boolean
+  - exportNotice : String
+  - hasLockedSlides : boolean
+  + exportHtml() : void
+}
+
+class SlideEditorStore <<client>> {
+  - slides : Slide [0..*]
+  - currentSlideId : String
+  + currentSlide() : Slide
+}
+
+class SlideHtmlExport <<client>> {
+  - PLACEHOLDER_IMAGE : String
+  - CONTENT_TYPE_EXT : Map<String, String>
+  + exportOfflineZip(slides : Slide[], title : String) : OfflineZipExport
+  + buildOfflineHtml(slides, title, imageSources, simulationSources) : String
+  + downloadOfflineZip(blob : Blob, title : String) : void
+}
+
+class JSZip <<client>> {
+  + file(path : String, data : Blob) : JSZip
+  + folder(name : String) : JSZip
+  + generateAsync(options : ZipOptions) : Blob
+}
+
+class OfflineZipExport <<dto>> {
+  + blob : Blob
+  + warnings : HtmlExportWarning[]
+}
+
+class HtmlExportWarning <<dto>> {
+  + source : String
+  + reason : String
+}
+
+class Slide <<dto>> {
+  + id : String
+  + bg : String
+  + aiPrompt : String
+}
+
+class SlideElement <<dto>> {
+  + id : String
+  + type : ElementType
+  + zIndex : int
+  + opacity : double
+}
+
+class SimulationElement <<dto>> {
+  + kind : SimulationKind
+  + molecule : Molecule
+  + presetId : String
+  + mode : RenderMode
+}
+
+TopBar "1" --> "1" SlideEditorStore
+TopBar ..> SlideHtmlExport : uses
+SlideEditorStore "1" --> "0..*" Slide
+SlideHtmlExport ..> Slide : input
+SlideHtmlExport ..> OfflineZipExport : output
+SlideHtmlExport "1" --> "1" JSZip
+OfflineZipExport "1" *-- "0..*" HtmlExportWarning : contains
+Slide "1" *-- "0..*" SlideElement : contains
+SimulationElement --|> SlideElement
+SlideHtmlExport ..> SimulationElement : captures as a static image
+
+@enduml

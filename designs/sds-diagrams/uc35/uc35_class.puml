@@ -1,0 +1,105 @@
+@startuml UC-35 View Class Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-35 View Class Detail — Class Diagram
+
+class ClassOverviewPage <<client>> {
+  - detail : ClassDetail
+  - loading : boolean
+  - error : String
+  + load() : void
+  + handleSelectClass(event : ChangeEvent) : void
+}
+
+class StudentClassResourcesPage <<client>> {
+  - selectedClass : ClassDetail
+  - accessRevoked : boolean
+  + loadClassDetail(id : String) : void
+  + selectClass(id : String) : void
+}
+
+class ClassDetailDto <<dto>> {
+  + id : UUID
+  + name : String
+  + description : String
+  + subject : Subject
+  + grade : Integer
+  + status : ClassStatus
+  + ownerId : UUID
+  + ownerName : String
+  + memberCount : long
+  + resourceCount : long
+  + assignmentCount : long
+  + submissionCount : long
+}
+
+class ClassController <<controller>> {
+  - classManagementService : ClassManagementService
+  + detail(id : UUID) : ClassDetailDto
+}
+
+class ClassManagementService <<service>> {
+  - classRepository : ClassRepository
+  - classMemberRepository : ClassMemberRepository
+  - classResourceRepository : ClassResourceRepository
+  - currentUserProvider : CurrentUserProvider
+  + getDetail(id : UUID) : ClassViews.ClassDetail
+}
+
+interface ClassRepository {
+  + findById(id : UUID) : Optional<Classroom>
+}
+
+class JpaClassRepository <<adapter>> {
+  - jpa : ClassJpaRepository
+}
+
+interface ClassMemberRepository {
+  + existsByClassIdAndStudentId(classId : UUID, studentId : UUID) : boolean
+  + countByClassId(classId : UUID) : long
+}
+
+class Classroom <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - description : String
+  - subject : Subject
+  - grade : Integer
+  - status : ClassStatus
+  + isActive() : boolean
+  + isOwnedBy(userId : UUID) : boolean
+}
+
+class ClassEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - description : String
+  - subject : Subject
+  - grade : Integer
+  - status : ClassStatus
+}
+
+enum ClassStatus {
+  ACTIVE
+  INACTIVE
+}
+
+ClassOverviewPage ..> ClassController : calls API
+StudentClassResourcesPage ..> ClassController : calls API
+ClassController ..> ClassDetailDto : output
+ClassController "1" --> "1" ClassManagementService
+ClassManagementService "1" --> "1" ClassRepository
+ClassManagementService "1" --> "1" ClassMemberRepository
+JpaClassRepository ..|> ClassRepository : implements
+JpaClassRepository ..> ClassEntity : maps
+ClassEntity "1" -- "1" Classroom : mapped to
+ClassRepository ..> Classroom : output
+Classroom ..> ClassStatus : lifecycle status
+
+@enduml

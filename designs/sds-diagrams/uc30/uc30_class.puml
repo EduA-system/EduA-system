@@ -1,0 +1,84 @@
+@startuml UC-30 Hide Comment on Own Blog Post - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-30 Hide Comment on Own Blog Post — Class Diagram
+
+class BlogCommunityPage <<client>> {
+  - detail : Detail
+  - commentToHide : Comment
+  + hideComment() : void
+  + loadDetail(id : String) : void
+}
+
+class BlogController <<controller>> {
+  - commentService : BlogCommentService
+  + hideComment(commentId : UUID) : void
+}
+
+class BlogCommentService <<service>> {
+  - commentRepository : BlogCommentRepository
+  - postRepository : BlogPostRepository
+  - currentUser : CurrentUserProvider
+  + hideByPostAuthor(commentId : UUID) : void
+}
+
+interface BlogCommentRepository {
+  + findById(id : UUID) : Optional<BlogComment>
+  + findByPostId(postId : UUID) : List<BlogComment>
+  + save(comment : BlogComment) : BlogComment
+}
+
+interface BlogPostRepository {
+  + findPublishedById(id : UUID) : Optional<BlogPost>
+}
+
+class JpaBlogCommentRepository <<adapter>> {
+  - jpa : BlogCommentJpaRepository
+}
+
+class JpaBlogPostRepository <<adapter>> {
+  - jpa : BlogPostJpaRepository
+}
+
+class BlogComment <<entity>> {
+  - id : UUID
+  - postId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - hiddenAt : Instant
+  - hiddenBy : UUID
+}
+
+class BlogCommentEntity <<entity>> {
+  - id : UUID
+  - parentCommentId : UUID
+  - hiddenAt : Instant
+  - hiddenBy : UUID
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - subject : Subject
+  - status : BlogPostStatus
+}
+
+BlogCommunityPage ..> BlogController : calls API
+BlogController "1" --> "1" BlogCommentService
+BlogCommentService "1" --> "1" BlogCommentRepository
+BlogCommentService "1" --> "1" BlogPostRepository
+JpaBlogCommentRepository ..|> BlogCommentRepository : implements
+JpaBlogPostRepository ..|> BlogPostRepository : implements
+JpaBlogCommentRepository ..> BlogCommentEntity : maps
+BlogCommentRepository ..> BlogComment : soft-hides by setting hiddenAt
+BlogPostRepository ..> BlogPost : uses
+BlogPost "1" -- "0..*" BlogComment : has
+BlogComment "0..*" --> "0..1" BlogComment : replies to, hidden together
+
+@enduml

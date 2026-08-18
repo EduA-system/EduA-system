@@ -1,0 +1,108 @@
+@startuml UC-22 View Blog Post Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-22 View Blog Post Detail — Class Diagram
+
+class BlogCommunityPage <<client>> {
+  - detail : Detail
+  - isDetailLoading : boolean
+  - isModerator : boolean
+  - msg : String
+  + loadDetail(id : String) : void
+  + handleModeratorRemoved() : void
+}
+
+class BlogController <<controller>> {
+  - postService : BlogPostService
+  + detail(id : UUID) : BlogViews.PostDetail
+}
+
+class BlogPostService <<service>> {
+  - postRepository : BlogPostRepository
+  - commentRepository : BlogCommentRepository
+  - authorResolver : BlogAuthorResolver
+  + getDetail(id : UUID) : BlogViews.PostDetail
+}
+
+class BlogAuthorResolver <<service>> {
+  - userRepository : AppUserRepository
+  + profile(authorId : UUID) : Profile
+  + profiles(authorIds : Collection<UUID>) : Map<UUID, Profile>
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+  + findAllById(ids : Collection<UUID>) : List<AppUser>
+}
+
+interface BlogPostRepository {
+  + findPublishedById(id : UUID) : Optional<BlogPost>
+}
+
+interface BlogCommentRepository {
+  + findByPostId(postId : UUID) : List<BlogComment>
+}
+
+class JpaBlogCommentRepository <<adapter>> {
+  - jpa : BlogCommentJpaRepository
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - content : String
+  - thumbnailUrl : String
+  - subject : Subject
+  - status : BlogPostStatus
+  - createdAt : Instant
+}
+
+class BlogComment <<entity>> {
+  - id : UUID
+  - postId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - createdAt : Instant
+  - hiddenAt : Instant
+}
+
+class "BlogViews.PostDetail" as BlogPostDetailView <<dto>> {
+  + id : UUID
+  + title : String
+  + content : String
+  + subject : Subject
+  + authorId : UUID
+  + authorName : String
+  + createdAt : Instant
+  + comments : List<CommentView>
+}
+
+class "BlogViews.CommentView" as BlogCommentView <<dto>> {
+  + id : UUID
+  + content : String
+  + authorId : UUID
+  + parentCommentId : UUID
+  + authorName : String
+  + createdAt : Instant
+}
+
+BlogCommunityPage ..> BlogController : calls API
+BlogController ..> BlogPostDetailView : output
+BlogController "1" --> "1" BlogPostService
+BlogPostService "1" --> "1" BlogPostRepository
+BlogPostService "1" --> "1" BlogCommentRepository
+BlogPostService "1" --> "1" BlogAuthorResolver
+BlogAuthorResolver "1" --> "1" AppUserRepository
+JpaBlogCommentRepository ..|> BlogCommentRepository : implements
+BlogPostRepository ..> BlogPost : reads PUBLISHED posts
+BlogCommentRepository ..> BlogComment : reads visible comments
+BlogPost "1" -- "0..*" BlogComment : has
+BlogPostDetailView "1" *-- "0..*" BlogCommentView : contains
+
+@enduml

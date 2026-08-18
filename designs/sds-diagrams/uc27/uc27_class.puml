@@ -1,0 +1,106 @@
+@startuml UC-27 Reply to Blog Comment - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-27 Reply to Blog Comment — Class Diagram
+
+class BlogCommunityPage <<client>> {
+  - detail : Detail
+  - comment : String
+  - replyTo : Comment
+  - isCommentSubmitting : boolean
+  + addComment() : void
+  + loadDetail(id : String) : void
+}
+
+class CreateBlogCommentRequest <<dto>> {
+  + content : String
+  + parentCommentId : UUID
+}
+
+class CommentView <<dto>> {
+  + id : UUID
+  + content : String
+  + authorId : UUID
+  + parentCommentId : UUID
+  + authorName : String
+  + createdAt : Instant
+}
+
+class BlogController <<controller>> {
+  - commentService : BlogCommentService
+  + createComment(id : UUID, request : CreateBlogCommentRequest) : CommentView
+}
+
+class BlogCommentService <<service>> {
+  - commentRepository : BlogCommentRepository
+  - postRepository : BlogPostRepository
+  - sanitizer : BlogContentSanitizer
+  - COMMENT_MAX_WORDS : int
+  + create(postId, content, parentCommentId) : CommentView
+}
+
+class BlogContentSanitizer <<service>> {
+  + sanitize(html : String) : String
+  + isEmpty(sanitizedHtml : String) : boolean
+}
+
+interface BlogPostRepository {
+  + findPublishedById(id : UUID) : Optional<BlogPost>
+}
+
+interface BlogCommentRepository {
+  + findById(id : UUID) : Optional<BlogComment>
+  + save(comment : BlogComment) : BlogComment
+}
+
+class JpaBlogCommentRepository <<adapter>> {
+  - jpa : BlogCommentJpaRepository
+}
+
+class BlogComment <<entity>> {
+  - id : UUID
+  - postId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - createdAt : Instant
+  - hiddenAt : Instant
+}
+
+class BlogCommentEntity <<entity>> {
+  - id : UUID
+  - postId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - hiddenAt : Instant
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - subject : Subject
+  - status : BlogPostStatus
+}
+
+BlogCommunityPage ..> BlogController : calls API
+BlogCommunityPage ..> CreateBlogCommentRequest : input
+BlogCommunityPage ..> CommentView : output
+BlogController ..> CreateBlogCommentRequest : input
+BlogController ..> CommentView : output
+BlogController "1" --> "1" BlogCommentService
+BlogCommentService "1" --> "1" BlogCommentRepository
+BlogCommentService "1" --> "1" BlogPostRepository
+BlogCommentService "1" --> "1" BlogContentSanitizer
+JpaBlogCommentRepository ..|> BlogCommentRepository : implements
+JpaBlogCommentRepository ..> BlogCommentEntity : maps
+BlogCommentRepository ..> BlogComment : uses
+BlogPostRepository ..> BlogPost : uses
+BlogPost "1" -- "0..*" BlogComment : has
+BlogComment "0..*" --> "0..1" BlogComment : replies to
+
+@enduml

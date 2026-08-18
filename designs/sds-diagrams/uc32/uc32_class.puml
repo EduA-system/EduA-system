@@ -1,0 +1,103 @@
+@startuml UC-32 Create Class - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-32 Create Class — Class Diagram
+
+class ClassManagementPage <<client>> {
+  - createForm : FormState
+  - creating : boolean
+  - confirmCreate : boolean
+  - error : String
+  + handleCreate(event : FormEvent) : void
+  + confirmCreateClass() : void
+}
+
+class CreateClassRequest <<dto>> {
+  + name : String
+  + subject : Subject
+  + grade : Integer
+  + description : String
+}
+
+class ClassDetailDto <<dto>> {
+  + id : UUID
+  + name : String
+  + description : String
+  + subject : Subject
+  + grade : Integer
+  + status : ClassStatus
+  + ownerId : UUID
+  + ownerName : String
+  + memberCount : long
+}
+
+class ClassController <<controller>> {
+  - classManagementService : ClassManagementService
+  + create(request : CreateClassRequest) : ClassDetailDto
+}
+
+class ClassManagementService <<service>> {
+  - classRepository : ClassRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - currentUserProvider : CurrentUserProvider
+  + createClass(name, subject, grade, description) : ClassViews.ClassDetail
+}
+
+interface ClassRepository {
+  + save(classroom : Classroom) : Classroom
+}
+
+class JpaClassRepository <<adapter>> {
+  - jpa : ClassJpaRepository
+}
+
+interface TeacherGradeRepository {
+  + findGradesByUserIds(userIds : Collection<UUID>) : Map<UUID, List<Integer>>
+}
+
+class Classroom <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - description : String
+  - subject : Subject
+  - grade : Integer
+  - status : ClassStatus
+  - createdAt : Instant
+  + isActive() : boolean
+}
+
+class ClassEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - name : String
+  - description : String
+  - subject : Subject
+  - grade : Integer
+  - status : ClassStatus
+  - createdAt : Instant
+}
+
+enum ClassStatus {
+  ACTIVE
+  INACTIVE
+}
+
+ClassManagementPage ..> ClassController : calls API
+ClassManagementPage ..> CreateClassRequest : input
+ClassController ..> CreateClassRequest : input
+ClassController ..> ClassDetailDto : output
+ClassController "1" --> "1" ClassManagementService
+ClassManagementService "1" --> "1" ClassRepository
+ClassManagementService "1" --> "1" TeacherGradeRepository
+JpaClassRepository ..|> ClassRepository : implements
+JpaClassRepository ..> ClassEntity : maps
+ClassEntity "1" -- "1" Classroom : mapped to
+ClassRepository ..> Classroom : output
+Classroom ..> ClassStatus : created as ACTIVE
+
+@enduml

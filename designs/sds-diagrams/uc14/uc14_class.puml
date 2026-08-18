@@ -1,0 +1,112 @@
+@startuml UC-14 Create Slide Deck - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-14 Create Slide Deck — Class Diagram
+
+class SlideMakerClient <<client>> {
+  - steps : StepStates
+  - libraryId : String
+  - saving : boolean
+  + runStep(step : int) : DesignStepStatus
+  + handleSlideFrames(slideId : String, result : LayoutRender) : void
+  + handleSlideReady(slideId, result, title) : void
+  + handleSlideFailed(slideId : String, message : String) : void
+  + saveDeck(metadata : DeckMetadata, auto : boolean) : void
+}
+
+class SlideDesignPipeline <<client>> {
+  - SLIDE_CONCURRENCY : int
+  - CONTENT_SLOT_BATCH_SIZE : int
+  - MAX_GENERATED_IMAGES_PER_DECK : int
+  + runDeckSkinStep(input : DesignPipelineInput, cb : StepCallbacks) : void
+  + runStructuralStep(cb : StepCallbacks) : StepRunResult
+  + runContentFillStep(cb : StepCallbacks) : StepRunResult
+}
+
+class SlideLayoutEngine <<client>> {
+  + generateSlideLayout(input : SlideLayoutInput) : SlideLayoutResult
+}
+
+class SlideLayoutRenderer <<client>> {
+  + renderSlideLayout(result, options) : SlideElement[]
+}
+
+class SlideDesignController <<controller>> {
+  - generateSlideHtmlDesignUseCase : GenerateSlideHtmlDesignUseCase
+  - fillSlideContentUseCase : FillSlideContentUseCase
+  + generateHtml(req : SlideHtmlDesignRequest) : SlideHtmlDesignResponse
+  + fillContent(req : SlideContentFillRequest) : SlideContentFillResponse
+  + generateImage(req : SlideImageGenerateRequest) : SlideImageGenerateResponse
+}
+
+class SlideHtmlDesignRequest <<dto>> {
+  + topic : String
+  + outline : String
+  + styleHint : String
+  + subject : String
+  + step : String
+  + priorHtml : String
+}
+
+class SlideContentSlotRequest <<dto>> {
+  + id : String
+  + kind : String
+  + zone : String
+  + sourceText : String
+  + maxChars : int
+  + maxLines : int
+  + width : Integer
+  + height : Integer
+}
+
+class GenerateSlideHtmlDesignUseCase <<service>> {
+  - aiClient : AiClient
+  - promptBuilder : SlideDesignPromptBuilder
+  - modelLabel : String
+  + execute(req : SlideHtmlDesignRequest) : SlideHtmlDesignResponse
+}
+
+class FillSlideContentUseCase <<service>> {
+  - aiClient : AiClient
+  - promptBuilder : SlideDesignPromptBuilder
+  - imageGenerator : SlideImageGenerator
+  - imageExecutor : ExecutorService
+  - MAX_JSON_ATTEMPTS : int
+  + execute(req : SlideContentFillRequest) : SlideContentFillResponse
+}
+
+class SlideImageGenerator <<service>> {
+  - imageGenerationClient : ImageGenerationClient
+  - storageClient : StorageClient
+  + generateAndStore(prompt : String, size : String) : String
+  + resolveImageSize(width : Integer, height : Integer) : String
+}
+
+interface AiClient {
+  + generate(prompt : String) : String
+  + generate(prompt, image, mimeType) : String
+}
+
+interface ImageGenerationClient {
+  + generatePng(prompt : String, size : String) : byte[]
+}
+
+SlideMakerClient "1" --> "1" SlideDesignPipeline
+SlideDesignPipeline ..> SlideDesignController : calls API
+SlideDesignPipeline ..> SlideHtmlDesignRequest : input
+SlideDesignPipeline ..> SlideContentSlotRequest : input
+SlideDesignPipeline "1" --> "1" SlideLayoutEngine
+SlideDesignPipeline "1" --> "1" SlideLayoutRenderer
+SlideDesignController "1" --> "1" GenerateSlideHtmlDesignUseCase
+SlideDesignController "1" --> "1" FillSlideContentUseCase
+GenerateSlideHtmlDesignUseCase "1" --> "1" AiClient
+FillSlideContentUseCase "1" --> "1" AiClient
+FillSlideContentUseCase "1" --> "1" SlideImageGenerator
+SlideImageGenerator "1" --> "1" ImageGenerationClient
+SlideLayoutEngine ..> SlideLayoutRenderer : output
+
+@enduml

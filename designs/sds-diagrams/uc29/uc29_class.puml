@@ -1,0 +1,71 @@
+@startuml UC-29 Delete Own Blog Comment - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-29 Delete Own Blog Comment — Class Diagram
+
+class BlogCommunityPage <<client>> {
+  - detail : Detail
+  - commentToDelete : Comment
+  + deleteComment(cid : String) : void
+  + loadDetail(id : String) : void
+}
+
+class BlogController <<controller>> {
+  - commentService : BlogCommentService
+  + deleteComment(commentId : UUID) : void
+}
+
+class BlogCommentService <<service>> {
+  - commentRepository : BlogCommentRepository
+  - currentUser : CurrentUserProvider
+  + delete(commentId : UUID) : void
+}
+
+interface BlogCommentRepository {
+  + findById(id : UUID) : Optional<BlogComment>
+  + deleteById(id : UUID) : void
+}
+
+class JpaBlogCommentRepository <<adapter>> {
+  - jpa : BlogCommentJpaRepository
+}
+
+class BlogComment <<entity>> {
+  - id : UUID
+  - postId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - createdAt : Instant
+  - hiddenAt : Instant
+}
+
+class BlogCommentEntity <<entity>> {
+  - id : UUID
+  - postId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - status : BlogPostStatus
+}
+
+BlogCommunityPage ..> BlogController : calls API
+BlogController "1" --> "1" BlogCommentService
+BlogCommentService "1" --> "1" BlogCommentRepository
+JpaBlogCommentRepository ..|> BlogCommentRepository : implements
+JpaBlogCommentRepository ..> BlogCommentEntity : maps
+BlogCommentRepository ..> BlogComment : deletes permanently
+BlogCommentEntity "1" -- "1" BlogComment : mapped to
+BlogPost "1" -- "0..*" BlogComment : has
+BlogComment "0..*" --> "0..1" BlogComment : replies to, ON DELETE CASCADE
+
+@enduml

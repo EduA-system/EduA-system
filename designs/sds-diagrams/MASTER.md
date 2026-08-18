@@ -115,6 +115,19 @@ Bước chèn ảnh khớp theo **tên heading** (`2.<N>.1 Class Diagram`), khô
 - Tên class trong sequence, trong class diagram và trong code phải trùng nhau từng ký tự.
 - **Vẽ theo code thật**, không theo trí nhớ: mở controller → service → repository → entity của đúng UC đó rồi mới vẽ. Sai một tên method là hỏng quy tắc 6.
 
+## Rút gọn chữ ký
+
+Chữ ký method dài làm hộp phình ngang, kéo cả hình rộng ra, và vì hình luôn bị ép vừa 9,69 inch nên **chữ bị co nhỏ**. UC-18 từng có dòng 166 ký tự → hình rộng 2406 px → chữ in ra chỉ 3,8 pt. Rút gọn xong còn 1510 px và 6,2 pt.
+
+Quy tắc:
+
+- Mỗi dòng trong hộp class **≤ 90 ký tự**.
+- Từ **3 tham số trở lên thì bỏ kiểu**, chỉ giữ tên: `publishPlanReady(sessionId, examPlan) : void`. Dưới 3 tham số thì giữ kiểu như mẫu tham khảo.
+- Bỏ tham số wiring: `generateStreaming(request, sessionId, stream)` → `generateStreaming(request, sessionId)`.
+- Bỏ chuỗi JSON nội bộ khỏi tham số: `detailOne(activity, knowledge, objectivesJson, materialsJson, frameJson, userPrompt)` → `detailOne(activity, context)`.
+- Thêm `skinparam wrapWidth 320` (class diagram) và `skinparam maxMessageSize 280` (sequence) để dòng dài tự xuống hàng.
+- Mục tiêu: bề ngang gốc **≤ 1700 px**, tương đương chữ in ≥ 5,5 pt. Vượt nhiều thì rút tiếp hoặc bỏ bớt hộp.
+
 ## Kích thước hình
 
 Nội dung quyết định kích thước, **không cắt bớt lifeline hay rút nhãn chỉ để hình hẹp lại**. Script tự co hình vừa bề ngang trang (9,69") nên hình càng rộng thì chữ càng nhỏ khi in — hình nào chữ nhỏ quá thì phóng to trực tiếp trong Word, hoặc xoay ngang riêng trang đó (Layout → Orientation → Landscape cho section).

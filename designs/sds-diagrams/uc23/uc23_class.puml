@@ -1,0 +1,111 @@
+@startuml UC-23 Create Blog Post - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-23 Create Blog Post — Class Diagram
+
+class CreateBlogPostPage <<client>> {
+  - title : String
+  - subject : SubjectValue
+  - content : String
+  - coverImageUrl : String
+  - errors : FormErrors
+  - submitting : boolean
+  + handleCoverFile(file : File) : void
+  + handleSubmit() : void
+  + discardDraft() : void
+}
+
+class UploadController <<controller>> {
+  - uploadService : UploadService
+  + upload(file : MultipartFile) : UploadResponse
+}
+
+class BlogController <<controller>> {
+  - postService : BlogPostService
+  + create(request : CreateBlogPostRequest) : BlogViews.PostDetail
+}
+
+class CreateBlogPostRequest <<dto>> {
+  + title : String
+  + content : String
+  + subject : String
+  + thumbnailUrl : String
+}
+
+class BlogPostService <<service>> {
+  - postRepository : BlogPostRepository
+  - sanitizer : BlogContentSanitizer
+  + create(title, content, subject, thumbnailUrl) : BlogViews.PostDetail
+}
+
+class BlogContentSanitizer <<service>> {
+  - safelist : Safelist
+  + sanitize(html : String) : String
+  + isEmpty(sanitizedHtml : String) : boolean
+}
+
+interface BlogPostRepository {
+  + save(post : BlogPost) : BlogPost
+}
+
+class JpaBlogPostRepository <<adapter>> {
+  - jpa : BlogPostJpaRepository
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - content : String
+  - thumbnailUrl : String
+  - subject : Subject
+  - status : BlogPostStatus
+  - createdAt : Instant
+  - updatedAt : Instant
+}
+
+class BlogPostEntity <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - content : String
+  - subject : Subject
+  - status : BlogPostStatus
+  - createdAt : Instant
+  - updatedAt : Instant
+}
+
+enum BlogPostStatus {
+  PUBLISHED
+  REMOVED_BY_MODERATOR
+  DELETED_BY_AUTHOR
+}
+
+class "BlogViews.PostDetail" as BlogPostDetailView <<dto>> {
+  + id : UUID
+  + title : String
+  + content : String
+  + subject : Subject
+  + authorName : String
+  + createdAt : Instant
+}
+
+CreateBlogPostPage ..> UploadController : uploads the cover image
+CreateBlogPostPage ..> BlogController : calls API
+CreateBlogPostPage ..> CreateBlogPostRequest : input
+BlogController ..> CreateBlogPostRequest : input
+BlogController ..> BlogPostDetailView : output
+BlogController "1" --> "1" BlogPostService
+BlogPostService "1" --> "1" BlogContentSanitizer
+BlogPostService "1" --> "1" BlogPostRepository
+JpaBlogPostRepository ..|> BlogPostRepository : implements
+JpaBlogPostRepository ..> BlogPostEntity : maps
+BlogPostRepository ..> BlogPost : saves
+BlogPostEntity "1" -- "1" BlogPost : mapped to
+BlogPost ..> BlogPostStatus : publish status
+
+@enduml

@@ -1,0 +1,104 @@
+@startuml UC-26 Comment on Blog Post - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-26 Comment on Blog Post — Class Diagram
+
+class BlogCommunityPage <<client>> {
+  - detail : Detail
+  - comment : String
+  - commentWordCount : int
+  - isCommentSubmitting : boolean
+  + addComment() : void
+  + loadDetail(id : String) : void
+}
+
+class BlogController <<controller>> {
+  - commentService : BlogCommentService
+  + createComment(id : UUID, request : CreateBlogCommentRequest) : BlogViews.CommentView
+}
+
+class CreateBlogCommentRequest <<dto>> {
+  + content : String
+  + parentCommentId : UUID
+}
+
+class BlogCommentService <<service>> {
+  - commentRepository : BlogCommentRepository
+  - postRepository : BlogPostRepository
+  - sanitizer : BlogContentSanitizer
+  - authorResolver : BlogAuthorResolver
+  - COMMENT_MAX_WORDS : int
+  + create(postId, content, parentCommentId) : BlogViews.CommentView
+}
+
+class BlogContentSanitizer <<service>> {
+  - safelist : Safelist
+  + sanitize(html : String) : String
+  + isEmpty(sanitizedHtml : String) : boolean
+}
+
+class BlogAuthorResolver <<service>> {
+  - userRepository : AppUserRepository
+  + profile(authorId : UUID) : Profile
+}
+
+interface BlogPostRepository {
+  + findPublishedById(id : UUID) : Optional<BlogPost>
+}
+
+interface BlogCommentRepository {
+  + save(comment : BlogComment) : BlogComment
+  + findById(id : UUID) : Optional<BlogComment>
+}
+
+class JpaBlogCommentRepository <<adapter>> {
+  - jpa : BlogCommentJpaRepository
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - subject : Subject
+  - status : BlogPostStatus
+}
+
+class BlogComment <<entity>> {
+  - id : UUID
+  - postId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - createdAt : Instant
+  - updatedAt : Instant
+  - hiddenAt : Instant
+}
+
+class "BlogViews.CommentView" as BlogCommentView <<dto>> {
+  + id : UUID
+  + content : String
+  + authorId : UUID
+  + parentCommentId : UUID
+  + authorName : String
+  + createdAt : Instant
+}
+
+BlogCommunityPage ..> BlogController : calls API
+BlogCommunityPage ..> CreateBlogCommentRequest : input
+BlogController ..> CreateBlogCommentRequest : input
+BlogController ..> BlogCommentView : output
+BlogController "1" --> "1" BlogCommentService
+BlogCommentService "1" --> "1" BlogPostRepository
+BlogCommentService "1" --> "1" BlogCommentRepository
+BlogCommentService "1" --> "1" BlogContentSanitizer
+BlogCommentService "1" --> "1" BlogAuthorResolver
+JpaBlogCommentRepository ..|> BlogCommentRepository : implements
+BlogPostRepository ..> BlogPost : reads PUBLISHED posts
+BlogCommentRepository ..> BlogComment : saves
+BlogPost "1" -- "0..*" BlogComment : has
+
+@enduml

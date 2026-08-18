@@ -1,0 +1,92 @@
+@startuml UC-16 Present Slide - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-16 Present Slide — Class Diagram
+
+class TopBar <<client>> {
+  - hasLockedSlides : boolean
+  - menu : String
+  + onPresent() : void
+}
+
+class SlideMakerClient <<client>> {
+  - presentSlides : Slide [0..*]
+  + openPresentation() : void
+  + closePresentation() : void
+}
+
+class SlidePresentationClient <<client>> {
+  - libraryId : String
+  - classId : String
+  - resourceId : String
+  - slides : Slide [0..*]
+  - error : String
+  + exit() : void
+}
+
+class SlideEditorStore <<client>> {
+  - slides : Slide [0..*]
+  - currentSlideId : String
+  + currentSlide() : Slide
+  + setCurrentSlide(id : String) : void
+}
+
+class SlideEditorStorage <<client>> {
+  - LS_KEY : String
+  + saveSlides(slides : Slide[]) : void
+  + loadSlides() : Slide[]
+}
+
+class SlidePresentationOverlay <<client>> {
+  - activeIndex : int
+  - scale : double
+  - selectedElement : PeriodicElement
+  + goTo(index : int) : void
+  + next() : void
+  + previous() : void
+  + setSelectedElement(element : PeriodicElement) : void
+  + onExit() : void
+}
+
+class ElementView <<client>> {
+  - el : SlideElement
+  - interactive : boolean
+  + onSelectPeriodicElement(element : PeriodicElement) : void
+}
+
+class ElementDetailPanel <<client>> {
+  - element : PeriodicElement
+  + onClose() : void
+}
+
+class Slide <<dto>> {
+  + id : String
+  + bg : String
+  + aiPrompt : String
+}
+
+class SlideElement <<dto>> {
+  + id : String
+  + type : ElementType
+  + zIndex : int
+  + opacity : double
+}
+
+TopBar ..> SlideMakerClient : requests the presentation
+SlideMakerClient "1" --> "1" SlideEditorStore
+SlideMakerClient ..> SlideEditorStorage : uses
+SlideMakerClient ..> SlidePresentationOverlay : opens as a full-screen overlay
+SlidePresentationClient ..> SlidePresentationOverlay : opens from a stored deck
+SlidePresentationClient ..> SlideEditorStorage : uses
+SlideEditorStore "1" --> "0..*" Slide
+SlidePresentationOverlay "1" --> "0..*" Slide
+SlidePresentationOverlay "1" --> "0..*" ElementView
+SlidePresentationOverlay "1" --> "1" ElementDetailPanel
+Slide "1" *-- "0..*" SlideElement : contains
+ElementView ..> SlideElement : input
+
+@enduml

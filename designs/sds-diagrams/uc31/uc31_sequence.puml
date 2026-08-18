@@ -1,0 +1,68 @@
+@startuml UC-31 View Class List - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-31 View Class List — Sequence Diagram
+
+actor Teacher
+participant ":ClassManagementPage" as UI
+participant ":ClassController" as CTL
+participant ":ClassManagementService" as SVC
+participant ":ClassRepository" as REPO
+participant ":ClassMemberRepository" as MEM
+database DB
+
+autonumber
+Teacher -> UI : Open the Class List from the main navigation
+activate UI
+UI -> UI : loadClasses()
+UI -> CTL : GET /api/classes?subject=&grade=&status=&q=&page=&size=
+activate CTL
+CTL -> SVC : listOwnedClasses(subject, grade, status, q, page, size)
+activate SVC
+SVC -> SVC : take the signed-in teacher as the class owner
+SVC -> REPO : searchOwned(ownerId, subject, grade, status, q, page, size)
+activate REPO
+REPO -> DB : SELECT * FROM classes WHERE owner_id = ? AND the selected filters ORDER BY updated_at DESC LIMIT ? OFFSET ?
+activate DB
+DB --> REPO : rows
+deactivate DB
+REPO -> DB : SELECT COUNT(*) FROM classes WHERE the same filters
+activate DB
+DB --> REPO : total
+deactivate DB
+REPO --> SVC : ClassRepository.SearchResult
+deactivate REPO
+SVC -> MEM : countByClassId(classId)
+activate MEM
+MEM -> DB : SELECT COUNT(*) FROM class_members WHERE class_id = ? AND status = 'ENROLLED'
+activate DB
+DB --> MEM : enrolled count
+deactivate DB
+MEM --> SVC : long
+deactivate MEM
+SVC -> SVC : build one summary per owned class with its member count
+SVC --> CTL : ClassViews.Page
+deactivate SVC
+CTL --> UI : HTTP 200 + ClassPageDto
+deactivate CTL
+
+alt no owned class matches the selected filters
+  UI --> Teacher : Show MSG01 and the tile that creates a new class
+else at least one owned class is found
+  UI --> Teacher : Show the class cards with name, subject, grade, member count and Active / Inactive status
+end
+
+opt teacher searches or filters the list
+  Teacher -> UI : Enter a keyword or change the grade or status filter
+  UI -> UI : rebuild the query parameters and reload the owned classes
+  UI --> Teacher : Refresh the class list with the matching classes
+end
+deactivate UI
+@enduml

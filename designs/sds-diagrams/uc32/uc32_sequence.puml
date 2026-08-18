@@ -1,0 +1,70 @@
+@startuml UC-32 Create Class - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-32 Create Class — Sequence Diagram
+
+actor Teacher
+participant ":ClassManagementPage" as UI
+participant ":ClassController" as CTL
+participant ":ClassManagementService" as SVC
+participant ":TeacherGradeRepository" as GRADES
+participant ":ClassRepository" as REPO
+database DB
+
+autonumber
+Teacher -> UI : Select "Create class" from the Class List
+activate UI
+UI --> Teacher : Show the creation form with name, subject, grade and description
+
+opt teacher cancels the creation
+  Teacher -> UI : Close the form without submitting
+  UI --> Teacher : Create no class and end the use case
+end
+
+Teacher -> UI : Enter the class name, grade and optional description, then submit
+UI -> UI : handleCreate(event)
+Teacher -> UI : Confirm the creation in the confirmation dialog
+UI -> UI : confirmCreateClass()
+UI -> CTL : POST /api/classes
+activate CTL
+CTL -> SVC : createClass(name, subject, grade, description)
+activate SVC
+SVC -> GRADES : findGradesByUserIds(userIds)
+activate GRADES
+GRADES -> DB : SELECT grade FROM teacher_grades WHERE user_id = ?
+activate DB
+DB --> GRADES : assigned grades
+deactivate DB
+GRADES --> SVC : Map<UUID, List<Integer>>
+deactivate GRADES
+SVC -> SVC : require a non-empty name and the teacher's own subject and assigned grade
+
+alt required information is missing or outside the teacher's subject and grades
+  SVC --> CTL : IllegalArgumentException / ForbiddenOperationException
+  CTL --> UI : HTTP 400 / 403
+  UI --> Teacher : Show MSG02, create no class and keep the entered information in the form
+else the entered information is valid
+  SVC -> REPO : save(new Classroom owned by the teacher with status ACTIVE)
+  activate REPO
+  REPO -> DB : INSERT INTO classes with owner, name, description, subject, grade and status ACTIVE
+  activate DB
+  DB --> REPO : Saved
+  deactivate DB
+  REPO --> SVC : Classroom
+  deactivate REPO
+  SVC -> SVC : build the class detail with the member, resource and submission counts
+  SVC --> CTL : ClassViews.ClassDetail
+  CTL --> UI : HTTP 201 + ClassDetailDto
+  UI --> Teacher : Show MSG08 and open the new Class Hub
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml
