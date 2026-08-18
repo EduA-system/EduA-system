@@ -151,3 +151,48 @@ Từ 4 subagent vẽ mục 2.4, 2.6, 2.7 (phần 1). Cùng cách phân loại nh
 | 3 | Actor trong code rộng hơn SRS | Vẽ đúng actor SRS ghi, không thêm; ghi vào file này |
 | 4 | Luật chỉ có trong code (200 từ, môn/khối, confirm dialog) | **Vẫn vẽ** — hệ thống thật; đồng thời bổ sung vào SRS |
 | 5 | UC chưa có spec (UC-27, 95, 98, 106, 112) | Vẽ theo code, đánh dấu "cần rà lại sau khi có spec" |
+
+---
+
+# Đợt sửa SRS 18/08/2026
+
+Đã vá thẳng vào `Report3_Software_Requirement_Specification_v1.2.docx` trên Drive (bản gốc trước khi sửa giữ ở scratchpad `srsfix/orig.docx`). Mọi thao tác đều đối chiếu đúng câu cũ trước khi ghi.
+
+## Đã sửa
+
+| Mục | Sửa gì |
+|---|---|
+| 1.3 bảng UC (UC-10) | Bỏ "or its current status"; thêm câu Publish Status bị đặt lại theo BR-23 khi nội dung đã duyệt và đã lên Hub |
+| 2.2.2 | AI sửa **mọi** mục khớp lệnh, không phải một mục |
+| 2.2.3 / 2.4.6 / 2.5.3 | Secondary Actor **File Storage Service → None** |
+| 2.2.3 / 2.5.3 | Xuất PDF là in từ trình duyệt, không gửi server, không có download link; gộp nhánh lỗi trùng |
+| 2.3.1 | "grouped by content type" → tab theo loại; mở item là mở editor/preview, không phải màn chi tiết |
+| 2.3.3 | Bỏ điều kiện "editable Publish Status" ở Precondition và bước 2 |
+| 2.3.4 | Precondition đang ghi nhầm nội dung hậu điều kiện → viết lại; Postcondition nêu rõ snapshot Hub vẫn công khai (BR-32) |
+| 2.4.1 | Bỏ bước xác nhận và nhánh "teacher cancels generation"; đánh lại số nhánh 4→3, 5→4 |
+| 2.4.3 | Bỏ bước validate outline (BR-13) và nhánh "outline invalid"; đánh lại số nhánh 5→4, 7→6 |
+| 2.5.1 | Sửa lỗi gõ "is ...saved"; nêu rõ Test Editor mở ngay khi sinh; bước cuối là rà soát trong editor |
+| 2.6.2 | Moderator không có môn thì liệt kê blog **mọi môn** thay vì báo lỗi (Precondition + Postcondition + nhánh Step 3) |
+| 2.6.6 | Comment không bị xoá khỏi DB, chỉ không truy cập được cùng bài |
+| 2.6.7 | Thêm giới hạn **200 từ** ở bước validate và nhánh lỗi |
+| 2.7.2 | Thêm điều kiện giáo viên phải có môn/khối được phân công; bước validate kiểm tra điều đó |
+| 2.7.3 | Thêm popup xác nhận, kiểm môn/khối, thông báo học sinh (BR-46), Secondary Actor Notification Service; đánh lại nhánh Step 8→9 |
+| 2.7.4 | Bỏ Notification Service và bước gửi thông báo; Postcondition ghi rõ đặt Inactive **không** gửi thông báo |
+| 2.7.19 | Nộp bài bằng **văn bản và/hoặc tệp** (Description, Postcondition, bước 3 và 5) |
+| Toàn tài liệu | Đánh lại **96 tham chiếu** dạng "UC-NN: Tên" theo bảng 1.3.2; sửa thêm 6 tham chiếu tên cũ ở 5.3; xoá 3 dòng "Mapped Use Case" trỏ tới UC đã bỏ |
+
+Giữ nguyên theo yêu cầu: mọi mô tả **auto-save** (BR-19, 2.4.3, 2.3.3) — BR-19 hiện đã mô tả đúng code (auto-save lần sinh đầu, sau đó lưu tay kèm cảnh báo rời trang).
+
+## Còn lại
+
+| Việc | Vì sao chưa làm |
+|---|---|
+| 2.5.2 bước "validate answer-key consistency" | Chưa chốt: bỏ khỏi SRS hay bổ sung code |
+| 2.5.3 tuỳ chọn "kèm đáp án" (bước 2 + Postcondition) | Như trên |
+| UC-11 snapshot Hub vẫn công khai sau khi xoá | Đã hoãn để sửa code; nếu sửa code thì phải sửa lại Postcondition 2.3.4 |
+| Thêm UC-113 View Other User Profile | Cần thêm dòng bảng 1.3 + spec mới ở mục 2 + hình trong Report 4 |
+| 5 UC chưa có spec (UC-27, 95, 98, 106, 112) | Cần viết Normal/Alternative Flow |
+| 2 dòng 5.3 gắn "UC-56: Run Chemistry Virtual Lab Experiment" | Không còn UC tương ứng trong hệ thống, cần chọn UC thay thế hoặc bỏ dòng |
+| UC-110 / UC-112 xuất báo cáo | Phải code trước bảo vệ |
+
+Bảng 5.2 System Messages **đã có nội dung đầy đủ** (MSG01–MSG82) — mục này trong danh sách trên đã xử lý xong.
