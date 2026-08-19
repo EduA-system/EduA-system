@@ -14,6 +14,7 @@ $ErrorActionPreference = 'Stop'
 $W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 $R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 $PAGE_W_IN = 9.69
+$PAGE_H_IN = 11.50      # chua chieu cao anh de con cho heading + mo ta tren cung trang
 $EMU = 914400
 
 Add-Type -AssemblyName System.IO.Compression
@@ -98,6 +99,7 @@ try {
     $j = Get-Content -LiteralPath $meta -Raw | ConvertFrom-Json
     $wIn = [Math]::Min($PAGE_W_IN, $j.widthIn)
     $hIn = $wIn * $j.heightIn / $j.widthIn
+    if ($hIn -gt $PAGE_H_IN) { $wIn = $wIn * $PAGE_H_IN / $hIn; $hIn = $PAGE_H_IN }   # anh cao qua thi thu nho theo chieu cao, khong de tran trang
     $cx = [int]($wIn * $EMU); $cy = [int]($hIn * $EMU)
 
     # them anh vao goi

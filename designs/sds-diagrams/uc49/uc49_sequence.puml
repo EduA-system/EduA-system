@@ -8,7 +8,7 @@ skinparam DatabaseBackgroundColor #FFFFFF
 skinparam DatabaseBorderColor #000000
 skinparam noteBackgroundColor #F5F5F5
 skinparam noteBorderColor #666666
-title UC-49 Submit Assignment — Sequence Diagram
+title 2.14.2.4 UC-49 Submit Assignment — Sequence Diagram
 
 actor Student
 participant ":ResourceDetailPage" as UI
@@ -18,43 +18,43 @@ participant ":SubmissionRepository" as REPO
 database DB
 
 autonumber
-Student -> UI : Enter answer text, attach files and click "Submit"
+Student ->> UI : Enter answer text, attach files and click "Submit"
 activate UI
-UI -> CTL : POST /api/classes/{id}/resources/{rid}/submission
+UI ->> CTL : POST /api/classes/{id}/resources/{rid}/submission
 activate CTL
-CTL -> SVC : submit(classId, resourceId, textContent, files)
+CTL ->> SVC : submit(classId, resourceId, textContent, files)
 activate SVC
 
-SVC -> REPO : findByResourceAndStudent(resourceId, studentId)
+SVC ->> REPO : findByResourceAndStudent(resourceId, studentId)
 activate REPO
-REPO -> DB : SELECT * FROM submissions\nWHERE class_resource_id = ? AND student_id = ?
+REPO ->> DB : SELECT * FROM submissions\nWHERE class_resource_id = ? AND student_id = ?
 activate DB
-DB --> REPO : row / null
+DB -->> REPO : row / null
 deactivate DB
-REPO --> SVC : Optional<SubmissionWithFiles>
+REPO -->> SVC : SubmissionWithFiles
 deactivate REPO
 
 alt not a class member / class is INACTIVE / resource does not accept submissions
-  SVC --> CTL : ForbiddenOperationException / ResourceNotFoundException
-  CTL --> UI : HTTP 403 / 404
-  UI --> Student : Show submission-blocked message, keep the draft
+  SVC -->> CTL : ForbiddenOperationException / ResourceNotFoundException
+  CTL -->> UI : HTTP 403 / 404
+  UI -->> Student : Show submission-blocked message, keep the draft
 
 else valid
-  SVC -> SVC : sanitize the answer text
-  SVC -> SVC : status = submittedAt ≤ deadline ? ON_TIME : LATE
+  SVC ->> SVC : sanitize the answer text
+  SVC ->> SVC : status = submittedAt ≤ deadline ? ON_TIME : LATE
 
-  SVC -> REPO : upsert(submission, files)
+  SVC ->> REPO : upsert(submission, files)
   activate REPO
-  REPO -> DB : INSERT/UPDATE submissions + submission_files
+  REPO ->> DB : INSERT/UPDATE submissions + submission_files
   activate DB
-  DB --> REPO : Saved
+  DB -->> REPO : Saved
   deactivate DB
-  REPO --> SVC : SubmissionWithFiles
+  REPO -->> SVC : SubmissionWithFiles
   deactivate REPO
 
-  SVC --> CTL : SubmissionViews.Detail
-  CTL --> UI : HTTP 200 + SubmissionDetailDto
-  UI --> Student : Show ON_TIME / LATE status, attached files and submitted time
+  SVC -->> CTL : SubmissionDetail
+  CTL -->> UI : HTTP 200 + SubmissionDetail
+  UI -->> Student : Show ON_TIME / LATE status, attached files and submitted time
 end
 
 deactivate SVC

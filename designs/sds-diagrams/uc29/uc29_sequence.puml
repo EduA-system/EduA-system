@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-29 Delete Own Blog Comment — Sequence Diagram
+title 2.11.2.9 UC-29 Delete Own Blog Comment — Sequence Diagram
 
 actor Teacher
 participant ":BlogCommunityPage" as UI
@@ -18,49 +18,49 @@ participant ":BlogCommentRepository" as REPO
 database DB
 
 autonumber
-Teacher -> UI : Click "Delete" on one of their own comments
+Teacher ->> UI : Click "Delete" on one of their own comments
 activate UI
-UI --> Teacher : Show the delete confirmation dialog warning that direct replies go with it (MSG09)
+UI -->> Teacher : Show the delete confirmation dialog warning that direct replies go with it (MSG09)
 
 opt the teacher cancels the deletion
-  Teacher -> UI : Click "Let me think again"
-  UI --> Teacher : Close the dialog, change nothing stored, and end the use case
+  Teacher ->> UI : Click "Let me think again"
+  UI -->> Teacher : Close the dialog, change nothing stored, and end the use case
 end
 
-Teacher -> UI : Click "Delete comment" to confirm
-UI -> UI : deleteComment(cid)
-UI -> CTL : DELETE /api/blog-comments/{commentId}
+Teacher ->> UI : Click "Delete comment" to confirm
+UI ->> UI : deleteComment(cid)
+UI ->> CTL : DELETE /api/blog-comments/{commentId}
 activate CTL
-CTL -> SVC : delete(commentId)
+CTL ->> SVC : delete(commentId)
 activate SVC
 
-SVC -> REPO : findById(commentId)
+SVC ->> REPO : findById(commentId)
 activate REPO
-REPO -> DB : SELECT * FROM blog_comments WHERE id = ?
+REPO ->> DB : SELECT * FROM blog_comments WHERE id = ?
 activate DB
-DB --> REPO : row / none
+DB -->> REPO : row / none
 deactivate DB
-REPO --> SVC : Optional<BlogComment>
+REPO -->> SVC : BlogComment
 deactivate REPO
 
 alt the comment is missing or hidden, or the teacher is not its author
-  SVC --> CTL : ResourceNotFoundException / ForbiddenOperationException
-  CTL --> UI : HTTP 404 / 403
-  UI --> Teacher : Show MSG25 and leave the discussion unchanged
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> Teacher : Show MSG25 and leave the discussion unchanged
 
 else the teacher owns the comment
-  SVC -> REPO : deleteById(commentId)
+  SVC ->> REPO : deleteById(commentId)
   activate REPO
-  REPO -> DB : DELETE FROM blog_comments WHERE id = ?
+  REPO ->> DB : DELETE FROM blog_comments WHERE id = ?
   activate DB
-  DB --> REPO : Deleted, direct replies removed by ON DELETE CASCADE
+  DB -->> REPO : Deleted, direct replies removed by ON DELETE CASCADE
   deactivate DB
-  REPO --> SVC : void
+  REPO -->> SVC : void
   deactivate REPO
-  SVC --> CTL : void
-  CTL --> UI : HTTP 204 No Content
-  UI -> UI : loadDetail(id)
-  UI --> Teacher : Show MSG10 and the discussion without the deleted comment and its replies
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204 No Content
+  UI ->> UI : loadDetail(id)
+  UI -->> Teacher : Show MSG10 and the discussion without the deleted comment and its replies
 end
 
 deactivate SVC

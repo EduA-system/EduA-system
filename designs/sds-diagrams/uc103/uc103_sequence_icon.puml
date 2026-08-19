@@ -1,0 +1,67 @@
+@startuml UC-103 View Staff Detail - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.19.2.2 UC-103 View Staff Detail — Sequence Diagram
+
+actor Principal
+boundary ":UserManagementPage" as LIST
+boundary ":UserProfileViewPage" as UI
+control ":UserController" as CTL
+control ":UserProfileViewService" as SVC
+boundary ":AppUserRepository" as USERS
+boundary ":UserRoleRepository" as ROLES
+database DB
+
+autonumber
+Principal ->> LIST : Select the name of a Moderator or of the IT Supporter in the Staff List
+activate LIST
+LIST ->> UI : open the read-only profile route of the selected account
+deactivate LIST
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/users/{id}/profile
+activate CTL
+CTL ->> SVC : view(targetId)
+activate SVC
+SVC ->> USERS : findById(targetId)
+activate USERS
+USERS ->> DB : SELECT * FROM app_users WHERE id = ?
+activate DB
+DB -->> USERS : row / none
+deactivate DB
+USERS -->> SVC : AppUser
+deactivate USERS
+SVC ->> ROLES : findRolesByUserId(targetId)
+activate ROLES
+ROLES ->> DB : SELECT the granted role FROM user_roles WHERE user_id = ?
+activate DB
+DB -->> ROLES : row / none
+deactivate DB
+ROLES -->> SVC : Role [0..*]
+deactivate ROLES
+SVC ->> SVC : accept only an existing Moderator or IT Staff account that is not DISABLED and is visible to the Principal
+
+alt the selected account does not exist, is DISABLED or is out of the Principal's scope
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> Principal : Show the unavailable-account message and no stored data is changed
+else the selected staff account is visible to the Principal
+  SVC ->> ROLES : findGrantedAtsByUserIds(userIds, role)
+  activate ROLES
+  ROLES -->> SVC : Map<String, Date>
+  deactivate ROLES
+  SVC -->> CTL : UserProfileView
+  CTL -->> UI : HTTP 200 + UserProfileView
+  UI -->> Principal : Show the full name, position, email, subject, grades, granted date and granting account
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

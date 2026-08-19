@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-83 View Weekly Schedule — Sequence Diagram
+title 2.15.2.1 UC-83 View Weekly Schedule — Sequence Diagram
 
 actor "Teacher or Moderator" as USER
 participant ":WeeklyScheduleScreen" as UI
@@ -19,54 +19,54 @@ participant ":AppUserRepository" as USERS
 database DB
 
 autonumber
-USER -> UI : Open the Weekly Schedule and choose the month and the grade
+USER ->> UI : Open the Weekly Schedule and choose the month and the grade
 activate UI
-UI -> UI : load()
-UI -> CTL : GET /api/weekly-tasks?from=&to=&grade=
+UI ->> UI : load()
+UI ->> CTL : GET /api/weekly-tasks?from=&to=&grade=
 activate CTL
-CTL -> SVC : schedule(from, to, grade)
+CTL ->> SVC : schedule(from, to, grade)
 activate SVC
-SVC -> SVC : resolve the visible scope from the signed-in user's role and assigned subject
+SVC ->> SVC : resolve the visible scope from the signed-in user's role and assigned subject
 
 alt current user holds the MODERATOR role
-  SVC -> REPO : findBySubjectAndGrade(subject, grade, fromWeek, toWeek)
+  SVC ->> REPO : findBySubjectAndGrade(subject, grade, fromWeek, toWeek)
   activate REPO
-  REPO -> DB : SELECT * FROM weekly_tasks WHERE subject = ? AND grade = ? AND week_start_date BETWEEN ? AND ?
+  REPO ->> DB : SELECT * FROM weekly_tasks WHERE subject = ? AND grade = ? AND week_start_date BETWEEN ? AND ?
   activate DB
-  DB --> REPO : rows
+  DB -->> REPO : rows
   deactivate DB
-  REPO --> SVC : List<WeeklyTask>
+  REPO -->> SVC : WeeklyTask [0..*]
   deactivate REPO
 else current user is a teacher and only sees the tasks assigned to them
-  SVC -> REPO : findByTeacher(teacherId, fromWeek, toWeek)
+  SVC ->> REPO : findByTeacher(teacherId, fromWeek, toWeek)
   activate REPO
-  REPO -> DB : SELECT * FROM weekly_tasks WHERE teacher_id = ? AND week_start_date BETWEEN ? AND ?
+  REPO ->> DB : SELECT * FROM weekly_tasks WHERE teacher_id = ? AND week_start_date BETWEEN ? AND ?
   activate DB
-  DB --> REPO : rows
+  DB -->> REPO : rows
   deactivate DB
-  REPO --> SVC : List<WeeklyTask>
+  REPO -->> SVC : WeeklyTask [0..*]
   deactivate REPO
 end
 
-SVC -> USERS : findAllById(ids)
+SVC ->> USERS : findAllById(ids)
 activate USERS
-USERS -> DB : SELECT * FROM app_users WHERE id IN (?)
+USERS ->> DB : SELECT * FROM app_users WHERE id IN (?)
 activate DB
-DB --> USERS : rows
+DB -->> USERS : rows
 deactivate DB
-USERS --> SVC : List<AppUser>
+USERS -->> SVC : AppUser [0..*]
 deactivate USERS
-SVC -> SVC : group the tasks by week start date and attach the moderator and teacher display names
-SVC --> CTL : WeeklyTaskViews.Schedule
+SVC ->> SVC : group the tasks by week start date and attach the moderator and teacher display names
+SVC -->> CTL : WeeklyTaskSchedule
 deactivate SVC
-CTL --> UI : HTTP 200 + WeeklyTaskViews.Schedule
+CTL -->> UI : HTTP 200 + WeeklyTaskSchedule
 deactivate CTL
-UI -> UI : buildMonthSchedule(weeks, year, month)
+UI ->> UI : buildMonthSchedule(weeks, year, month)
 
 alt no task is visible in the selected month
-  UI --> USER : Show MSG01 and the empty weeks of the month
+  UI -->> USER : Show MSG01 and the empty weeks of the month
 else at least one task is visible
-  UI --> USER : Show every week with its tasks: title, chapter and lesson, assignee, deadline and review status
+  UI -->> USER : Show every week with its tasks: title, chapter and lesson, assignee, deadline and review status
 end
 deactivate UI
 @enduml

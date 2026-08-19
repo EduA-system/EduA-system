@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-100 View System Prompts — Sequence Diagram
+title 2.20.2.2 UC-100 View System Prompts — Sequence Diagram
 
 actor "IT Staff" as STAFF
 participant ":ItStaffPage" as UI
@@ -19,40 +19,40 @@ participant ":AiPromptTemplateCatalog" as CATALOG
 database DB
 
 autonumber
-STAFF -> UI : Open the AI configuration screen
+STAFF ->> UI : Open the AI configuration screen
 activate UI
-UI -> UI : load()
-UI -> CTL : GET /api/it-staff/system-prompts
+UI ->> UI : load()
+UI ->> CTL : GET /api/it-staff/system-prompts
 activate CTL
-CTL -> SVC : list()
+CTL ->> SVC : list()
 activate SVC
-SVC -> SVC : walk every prompt key used by the generation features
-SVC -> REPO : findByKey(key)
+SVC ->> SVC : walk every prompt key used by the generation features
+SVC ->> REPO : findByKey(key)
 activate REPO
-REPO -> DB : SELECT * FROM ai_system_prompts WHERE prompt_key = ?
+REPO ->> DB : SELECT * FROM ai_system_prompts WHERE prompt_key = ?
 activate DB
-DB --> REPO : row / none
+DB -->> REPO : row / none
 deactivate DB
-REPO --> SVC : Optional<AiSystemPrompt>
+REPO -->> SVC : AiSystemPrompt
 deactivate REPO
 
 opt no instruction is stored for the key yet
-  SVC -> CATALOG : defaultInstruction(key)
+  SVC ->> CATALOG : defaultInstruction(key)
   activate CATALOG
-  CATALOG --> SVC : built-in instruction of that feature
+  CATALOG -->> SVC : built-in instruction of that feature
   deactivate CATALOG
 end
 
-SVC --> CTL : List<AiSystemPrompt>
+SVC -->> CTL : AiSystemPrompt [0..*]
 deactivate SVC
-CTL --> UI : HTTP 200 + List<AiSystemPromptDto>
+CTL -->> UI : HTTP 200 + AiSystemPrompt [0..*]
 deactivate CTL
-UI -> UI : group the prompts by feature and keep only the ones matching the search text
+UI ->> UI : group the prompts by feature and keep only the ones matching the search text
 
 alt no prompt matches the selected feature group or the search text
-  UI --> STAFF : Show MSG01
+  UI -->> STAFF : Show MSG01
 else at least one prompt is available
-  UI --> STAFF : Show every prompt grouped by feature with its key, complete instruction, word count, last-updated time and the Edit action
+  UI -->> STAFF : Show every prompt grouped by feature with its key, complete instruction, word count, last-updated time and the Edit action
 end
 deactivate UI
 @enduml

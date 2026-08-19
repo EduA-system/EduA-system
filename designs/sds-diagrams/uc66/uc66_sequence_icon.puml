@@ -1,0 +1,68 @@
+@startuml UC-66 Publish Hub Content - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.9.2.5 UC-66 Publish Hub Content — Sequence Diagram
+
+actor Teacher
+boundary ":LibraryScreen" as UI
+control ":LibraryContentController" as CTL
+control ":LibraryContentService" as SVC
+boundary ":LibraryContentRepository" as CONTENTS
+database DB
+
+autonumber
+Teacher ->> UI : Click "Submit to Community Hub" on an eligible owned item
+activate UI
+UI ->> UI : requestAction(content, kind)
+UI -->> Teacher : Show the confirmation popup with the item title
+
+opt teacher cancels the publication request
+  Teacher ->> UI : Click "Cancel"
+  UI -->> Teacher : Close the popup, create no publication request and leave the Publish Status unchanged
+end
+
+Teacher ->> UI : Click "Submit" to confirm the publication request
+UI ->> UI : performAction()
+UI ->> CTL : POST /api/library/contents/{id}/submission
+activate CTL
+CTL ->> SVC : submit(id)
+activate SVC
+SVC ->> CONTENTS : findActiveById(id)
+activate CONTENTS
+CONTENTS ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+activate DB
+DB -->> CONTENTS : row / none
+deactivate DB
+CONTENTS -->> SVC : LibraryContent
+deactivate CONTENTS
+SVC ->> SVC : check ownership, block Physics simulations and require Publish Status PRIVATE or REJECTED with a subject
+
+alt the item is unavailable, not owned or not eligible for Hub submission
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException / StateConflictException
+  CTL -->> UI : HTTP 404 / HTTP 403 / HTTP 409
+  UI -->> Teacher : Show that the item cannot be submitted in its current Publish Status and change nothing stored
+else the owned item is eligible
+  SVC ->> CONTENTS : save(content with status SUBMITTED)
+  activate CONTENTS
+  CONTENTS ->> DB : UPDATE library_contents SET status = 'SUBMITTED', submitted_at = ?, updated_at = ? WHERE id = ?
+  activate DB
+  DB -->> CONTENTS : Saved
+  deactivate DB
+  CONTENTS -->> SVC : LibraryContent
+  deactivate CONTENTS
+  SVC -->> CTL : Detail
+  CTL -->> UI : HTTP 200 + Detail
+  UI ->> UI : load()
+  UI -->> Teacher : Show MSG11 and the updated Publish Status Pending Publish in the Personal Library
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

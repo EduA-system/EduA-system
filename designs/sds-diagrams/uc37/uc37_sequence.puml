@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-37 View Enrolled Classes List — Sequence Diagram
+title 2.12.2.7 UC-37 View Enrolled Classes List — Sequence Diagram
 
 actor Student
 participant ":StudentClassResourcesPage" as UI
@@ -19,50 +19,50 @@ participant ":ClassMemberRepository" as MEM
 database DB
 
 autonumber
-Student -> UI : Open the Enrolled Classes List from the main navigation
+Student ->> UI : Open the Enrolled Classes List from the main navigation
 activate UI
-UI -> UI : loadClasses()
-UI -> CTL : GET /api/classes/enrolled?subject=&grade=&status=&q=&page=&size=
+UI ->> UI : loadClasses()
+UI ->> CTL : GET /api/classes/enrolled?subject=&grade=&status=&q=&page=&size=
 activate CTL
-CTL -> SVC : listEnrolledClasses(subject, grade, status, q, page, size)
+CTL ->> SVC : listEnrolledClasses(subject, grade, status, q, page, size)
 activate SVC
-SVC -> SVC : take the signed-in student as the enrolled member
-SVC -> REPO : searchEnrolled(studentId, subject, grade, status, q, page, size)
+SVC ->> SVC : take the signed-in student as the enrolled member
+SVC ->> REPO : searchEnrolled(studentId, subject, grade, status, q, page, size)
 activate REPO
-REPO -> DB : SELECT * FROM classes WHERE id IN the classes the student is ENROLLED in AND the selected filters ORDER BY updated_at DESC LIMIT ? OFFSET ?
+REPO ->> DB : SELECT * FROM classes WHERE id IN the classes the student is ENROLLED in AND the selected filters ORDER BY updated_at DESC LIMIT ? OFFSET ?
 activate DB
-DB --> REPO : rows
+DB -->> REPO : rows
 deactivate DB
-REPO -> DB : SELECT COUNT(*) FROM classes WHERE the same filters
+REPO ->> DB : SELECT COUNT(*) FROM classes WHERE the same filters
 activate DB
-DB --> REPO : total
+DB -->> REPO : total
 deactivate DB
-REPO --> SVC : ClassRepository.SearchResult
+REPO -->> SVC : ClassRepository.SearchResult
 deactivate REPO
-SVC -> MEM : countByClassId(classId)
+SVC ->> MEM : countByClassId(classId)
 activate MEM
-MEM -> DB : SELECT COUNT(*) FROM class_members WHERE class_id = ? AND status = 'ENROLLED'
+MEM ->> DB : SELECT COUNT(*) FROM class_members WHERE class_id = ? AND status = 'ENROLLED'
 activate DB
-DB --> MEM : enrolled count
+DB -->> MEM : enrolled count
 deactivate DB
-MEM --> SVC : long
+MEM -->> SVC : long
 deactivate MEM
-SVC -> SVC : build one summary per enrolled class with its member count and status
-SVC --> CTL : ClassViews.Page
+SVC ->> SVC : build one summary per enrolled class with its member count and status
+SVC -->> CTL : ClassPage
 deactivate SVC
-CTL --> UI : HTTP 200 + ClassPageDto
+CTL -->> UI : HTTP 200 + ClassPage
 deactivate CTL
 
 alt the student is enrolled in no class matching the filters
-  UI --> Student : Show MSG01 and no class card
+  UI -->> Student : Show MSG01 and no class card
 else at least one enrolled class is found
-  UI --> Student : Show the enrolled class cards with name, subject, grade and Active / Inactive status
+  UI -->> Student : Show the enrolled class cards with name, subject, grade and Active / Inactive status
 end
 
 opt student searches or filters the list
-  Student -> UI : Enter a keyword or change the grade or subject filter
-  UI -> UI : rebuild the query parameters and reload the enrolled classes
-  UI --> Student : Refresh the list with the matching enrolled classes
+  Student ->> UI : Enter a keyword or change the grade or subject filter
+  UI ->> UI : rebuild the query parameters and reload the enrolled classes
+  UI -->> Student : Refresh the list with the matching enrolled classes
 end
 deactivate UI
 @enduml

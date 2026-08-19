@@ -6,7 +6,7 @@ skinparam ParticipantBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-52 View Physics Simulation Detail — Sequence Diagram
+title 2.6.2.2 UC-52 View Physics Simulation Detail — Sequence Diagram
 
 actor "Physics Teacher" as Teacher
 participant ":DetailView" as DV
@@ -17,52 +17,52 @@ participant ":SceneKonva2D" as CANVAS
 participant ":SceneKernel" as KERNEL
 
 autonumber
-Teacher -> DV : Select a simulation from the Physics Simulation Library
+Teacher ->> DV : Select a simulation from the Physics Simulation Library
 activate DV
-DV -> DV : dispatch the opened preset to the matching detail view by its id and kind
-DV -> GDV : render()
+DV ->> DV : dispatch the opened preset to the matching detail view by its id and kind
+DV ->> GDV : render()
 activate GDV
-GDV -> PRESET : applyParams(params)
+GDV ->> PRESET : applyParams(params)
 activate PRESET
-PRESET --> GDV : Scene
+PRESET -->> GDV : Scene
 deactivate PRESET
-GDV -> CANVAS : render()
+GDV ->> CANVAS : render()
 activate CANVAS
-CANVAS -> KERNEL : <<create>> compile the scene bodies, forces and constraints into an ODE kernel
+CANVAS ->> KERNEL : <<create>> compile the scene bodies, forces and constraints into an ODE kernel
 activate KERNEL
-CANVAS -> KERNEL : project(initialState)
-KERNEL --> CANVAS : StateVec
-CANVAS -> KERNEL : derivs(s)
-KERNEL --> CANVAS : StateVec
+CANVAS ->> KERNEL : project(initialState)
+KERNEL -->> CANVAS : StateVec
+CANVAS ->> KERNEL : derivs(s)
+KERNEL -->> CANVAS : StateVec
 deactivate KERNEL
-CANVAS -> CANVAS : advance one RK4 sub-step per animation frame at the selected playback speed
-CANVAS -> GDV : handleReadout(readout)
+CANVAS ->> CANVAS : advance one RK4 sub-step per animation frame at the selected playback speed
+CANVAS ->> GDV : handleReadout(readout)
 deactivate CANVAS
-GDV -> PANEL : render()
-GDV --> Teacher : Show the running simulation with its objective, textbook reference, one slider per supported parameter and the live position, velocity and energy readout
+GDV ->> PANEL : render()
+GDV -->> Teacher : Show the running simulation with its objective, textbook reference, one slider per supported parameter and the live position, velocity and energy readout
 
 opt teacher adjusts a supported parameter
-  Teacher -> PANEL : Drag a parameter slider to a new value inside its allowed range
+  Teacher ->> PANEL : Drag a parameter slider to a new value inside its allowed range
   activate PANEL
-  PANEL -> GDV : markEdited()
+  PANEL ->> GDV : markEdited()
   deactivate PANEL
-  GDV -> PRESET : applyParams(params)
+  GDV ->> PRESET : applyParams(params)
   activate PRESET
-  PRESET --> GDV : Scene
+  PRESET -->> GDV : Scene
   deactivate PRESET
-  GDV -> CANVAS : render()
+  GDV ->> CANVAS : render()
   activate CANVAS
-  CANVAS -> CANVAS : rebuild the kernel from the new scene and restart the run from its initial state
-  CANVAS --> Teacher : Show the updated motion for the new value and flag the run as edited
+  CANVAS ->> CANVAS : rebuild the kernel from the new scene and restart the run from its initial state
+  CANVAS -->> Teacher : Show the updated motion for the new value and flag the run as edited
   deactivate CANVAS
 end
 
 opt teacher restores the reviewed original
-  Teacher -> GDV : Select "Restore the reviewed original"
-  GDV -> GDV : revertAll()
-  GDV -> PANEL : render()
+  Teacher ->> GDV : Select "Restore the reviewed original"
+  GDV ->> GDV : revertAll()
+  GDV ->> PANEL : render()
   activate PANEL
-  PANEL --> Teacher : Show the original parameter values, playback speed and reviewed-original badge
+  PANEL -->> Teacher : Show the original parameter values, playback speed and reviewed-original badge
   deactivate PANEL
 end
 deactivate GDV

@@ -1,0 +1,72 @@
+@startuml UC-91 Approve Lesson Plan - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.15.2.9 UC-91 Approve Lesson Plan — Sequence Diagram
+
+actor Moderator
+boundary ":LessonPlanApprovalScreen" as UI
+boundary ":ConfirmDialog" as CONFIRM
+control ":WeeklyTaskController" as CTL
+control ":WeeklyTaskService" as SVC
+boundary ":WeeklyTaskRepository" as REPO
+database DB
+
+autonumber
+Moderator ->> UI : Click "Approve" on an eligible submission of the approval list
+activate UI
+UI ->> CONFIRM : Show the approval confirmation popup for that submission
+activate CONFIRM
+
+opt the moderator cancels the approval
+  Moderator ->> CONFIRM : Click "Cancel"
+  CONFIRM -->> Moderator : Close the popup and record no review decision
+end
+
+Moderator ->> CONFIRM : Click "Approve" to confirm the decision
+CONFIRM ->> UI : Report the confirmed approval
+deactivate CONFIRM
+UI ->> UI : handleApprove(id)
+UI ->> CTL : POST /api/weekly-tasks/{id}/approval
+activate CTL
+CTL ->> SVC : approve(id)
+activate SVC
+SVC ->> REPO : findById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM weekly_tasks WHERE id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : WeeklyTask
+deactivate REPO
+SVC ->> SVC : accept only a submission still in SUBMITTED status and inside the moderator assigned subject (BR-18)
+
+alt the submission is unavailable, already processed or outside the assigned subject
+  SVC -->> CTL : ResourceNotFoundException / IllegalArgumentException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 400 / 403
+  UI -->> Moderator : Report the unavailable or out-of-scope submission (MSG25) and keep every status unchanged
+else the submission is SUBMITTED and belongs to the assigned subject
+  SVC ->> REPO : save(task with APPROVED status, the reviewing moderator and the review time)
+  activate REPO
+  REPO ->> DB : UPDATE weekly_tasks SET review_status = 'APPROVED', reviewed_by = ?, reviewed_at = ? WHERE id = ?
+  activate DB
+  DB -->> REPO : Saved
+  deactivate DB
+  REPO -->> SVC : WeeklyTask
+  deactivate REPO
+  SVC ->> SVC : record the approval in the activity log and inform the assigned teacher of the review result (see UC-93)
+  SVC -->> CTL : WeeklyTaskDetail
+  CTL -->> UI : HTTP 200 + WeeklyTaskDetail
+  UI ->> UI : load()
+  UI -->> Moderator : Show MSG08, leave the Community Hub publish status untouched and refresh the approval list
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 260
-title UC-10 Update Content — Sequence Diagram
+title 2.9.2.3 UC-10 Update Content — Sequence Diagram
 
 actor Teacher
 participant ":LessonEditDashboard" as EDT
@@ -18,49 +18,49 @@ participant ":LibraryContentRepository" as REPO
 database DB
 
 autonumber
-Teacher -> EDT : Modify the opened content and click "Save"
+Teacher ->> EDT : Modify the opened content and click "Save"
 activate EDT
-EDT -> EDT : saveLesson(allowDuringGeneration)
-EDT -> EDT : build the payload and derive the title, subject, grade and thumbnail
-EDT -> CTL : PATCH /api/library/contents/{id}
+EDT ->> EDT : saveLesson(allowDuringGeneration)
+EDT ->> EDT : build the payload and derive the title, subject, grade and thumbnail
+EDT ->> CTL : PATCH /api/library/contents/{id}
 activate CTL
-CTL -> SVC : update(id, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl)
+CTL ->> SVC : update(id, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl)
 activate SVC
-SVC -> REPO : findActiveById(id)
+SVC ->> REPO : findActiveById(id)
 activate REPO
-REPO -> DB : SELECT * FROM library_contents WHERE id = ?
+REPO ->> DB : SELECT * FROM library_contents WHERE id = ?
 activate DB
-DB --> REPO : row / none
+DB -->> REPO : row / none
 deactivate DB
-REPO --> SVC : Optional<LibraryContent>
+REPO -->> SVC : LibraryContent
 deactivate REPO
-SVC -> SVC : check ownership and keep every field the request does not provide
+SVC ->> SVC : check ownership and keep every field the request does not provide
 
 alt the title is blank or the subject is cleared while the item is pending review
-  SVC --> CTL : IllegalArgumentException
-  CTL --> EDT : HTTP 400 with the field error
-  EDT --> Teacher : Highlight the invalid field, keep the edits in the editor and change nothing stored
+  SVC -->> CTL : IllegalArgumentException
+  CTL -->> EDT : HTTP 400 with the field error
+  EDT -->> Teacher : Highlight the invalid field, keep the edits in the editor and change nothing stored
 else the update is valid
-  SVC -> REPO : hasAnySnapshotBySourceId(id)
+  SVC ->> REPO : hasAnySnapshotBySourceId(id)
   activate REPO
-  REPO -> DB : SELECT 1 FROM library_contents WHERE source_library_content_id = ?
+  REPO ->> DB : SELECT 1 FROM library_contents WHERE source_library_content_id = ?
   activate DB
-  DB --> REPO : true / false
+  DB -->> REPO : true / false
   deactivate DB
-  REPO --> SVC : boolean
+  REPO -->> SVC : boolean
   deactivate REPO
-  SVC -> SVC : reset the status to PRIVATE when a published Hub snapshot exists, keep it otherwise
-  SVC -> REPO : save(updated LibraryContent)
+  SVC ->> SVC : reset the status to PRIVATE when a published Hub snapshot exists, keep it otherwise
+  SVC ->> REPO : save(updated LibraryContent)
   activate REPO
-  REPO -> DB : UPDATE library_contents SET metadata, payload, updated_at, version = version + 1\nWHERE id = ? AND version = ?
+  REPO ->> DB : UPDATE library_contents SET metadata, payload, updated_at, version = version + 1\nWHERE id = ? AND version = ?
   activate DB
-  DB --> REPO : Saved
+  DB -->> REPO : Saved
   deactivate DB
-  REPO --> SVC : LibraryContent
+  REPO -->> SVC : LibraryContent
   deactivate REPO
-  SVC --> CTL : LibraryViews.Detail
-  CTL --> EDT : HTTP 200 + LibraryViews.Detail
-  EDT --> Teacher : Show the success message and the new Publish Status (MSG08)
+  SVC -->> CTL : LibraryDetail
+  CTL -->> EDT : HTTP 200 + LibraryDetail
+  EDT -->> Teacher : Show the success message and the new Publish Status (MSG08)
 end
 deactivate SVC
 deactivate CTL

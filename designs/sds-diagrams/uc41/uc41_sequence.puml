@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-41 Update Class Resource — Sequence Diagram
+title 2.13.2.2 UC-41 Update Class Resource — Sequence Diagram
 
 actor Teacher
 participant ":ClassResourcesPage" as UI
@@ -19,46 +19,46 @@ participant ":ClassResourceRepository" as RES
 database DB
 
 autonumber
-Teacher -> UI : Select "Edit" on a resource of an owned ACTIVE class
+Teacher ->> UI : Select "Edit" on a resource of an owned ACTIVE class
 activate UI
-UI -> FORM : Open the form filled with the stored resource information
+UI ->> FORM : Open the form filled with the stored resource information
 activate FORM
-Teacher -> FORM : Change the title, description, attachment, submission setting or deadline, then click "Save"
-FORM -> FORM : handleSubmit(event)
-FORM -> CTL : PATCH /api/classes/{id}/resources/{resourceId}
+Teacher ->> FORM : Change the title, description, attachment, submission setting or deadline, then click "Save"
+FORM ->> FORM : handleSubmit(event)
+FORM ->> CTL : PATCH /api/classes/{id}/resources/{resourceId}
 activate CTL
-CTL -> SVC : updateResource(classId, resourceId, resourceChanges)
+CTL ->> SVC : updateResource(classId, resourceId, resourceChanges)
 activate SVC
-SVC -> SVC : resolve the class and accept only an owned class that is still ACTIVE
-SVC -> RES : findById(resourceId)
+SVC ->> SVC : resolve the class and accept only an owned class that is still ACTIVE
+SVC ->> RES : findById(resourceId)
 activate RES
-RES -> DB : SELECT * FROM class_resources WHERE id = ?
+RES ->> DB : SELECT * FROM class_resources WHERE id = ?
 activate DB
-DB --> RES : row / none
+DB -->> RES : row / none
 deactivate DB
-RES --> SVC : Optional<ClassResource>
+RES -->> SVC : ClassResource
 deactivate RES
-SVC -> SVC : accept only a resource of that class, keep the fields left untouched, refuse an attachment on a Personal Library snapshot, and require a future deadline when submissions are enabled
+SVC ->> SVC : accept only a resource of that class, keep the fields left untouched, refuse an attachment on a Personal Library snapshot, and require a future deadline when submissions are enabled
 
 alt class is not owned or is INACTIVE, the resource is not in the class, or the changes are invalid
-  SVC --> CTL : ForbiddenOperationException / ResourceNotFoundException / IllegalArgumentException
-  CTL --> FORM : HTTP 403 / 404 / 400
-  FORM --> Teacher : Show MSG23 or the invalid-field message and keep the current edits in the form
+  SVC -->> CTL : ForbiddenOperationException / ResourceNotFoundException / IllegalArgumentException
+  CTL -->> FORM : HTTP 403 / 404 / 400
+  FORM -->> Teacher : Show MSG23 or the invalid-field message and keep the current edits in the form
 
 else the teacher owns an ACTIVE class and the entered changes are valid
-  SVC -> RES : save(ClassResource with the updated resource and assignment information)
+  SVC ->> RES : save(ClassResource with the updated resource and assignment information)
   activate RES
-  RES -> DB : UPDATE class_resources SET resource and assignment fields, updated_at = ? WHERE id = ?
+  RES ->> DB : UPDATE class_resources SET resource and assignment fields, updated_at = ? WHERE id = ?
   activate DB
-  DB --> RES : Saved
+  DB -->> RES : Saved
   deactivate DB
-  RES --> SVC : ClassResource
+  RES -->> SVC : ClassResource
   deactivate RES
-  SVC --> CTL : ResourceSummary
-  CTL --> FORM : HTTP 200 + ClassResourceSummaryDto
-  FORM -> UI : saved(resource)
+  SVC -->> CTL : ResourceSummary
+  CTL -->> FORM : HTTP 200 + ClassResourceSummary
+  FORM ->> UI : saved(resource)
   deactivate FORM
-  UI --> Teacher : Show MSG08 and the updated resource; the source Personal Library item stays unchanged
+  UI -->> Teacher : Show MSG08 and the updated resource; the source Personal Library item stays unchanged
 end
 deactivate SVC
 deactivate CTL

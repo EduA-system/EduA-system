@@ -1,0 +1,69 @@
+@startuml UC-93 Create Notifications - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.16.2.1 UC-93 Create Notifications — Sequence Diagram
+
+actor Moderator
+boundary ":NotificationsScreen" as UI
+control ":NotificationController" as CTL
+control ":NotificationService" as SVC
+boundary ":AppUserRepository" as USERS
+boundary ":NotificationRepository" as NOTIFS
+boundary ":NotificationStreamPort" as STREAM
+database DB
+
+autonumber
+Moderator ->> UI : Click "Compose notification", enter the title and the message, then click "Send"
+activate UI
+UI ->> UI : handleSend()
+UI ->> CTL : POST /api/notifications
+activate CTL
+CTL ->> SVC : create(rawTitle, rawContent)
+activate SVC
+SVC ->> SVC : require an assigned subject (BR-27) and a non-empty title and message within their length limits
+
+alt the title or the message is empty, or the moderator has no assigned subject
+  SVC -->> CTL : IllegalArgumentException / ForbiddenOperationException
+  CTL -->> UI : HTTP 400 / 403
+  UI -->> Moderator : Show MSG02 and keep the entered notification in the form
+
+else the content is valid and the moderator has an assigned subject
+  SVC ->> USERS : findAllByRoleAndSubject(role, subject, page, size)
+  activate USERS
+  USERS ->> DB : SELECT * FROM app_users JOIN user_roles JOIN roles WHERE role name = 'TEACHER' AND subject = ?
+  activate DB
+  DB -->> USERS : rows
+  deactivate DB
+  USERS -->> SVC : AppUserPage
+  deactivate USERS
+
+  SVC ->> NOTIFS : createWithRecipients(notification, recipientIds)
+  activate NOTIFS
+  NOTIFS ->> DB : INSERT INTO notifications and one unread notification_recipients row per identified teacher
+  activate DB
+  DB -->> NOTIFS : Saved
+  deactivate DB
+  NOTIFS -->> SVC : Notification
+  deactivate NOTIFS
+
+  SVC ->> STREAM : publishNew(recipientUserId, event) for each identified teacher
+  activate STREAM
+  STREAM ->> UI : deliver the event to /user/queue/notifications of every recipient with an open STOMP session
+  deactivate STREAM
+
+  SVC -->> CTL : NotificationCreated
+  CTL -->> UI : HTTP 201 + NotificationCreated
+  UI ->> UI : load()
+  UI -->> Moderator : Show MSG08 with the number of teachers reached and the notification at the top of the list
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

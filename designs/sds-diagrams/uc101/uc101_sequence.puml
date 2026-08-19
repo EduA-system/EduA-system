@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-101 Update System Prompts — Sequence Diagram
+title 2.20.2.3 UC-101 Update System Prompts — Sequence Diagram
 
 actor "IT Staff" as STAFF
 participant ":PromptCard" as CARD
@@ -20,48 +20,48 @@ participant ":ActivityLogService" as AUDIT
 database DB
 
 autonumber
-STAFF -> CARD : Edit the instruction of an open prompt
+STAFF ->> CARD : Edit the instruction of an open prompt
 activate CARD
-CARD -> UI : keep the edited instruction and mark the card as unsaved
+CARD ->> UI : keep the edited instruction and mark the card as unsaved
 activate UI
-STAFF -> CARD : Click "Save" on the prompt card
-CARD -> UI : save(prompt)
+STAFF ->> CARD : Click "Save" on the prompt card
+CARD ->> UI : save(prompt)
 deactivate CARD
 
 alt the edited instruction is empty or identical to the stored one
-  UI --> STAFF : Keep the Save action disabled and the stored prompt unchanged (MSG02)
+  UI -->> STAFF : Keep the Save action disabled and the stored prompt unchanged (MSG02)
 else the instruction was changed and is not empty
-  UI -> CTL : PUT /api/it-staff/system-prompts/{key}
+  UI ->> CTL : PUT /api/it-staff/system-prompts/{key}
   activate CTL
-  CTL -> SVC : update(key, instruction)
+  CTL ->> SVC : update(key, instruction)
   activate SVC
-  SVC -> SVC : trim the instruction and take the signed-in IT Staff as its author
-  SVC -> REPO : save(AiSystemPrompt with the new instruction)
+  SVC ->> SVC : trim the instruction and take the signed-in IT Staff as its author
+  SVC ->> REPO : save(AiSystemPrompt with the new instruction)
   activate REPO
-  REPO -> DB : SELECT * FROM ai_system_prompts WHERE prompt_key = ?
+  REPO ->> DB : SELECT * FROM ai_system_prompts WHERE prompt_key = ?
   activate DB
-  DB --> REPO : row / none
+  DB -->> REPO : row / none
   deactivate DB
-  REPO -> DB : INSERT INTO ai_system_prompts or UPDATE its instruction, updated_by and updated_at
+  REPO ->> DB : INSERT INTO ai_system_prompts or UPDATE its instruction, updated_by and updated_at
   activate DB
-  DB --> REPO : Saved
+  DB -->> REPO : Saved
   deactivate DB
-  REPO --> SVC : AiSystemPrompt
+  REPO -->> SVC : AiSystemPrompt
   deactivate REPO
-  SVC -> AUDIT : record(actorId, IT_STAFF, CONFIG, UPDATE_SYSTEM_PROMPT, prompt key)
+  SVC ->> AUDIT : record(actorId, IT_STAFF, CONFIG, UPDATE_SYSTEM_PROMPT, prompt key)
   activate AUDIT
-  AUDIT -> DB : INSERT INTO activity_logs the UPDATE_SYSTEM_PROMPT entry
+  AUDIT ->> DB : INSERT INTO activity_logs the UPDATE_SYSTEM_PROMPT entry
   activate DB
-  DB --> AUDIT : Saved
+  DB -->> AUDIT : Saved
   deactivate DB
-  AUDIT --> SVC : Recorded
+  AUDIT -->> SVC : Recorded
   deactivate AUDIT
-  SVC -> SVC : the next generation request of that feature reads the stored instruction through apply(key, fixedPrompt)
-  SVC --> CTL : AiSystemPrompt
+  SVC ->> SVC : the next generation request of that feature reads the stored instruction through apply(key, fixedPrompt)
+  SVC -->> CTL : AiSystemPrompt
   deactivate SVC
-  CTL --> UI : HTTP 200 + AiSystemPromptDto
+  CTL -->> UI : HTTP 200 + AiSystemPrompt
   deactivate CTL
-  UI --> STAFF : Show the saved confirmation and the new last-updated time (MSG08)
+  UI -->> STAFF : Show the saved confirmation and the new last-updated time (MSG08)
 end
 deactivate UI
 @enduml

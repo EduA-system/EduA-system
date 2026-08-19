@@ -1,0 +1,65 @@
+@startuml UC-20 Export Test - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 260
+title 2.5.2.3 UC-20 Export Test — Sequence Diagram
+
+actor Teacher
+boundary ":PracticeExamEditDashboard" as EDT
+control ":LibraryContentController" as CTL
+control ":LibraryContentService" as SVC
+boundary ":LibraryContentRepository" as REPO
+database DB
+boundary ":LessonPlanPdfExport" as PRINT
+
+autonumber
+Teacher ->> EDT : Open the test to export
+activate EDT
+
+opt test is opened from the personal library
+  EDT ->> CTL : GET /api/library/contents/{id}
+  activate CTL
+  CTL ->> SVC : get(id)
+  activate SVC
+  SVC ->> REPO : findActiveById(id)
+  activate REPO
+  REPO ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+  activate DB
+  DB -->> REPO : row
+  deactivate DB
+  REPO -->> SVC : LibraryContent
+  deactivate REPO
+  SVC -->> CTL : LibraryDetail
+  deactivate SVC
+  CTL -->> EDT : HTTP 200 with the stored document and answer key
+  deactivate CTL
+  EDT ->> EDT : load the stored document into the rich-text editor
+end
+
+Teacher ->> EDT : Click "Export test"
+EDT ->> EDT : check that the exam document has finished loading
+EDT ->> PRINT : openDocumentPrintDialog(title, documentHtml, margins)
+activate PRINT
+
+alt the hidden print frame is available
+  PRINT ->> PRINT : render the formulas and inline the current page styles
+  PRINT ->> PRINT : write the A4 print document and call the browser print function
+  PRINT -->> EDT : true
+  PRINT -->> Teacher : Show the browser print dialog with the test and its answer key
+  Teacher ->> PRINT : Choose "Save as PDF" and confirm
+  PRINT -->> Teacher : Store the exported PDF file on the device
+  EDT -->> Teacher : Show the export confirmation message
+
+else the browser blocks the print frame
+  PRINT -->> EDT : false
+  EDT -->> Teacher : Show the blocked-print-window message and keep the test unchanged (MSG80)
+end
+deactivate PRINT
+deactivate EDT
+@enduml

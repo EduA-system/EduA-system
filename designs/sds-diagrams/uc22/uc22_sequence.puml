@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-22 View Blog Post Detail — Sequence Diagram
+title 2.11.2.2 UC-22 View Blog Post Detail — Sequence Diagram
 
 actor "Teacher or Moderator" as User
 participant ":BlogCommunityPage" as UI
@@ -19,47 +19,47 @@ participant ":BlogCommentRepository" as COMMENTS
 database DB
 
 autonumber
-User -> UI : Select a published blog post in the Blog list
+User ->> UI : Select a published blog post in the Blog list
 activate UI
-UI -> UI : loadDetail(id)
-UI -> CTL : GET /api/blog-posts/{id}
+UI ->> UI : loadDetail(id)
+UI ->> CTL : GET /api/blog-posts/{id}
 activate CTL
-CTL -> SVC : getDetail(id)
+CTL ->> SVC : getDetail(id)
 activate SVC
-SVC -> POSTS : findPublishedById(id)
+SVC ->> POSTS : findPublishedById(id)
 activate POSTS
-POSTS -> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
+POSTS ->> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
 activate DB
-DB --> POSTS : row / none
+DB -->> POSTS : row / none
 deactivate DB
-POSTS --> SVC : Optional<BlogPost>
+POSTS -->> SVC : BlogPost
 deactivate POSTS
 
 alt the post no longer exists or is no longer published
-  SVC --> CTL : ResourceNotFoundException
-  CTL --> UI : HTTP 404
-  UI -> UI : handleModeratorRemoved()
-  UI --> User : Show that the post is unavailable and return to the Blog screen
+  SVC -->> CTL : ResourceNotFoundException
+  CTL -->> UI : HTTP 404
+  UI ->> UI : handleModeratorRemoved()
+  UI -->> User : Show that the post is unavailable and return to the Blog screen
 
 else the post or its discussion cannot be retrieved
-  UI --> User : Show MSG25 and let the user open the blog post again
+  UI -->> User : Show MSG25 and let the user open the blog post again
 
 else the post is published
-  SVC -> COMMENTS : findByPostId(postId)
+  SVC ->> COMMENTS : findByPostId(postId)
   activate COMMENTS
-  COMMENTS -> DB : SELECT * FROM blog_comments WHERE post_id = ?\nAND the comment or one of its replies is not hidden ORDER BY created_at ASC
+  COMMENTS ->> DB : SELECT * FROM blog_comments WHERE post_id = ?\nAND the comment or one of its replies is not hidden ORDER BY created_at ASC
   activate DB
-  DB --> COMMENTS : rows
+  DB -->> COMMENTS : rows
   deactivate DB
-  COMMENTS --> SVC : List<BlogComment>
+  COMMENTS -->> SVC : BlogComment [0..*]
   deactivate COMMENTS
-  SVC -> SVC : drop the hidden comments and the replies whose parent is hidden
-  SVC -> SVC : resolve the display name of the post author and of every comment author
-  SVC --> CTL : BlogViews.PostDetail
-  CTL --> UI : HTTP 200 + BlogViews.PostDetail
-  UI -> UI : group the replies under their parent comment
-  UI -> UI : decide which comment, owner and moderation actions the signed-in user may use
-  UI --> User : Show the title, body, author, subject tag, publication date, comments and permitted actions
+  SVC ->> SVC : drop the hidden comments and the replies whose parent is hidden
+  SVC ->> SVC : resolve the display name of the post author and of every comment author
+  SVC -->> CTL : BlogPostDetail
+  CTL -->> UI : HTTP 200 + BlogPostDetail
+  UI ->> UI : group the replies under their parent comment
+  UI ->> UI : decide which comment, owner and moderation actions the signed-in user may use
+  UI -->> User : Show the title, body, author, subject tag, publication date, comments and permitted actions
 end
 deactivate SVC
 deactivate CTL

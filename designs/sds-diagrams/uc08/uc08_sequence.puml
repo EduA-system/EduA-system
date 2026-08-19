@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 260
-title UC-08 View Personal Library — Sequence Diagram
+title 2.9.2.1 UC-08 View Personal Library — Sequence Diagram
 
 actor Teacher
 participant ":LibraryScreen" as UI
@@ -18,42 +18,42 @@ participant ":LibraryContentRepository" as REPO
 database DB
 
 autonumber
-Teacher -> UI : Open the Personal Library from the main navigation
+Teacher ->> UI : Open the Personal Library from the main navigation
 activate UI
-UI -> UI : load()
-UI -> CTL : GET /api/library/contents?type=&subject=&grade=&q=&status=&sort=&size=
+UI ->> UI : load()
+UI ->> CTL : GET /api/library/contents?type=&subject=&grade=&q=&status=&sort=&size=
 activate CTL
-CTL -> SVC : list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort)
+CTL ->> SVC : list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort)
 activate SVC
-SVC -> SVC : parse the type, subject and status filters and take the signed-in owner
-SVC -> REPO : searchSummaries(ownerId, type, subject, grade, textbookCode, chapterCode, q, status, page, size, titleAscending, createdAtDescending)
+SVC ->> SVC : parse the type, subject and status filters and take the signed-in owner
+SVC ->> REPO : searchSummaries(ownerId, type, subject, grade, textbookCode, chapterCode, q, status, page, size, titleAscending, createdAtDescending)
 activate REPO
-REPO -> DB : SELECT summary columns FROM library_contents\nWHERE owner_id = ? AND deleted_at IS NULL AND source_library_content_id IS NULL AND filters\nORDER BY updated_at DESC LIMIT ? OFFSET ?
+REPO ->> DB : SELECT summary columns FROM library_contents\nWHERE owner_id = ? AND deleted_at IS NULL AND source_library_content_id IS NULL AND filters\nORDER BY updated_at DESC LIMIT ? OFFSET ?
 activate DB
-DB --> REPO : rows
+DB -->> REPO : rows
 deactivate DB
-REPO -> DB : SELECT COUNT(*) FROM library_contents WHERE the same filters
+REPO ->> DB : SELECT COUNT(*) FROM library_contents WHERE the same filters
 activate DB
-DB --> REPO : total
+DB -->> REPO : total
 deactivate DB
-REPO --> SVC : SummarySearchResult
+REPO -->> SVC : SummarySearchResult
 deactivate REPO
-SVC -> SVC : map the rows to summaries and clamp the page size
-SVC --> CTL : LibraryViews.Page
+SVC ->> SVC : map the rows to summaries and clamp the page size
+SVC -->> CTL : LibraryPage
 deactivate SVC
-CTL --> UI : HTTP 200 + LibraryViews.Page
+CTL -->> UI : HTTP 200 + LibraryPage
 deactivate CTL
 
 alt no content item matches the owner and the selected filters
-  UI --> Teacher : Show MSG01 and the tile that creates new content
+  UI -->> Teacher : Show MSG01 and the tile that creates new content
 else at least one content item is found
-  UI --> Teacher : Show the items of the selected content type with their Publish Status
+  UI -->> Teacher : Show the items of the selected content type with their Publish Status
 end
 
 opt teacher searches or filters the library
-  Teacher -> UI : Enter a keyword or change the subject, grade or status filter
-  UI -> UI : rebuild the query parameters and reload the list
-  UI --> Teacher : Refresh the Personal Library list with the matching items
+  Teacher ->> UI : Enter a keyword or change the subject, grade or status filter
+  UI ->> UI : rebuild the query parameters and reload the list
+  UI -->> Teacher : Refresh the Personal Library list with the matching items
 end
 deactivate UI
 @enduml

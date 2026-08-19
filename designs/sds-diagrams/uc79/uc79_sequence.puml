@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-79 Add Teacher — Sequence Diagram
+title 2.18.2.3 UC-79 Add Teacher — Sequence Diagram
 
 actor Moderator
 participant ":UserManagementContent" as UI
@@ -20,49 +20,49 @@ participant ":TeacherGradeRepository" as GRADES
 database DB
 
 autonumber
-Moderator -> UI : Enter the teacher Gmail address, full name and applicable grades, with the subject fixed to the moderator subject, then select "Add"
+Moderator ->> UI : Enter the teacher Gmail address, full name and applicable grades, with the subject fixed to the moderator subject, then select "Add"
 activate UI
-UI -> UI : addTeacher()
-UI -> UI : block the call while a required field is empty or the email format is invalid (MSG02, MSG03)
-UI -> CTL : POST /api/moderator/teachers
+UI ->> UI : addTeacher()
+UI ->> UI : block the call while a required field is empty or the email format is invalid (MSG02, MSG03)
+UI ->> CTL : POST /api/moderator/teachers
 activate CTL
-CTL -> SVC : addTeacher(email, subject, fullName, grades)
+CTL ->> SVC : addTeacher(email, subject, fullName, grades)
 activate SVC
-SVC -> SVC : accept only the moderator's own subject and grades among 10, 11 and 12 (BR-18)
-SVC -> USERS : findByEmail(email)
+SVC ->> SVC : accept only the moderator's own subject and grades among 10, 11 and 12 (BR-18)
+SVC ->> USERS : findByEmail(email)
 activate USERS
-USERS -> DB : SELECT * FROM app_users WHERE email = ?
+USERS ->> DB : SELECT * FROM app_users WHERE email = ?
 activate DB
-DB --> USERS : row / none
+DB -->> USERS : row / none
 deactivate DB
-USERS --> SVC : Optional<AppUser>
+USERS -->> SVC : AppUser
 deactivate USERS
 
 alt the email already belongs to an active account, to another role or to another subject
-  SVC --> CTL : DuplicateEmailException / ForbiddenOperationException
-  CTL --> UI : HTTP 409 / 403
-  UI --> Moderator : Show the message that the account cannot be added and keep the entered values
+  SVC -->> CTL : DuplicateEmailException / ForbiddenOperationException
+  CTL -->> UI : HTTP 409 / 403
+  UI -->> Moderator : Show the message that the account cannot be added and keep the entered values
 else the email is new or belongs to a revoked teacher of the same subject
-  SVC -> USERS : save(AppUser with status INVITED)
+  SVC ->> USERS : save(AppUser with status INVITED)
   activate USERS
-  USERS -> DB : INSERT INTO app_users email, full_name, subject, status = 'INVITED'
+  USERS ->> DB : INSERT INTO app_users email, full_name, subject, status = 'INVITED'
   activate DB
-  DB --> USERS : Saved
+  DB -->> USERS : Saved
   deactivate DB
-  USERS --> SVC : AppUser
+  USERS -->> SVC : AppUser
   deactivate USERS
-  SVC -> ROLES : replaceRole(userId, TEACHER, grantedBy, grantedAt)
+  SVC ->> ROLES : replaceRole(userId, TEACHER, grantedBy, grantedAt)
   activate ROLES
-  ROLES -> DB : INSERT INTO user_roles user_id, role, granted_by, granted_at
+  ROLES ->> DB : INSERT INTO user_roles user_id, role, granted_by, granted_at
   deactivate ROLES
-  SVC -> GRADES : replaceGrades(userId, grades)
+  SVC ->> GRADES : replaceGrades(userId, grades)
   activate GRADES
-  GRADES -> DB : DELETE the removed rows and INSERT the selected grades in teacher_grades
+  GRADES ->> DB : DELETE the removed rows and INSERT the selected grades in teacher_grades
   deactivate GRADES
-  SVC -> SVC : record the GRANT_TEACHER entry of the account-management activity log
-  SVC --> CTL : AppUser
-  CTL --> UI : HTTP 201 + TeacherDto
-  UI --> Moderator : Show MSG08 and the refreshed teacher list with the new account in status Invited
+  SVC ->> SVC : record the GRANT_TEACHER entry of the account-management activity log
+  SVC -->> CTL : AppUser
+  CTL -->> UI : HTTP 201 + Teacher
+  UI -->> Moderator : Show MSG08 and the refreshed teacher list with the new account in status Invited
 end
 deactivate SVC
 deactivate CTL

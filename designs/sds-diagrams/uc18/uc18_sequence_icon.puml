@@ -1,0 +1,75 @@
+@startuml UC-18 Create Test - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 260
+title 2.5.2.1 UC-18 Create Test — Sequence Diagram
+
+actor Teacher
+boundary ":PracticeExamCreateDashboard" as CFG
+boundary ":PracticeExamEditDashboard" as EDT
+control ":PracticeExamController" as CTL
+control ":GeneratePracticeExamStreamUseCase" as KICK
+control ":PracticeExamService" as SVC
+boundary ":AiClient" as AI
+boundary ":PracticeExamStreamPort" as STREAM
+
+autonumber
+Teacher ->> CFG : Select subject, grade, textbook lessons, duration, difficulty and question types
+activate CFG
+
+opt estimated working time exceeds the test duration
+  CFG -->> Teacher : Ask to confirm the tight configuration before generating
+  Teacher ->> CFG : Confirm the configuration
+end
+
+Teacher ->> CFG : Click "Generate test"
+CFG ->> CTL : POST /api/practice-exams/generate-stream
+activate CTL
+CTL ->> KICK : start(request)
+activate KICK
+KICK ->> SVC : generateStreaming(request, sessionId, stream)
+activate SVC
+deactivate KICK
+CTL -->> CFG : HTTP 202 Accepted
+deactivate CTL
+CFG ->> EDT : Open the exam editor and subscribe to /topic/practice-exam/{sessionId}
+activate EDT
+deactivate CFG
+
+SVC ->> SVC : validate(request)
+SVC ->> SVC : load the textbook knowledge of the selected lessons and plan the question batches
+SVC ->> STREAM : publishPlanReady(sessionId, title, instructions, durationMinutes, stubs)
+activate STREAM
+STREAM ->> EDT : PLAN_READY with the exam header and one stub per question
+EDT -->> Teacher : Show the exam title, instructions and a placeholder for every question
+
+SVC ->> AI : generate(prompt)
+activate AI
+AI -->> SVC : JSON array of generated questions
+deactivate AI
+
+alt batch is parsed and structurally valid
+  SVC ->> STREAM : publishBatchReady(sessionId, questions)
+  STREAM ->> EDT : BATCH_READY with the finished questions
+  EDT -->> Teacher : Replace those placeholders with the generated questions
+
+else batch is still invalid after one retry
+  SVC ->> STREAM : publishBatchFailed(sessionId, orders, reason)
+  STREAM ->> EDT : BATCH_FAILED with the affected question orders
+  EDT -->> Teacher : Mark those questions as failed and offer a retry action
+end
+
+SVC ->> STREAM : publishDone(sessionId)
+deactivate SVC
+STREAM ->> EDT : DONE
+deactivate STREAM
+EDT ->> EDT : save the exam and its answer key to the personal library as a draft
+EDT -->> Teacher : Show the complete exam and its answer key for review
+deactivate EDT
+@enduml

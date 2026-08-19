@@ -1,0 +1,82 @@
+@startuml UC-12 Create Slide Outline - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.2.2.1 UC-12 Create Slide Outline — Sequence Diagram
+
+actor Teacher
+boundary ":SlideCreateDashboard" as DASH
+boundary ":SlideOutlineScreen" as SCR
+control ":SlideController" as CTL
+control ":GenerateSlideOutlineUseCase" as UCASE
+control ":OutlineGenerationSessionStore" as STORE
+boundary ":AiClient" as AI
+boundary ":OutlineStreamPort" as STREAM
+
+autonumber
+Teacher ->> DASH : Open an owned lesson plan and click "Create Slide Outline"
+activate DASH
+DASH ->> SCR : verify that the lesson plan exists and belongs to the teacher, then open the Slide Outline screen
+deactivate DASH
+activate SCR
+SCR ->> CTL : POST /api/slides/generate-outline
+activate CTL
+CTL ->> UCASE : execute(request)
+activate UCASE
+UCASE ->> AI : generate(prompt)
+activate AI
+AI -->> UCASE : lesson content map and deck blueprint as JSON
+deactivate AI
+UCASE ->> STORE : create(sessionId, request, source, parts)
+UCASE -->> CTL : GenerateOutlineResponse
+deactivate UCASE
+CTL -->> SCR : HTTP 200 + sessionId, outlineTopic and the part skeleton — the screen subscribes to /topic/outline/{sessionId}
+deactivate CTL
+SCR ->> CTL : POST /api/slides/outline-sessions/{sessionId}/start
+activate CTL
+CTL ->> UCASE : start(sessionId)
+activate UCASE
+deactivate CTL
+UCASE ->> STORE : find(sessionId)
+activate STORE
+STORE -->> UCASE : Session
+deactivate STORE
+UCASE ->> AI : generate(prompt)
+activate AI
+AI -->> UCASE : part skeleton and the detailed slides of that part as JSON
+deactivate AI
+UCASE ->> STREAM : publishPartSkeletonReady(sessionId, part)
+activate STREAM
+STREAM ->> SCR : OUTLINE_PART_SKELETON_READY on /topic/outline/{sessionId}
+deactivate STREAM
+
+alt the slide was written
+  UCASE ->> STREAM : publishSlideReady(sessionId, partId, slide)
+  activate STREAM
+  STREAM ->> SCR : OUTLINE_SLIDE_READY — the preview shows the finished slide
+  deactivate STREAM
+else the slide failed after the maximum attempts
+  UCASE ->> STREAM : publishSlideError(sessionId, partId, slideId, message)
+  activate STREAM
+  STREAM ->> SCR : OUTLINE_SLIDE_FAILED — the preview marks the slide and offers "Retry"
+  deactivate STREAM
+end
+
+UCASE ->> STREAM : publishPartReady(sessionId, partId, slides)
+activate STREAM
+STREAM ->> SCR : OUTLINE_PART_READY on /topic/outline/{sessionId}
+deactivate STREAM
+UCASE ->> STREAM : publishDone(sessionId, partFailures)
+activate STREAM
+STREAM ->> SCR : DONE on /topic/outline/{sessionId}
+deactivate STREAM
+deactivate UCASE
+SCR ->> Teacher : Show the full Slide Outline Preview, ready for review
+deactivate SCR
+@enduml

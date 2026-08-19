@@ -1,0 +1,66 @@
+@startuml UC-88 Unsubmit Lesson Plan for Weekly Task - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.15.2.6 UC-88 Unsubmit Lesson Plan for Weekly Task — Sequence Diagram
+
+actor Teacher
+boundary ":WeeklyScheduleScreen" as UI
+boundary ":ConfirmDialog" as DLG
+control ":WeeklyTaskController" as CTL
+control ":WeeklyTaskService" as SVC
+boundary ":WeeklyTaskRepository" as REPO
+database DB
+
+autonumber
+Teacher ->> UI : Click "Unsubmit" on a submitted task of the current week
+activate UI
+UI ->> DLG : open the withdrawal confirmation with the task title
+activate DLG
+DLG -->> Teacher : Show the warning that the lesson plan leaves the approval queue and may be submitted again
+Teacher ->> DLG : Click "Withdraw lesson plan"
+DLG ->> UI : handleUnsubmit(taskId)
+deactivate DLG
+UI ->> CTL : DELETE /api/weekly-tasks/{id}/submission
+activate CTL
+CTL ->> SVC : unsubmit(id)
+activate SVC
+
+SVC ->> REPO : findById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM weekly_tasks WHERE id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : WeeklyTask
+deactivate REPO
+SVC ->> SVC : accept only a task assigned to the teacher, still before its deadline and still in SUBMITTED status
+
+alt the deadline has passed, the task is not assigned to the teacher, or it is no longer SUBMITTED
+  SVC -->> CTL : IllegalArgumentException / ForbiddenOperationException
+  CTL -->> UI : HTTP 400 / 403
+  UI -->> Teacher : Show the blocking message and keep the submission unchanged
+else the submission can still be withdrawn
+  SVC ->> SVC : restore REJECTED when the task still carries a rejection reason, otherwise NOT_SUBMITTED
+  SVC ->> REPO : save(task with the restored status and the submission source cleared)
+  activate REPO
+  REPO ->> DB : UPDATE weekly_tasks SET review_status = ?, source snapshot fields = NULL, submitted_at = NULL WHERE id = ?
+  activate DB
+  DB -->> REPO : Saved
+  deactivate DB
+  REPO -->> SVC : WeeklyTask
+  deactivate REPO
+  SVC -->> CTL : WeeklyTaskDetail
+  CTL -->> UI : HTTP 200 + WeeklyTaskDetail
+  UI -->> Teacher : Show MSG08 and the task back as NOT_SUBMITTED or REJECTED, removed from the moderator approval list
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

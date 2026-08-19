@@ -1,0 +1,75 @@
+@startuml UC-107 Add IT Support Account - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.19.2.6 UC-107 Add IT Support Account — Sequence Diagram
+
+actor Principal
+boundary ":UserManagementContent" as UI
+control ":PrincipalController" as CTL
+control ":PrincipalItStaffService" as SVC
+boundary ":AppUserRepository" as USERS
+boundary ":UserRoleRepository" as ROLES
+control ":ActivityLogService" as LOG
+database DB
+
+autonumber
+Principal ->> UI : Open the IT Support tab, enter the account email and an optional full name, then click "Grant access"
+activate UI
+UI ->> UI : addItStaff()
+UI ->> UI : send the request only for a well-formed email, otherwise highlight the field and show MSG02
+UI ->> CTL : POST /api/principal/it-staff
+activate CTL
+CTL ->> SVC : add(email : String, fullName : String)
+activate SVC
+SVC ->> USERS : existsActiveByRole(IT_STAFF)
+activate USERS
+USERS -->> SVC : boolean
+deactivate USERS
+SVC ->> USERS : findByEmail(email)
+activate USERS
+USERS ->> DB : SELECT * FROM app_users WHERE email = ?
+activate DB
+DB -->> USERS : row / none
+deactivate DB
+USERS -->> SVC : AppUser
+deactivate USERS
+SVC ->> SVC : accept only a free IT Support seat and an email that is new or belongs to a disabled former IT Support account
+
+alt an active IT Support already exists or the email belongs to an active or ineligible account
+  SVC -->> CTL : ForbiddenOperationException / DuplicateEmailException
+  CTL -->> UI : HTTP 403 / 409
+  UI -->> Principal : Show MSG39 and create no account
+else the IT Support seat is free and the email is eligible
+  SVC ->> USERS : save(invited IT Support AppUser)
+  activate USERS
+  USERS ->> DB : INSERT INTO app_users (id, email, full_name, status)
+  activate DB
+  DB -->> USERS : Saved
+  deactivate DB
+  deactivate USERS
+  SVC ->> ROLES : replaceRole(userId, IT_STAFF, grantedBy, grantedAt)
+  activate ROLES
+  ROLES ->> DB : INSERT INTO user_roles (user_id, role_id, granted_by, granted_at)
+  activate DB
+  DB -->> ROLES : Saved
+  deactivate DB
+  deactivate ROLES
+  SVC ->> LOG : record(actorId, actorRole, category, action, targetType, targetId, metadata)
+  activate LOG
+  LOG -->> SVC : GRANT_IT_STAFF entry written
+  deactivate LOG
+  SVC -->> CTL : AppUser
+  CTL -->> UI : HTTP 201 + ItStaff
+  UI -->> Principal : Show MSG08 and refresh the IT Support list
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

@@ -1,0 +1,55 @@
+@startuml UC-03 Logout - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+title 2.17.2.2 UC-03 Logout — Sequence Diagram
+
+actor User
+boundary ":AuthContext" as UI
+control ":AuthController" as CTL
+control ":AuthService" as SVC
+boundary ":RefreshTokenRepository" as TOKENS
+database DB
+
+autonumber
+User ->> UI : Open the account menu and select "Log out"
+activate UI
+UI ->> CTL : POST /api/auth/logout (refresh token cookie)
+activate CTL
+CTL ->> SVC : logout(rawRefreshToken)
+activate SVC
+SVC ->> SVC : hash the refresh token (SHA-256)
+SVC ->> TOKENS : findByTokenHash(tokenHash)
+activate TOKENS
+TOKENS ->> DB : SELECT * FROM refresh_tokens WHERE token_hash = ?
+activate DB
+DB -->> TOKENS : row / null
+deactivate DB
+TOKENS -->> SVC : RefreshToken
+deactivate TOKENS
+
+alt token missing, expired or already revoked
+  SVC -->> CTL : no active session to terminate
+else active token found
+  SVC ->> TOKENS : revoke(tokenId)
+  activate TOKENS
+  TOKENS ->> DB : UPDATE refresh_tokens SET revoked = true WHERE id = ?
+  activate DB
+  DB -->> TOKENS : Saved
+  deactivate DB
+  TOKENS -->> SVC : done
+  deactivate TOKENS
+end
+SVC -->> CTL : void
+deactivate SVC
+CTL -->> UI : HTTP 204 + cleared refresh token cookie
+deactivate CTL
+UI ->> UI : clear access token and cached user
+UI -->> User : Redirect to the public landing page
+deactivate UI
+@enduml

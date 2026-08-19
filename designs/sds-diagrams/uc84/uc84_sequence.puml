@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-84 Assign Weekly Task — Sequence Diagram
+title 2.15.2.2 UC-84 Assign Weekly Task — Sequence Diagram
 
 actor Moderator
 participant ":WeeklyScheduleScreen" as UI
@@ -19,52 +19,52 @@ participant ":AppUserRepository" as USERS
 database DB
 
 autonumber
-Moderator -> UI : Select an empty lesson slot of a week for the selected grade
+Moderator ->> UI : Select an empty lesson slot of a week for the selected grade
 activate UI
-UI -> UI : openCreatePanel(weekStartDate)
-Moderator -> UI : Enter the title, pick the chapter and the lesson from the textbook catalog and click "Assign lesson"
-UI -> UI : handleCreateLesson()
-UI -> CTL : POST /api/weekly-tasks/bulk
+UI ->> UI : openCreatePanel(weekStartDate)
+Moderator ->> UI : Enter the title, pick the chapter and the lesson from the textbook catalog and click "Assign lesson"
+UI ->> UI : handleCreateLesson()
+UI ->> CTL : POST /api/weekly-tasks/bulk
 activate CTL
-CTL -> SVC : bulkCreate(weekStartDate, grade, textbookCode, lessons)
+CTL ->> SVC : bulkCreate(weekStartDate, grade, textbookCode, lessons)
 activate SVC
-SVC -> SVC : resolve the chapter and lesson names from the textbook catalog, check the book matches the subject and grade, and compute the deadline as Sunday 23:59:59 Vietnam time of the assigned week
+SVC ->> SVC : resolve the chapter and lesson names from the textbook catalog, check the book matches the subject and grade, and compute the deadline as Sunday 23:59:59 Vietnam time of the assigned week
 
-SVC -> REPO : findBySubjectAndGrade(subject, grade, monday, monday)
+SVC ->> REPO : findBySubjectAndGrade(subject, grade, monday, monday)
 activate REPO
-REPO -> DB : SELECT * FROM weekly_tasks WHERE subject = ? AND grade = ? AND week_start_date = ?
+REPO ->> DB : SELECT * FROM weekly_tasks WHERE subject = ? AND grade = ? AND week_start_date = ?
 activate DB
-DB --> REPO : rows
+DB -->> REPO : rows
 deactivate DB
-REPO --> SVC : List<WeeklyTask>
+REPO -->> SVC : WeeklyTask [0..*]
 deactivate REPO
 
-SVC -> USERS : findAllByRoleAndSubject(role, subject, pageable)
+SVC ->> USERS : findAllByRoleAndSubject(role, subject, page, size)
 activate USERS
-USERS -> DB : SELECT * FROM app_users WHERE subject = ? AND the account holds the TEACHER role
+USERS ->> DB : SELECT * FROM app_users WHERE subject = ? AND the account holds the TEACHER role
 activate DB
-DB --> USERS : rows
+DB -->> USERS : rows
 deactivate DB
-USERS --> SVC : Page<AppUser>
+USERS -->> SVC : AppUserPage
 deactivate USERS
-SVC -> SVC : keep only the ACTIVE teachers who teach the selected grade
+SVC ->> SVC : keep only the ACTIVE teachers who teach the selected grade
 
 alt the lesson is already assigned in that week, the week already holds two lessons, or no eligible teacher exists
-  SVC --> CTL : IllegalArgumentException
-  CTL --> UI : HTTP 400
-  UI --> Moderator : Show the blocking message and keep the entered title, chapter and lesson
+  SVC -->> CTL : IllegalArgumentException
+  CTL -->> UI : HTTP 400
+  UI -->> Moderator : Show the blocking message and keep the entered title, chapter and lesson
 else the lesson slot is free and at least one eligible teacher exists
-  SVC -> REPO : save(task)
+  SVC ->> REPO : save(task)
   activate REPO
-  REPO -> DB : INSERT INTO weekly_tasks one NOT_SUBMITTED row per eligible teacher
+  REPO ->> DB : INSERT INTO weekly_tasks one NOT_SUBMITTED row per eligible teacher
   activate DB
-  DB --> REPO : Saved
+  DB -->> REPO : Saved
   deactivate DB
-  REPO --> SVC : WeeklyTask
+  REPO -->> SVC : WeeklyTask
   deactivate REPO
-  SVC --> CTL : WeeklyTaskViews.BulkResult
-  CTL --> UI : HTTP 201 + WeeklyTaskViews.BulkResult
-  UI --> Moderator : Show MSG08 and the new lesson card on the refreshed schedule
+  SVC -->> CTL : WeeklyTaskBulkResult
+  CTL -->> UI : HTTP 201 + WeeklyTaskBulkResult
+  UI -->> Moderator : Show MSG08 and the new lesson card on the refreshed schedule
 end
 deactivate SVC
 deactivate CTL

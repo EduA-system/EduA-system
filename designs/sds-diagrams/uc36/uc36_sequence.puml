@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-36 View Class Members — Sequence Diagram
+title 2.12.2.6 UC-36 View Class Members — Sequence Diagram
 
 actor User
 participant ":StudentClassMembersPage" as UI
@@ -19,49 +19,49 @@ participant ":AppUserRepository" as USERS
 database DB
 
 autonumber
-User -> UI : Open the Class Members area of a class
+User ->> UI : Open the Class Members area of a class
 activate UI
-UI -> UI : load()
-UI -> CTL : GET /api/classes/{id}/members?page=&size=
+UI ->> UI : load()
+UI ->> CTL : GET /api/classes/{id}/members?page=&size=
 activate CTL
-CTL -> SVC : listMembers(classId, page, size)
+CTL ->> SVC : listMembers(classId, page, size)
 activate SVC
-SVC -> MEM : existsByClassIdAndStudentId(classId, currentUserId)
+SVC ->> MEM : existsByClassIdAndStudentId(classId, currentUserId)
 activate MEM
-MEM -> DB : SELECT 1 FROM class_members WHERE class_id = ? AND student_id = ? AND status = 'ENROLLED'
+MEM ->> DB : SELECT 1 FROM class_members WHERE class_id = ? AND student_id = ? AND status = 'ENROLLED'
 activate DB
-DB --> MEM : match / none
+DB -->> MEM : match / none
 deactivate DB
-MEM --> SVC : boolean
+MEM -->> SVC : boolean
 deactivate MEM
-SVC -> SVC : resolve the class and allow only its owner or an enrolled student
+SVC ->> SVC : resolve the class and allow only its owner or an enrolled student
 
 alt class is unavailable or the user is neither owner nor enrolled student
-  SVC --> CTL : ResourceNotFoundException / ClassAccessRevokedException
-  CTL --> UI : HTTP 404 / 403
-  UI --> User : Show that the class is unavailable or access is not permitted
+  SVC -->> CTL : ResourceNotFoundException / ClassAccessRevokedException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> User : Show that the class is unavailable or access is not permitted
 
 else the user may see the class
-  SVC -> MEM : findByClassId(classId, page, size)
+  SVC ->> MEM : findByClassId(classId, page, size)
   activate MEM
-  MEM -> DB : SELECT * FROM class_members WHERE class_id = ? AND status = 'ENROLLED' ORDER BY joined_at DESC LIMIT ? OFFSET ?
+  MEM ->> DB : SELECT * FROM class_members WHERE class_id = ? AND status = 'ENROLLED' ORDER BY joined_at DESC LIMIT ? OFFSET ?
   activate DB
-  DB --> MEM : rows
+  DB -->> MEM : rows
   deactivate DB
-  MEM --> SVC : ClassMemberRepository.PageResult
+  MEM -->> SVC : ClassMemberRepository.PageResult
   deactivate MEM
-  SVC -> USERS : findAllById(studentIds)
+  SVC ->> USERS : findAllById(studentIds)
   activate USERS
-  USERS -> DB : SELECT identity columns FROM app_users WHERE id IN the enrolled student ids
+  USERS ->> DB : SELECT identity columns FROM app_users WHERE id IN the enrolled student ids
   activate DB
-  DB --> USERS : rows
+  DB -->> USERS : rows
   deactivate DB
-  USERS --> SVC : List<AppUser>
+  USERS -->> SVC : AppUser [0..*]
   deactivate USERS
-  SVC -> SVC : attach the name, email and account status of each student to the membership
-  SVC --> CTL : ClassMemberViews.Page
-  CTL --> UI : HTTP 200 + ClassMemberPageDto
-  UI --> User : Show the class owner and the enrolled students with the actions allowed by role and class status
+  SVC ->> SVC : attach the name, email and account status of each student to the membership
+  SVC -->> CTL : ClassMemberPage
+  CTL -->> UI : HTTP 200 + ClassMemberPage
+  UI -->> User : Show the class owner and the enrolled students with the actions allowed by role and class status
 end
 deactivate SVC
 deactivate CTL

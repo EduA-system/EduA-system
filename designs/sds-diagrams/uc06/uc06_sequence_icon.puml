@@ -1,0 +1,80 @@
+@startuml UC-06 Edit Lesson Plan - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.1.2.2 UC-06 Edit Lesson Plan — Sequence Diagram
+
+actor Teacher
+boundary ":LessonEditDashboard" as EDIT
+boundary ":AssistantPanel" as PANEL
+control ":LessonPlanService" as LPSVC
+boundary ":AiClient" as AI
+control ":LibraryContentService" as LIBSVC
+boundary ":LibraryContentRepository" as LIBREPO
+database DB
+
+autonumber
+Teacher ->> EDIT : Edit objectives, materials, sections and teaching activities directly in the editor
+activate EDIT
+
+opt teacher asks the AI to rewrite part of the lesson plan
+  Teacher ->> PANEL : Enter an instruction such as "make Activity 2 more practical" and send it
+  activate PANEL
+  PANEL ->> LPSVC : POST /api/lesson-plans/edit-section (all current sections + instruction)
+  activate LPSVC
+  LPSVC ->> LPSVC : validate the instruction and the submitted section list
+  LPSVC ->> AI : generate(prompt)
+  activate AI
+  AI -->> LPSVC : ids of the sections that match the instruction
+  deactivate AI
+  LPSVC ->> AI : generate(prompt)
+  activate AI
+  AI -->> LPSVC : rewritten content of each selected section as JSON
+  deactivate AI
+  LPSVC -->> PANEL : HTTP 200 + EditLessonSectionResponse [0..*]
+  deactivate LPSVC
+  PANEL ->> EDIT : Show every rewritten section as an inline diff (MSG07 when the AI revision fails)
+  Teacher ->> PANEL : Accept or discard each suggested revision
+  deactivate PANEL
+end
+
+Teacher ->> EDIT : Click "Save"
+
+alt the lesson plan still has AI suggestions that were not accepted or discarded
+  EDIT ->> Teacher : Block saving and ask to accept or discard the pending suggestions
+
+else the lesson plan content is valid
+  EDIT ->> LIBSVC : PATCH /api/library/contents/{id}
+  activate LIBSVC
+  LIBSVC ->> LIBREPO : findActiveById(id)
+  activate LIBREPO
+  LIBREPO ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+  activate DB
+  DB -->> LIBREPO : row
+  deactivate DB
+  LIBREPO -->> LIBSVC : LibraryContent
+  deactivate LIBREPO
+  LIBSVC ->> LIBSVC : apply the publish-status rule (BR-23)
+  LIBSVC ->> LIBREPO : save(content)
+  activate LIBREPO
+  LIBREPO ->> DB : UPDATE library_contents SET title, payload, thumbnail_url, status, updated_at
+  activate DB
+  DB -->> LIBREPO : Saved
+  deactivate DB
+  LIBREPO -->> LIBSVC : LibraryContent
+  deactivate LIBREPO
+  LIBSVC -->> EDIT : HTTP 200 + LibraryDetail
+  deactivate LIBSVC
+  EDIT ->> Teacher : Show the saved state and clear the unsaved-changes warning
+
+else saving the lesson plan fails
+  EDIT ->> Teacher : Show MSG80 and keep the current edits in the editor
+end
+deactivate EDIT
+@enduml

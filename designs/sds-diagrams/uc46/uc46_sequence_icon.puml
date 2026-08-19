@@ -1,0 +1,72 @@
+@startuml UC-46 View Submissions List - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.14.2.1 UC-46 View Submissions List — Sequence Diagram
+
+actor Teacher
+boundary ":SubmissionsRosterPanel" as UI
+control ":ClassController" as CTL
+control ":SubmissionService" as SVC
+boundary ":SubmissionRepository" as SREPO
+boundary ":ClassMemberRepository" as MEM
+boundary ":AppUserRepository" as USERS
+database DB
+
+autonumber
+Teacher ->> UI : Select a class resource that accepts student submissions
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/classes/{id}/resources/{rid}/submissions
+activate CTL
+CTL ->> SVC : listSubmissions(classId, resourceId)
+activate SVC
+SVC ->> SVC : allow only the owner of the class and a resource that belongs to that class
+
+alt the teacher does not own the class or the resource no longer exists
+  SVC -->> CTL : ForbiddenOperationException / ResourceNotFoundException
+  CTL -->> UI : HTTP 403 / 404
+  UI -->> Teacher : Show the access-denied or unavailable-content message and return to the Class Hub
+else the teacher owns the class and the resource exists
+  SVC ->> SREPO : findAllByResource(resourceId)
+  activate SREPO
+  SREPO ->> DB : SELECT * FROM submissions WHERE class_resource_id = ?
+  activate DB
+  DB -->> SREPO : submission rows
+  deactivate DB
+  SREPO -->> SVC : SubmissionWithFiles [0..*]
+  deactivate SREPO
+
+  SVC ->> MEM : findAllStudentIds(classId)
+  activate MEM
+  MEM ->> DB : SELECT student_id FROM class_members WHERE class_id = ? AND status = 'ENROLLED'
+  activate DB
+  DB -->> MEM : student id rows
+  deactivate DB
+  MEM -->> SVC : String [0..*]
+  deactivate MEM
+
+  SVC ->> USERS : findAllById(studentIds)
+  activate USERS
+  USERS ->> DB : SELECT * FROM app_users WHERE id IN the enrolled student ids
+  activate DB
+  DB -->> USERS : student rows
+  deactivate DB
+  USERS -->> SVC : AppUser [0..*]
+  deactivate USERS
+
+  SVC ->> SVC : build one row per enrolled student with the submission status and sort the rows by student name
+  SVC -->> CTL : SubmissionRoster
+  CTL -->> UI : HTTP 200 + SubmissionRoster
+  UI -->> Teacher : Show every enrolled student as Submitted or Not Submitted with the submitted time and the On Time or Late tag, or the empty-state message (MSG01)
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

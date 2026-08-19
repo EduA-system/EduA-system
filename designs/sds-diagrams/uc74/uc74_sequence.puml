@@ -19,41 +19,41 @@ participant ":LibraryContentRepository" as REPO
 database DB
 
 autonumber
-Moderator -> UI : Select a pending item from the Hub moderation queue
+Moderator ->> UI : Select a pending item from the Hub moderation queue
 activate UI
-UI -> UI : open the review pane for the selected submission
-UI -> CTL : GET /api/library/contents/moderation-queue/{id}
+UI ->> UI : open the review pane for the selected submission
+UI ->> CTL : GET /api/library/contents/moderation-queue/{id}
 activate CTL
-CTL -> SVC : getModerationDetail(id)
+CTL ->> SVC : getModerationDetail(id)
 activate SVC
-SVC -> REPO : findActiveById(id)
+SVC ->> REPO : findActiveById(id)
 activate REPO
-REPO -> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+REPO ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
 activate DB
-DB --> REPO : row / none
+DB -->> REPO : row / none
 deactivate DB
-REPO --> SVC : Optional<LibraryContent>
+REPO -->> SVC : LibraryContent
 deactivate REPO
-SVC -> SVC : accept only an existing submission that is still SUBMITTED and carries the assigned subject of the moderator (BR-18)
+SVC ->> SVC : accept only an existing submission that is still SUBMITTED and carries the assigned subject of the moderator (BR-18)
 
 alt the item is missing, already reviewed or outside the assigned subject
-  SVC --> CTL : ResourceNotFoundException / StateConflictException / ForbiddenOperationException
-  CTL --> UI : HTTP 404 / 409 / 403
-  UI --> Moderator : Show that the submission is unavailable (MSG25) and keep the review pane empty
+  SVC -->> CTL : ResourceNotFoundException / StateConflictException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 409 / 403
+  UI -->> Moderator : Show that the submission is unavailable (MSG25) and keep the review pane empty
 else the submission is SUBMITTED and belongs to the assigned subject
-  SVC --> CTL : LibraryViews.Detail
-  CTL --> UI : HTTP 200 + LibraryViews.Detail
-  UI -> PREVIEW : render the submitted payload in the review pane
+  SVC -->> CTL : LibraryDetail
+  CTL -->> UI : HTTP 200 + LibraryDetail
+  UI ->> PREVIEW : render the submitted payload in the review pane
   activate PREVIEW
-  PREVIEW -> PREVIEW : resolveDocument(payload)
-  PREVIEW -> PREVIEW : parseSlideDeck(payload)
-  PREVIEW --> UI : Rendered lesson plan document, test paper or slide deck preview
+  PREVIEW ->> PREVIEW : resolveDocument(payload)
+  PREVIEW ->> PREVIEW : parseSlideDeck(payload)
+  PREVIEW -->> UI : Rendered lesson plan document, test paper or slide deck preview
   deactivate PREVIEW
-  UI -> PREVIEW : inferGradeFromPayload(payload)
+  UI ->> PREVIEW : inferGradeFromPayload(payload)
   activate PREVIEW
-  PREVIEW --> UI : Grade read from the payload when the stored grade is empty
+  PREVIEW -->> UI : Grade read from the payload when the stored grade is empty
   deactivate PREVIEW
-  UI --> Moderator : Show the title, type, subject, grade, submission time, the submitted content and the "Approve to Hub" and "Reject" actions
+  UI -->> Moderator : Show the title, type, subject, grade, submission time, the submitted content and the "Approve to Hub" and "Reject" actions
 end
 deactivate SVC
 deactivate CTL

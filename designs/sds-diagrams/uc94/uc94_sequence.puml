@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-94 View Notifications — Sequence Diagram
+title 2.16.2.2 UC-94 View Notifications — Sequence Diagram
 
 actor User
 participant ":NotificationsScreen" as UI
@@ -19,46 +19,46 @@ participant ":NotificationStreamPort" as STREAM
 database DB
 
 autonumber
-User -> UI : Click the notification bell and choose the unread filter
+User ->> UI : Click the notification bell and choose the unread filter
 activate UI
-UI -> UI : load()
-UI -> CTL : GET /api/notifications?unread=&page=&size=
+UI ->> UI : load()
+UI ->> CTL : GET /api/notifications?unread=&page=&size=
 activate CTL
-CTL -> SVC : listMine(unreadOnly, pageable)
+CTL ->> SVC : listMine(unreadOnly, page, size)
 activate SVC
-SVC -> NOTIFS : findForRecipient(recipientId, unreadOnly, pageable)
+SVC ->> NOTIFS : findForRecipient(recipientId, unreadOnly, page, size)
 activate NOTIFS
-NOTIFS -> DB : SELECT notification fields and read_at FROM notification_recipients JOIN notifications WHERE recipient_id = ? ORDER BY created_at DESC
+NOTIFS ->> DB : SELECT notification fields and read_at FROM notification_recipients JOIN notifications WHERE recipient_id = ? ORDER BY created_at DESC
 activate DB
-DB --> NOTIFS : rows + total count
+DB -->> NOTIFS : rows + total count
 deactivate DB
-NOTIFS --> SVC : Page<RecipientNotification>
+NOTIFS -->> SVC : RecipientNotificationPage
 deactivate NOTIFS
-SVC -> NOTIFS : countUnreadForRecipient(recipientId)
+SVC ->> NOTIFS : countUnreadForRecipient(recipientId)
 activate NOTIFS
-NOTIFS -> DB : SELECT COUNT(*) FROM notification_recipients WHERE recipient_id = ? AND read_at IS NULL
+NOTIFS ->> DB : SELECT COUNT(*) FROM notification_recipients WHERE recipient_id = ? AND read_at IS NULL
 activate DB
-DB --> NOTIFS : count
+DB -->> NOTIFS : count
 deactivate DB
-NOTIFS --> SVC : long
+NOTIFS -->> SVC : long
 deactivate NOTIFS
-SVC -> SVC : resolve the sender name of every notification and mark each item as read or unread for this recipient
-SVC --> CTL : NotificationViews.Page
+SVC ->> SVC : resolve the sender name of every notification and mark each item as read or unread for this recipient
+SVC -->> CTL : NotificationPage
 deactivate SVC
-CTL --> UI : HTTP 200 + NotificationViews.Page
+CTL -->> UI : HTTP 200 + NotificationPage
 deactivate CTL
 
 alt no notification is addressed to the user
-  UI --> User : Show the empty notification state (MSG01)
+  UI -->> User : Show the empty notification state (MSG01)
 else the user has notifications
-  UI --> User : Show the notifications newest first, with the unread ones highlighted and the unread counter on the bell
+  UI -->> User : Show the notifications newest first, with the unread ones highlighted and the unread counter on the bell
 end
 
-UI -> STREAM : Subscribe to /user/queue/notifications over the STOMP endpoint /ws with the access token of the signed-in user
+UI ->> STREAM : Subscribe to /user/queue/notifications over the STOMP endpoint /ws with the access token of the signed-in user
 activate STREAM
-STREAM --> UI : NotificationEvent of a newly created notification
+STREAM ->> UI : NotificationEvent of a newly created notification
 deactivate STREAM
-UI -> UI : load()
-UI --> User : Show the newly received notification at the top of the list without a page reload
+UI ->> UI : load()
+UI -->> User : Show the newly received notification at the top of the list without a page reload
 deactivate UI
 @enduml

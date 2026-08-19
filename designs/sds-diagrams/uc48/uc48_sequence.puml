@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-48 Download Submission File — Sequence Diagram
+title 2.14.2.3 UC-48 Download Submission File — Sequence Diagram
 
 actor Teacher
 participant ":SubmissionDetailPanel" as UI
@@ -19,42 +19,42 @@ database DB
 participant "File Storage Service" as STORAGE
 
 autonumber
-Teacher -> UI : Open a student submission from the Submissions List
+Teacher ->> UI : Open a student submission from the Submissions List
 activate UI
-UI -> UI : load()
-UI -> CTL : GET /api/classes/{id}/resources/{rid}/submissions/{studentId}
+UI ->> UI : load()
+UI ->> CTL : GET /api/classes/{id}/resources/{rid}/submissions/{studentId}
 activate CTL
-CTL -> SVC : getSubmissionDetail(classId, resourceId, studentId)
+CTL ->> SVC : getSubmissionDetail(classId, resourceId, studentId)
 activate SVC
-SVC -> SVC : allow only the owner of the class and a resource that belongs to that class
-SVC -> REPO : findByResourceAndStudent(resourceId, studentId)
+SVC ->> SVC : allow only the owner of the class and a resource that belongs to that class
+SVC ->> REPO : findByResourceAndStudent(resourceId, studentId)
 activate REPO
-REPO -> DB : SELECT * FROM submissions WHERE class_resource_id = ? AND student_id = ?
+REPO ->> DB : SELECT * FROM submissions WHERE class_resource_id = ? AND student_id = ?
 activate DB
-DB --> REPO : row / none
+DB -->> REPO : row / none
 deactivate DB
-REPO -> DB : SELECT * FROM submission_files WHERE submission_id = ?
+REPO ->> DB : SELECT * FROM submission_files WHERE submission_id = ?
 activate DB
-DB --> REPO : file rows with the stored file URLs
+DB -->> REPO : file rows with the stored file URLs
 deactivate DB
-REPO --> SVC : Optional<SubmissionWithFiles>
+REPO -->> SVC : SubmissionWithFiles
 deactivate REPO
-SVC --> CTL : SubmissionViews.TeacherDetail
+SVC -->> CTL : SubmissionTeacherDetail
 deactivate SVC
-CTL --> UI : HTTP 200 + TeacherSubmissionDetailDto
+CTL -->> UI : HTTP 200 + TeacherSubmissionDetail
 deactivate CTL
-UI --> Teacher : Show each submitted file with its name and size and a Download action, also when the class is INACTIVE
+UI -->> Teacher : Show each submitted file with its name and size and a Download action, also when the class is INACTIVE
 
-Teacher -> UI : Click Download on a submitted file
-UI -> STORAGE : Request the submitted file from the stored file URL
+Teacher ->> UI : Click Download on a submitted file
+UI ->> STORAGE : Request the submitted file from the stored file URL
 activate STORAGE
-STORAGE --> UI : File content with its content type / retrieval error
+STORAGE -->> UI : File content with its content type / retrieval error
 deactivate STORAGE
 
 alt the submission was withdrawn or the storage service cannot return the file
-  UI --> Teacher : Hide the Download action or show the failure message (MSG25), leaving the submission unchanged
+  UI -->> Teacher : Hide the Download action or show the failure message (MSG25), leaving the submission unchanged
 else the storage service returns the file
-  UI --> Teacher : Save the file to the chosen or default download folder
+  UI -->> Teacher : Save the file to the chosen or default download folder
 end
 deactivate UI
 @enduml

@@ -1,0 +1,55 @@
+@startuml UC-86 View Assigned Task - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.15.2.4 UC-86 View Assigned Task — Sequence Diagram
+
+actor Teacher
+boundary ":WeeklyScheduleScreen" as UI
+control ":WeeklyTaskController" as CTL
+control ":WeeklyTaskService" as SVC
+boundary ":WeeklyTaskRepository" as REPO
+database DB
+
+autonumber
+Teacher ->> UI : Open the Weekly Schedule and pick the month and the grade filter
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/weekly-tasks?from=&to=
+activate CTL
+CTL ->> SVC : schedule(from, to, grade)
+activate SVC
+SVC ->> SVC : restrict the scope to the tasks assigned to the signed-in teacher
+SVC ->> REPO : findByTeacher(teacherId, fromWeek, toWeek)
+activate REPO
+REPO ->> DB : SELECT * FROM weekly_tasks WHERE teacher_id = ? AND week_start_date BETWEEN ? AND ?
+activate DB
+DB -->> REPO : rows
+deactivate DB
+REPO -->> SVC : WeeklyTask [0..*]
+deactivate REPO
+SVC -->> CTL : WeeklyTaskSchedule
+deactivate SVC
+CTL -->> UI : HTTP 200 + WeeklyTaskSchedule
+deactivate CTL
+
+Teacher ->> UI : Select one assigned task in the schedule
+UI ->> UI : isCurrentWeek(weekStartDate)
+UI ->> UI : isPastDeadline(deadline)
+UI -->> Teacher : Show the required chapter and lesson, the teaching week, the deadline and the review status
+
+alt the task is in the current week, before the deadline, and NOT_SUBMITTED or REJECTED
+  UI -->> Teacher : Offer the "Submit lesson plan" action
+else the task is in the current week, before the deadline, and SUBMITTED
+  UI -->> Teacher : Offer the "Unsubmit" action
+else the task lies outside the current week or the deadline has passed
+  UI -->> Teacher : Show the task read-only, marked as not yet started, already past or overdue
+end
+deactivate UI
+@enduml

@@ -1,0 +1,68 @@
+@startuml UC-75 Approve Content - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 220
+title UC-75 Approve Content — Sequence Diagram
+
+actor Moderator
+participant ":HubModerationPage" as UI
+control ":LibraryContentController" as CTL
+control ":LibraryContentService" as SVC
+boundary ":LibraryContentRepository" as REPO
+control ":ActivityLogService" as LOG
+database DB
+
+autonumber
+Moderator ->> UI : Click "Approve to Hub" on the opened submission
+activate UI
+UI ->> UI : handleApprove()
+UI ->> CTL : POST /api/library/contents/{id}/approval
+activate CTL
+CTL ->> SVC : approve(id)
+activate SVC
+SVC ->> REPO : findActiveById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : LibraryContent
+deactivate REPO
+SVC ->> SVC : accept only an existing submission that is still SUBMITTED and carries the assigned subject of the moderator (BR-18)
+
+alt the item is missing, already reviewed or outside the assigned subject
+  SVC -->> CTL : ResourceNotFoundException / StateConflictException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 409 / 403
+  UI -->> Moderator : Show that the submission cannot be approved (MSG25) and leave every status unchanged
+else the submission is SUBMITTED and belongs to the assigned subject
+  SVC ->> REPO : findActiveSnapshotsBySourceId(id)
+  activate REPO
+  REPO -->> SVC : LibraryContent [0..*]
+  deactivate REPO
+  SVC ->> REPO : save(each earlier published snapshot with deletedAt set to now)
+  activate REPO
+  REPO ->> DB : UPDATE library_contents SET deleted_at = ?, updated_at = ? WHERE source_library_content_id = ?
+  SVC ->> REPO : save(source LibraryContent with status APPROVED, reviewedBy and reviewedAt)
+  REPO ->> DB : UPDATE library_contents SET status = 'APPROVED', reviewed_by = ?, reviewed_at = ? WHERE id = ?
+  SVC ->> REPO : save(new published snapshot copying the payload, with sourceLibraryContentId)
+  REPO ->> DB : INSERT INTO library_contents (published snapshot columns)
+  deactivate REPO
+  SVC ->> LOG : record(moderatorId, MODERATION, APPROVE_LIBRARY_CONTENT, contentId)
+  activate LOG
+  LOG ->> DB : INSERT INTO activity_logs (moderation approval entry)
+  deactivate LOG
+  SVC -->> CTL : LibraryDetail
+  CTL -->> UI : HTTP 200 + LibraryDetail
+  UI ->> UI : load()
+  UI -->> Moderator : Show MSG12 and refresh the moderation queue without the approved item
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-65 Delete Own Public Content — Sequence Diagram
+title 2.10.2.5 UC-65 Delete Own Public Content — Sequence Diagram
 
 actor Teacher
 participant ":CommunityHubDetailPage" as UI
@@ -19,51 +19,51 @@ participant ":LibraryContentRepository" as CONTENTS
 database DB
 
 autonumber
-Teacher -> UI : Click "Delete post" on an own published Community Hub item
+Teacher ->> UI : Click "Delete post" on an own published Community Hub item
 activate UI
-UI -> CONFIRM : Show the confirmation popup stating the item will be removed from the Community Hub (MSG09)
+UI ->> CONFIRM : Show the confirmation popup stating the item will be removed from the Community Hub (MSG09)
 activate CONFIRM
 
 opt teacher cancels the deletion
-  Teacher -> CONFIRM : Click "Cancel"
-  CONFIRM -> UI : Report the cancelled confirmation
-  UI --> Teacher : Close the popup and leave the published item unchanged
+  Teacher ->> CONFIRM : Click "Cancel"
+  CONFIRM ->> UI : Report the cancelled confirmation
+  UI -->> Teacher : Close the popup and leave the published item unchanged
 end
 
-Teacher -> CONFIRM : Click "Delete post" to confirm
-CONFIRM -> UI : Report the confirmed deletion
+Teacher ->> CONFIRM : Click "Delete post" to confirm
+CONFIRM ->> UI : Report the confirmed deletion
 deactivate CONFIRM
-UI -> UI : handleDeleteContent()
-UI -> CTL : DELETE /api/hub/contents/{id}
+UI ->> UI : handleDeleteContent()
+UI ->> CTL : DELETE /api/hub/contents/{id}
 activate CTL
-CTL -> SVC : deleteByOwner(id)
+CTL ->> SVC : deleteByOwner(id)
 activate SVC
-SVC -> CONTENTS : findApprovedForHubById(id)
+SVC ->> CONTENTS : findApprovedForHubById(id)
 activate CONTENTS
-CONTENTS -> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
+CONTENTS ->> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
 activate DB
-DB --> CONTENTS : row / none
+DB -->> CONTENTS : row / none
 deactivate DB
-CONTENTS --> SVC : Optional<LibraryContent>
+CONTENTS -->> SVC : LibraryContent
 deactivate CONTENTS
-SVC -> SVC : check that the published item exists and belongs to the signed-in teacher
+SVC ->> SVC : check that the published item exists and belongs to the signed-in teacher
 
 alt the item is unavailable or the teacher is not its author
-  SVC --> CTL : ResourceNotFoundException / ForbiddenOperationException
-  CTL --> UI : HTTP 404 / HTTP 403
-  UI --> Teacher : Show MSG25 and keep the Community Hub unchanged
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / HTTP 403
+  UI -->> Teacher : Show MSG25 and keep the Community Hub unchanged
 else the teacher owns the published item
-  SVC -> CONTENTS : save(hub row with deletedAt set to now)
+  SVC ->> CONTENTS : save(hub row with deletedAt set to now)
   activate CONTENTS
-  CONTENTS -> DB : UPDATE library_contents SET deleted_at = ?, updated_at = ? WHERE id = ?
+  CONTENTS ->> DB : UPDATE library_contents SET deleted_at = ?, updated_at = ? WHERE id = ?
   activate DB
-  DB --> CONTENTS : Saved
+  DB -->> CONTENTS : Saved
   deactivate DB
-  CONTENTS --> SVC : LibraryContent
+  CONTENTS -->> SVC : LibraryContent
   deactivate CONTENTS
-  SVC --> CTL : void
-  CTL --> UI : HTTP 204 No Content
-  UI --> Teacher : Show MSG10 and return to the Community Hub without the deleted item
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204 No Content
+  UI -->> Teacher : Show MSG10 and return to the Community Hub without the deleted item
 end
 deactivate SVC
 deactivate CTL

@@ -1,0 +1,57 @@
+@startuml UC-09 View Personal Content Detail - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 260
+title 2.9.2.2 UC-09 View Personal Content Detail — Sequence Diagram
+
+actor Teacher
+boundary ":LibraryScreen" as UI
+boundary ":LessonEditDashboard" as EDT
+control ":LibraryContentController" as CTL
+control ":LibraryContentService" as SVC
+boundary ":LibraryContentRepository" as REPO
+database DB
+
+autonumber
+Teacher ->> UI : Select an owned item and click "Open"
+activate UI
+UI ->> UI : open(content)
+UI ->> EDT : Open the editor route of that content type with libraryId
+deactivate UI
+activate EDT
+EDT ->> CTL : GET /api/library/contents/{id}
+activate CTL
+CTL ->> SVC : get(id)
+activate SVC
+SVC ->> REPO : findActiveById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM library_contents WHERE id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO ->> REPO : drop the row when deleted_at is set
+REPO -->> SVC : LibraryContent
+deactivate REPO
+SVC ->> SVC : check that the item exists, belongs to the teacher and is not a published Hub snapshot
+
+alt the item is missing, soft-deleted or not owned by the teacher
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> EDT : HTTP 404 / 403
+  EDT -->> Teacher : Show that the item is unavailable or not permitted, change nothing (MSG25)
+else the teacher owns the item
+  SVC ->> SVC : map the stored record to its detail view with payload, metadata and status
+  SVC -->> CTL : LibraryDetail
+  CTL -->> EDT : HTTP 200 + LibraryDetail
+  EDT ->> EDT : load the payload, metadata and current status into the editor
+  EDT -->> Teacher : Show the latest stored version in the preview or editor of that content type
+end
+deactivate SVC
+deactivate CTL
+deactivate EDT
+@enduml

@@ -6,7 +6,7 @@ skinparam ParticipantBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-53 View Physics Simulation Analysis — Sequence Diagram
+title 2.6.2.3 UC-53 View Physics Simulation Analysis — Sequence Diagram
 
 actor "Physics Teacher" as Teacher
 participant ":GenericDetailView" as GDV
@@ -16,53 +16,53 @@ participant ":SceneKonva2D" as CANVAS
 participant ":SceneKernel" as KERNEL
 
 autonumber
-Teacher -> GDV : Open the Analysis tab of the simulation currently running
+Teacher ->> GDV : Open the Analysis tab of the simulation currently running
 activate GDV
-GDV -> PANEL : render()
+GDV ->> PANEL : render()
 activate PANEL
-PANEL -> PANEL : lay out the shared time marks t1 to t8 that every simulation supports
-PANEL -> MARK : values(params)
+PANEL ->> PANEL : lay out the shared time marks t1 to t8 that every simulation supports
+PANEL ->> MARK : values(params)
 activate MARK
-MARK --> PANEL : LandmarkValue list
-PANEL -> MARK : atTime(params)
-MARK --> PANEL : second at which the state occurs
+MARK -->> PANEL : LandmarkValue list
+PANEL ->> MARK : atTime(params)
+MARK -->> PANEL : second at which the state occurs
 deactivate MARK
 
 alt the opened simulation declares no landmark
-  PANEL --> Teacher : Show only the shared time marks of the current run
+  PANEL -->> Teacher : Show only the shared time marks of the current run
 else the opened simulation declares landmarks
-  PANEL --> Teacher : Show each landmark with its letter, description and calculated values with units
+  PANEL -->> Teacher : Show each landmark with its letter, description and calculated values with units
 end
 deactivate PANEL
 
-Teacher -> PANEL : Select a time mark or the "Go to" button of a landmark
+Teacher ->> PANEL : Select a time mark or the "Go to" button of a landmark
 activate PANEL
-PANEL -> GDV : jumpTo(mark)
+PANEL ->> GDV : jumpTo(mark)
 deactivate PANEL
-GDV -> GDV : keep the mark just left as a dashed ghost and raise the seek token
-GDV -> CANVAS : render()
+GDV ->> GDV : keep the mark just left as a dashed ghost and raise the seek token
+GDV ->> CANVAS : render()
 activate CANVAS
-CANVAS -> KERNEL : project(initialState)
+CANVAS ->> KERNEL : project(initialState)
 activate KERNEL
-KERNEL --> CANVAS : StateVec
-CANVAS -> KERNEL : derivs(s)
-KERNEL --> CANVAS : StateVec
+KERNEL -->> CANVAS : StateVec
+CANVAS ->> KERNEL : derivs(s)
+KERNEL -->> CANVAS : StateVec
 deactivate KERNEL
-CANVAS -> CANVAS : integrate from the initial state to the requested second at a fixed sub-step, then stop the run
-CANVAS -> GDV : handleReadout(readout)
-CANVAS --> Teacher : Show the run stopped at the mark with its label and the dashed ghost of the previous mark
+CANVAS ->> CANVAS : integrate from the initial state to the requested second at a fixed sub-step, then stop the run
+CANVAS ->> GDV : handleReadout(readout)
+CANVAS -->> Teacher : Show the run stopped at the mark with its label and the dashed ghost of the previous mark
 deactivate CANVAS
-GDV --> Teacher : Show the time, position, velocity and kinetic and potential energy calculated for that state
+GDV -->> Teacher : Show the time, position, velocity and kinetic and potential energy calculated for that state
 
 opt teacher changes a parameter while the Analysis tab is open
-  Teacher -> GDV : Change a supported parameter of the simulation
-  GDV -> PANEL : render()
+  Teacher ->> GDV : Change a supported parameter of the simulation
+  GDV ->> PANEL : render()
   activate PANEL
-  PANEL -> MARK : values(params)
+  PANEL ->> MARK : values(params)
   activate MARK
-  MARK --> PANEL : LandmarkValue list recalculated for the new inputs
+  MARK -->> PANEL : LandmarkValue list recalculated for the new inputs
   deactivate MARK
-  PANEL --> Teacher : Refresh the landmark values and the second of each mark
+  PANEL -->> Teacher : Refresh the landmark values and the second of each mark
   deactivate PANEL
 end
 deactivate GDV

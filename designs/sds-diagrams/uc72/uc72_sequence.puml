@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-72 Hide Comment on Own Content — Sequence Diagram
+title 2.10.2.10 UC-72 Hide Comment on Own Content — Sequence Diagram
 
 actor Teacher
 participant ":CommunityHubDetailPage" as UI
@@ -19,52 +19,52 @@ participant ":LibraryContentRepository" as CONTENTS
 database DB
 
 autonumber
-Teacher -> UI : Click "Hide" on another teacher's comment on their own Hub content
+Teacher ->> UI : Click "Hide" on another teacher's comment on their own Hub content
 activate UI
-UI --> Teacher : Show the hide confirmation dialog (MSG44)
-Teacher -> UI : Click "Hide comment" to confirm
-UI -> UI : confirmDeleteComment()
-UI -> CTL : POST /api/hub/comments/{commentId}/hide
+UI -->> Teacher : Show the hide confirmation dialog (MSG44)
+Teacher ->> UI : Click "Hide comment" to confirm
+UI ->> UI : confirmDeleteComment()
+UI ->> CTL : POST /api/hub/comments/{commentId}/hide
 activate CTL
-CTL -> SVC : hideByContentOwner(commentId)
+CTL ->> SVC : hideByContentOwner(commentId)
 activate SVC
 
-SVC -> COMMENTS : findById(commentId)
+SVC ->> COMMENTS : findById(commentId)
 activate COMMENTS
-COMMENTS -> DB : SELECT * FROM hub_content_comments WHERE id = ?
+COMMENTS ->> DB : SELECT * FROM hub_content_comments WHERE id = ?
 activate DB
-DB --> COMMENTS : row / none
+DB -->> COMMENTS : row / none
 deactivate DB
-COMMENTS --> SVC : Optional<HubComment>
+COMMENTS -->> SVC : HubComment
 deactivate COMMENTS
 
-SVC -> CONTENTS : findApprovedForHubById(libraryContentId)
+SVC ->> CONTENTS : findApprovedForHubById(libraryContentId)
 activate CONTENTS
-CONTENTS -> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
+CONTENTS ->> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
 activate DB
-DB --> CONTENTS : row / none
+DB -->> CONTENTS : row / none
 deactivate DB
-CONTENTS --> SVC : Optional<LibraryContent>
+CONTENTS -->> SVC : LibraryContent
 deactivate CONTENTS
 
 alt the content or comment is unavailable, the comment is the requester's own, or the requester does not own the content
-  SVC --> CTL : ResourceNotFoundException / IllegalArgumentException / ForbiddenOperationException
-  CTL --> UI : HTTP 404 / 400 / 403
-  UI --> Teacher : Show that hiding is not permitted and leave the comment visible
+  SVC -->> CTL : ResourceNotFoundException / IllegalArgumentException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 400 / 403
+  UI -->> Teacher : Show that hiding is not permitted and leave the comment visible
 
 else the requester owns the content and the comment belongs to another teacher
-  SVC -> COMMENTS : save(comment)
+  SVC ->> COMMENTS : save(comment)
   activate COMMENTS
-  COMMENTS -> DB : UPDATE hub_content_comments SET hidden_at = ?, hidden_by = ? WHERE id = ?
+  COMMENTS ->> DB : UPDATE hub_content_comments SET hidden_at = ?, hidden_by = ? WHERE id = ?
   activate DB
-  DB --> COMMENTS : Saved
+  DB -->> COMMENTS : Saved
   deactivate DB
-  COMMENTS --> SVC : HubComment
+  COMMENTS -->> SVC : HubComment
   deactivate COMMENTS
-  SVC -> SVC : load the visible comments of that content and soft-hide every direct reply of the root comment the same way
-  SVC --> CTL : void
-  CTL --> UI : HTTP 204 No Content
-  UI --> Teacher : Show MSG45 and the discussion without the hidden comment and its replies
+  SVC ->> SVC : load the visible comments of that content and soft-hide every direct reply of the root comment the same way
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204 No Content
+  UI -->> Teacher : Show MSG45 and the discussion without the hidden comment and its replies
 end
 
 deactivate SVC

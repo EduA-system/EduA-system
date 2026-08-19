@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-26 Comment on Blog Post — Sequence Diagram
+title 2.11.2.6 UC-26 Comment on Blog Post — Sequence Diagram
 
 actor "Teacher or Moderator" as User
 participant ":BlogCommunityPage" as UI
@@ -19,51 +19,51 @@ participant ":BlogCommentRepository" as COMMENTS
 database DB
 
 autonumber
-User -> UI : Enter the comment text in the comment box of the Blog Post Detail screen
+User ->> UI : Enter the comment text in the comment box of the Blog Post Detail screen
 activate UI
-User -> UI : Click "Post"
-UI -> UI : addComment()
-UI -> CTL : POST /api/blog-posts/{id}/comments
+User ->> UI : Click "Post"
+UI ->> UI : addComment()
+UI ->> CTL : POST /api/blog-posts/{id}/comments
 activate CTL
-CTL -> SVC : create(postId, content, parentCommentId)
+CTL ->> SVC : create(postId, content, parentCommentId)
 activate SVC
-SVC -> POSTS : findPublishedById(postId)
+SVC ->> POSTS : findPublishedById(postId)
 activate POSTS
-POSTS -> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
+POSTS ->> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
 activate DB
-DB --> POSTS : row / none
+DB -->> POSTS : row / none
 deactivate DB
-POSTS --> SVC : Optional<BlogPost>
+POSTS -->> SVC : BlogPost
 deactivate POSTS
-SVC -> SVC : sanitize the comment HTML and check that it is not empty and stays within 200 words
+SVC ->> SVC : sanitize the comment HTML and check that it is not empty and stays within 200 words
 
 alt the blog post no longer exists or is no longer published
-  SVC --> CTL : ResourceNotFoundException
-  CTL --> UI : HTTP 404
-  UI --> User : Show that the blog post is unavailable and keep the entered text
+  SVC -->> CTL : ResourceNotFoundException
+  CTL -->> UI : HTTP 404
+  UI -->> User : Show that the blog post is unavailable and keep the entered text
 
 else the comment text is empty or exceeds 200 words
-  SVC --> CTL : IllegalArgumentException
-  CTL --> UI : HTTP 400
-  UI --> User : Highlight the comment box, show MSG02 and keep the entered text
+  SVC -->> CTL : IllegalArgumentException
+  CTL -->> UI : HTTP 400
+  UI -->> User : Highlight the comment box, show MSG02 and keep the entered text
 
 else the comment cannot be saved
-  UI --> User : Show MSG25 and keep the entered comment text
+  UI -->> User : Show MSG25 and keep the entered comment text
 
 else the post is published and the comment text is valid
-  SVC -> COMMENTS : save(new comment on the post)
+  SVC ->> COMMENTS : save(new comment on the post)
   activate COMMENTS
-  COMMENTS -> DB : INSERT INTO blog_comments with post_id = ? and parent_comment_id NULL
+  COMMENTS ->> DB : INSERT INTO blog_comments with post_id = ? and parent_comment_id NULL
   activate DB
-  DB --> COMMENTS : Saved
+  DB -->> COMMENTS : Saved
   deactivate DB
-  COMMENTS --> SVC : BlogComment
+  COMMENTS -->> SVC : BlogComment
   deactivate COMMENTS
-  SVC -> SVC : build the comment view with the author display name and timestamps
-  SVC --> CTL : BlogViews.CommentView
-  CTL --> UI : HTTP 201 + BlogViews.CommentView
-  UI -> UI : loadDetail(id)
-  UI --> User : Show MSG08 and the new comment with its author name and time in the discussion
+  SVC ->> SVC : build the comment view with the author display name and timestamps
+  SVC -->> CTL : BlogCommentView
+  CTL -->> UI : HTTP 201 + BlogCommentView
+  UI ->> UI : loadDetail(id)
+  UI -->> User : Show MSG08 and the new comment with its author name and time in the discussion
 end
 deactivate SVC
 deactivate CTL

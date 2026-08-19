@@ -1,0 +1,77 @@
+@startuml UC-104 Add Moderator Account - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.19.2.3 UC-104 Add Moderator Account — Sequence Diagram
+
+actor Principal
+boundary ":UserManagementPage" as UI
+control ":PrincipalController" as CTL
+control ":PrincipalModeratorService" as SVC
+boundary ":AppUserRepository" as USERS
+boundary ":UserRoleRepository" as ROLES
+control ":ActivityLogService" as AUDIT
+database DB
+
+autonumber
+Principal ->> UI : Enter the account email and an optional full name, select a subject and click "Add"
+activate UI
+UI ->> UI : addModerator()
+
+alt the email is empty or has an invalid format
+  UI -->> Principal : Highlight the email field and keep the entered values (MSG02 / MSG03)
+else the entered information is valid
+  UI ->> CTL : POST /api/principal/moderators
+  activate CTL
+  CTL ->> SVC : addModerator(email, subject, fullName)
+  activate SVC
+  SVC ->> USERS : existsActiveByRoleAndSubject(MODERATOR, subject)
+  activate USERS
+  USERS -->> SVC : boolean
+  deactivate USERS
+  SVC ->> USERS : findByEmail(email)
+  activate USERS
+  USERS ->> DB : SELECT * FROM app_users WHERE email = ?
+  activate DB
+  DB -->> USERS : row / none
+  deactivate DB
+  USERS -->> SVC : AppUser
+  deactivate USERS
+  SVC ->> SVC : reject a subject that already has an active Moderator, reject an email that belongs to an account which is not DISABLED (MSG39), and reuse a DISABLED account instead of creating a duplicate
+  SVC ->> USERS : save(AppUser with the selected subject and status INVITED)
+  activate USERS
+  USERS ->> DB : INSERT INTO app_users or UPDATE the reused account, setting subject and status
+  activate DB
+  DB -->> USERS : Saved
+  deactivate DB
+  USERS -->> SVC : AppUser
+  deactivate USERS
+  SVC ->> ROLES : replaceRole(userId, MODERATOR, grantedBy, grantedAt)
+  activate ROLES
+  ROLES ->> DB : DELETE the previous rows and INSERT the MODERATOR grant INTO user_roles
+  activate DB
+  DB -->> ROLES : Saved
+  deactivate DB
+  deactivate ROLES
+  SVC ->> SVC : give the new Moderator the high school grades 10, 11 and 12
+  SVC ->> AUDIT : record(actorId, PRINCIPAL, ACCOUNT, GRANT_MODERATOR, new Moderator)
+  activate AUDIT
+  AUDIT ->> DB : INSERT INTO activity_logs the GRANT_MODERATOR entry
+  activate DB
+  DB -->> AUDIT : Saved
+  deactivate DB
+  deactivate AUDIT
+  SVC -->> CTL : AppUser
+  deactivate SVC
+  CTL -->> UI : HTTP 201 + Moderator
+  deactivate CTL
+  UI -->> Principal : Show MSG08 and refresh the Moderator list with the invited account
+end
+deactivate UI
+@enduml

@@ -1,0 +1,70 @@
+@startuml UC-43 View Class Resources - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.13.2.4 UC-43 View Class Resources — Sequence Diagram
+
+actor Student
+boundary ":StudentClassResourcesPage" as UI
+control ":ClassController" as CTL
+control ":ClassResourceService" as SVC
+boundary ":ClassMemberRepository" as MEM
+boundary ":ClassResourceRepository" as RES
+boundary ":SubmissionRepository" as SUBS
+database DB
+
+autonumber
+Student ->> UI : Open the Resources area of an enrolled class
+activate UI
+UI ->> UI : loadResources(id)
+UI ->> CTL : GET /api/classes/{id}/resources?page=&size=
+activate CTL
+CTL ->> SVC : listResources(classId, page, size)
+activate SVC
+SVC ->> MEM : existsByClassIdAndStudentId(classId, currentUserId)
+activate MEM
+MEM ->> DB : SELECT 1 FROM class_members WHERE class_id = ? AND student_id = ? AND status = 'ENROLLED'
+activate DB
+DB -->> MEM : match / none
+deactivate DB
+MEM -->> SVC : boolean
+deactivate MEM
+SVC ->> SVC : resolve the class and allow only its owner or an enrolled student, whatever the class status
+
+alt class is unavailable or the student is no longer enrolled
+  SVC -->> CTL : ResourceNotFoundException / ClassAccessRevokedException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> Student : Show that the class is unavailable or the access is revoked, then return to the enrolled class list
+
+else the student is enrolled in the class
+  SVC ->> RES : findByClassId(classId, page, size)
+  activate RES
+  RES ->> DB : SELECT * FROM class_resources WHERE class_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?
+  activate DB
+  DB -->> RES : rows
+  deactivate DB
+  RES -->> SVC : ClassResourceRepository.PageResult
+  deactivate RES
+  SVC ->> SUBS : findStatusesByResourceIds(resourceIds, studentId)
+  activate SUBS
+  SUBS ->> DB : SELECT submission status FROM submissions WHERE class_resource_id IN the listed resources AND student_id = ?
+  activate DB
+  DB -->> SUBS : rows
+  deactivate DB
+  SUBS -->> SVC : Map<String, SubmissionStatus>
+  deactivate SUBS
+  SVC ->> SVC : attach the poster name and the own submission state of each resource, NOT_SUBMITTED for an assignment with no submission yet
+  SVC -->> CTL : Page
+  CTL -->> UI : HTTP 200 + ClassResourcePage
+  UI -->> Student : Show the resources with deadlines, submission states and the actions allowed by the class status, or MSG01 when the class has none
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

@@ -1,0 +1,72 @@
+@startuml UC-81 Reactivate Teacher Account - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.18.2.5 UC-81 Reactivate Teacher Account — Sequence Diagram
+
+actor Moderator
+boundary ":UserManagementContent" as UI
+control ":ModeratorController" as CTL
+control ":ModeratorTeacherService" as SVC
+boundary ":AppUserRepository" as USERS
+boundary ":UserRoleRepository" as ROLES
+database DB
+
+autonumber
+Moderator ->> UI : Select "Reactivate" on a revoked teacher account of the assigned subject
+activate UI
+UI ->> UI : toggleTeacher(item)
+UI ->> CTL : PATCH /api/moderator/teachers/{id}/reactivate
+activate CTL
+CTL ->> SVC : reactivateTeacher(id)
+activate SVC
+SVC ->> USERS : findById(id)
+activate USERS
+USERS ->> DB : SELECT * FROM app_users WHERE id = ?
+activate DB
+DB -->> USERS : row / none
+deactivate DB
+USERS -->> SVC : AppUser
+deactivate USERS
+SVC ->> ROLES : findRolesByUserId(id)
+activate ROLES
+ROLES ->> DB : SELECT role FROM user_roles WHERE user_id = ?
+activate DB
+DB -->> ROLES : rows
+deactivate DB
+ROLES -->> SVC : Role [0..*]
+deactivate ROLES
+SVC ->> SVC : accept only a DISABLED account that holds the Teacher role in the moderator subject (BR-18)
+
+alt the account is missing, not revoked, not a teacher or in another subject
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> Moderator : Show the unavailable or not-permitted message and leave the account revoked
+else the account is a revoked teacher of the moderator subject
+  SVC ->> USERS : save(AppUser with status INVITED)
+  activate USERS
+  USERS ->> DB : UPDATE app_users SET status = 'INVITED' WHERE id = ?
+  activate DB
+  DB -->> USERS : Saved
+  deactivate DB
+  USERS -->> SVC : AppUser
+  deactivate USERS
+  SVC ->> ROLES : replaceRole(userId, TEACHER, grantedBy, grantedAt)
+  activate ROLES
+  ROLES ->> DB : INSERT INTO user_roles user_id, role, granted_by, granted_at
+  deactivate ROLES
+  SVC ->> SVC : record the REACTIVATE_TEACHER entry of the account-management activity log
+  SVC -->> CTL : AppUser
+  CTL -->> UI : HTTP 200 + Teacher
+  UI -->> Moderator : Show MSG08 and the refreshed list with the account back in status Invited
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

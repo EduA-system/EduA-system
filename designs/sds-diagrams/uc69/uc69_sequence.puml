@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-69 Create Content Comment — Sequence Diagram
+title 2.10.2.7 UC-69 Create Content Comment — Sequence Diagram
 
 actor "Teacher or Moderator" as User
 participant ":CommunityHubDetailPage" as UI
@@ -19,51 +19,51 @@ participant ":HubCommentRepository" as COMMENTS
 database DB
 
 autonumber
-User -> UI : Enter the comment text in the comment box of the Community Hub content detail screen
+User ->> UI : Enter the comment text in the comment box of the Community Hub content detail screen
 activate UI
-User -> UI : Click the send button
-UI -> UI : addComment()
-UI -> CTL : POST /api/hub/contents/{id}/comments
+User ->> UI : Click the send button
+UI ->> UI : addComment()
+UI ->> CTL : POST /api/hub/contents/{id}/comments
 activate CTL
-CTL -> SVC : create(contentId, content, parentCommentId)
+CTL ->> SVC : create(contentId, content, parentCommentId)
 activate SVC
 
-SVC -> CONTENTS : findApprovedForHubById(contentId)
+SVC ->> CONTENTS : findApprovedForHubById(contentId)
 activate CONTENTS
-CONTENTS -> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
+CONTENTS ->> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
 activate DB
-DB --> CONTENTS : row / none
+DB -->> CONTENTS : row / none
 deactivate DB
-CONTENTS --> SVC : Optional<LibraryContent>
+CONTENTS -->> SVC : LibraryContent
 deactivate CONTENTS
-SVC -> SVC : sanitize the comment HTML and check that it is not empty and stays within 200 words
+SVC ->> SVC : sanitize the comment HTML and check that it is not empty and stays within 200 words
 
 alt the content is no longer published on the Community Hub
-  SVC --> CTL : ResourceNotFoundException
-  CTL --> UI : HTTP 404
-  UI --> User : Show that the content is unavailable and keep the entered text
+  SVC -->> CTL : ResourceNotFoundException
+  CTL -->> UI : HTTP 404
+  UI -->> User : Show that the content is unavailable and keep the entered text
 
 else the comment text is empty or exceeds 200 words
-  SVC --> CTL : IllegalArgumentException
-  CTL --> UI : HTTP 400
-  UI --> User : Highlight the comment box, show MSG02 and keep the entered text
+  SVC -->> CTL : IllegalArgumentException
+  CTL -->> UI : HTTP 400
+  UI -->> User : Highlight the comment box, show MSG02 and keep the entered text
 
 else the comment cannot be saved
-  UI --> User : Show MSG25 and keep the entered comment text
+  UI -->> User : Show MSG25 and keep the entered comment text
 
 else the content accepts comments and the text is valid
-  SVC -> COMMENTS : save(comment)
+  SVC ->> COMMENTS : save(comment)
   activate COMMENTS
-  COMMENTS -> DB : INSERT INTO hub_content_comments with library_content_id = ? and parent_comment_id NULL for a root comment
+  COMMENTS ->> DB : INSERT INTO hub_content_comments with library_content_id = ? and parent_comment_id NULL for a root comment
   activate DB
-  DB --> COMMENTS : Saved
+  DB -->> COMMENTS : Saved
   deactivate DB
-  COMMENTS --> SVC : HubComment
+  COMMENTS -->> SVC : HubComment
   deactivate COMMENTS
-  SVC -> SVC : build the comment view with the author display name, avatar and timestamps
-  SVC --> CTL : HubViews.CommentView
-  CTL --> UI : HTTP 201 + HubViews.CommentView
-  UI --> User : Show MSG08 and append the new comment with its author name and time to the discussion
+  SVC ->> SVC : build the comment view with the author display name, avatar and timestamps
+  SVC -->> CTL : HubCommentView
+  CTL -->> UI : HTTP 201 + HubCommentView
+  UI -->> User : Show MSG08 and append the new comment with its author name and time to the discussion
 end
 
 deactivate SVC

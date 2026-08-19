@@ -1,0 +1,74 @@
+@startuml UC-02 Login - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+title 2.17.2.1 UC-02 Login — Sequence Diagram
+
+actor User
+boundary ":AuthFlow" as UI
+participant "Google Identity Services" as GIS
+control ":AuthController" as CTL
+control ":AuthService" as SVC
+boundary ":AppUserRepository" as USERS
+boundary ":RefreshTokenRepository" as TOKENS
+database DB
+
+autonumber
+User ->> UI : Click "Sign in with Google"
+activate UI
+UI ->> GIS : Open the Google sign-in prompt
+activate GIS
+GIS -->> UI : Google credential (id_token)
+deactivate GIS
+UI ->> CTL : POST /api/auth/google
+activate CTL
+CTL ->> SVC : loginWithGoogle(idToken)
+activate SVC
+SVC ->> GIS : verify id_token against Google JWKS
+activate GIS
+GIS -->> SVC : verified identity (email, subject, emailVerified)
+deactivate GIS
+SVC ->> USERS : findByEmail(email)
+activate USERS
+USERS ->> DB : SELECT * FROM app_users WHERE email = ?
+activate DB
+DB -->> USERS : row / null
+deactivate DB
+USERS -->> SVC : AppUser
+deactivate USERS
+
+alt id_token invalid, email not allowed or account DISABLED
+  SVC -->> CTL : InvalidTokenException / EmailNotAllowedException
+  CTL -->> UI : HTTP 401 / 403
+  UI -->> User : Show sign-in error and stay on the Login screen
+else account allowed
+  SVC ->> USERS : save(activated user)
+  activate USERS
+  USERS ->> DB : UPDATE app_users SET status, last_login_at
+  activate DB
+  DB -->> USERS : Saved
+  deactivate DB
+  USERS -->> SVC : AppUser
+  deactivate USERS
+  SVC ->> SVC : issue access token and refresh token
+  SVC ->> TOKENS : save(refreshToken)
+  activate TOKENS
+  TOKENS ->> DB : INSERT INTO refresh_tokens
+  activate DB
+  DB -->> TOKENS : Saved
+  deactivate DB
+  TOKENS -->> SVC : RefreshToken
+  deactivate TOKENS
+  SVC -->> CTL : LoginResult (user, roles, grades, tokens)
+  deactivate SVC
+  CTL -->> UI : HTTP 200 + access token, refresh token in HttpOnly cookie
+  deactivate CTL
+  UI -->> User : Open the workspace for the assigned role
+end
+deactivate UI
+@enduml

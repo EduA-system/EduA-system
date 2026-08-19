@@ -1,0 +1,71 @@
+@startuml UC-44 View Class Resource Detail - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.13.2.5 UC-44 View Class Resource Detail — Sequence Diagram
+
+actor Student
+boundary ":ResourceDetailPage" as UI
+control ":ClassController" as CTL
+control ":ClassResourceService" as RSVC
+boundary ":ClassResourceRepository" as RREPO
+control ":SubmissionService" as SSVC
+boundary ":SubmissionRepository" as SREPO
+database DB
+
+autonumber
+Student ->> UI : Select a resource of an enrolled class to open its detail
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/classes/{id}/resources
+activate CTL
+CTL ->> RSVC : listResources(classId, page, size)
+activate RSVC
+RSVC ->> RSVC : allow only the class owner or a student still enrolled in the class
+
+alt the resource is unavailable or the student is no longer enrolled
+  RSVC -->> CTL : ClassAccessRevokedException / ResourceNotFoundException
+  CTL -->> UI : HTTP 403 / 404
+  UI -->> Student : Show the unavailable-resource message (MSG25) and return to the class list
+else the student is enrolled and the resource exists
+  RSVC ->> RREPO : findByClassId(classId, page, size)
+  activate RREPO
+  RREPO ->> DB : SELECT * FROM class_resources WHERE class_id = ? ORDER BY created_at DESC
+  activate DB
+  DB -->> RREPO : resource rows
+  deactivate DB
+  RREPO -->> RSVC : PageResult
+  deactivate RREPO
+  RSVC ->> RSVC : add the poster name and the student's own submission status to every resource
+  RSVC -->> CTL : ClassResourcePage
+  deactivate RSVC
+  CTL -->> UI : HTTP 200 + ClassResourcePage
+  deactivate CTL
+  UI ->> UI : keep the selected resource with its attachment, deadline and submission settings
+
+  UI ->> CTL : GET /api/classes/{id}/resources/{rid}/submission
+  activate CTL
+  CTL ->> SSVC : getOwnSubmission(classId, resourceId)
+  activate SSVC
+  SSVC ->> SREPO : findByResourceAndStudent(resourceId, studentId)
+  activate SREPO
+  SREPO ->> DB : SELECT * FROM submissions WHERE class_resource_id = ? AND student_id = ?
+  activate DB
+  DB -->> SREPO : row / none
+  deactivate DB
+  SREPO -->> SSVC : SubmissionWithFiles
+  deactivate SREPO
+  SSVC -->> CTL : SubmissionDetail
+  deactivate SSVC
+  CTL -->> UI : HTTP 200 + SubmissionDetail / HTTP 404 when nothing was submitted
+  deactivate CTL
+  UI -->> Student : Show the instructions, attachment, deadline and the submission state with the actions allowed by the class status
+end
+deactivate UI
+@enduml

@@ -1,0 +1,72 @@
+@startuml UC-87 Submit Lesson Plan for Weekly Task - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.15.2.5 UC-87 Submit Lesson Plan for Weekly Task — Sequence Diagram
+
+actor Teacher
+boundary ":WeeklyScheduleScreen" as UI
+control ":WeeklyTaskController" as CTL
+control ":WeeklyTaskService" as SVC
+boundary ":LibraryContentRepository" as LIB
+boundary ":WeeklyTaskRepository" as REPO
+database DB
+
+autonumber
+Teacher ->> UI : Click "Submit lesson plan" on an assigned task of the current week
+activate UI
+UI ->> UI : loadOwnedLessonPlans(task, all)
+UI -->> Teacher : Show the owned lesson plans of the assigned subject, grade and chapter as selectable cards
+Teacher ->> UI : Select one lesson plan and click "Submit"
+UI ->> UI : handleSubmitTask()
+UI ->> CTL : POST /api/weekly-tasks/{id}/submission
+activate CTL
+CTL ->> SVC : submit(id, libraryContentId, documentUrl, documentName)
+activate SVC
+
+SVC ->> REPO : findById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM weekly_tasks WHERE id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : WeeklyTask
+deactivate REPO
+SVC ->> SVC : accept only a task assigned to the teacher, still before its deadline, in NOT_SUBMITTED or REJECTED status, and carrying exactly one source: an owned library lesson plan or an uploaded document
+
+SVC ->> LIB : findActiveById(libraryContentId)
+activate LIB
+LIB ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+activate DB
+DB -->> LIB : row / none
+deactivate DB
+LIB -->> SVC : LibraryContent
+deactivate LIB
+
+alt the deadline has passed, the task is not assigned to the teacher, or the chosen content is not a LESSON_PLAN owned by the teacher
+  SVC -->> CTL : IllegalArgumentException / ForbiddenOperationException / ResourceNotFoundException
+  CTL -->> UI : HTTP 400 / 403 / 404
+  UI -->> Teacher : Show the blocking message and leave the review status unchanged
+else the task still accepts a submission and the lesson plan is valid
+  SVC ->> REPO : save(task with SUBMITTED status, the lesson plan snapshot and submittedAt)
+  activate REPO
+  REPO ->> DB : UPDATE weekly_tasks SET review_status = 'SUBMITTED', source snapshot fields, submitted_at = ? WHERE id = ?
+  activate DB
+  DB -->> REPO : Saved
+  deactivate DB
+  REPO -->> SVC : WeeklyTask
+  deactivate REPO
+  SVC -->> CTL : WeeklyTaskDetail
+  CTL -->> UI : HTTP 200 + WeeklyTaskDetail
+  UI -->> Teacher : Show MSG08 and the task as SUBMITTED and awaiting review, now queued for the moderator
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

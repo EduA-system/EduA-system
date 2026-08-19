@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-27 Reply to Blog Comment — Sequence Diagram
+title 2.11.2.7 UC-27 Reply to Blog Comment — Sequence Diagram
 
 actor Teacher
 participant ":BlogCommunityPage" as UI
@@ -19,52 +19,52 @@ participant ":BlogCommentRepository" as CREPO
 database DB
 
 autonumber
-Teacher -> UI : Click "Reply" on a root comment
+Teacher ->> UI : Click "Reply" on a root comment
 activate UI
-UI --> Teacher : Show the reply banner naming the author of the root comment
-Teacher -> UI : Enter the reply text and click "Send"
-UI -> UI : addComment()
-UI -> CTL : POST /api/blog-posts/{id}/comments with parentCommentId
+UI -->> Teacher : Show the reply banner naming the author of the root comment
+Teacher ->> UI : Enter the reply text and click "Send"
+UI ->> UI : addComment()
+UI ->> CTL : POST /api/blog-posts/{id}/comments with parentCommentId
 activate CTL
-CTL -> SVC : create(postId, content, parentCommentId)
+CTL ->> SVC : create(postId, content, parentCommentId)
 activate SVC
 
-SVC -> PREPO : findPublishedById(postId)
+SVC ->> PREPO : findPublishedById(postId)
 activate PREPO
-PREPO -> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
+PREPO ->> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
 activate DB
-DB --> PREPO : row / none
+DB -->> PREPO : row / none
 deactivate DB
-PREPO --> SVC : Optional<BlogPost>
+PREPO -->> SVC : BlogPost
 deactivate PREPO
 
-SVC -> CREPO : findById(parentCommentId)
+SVC ->> CREPO : findById(parentCommentId)
 activate CREPO
-CREPO -> DB : SELECT * FROM blog_comments WHERE id = ?
+CREPO ->> DB : SELECT * FROM blog_comments WHERE id = ?
 activate DB
-DB --> CREPO : row / none
+DB -->> CREPO : row / none
 deactivate DB
-CREPO --> SVC : Optional<BlogComment>
+CREPO -->> SVC : BlogComment
 deactivate CREPO
 
 alt the post is no longer published or the reply target is not a root comment of that post
-  SVC --> CTL : ResourceNotFoundException / IllegalArgumentException
-  CTL --> UI : HTTP 404 / 400
-  UI --> Teacher : Show that the reply cannot be posted and keep the typed text
+  SVC -->> CTL : ResourceNotFoundException / IllegalArgumentException
+  CTL -->> UI : HTTP 404 / 400
+  UI -->> Teacher : Show that the reply cannot be posted and keep the typed text
 
 else the reply target is a valid root comment of the published post
-  SVC -> SVC : sanitize the reply text and reject it when empty or over 200 words
-  SVC -> CREPO : save(comment)
+  SVC ->> SVC : sanitize the reply text and reject it when empty or over 200 words
+  SVC ->> CREPO : save(comment)
   activate CREPO
-  CREPO -> DB : INSERT INTO blog_comments with parent_comment_id set to the root comment
+  CREPO ->> DB : INSERT INTO blog_comments with parent_comment_id set to the root comment
   activate DB
-  DB --> CREPO : Saved
+  DB -->> CREPO : Saved
   deactivate DB
-  CREPO --> SVC : BlogComment
+  CREPO -->> SVC : BlogComment
   deactivate CREPO
-  SVC --> CTL : CommentView
-  CTL --> UI : HTTP 201 + CommentView
-  UI --> Teacher : Show MSG08, reload the discussion and display the reply nested under the root comment
+  SVC -->> CTL : CommentView
+  CTL -->> UI : HTTP 201 + CommentView
+  UI -->> Teacher : Show MSG08, reload the discussion and display the reply nested under the root comment
 end
 
 deactivate SVC

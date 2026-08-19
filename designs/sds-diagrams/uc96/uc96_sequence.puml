@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-96 View Assigned Subject Blog List — Sequence Diagram
+title 2.11.2.11 UC-96 View Assigned Subject Blog List — Sequence Diagram
 
 actor Moderator
 participant ":BlogModerationPage" as UI
@@ -20,51 +20,51 @@ participant ":BlogCommentRepository" as CREPO
 database DB
 
 autonumber
-Moderator -> UI : Open the Blog screen and select "Blog Management"
+Moderator ->> UI : Open the Blog screen and select "Blog Management"
 activate UI
-UI -> UI : loadPosts()
-UI -> CTL : GET /api/blog-posts?subject={assignedSubject}&size=50
+UI ->> UI : loadPosts()
+UI ->> CTL : GET /api/blog-posts?subject={assignedSubject}&size=50
 activate CTL
-CTL -> SVC : list(rawSubject, authorId, q, page, size)
+CTL ->> SVC : list(rawSubject, authorId, q, page, size)
 activate SVC
 
-SVC -> PREPO : search(subject, authorId, q, page, size)
+SVC ->> PREPO : search(subject, authorId, q, page, size)
 activate PREPO
-PREPO -> DB : SELECT * FROM blog_posts WHERE status = 'PUBLISHED' AND subject = ? ORDER BY created_at DESC
+PREPO ->> DB : SELECT * FROM blog_posts WHERE status = 'PUBLISHED' AND subject = ? ORDER BY created_at DESC
 activate DB
-DB --> PREPO : rows + total count
+DB -->> PREPO : rows + total count
 deactivate DB
-PREPO --> SVC : SearchResult
+PREPO -->> SVC : SearchResult
 deactivate PREPO
 
 alt the published posts of the assigned subject cannot be retrieved
-  SVC --> CTL : DataAccessException
-  CTL --> UI : HTTP 500
-  UI --> Moderator : Show MSG25 and let the moderator retry loading the list
+  SVC -->> CTL : DataAccessException
+  CTL -->> UI : HTTP 500
+  UI -->> Moderator : Show MSG25 and let the moderator retry loading the list
 
 else the published posts of the assigned subject are retrieved
-  SVC -> RES : profiles(authorIds)
+  SVC ->> RES : profiles(authorIds)
   activate RES
-  RES -> DB : SELECT id, full_name, avatar_url FROM app_users WHERE id IN (?)
+  RES ->> DB : SELECT id, full_name, avatar_url FROM app_users WHERE id IN (?)
   activate DB
-  DB --> RES : rows
+  DB -->> RES : rows
   deactivate DB
-  RES --> SVC : Map<UUID, Profile>
+  RES -->> SVC : Map<String, Profile>
   deactivate RES
 
-  SVC -> CREPO : countByPostIds(postIds)
+  SVC ->> CREPO : countByPostIds(postIds)
   activate CREPO
-  CREPO -> DB : SELECT post_id, COUNT of visible comments FROM blog_comments GROUP BY post_id
+  CREPO ->> DB : SELECT post_id, COUNT of visible comments FROM blog_comments GROUP BY post_id
   activate DB
-  DB --> CREPO : rows
+  DB -->> CREPO : rows
   deactivate DB
-  CREPO --> SVC : Map<UUID, Long>
+  CREPO -->> SVC : Map<String, Long>
   deactivate CREPO
 
-  SVC --> CTL : Page<PostSummary>
-  CTL --> UI : HTTP 200 + Page<PostSummary>
-  UI -> UI : filter the posts by the selected day or month
-  UI --> Moderator : Show title, author, subject tag, date and comment count of each post, or MSG01 when none exists
+  SVC -->> CTL : PostSummaryPage
+  CTL -->> UI : HTTP 200 + PostSummaryPage
+  UI ->> UI : filter the posts by the selected day or month
+  UI -->> Moderator : Show title, author, subject tag, date and comment count of each post, or MSG01 when none exists
 end
 
 deactivate SVC

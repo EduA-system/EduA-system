@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 220
-title UC-112 Export Subject Performance Report — Sequence Diagram
+title 2.21.2.4 UC-112 Export Subject Performance Report — Sequence Diagram
 
 actor Moderator
 participant ":ModeratorStatisticsScreen" as UI
@@ -20,44 +20,44 @@ participant ":DocumentPdfRenderer" as PDF
 participant "File Storage Service" as STORE
 
 autonumber
-Moderator -> UI : Click "Export report" on the subject statistics dashboard
+Moderator ->> UI : Click "Export report" on the subject statistics dashboard
 activate UI
-UI -> UI : exportReport()
-UI -> CTL : GET /api/moderator/statistics/report/pdf?weekStartDate=
+UI ->> UI : exportReport()
+UI ->> CTL : GET /api/moderator/statistics/report/pdf?weekStartDate=
 activate CTL
-CTL -> RSVC : exportPdf(weekStartDate, year, quarter)
+CTL ->> RSVC : exportPdf(weekStartDate, year, quarter)
 activate RSVC
-RSVC -> SVC : overdueByTeacherForWeek(weekStartDate : LocalDate)
+RSVC ->> SVC : overdueByTeacherForWeek(weekStartDate : LocalDate)
 activate SVC
-SVC --> RSVC : OverdueByTeacher
+SVC -->> RSVC : OverdueByTeacher
 deactivate SVC
-RSVC -> SVC : weeklyTaskReviewSummary()
+RSVC ->> SVC : weeklyTaskReviewSummary()
 activate SVC
-SVC --> RSVC : ReviewStatusCounts
+SVC -->> RSVC : ReviewStatusCounts
 deactivate SVC
-RSVC -> RSVC : collect the displayed figures into one report model scoped to the assigned subject
-RSVC -> HTMLB : build(report : SubjectStatisticsReport)
+RSVC ->> RSVC : collect the displayed figures into one report model scoped to the assigned subject
+RSVC ->> HTMLB : build(report : SubjectStatisticsReport)
 activate HTMLB
-HTMLB --> RSVC : printable report HTML
+HTMLB -->> RSVC : printable report HTML
 deactivate HTMLB
-RSVC -> PDF : render(html : String)
+RSVC ->> PDF : render(html : String)
 activate PDF
 
 alt the report cannot be rendered or uploaded
-  PDF --> RSVC : RuntimeException
-  RSVC --> CTL : DocumentExportException
-  CTL --> UI : HTTP 502
-  UI --> Moderator : Show MSG25, download no file and keep the dashboard unchanged
+  PDF -->> RSVC : RuntimeException
+  RSVC -->> CTL : DocumentExportException
+  CTL -->> UI : HTTP 502
+  UI -->> Moderator : Show MSG25, download no file and keep the dashboard unchanged
 else the report is generated
-  PDF --> RSVC : byte[]
+  PDF -->> RSVC : byte[]
   deactivate PDF
-  RSVC -> STORE : store(key, pdf, contentType)
+  RSVC ->> STORE : store(key, pdf, contentType)
   activate STORE
-  STORE --> RSVC : public download URL
+  STORE -->> RSVC : public download URL
   deactivate STORE
-  RSVC --> CTL : DocumentExportResult
-  CTL --> UI : HTTP 200 + StatisticsReportDto
-  UI --> Moderator : Start the download of the generated PDF report
+  RSVC -->> CTL : DocumentExportResult
+  CTL -->> UI : HTTP 200 + StatisticsReport
+  UI -->> Moderator : Start the download of the generated PDF report
 end
 deactivate RSVC
 deactivate CTL

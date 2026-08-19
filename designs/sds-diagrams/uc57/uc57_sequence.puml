@@ -6,7 +6,7 @@ skinparam ParticipantBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-57 View Electron Model — Sequence Diagram
+title 2.7.2.2 UC-57 View Electron Model — Sequence Diagram
 
 actor "Chemistry Teacher" as Teacher
 participant ":ElementDetailPanel" as PANEL
@@ -17,50 +17,50 @@ participant ":LayerRing" as RING
 participant ":EnergyDiagram" as DIAG
 
 autonumber
-Teacher -> PANEL : Select an element in the periodic table to open its electron model
+Teacher ->> PANEL : Select an element in the periodic table to open its electron model
 activate PANEL
-PANEL -> ORB : getShellDistribution(electronConfig)
+PANEL ->> ORB : getShellDistribution(electronConfig)
 activate ORB
-ORB -> ORB : parseElectronConfig(config)
-ORB --> PANEL : ElectronShell[] grouped by principal quantum number
+ORB ->> ORB : parseElectronConfig(config)
+ORB -->> PANEL : ElectronShell[] grouped by principal quantum number
 deactivate ORB
-PANEL -> ORB : getEnergySubshells(electronConfig)
+PANEL ->> ORB : getEnergySubshells(electronConfig)
 activate ORB
-ORB --> PANEL : EnergySubshell[] in Aufbau order with the filled orbital boxes
+ORB -->> PANEL : EnergySubshell[] in Aufbau order with the filled orbital boxes
 deactivate ORB
-PANEL -> ATOM : render()
+PANEL ->> ATOM : render()
 activate ATOM
-ATOM -> SCENE : render()
+ATOM ->> SCENE : render()
 activate SCENE
-SCENE -> RING : render()
+SCENE ->> RING : render()
 activate RING
-RING -> RING : place the electrons of every subshell on the ring and animate the rotation
-RING --> SCENE : Shell ring with its electrons
+RING ->> RING : place the electrons of every subshell on the ring and animate the rotation
+RING -->> SCENE : Shell ring with its electrons
 deactivate RING
-SCENE --> ATOM : Nucleus and the K–Q rings
+SCENE -->> ATOM : Nucleus and the K–Q rings
 deactivate SCENE
-ATOM --> Teacher : Show the interactive electron model — drag to change the viewing angle
+ATOM -->> Teacher : Show the interactive electron model — drag to change the viewing angle
 
 alt the teacher inspects the model in Shell mode
-  Teacher -> PANEL : Click a K–Q shell pill
-  PANEL -> ATOM : keep the selected shell and dim the other rings
-  ATOM --> Teacher : Highlight the selected shell and show its electron count
+  Teacher ->> PANEL : Click a K–Q shell pill
+  PANEL ->> ATOM : keep the selected shell and dim the other rings
+  ATOM -->> Teacher : Highlight the selected shell and show its electron count
 else the teacher switches to Orbital mode
-  Teacher -> PANEL : Click "Orbital"
-  PANEL -> DIAG : render()
+  Teacher ->> PANEL : Click "Orbital"
+  PANEL ->> DIAG : render()
   activate DIAG
-  DIAG --> Teacher : Show the Aufbau energy diagram with the orbital boxes and the paired arrows
-  Teacher -> DIAG : Select a subshell such as 3d or 4s
-  DIAG -> PANEL : Selected subshell key
+  DIAG -->> Teacher : Show the Aufbau energy diagram with the orbital boxes and the paired arrows
+  Teacher ->> DIAG : Select a subshell such as 3d or 4s
+  DIAG ->> PANEL : Selected subshell key
   deactivate DIAG
-  PANEL -> ATOM : render()
-  ATOM --> Teacher : Highlight only the electrons of the selected subshell and mute the rest
+  PANEL ->> ATOM : render()
+  ATOM -->> Teacher : Highlight only the electrons of the selected subshell and mute the rest
 end
 
 opt the teacher stops the animation
-  Teacher -> PANEL : Click "Stop the motion"
-  PANEL -> ATOM : render()
-  ATOM --> Teacher : Show the model at rest, with the reference data unchanged
+  Teacher ->> PANEL : Click "Stop the motion"
+  PANEL ->> ATOM : render()
+  ATOM -->> Teacher : Show the model at rest, with the reference data unchanged
 end
 deactivate ATOM
 deactivate PANEL

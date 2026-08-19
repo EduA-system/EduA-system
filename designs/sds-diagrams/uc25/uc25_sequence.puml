@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-25 Delete Own Blog Post — Sequence Diagram
+title 2.11.2.5 UC-25 Delete Own Blog Post — Sequence Diagram
 
 actor "Teacher or Moderator" as User
 participant ":BlogCommunityPage" as UI
@@ -19,53 +19,53 @@ participant ":BlogPostRepository" as POSTS
 database DB
 
 autonumber
-User -> UI : Open the three-dot menu of an own post and select "Delete"
+User ->> UI : Open the three-dot menu of an own post and select "Delete"
 activate UI
-UI -> CONFIRM : Show the confirmation popup for that post (MSG09)
+UI ->> CONFIRM : Show the confirmation popup for that post (MSG09)
 activate CONFIRM
 
 opt user cancels the deletion
-  User -> CONFIRM : Click "Cancel"
-  CONFIRM -> UI : Report the cancelled confirmation
-  UI --> User : Close the popup and leave the blog post unchanged
+  User ->> CONFIRM : Click "Cancel"
+  CONFIRM ->> UI : Report the cancelled confirmation
+  UI -->> User : Close the popup and leave the blog post unchanged
 end
 
-User -> CONFIRM : Click "Delete" to confirm
-CONFIRM -> UI : Report the confirmed deletion
+User ->> CONFIRM : Click "Delete" to confirm
+CONFIRM ->> UI : Report the confirmed deletion
 deactivate CONFIRM
-UI -> UI : deletePost(id)
-UI -> CTL : DELETE /api/blog-posts/{id}
+UI ->> UI : deletePost(id)
+UI ->> CTL : DELETE /api/blog-posts/{id}
 activate CTL
-CTL -> SVC : delete(id)
+CTL ->> SVC : delete(id)
 activate SVC
-SVC -> POSTS : findPublishedById(id)
+SVC ->> POSTS : findPublishedById(id)
 activate POSTS
-POSTS -> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
+POSTS ->> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
 activate DB
-DB --> POSTS : row / none
+DB -->> POSTS : row / none
 deactivate DB
-POSTS --> SVC : Optional<BlogPost>
+POSTS -->> SVC : BlogPost
 deactivate POSTS
-SVC -> SVC : check that the post is still published and belongs to the signed-in user
+SVC ->> SVC : check that the post is still published and belongs to the signed-in user
 
 alt the post is unavailable, the user is not its author or the deletion fails
-  SVC --> CTL : ResourceNotFoundException / ForbiddenOperationException
-  CTL --> UI : HTTP 404 / 403
-  UI --> User : Show MSG25 or the not-permitted message and keep the Blog list unchanged
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> User : Show MSG25 or the not-permitted message and keep the Blog list unchanged
 
 else the author confirms the deletion of an own post
-  SVC -> POSTS : save(post with status DELETED_BY_AUTHOR)
+  SVC ->> POSTS : save(post with status DELETED_BY_AUTHOR)
   activate POSTS
-  POSTS -> DB : UPDATE blog_posts SET status = 'DELETED_BY_AUTHOR', updated_at = ? WHERE id = ?
+  POSTS ->> DB : UPDATE blog_posts SET status = 'DELETED_BY_AUTHOR', updated_at = ? WHERE id = ?
   activate DB
-  DB --> POSTS : Saved
+  DB -->> POSTS : Saved
   deactivate DB
-  POSTS --> SVC : BlogPost
+  POSTS -->> SVC : BlogPost
   deactivate POSTS
-  SVC --> CTL : void
-  CTL --> UI : HTTP 204 No Content
-  UI -> UI : loadPosts(subject)
-  UI --> User : Show MSG10 and refresh the Blog list without the deleted post and its discussion
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204 No Content
+  UI ->> UI : loadPosts(subject)
+  UI -->> User : Show MSG10 and refresh the Blog list without the deleted post and its discussion
 end
 deactivate SVC
 deactivate CTL

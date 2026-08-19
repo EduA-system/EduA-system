@@ -6,7 +6,7 @@ skinparam ParticipantBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-16 Present Slide — Sequence Diagram
+title 2.4.2.2 UC-16 Present Slide — Sequence Diagram
 
 actor Teacher
 participant ":TopBar" as TB
@@ -16,40 +16,40 @@ participant ":SlidePresentationOverlay" as OVL
 participant ":ElementView" as EV
 
 autonumber
-Teacher -> TB : Click "Present" for the slide deck
+Teacher ->> TB : Click "Present" for the slide deck
 activate TB
-TB -> SMC : openPresentation()
+TB ->> SMC : openPresentation()
 activate SMC
-SMC -> STORE : read the slide deck currently open in the editor
+SMC ->> STORE : read the slide deck currently open in the editor
 activate STORE
-STORE --> SMC : Slide [0..*] with their elements
+STORE -->> SMC : Slide [0..*] with their elements
 deactivate STORE
-SMC -> SMC : keep the deck in the browser storage before the presentation starts
-SMC -> OVL : open the presentation overlay with the loaded deck
+SMC ->> SMC : keep the deck in the browser storage before the presentation starts
+SMC ->> OVL : open the presentation overlay with the loaded deck
 activate OVL
-OVL -> OVL : request full-screen mode for the presentation stage
+OVL ->> OVL : request full-screen mode for the presentation stage
 
 alt the browser denies full-screen mode
-  OVL -> Teacher : Show the deck in a maximized presentation view and retry full-screen on the next interaction
+  OVL ->> Teacher : Show the deck in a maximized presentation view and retry full-screen on the next interaction
 else full-screen mode is granted
-  OVL -> Teacher : Show the first slide scaled to the screen
+  OVL ->> Teacher : Show the first slide scaled to the screen
 end
 
-OVL -> EV : draw every element of the current slide
+OVL ->> EV : draw every element of the current slide
 activate EV
-EV --> Teacher : Show the slide text, images, placeholders for unavailable assets and embedded simulations
-Teacher -> OVL : Press ArrowRight, Space or PageDown to move forward
-OVL -> OVL : next()
-Teacher -> OVL : Press ArrowLeft or PageUp to move back
-OVL -> OVL : previous()
-Teacher -> EV : Click an element of an embedded periodic-table simulation
-EV -> OVL : setSelectedElement(element)
+EV -->> Teacher : Show the slide text, images, placeholders for unavailable assets and embedded simulations
+Teacher ->> OVL : Press ArrowRight, Space or PageDown to move forward
+OVL ->> OVL : next()
+Teacher ->> OVL : Press ArrowLeft or PageUp to move back
+OVL ->> OVL : previous()
+Teacher ->> EV : Click an element of an embedded periodic-table simulation
+EV ->> OVL : setSelectedElement(element)
 deactivate EV
-OVL -> Teacher : Open the element detail panel over the current slide
-Teacher -> OVL : Press Esc to end the presentation
-OVL -> SMC : closePresentation()
+OVL ->> Teacher : Open the element detail panel over the current slide
+Teacher ->> OVL : Press Esc to end the presentation
+OVL ->> SMC : closePresentation()
 deactivate OVL
-SMC -> Teacher : Return to the Slide Deck Editor with the stored deck unchanged
+SMC ->> Teacher : Return to the Slide Deck Editor with the stored deck unchanged
 deactivate SMC
 deactivate TB
 @enduml

@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-97 Remove Blog Post — Sequence Diagram
+title 2.11.2.12 UC-97 Remove Blog Post — Sequence Diagram
 
 actor Moderator
 participant ":BlogModerationPage" as UI
@@ -19,52 +19,52 @@ participant ":BlogPostRepository" as POSTS
 database DB
 
 autonumber
-Moderator -> UI : Open a post of "My Subject Blogs" and click "Remove post"
+Moderator ->> UI : Open a post of "My Subject Blogs" and click "Remove post"
 activate UI
-UI -> DIALOG : Show the removal dialog requesting the removal reason
+UI ->> DIALOG : Show the removal dialog requesting the removal reason
 activate DIALOG
 
 opt the reason is still empty or the moderator cancels the removal
-  Moderator -> DIALOG : Leave the reason field empty or click "Let me think again"
-  DIALOG --> Moderator : Keep the "Remove post" action disabled with MSG02 under the field, or close the dialog and leave the post published
+  Moderator ->> DIALOG : Leave the reason field empty or click "Let me think again"
+  DIALOG -->> Moderator : Keep the "Remove post" action disabled with MSG02 under the field, or close the dialog and leave the post published
 end
 
-Moderator -> DIALOG : Enter the removal reason and click "Remove post"
-DIALOG -> UI : Report the confirmed removal with the entered reason
+Moderator ->> DIALOG : Enter the removal reason and click "Remove post"
+DIALOG ->> UI : Report the confirmed removal with the entered reason
 deactivate DIALOG
-UI -> UI : removePost()
-UI -> CTL : POST /api/blog-posts/{id}/removal
+UI ->> UI : removePost()
+UI ->> CTL : POST /api/blog-posts/{id}/removal
 activate CTL
-CTL -> SVC : removeByModerator(id, reason)
+CTL ->> SVC : removeByModerator(id, reason)
 activate SVC
-SVC -> POSTS : findPublishedById(id)
+SVC ->> POSTS : findPublishedById(id)
 activate POSTS
-POSTS -> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
+POSTS ->> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
 activate DB
-DB --> POSTS : row / none
+DB -->> POSTS : row / none
 deactivate DB
-POSTS --> SVC : Optional<BlogPost>
+POSTS -->> SVC : BlogPost
 deactivate POSTS
-SVC -> SVC : require a non-empty reason and accept only a published post of the moderator assigned subject (BR-21)
+SVC ->> SVC : require a non-empty reason and accept only a published post of the moderator assigned subject (BR-21)
 
 alt the reason is empty, or the post is no longer published or belongs to another subject
-  SVC --> CTL : IllegalArgumentException / ResourceNotFoundException / ForbiddenOperationException
-  CTL --> UI : HTTP 400 / 404 / 403
-  UI --> Moderator : Show MSG02 for the empty reason or the access-denied message, and refresh "My Subject Blogs" with the post unchanged
+  SVC -->> CTL : IllegalArgumentException / ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> UI : HTTP 400 / 404 / 403
+  UI -->> Moderator : Show MSG02 for the empty reason or the access-denied message, and refresh "My Subject Blogs" with the post unchanged
 else the reason is entered and the post is published inside the assigned subject
-  SVC -> POSTS : save(post with status REMOVED_BY_MODERATOR, the reason and the removing moderator)
+  SVC ->> POSTS : save(post with status REMOVED_BY_MODERATOR, the reason and the removing moderator)
   activate POSTS
-  POSTS -> DB : UPDATE blog_posts SET status = 'REMOVED_BY_MODERATOR', removed_reason = ?, removed_by = ?, updated_at = ? WHERE id = ?
+  POSTS ->> DB : UPDATE blog_posts SET status = 'REMOVED_BY_MODERATOR', removed_reason = ?, removed_by = ?, updated_at = ? WHERE id = ?
   activate DB
-  DB --> POSTS : Saved
+  DB -->> POSTS : Saved
   deactivate DB
-  POSTS --> SVC : BlogPost
+  POSTS -->> SVC : BlogPost
   deactivate POSTS
-  SVC -> SVC : record the removal with its reason in the activity log and notify the author with the removal reason (see UC-93)
-  SVC --> CTL : void
-  CTL --> UI : HTTP 204 No Content
-  UI -> UI : loadPosts()
-  UI --> Moderator : Show MSG22 and refresh "My Subject Blogs" without the removed post and its discussion
+  SVC ->> SVC : record the removal with its reason in the activity log and notify the author with the removal reason (see UC-93)
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204 No Content
+  UI ->> UI : loadPosts()
+  UI -->> Moderator : Show MSG22 and refresh "My Subject Blogs" without the removed post and its discussion
 end
 deactivate SVC
 deactivate CTL

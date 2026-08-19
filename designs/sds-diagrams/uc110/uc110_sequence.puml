@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 220
-title UC-110 Export School Performance Report — Sequence Diagram
+title 2.21.2.3 UC-110 Export School Performance Report — Sequence Diagram
 
 actor Principal
 participant ":PrincipalStatisticsScreen" as UI
@@ -20,44 +20,44 @@ participant ":DocumentPdfRenderer" as PDF
 participant "File Storage Service" as STORE
 
 autonumber
-Principal -> UI : Click "Export report" on the school-wide statistics dashboard
+Principal ->> UI : Click "Export report" on the school-wide statistics dashboard
 activate UI
-UI -> UI : exportReport()
-UI -> CTL : GET /api/principal/statistics/report/pdf?from=&to=&subject=
+UI ->> UI : exportReport()
+UI ->> CTL : GET /api/principal/statistics/report/pdf?from=&to=&subject=
 activate CTL
-CTL -> RSVC : exportPdf(from, to, subject)
+CTL ->> RSVC : exportPdf(from, to, subject)
 activate RSVC
-RSVC -> SVC : aiContentTrend(rawMonths : int)
+RSVC ->> SVC : aiContentTrend(rawMonths : int)
 activate SVC
-SVC --> RSVC : AiContentTrend
+SVC -->> RSVC : AiContentTrend
 deactivate SVC
-RSVC -> SVC : weeklyTaskStatus(from, to, subject)
+RSVC ->> SVC : weeklyTaskStatus(from, to, subject)
 activate SVC
-SVC --> RSVC : WeeklyTaskStatus
+SVC -->> RSVC : WeeklyTaskStatus
 deactivate SVC
-RSVC -> RSVC : collect the displayed figures into one report model that carries the active filters
-RSVC -> HTMLB : build(report : SchoolStatisticsReport)
+RSVC ->> RSVC : collect the displayed figures into one report model that carries the active filters
+RSVC ->> HTMLB : build(report : SchoolStatisticsReport)
 activate HTMLB
-HTMLB --> RSVC : printable report HTML
+HTMLB -->> RSVC : printable report HTML
 deactivate HTMLB
-RSVC -> PDF : render(html : String)
+RSVC ->> PDF : render(html : String)
 activate PDF
 
 alt the report cannot be rendered or uploaded
-  PDF --> RSVC : RuntimeException
-  RSVC --> CTL : DocumentExportException
-  CTL --> UI : HTTP 502
-  UI --> Principal : Show MSG25, download no file and keep the dashboard unchanged
+  PDF -->> RSVC : RuntimeException
+  RSVC -->> CTL : DocumentExportException
+  CTL -->> UI : HTTP 502
+  UI -->> Principal : Show MSG25, download no file and keep the dashboard unchanged
 else the report is generated
-  PDF --> RSVC : byte[]
+  PDF -->> RSVC : byte[]
   deactivate PDF
-  RSVC -> STORE : store(key, pdf, contentType)
+  RSVC ->> STORE : store(key, pdf, contentType)
   activate STORE
-  STORE --> RSVC : public download URL
+  STORE -->> RSVC : public download URL
   deactivate STORE
-  RSVC --> CTL : DocumentExportResult
-  CTL --> UI : HTTP 200 + StatisticsReportDto
-  UI --> Principal : Start the download of the generated PDF report
+  RSVC -->> CTL : DocumentExportResult
+  CTL -->> UI : HTTP 200 + StatisticsReport
+  UI -->> Principal : Start the download of the generated PDF report
 end
 deactivate RSVC
 deactivate CTL

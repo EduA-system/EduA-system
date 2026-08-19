@@ -1,0 +1,68 @@
+@startuml UC-35 View Class Detail - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.12.2.5 UC-35 View Class Detail — Sequence Diagram
+
+actor User
+boundary ":ClassOverviewPage" as UI
+control ":ClassController" as CTL
+control ":ClassManagementService" as SVC
+boundary ":ClassRepository" as REPO
+boundary ":ClassMemberRepository" as MEM
+database DB
+
+autonumber
+User ->> UI : Select an accessible class to open its Class Hub
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/classes/{id}
+activate CTL
+CTL ->> SVC : getDetail(id)
+activate SVC
+SVC ->> REPO : findById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM classes WHERE id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : Classroom
+deactivate REPO
+SVC ->> MEM : existsByClassIdAndStudentId(classId, currentUserId)
+activate MEM
+MEM ->> DB : SELECT 1 FROM class_members WHERE class_id = ? AND student_id = ? AND status = 'ENROLLED'
+activate DB
+DB -->> MEM : match / none
+deactivate DB
+MEM -->> SVC : boolean
+deactivate MEM
+SVC ->> SVC : allow only the class owner or an enrolled student
+
+alt class does not exist or the user is neither owner nor enrolled student
+  SVC -->> CTL : ResourceNotFoundException / ClassAccessRevokedException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> User : Show that the class is unavailable or access is not permitted
+else the user owns the class or is enrolled in it
+  SVC ->> MEM : countByClassId(classId)
+  activate MEM
+  MEM ->> DB : SELECT COUNT(*) FROM class_members WHERE class_id = ? AND status = 'ENROLLED'
+  activate DB
+  DB -->> MEM : enrolled count
+  deactivate DB
+  MEM -->> SVC : long
+  deactivate MEM
+  SVC ->> SVC : add the resource, assignment and submission counts and the owner name
+  SVC -->> CTL : ClassDetail
+  CTL -->> UI : HTTP 200 + ClassDetail
+  UI -->> User : Show the Class Hub with the class information, counters and the actions allowed by role and class status
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

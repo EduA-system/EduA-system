@@ -6,7 +6,7 @@ skinparam ParticipantBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-13 Edit Slide Outline — Sequence Diagram
+title 2.2.2.2 UC-13 Edit Slide Outline — Sequence Diagram
 
 actor Teacher
 participant ":OutlineEditor" as OE
@@ -17,50 +17,50 @@ participant ":SlideOutlineScreen" as SCR
 participant ":SlideCreateSession" as SESSION
 
 autonumber
-Teacher -> OE : Rename a part, add or delete a slide, or drag a part to reorder the outline
+Teacher ->> OE : Rename a part, add or delete a slide, or drag a part to reorder the outline
 activate OE
-OE -> OE : updatePartTitle(partId, title)
-OE -> OE : addSlide(partId)
-OE -> SCR : setParts(parts)
+OE ->> OE : updatePartTitle(partId, title)
+OE ->> OE : addSlide(partId)
+OE ->> SCR : setParts(parts)
 activate SCR
-SCR -> SESSION : patchSlideCreateSession(patch)
-SCR --> OE : updated parts and slide count
+SCR ->> SESSION : patchSlideCreateSession(patch)
+SCR -->> OE : updated parts and slide count
 deactivate SCR
-OE -> Teacher : Show the reordered parts and the updated slide count
+OE ->> Teacher : Show the reordered parts and the updated slide count
 
-Teacher -> OE : Click "Detail" on a slide to edit its structured content
-OE -> MODAL : open the slide detail dialog for the selected slide
+Teacher ->> OE : Click "Detail" on a slide to edit its structured content
+OE ->> MODAL : open the slide detail dialog for the selected slide
 activate MODAL
-MODAL -> PANEL : show the slide title, slide type, blocks and relationships
+MODAL ->> PANEL : show the slide title, slide type, blocks and relationships
 activate PANEL
-Teacher -> PANEL : Edit the slide title, the block content and the block order
-PANEL -> API : validateContentPlan(plan)
+Teacher ->> PANEL : Edit the slide title, the block content and the block order
+PANEL ->> API : validateContentPlan(plan)
 activate API
-API --> PANEL : list of validation errors
+API -->> PANEL : list of validation errors
 deactivate API
 
 alt the updated outline item is invalid
-  PANEL -> Teacher : Highlight the affected blocks and keep the last valid preview
+  PANEL ->> Teacher : Highlight the affected blocks and keep the last valid preview
 else the updated outline item is valid
-  PANEL -> OE : updateSlide(partId, slideId, patch)
+  PANEL ->> OE : updateSlide(partId, slideId, patch)
   deactivate PANEL
   deactivate MODAL
-  OE -> SCR : setParts(parts)
+  OE ->> SCR : setParts(parts)
   activate SCR
-  SCR -> SESSION : patchSlideCreateSession(patch)
-  SCR -> Teacher : Show the updated Slide Outline Preview
+  SCR ->> SESSION : patchSlideCreateSession(patch)
+  SCR ->> Teacher : Show the updated Slide Outline Preview
   deactivate SCR
 end
 
-Teacher -> OE : Click "Create slides" to confirm the outline
-OE -> API : validateContentPlan(plan)
+Teacher ->> OE : Click "Create slides" to confirm the outline
+OE ->> API : validateContentPlan(plan)
 activate API
-API --> OE : list of validation errors
+API -->> OE : list of validation errors
 deactivate API
-OE -> SCR : handleConfirm(editedParts)
+OE ->> SCR : handleConfirm(editedParts)
 activate SCR
-SCR -> SESSION : writeActiveGeneration(active)
-SCR -> Teacher : Open the Slide Deck Editor with the confirmed outline
+SCR ->> SESSION : writeActiveGeneration(active)
+SCR ->> Teacher : Open the Slide Deck Editor with the confirmed outline
 deactivate SCR
 deactivate OE
 @enduml

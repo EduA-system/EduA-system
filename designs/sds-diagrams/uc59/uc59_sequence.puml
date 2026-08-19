@@ -6,7 +6,7 @@ skinparam ParticipantBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-59 View Molecule Structure — Sequence Diagram
+title 2.8.2.2 UC-59 View Molecule Structure — Sequence Diagram
 
 actor "Chemistry Teacher" as Teacher
 participant ":MoleculesPage" as PAGE
@@ -17,46 +17,46 @@ participant ":MoleculeGeometry" as GEO
 participant ":Scene" as SCENE
 
 autonumber
-Teacher -> PAGE : Open "Molecular Structure" from the Chemistry Lab
+Teacher ->> PAGE : Open "Molecular Structure" from the Chemistry Lab
 activate PAGE
-PAGE -> EXP : render()
+PAGE ->> EXP : render()
 activate EXP
-EXP -> CAT : findMolecules(query, family)
+EXP ->> CAT : findMolecules(query, family)
 activate CAT
-CAT --> EXP : Molecule[] of the catalog
+CAT -->> EXP : Molecule[] of the catalog
 deactivate CAT
-EXP --> Teacher : Show the molecule list, the default molecule and its formula, molar mass and bond cards
+EXP -->> Teacher : Show the molecule list, the default molecule and its formula, molar mass and bond cards
 
-Teacher -> EXP : Enter a substance name or a chemical formula and pick the Ankan, Anken or Ankin filter
-EXP -> CAT : findMolecules(query, family)
+Teacher ->> EXP : Enter a substance name or a chemical formula and pick the Ankan, Anken or Ankin filter
+EXP ->> CAT : findMolecules(query, family)
 activate CAT
-CAT --> EXP : Molecule[] matching the criteria
+CAT -->> EXP : Molecule[] matching the criteria
 deactivate CAT
 
 alt no catalog molecule matches the entered criteria
-  EXP --> Teacher : Show "No matching molecule was found." and keep the current model on screen
+  EXP -->> Teacher : Show "No matching molecule was found." and keep the current model on screen
 else at least one catalog molecule matches
-  EXP --> Teacher : Show the matching molecules with their formulas
-  Teacher -> EXP : Select a molecule from the result list
-  EXP -> EXP : selectMolecule(item)
-  EXP -> VIEW : render()
+  EXP -->> Teacher : Show the matching molecules with their formulas
+  Teacher ->> EXP : Select a molecule from the result list
+  EXP ->> EXP : selectMolecule(item)
+  EXP ->> VIEW : render()
   activate VIEW
-  VIEW -> SCENE : render()
+  VIEW ->> SCENE : render()
   activate SCENE
-  SCENE -> GEO : buildGeometry(molecule)
+  SCENE ->> GEO : buildGeometry(molecule)
   activate GEO
-  GEO -> GEO : add the implicit hydrogens from the free valence of every heavy atom and centre the molecule on the origin
-  GEO --> SCENE : PositionedMolecule with the atom coordinates and the bonds
+  GEO ->> GEO : add the implicit hydrogens from the free valence of every heavy atom and centre the molecule on the origin
+  GEO -->> SCENE : PositionedMolecule with the atom coordinates and the bonds
   deactivate GEO
-  SCENE --> Teacher : Show the interactive three-dimensional ball-and-stick model
+  SCENE -->> Teacher : Show the interactive three-dimensional ball-and-stick model
 end
 
 opt the teacher inspects the model
-  Teacher -> SCENE : Drag to rotate, scroll to zoom and right-drag to pan
-  SCENE --> Teacher : Update the viewing angle and the scale, with the molecule data unchanged
-  Teacher -> EXP : Switch to "Space Fill" or stop the auto-rotation
-  EXP -> VIEW : render()
-  VIEW --> Teacher : Show the same molecule in the selected render mode
+  Teacher ->> SCENE : Drag to rotate, scroll to zoom and right-drag to pan
+  SCENE -->> Teacher : Update the viewing angle and the scale, with the molecule data unchanged
+  Teacher ->> EXP : Switch to "Space Fill" or stop the auto-rotation
+  EXP ->> VIEW : render()
+  VIEW -->> Teacher : Show the same molecule in the selected render mode
 end
 deactivate SCENE
 deactivate VIEW

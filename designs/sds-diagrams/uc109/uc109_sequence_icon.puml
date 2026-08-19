@@ -1,0 +1,70 @@
+@startuml UC-109 View School-wide Statistics Dashboard - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 220
+title 2.21.2.2 UC-109 View School-wide Statistics Dashboard — Sequence Diagram
+
+actor Principal
+boundary ":PrincipalStatisticsScreen" as UI
+control ":PrincipalStatisticsController" as CTL
+control ":PrincipalStatisticsService" as SVC
+boundary ":LibraryContentRepository" as HUB
+boundary ":WeeklyTaskRepository" as TASKS
+database DB
+
+autonumber
+Principal ->> UI : Open "Statistics" from the main navigation
+activate UI
+UI ->> CTL : GET /api/principal/statistics/ai-content-trend?months=6
+activate CTL
+CTL ->> SVC : aiContentTrend(rawMonths : int)
+activate SVC
+SVC ->> HUB : countCreatedByMonthAndType(fromInclusive, toExclusive)
+activate HUB
+HUB ->> DB : SELECT month, type, COUNT(*) FROM library_contents GROUP BY month, type
+activate DB
+DB -->> HUB : one row per month and content type
+deactivate DB
+HUB -->> SVC : MonthTypeAggregate [0..*]
+deactivate HUB
+SVC ->> SVC : fill in every month of the window so empty months still appear on the chart
+SVC -->> CTL : AiContentTrend
+deactivate SVC
+CTL -->> UI : HTTP 200 + AiContentTrend
+deactivate CTL
+UI -->> Principal : Show the AI content trend, the content-by-subject chart and the review donut
+
+Principal ->> UI : Choose a subject filter for the Weekly Task status chart
+UI ->> CTL : GET /api/principal/statistics/weekly-task-status?subject=PHYSICS
+activate CTL
+CTL ->> SVC : weeklyTaskStatus(from, to, subject)
+activate SVC
+SVC ->> SVC : normalise the requested date range to Monday-based weeks
+
+alt the start week is after the end week
+  SVC -->> CTL : IllegalArgumentException
+  CTL -->> UI : HTTP 400
+  UI -->> Principal : Keep the previously displayed chart and show MSG25
+else the requested date range is valid
+  SVC ->> TASKS : countByWeekAndReviewStatus(fromWeek, toWeek, subject)
+  activate TASKS
+  TASKS ->> DB : SELECT week_start_date, review_status, COUNT(*) FROM weekly_tasks GROUP BY 1, 2
+  activate DB
+  DB -->> TASKS : one row per week and review status
+  deactivate DB
+  TASKS -->> SVC : WeeklyStatusAggregate [0..*]
+  deactivate TASKS
+  SVC -->> CTL : WeeklyTaskStatus
+  CTL -->> UI : HTTP 200 + WeeklyTaskStatus
+  UI -->> Principal : Refresh the chart for the selected subject and show MSG01 when the filter returns no data
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

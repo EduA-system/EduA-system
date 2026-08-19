@@ -8,7 +8,7 @@ skinparam DatabaseBorderColor #000000
 skinparam ArrowColor #000000
 skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
-title UC-30 Hide Comment on Own Blog Post — Sequence Diagram
+title 2.11.2.10 UC-30 Hide Comment on Own Blog Post — Sequence Diagram
 
 actor Teacher
 participant ":BlogCommunityPage" as UI
@@ -19,52 +19,52 @@ participant ":BlogPostRepository" as PREPO
 database DB
 
 autonumber
-Teacher -> UI : Click "Hide comment" on another teacher's comment on their own post
+Teacher ->> UI : Click "Hide comment" on another teacher's comment on their own post
 activate UI
-UI --> Teacher : Show the hide confirmation dialog (MSG44)
-Teacher -> UI : Click "Hide comment" to confirm
-UI -> UI : hideComment()
-UI -> CTL : POST /api/blog-comments/{commentId}/hide
+UI -->> Teacher : Show the hide confirmation dialog (MSG44)
+Teacher ->> UI : Click "Hide comment" to confirm
+UI ->> UI : hideComment()
+UI ->> CTL : POST /api/blog-comments/{commentId}/hide
 activate CTL
-CTL -> SVC : hideByPostAuthor(commentId)
+CTL ->> SVC : hideByPostAuthor(commentId)
 activate SVC
 
-SVC -> CREPO : findById(commentId)
+SVC ->> CREPO : findById(commentId)
 activate CREPO
-CREPO -> DB : SELECT * FROM blog_comments WHERE id = ?
+CREPO ->> DB : SELECT * FROM blog_comments WHERE id = ?
 activate DB
-DB --> CREPO : row / none
+DB -->> CREPO : row / none
 deactivate DB
-CREPO --> SVC : Optional<BlogComment>
+CREPO -->> SVC : BlogComment
 deactivate CREPO
 
-SVC -> PREPO : findPublishedById(postId)
+SVC ->> PREPO : findPublishedById(postId)
 activate PREPO
-PREPO -> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
+PREPO ->> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
 activate DB
-DB --> PREPO : row / none
+DB -->> PREPO : row / none
 deactivate DB
-PREPO --> SVC : Optional<BlogPost>
+PREPO -->> SVC : BlogPost
 deactivate PREPO
 
 alt the post or comment is unavailable, the comment is the teacher's own, or the teacher does not own the post
-  SVC --> CTL : ResourceNotFoundException / IllegalArgumentException / ForbiddenOperationException
-  CTL --> UI : HTTP 404 / 400 / 403
-  UI --> Teacher : Show that hiding is not permitted and leave the comment visible
+  SVC -->> CTL : ResourceNotFoundException / IllegalArgumentException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 400 / 403
+  UI -->> Teacher : Show that hiding is not permitted and leave the comment visible
 
 else the teacher owns the post and the comment belongs to another teacher
-  SVC -> CREPO : save(comment)
+  SVC ->> CREPO : save(comment)
   activate CREPO
-  CREPO -> DB : UPDATE blog_comments SET hidden_at = ?, hidden_by = ? WHERE id = ?
+  CREPO ->> DB : UPDATE blog_comments SET hidden_at = ?, hidden_by = ? WHERE id = ?
   activate DB
-  DB --> CREPO : Saved
+  DB -->> CREPO : Saved
   deactivate DB
-  CREPO --> SVC : BlogComment
+  CREPO -->> SVC : BlogComment
   deactivate CREPO
-  SVC -> SVC : soft-hide every direct reply of that root comment the same way
-  SVC --> CTL : void
-  CTL --> UI : HTTP 204 No Content
-  UI --> Teacher : Show MSG45, reload the discussion without the hidden comment and its replies
+  SVC ->> SVC : soft-hide every direct reply of that root comment the same way
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204 No Content
+  UI -->> Teacher : Show MSG45, reload the discussion without the hidden comment and its replies
 end
 
 deactivate SVC

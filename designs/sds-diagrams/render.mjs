@@ -35,7 +35,9 @@ const render = (puml, outDir, dpi) =>
 const outName = base => {
   const cls = base.match(/^(.*)_class(?:_([a-z0-9]+))?$/);   // feat09_class_a -> feat09-class-diagram-a.png
   if (cls) return `${cls[1]}-class-diagram${cls[2] ? "-" + cls[2] : ""}.png`;
-  return `${base.replace(/_sequence$/, "")}-sequence-diagram.png`;
+  const seq = base.match(/^(.*)_sequence(?:_([a-z0-9]+))?$/);   // uc49_sequence_icon -> uc49-sequence-diagram-icon.png
+  if (seq) return `${seq[1]}-sequence-diagram${seq[2] ? "-" + seq[2] : ""}.png`;
+  return `${base}.png`;
 };
 
 const isDiagramDir = d => /^(feat\d+|uc\d+|overview)$/.test(d);
@@ -47,7 +49,9 @@ console.log("hinh".padEnd(30), "px sau render".padEnd(15), "hien thi".padEnd(10)
 for (const dir of targets) {
   const abs = path.join(ROOT, dir);
   if (!fs.existsSync(abs)) { console.log(`${dir}: khong co thu muc`); continue; }
-  for (const puml of fs.readdirSync(abs).filter(f => f.endsWith(".puml")).sort()) {
+  /* ONLY=sequence hoac ONLY=class de chi render mot loai hinh */
+  const only = process.env.ONLY;
+  for (const puml of fs.readdirSync(abs).filter(f => f.endsWith(".puml") && (!only || f.includes("_" + only))).sort()) {
     const base = puml.replace(/\.puml$/, "");
     const finalName = outName(base);
     const tmp = path.join(abs, "_probe");

@@ -1,0 +1,55 @@
+@startuml UC-89 View Lesson Plan Approval List - Sequence Diagram (icon)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title 2.15.2.7 UC-89 View Lesson Plan Approval List — Sequence Diagram
+
+actor Moderator
+boundary ":LessonPlanApprovalScreen" as UI
+control ":WeeklyTaskController" as CTL
+control ":WeeklyTaskService" as SVC
+boundary ":WeeklyTaskRepository" as REPO
+database DB
+
+autonumber
+Moderator ->> UI : Open "Weekly Lesson Plan Approval" from the sidebar
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/weekly-tasks/moderation-queue
+activate CTL
+CTL ->> SVC : listModerationQueue(page, size, grade, chapterCode, lessonCode)
+activate SVC
+SVC ->> SVC : resolve the assigned subject of the signed-in moderator (BR-18)
+SVC ->> REPO : searchModerationQueue(subject, status, grade, chapterCode, lessonCode, page, size)
+activate REPO
+REPO ->> DB : SELECT * FROM weekly_tasks WHERE subject = ? AND review_status = 'SUBMITTED' AND the optional grade, chapter and lesson filters ORDER BY submitted_at ASC
+activate DB
+DB -->> REPO : rows + total count
+deactivate DB
+REPO -->> SVC : WeeklyTaskPage
+deactivate REPO
+
+alt the moderator has no assigned subject or the queue cannot be retrieved
+  SVC -->> CTL : ForbiddenOperationException / DataAccessException
+  CTL -->> UI : HTTP 403 / 500
+  UI -->> Moderator : Show MSG25 and leave the approval list empty
+else the submitted lesson plans of the assigned subject are retrieved
+  SVC -->> CTL : WeeklyTaskPage
+  CTL -->> UI : HTTP 200 + WeeklyTaskPage
+  UI -->> Moderator : Show teacher, weekly task, chapter and lesson, submitted time, deadline and review status of each submission, or MSG01 when nothing awaits review
+end
+deactivate SVC
+deactivate CTL
+
+Moderator ->> UI : Choose a grade, chapter or lesson in the filter bar
+UI ->> UI : handleGradeChange(grade)
+UI ->> UI : load()
+UI -->> Moderator : Show only the submissions of the assigned subject that match the chosen filters
+deactivate UI
+@enduml
