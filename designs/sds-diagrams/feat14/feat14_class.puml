@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.14.1 Assignment Submissions — Class Diagram
 class SubmissionsRosterPanel <<user interaction>> {
@@ -17,11 +18,11 @@ class SubmissionsRosterPanel <<user interaction>> {
 
 class ClassController <<coordinator>> {
   - submissionService : SubmissionService
-  + list(subject, grade, status, q, page, size) : ClassPageDto
-  + create(request : CreateClassRequest) : ClassDetailDto
-  + detail(id : String) : ClassDetailDto
-  + update(id : String, request : UpdateClassRequest) : ClassDetailDto
-  + updateStatus(id : String, request : UpdateClassStatusRequest) : ClassDetailDto
+  + list(subject, grade, status, q, page, size) : ClassPage
+  + create(request : CreateClassRequest) : ClassDetail
+  + detail(id : String) : ClassDetail
+  + update(id : String, request : UpdateClassRequest) : ClassDetail
+  + updateStatus(id : String, request : UpdateClassStatusRequest) : ClassDetail
 }
 
 class SubmissionService <<business logic>> {
@@ -133,7 +134,7 @@ JpaSubmissionRepository ..|> SubmissionRepository
 AppUser "1" -- "0..*" Submission : submitted
 ResourceDetailPage "1" *-- "0..*" ConfirmDialog : contains
 JpaSubmissionRepository "1" -- "0..*" Submission : Maps >
-JpaClassMemberRepository "1" -- "0..*" Submission : Maps >
-JpaAppUserRepository "1" -- "0..*" Submission : Maps >
+JpaClassMemberRepository "1" -- "0..*" ClassMember : Maps >
+JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
 
 @enduml

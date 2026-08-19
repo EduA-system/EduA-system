@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.16.1 Notification Management — Class Diagram
 class NotificationsScreen <<user interaction>> {
@@ -99,6 +100,6 @@ JpaAppUserRepository ..|> AppUserRepository
 JpaNotificationRepository ..|> NotificationRepository
 StompNotificationStreamAdapter ..|> NotificationStreamPort
 JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
-JpaNotificationRepository "1" -- "0..*" AppUser : Maps >
+JpaNotificationRepository "1" -- "0..*" Notification : Maps >
 
 @enduml

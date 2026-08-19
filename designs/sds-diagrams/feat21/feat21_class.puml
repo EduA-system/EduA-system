@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.21.1 Statistics and Reporting — Class Diagram
 class ModeratorStatisticsScreen <<user interaction>> {
@@ -18,7 +19,7 @@ class ModeratorStatisticsScreen <<user interaction>> {
 class ModeratorStatisticsController <<coordinator>> {
   - reportService : ModeratorStatisticsReportService
   - service : ModeratorStatisticsService
-  + exportReport(weekStartDate, year, quarter) : StatisticsReportDto
+  + exportReport(weekStartDate, year, quarter) : StatisticsReport
   + overdueByTeacherWeek(weekStartDate : Date) : OverdueByTeacher
   + overdueByTeacherQuarter(year : Integer, quarter : Integer) : OverdueByTeacher
   + weeklyTaskReviewSummary() : ReviewStatusCounts
@@ -61,7 +62,7 @@ class PrincipalStatisticsController <<coordinator>> {
   + weeklyTaskStatus(from, to, subject) : WeeklyTaskStatus
   + communityHubReview() : CommunityHubReview
   + accountsByRole(subject : Subject) : AccountsByRole
-  + exportReport(from, to, subject) : StatisticsReportDto
+  + exportReport(from, to, subject) : StatisticsReport
 }
 
 class PrincipalStatisticsService <<business logic>> {
@@ -144,6 +145,6 @@ JpaLibraryContentRepository ..|> LibraryContentRepository
 OpenHtmlDocumentPdfRenderer ..|> DocumentPdfRenderer
 JpaWeeklyTaskRepository ..|> WeeklyTaskRepository
 JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
-JpaWeeklyTaskRepository "1" -- "0..*" LibraryContent : Maps >
+JpaWeeklyTaskRepository "1" -- "0..*" WeeklyTask : Maps >
 
 @enduml

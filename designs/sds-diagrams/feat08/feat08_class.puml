@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.8.1 Molecule Modeling — Class Diagram
 class MoleculeExplorer <<user interaction>> {

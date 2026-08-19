@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.7.1 Periodic Table — Class Diagram
 class PeriodicTablePage <<user interaction>> {
@@ -97,5 +98,8 @@ ElementDetailPanel "1" *-- "0..*" EnergyDiagram : contains
 AtomModel3D "1" *-- "0..*" LayerScene : contains
 LayerScene "1" *-- "0..*" LayerRing : contains
 PeriodicTablePage "1" *-- "0..*" ElementDetailPanel : contains
+PeriodicTablePage "1" -- "1" RouteGuard : Uses >
+PeriodicTablePage "1" -- "1" PeriodicTableData : Uses >
+ElementDetailPanel "1" -- "1" OrbitalData : Uses >
 
 @enduml

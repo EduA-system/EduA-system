@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.20.1 System Administration — Class Diagram
 class ActivityLogPage <<user interaction>> {
@@ -51,8 +52,8 @@ class ItStaffPage <<user interaction>> {
 
 class ItStaffController <<coordinator>> {
   - service : AiSystemPromptService
-  + list() : AiSystemPromptDto [0..*]
-  + update(key : AiPromptKey, request : UpdateAiSystemPromptRequest) : AiSystemPromptDto
+  + list() : AiSystemPrompt [0..*]
+  + update(key : AiPromptKey, request : UpdateAiSystemPromptRequest) : AiSystemPrompt
 }
 
 class AiSystemPromptService <<business logic>> {
@@ -134,7 +135,7 @@ JpaAiSystemPromptRepository ..|> AiSystemPromptRepository
 JpaAppUserRepository ..|> AppUserRepository
 JpaActivityLogRepository ..|> ActivityLogRepository
 JpaActivityLogRepository "1" -- "0..*" ActivityLog : Maps >
-JpaAppUserRepository "1" -- "0..*" ActivityLog : Maps >
-JpaAiSystemPromptRepository "1" -- "0..*" ActivityLog : Maps >
+JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
+JpaAiSystemPromptRepository "1" -- "0..*" AiSystemPrompt : Maps >
 
 @enduml

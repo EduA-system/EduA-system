@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.19.1 Staff Account Management — Class Diagram
 class UserManagementPage <<user interaction>> {
@@ -24,9 +25,9 @@ class PrincipalController <<coordinator>> {
   - principalItStaffService : PrincipalItStaffService
   + listModerators(page : Integer, size : Integer) : ModeratorDtoPage
   + listItStaffs(page : Integer, size : Integer) : ItStaffDtoPage
-  + addModerator(request : AddModeratorRequest) : ModeratorDto
-  + replaceModerator(id : String, request : ReplaceModeratorRequest) : ModeratorDto
-  + reactivateModerator(id : String) : ModeratorDto
+  + addModerator(request : AddModeratorRequest) : Moderator
+  + replaceModerator(id : String, request : ReplaceModeratorRequest) : Moderator
+  + reactivateModerator(id : String) : Moderator
 }
 
 class PrincipalModeratorService <<business logic>> {
@@ -76,14 +77,14 @@ class UserProfileViewPage <<user interaction>> {
 
 class UserController <<coordinator>> {
   - profileViewService : UserProfileViewService
-  + updateMe(request : UpdateProfileRequest) : UserDto
-  + viewProfile(id : String) : UserProfileViewDto
+  + updateMe(request : UpdateProfileRequest) : User
+  + viewProfile(id : String) : UserProfileView
 }
 
 class UserProfileViewService <<business logic>> {
   - userRepository : AppUserRepository
   - userRoleRepository : UserRoleRepository
-  + view(targetId : String) : UserProfileViewDto
+  + view(targetId : String) : UserProfileView
 }
 
 class ActivityLogService <<business logic>> {
@@ -136,6 +137,5 @@ UserManagementContent "1" -- "1" PrincipalController : Sends requests to >
 JpaAppUserRepository ..|> AppUserRepository
 JpaUserRoleRepository ..|> UserRoleRepository
 JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
-JpaUserRoleRepository "1" -- "0..*" AppUser : Maps >
 
 @enduml

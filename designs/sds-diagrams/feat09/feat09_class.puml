@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.9.1 Personal Library Management — Class Diagram
 class LibraryScreen <<user interaction>> {
@@ -66,7 +67,7 @@ class LibraryContent <<entity>> {
   - status : LibraryContentStatus
 }
 
-LibraryScreen "1" -- "1" LibraryContent : Uses >
+LibraryScreen "1" -- "1" LibraryContent : Displays >
 LibraryContentController "1" -- "1" LibraryContentService : Delegates to >
 LibraryContentService "1" -- "1" LibraryContentRepository : Accesses data through >
 LibraryScreen "1" -- "1" LibraryContentController : Sends requests to >

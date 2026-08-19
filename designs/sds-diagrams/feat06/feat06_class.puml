@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.6.1 Physics Simulation Library — Class Diagram
 class MoPhongHubPage <<user interaction>> {
@@ -147,5 +148,7 @@ GenericDetailView "1" *-- "0..*" ParamPanel : contains
 GenericDetailView "1" *-- "0..*" SceneKonva2D : contains
 GenericDetailView "1" *-- "0..*" LandmarksPanel : contains
 JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
+SceneKonva2D "1" -- "1" SceneKernel : Uses >
+LandmarksPanel "1" -- "1" Landmark : Uses >
 
 @enduml

@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.2.1 Slide Outline — Class Diagram
 class SlideCreateDashboard <<user interaction>> {
@@ -52,7 +53,7 @@ class AiClient <<interface>> {
 class OutlineStreamPort <<interface>> {
   {field}
   --
-  + publishPartSkeletonReady(sessionId : String, part : PartDto)
+  + publishPartSkeletonReady(sessionId : String, part : Part)
   + publishSlideReady(sessionId, partId, slide)
   + publishSlideError(sessionId, partId, slideId, message)
   + publishPartReady(sessionId, partId, slides)

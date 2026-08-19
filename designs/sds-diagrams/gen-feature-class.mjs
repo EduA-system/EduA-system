@@ -46,7 +46,7 @@ for (const dir of fs.readdirSync(ROOT).filter(d => /^uc\d+$/.test(d))) {
 
 /* ---------- doc sequence ---------- */
 function seqInfo(ucs) {
-  const life = new Set(), calls = new Map();
+  const life = new Set(), calls = new Map(), edges = new Set();
   for (const n of ucs) {
     const f = path.join(ROOT, `uc${pad(n)}`, `uc${pad(n)}_sequence.puml`);
     if (!fs.existsSync(f)) continue;
@@ -61,13 +61,14 @@ function seqInfo(ucs) {
       if (m[2].startsWith("--")) continue;
       const call = m[4].match(/(?:^|[\s.>])([a-z]\w*)\((?!\s)[^)]*\)/);
       if (!call) continue;
-      const t = alias.get(m[3]);
+      const t = alias.get(m[3]), src = alias.get(m[1]);
       if (!t) continue;
       if (!calls.has(t)) calls.set(t, new Set());
       calls.get(t).add(call[1]);
+      if (src && src !== t) edges.add(`${src}|${t}`);   // do thi goi trong sequence, dung de noi hop bi treo
     }
   }
-  return { life: [...life], calls };
+  return { life: [...life], calls, edges };
 }
 
 /* ---------- chuyen kieu sang tu vung sach ---------- */
@@ -81,7 +82,7 @@ function bookType(line) {
     .replace(/Map<[^>]*>/g, "Map")
     .replace(/Page<([A-Za-z0-9_.]+)>/g, "$1Page")
     .replace(/\bPageable\b/g, "page : Integer, size : Integer")
-    .replace(/[A-Za-z]+Views\./g, "").replace(/\bDto\b/g, "");
+    .replace(/[A-Za-z]+Views\./g, "").replace(/([A-Za-z]+)Dto\b/g, "$1");
 }
 
 const STEREO = { client: "user interaction", controller: "coordinator", service: "business logic", interface: "interface", adapter: "database wrapper", entity: "entity", dto: "dto", other: "other" };
@@ -89,6 +90,7 @@ const WIRING = /^(CurrentUserProvider)$/;
 
 function labelFor(a, b, sa, sb) {
   if (sa === "user interaction" && sb === "coordinator") return "Sends requests to >";
+  if (sa === "user interaction" && sb === "entity") return "Displays >";
   if (sa === "coordinator" && sb === "business logic") return "Delegates to >";
   if (sa === "business logic" && sb === "interface") {
     if (/StreamPort$/.test(b)) return "Publishes progress through >";
@@ -103,7 +105,7 @@ function labelFor(a, b, sa, sb) {
 }
 
 function build(feat) {
-  const { life, calls } = seqInfo(feat.ucs);
+  const { life, calls, edges } = seqInfo(feat.ucs);
   const members = new Map();     // ten -> stereo
   for (const n of life) {
     const rec = store.get(n);
@@ -185,8 +187,44 @@ function build(feat) {
     else if (r.kind === "--" && st(r.a) === "entity" && st(r.b) === "entity") rels.add(`${r.a} "1" -- "0..*" ${r.b} : ${r.label || "Has >"}`);
   }
   for (const [a, sa] of members) {
-    if (sa !== "database wrapper") continue;
-    for (const [b, sb] of members) if (sb === "entity") { rels.add(`${a} "1" -- "0..*" ${b} : Maps >`); break; }
+    if (sa !== "database wrapper" && sa !== "proxy") continue;
+    const core = a.replace(/^Jpa/, "").replace(/Repository$/, "");
+    let target = [...members].find(([b, sb]) => sb === "entity" && (b === core || b === core + "Entity" || b.startsWith(core) || core.startsWith(b)));
+    if (!target) {
+      for (const r of relsAll) {
+        if (r.a !== a) continue;
+        if (members.get(r.b) === "entity") { target = [r.b]; break; }
+      }
+    }
+    if (target) rels.add(`${a} "1" -- "0..*" ${target[0] || target} : Maps >`);
+  }
+
+  /* hop nao chua dinh vao quan he nao thi noi theo do thi goi trong sequence */
+  const linked = new Set();
+  for (const r of rels) {
+    const m = r.match(/^([A-Za-z0-9_]+)\s+(?:"[^"]*"\s+)?(?:--|\*--|o--|\.\.\|>)\s*(?:"[^"]*"\s+)?([A-Za-z0-9_]+)/);
+    if (m) { linked.add(m[1]); linked.add(m[2]); }
+  }
+  for (const [a, sa] of members) {
+    if (linked.has(a)) continue;
+    for (const e of edges) {
+      const [x, y] = e.split("|");
+      const other = x === a ? y : y === a ? x : null;
+      if (!other || !members.has(other) || other === a) continue;
+      const [from, to] = x === a ? [a, other] : [other, a];
+      rels.add(`${from} "1" -- "1" ${to} : ${labelFor(from, to, st(from), st(to))}`);
+      linked.add(a);
+      break;
+    }
+    if (linked.has(a)) continue;
+    /* van treo: entity thi cho business logic sinh ra, coordinator thi cho man hinh goi toi */
+    if (sa === "entity") {
+      const svc = [...members].find(([, s]) => s === "business logic");
+      if (svc) { rels.add(`${svc[0]} "1" -- "0..*" ${a} : Produces >`); linked.add(a); }
+    } else if (sa === "coordinator") {
+      const ui = [...members].find(([, s]) => s === "user interaction");
+      if (ui) { rels.add(`${ui[0]} "1" -- "1" ${a} : Sends requests to >`); linked.add(a); }
+    }
   }
 
   const idx = features.findIndex(f => f.id === feat.id) + 1;
@@ -199,6 +237,7 @@ function build(feat) {
     "skinparam classBorderColor #000000",
     "skinparam ArrowColor #000000",
     "skinparam classAttributeIconSize 0",
+    "skinparam linetype ortho",
     "hide circle",
     `title 2.${idx}.1 ${feat.title} — Class Diagram`,
     "",

@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.11.1 Community Blog — Class Diagram
 class BlogCommunityPage <<user interaction>> {
@@ -165,6 +166,7 @@ JpaBlogPostRepository ..|> BlogPostRepository
 JpaBlogCommentRepository ..|> BlogCommentRepository
 BlogPost "1" -- "0..*" BlogComment : has
 JpaBlogPostRepository "1" -- "0..*" BlogPost : Maps >
-JpaBlogCommentRepository "1" -- "0..*" BlogPost : Maps >
+JpaBlogCommentRepository "1" -- "0..*" BlogComment : Maps >
+BlogCommunityPage "1" -- "1" UploadController : Sends requests to >
 
 @enduml

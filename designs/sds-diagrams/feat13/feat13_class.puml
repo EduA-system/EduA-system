@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.13.1 Class Resources — Class Diagram
 class ClassResourcesPage <<user interaction>> {
@@ -26,11 +27,11 @@ class ResourceFormPanel <<user interaction>> {
 class ClassController <<coordinator>> {
   - classResourceService : ClassResourceService
   - submissionService : SubmissionService
-  + list(subject, grade, status, q, page, size) : ClassPageDto
-  + create(request : CreateClassRequest) : ClassDetailDto
-  + detail(id : String) : ClassDetailDto
-  + update(id : String, request : UpdateClassRequest) : ClassDetailDto
-  + updateStatus(id : String, request : UpdateClassStatusRequest) : ClassDetailDto
+  + list(subject, grade, status, q, page, size) : ClassPage
+  + create(request : CreateClassRequest) : ClassDetail
+  + detail(id : String) : ClassDetail
+  + update(id : String, request : UpdateClassRequest) : ClassDetail
+  + updateStatus(id : String, request : UpdateClassStatusRequest) : ClassDetail
 }
 
 class ClassResourceService <<business logic>> {
@@ -175,8 +176,8 @@ ClassResource "1" -- "0..*" Submission : has
 JpaSubmissionRepository ..|> SubmissionRepository
 ResourceDetailPage "1" *-- "0..*" ConfirmDialog : contains
 JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
-JpaClassResourceRepository "1" -- "0..*" LibraryContent : Maps >
-JpaClassMemberRepository "1" -- "0..*" LibraryContent : Maps >
-JpaSubmissionRepository "1" -- "0..*" LibraryContent : Maps >
+JpaClassResourceRepository "1" -- "0..*" ClassResource : Maps >
+JpaClassMemberRepository "1" -- "0..*" ClassMember : Maps >
+JpaSubmissionRepository "1" -- "0..*" Submission : Maps >
 
 @enduml

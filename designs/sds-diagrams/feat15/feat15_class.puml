@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.15.1 Weekly Task Management — Class Diagram
 class WeeklyScheduleScreen <<user interaction>> {
@@ -138,7 +139,7 @@ class LibraryContent <<entity>> {
   - status : LibraryContentStatus
 }
 
-WeeklyScheduleScreen "1" -- "1" LibraryContent : Uses >
+WeeklyScheduleScreen "1" -- "1" LibraryContent : Displays >
 WeeklyTaskController "1" -- "1" WeeklyTaskService : Delegates to >
 WeeklyTaskService "1" -- "1" WeeklyTaskRepository : Accesses data through >
 WeeklyTaskService "1" -- "1" AppUserRepository : Accesses data through >
@@ -152,7 +153,7 @@ JpaAppUserRepository ..|> AppUserRepository
 AppUser "1" -- "0..*" LibraryContent : authors
 JpaWeeklyTaskRepository ..|> WeeklyTaskRepository
 JpaWeeklyTaskRepository "1" -- "0..*" WeeklyTask : Maps >
-JpaAppUserRepository "1" -- "0..*" WeeklyTask : Maps >
-JpaLibraryContentRepository "1" -- "0..*" WeeklyTask : Maps >
+JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
+JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
 
 @enduml

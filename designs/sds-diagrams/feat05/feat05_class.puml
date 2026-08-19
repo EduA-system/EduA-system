@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.5.1 Practice Exam Management — Class Diagram
 class PracticeExamCreateDashboard <<user interaction>> {
@@ -110,7 +111,7 @@ class LibraryContent <<entity>> {
   - status : LibraryContentStatus
 }
 
-PracticeExamEditDashboard "1" -- "1" PracticeExam : Uses >
+PracticeExamEditDashboard "1" -- "1" PracticeExam : Displays >
 PracticeExamController "1" -- "1" PracticeExamService : Delegates to >
 PracticeExamController "1" -- "1" GeneratePracticeExamStreamUseCase : Delegates to >
 GeneratePracticeExamStreamUseCase "1" -- "1" PracticeExamService : Uses >
@@ -124,6 +125,6 @@ LessonPlanPdfExport "1" -- "1" PracticeExamController : Sends requests to >
 JpaLibraryContentRepository ..|> LibraryContentRepository
 StompPracticeExamStreamAdapter ..|> PracticeExamStreamPort
 LibraryContent "1" *-- "0..*" PracticeExam : payload contains
-JpaLibraryContentRepository "1" -- "0..*" PracticeExam : Maps >
+JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
 
 @enduml

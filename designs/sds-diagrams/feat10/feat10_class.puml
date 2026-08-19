@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.10.1 Community Hub — Class Diagram
 class CommunityHubPage <<user interaction>> {
@@ -133,7 +134,7 @@ HubContentController "1" -- "1" HubCommentService : Delegates to >
 HubContentService "1" -- "1" LibraryContentRepository : Accesses data through >
 HubContentService "1" -- "1" HubCommentRepository : Accesses data through >
 HubContentService "1" -- "1" AppUserRepository : Accesses data through >
-CommunityHubDetailPage "1" -- "1" HubComment : Uses >
+CommunityHubDetailPage "1" -- "1" HubComment : Displays >
 HubCommentService "1" -- "1" HubCommentRepository : Accesses data through >
 HubCommentService "1" -- "1" LibraryContentRepository : Accesses data through >
 HubCommentService "1" -- "1" AppUserRepository : Accesses data through >
@@ -146,7 +147,7 @@ AppUser "1" -- "0..*" LibraryContent : authors
 JpaHubCommentRepository ..|> HubCommentRepository
 LibraryContent "1" -- "0..*" HubComment : has
 JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
-JpaHubCommentRepository "1" -- "0..*" LibraryContent : Maps >
-JpaAppUserRepository "1" -- "0..*" LibraryContent : Maps >
+JpaHubCommentRepository "1" -- "0..*" HubComment : Maps >
+JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
 
 @enduml

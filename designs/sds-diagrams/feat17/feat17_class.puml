@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.17.1 Authentication and Profile Management — Class Diagram
 class AuthFlow <<user interaction>> {
@@ -71,8 +72,8 @@ class StorageClient <<interface>> {
 
 class UserController <<coordinator>> {
   - profileService : ProfileService
-  + updateMe(request : UpdateProfileRequest) : UserDto
-  + viewProfile(id : String) : UserProfileViewDto
+  + updateMe(request : UpdateProfileRequest) : User
+  + viewProfile(id : String) : UserProfileView
 }
 
 class ProfileService <<business logic>> {
@@ -123,6 +124,6 @@ JpaRefreshTokenRepository ..|> RefreshTokenRepository
 R2StorageAdapter ..|> StorageClient
 JpaAppUserRepository ..|> AppUserRepository
 JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
-JpaRefreshTokenRepository "1" -- "0..*" AppUser : Maps >
+JpaRefreshTokenRepository "1" -- "0..*" RefreshToken : Maps >
 
 @enduml

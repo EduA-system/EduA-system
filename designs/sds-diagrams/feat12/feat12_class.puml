@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.12.1 Classroom Management — Class Diagram
 class ClassManagementPage <<user interaction>> {
@@ -20,11 +21,11 @@ class ClassManagementPage <<user interaction>> {
 class ClassController <<coordinator>> {
   - classManagementService : ClassManagementService
   - classEnrollmentService : ClassEnrollmentService
-  + list(subject, grade, status, q, page, size) : ClassPageDto
-  + create(request : CreateClassRequest) : ClassDetailDto
-  + detail(id : String) : ClassDetailDto
-  + update(id : String, request : UpdateClassRequest) : ClassDetailDto
-  + updateStatus(id : String, request : UpdateClassStatusRequest) : ClassDetailDto
+  + list(subject, grade, status, q, page, size) : ClassPage
+  + create(request : CreateClassRequest) : ClassDetail
+  + detail(id : String) : ClassDetail
+  + update(id : String, request : UpdateClassRequest) : ClassDetail
+  + updateStatus(id : String, request : UpdateClassStatusRequest) : ClassDetail
 }
 
 class ClassManagementService <<business logic>> {
@@ -165,11 +166,11 @@ ClassController "1" -- "1" ClassEnrollmentService : Delegates to >
 ClassManagementService "1" -- "1" ClassRepository : Accesses data through >
 ClassManagementService "1" -- "1" ClassMemberRepository : Accesses data through >
 ClassManagementService "1" -- "1" TeacherGradeRepository : Accesses data through >
-StudentClassMembersPage "1" -- "1" ClassMember : Uses >
+StudentClassMembersPage "1" -- "1" ClassMember : Displays >
 ClassEnrollmentService "1" -- "1" ClassRepository : Accesses data through >
 ClassEnrollmentService "1" -- "1" ClassMemberRepository : Accesses data through >
 ClassEnrollmentService "1" -- "1" AppUserRepository : Accesses data through >
-AddStudentPage "1" -- "1" ClassMember : Uses >
+AddStudentPage "1" -- "1" ClassMember : Displays >
 ClassManagementPage "1" -- "1" ClassController : Sends requests to >
 ClassSettingsPage "1" -- "1" ClassController : Sends requests to >
 ClassOverviewPage "1" -- "1" ClassController : Sends requests to >
@@ -181,7 +182,7 @@ JpaClassRepository ..|> ClassRepository
 JpaClassMemberRepository ..|> ClassMemberRepository
 ClassMember "1" -- "0..*" AppUser : enrolled student
 JpaClassRepository "1" -- "0..*" Classroom : Maps >
-JpaClassMemberRepository "1" -- "0..*" Classroom : Maps >
-JpaAppUserRepository "1" -- "0..*" Classroom : Maps >
+JpaClassMemberRepository "1" -- "0..*" ClassMember : Maps >
+JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
 
 @enduml

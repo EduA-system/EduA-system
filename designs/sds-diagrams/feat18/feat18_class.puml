@@ -6,6 +6,7 @@ skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #000000
 skinparam ArrowColor #000000
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 hide circle
 title 2.18.1 Teacher Account Management — Class Diagram
 class UserManagementContent <<user interaction>> {
@@ -23,9 +24,9 @@ class UserManagementContent <<user interaction>> {
 class ModeratorController <<coordinator>> {
   - moderatorTeacherService : ModeratorTeacherService
   + listTeachers(page : Integer, size : Integer) : TeacherDtoPage
-  + addTeacher(request : AddTeacherRequest) : TeacherDto
-  + updateTeacher(id : String, request : UpdateTeacherRequest) : TeacherDto
-  + reactivateTeacher(id : String) : TeacherDto
+  + addTeacher(request : AddTeacherRequest) : Teacher
+  + updateTeacher(id : String, request : UpdateTeacherRequest) : Teacher
+  + reactivateTeacher(id : String) : Teacher
   + deleteTeacher(id : String)
 }
 
@@ -136,8 +137,7 @@ JpaAppUserRepository ..|> AppUserRepository
 JpaUserRoleRepository ..|> UserRoleRepository
 JpaClassRepository ..|> ClassRepository
 JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
-JpaUserRoleRepository "1" -- "0..*" AppUser : Maps >
-JpaClassRepository "1" -- "0..*" AppUser : Maps >
-JpaRefreshTokenRepository "1" -- "0..*" AppUser : Maps >
+JpaClassRepository "1" -- "0..*" Classroom : Maps >
+JpaRefreshTokenRepository "1" -- "0..*" RefreshToken : Maps >
 
 @enduml
