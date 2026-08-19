@@ -1,0 +1,71 @@
+@startuml UC-71 Delete Content Comment - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-71 Delete Content Comment — Class Diagram
+
+class CommunityHubDetailPage <<client>> {
+  - detail : HubContentDetail
+  - moderationTarget : ModerationTarget
+  - moderatingComment : boolean
+  + confirmDeleteComment() : void
+}
+
+class HubContentController <<controller>> {
+  - commentService : HubCommentService
+  + deleteComment(commentId : UUID) : void
+}
+
+class HubCommentService <<service>> {
+  - commentRepository : HubCommentRepository
+  - currentUser : CurrentUserProvider
+  + delete(commentId : UUID) : void
+}
+
+interface HubCommentRepository {
+  + findById(id : UUID) : Optional<HubComment>
+  + deleteById(id : UUID) : void
+}
+
+class JpaHubCommentRepository <<adapter>> {
+  - jpa : HubCommentJpaRepository
+}
+
+class HubComment <<entity>> {
+  - id : UUID
+  - libraryContentId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - createdAt : Instant
+  - hiddenAt : Instant
+}
+
+class HubCommentEntity <<entity>> {
+  - id : UUID
+  - libraryContentId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - status : LibraryContentStatus
+}
+
+CommunityHubDetailPage ..> HubContentController : calls API
+HubContentController "1" --> "1" HubCommentService
+HubCommentService "1" --> "1" HubCommentRepository
+JpaHubCommentRepository ..|> HubCommentRepository : implements
+JpaHubCommentRepository ..> HubCommentEntity : maps
+HubCommentRepository ..> HubComment : deletes permanently
+HubCommentEntity "1" -- "1" HubComment : mapped to
+LibraryContent "1" -- "0..*" HubComment : has
+HubComment "0..*" --> "0..1" HubComment : replies to, ON DELETE CASCADE
+
+@enduml

@@ -1,0 +1,104 @@
+@startuml feat16 Notification Management - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.16.1 Notification Management — Class Diagram
+class NotificationsScreen <<user interaction>> {
+  - title : String
+  - content : String
+  - composing : Boolean
+  + handleSend()
+  + load()
+  + handleOpenNotification(notification : NotificationSummary)
+  + handleMarkRead(id : String)
+  + handleMarkAllRead()
+}
+
+class NotificationController <<coordinator>> {
+  - notificationService : NotificationService
+  + create(request : CreateNotificationRequest) : NotificationCreated
+  + list(unread : Boolean, page : Integer, size : Integer) : Page
+  + markRead(id : String)
+  + markAllRead()
+}
+
+class NotificationService <<business logic>> {
+  - notificationRepository : NotificationRepository
+  - userRepository : AppUserRepository
+  - streamPort : NotificationStreamPort
+  + create(rawTitle : String, rawContent : String) : NotificationCreated
+  + listMine(unreadOnly : Boolean, pageable : page : Integer, size : Integer) : Page
+  + markRead(notificationId : String)
+  + markAllRead()
+}
+
+class AppUserRepository <<interface>> {
+  {field}
+  --
+  + findAllByRoleAndSubject(role, subject, pageable) : AppUserPage
+}
+
+class NotificationRepository <<interface>> {
+  {field}
+  --
+  + createWithRecipients(notification, recipientIds) : Notification
+  + findForRecipient(recipientId, unreadOnly, pageable) : RecipientNotificationPage
+  + countUnreadForRecipient(recipientId : String) : Integer
+  + markRead(notificationId : String, recipientId : String) : Boolean
+  + markAllRead(recipientId : String)
+}
+
+class NotificationStreamPort <<interface>> {
+  {field}
+  --
+  + publishNew(recipientUserId : String, event : NotificationEvent)
+}
+
+class JpaAppUserRepository <<database wrapper>> {
+  - jpa : AppUserJpaRepository
+}
+
+class JpaNotificationRepository <<database wrapper>> {
+  - notificationJpa : NotificationJpaRepository
+  - recipientJpa : NotificationRecipientJpaRepository
+}
+
+class StompNotificationStreamAdapter <<proxy>> {
+  - messagingTemplate : SimpMessagingTemplate
+  - DESTINATION : String
+}
+
+class AppUser <<entity>> {
+  - id : String
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  + isActiveOrInvited() : Boolean
+}
+
+class Notification <<entity>> {
+  - id : String
+  - senderId : String
+  - subject : Subject
+  - title : String
+  - content : String
+}
+
+NotificationController "1" -- "1" NotificationService : Delegates to >
+NotificationService "1" -- "1" NotificationRepository : Accesses data through >
+NotificationService "1" -- "1" AppUserRepository : Accesses data through >
+NotificationService "1" -- "1" NotificationStreamPort : Publishes progress through >
+NotificationsScreen "1" -- "1" NotificationController : Sends requests to >
+JpaAppUserRepository ..|> AppUserRepository
+JpaNotificationRepository ..|> NotificationRepository
+StompNotificationStreamAdapter ..|> NotificationStreamPort
+JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
+JpaNotificationRepository "1" -- "0..*" AppUser : Maps >
+
+@enduml

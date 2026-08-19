@@ -1,0 +1,71 @@
+@startuml UC-85 Edit Weekly Task - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-85 Edit Weekly Task — Sequence Diagram
+
+actor Moderator
+participant ":WeeklyScheduleScreen" as UI
+participant ":WeeklyTaskController" as CTL
+participant ":WeeklyTaskService" as SVC
+participant ":WeeklyTaskRepository" as REPO
+database DB
+
+autonumber
+Moderator -> UI : Click "Edit" on a lesson card of a week that has not ended
+activate UI
+UI -> UI : openEditForm(task)
+Moderator -> UI : Change the title, the chapter and lesson or the week and click "Save"
+UI -> UI : handleSaveTask()
+UI -> CTL : PATCH /api/weekly-tasks/{id}
+activate CTL
+CTL -> SVC : update(id, teacherId, weekStartDate, title, textbookCode, chapterCode, lessonCode)
+activate SVC
+
+SVC -> REPO : findById(id)
+activate REPO
+REPO -> DB : SELECT * FROM weekly_tasks WHERE id = ?
+activate DB
+DB --> REPO : row / none
+deactivate DB
+REPO --> SVC : Optional<WeeklyTask>
+deactivate REPO
+SVC -> SVC : accept only a task of the moderator's subject whose deadline has not passed
+
+SVC -> REPO : findBySubjectAndGrade(subject, grade, weekStartDate, weekStartDate)
+activate REPO
+REPO -> DB : SELECT * FROM weekly_tasks WHERE subject = ? AND grade = ? AND week_start_date = ?
+activate DB
+DB --> REPO : rows
+deactivate DB
+REPO --> SVC : List<WeeklyTask>
+deactivate REPO
+SVC -> SVC : take the tasks sharing the same lesson as one assignment group and resolve the new chapter and lesson names from the textbook catalog
+
+alt the deadline has passed, the group already holds an APPROVED lesson plan, or the new lesson is already assigned in that week
+  SVC --> CTL : IllegalArgumentException / ForbiddenOperationException
+  CTL --> UI : HTTP 400 / 403
+  UI --> Moderator : Show MSG40 and keep the stored task unchanged
+else the task is still editable and the changes are valid
+  SVC -> REPO : save(task with the updated title, lesson, week and recomputed deadline)
+  activate REPO
+  REPO -> DB : UPDATE weekly_tasks SET assignment fields, deadline = ?, updated_at = ? WHERE id = ?
+  activate DB
+  DB --> REPO : Saved
+  deactivate DB
+  REPO --> SVC : WeeklyTask
+  deactivate REPO
+  SVC --> CTL : WeeklyTaskViews.Detail
+  CTL --> UI : HTTP 200 + WeeklyTaskViews.Detail
+  UI --> Moderator : Show MSG08 and the refreshed lesson card
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

@@ -1,0 +1,99 @@
+@startuml UC-107 Add IT Support Account - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-107 Add IT Support Account — Class Diagram
+
+class UserManagementContent <<client>> {
+  - itStaffEmail : String
+  - itStaffFullName : String
+  - itStaffSeatOccupied : boolean
+  + addItStaff() : void
+  + loadItStaff(page : int) : void
+}
+
+class AddItStaffRequest <<dto>> {
+  + email : String
+  + fullName : String
+}
+
+class ItStaffDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + status : String
+}
+
+class PrincipalController <<controller>> {
+  - principalItStaffService : PrincipalItStaffService
+  + addItStaff(request : AddItStaffRequest) : ItStaffDto
+}
+
+class PrincipalItStaffService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - activityLogService : ActivityLogService
+  + add(email : String, fullName : String) : AppUser
+}
+
+interface AppUserRepository {
+  + findByEmail(email : String) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+  + existsActiveByRole(role : Role) : boolean
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+interface UserRoleRepository {
+  + findRolesByUserId(userId : UUID) : Set<Role>
+  + replaceRole(userId, role, grantedBy, grantedAt) : void
+  + lockRole(role : Role) : void
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  + record(actorId, actorRole, category, action, targetType, targetId, metadata) : void
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - status : UserStatus
+  - createdAt : Instant
+  + isActiveOrInvited() : boolean
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+enum Role {
+  TEACHER
+  MODERATOR
+  PRINCIPAL
+  IT_STAFF
+  STUDENT
+}
+
+UserManagementContent ..> PrincipalController : calls API
+UserManagementContent ..> AddItStaffRequest : input
+PrincipalController ..> AddItStaffRequest : input
+PrincipalController ..> ItStaffDto : output
+PrincipalController "1" --> "1" PrincipalItStaffService
+PrincipalItStaffService "1" --> "1" AppUserRepository
+PrincipalItStaffService "1" --> "1" UserRoleRepository
+PrincipalItStaffService "1" --> "1" ActivityLogService
+JpaAppUserRepository ..|> AppUserRepository : implements
+AppUserRepository ..> AppUser : output
+AppUser "1" --> "1" UserStatus : has
+UserRoleRepository ..> Role : exactly one active IT_STAFF
+
+@enduml

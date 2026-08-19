@@ -1,0 +1,100 @@
+@startuml UC-79 Add Teacher - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-79 Add Teacher — Class Diagram
+
+class UserManagementContent <<client>> {
+  - teacherEmail : String
+  - teacherFullName : String
+  - teacherGrades : number[]
+  - msg : String
+  + addTeacher() : void
+  + loadTeachers(page : number) : void
+}
+
+class AddTeacherRequest <<dto>> {
+  + email : String
+  + subject : String
+  + fullName : String
+  + grades : List<Integer>
+}
+
+class TeacherDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + subject : String
+  + grades : List<Integer>
+  + status : String
+}
+
+class ModeratorController <<controller>> {
+  - moderatorTeacherService : ModeratorTeacherService
+  + addTeacher(request : AddTeacherRequest) : TeacherDto
+}
+
+class ModeratorTeacherService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - activityLogService : ActivityLogService
+  + addTeacher(email, subject, fullName, grades) : AppUser
+}
+
+interface AppUserRepository {
+  + findByEmail(email : String) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+}
+
+interface UserRoleRepository {
+  + findRolesByUserId(userId : UUID) : Set<Role>
+  + replaceRole(userId, role, grantedBy, grantedAt) : void
+}
+
+interface TeacherGradeRepository {
+  + replaceGrades(userId : UUID, grades : Collection<Integer>) : void
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  + record(actorId, actorRole, category, action, targetType, targetId) : void
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+  - createdAt : Instant
+  + isActiveOrInvited() : boolean
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+UserManagementContent ..> ModeratorController : calls API
+UserManagementContent ..> AddTeacherRequest : input
+ModeratorController ..> AddTeacherRequest : input
+ModeratorController ..> TeacherDto : output
+ModeratorController "1" --> "1" ModeratorTeacherService
+ModeratorTeacherService "1" --> "1" AppUserRepository
+ModeratorTeacherService "1" --> "1" UserRoleRepository
+ModeratorTeacherService "1" --> "1" TeacherGradeRepository
+ModeratorTeacherService "1" --> "1" ActivityLogService
+JpaAppUserRepository ..|> AppUserRepository : implements
+AppUserRepository ..> AppUser : output
+AppUser ..> UserStatus : created as INVITED
+
+@enduml

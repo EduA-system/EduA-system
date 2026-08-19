@@ -1,0 +1,39 @@
+@startuml legend
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+hide members
+title Ky phap quan he — Gomaa Fig 2.3 / 12.13
+
+class A1
+class B1
+A1 "1" -- "0..*" B1 : Association (kieu sach) >
+
+class A2
+class B2
+A2 "1" --> "0..*" B2 : Association + navigability >
+
+class A3
+class B3
+A3 "1" o-- "0..*" B3 : Aggregation (Is part of) >
+
+class A4
+class B4
+A4 "1" *-- "0..*" B4 : Composition (Is part of) >
+
+class A5
+class B5
+A5 <|-- B5
+
+class A6 <<interface>>
+class B6 <<adapter>>
+A6 <|.. B6
+
+class A7
+class B7
+A7 ..> B7 : Dependency (sach: dung cho package)
+@enduml

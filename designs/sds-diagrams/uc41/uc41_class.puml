@@ -1,0 +1,120 @@
+@startuml UC-41 Update Class Resource - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-41 Update Class Resource — Class Diagram
+
+class ClassResourcesPage <<client>> {
+  - detail : ClassDetail
+  - resources : ClassResourceSummary [0..*]
+  - target : FormTarget
+  - successMessage : String
+  + load() : void
+  + saved(resource : ClassResourceSummary) : void
+}
+
+class ResourceFormPanel <<client>> {
+  - initial : ClassResourceSummary
+  - title : String
+  - description : String
+  - attachment : ClassResourceAttachmentInput
+  - submissionEnabled : boolean
+  - deadline : String
+  - saving : boolean
+  + handleSubmit(event : FormEvent) : void
+}
+
+class UpdateClassResourceRequest <<dto>> {
+  + title : String
+  + description : String
+  + attachment : ClassResourceAttachmentRequest
+  + submissionEnabled : Boolean
+  + deadline : Instant
+}
+
+class ClassResourceSummaryDto <<dto>> {
+  + id : UUID
+  + title : String
+  + description : String
+  + sourceType : ResourceSourceType
+  + attachment : AttachmentDto
+  + submissionEnabled : boolean
+  + deadline : Instant
+  + postedAt : Instant
+}
+
+class ClassController <<controller>> {
+  - classResourceService : ClassResourceService
+  + updateResource(id, resourceId, request) : ClassResourceSummaryDto
+}
+
+class ClassResourceService <<service>> {
+  - classRepository : ClassRepository
+  - classResourceRepository : ClassResourceRepository
+  - currentUserProvider : CurrentUserProvider
+  + updateResource(classId, resourceId, resourceChanges) : ResourceSummary
+}
+
+interface ClassResourceRepository {
+  + findById(id : UUID) : Optional<ClassResource>
+  + save(resource : ClassResource) : ClassResource
+}
+
+class JpaClassResourceRepository <<adapter>> {
+  - jpa : ClassResourceJpaRepository
+}
+
+class ClassResource <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - title : String
+  - description : String
+  - sourceType : ResourceSourceType
+  - sourceLibraryContentId : UUID
+  - attachmentUrl : String
+  - submissionEnabled : boolean
+  - deadline : Instant
+  - updatedAt : Instant
+}
+
+class ClassResourceEntity <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - title : String
+  - description : String
+  - attachmentUrl : String
+  - submissionEnabled : boolean
+  - deadline : Instant
+  - updatedAt : Instant
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - updatedAt : Instant
+}
+
+enum ResourceSourceType {
+  LIBRARY_SNAPSHOT
+  FILE_UPLOAD
+}
+
+ClassResourcesPage "1" --> "1" ResourceFormPanel : opens the edit form
+ResourceFormPanel ..> ClassController : calls API
+ResourceFormPanel ..> UpdateClassResourceRequest : input
+ClassController ..> UpdateClassResourceRequest : input
+ClassController ..> ClassResourceSummaryDto : output
+ClassController "1" --> "1" ClassResourceService
+ClassResourceService "1" --> "1" ClassResourceRepository
+JpaClassResourceRepository ..|> ClassResourceRepository : implements
+JpaClassResourceRepository ..> ClassResourceEntity : maps
+ClassResourceEntity "1" -- "1" ClassResource : mapped to
+ClassResourceRepository ..> ClassResource : output
+ClassResource "0..*" ..> "1" LibraryContent : source item stays unchanged
+ClassResource ..> ResourceSourceType : attachment editable only for FILE_UPLOAD
+
+@enduml

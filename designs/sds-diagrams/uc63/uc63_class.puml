@@ -1,0 +1,89 @@
+@startuml UC-63 Customize Public Content - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-63 Customize Public Content — Class Diagram
+
+class CommunityHubDetailPage <<client>> {
+  - detail : ContentDetail
+  - savingCopy : boolean
+  - toast : Toast
+  - canSaveToLibrary : boolean
+  + handleCustomize() : void
+}
+
+class HubContentController <<controller>> {
+  - contentService : HubContentService
+  + customize(id : UUID) : Detail
+}
+
+class HubContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + customize(id : UUID) : Detail
+}
+
+interface LibraryContentRepository {
+  + findApprovedForHubById(id : UUID) : Optional<LibraryContent>
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - grade : Integer
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - thumbnailUrl : String
+  - sourceLibraryContentId : UUID
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - createdAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+class Detail <<dto>> {
+  - id : UUID
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - createdAt : Instant
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+CommunityHubDetailPage ..> HubContentController : calls API
+HubContentController "1" --> "1" HubContentService
+HubContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+JpaLibraryContentRepository ..> LibraryContentEntity : maps
+LibraryContentRepository ..> LibraryContent : input
+LibraryContentEntity "1" -- "1" LibraryContent : mapped to
+HubContentService ..> Detail : output
+LibraryContent "1" --> "0..*" LibraryContent : copied into a new owner item
+LibraryContent ..> LibraryContentStatus : publish status
+
+@enduml

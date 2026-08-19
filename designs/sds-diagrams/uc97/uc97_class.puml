@@ -1,0 +1,101 @@
+@startuml UC-97 Remove Blog Post - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-97 Remove Blog Post — Class Diagram
+
+class BlogModerationPage <<client>> {
+  - posts : Summary [0..*]
+  - detail : Detail
+  - removeOpen : boolean
+  - reason : String
+  - message : String
+  + removePost() : void
+  + loadPosts() : void
+}
+
+class RemovePostDialog <<client>> {
+  - reason : String
+  + onReasonChange(value : String) : void
+  + onConfirm() : void
+  + onCancel() : void
+}
+
+class RemoveBlogPostRequest <<dto>> {
+  + reason : String
+}
+
+class BlogController <<controller>> {
+  - postService : BlogPostService
+  + removePost(id : UUID, request : RemoveBlogPostRequest) : void
+}
+
+class BlogPostService <<service>> {
+  - postRepository : BlogPostRepository
+  - currentUser : CurrentUserProvider
+  - activityLogService : ActivityLogService
+  - notificationService : NotificationService
+  + removeByModerator(id : UUID, reason : String) : void
+}
+
+interface BlogPostRepository {
+  + findPublishedById(id : UUID) : Optional<BlogPost>
+  + save(post : BlogPost) : BlogPost
+}
+
+class JpaBlogPostRepository <<adapter>> {
+  - jpa : BlogPostJpaRepository
+}
+
+class BlogPost <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - title : String
+  - subject : Subject
+  - status : BlogPostStatus
+  - removedReason : String
+  - removedBy : UUID
+  - updatedAt : Instant
+  + isPublished() : boolean
+}
+
+class BlogPostEntity <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - subject : Subject
+  - status : BlogPostStatus
+  - removedReason : String
+  - removedBy : UUID
+}
+
+class BlogCommentEntity <<entity>> {
+  - id : UUID
+  - postId : UUID
+  - authorId : UUID
+  - content : String
+  - hiddenAt : Instant
+}
+
+enum BlogPostStatus {
+  PUBLISHED
+  REMOVED_BY_MODERATOR
+  DELETED_BY_AUTHOR
+}
+
+BlogModerationPage "1" --> "1" RemovePostDialog : asks for the removal reason
+BlogModerationPage ..> BlogController : calls API
+BlogModerationPage ..> RemoveBlogPostRequest : input
+BlogController ..> RemoveBlogPostRequest : input
+BlogController "1" --> "1" BlogPostService
+BlogPostService "1" --> "1" BlogPostRepository
+JpaBlogPostRepository ..|> BlogPostRepository : implements
+JpaBlogPostRepository ..> BlogPostEntity : maps
+BlogPostEntity "1" -- "1" BlogPost : mapped to
+BlogPostEntity "1" -- "0..*" BlogCommentEntity : keeps the discussion rows out of the public view
+BlogPostRepository ..> BlogPost : removes by setting REMOVED_BY_MODERATOR with the reason
+BlogPost ..> BlogPostStatus : publish status
+
+@enduml

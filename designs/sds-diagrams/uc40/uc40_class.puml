@@ -1,0 +1,120 @@
+@startuml UC-40 Post Class Resource - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-40 Post Class Resource — Class Diagram
+
+class ClassResourcesPage <<client>> {
+  - detail : ClassDetail
+  - resources : ClassResourceSummary [0..*]
+  - target : FormTarget
+  - successMessage : String
+  + load() : void
+  + saved(resource : ClassResourceSummary) : void
+}
+
+class ResourceFormPanel <<client>> {
+  - title : String
+  - description : String
+  - sourceType : ResourceSourceType
+  - sourceLibraryContentId : String
+  - attachment : ClassResourceAttachmentInput
+  - submissionEnabled : boolean
+  - deadline : String
+  + handleFileChange(event : ChangeEvent) : void
+  + handleSubmit(event : FormEvent) : void
+}
+
+class PostClassResourceRequest <<dto>> {
+  + title : String
+  + description : String
+  + sourceType : ResourceSourceType
+  + sourceLibraryContentId : UUID
+  + attachment : ClassResourceAttachmentRequest
+  + submissionEnabled : boolean
+  + deadline : Instant
+}
+
+class ClassResourceSummaryDto <<dto>> {
+  + id : UUID
+  + title : String
+  + sourceType : ResourceSourceType
+  + thumbnailUrl : String
+  + attachment : AttachmentDto
+  + submissionEnabled : boolean
+  + deadline : Instant
+  + postedByName : String
+  + postedAt : Instant
+}
+
+class ClassController <<controller>> {
+  - classResourceService : ClassResourceService
+  + postResource(id : UUID, request : PostClassResourceRequest) : ClassResourceSummaryDto
+}
+
+class ClassResourceService <<service>> {
+  - classRepository : ClassRepository
+  - classResourceRepository : ClassResourceRepository
+  - libraryContentRepository : LibraryContentRepository
+  - currentUserProvider : CurrentUserProvider
+  + postResource(classId, resourceDetails) : ResourceSummary
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+}
+
+interface ClassResourceRepository {
+  + save(resource : ClassResource) : ClassResource
+}
+
+class JpaClassResourceRepository <<adapter>> {
+  - jpa : ClassResourceJpaRepository
+}
+
+class ClassResource <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - postedBy : UUID
+  - title : String
+  - description : String
+  - sourceType : ResourceSourceType
+  - sourceLibraryContentId : UUID
+  - thumbnailUrl : String
+  - attachmentUrl : String
+  - submissionEnabled : boolean
+  - deadline : Instant
+  + hasAttachment() : boolean
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - thumbnailUrl : String
+}
+
+enum ResourceSourceType {
+  LIBRARY_SNAPSHOT
+  FILE_UPLOAD
+}
+
+ClassResourcesPage "1" --> "1" ResourceFormPanel : opens the posting form
+ResourceFormPanel ..> ClassController : calls API
+ResourceFormPanel ..> PostClassResourceRequest : input
+ClassController ..> PostClassResourceRequest : input
+ClassController ..> ClassResourceSummaryDto : output
+ClassController "1" --> "1" ClassResourceService
+ClassResourceService "1" --> "1" ClassResourceRepository
+ClassResourceService "1" --> "1" LibraryContentRepository
+JpaClassResourceRepository ..|> ClassResourceRepository : implements
+LibraryContentRepository ..> LibraryContent : output
+ClassResourceRepository ..> ClassResource : output
+ClassResource "0..*" ..> "1" LibraryContent : independent snapshot of the source item
+ClassResource ..> ResourceSourceType : posting source
+
+@enduml

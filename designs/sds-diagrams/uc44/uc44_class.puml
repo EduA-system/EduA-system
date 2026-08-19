@@ -1,0 +1,111 @@
+@startuml UC-44 View Class Resource Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-44 View Class Resource Detail — Class Diagram
+
+class ResourceDetailPage <<client>> {
+  - resource : ClassResourceSummary
+  - submission : SubmissionDetail
+  - accessRevoked : boolean
+  - error : String
+  + load() : void
+}
+
+class ClassResourceSummaryDto <<dto>> {
+  + id : UUID
+  + title : String
+  + description : String
+  + attachment : AttachmentDto
+  + submissionEnabled : boolean
+  + deadline : Instant
+  + postedByName : String
+  + submissionStatus : SubmissionStatus
+}
+
+class SubmissionDetailDto <<dto>> {
+  + textContent : String
+  + files : List<FileDto>
+  + status : SubmissionStatus
+  + submittedAt : Instant
+}
+
+class ClassController <<controller>> {
+  - classResourceService : ClassResourceService
+  - submissionService : SubmissionService
+  + resources(id, page, size) : ClassResourcePageDto
+  + mySubmission(id : UUID, resourceId : UUID) : SubmissionDetailDto
+}
+
+class ClassResourceService <<service>> {
+  - classResourceRepository : ClassResourceRepository
+  - submissionRepository : SubmissionRepository
+  - classMemberRepository : ClassMemberRepository
+  + listResources(classId, page, size) : ClassResourceViews.Page
+}
+
+class SubmissionService <<service>> {
+  - submissionRepository : SubmissionRepository
+  - classResourceRepository : ClassResourceRepository
+  + getOwnSubmission(classId : UUID, resourceId : UUID) : SubmissionViews.Detail
+}
+
+interface ClassResourceRepository {
+  + findByClassId(classId, page, size) : PageResult
+  + findById(id : UUID) : Optional<ClassResource>
+}
+
+class JpaClassResourceRepository <<adapter>> {
+  - jpa : ClassResourceJpaRepository
+}
+
+interface SubmissionRepository {
+  + findByResourceAndStudent(resourceId : UUID, studentId : UUID) : Optional<SubmissionWithFiles>
+  + findStatusesByResourceIds(resourceIds, studentId) : Map<UUID, SubmissionStatus>
+}
+
+class ClassResource <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - title : String
+  - description : String
+  - attachmentUrl : String
+  - submissionEnabled : boolean
+  - deadline : Instant
+  + hasAttachment() : boolean
+}
+
+class Submission <<entity>> {
+  - id : UUID
+  - classResourceId : UUID
+  - studentId : UUID
+  - textContent : String
+  - status : SubmissionStatus
+  - submittedAt : Instant
+}
+
+enum SubmissionStatus {
+  NOT_APPLICABLE
+  NOT_SUBMITTED
+  ON_TIME
+  LATE
+}
+
+ResourceDetailPage ..> ClassController : calls API
+ClassController ..> ClassResourceSummaryDto : output
+ClassController ..> SubmissionDetailDto : output
+ClassController "1" --> "1" ClassResourceService
+ClassController "1" --> "1" SubmissionService
+ClassResourceService "1" --> "1" ClassResourceRepository
+ClassResourceService "1" --> "1" SubmissionRepository
+SubmissionService "1" --> "1" SubmissionRepository
+JpaClassResourceRepository ..|> ClassResourceRepository : implements
+ClassResourceRepository ..> ClassResource : output
+SubmissionRepository ..> Submission : output
+ClassResource "1" -- "0..*" Submission : has
+Submission ..> SubmissionStatus : delivery tag
+
+@enduml

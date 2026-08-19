@@ -1,0 +1,106 @@
+@startuml UC-61 View Community Hub - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-61 View Community Hub — Class Diagram
+
+class CommunityHubPage <<client>> {
+  - items : HubContentSummary [0..*]
+  - type : LibraryContentType
+  - q : String
+  - page : int
+  - total : long
+  - loading : boolean
+  - error : String
+  + load(page : int, append : boolean) : void
+}
+
+class HubContentController <<controller>> {
+  - contentService : HubContentService
+  + list(type, subject, q, page, size) : Page<ContentSummary>
+}
+
+class HubContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + list(rawType, rawSubject, q, page, size) : Page<ContentSummary>
+}
+
+interface LibraryContentRepository {
+  + searchApprovedHubSummaries(type, subject, q, page, size) : HubSearchResult
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class HubContentSummary <<dto>> {
+  - id : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - ownerId : UUID
+  - ownerName : String
+  - thumbnailUrl : String
+  - reviewedAt : Instant
+  - commentCount : long
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - status : LibraryContentStatus
+  - thumbnailUrl : String
+  - reviewedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+class HubCommentEntity <<entity>> {
+  - id : UUID
+  - libraryContentId : UUID
+  - authorId : UUID
+  - hiddenAt : Instant
+}
+
+class AppUserEntity <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum LibraryContentType {
+  LESSON_PLAN
+  SLIDE_DECK
+  TEST
+  SIMULATION
+}
+
+CommunityHubPage ..> HubContentController : calls API
+HubContentController "1" --> "1" HubContentService
+HubContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+LibraryContentRepository ..> HubContentSummary : output
+JpaLibraryContentRepository ..> LibraryContentEntity : maps
+LibraryContentEntity "1" --> "0..*" LibraryContentEntity : publishes hub snapshot
+AppUserEntity "1" -- "0..*" LibraryContentEntity : owns
+LibraryContentEntity "1" -- "0..*" HubCommentEntity : is discussed by
+LibraryContentEntity ..> LibraryContentStatus : publish status
+LibraryContentEntity ..> LibraryContentType : content type
+
+@enduml

@@ -1,0 +1,110 @@
+@startuml UC-56 View Periodic Table - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-56 View Periodic Table — Class Diagram
+
+class PeriodicTablePage <<client>> {
+  - displayMode : DisplayMode
+  - groupMode : GroupMode
+  - colorMode : ColorMode
+  - filters : FilterState
+  - searchQuery : String
+  - quickRange : [number, number]
+  - visibleSet : Set<number>
+  + render() : ReactNode
+  + handleReset() : void
+  + handleSelectElement(el : Element) : void
+  + handleChangeColorMode(mode : ColorMode) : void
+}
+
+class RouteGuard <<client>> {
+  - pathname : String
+  - requiresAuth : boolean
+  + render() : ReactNode
+}
+
+class PeriodicTableData <<client>> {
+  + ELEMENTS : Element [0..*]
+  + ELEMENTS_BY_NUMBER : Map<number, Element>
+  + applyFilters(elements, filters, query, quickRange) : Set<number>
+  + computeRange(elements : Element[], prop : String) : Range
+}
+
+class PeriodicTable <<client>> {
+  - hoveredLegendKey : String
+  - openDropdown : DropdownKey
+  + render() : ReactNode
+  + isElementVisible(el : Element) : boolean
+  + getColors(el : Element) : ElementColors
+}
+
+class FilterPanel <<client>> {
+  - local : FilterState
+  + render() : ReactNode
+  + handleReset() : void
+}
+
+class ElementCard <<client>> {
+  - isVisible : boolean
+  - isSelected : boolean
+  + render() : ReactNode
+}
+
+class Element <<dto>> {
+  + atomicNumber : int
+  + symbol : String
+  + name : String
+  + nameVi : String
+  + block : ElementBlock
+  + state : ElementState
+  + period : int
+  + group : Integer
+  + gridRow : int
+  + gridCol : int
+}
+
+class FilterState <<dto>> {
+  + meltingPoint : Range
+  + boilingPoint : Range
+  + density : Range
+  + electronegativity : Range
+  + ionizationEnergy : Range
+  + electronAffinity : Range
+  + vanDerWaalsRadius : Range
+  + blocks : Set<ElementBlock>
+  + states : Set<ElementState>
+  + categories : Set<ElementCategory>
+}
+
+enum ElementBlock {
+  s
+  p
+  d
+  f
+}
+
+enum ElementState {
+  solid
+  liquid
+  gas
+  unknown
+}
+
+PeriodicTablePage ..> RouteGuard : guards access
+PeriodicTablePage ..> PeriodicTableData : uses
+PeriodicTablePage "1" *-- "1" PeriodicTable : contains
+PeriodicTablePage "1" *-- "0..1" FilterPanel : contains
+PeriodicTablePage "1" --> "1" FilterState
+PeriodicTable "1" *-- "0..*" ElementCard : contains
+PeriodicTable ..> PeriodicTableData : uses
+FilterPanel ..> FilterState : output
+PeriodicTableData "1" *-- "118" Element : contains
+ElementCard ..> Element : input
+Element ..> ElementBlock : classified by
+Element ..> ElementState : classified by
+
+@enduml

@@ -1,0 +1,89 @@
+@startuml UC-67 Unpublish Hub Content - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-67 Unpublish Hub Content — Class Diagram
+
+class LibraryScreen <<client>> {
+  - items : LibraryContent [0..*]
+  - pendingAction : PendingAction
+  - saving : boolean
+  - error : String
+  + requestAction(content : LibraryContent, kind : String) : void
+  + performAction() : void
+  + load() : void
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + unsubmit(id : UUID) : Detail
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + unsubmit(id : UUID) : Detail
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - status : LibraryContentStatus
+  - submittedAt : Instant
+  - updatedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - status : LibraryContentStatus
+  - submittedAt : Instant
+  - updatedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+class Detail <<dto>> {
+  - id : UUID
+  - title : String
+  - subject : Subject
+  - status : LibraryContentStatus
+  - submittedAt : Instant
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+LibraryScreen ..> LibraryContentController : calls API
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+JpaLibraryContentRepository ..> LibraryContentEntity : maps
+LibraryContentRepository ..> LibraryContent : returns the owned row to PRIVATE
+LibraryContentEntity "1" -- "1" LibraryContent : mapped to
+LibraryContentService ..> Detail : output
+LibraryContent ..> LibraryContentStatus : publish status
+
+@enduml

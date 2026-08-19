@@ -1,0 +1,97 @@
+@startuml UC-46 View Submissions List - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-46 View Submissions List — Class Diagram
+
+class SubmissionsRosterPanel <<client>> {
+  - roster : SubmissionRoster
+  - loading : boolean
+  - error : String
+  + load() : void
+  + openDetail(entry : SubmissionRosterEntry) : void
+}
+
+class SubmissionRosterDto <<dto>> {
+  + resourceId : UUID
+  + deadline : Instant
+  + items : List<EntryDto>
+}
+
+class EntryDto <<dto>> {
+  + studentId : UUID
+  + studentName : String
+  + studentEmail : String
+  + status : SubmissionStatus
+  + firstSubmittedAt : Instant
+  + submittedAt : Instant
+}
+
+class ClassController <<controller>> {
+  - submissionService : SubmissionService
+  + submissions(id : UUID, resourceId : UUID) : SubmissionRosterDto
+}
+
+class SubmissionService <<service>> {
+  - submissionRepository : SubmissionRepository
+  - classMemberRepository : ClassMemberRepository
+  - classResourceRepository : ClassResourceRepository
+  - userRepository : AppUserRepository
+  + listSubmissions(classId : UUID, resourceId : UUID) : SubmissionViews.Roster
+}
+
+interface SubmissionRepository {
+  + findAllByResource(resourceId : UUID) : List<SubmissionWithFiles>
+}
+
+class JpaSubmissionRepository <<adapter>> {
+  - submissionJpa : SubmissionJpaRepository
+  - fileJpa : SubmissionFileJpaRepository
+}
+
+interface ClassMemberRepository {
+  + findAllStudentIds(classId : UUID) : List<UUID>
+}
+
+interface AppUserRepository {
+  + findAllById(ids : Collection<UUID>) : List<AppUser>
+}
+
+class Submission <<entity>> {
+  - id : UUID
+  - classResourceId : UUID
+  - studentId : UUID
+  - status : SubmissionStatus
+  - submittedAt : Instant
+  - createdAt : Instant
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+}
+
+enum SubmissionStatus {
+  NOT_SUBMITTED
+  ON_TIME
+  LATE
+}
+
+SubmissionsRosterPanel ..> ClassController : calls API
+ClassController ..> SubmissionRosterDto : output
+SubmissionRosterDto "1" *-- "0..*" EntryDto : contains
+ClassController "1" --> "1" SubmissionService
+SubmissionService "1" --> "1" SubmissionRepository
+SubmissionService "1" --> "1" ClassMemberRepository
+SubmissionService "1" --> "1" AppUserRepository
+JpaSubmissionRepository ..|> SubmissionRepository : implements
+SubmissionRepository ..> Submission : output
+AppUserRepository ..> AppUser : output
+AppUser "1" -- "0..1" Submission : submitted
+Submission ..> SubmissionStatus : delivery tag
+
+@enduml

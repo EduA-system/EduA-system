@@ -1,0 +1,77 @@
+@startuml feat09 Personal Library Management - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.9.1 Personal Library Management — Class Diagram
+class LibraryScreen <<user interaction>> {
+  - type : LibraryType
+  - q : String
+  - subject : String
+  + load()
+  + open(content : LibraryContent) : String
+  + requestAction(content : LibraryContent, kind : String)
+  + performAction()
+}
+
+class LibraryContentController <<coordinator>> {
+  - service : LibraryContentService
+  + list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort) : Page
+  + get(id : String) : Detail
+  + update(id : String, request : UpdateLibraryContentRequest) : Detail
+  + delete(id : String)
+  + create(r : CreateLibraryContentRequest) : Detail
+}
+
+class LibraryContentService <<business logic>> {
+  - repository : LibraryContentRepository
+  + list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort) : Page
+  + get(id : String) : Detail
+  + update(id : String, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl) : Detail
+  + delete(id : String)
+  + submit(id : String) : Detail
+  + unsubmit(id : String) : Detail
+}
+
+class LibraryContentRepository <<interface>> {
+  {field}
+  --
+  + searchSummaries(ownerId, type, subject, grade, textbookCode, chapterCode, q, status, page, size, titleAscending, createdAtDescending) : SummarySearchResult
+  + findActiveById(id : String) : LibraryContent
+  + hasAnySnapshotBySourceId(sourceLibraryContentId : String) : Boolean
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class LessonEditDashboard <<user interaction>> {
+  - isGeneratingLesson : Boolean
+  - saveStatus : SaveStatus
+  - libraryContentId : String
+  + saveLesson(session : LessonPlanSession, allowDuringGeneration : Boolean)
+}
+
+class JpaLibraryContentRepository <<database wrapper>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : String
+  - ownerId : String
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+}
+
+LibraryScreen "1" -- "1" LibraryContent : Uses >
+LibraryContentController "1" -- "1" LibraryContentService : Delegates to >
+LibraryContentService "1" -- "1" LibraryContentRepository : Accesses data through >
+LibraryScreen "1" -- "1" LibraryContentController : Sends requests to >
+LessonEditDashboard "1" -- "1" LibraryContentController : Sends requests to >
+JpaLibraryContentRepository ..|> LibraryContentRepository
+JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
+
+@enduml

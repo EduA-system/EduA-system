@@ -1,0 +1,93 @@
+@startuml UC-70 Update Content Comment - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-70 Update Content Comment — Class Diagram
+
+class CommunityHubDetailPage <<client>> {
+  - editingCommentId : String
+  - editCommentText : String
+  - editWordCount : int
+  - pendingEditComment : HubComment
+  + startEditComment(item : HubComment) : void
+  + requestSaveEditComment(item : HubComment) : void
+  + saveEditComment() : void
+}
+
+class UpdateHubCommentRequest <<dto>> {
+  + content : String
+}
+
+class "HubViews.CommentView" as HubCommentView <<dto>> {
+  + id : UUID
+  + content : String
+  + authorId : UUID
+  + authorName : String
+  + createdAt : Instant
+  + updatedAt : Instant
+}
+
+class HubContentController <<controller>> {
+  - commentService : HubCommentService
+  + updateComment(commentId : UUID, request : UpdateHubCommentRequest) : HubViews.CommentView
+}
+
+class HubCommentService <<service>> {
+  - commentRepository : HubCommentRepository
+  - userRepository : AppUserRepository
+  - sanitizer : BlogContentSanitizer
+  - currentUser : CurrentUserProvider
+  - COMMENT_MAX_WORDS : int
+  + update(commentId : UUID, content : String) : HubViews.CommentView
+}
+
+class BlogContentSanitizer <<service>> {
+  + sanitize(html : String) : String
+  + isEmpty(sanitizedHtml : String) : boolean
+}
+
+interface HubCommentRepository {
+  + findById(id : UUID) : Optional<HubComment>
+  + save(comment : HubComment) : HubComment
+}
+
+class JpaHubCommentRepository <<adapter>> {
+  - jpa : HubCommentJpaRepository
+}
+
+class HubComment <<entity>> {
+  - id : UUID
+  - libraryContentId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - createdAt : Instant
+  - updatedAt : Instant
+  - hiddenAt : Instant
+}
+
+class HubCommentEntity <<entity>> {
+  - id : UUID
+  - authorId : UUID
+  - content : String
+  - updatedAt : Instant
+  - hiddenAt : Instant
+}
+
+CommunityHubDetailPage ..> HubContentController : calls API
+CommunityHubDetailPage ..> UpdateHubCommentRequest : input
+CommunityHubDetailPage ..> HubCommentView : output
+HubContentController ..> UpdateHubCommentRequest : input
+HubContentController ..> HubCommentView : output
+HubContentController "1" --> "1" HubCommentService
+HubCommentService "1" --> "1" HubCommentRepository
+HubCommentService "1" --> "1" BlogContentSanitizer
+JpaHubCommentRepository ..|> HubCommentRepository : implements
+JpaHubCommentRepository ..> HubCommentEntity : maps
+HubCommentRepository ..> HubComment : uses
+HubCommentEntity "1" -- "1" HubComment : mapped to
+
+@enduml

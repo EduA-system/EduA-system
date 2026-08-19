@@ -1,0 +1,102 @@
+@startuml UC-89 View Lesson Plan Approval List - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-89 View Lesson Plan Approval List — Class Diagram
+
+class LessonPlanApprovalScreen <<client>> {
+  - items : WeeklyTaskSummary [0..*]
+  - gradeFilter : Integer
+  - chapterCode : String
+  - lessonCode : String
+  - loading : boolean
+  - error : String
+  + load() : void
+  + handleGradeChange(grade : Integer) : void
+}
+
+class "WeeklyTaskViews.Page" as PageView <<dto>> {
+  + items : List<Summary>
+  + page : int
+  + size : int
+  + total : long
+}
+
+class "WeeklyTaskViews.Summary" as SummaryView <<dto>> {
+  + id : UUID
+  + teacherName : String
+  + subject : Subject
+  + grade : Integer
+  + scopeDescription : String
+  + chapterName : String
+  + lessonName : String
+  + deadline : Instant
+  + reviewStatus : WeeklyTaskReviewStatus
+  + submittedAt : Instant
+}
+
+class WeeklyTaskController <<controller>> {
+  - service : WeeklyTaskService
+  + moderationQueue(page, size, grade, chapterCode, lessonCode) : Page
+}
+
+class WeeklyTaskService <<service>> {
+  - repository : WeeklyTaskRepository
+  - currentUser : CurrentUserProvider
+  + listModerationQueue(page, size, grade, chapterCode, lessonCode) : Page
+}
+
+interface WeeklyTaskRepository {
+  + searchModerationQueue(subject, status, grade, chapterCode, lessonCode, pageable) : Page<WeeklyTask>
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+class WeeklyTask <<entity>> {
+  - id : UUID
+  - subject : Subject
+  - grade : Integer
+  - teacherId : UUID
+  - weekStartDate : LocalDate
+  - scopeDescription : String
+  - chapterCode : String
+  - lessonCode : String
+  - deadline : Instant
+  - reviewStatus : WeeklyTaskReviewStatus
+  - submittedAt : Instant
+}
+
+class WeeklyTaskEntity <<entity>> {
+  - id : UUID
+  - subject : Subject
+  - grade : Integer
+  - teacherId : UUID
+  - reviewStatus : WeeklyTaskReviewStatus
+  - submittedAt : Instant
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+LessonPlanApprovalScreen ..> WeeklyTaskController : calls API
+LessonPlanApprovalScreen ..> SummaryView : reads one queued submission
+WeeklyTaskController ..> PageView : output
+WeeklyTaskController "1" --> "1" WeeklyTaskService
+WeeklyTaskService "1" --> "1" WeeklyTaskRepository
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+JpaWeeklyTaskRepository ..> WeeklyTaskEntity : maps
+WeeklyTaskEntity "1" -- "1" WeeklyTask : mapped to
+WeeklyTaskRepository ..> WeeklyTask : output
+PageView "1" *-- "0..*" SummaryView : contains
+WeeklyTask ..> WeeklyTaskReviewStatus : queued only while SUBMITTED
+
+@enduml

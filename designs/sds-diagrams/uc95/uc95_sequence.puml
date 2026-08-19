@@ -1,0 +1,72 @@
+@startuml UC-95 Manage Notification Read State - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-95 Manage Notification Read State — Sequence Diagram
+
+actor User
+participant ":NotificationsScreen" as UI
+participant ":NotificationController" as CTL
+participant ":NotificationService" as SVC
+participant ":NotificationRepository" as NOTIFS
+database DB
+
+autonumber
+User -> UI : Click an unread notification in the list
+activate UI
+UI -> UI : handleOpenNotification(notification)
+UI -> UI : handleMarkRead(id)
+UI -> CTL : PATCH /api/notifications/{id}/read
+activate CTL
+CTL -> SVC : markRead(id)
+activate SVC
+SVC -> NOTIFS : markRead(notificationId, recipientId)
+activate NOTIFS
+NOTIFS -> DB : UPDATE notification_recipients SET read_at = ? WHERE notification_id = ? AND recipient_id = ? AND read_at IS NULL
+activate DB
+DB --> NOTIFS : Updated / no row
+deactivate DB
+NOTIFS --> SVC : boolean
+deactivate NOTIFS
+
+alt the notification is not addressed to the signed-in user
+  SVC --> CTL : ResourceNotFoundException
+  CTL --> UI : HTTP 404
+  UI --> User : Report that the notification cannot be marked as read and keep it unread
+else the notification is addressed to the signed-in user
+  SVC --> CTL : void
+  CTL --> UI : HTTP 204 No Content
+  UI --> User : Show the notification as read, decrease the unread counter and open its target page when the notification carries one
+end
+deactivate SVC
+deactivate CTL
+
+opt the user marks every notification as read
+  User -> UI : Click "Mark all as read"
+  UI -> UI : handleMarkAllRead()
+  UI -> CTL : POST /api/notifications/read-all
+  activate CTL
+  CTL -> SVC : markAllRead()
+  activate SVC
+  SVC -> NOTIFS : markAllRead(recipientId)
+  activate NOTIFS
+  NOTIFS -> DB : UPDATE notification_recipients SET read_at = ? WHERE recipient_id = ? AND read_at IS NULL
+  activate DB
+  DB --> NOTIFS : Updated
+  deactivate DB
+  NOTIFS --> SVC : void
+  deactivate NOTIFS
+  SVC --> CTL : void
+  deactivate SVC
+  CTL --> UI : HTTP 204 No Content
+  deactivate CTL
+  UI --> User : Show every notification as read and reset the unread counter to zero
+end
+deactivate UI
+@enduml

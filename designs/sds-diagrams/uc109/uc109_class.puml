@@ -1,0 +1,94 @@
+@startuml UC-109 View School-wide Statistics Dashboard - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 260
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-109 View School-wide Statistics Dashboard — Class Diagram
+
+class PrincipalStatisticsScreen <<client>> {
+  - trend : AiContentTrend
+  - weeklyStatus : WeeklyTaskStatus
+  - accounts : AccountsByRole
+  - weeklySubject : Subject
+  - accountSubject : Subject
+  - error : String
+}
+
+class PrincipalStatisticsController <<controller>> {
+  - service : PrincipalStatisticsService
+  + aiContentTrend(months : int) : AiContentTrend
+  + weeklyTaskStatus(from, to, subject) : WeeklyTaskStatus
+  + communityHubReview() : CommunityHubReview
+  + accountsByRole(subject : Subject) : AccountsByRole
+}
+
+class PrincipalStatisticsService <<service>> {
+  - libraryContentRepository : LibraryContentRepository
+  - weeklyTaskRepository : WeeklyTaskRepository
+  - appUserRepository : AppUserRepository
+  + aiContentTrend(rawMonths : int) : AiContentTrend
+  + weeklyTaskStatus(from, to, subject) : WeeklyTaskStatus
+  + communityHubReview() : CommunityHubReview
+  + accountsByRole(subject : Subject) : AccountsByRole
+}
+
+class AiContentTrend <<dto>> {
+  + items : List<AiContentTrendBucket>
+}
+
+class WeeklyTaskStatus <<dto>> {
+  + items : List<WeeklyTaskStatusBucket>
+}
+
+class AccountsByRole <<dto>> {
+  + items : List<AccountRoleStatus>
+}
+
+class CommunityHubReview <<dto>> {
+  + pending : long
+  + approved : long
+  + rejected : long
+}
+
+interface LibraryContentRepository {
+  + countCreatedByMonthAndType(from, to) : List<MonthTypeAggregate>
+  + countBySubjectAndType() : List<SubjectTypeAggregate>
+  + countByStatus(status : LibraryContentStatus) : long
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+}
+
+interface WeeklyTaskRepository {
+  + countByWeekAndReviewStatus(fromWeek, toWeek, subject) : List<WeeklyStatusAggregate>
+}
+
+interface AppUserRepository {
+  + countActiveInactiveByRole(subject : Subject) : List<RoleStatusAggregate>
+}
+
+enum Subject {
+  MATH
+  CHEMISTRY
+  PHYSICS
+}
+
+PrincipalStatisticsScreen ..> PrincipalStatisticsController : calls API
+PrincipalStatisticsScreen ..> AiContentTrend : output
+PrincipalStatisticsScreen ..> WeeklyTaskStatus : output
+PrincipalStatisticsScreen ..> AccountsByRole : output
+PrincipalStatisticsController "1" --> "1" PrincipalStatisticsService
+PrincipalStatisticsController ..> CommunityHubReview : output
+PrincipalStatisticsService "1" --> "1" LibraryContentRepository
+PrincipalStatisticsService "1" --> "1" WeeklyTaskRepository
+PrincipalStatisticsService "1" --> "1" AppUserRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+PrincipalStatisticsService ..> AiContentTrend : output
+PrincipalStatisticsService ..> WeeklyTaskStatus : output
+PrincipalStatisticsService ..> AccountsByRole : output
+PrincipalStatisticsController ..> Subject : filter
+
+@enduml

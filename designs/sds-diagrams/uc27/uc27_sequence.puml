@@ -19,7 +19,7 @@ participant ":BlogCommentRepository" as CREPO
 database DB
 
 autonumber
-Teacher -> UI : Click "Trả lời" on a root comment
+Teacher -> UI : Click "Reply" on a root comment
 activate UI
 UI --> Teacher : Show the reply banner naming the author of the root comment
 Teacher -> UI : Enter the reply text and click "Send"

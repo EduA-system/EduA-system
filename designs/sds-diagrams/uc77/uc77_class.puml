@@ -1,0 +1,107 @@
+@startuml UC-77 View Teacher List - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-77 View Teacher List — Class Diagram
+
+class UserManagementContent <<client>> {
+  - activeTab : Tab
+  - teacherData : PageResponse<SubjectAccountItem>
+  - teacherStats : AccountStatusStats
+  - msg : String
+  + loadTeachers(page : number) : void
+  + loadTeacherStats() : void
+}
+
+class TeacherDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + subject : String
+  + grades : List<Integer>
+  + status : String
+  + grantedAt : Instant
+  + grantedByEmail : String
+}
+
+class ModeratorController <<controller>> {
+  - moderatorTeacherService : ModeratorTeacherService
+  + listTeachers(page : int, size : int) : Page<TeacherDto>
+}
+
+class ModeratorTeacherService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - currentUserProvider : CurrentUserProvider
+  + listTeachers(pageable : Pageable) : TeacherListResult
+}
+
+interface AppUserRepository {
+  + findAllByRoleAndSubject(role, subject, pageable) : Page<AppUser>
+  + findAllById(ids : Collection<UUID>) : List<AppUser>
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+interface UserRoleRepository {
+  + findGrantedByUserIdsByUserIds(userIds, role) : Map<UUID, UUID>
+  + findGrantedAtsByUserIds(userIds, role) : Map<UUID, Instant>
+}
+
+interface TeacherGradeRepository {
+  + findGradesByUserIds(userIds : Collection<UUID>) : Map<UUID, List<Integer>>
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - phoneNumber : String
+  - dateOfBirth : LocalDate
+  - subject : Subject
+  - status : UserStatus
+  - createdAt : Instant
+  + isActiveOrInvited() : boolean
+}
+
+class AppUserEntity <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+  - createdAt : Instant
+}
+
+enum Subject {
+  MATH
+  CHEMISTRY
+  PHYSICS
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+UserManagementContent ..> ModeratorController : calls API
+ModeratorController ..> TeacherDto : output
+ModeratorController "1" --> "1" ModeratorTeacherService
+ModeratorTeacherService "1" --> "1" AppUserRepository
+ModeratorTeacherService "1" --> "1" UserRoleRepository
+ModeratorTeacherService "1" --> "1" TeacherGradeRepository
+JpaAppUserRepository ..|> AppUserRepository : implements
+JpaAppUserRepository ..> AppUserEntity : maps
+AppUserEntity "1" -- "1" AppUser : mapped to
+AppUserRepository ..> AppUser : output
+AppUser ..> Subject : listed only for the assigned subject
+AppUser ..> UserStatus : account status
+
+@enduml

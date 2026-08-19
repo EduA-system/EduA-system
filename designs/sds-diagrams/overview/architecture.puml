@@ -1,0 +1,120 @@
+@startuml
+title EDUA System - Software Architecture
+
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam wrapWidth 230
+skinparam ArrowFontSize 11
+skinparam nodesep 12
+skinparam ranksep 24
+skinparam PackageBackgroundColor #FFFFFF
+skinparam ComponentBackgroundColor #FFFFFF
+skinparam DatabaseBackgroundColor #FFFFFF
+
+actor "Teacher / Student / Moderator\nPrincipal / IT Staff" as Users
+
+component "Web Browser" as Browser <<device>>
+
+package "Client Tier - Next.js 16 App Router" as FE {
+  component "Pages, React Components\nand Client Stores" as FePages <<ui>>
+  component "Rewrite Proxy\n/api/* -> BACKEND_URL" as FeRewrite <<proxy>>
+  component "Route Handlers\nlong-running AI calls" as FeRoutes <<proxy>>
+  component "Direct REST Clients\nlib/api" as FeApi <<client>>
+  component "STOMP Clients\nlib/ws" as FeWs <<client>>
+
+  FeRewrite -[hidden]right- FeRoutes
+  FeRoutes -[hidden]right- FeApi
+  FeApi -[hidden]right- FeWs
+}
+
+package "Application Tier - Spring Boot 3.4.5 / Java 21" as BE {
+
+  package "presentation" as PRE {
+    component "REST Controllers\nDTO + Exception Advice" as Ctl <<layer>>
+    component "STOMP Endpoint /ws" as WsEp <<endpoint>>
+    Ctl -[hidden]right- WsEp
+  }
+
+  package "service" as SER {
+    component "Use Cases and Orchestration\nprompt builders, parsers, validators" as Svc <<layer>>
+  }
+
+  package "domain" as DOM {
+    component "Domain Models\nBusiness Rules, Domain Exceptions" as Dom <<layer>>
+  }
+
+  package "repository (ports)" as REP {
+    component "Repository Interfaces" as RepoI <<interface>>
+    component "Gateway Interfaces\nAiClient, StorageClient, TokenService,\nGoogleIdentityVerifier, Stream Ports" as GateI <<interface>>
+    RepoI -[hidden]right- GateI
+  }
+
+  package "infrastructure (adapters)" as INF {
+    component "JPA Persistence\nentities + adapters" as JpaA <<adapter>>
+    component "AI Adapters\nFallbackAiClient ->\nOpenAiAdapter -> DeepSeekAdapter" as AiA <<adapter>>
+    component "Storage Adapter\nR2StorageAdapter" as R2A <<adapter>>
+    component "Messaging Adapters\nSTOMP publishers" as MsgA <<adapter>>
+    component "Security\nJWT, STOMP auth, Google verifier" as SecA <<adapter>>
+
+    JpaA -[hidden]right- AiA
+    AiA -[hidden]right- R2A
+    R2A -[hidden]right- MsgA
+    MsgA -[hidden]right- SecA
+  }
+
+  component "config - Spring DI wiring, Security, WebSocket, CORS" as Cfg <<configuration>>
+}
+
+package "External Systems" as EXT {
+  database "PostgreSQL (Supabase)" as PG <<relational database>>
+  component "OpenAI API" as OAI <<AI / LLM provider>>
+  component "DeepSeek API" as DS <<AI / LLM provider>>
+  component "Cloudflare R2" as R2 <<object storage>>
+  component "Google Identity Services" as GIS <<authentication provider>>
+
+  PG -[hidden]right- OAI
+  OAI -[hidden]right- DS
+  DS -[hidden]right- R2
+  R2 -[hidden]right- GIS
+}
+
+Users -down-> Browser : uses
+Browser -down-> FePages : HTTPS
+
+FePages -down-> FeRewrite : fetch /api/*
+FePages -down-> FeRoutes : fetch AI endpoints
+FePages -down-> FeApi : fetch slide / molecule APIs
+FePages -down-> FeWs : subscribe to progress
+
+FeRewrite -down-> Ctl : HTTP REST + JWT
+FeRoutes -down-> Ctl : HTTP REST + JWT
+FeApi -down-> Ctl : HTTP REST + JWT
+FeWs -down-> WsEp : STOMP CONNECT + JWT, SUBSCRIBE
+WsEp -up-> FeWs : /topic/lesson-plan, /topic/outline,\n/topic/practice-exam, /user/queue/notifications
+
+Ctl -down-> Svc : calls
+SecA -up-> WsEp : authenticate STOMP CONNECT
+Svc -down-> Dom : uses
+Svc -down-> RepoI : depends on
+Svc -down-> GateI : depends on
+
+JpaA -up-> RepoI : implements
+AiA -up-> GateI : implements
+R2A -up-> GateI : implements
+MsgA -up-> GateI : implements
+SecA -up-> GateI : implements
+
+MsgA -up-> WsEp : publish stream events
+SecA -up-> Ctl : authenticate request
+Cfg -down-> INF : injects implementations
+
+JpaA -down-> PG : JDBC - SELECT / INSERT / UPDATE
+AiA -down-> OAI : HTTPS chat completion
+AiA -down-> DS : HTTPS chat completion (fallback)
+R2A -down-> R2 : S3 API - PUT / GET object
+SecA -down-> GIS : verify Google ID token
+Browser -[#666666,dashed]down-> GIS : Google Sign-In, obtain ID token
+
+@enduml

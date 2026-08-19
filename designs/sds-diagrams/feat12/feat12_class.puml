@@ -1,0 +1,187 @@
+@startuml feat12 Classroom Management - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.12.1 Classroom Management — Class Diagram
+class ClassManagementPage <<user interaction>> {
+  - items : ClassSummary [0..*]
+  - q : String
+  - gradeFilter : Integer
+  + loadClasses()
+  + handleCreate(event : FormEvent)
+  + confirmCreateClass()
+}
+
+class ClassController <<coordinator>> {
+  - classManagementService : ClassManagementService
+  - classEnrollmentService : ClassEnrollmentService
+  + list(subject, grade, status, q, page, size) : ClassPageDto
+  + create(request : CreateClassRequest) : ClassDetailDto
+  + detail(id : String) : ClassDetailDto
+  + update(id : String, request : UpdateClassRequest) : ClassDetailDto
+  + updateStatus(id : String, request : UpdateClassStatusRequest) : ClassDetailDto
+}
+
+class ClassManagementService <<business logic>> {
+  - classRepository : ClassRepository
+  - classMemberRepository : ClassMemberRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  + listOwnedClasses(subject, grade, status, q, page, size) : Page
+  + createClass(name, subject, grade, description) : ClassDetail
+  + getDetail(id : String) : ClassDetail
+  + updateClass(id, name, subject, grade, description) : ClassDetail
+  + updateStatus(id : String, status : ClassStatus) : ClassDetail
+  + listEnrolledClasses(subject, grade, status, q, page, size) : Page
+}
+
+class ClassRepository <<interface>> {
+  {field}
+  --
+  + searchOwned(ownerId, subject, grade, status, q, page, size) : SearchResult
+  + save(classroom : Classroom) : Classroom
+  + findById(id : String) : Classroom
+  + searchEnrolled(studentId, subject, grade, status, q, page, size) : SearchResult
+}
+
+class ClassMemberRepository <<interface>> {
+  {field}
+  --
+  + countByClassId(classId : String) : Integer
+  + existsByClassIdAndStudentId(classId : String, studentId : String) : Boolean
+  + findByClassId(classId : String, page : Integer, size : Integer) : PageResult
+  + save(member : ClassMember) : ClassMember
+  + findAnyByClassIdAndStudentId(classId : String, studentId : String) : ClassMember
+}
+
+class TeacherGradeRepository <<interface>> {
+  {field}
+  --
+  + findGradesByUserIds(userIds : String [0..*]) : Map
+}
+
+class ClassSettingsPage <<user interaction>> {
+  - detail : ClassDetail
+  - pendingUpdate : UpdateClassPayload
+  - selectedGrade : Integer
+  + load()
+  + submit(event : FormEvent)
+  + requestToggle()
+  + confirmToggle()
+}
+
+class ClassOverviewPage <<user interaction>> {
+  - detail : ClassDetail
+  - loading : Boolean
+  - error : String
+  + load()
+}
+
+class StudentClassMembersPage <<user interaction>> {
+  - detail : ClassDetail
+  - members : ClassMember [0..*]
+  - loading : Boolean
+  + load()
+}
+
+class ClassEnrollmentService <<business logic>> {
+  - classRepository : ClassRepository
+  - classMemberRepository : ClassMemberRepository
+  - userRepository : AppUserRepository
+  + listMembers(classId : String, page : Integer, size : Integer) : Page
+  + addStudent(classId, fullName, phoneNumber, dateOfBirth, email) : MemberSummary
+  + removeStudent(classId, studentId, reason) : RemoveResult
+}
+
+class AppUserRepository <<interface>> {
+  {field}
+  --
+  + findAllById(ids : String [0..*]) : AppUser [0..*]
+  + findByEmail(email : String) : AppUser
+}
+
+class StudentClassResourcesPage <<user interaction>> {
+  - selectedClass : ClassDetail
+  - accessRevoked : Boolean
+  - classes : ClassSummary [0..*]
+  + loadClasses()
+}
+
+class AddStudentPage <<user interaction>> {
+  - members : ClassMember [0..*]
+  - membersTotal : Integer
+  - membersLoading : Boolean
+  + handleAddStudent(event : FormEvent)
+  + loadMembers(id : String)
+  + openRemoveDialog(member : ClassMember)
+  + handleRemoveStudent()
+}
+
+class JpaClassRepository <<database wrapper>> {
+  - jpa : ClassJpaRepository
+}
+
+class JpaClassMemberRepository <<database wrapper>> {
+  - jpa : ClassMemberJpaRepository
+}
+
+class JpaAppUserRepository <<database wrapper>> {
+  - jpa : AppUserJpaRepository
+}
+
+class Classroom <<entity>> {
+  - id : String
+  - ownerId : String
+  - name : String
+  - subject : Subject
+  - grade : Integer
+  + isOwnedBy(userId : String) : Boolean
+  + isActive() : Boolean
+}
+
+class ClassMember <<entity>> {
+  - id : String
+  - classId : String
+  - studentId : String
+  - status : ClassMemberStatus
+  - joinedAt : Date
+}
+
+class AppUser <<entity>> {
+  - id : String
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  + isActiveOrInvited() : Boolean
+}
+
+ClassController "1" -- "1" ClassManagementService : Delegates to >
+ClassController "1" -- "1" ClassEnrollmentService : Delegates to >
+ClassManagementService "1" -- "1" ClassRepository : Accesses data through >
+ClassManagementService "1" -- "1" ClassMemberRepository : Accesses data through >
+ClassManagementService "1" -- "1" TeacherGradeRepository : Accesses data through >
+StudentClassMembersPage "1" -- "1" ClassMember : Uses >
+ClassEnrollmentService "1" -- "1" ClassRepository : Accesses data through >
+ClassEnrollmentService "1" -- "1" ClassMemberRepository : Accesses data through >
+ClassEnrollmentService "1" -- "1" AppUserRepository : Accesses data through >
+AddStudentPage "1" -- "1" ClassMember : Uses >
+ClassManagementPage "1" -- "1" ClassController : Sends requests to >
+ClassSettingsPage "1" -- "1" ClassController : Sends requests to >
+ClassOverviewPage "1" -- "1" ClassController : Sends requests to >
+StudentClassMembersPage "1" -- "1" ClassController : Sends requests to >
+StudentClassResourcesPage "1" -- "1" ClassController : Sends requests to >
+AddStudentPage "1" -- "1" ClassController : Sends requests to >
+JpaAppUserRepository ..|> AppUserRepository
+JpaClassRepository ..|> ClassRepository
+JpaClassMemberRepository ..|> ClassMemberRepository
+ClassMember "1" -- "0..*" AppUser : enrolled student
+JpaClassRepository "1" -- "0..*" Classroom : Maps >
+JpaClassMemberRepository "1" -- "0..*" Classroom : Maps >
+JpaAppUserRepository "1" -- "0..*" Classroom : Maps >
+
+@enduml

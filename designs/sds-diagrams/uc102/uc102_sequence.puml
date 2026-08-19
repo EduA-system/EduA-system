@@ -1,0 +1,75 @@
+@startuml UC-102 View Staff List - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-102 View Staff List — Sequence Diagram
+
+actor Principal
+participant ":UserManagementPage" as UI
+participant ":PrincipalController" as CTL
+participant ":PrincipalModeratorService" as MODSVC
+participant ":PrincipalItStaffService" as ITSVC
+participant ":AppUserRepository" as USERS
+participant ":UserRoleRepository" as ROLES
+database DB
+
+autonumber
+Principal -> UI : Open the Staff Management screen
+activate UI
+UI -> UI : loadModerators(page)
+UI -> CTL : GET /api/principal/moderators?page=&size=
+activate CTL
+CTL -> MODSVC : listModerators(pageable)
+activate MODSVC
+MODSVC -> USERS : findAllByRole(MODERATOR, pageable)
+activate USERS
+USERS -> DB : SELECT * FROM app_users JOIN user_roles ON the MODERATOR role ORDER BY created_at DESC LIMIT ? OFFSET ?
+activate DB
+DB --> USERS : rows
+deactivate DB
+USERS --> MODSVC : Page<AppUser>
+deactivate USERS
+MODSVC -> ROLES : findGrantedAtsByUserIds(userIds, MODERATOR)
+activate ROLES
+ROLES -> DB : SELECT user_id, granted_by, granted_at FROM user_roles WHERE user_id IN (?) AND the MODERATOR role
+activate DB
+DB --> ROLES : rows
+deactivate DB
+ROLES --> MODSVC : Map<UUID, Instant>
+deactivate ROLES
+MODSVC --> CTL : ModeratorListResult
+deactivate MODSVC
+CTL --> UI : HTTP 200 + Page<ModeratorDto>
+deactivate CTL
+
+UI -> UI : loadItStaff(page)
+UI -> CTL : GET /api/principal/it-staff?page=&size=
+activate CTL
+CTL -> ITSVC : list(pageable)
+activate ITSVC
+ITSVC -> USERS : findAllByRole(IT_STAFF, pageable)
+activate USERS
+USERS -> DB : SELECT * FROM app_users JOIN user_roles ON the IT_STAFF role ORDER BY created_at DESC LIMIT ? OFFSET ?
+activate DB
+DB --> USERS : rows
+deactivate DB
+USERS --> ITSVC : Page<AppUser>
+deactivate USERS
+ITSVC --> CTL : Page<AppUser>
+deactivate ITSVC
+CTL --> UI : HTTP 200 + Page<ItStaffDto>
+deactivate CTL
+
+alt no staff position is assigned yet
+  UI --> Principal : Show MSG01 and the forms that assign the positions
+else at least one position is assigned
+  UI --> Principal : Show every Moderator with subject, granting account and status, the IT Supporter position, and the Replace and Reactivate actions
+end
+deactivate UI
+@enduml

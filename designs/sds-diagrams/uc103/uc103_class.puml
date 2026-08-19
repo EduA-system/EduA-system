@@ -1,0 +1,105 @@
+@startuml UC-103 View Staff Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-103 View Staff Detail — Class Diagram
+
+class UserManagementPage <<client>> {
+  - moderatorData : PageResponse<SubjectAccountItem>
+  - itStaffData : PageResponse<AccountItem>
+  + loadModerators(page : int) : void
+  + openReplacement(item : SubjectAccountItem) : void
+}
+
+class UserProfileViewPage <<client>> {
+  - userId : String
+  - profile : UserProfileView
+  - loading : boolean
+  - error : String
+  + load() : void
+}
+
+class UserProfileViewDto <<dto>> {
+  + id : UUID
+  + fullName : String
+  + email : String
+  + bio : String
+  + role : Role
+  + subject : Subject
+  + grades : List<Integer>
+  + status : UserStatus
+  + grantedAt : Instant
+  + grantedByName : String
+}
+
+class UserController <<controller>> {
+  - profileViewService : UserProfileViewService
+  + viewProfile(id : UUID) : UserProfileViewDto
+}
+
+class UserProfileViewService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - currentUser : CurrentUserProvider
+  + view(targetId : UUID) : UserProfileViewDto
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+interface UserRoleRepository {
+  + findRolesByUserId(userId : UUID) : Set<Role>
+  + findGrantedAtsByUserIds(userIds : Collection<UUID>, role : Role) : Map<UUID, Instant>
+  + findGrantedByUserIdsByUserIds(userIds : Collection<UUID>, role : Role) : Map<UUID, UUID>
+}
+
+class JpaUserRoleRepository <<adapter>> {
+  - jpa : UserRoleJpaRepository
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - avatarUrl : String
+  - bio : String
+  - subject : Subject
+  - status : UserStatus
+}
+
+enum Role {
+  TEACHER
+  MODERATOR
+  PRINCIPAL
+  IT_STAFF
+  STUDENT
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+UserManagementPage ..> UserProfileViewPage : opens the read-only profile route
+UserProfileViewPage ..> UserController : calls API
+UserController ..> UserProfileViewDto : output
+UserController "1" --> "1" UserProfileViewService
+UserProfileViewService "1" --> "1" AppUserRepository
+UserProfileViewService "1" --> "1" UserRoleRepository
+JpaAppUserRepository ..|> AppUserRepository : implements
+JpaUserRoleRepository ..|> UserRoleRepository : implements
+AppUserRepository ..> AppUser : output
+UserRoleRepository ..> Role : output
+AppUser ..> UserStatus : DISABLED account is not visible
+UserProfileViewDto ..> Role : viewed position
+
+@enduml

@@ -1,0 +1,140 @@
+@startuml feat20 System Administration - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.20.1 System Administration — Class Diagram
+class ActivityLogPage <<user interaction>> {
+  - items : ActivityLogSummary [0..*]
+  - actorId : String
+  - category : ActivityLogCategory
+  + selectCategory(next : ActivityLogCategory)
+  + filterByActor(entry : ActivityLogSummary)
+  + load()
+}
+
+class ActivityLogController <<coordinator>> {
+  - service : ActivityLogService
+  + list(actorId, category, from, to, page, size) : Page
+}
+
+class ActivityLogService <<business logic>> {
+  - repository : ActivityLogRepository
+  - userRepository : AppUserRepository
+  + search(actorId, category, from, to, page, size) : Page
+  + record(actorId, actorRole, category, action, target)
+}
+
+class ActivityLogRepository <<interface>> {
+  {field}
+  --
+  + search(actorId, category, from, to, page, size) : SearchResult
+}
+
+class AppUserRepository <<interface>> {
+  {field}
+  --
+  + findAllById(ids : String [0..*]) : AppUser [0..*]
+}
+
+class ItStaffPage <<user interaction>> {
+  - prompts : EditablePrompt [0..*]
+  - query : String
+  - activeGroup : String
+  + load()
+  + save(prompt : EditablePrompt)
+}
+
+class ItStaffController <<coordinator>> {
+  - service : AiSystemPromptService
+  + list() : AiSystemPromptDto [0..*]
+  + update(key : AiPromptKey, request : UpdateAiSystemPromptRequest) : AiSystemPromptDto
+}
+
+class AiSystemPromptService <<business logic>> {
+  - repository : AiSystemPromptRepository
+  - templateCatalog : AiPromptTemplateCatalog
+  - activityLogService : ActivityLogService
+  + list() : AiSystemPrompt [0..*]
+  + update(key : AiPromptKey, instruction : String) : AiSystemPrompt
+  + apply(key : AiPromptKey, fixedPrompt : String) : String
+}
+
+class AiSystemPromptRepository <<interface>> {
+  {field}
+  --
+  + findByKey(key : AiPromptKey) : AiSystemPrompt
+  + save(prompt : AiSystemPrompt) : AiSystemPrompt
+}
+
+class AiPromptTemplateCatalog <<business logic>> {
+  + defaultInstruction(key : AiPromptKey) : String
+}
+
+class PromptCard <<user interaction>> {
+  - prompt : EditablePrompt
+  - saving : Boolean
+  - dirty : Boolean
+  + onChange(instruction : String)
+  + onSave()
+}
+
+class JpaActivityLogRepository <<database wrapper>> {
+  - jpa : ActivityLogJpaRepository
+}
+
+class JpaAppUserRepository <<database wrapper>> {
+  - jpa : AppUserJpaRepository
+}
+
+class JpaAiSystemPromptRepository <<database wrapper>> {
+  - jpa : AiSystemPromptJpaRepository
+}
+
+class ActivityLog <<entity>> {
+  - id : String
+  - actorId : String
+  - actorRole : String
+  - category : ActivityLogCategory
+  - action : ActivityLogAction
+}
+
+class AppUser <<entity>> {
+  - id : String
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  + isActiveOrInvited() : Boolean
+}
+
+class AiSystemPrompt <<entity>> {
+  - key : AiPromptKey
+  - instruction : String
+  - updatedBy : String
+  - updatedAt : Date
+}
+
+ActivityLogController "1" -- "1" ActivityLogService : Delegates to >
+ActivityLogService "1" -- "1" ActivityLogRepository : Accesses data through >
+ActivityLogService "1" -- "1" AppUserRepository : Accesses data through >
+ItStaffController "1" -- "1" AiSystemPromptService : Delegates to >
+AiSystemPromptService "1" -- "1" AiSystemPromptRepository : Accesses data through >
+AiSystemPromptService "1" -- "1" AiPromptTemplateCatalog : Uses >
+AiSystemPromptService "1" -- "1" ActivityLogService : Uses >
+ActivityLogPage "1" -- "1" ActivityLogController : Sends requests to >
+ItStaffPage "1" -- "1" ActivityLogController : Sends requests to >
+PromptCard "1" -- "1" ActivityLogController : Sends requests to >
+ItStaffPage "1" *-- "0..*" PromptCard : renders one card per prompt
+JpaAiSystemPromptRepository ..|> AiSystemPromptRepository
+JpaAppUserRepository ..|> AppUserRepository
+JpaActivityLogRepository ..|> ActivityLogRepository
+JpaActivityLogRepository "1" -- "0..*" ActivityLog : Maps >
+JpaAppUserRepository "1" -- "0..*" ActivityLog : Maps >
+JpaAiSystemPromptRepository "1" -- "0..*" ActivityLog : Maps >
+
+@enduml

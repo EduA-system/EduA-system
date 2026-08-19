@@ -1,0 +1,128 @@
+@startuml feat17 Authentication and Profile Management - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.17.1 Authentication and Profile Management — Class Diagram
+class AuthFlow <<user interaction>> {
+  - status : AuthStatus
+  - postLoginHref : String
+  + handleCredential(credential : String)
+}
+
+class AuthController <<coordinator>> {
+  - authService : AuthService
+  + loginWithGoogle(request : GoogleLoginRequest) : ResponseEntity<AuthResponse>
+  + logout(refreshToken : String) : ResponseEntity<Void>
+}
+
+class AuthService <<business logic>> {
+  - userRepository : AppUserRepository
+  - refreshTokenRepository : RefreshTokenRepository
+  + loginWithGoogle(idToken : String) : LoginResult
+  + logout(rawRefreshToken : String)
+}
+
+class AppUserRepository <<interface>> {
+  {field}
+  --
+  + findByEmail(email : String) : AppUser
+  + save(user : AppUser) : AppUser
+  + findById(id : String) : AppUser
+}
+
+class RefreshTokenRepository <<interface>> {
+  {field}
+  --
+  + save(token : RefreshToken) : RefreshToken   // luu SHA-256 hash
+  + findByTokenHash(tokenHash : String) : RefreshToken
+  + revoke(id : String)
+}
+
+class AuthContext <<user interaction>> {
+  - user : AuthUser
+  - accessToken : String
+  + useAuth() : AuthState
+  + logout()
+}
+
+class UserProfilePage <<user interaction>> {
+  - fullName : String
+  - avatarFile : File
+  - saving : Boolean
+  + uploadAvatar(file : File) : String
+  + saveProfile()
+}
+
+class UploadService <<business logic>> {
+  - storageClient : StorageClient
+  + upload(data : byte[], fileName : String, contentType : String) : UploadResponse
+}
+
+class StorageClient <<interface>> {
+  {field}
+  --
+  + store(key : String, data : byte[], contentType : String) : String
+}
+
+class UserController <<coordinator>> {
+  - profileService : ProfileService
+  + updateMe(request : UpdateProfileRequest) : UserDto
+  + viewProfile(id : String) : UserProfileViewDto
+}
+
+class ProfileService <<business logic>> {
+  - userRepository : AppUserRepository
+  + updateCurrentUserProfile(fullName, avatarUrl, contactInfo, bio, phoneNumber, dateOfBirth) : ProfileResult
+}
+
+class JpaAppUserRepository <<database wrapper>> {
+  - jpa : AppUserJpaRepository
+}
+
+class JpaRefreshTokenRepository <<database wrapper>> {
+  - jpa : RefreshTokenJpaRepository
+}
+
+class R2StorageAdapter <<proxy>> {
+  - bucket : String
+  - publicUrl : String
+}
+
+class AppUser <<entity>> {
+  - id : String
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  + isActiveOrInvited() : Boolean
+}
+
+class RefreshToken <<entity>> {
+  - id : String
+  - userId : String
+  - tokenHash : String
+  - expiresAt : Date
+  - revoked : Boolean
+}
+
+AuthController "1" -- "1" AuthService : Delegates to >
+AuthService "1" -- "1" AppUserRepository : Accesses data through >
+AuthService "1" -- "1" RefreshTokenRepository : Accesses data through >
+UploadService "1" -- "1" StorageClient : Stores files through >
+UserController "1" -- "1" ProfileService : Delegates to >
+ProfileService "1" -- "1" AppUserRepository : Accesses data through >
+AuthFlow "1" -- "1" AuthController : Sends requests to >
+AuthContext "1" -- "1" AuthController : Sends requests to >
+UserProfilePage "1" -- "1" AuthController : Sends requests to >
+JpaRefreshTokenRepository ..|> RefreshTokenRepository
+R2StorageAdapter ..|> StorageClient
+JpaAppUserRepository ..|> AppUserRepository
+JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
+JpaRefreshTokenRepository "1" -- "0..*" AppUser : Maps >
+
+@enduml

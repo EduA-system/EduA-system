@@ -1,0 +1,70 @@
+@startuml UC-105 Replace Moderator Account - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-105 Replace Moderator Account — Sequence Diagram
+
+actor Principal
+participant ":UserManagementPage" as UI
+participant ":PrincipalController" as CTL
+participant ":PrincipalModeratorService" as SVC
+participant ":AppUserRepository" as USERS
+participant ":UserRoleRepository" as ROLES
+participant ":ActivityLogService" as AUDIT
+database DB
+
+autonumber
+Principal -> UI : Click "Replace Moderator" on the current Moderator of a subject
+activate UI
+UI -> UI : openReplacement(item)
+Principal -> UI : Enter the replacement email, choose whether to deactivate the former account, pick the grades it keeps as a Teacher and confirm (MSG30 / MSG32)
+UI -> UI : replaceModerator()
+
+alt the replacement email is missing or invalid, or no grade is selected for the demoted Teacher
+  UI --> Principal : Highlight the field and keep the form open with no role, assignment or status changed (MSG02 / MSG03)
+else the replacement form is valid
+  UI -> CTL : POST /api/principal/moderators/{id}/replacement
+  activate CTL
+  CTL -> SVC : replaceModerator(id, replacementEmail, disablePrevious, grades)
+  activate SVC
+  SVC -> USERS : findById(id)
+  activate USERS
+  USERS --> SVC : Optional<AppUser>
+  deactivate USERS
+  SVC -> USERS : findByEmail(replacementEmail)
+  activate USERS
+  USERS --> SVC : Optional<AppUser>
+  deactivate USERS
+  SVC -> SVC : accept only an account that still holds the MODERATOR role, is not DISABLED and has a subject (MSG34), a replacement email different from the current one (MSG28) and a replacement eligible for that subject (MSG27 / MSG29)
+  SVC -> USERS : save(former Moderator, status DISABLED when the Principal asked for it)
+  activate USERS
+  USERS -> DB : UPDATE app_users SET status WHERE id = ?
+  deactivate USERS
+  SVC -> ROLES : replaceRole(formerModeratorId, TEACHER, grantedBy, grantedAt)
+  SVC -> SVC : when the former account is deactivated, archive its ACTIVE classes and revoke its refresh tokens, otherwise keep it as an active Teacher of the selected grades
+  SVC -> USERS : save(replacement account, created with status INVITED when the email is new)
+  activate USERS
+  USERS -> DB : INSERT INTO app_users or UPDATE the existing account of that subject
+  deactivate USERS
+  SVC -> ROLES : replaceRole(replacementId, MODERATOR, grantedBy, grantedAt)
+  activate ROLES
+  ROLES -> DB : DELETE the previous user_roles rows and INSERT both new grants inside the same transaction
+  deactivate ROLES
+  SVC -> AUDIT : record(actorId, PRINCIPAL, ACCOUNT, REPLACE_MODERATOR, replacement account)
+  activate AUDIT
+  AUDIT -> DB : INSERT INTO activity_logs the REPLACE_MODERATOR entry carrying the former Moderator id
+  deactivate AUDIT
+  SVC --> CTL : AppUser
+  deactivate SVC
+  CTL --> UI : HTTP 200 + ModeratorDto
+  deactivate CTL
+  UI --> Principal : Show MSG31 / MSG33 and refresh the Staff List with the new Moderator
+end
+deactivate UI
+@enduml

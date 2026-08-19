@@ -1,0 +1,71 @@
+@startuml UC-38 Add Student - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-38 Add Student — Sequence Diagram
+
+actor Teacher
+participant ":AddStudentPage" as UI
+participant ":ClassController" as CTL
+participant ":ClassEnrollmentService" as SVC
+participant ":ClassMemberRepository" as MEM
+participant ":AppUserRepository" as USERS
+database DB
+
+autonumber
+Teacher -> UI : Select "Add Student" on the Class Members screen of an owned ACTIVE class, then enter the student full name, phone number, date of birth and Gmail and click "Add"
+activate UI
+UI -> UI : handleAddStudent(event)
+UI -> CTL : POST /api/classes/{id}/members
+activate CTL
+CTL -> SVC : addStudent(classId, fullName, phoneNumber, dateOfBirth, email)
+activate SVC
+SVC -> SVC : resolve the class and accept only an owned class that is still ACTIVE, with a valid Gmail and a complete student profile
+SVC -> USERS : findByEmail(email)
+activate USERS
+USERS -> DB : SELECT * FROM app_users WHERE email = ?
+activate DB
+DB --> USERS : row / none
+deactivate DB
+USERS --> SVC : Optional<AppUser>
+deactivate USERS
+SVC -> MEM : existsByClassIdAndStudentId(classId, studentId)
+activate MEM
+MEM -> DB : SELECT 1 FROM class_members WHERE class_id = ? AND student_id = ? AND status = 'ENROLLED'
+activate DB
+DB --> MEM : match / none
+deactivate DB
+MEM --> SVC : boolean
+deactivate MEM
+SVC -> SVC : reject an already enrolled Gmail, a disabled account, a conflicting role or a profile that does not match the existing account
+
+alt class is not owned or is INACTIVE, the entered student data is invalid, or the Gmail is already enrolled
+  SVC --> CTL : ForbiddenOperationException / IllegalArgumentException / ClassEnrollmentConflictException
+  CTL --> UI : HTTP 403 / 400 / 409
+  UI --> Teacher : Show MSG23, MSG02, MSG03 or the already-enrolled message and keep the Class Members list unchanged
+
+else the teacher owns an ACTIVE class and the entered student data is valid
+  SVC -> SVC : create a student account for a Gmail that has no account yet and grant it the STUDENT role
+  SVC -> MEM : save(ClassMember with status ENROLLED)
+  activate MEM
+  MEM -> DB : INSERT INTO class_members enrollment columns
+  activate DB
+  DB --> MEM : Saved
+  deactivate DB
+  MEM --> SVC : ClassMember
+  deactivate MEM
+  SVC --> CTL : MemberSummary
+  CTL --> UI : HTTP 201 + ClassMemberDto
+  UI -> UI : loadMembers(id)
+  UI --> Teacher : Show MSG08 and the refreshed Class Members list containing the added student
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

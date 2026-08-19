@@ -1,0 +1,109 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 0
+skinparam shadowing false
+skinparam classFontSize 13
+skinparam nodesep 30
+skinparam ranksep 60
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #666666
+  ArrowColor #555555
+}
+skinparam class<<ref>> {
+  BackgroundColor #F0F0F0
+  BorderColor #AAAAAA
+}
+
+title Lop hoc & nop bai
+
+entity "classes" as classes {
+  *id : UUID <<PK>>
+  --
+  owner_id : UUID <<FK>>
+  name : VARCHAR(255)
+  description : TEXT
+  subject : VARCHAR(20)
+  grade : INTEGER
+  status : VARCHAR(20)
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "class_members" as class_members {
+  *id : UUID <<PK>>
+  --
+  class_id : UUID <<FK UQ>>
+  student_id : UUID <<FK UQ>>
+  removed_by : UUID <<FK>>
+  joined_at : TIMESTAMPTZ
+  status : VARCHAR(20)
+  removed_at : TIMESTAMPTZ
+  removed_reason : VARCHAR(500)
+  rejoined_at : TIMESTAMPTZ
+}
+
+entity "class_resources" as class_resources {
+  *id : UUID <<PK>>
+  --
+  class_id : UUID <<FK>>
+  posted_by : UUID <<FK>>
+  source_library_content_id : UUID <<FK>>
+  title : VARCHAR(255)
+  description : TEXT
+  source_type : VARCHAR(20)
+  thumbnail_url : TEXT
+  attachment_file_id : VARCHAR(255)
+  attachment_url : TEXT
+  attachment_file_name : VARCHAR(255)
+  attachment_content_type : VARCHAR(100)
+  attachment_size_bytes : BIGINT
+  submission_enabled : BOOLEAN
+  deadline : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "submissions" as submissions {
+  *id : UUID <<PK>>
+  --
+  class_resource_id : UUID <<FK UQ>>
+  student_id : UUID <<FK UQ>>
+  text_content : TEXT
+  status : VARCHAR(20)
+  submitted_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "submission_files" as submission_files {
+  *id : UUID <<PK>>
+  --
+  submission_id : UUID <<FK>>
+  url : TEXT
+  file_name : VARCHAR(255)
+  content_type : VARCHAR(100)
+  size_bytes : BIGINT
+}
+
+entity "app_users" as app_users <<ref>> {
+  *id : UUID <<PK>>
+}
+
+entity "library_contents" as library_contents <<ref>> {
+  *id : UUID <<PK>>
+}
+
+
+app_users ||--o{ classes
+classes ||--o{ class_members
+app_users ||--o{ class_members
+app_users |o--o{ class_members
+classes ||--o{ class_resources
+app_users ||--o{ class_resources
+library_contents |o--o{ class_resources
+class_resources ||--o{ submissions
+app_users ||--o{ submissions
+submissions ||--o{ submission_files
+@enduml

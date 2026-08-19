@@ -1,0 +1,143 @@
+@startuml feat18 Teacher Account Management - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.18.1 Teacher Account Management — Class Diagram
+class UserManagementContent <<user interaction>> {
+  - moderatorData : PageResponse<SubjectAccountItem>
+  - msg : String
+  - itStaffEmail : String
+  + loadTeachers(page : number)
+  + openTeacherEdit(item : SubjectAccountItem)
+  + addTeacher()
+  + saveTeacherEdit()
+  + toggleTeacher(item : SubjectAccountItem)
+  + confirmDisableAccount()
+}
+
+class ModeratorController <<coordinator>> {
+  - moderatorTeacherService : ModeratorTeacherService
+  + listTeachers(page : Integer, size : Integer) : TeacherDtoPage
+  + addTeacher(request : AddTeacherRequest) : TeacherDto
+  + updateTeacher(id : String, request : UpdateTeacherRequest) : TeacherDto
+  + reactivateTeacher(id : String) : TeacherDto
+  + deleteTeacher(id : String)
+}
+
+class ModeratorTeacherService <<business logic>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - classRepository : ClassRepository
+  - refreshTokenRepository : RefreshTokenRepository
+  + listTeachers(pageable : page : Integer, size : Integer) : TeacherListResult
+  + addTeacher(email, subject, fullName, grades) : AppUser
+  + updateTeacher(id, fullName, phoneNumber, dateOfBirth, grades) : AppUser
+  + reactivateTeacher(id : String) : AppUser
+  + deleteTeacher(id : String)
+}
+
+class AppUserRepository <<interface>> {
+  {field}
+  --
+  + findAllByRoleAndSubject(role, subject, pageable) : AppUserPage
+  + findAllById(ids : String [0..*]) : AppUser [0..*]
+  + findByEmail(email : String) : AppUser
+  + save(user : AppUser) : AppUser
+  + findById(id : String) : AppUser
+}
+
+class UserRoleRepository <<interface>> {
+  {field}
+  --
+  + findGrantedByUserIdsByUserIds(userIds : String [0..*], role : Role) : Map
+  + findGrantedAtsByUserIds(userIds : String [0..*], role : Role) : Map
+  + replaceRole(userId, role, grantedBy, grantedAt)
+  + findRolesByUserId(userId : String) : Role [0..*]
+}
+
+class TeacherGradeRepository <<interface>> {
+  {field}
+  --
+  + findGradesByUserIds(userIds : String [0..*]) : Map
+  + replaceGrades(userId : String, grades : Integer [0..*])
+}
+
+class ClassRepository <<interface>> {
+  {field}
+  --
+  + deactivateActiveByOwnerIdExcludingGrades(ownerId, keepGrades) : Integer
+  + archiveActiveByOwnerId(ownerId : String) : Integer
+}
+
+class RefreshTokenRepository <<interface>> {
+  {field}
+  --
+  + revokeAllByUserId(userId : String)
+}
+
+class JpaAppUserRepository <<database wrapper>> {
+  - jpa : AppUserJpaRepository
+}
+
+class JpaUserRoleRepository <<database wrapper>> {
+  - jpa : UserRoleJpaRepository
+}
+
+class JpaClassRepository <<database wrapper>> {
+  - jpa : ClassJpaRepository
+}
+
+class JpaRefreshTokenRepository <<database wrapper>> {
+  - jpa : RefreshTokenJpaRepository
+}
+
+class AppUser <<entity>> {
+  - id : String
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  + isActiveOrInvited() : Boolean
+}
+
+class Classroom <<entity>> {
+  - id : String
+  - ownerId : String
+  - name : String
+  - subject : Subject
+  - grade : Integer
+  + isOwnedBy(userId : String) : Boolean
+  + isActive() : Boolean
+}
+
+class RefreshToken <<entity>> {
+  - id : String
+  - userId : String
+  - tokenHash : String
+  - expiresAt : Date
+  - revoked : Boolean
+}
+
+ModeratorController "1" -- "1" ModeratorTeacherService : Delegates to >
+ModeratorTeacherService "1" -- "1" AppUserRepository : Accesses data through >
+ModeratorTeacherService "1" -- "1" UserRoleRepository : Accesses data through >
+ModeratorTeacherService "1" -- "1" TeacherGradeRepository : Accesses data through >
+ModeratorTeacherService "1" -- "1" ClassRepository : Accesses data through >
+ModeratorTeacherService "1" -- "1" RefreshTokenRepository : Accesses data through >
+UserManagementContent "1" -- "1" ModeratorController : Sends requests to >
+JpaRefreshTokenRepository ..|> RefreshTokenRepository
+JpaAppUserRepository ..|> AppUserRepository
+JpaUserRoleRepository ..|> UserRoleRepository
+JpaClassRepository ..|> ClassRepository
+JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
+JpaUserRoleRepository "1" -- "0..*" AppUser : Maps >
+JpaClassRepository "1" -- "0..*" AppUser : Maps >
+JpaRefreshTokenRepository "1" -- "0..*" AppUser : Maps >
+
+@enduml

@@ -1,0 +1,90 @@
+@startuml UC-110 Export School Performance Report - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-110 Export School Performance Report — Class Diagram
+
+class PrincipalStatisticsScreen <<client>> {
+  - weeklySubject : Subject
+  - exporting : boolean
+  - error : String
+  + exportReport() : void
+}
+
+class StatisticsReportDto <<dto>> {
+  + fileName : String
+  + downloadUrl : String
+}
+
+class PrincipalStatisticsController <<controller>> {
+  - reportService : PrincipalStatisticsReportService
+  + exportReport(from, to, subject) : StatisticsReportDto
+}
+
+class PrincipalStatisticsReportService <<service>> {
+  - statisticsService : PrincipalStatisticsService
+  - htmlBuilder : StatisticsReportHtmlBuilder
+  - pdfRenderer : DocumentPdfRenderer
+  - storageClient : StorageClient
+  + exportPdf(from, to, subject) : DocumentExportResult
+}
+
+class PrincipalStatisticsService <<service>> {
+  + aiContentTrend(rawMonths : int) : AiContentTrend
+  + weeklyTaskStatus(from, to, subject) : WeeklyTaskStatus
+  + communityHubReview() : CommunityHubReview
+  + accountsByRole(subject : Subject) : AccountsByRole
+}
+
+class SchoolStatisticsReport <<dto>> {
+  + from : LocalDate
+  + to : LocalDate
+  + subject : Subject
+  + contentTrend : AiContentTrend
+  + weeklyTaskStatus : WeeklyTaskStatus
+  + accountsByRole : AccountsByRole
+}
+
+class StatisticsReportHtmlBuilder <<service>> {
+  + build(report : SchoolStatisticsReport) : String
+}
+
+interface DocumentPdfRenderer {
+  + render(html : String) : byte[]
+}
+
+class OpenHtmlDocumentPdfRenderer <<adapter>> {
+  - fontResources : List<String>
+}
+
+interface StorageClient {
+  + store(key : String, data : byte[], contentType : String) : String
+}
+
+class R2StorageAdapter <<adapter>> {
+  - bucket : String
+  - publicUrl : String
+}
+
+class DocumentExportResult <<dto>> {
+  + fileName : String
+  + downloadUrl : String
+}
+
+PrincipalStatisticsScreen ..> PrincipalStatisticsController : calls API
+PrincipalStatisticsScreen ..> StatisticsReportDto : output
+PrincipalStatisticsController ..> StatisticsReportDto : output
+PrincipalStatisticsController "1" --> "1" PrincipalStatisticsReportService
+PrincipalStatisticsReportService "1" --> "1" PrincipalStatisticsService
+PrincipalStatisticsReportService "1" --> "1" StatisticsReportHtmlBuilder
+PrincipalStatisticsReportService "1" --> "1" DocumentPdfRenderer
+PrincipalStatisticsReportService "1" --> "1" StorageClient
+PrincipalStatisticsReportService ..> DocumentExportResult : output
+StatisticsReportHtmlBuilder ..> SchoolStatisticsReport : input
+OpenHtmlDocumentPdfRenderer ..|> DocumentPdfRenderer : implements
+R2StorageAdapter ..|> StorageClient : implements
+
+@enduml

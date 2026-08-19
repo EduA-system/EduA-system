@@ -1,0 +1,113 @@
+@startuml UC-57 View Electron Model - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-57 View Electron Model — Class Diagram
+
+class ElementDetailPanel <<client>> {
+  - shown : Element
+  - mode : ModelMode
+  - activeShell : Integer
+  - activeSubshell : String
+  - paused : boolean
+  + render() : ReactNode
+  + scrollPills(dir : number) : void
+}
+
+class EnergyDiagram <<client>> {
+  - subshells : EnergySubshell [0..*]
+  - activeSubshell : String
+  + render() : ReactNode
+}
+
+class OrbitalData <<client>> {
+  + AUFBAU_ORDER : String [0..*]
+  + SUBSHELL_CAPACITY : Map<SubshellType, int>
+  + parseElectronConfig(config : String) : Subshell[]
+  + getShellDistribution(config : String) : ElectronShell[]
+  + getEnergySubshells(config : String) : EnergySubshell[]
+  + fillOrbitalBoxes(type : SubshellType, electrons : int) : OrbitalBox[]
+  + subshellKey(subshell : Subshell) : String
+}
+
+class AtomModel3D <<client>> {
+  - atomicNumber : int
+  - protons : int
+  - neutrons : Integer
+  - electronConfig : String
+  - mode : ModelMode
+  - activeShell : Integer
+  - activeSubshell : String
+  - paused : boolean
+  + render() : ReactNode
+}
+
+class LayerScene <<client>> {
+  - shells : ElectronShell [0..*]
+  + render() : ReactNode
+}
+
+class LayerRing <<client>> {
+  - shellIndex : int
+  - radius : number
+  - ringColor : String
+  + render() : ReactNode
+}
+
+class Nucleus <<client>> {
+  - protons : int
+  - neutrons : Integer
+  + render() : ReactNode
+}
+
+class Element <<dto>> {
+  + atomicNumber : int
+  + symbol : String
+  + nameVi : String
+  + electronConfig : String
+  + protons : int
+  + electrons : int
+  + representativeIsotope : RepresentativeIsotope
+}
+
+class ElectronShell <<dto>> {
+  + n : int
+  + electrons : int
+}
+
+class Subshell <<dto>> {
+  + n : int
+  + type : SubshellType
+  + electrons : int
+}
+
+class EnergySubshell <<dto>> {
+  + key : String
+  + boxes : OrbitalBox [0..*]
+}
+
+enum ModelMode {
+  shell
+  orbital
+}
+
+ElementDetailPanel ..> Element : input
+ElementDetailPanel ..> OrbitalData : uses
+ElementDetailPanel "1" *-- "1" AtomModel3D : contains
+ElementDetailPanel "1" *-- "0..1" EnergyDiagram : contains
+ElementDetailPanel ..> ModelMode : shell or orbital view
+AtomModel3D ..> OrbitalData : uses
+AtomModel3D "1" *-- "1" LayerScene : contains
+LayerScene "1" *-- "1" Nucleus : contains
+LayerScene "1" *-- "0..*" LayerRing : contains
+OrbitalData ..> ElectronShell : output
+OrbitalData ..> EnergySubshell : output
+ElectronShell "1" *-- "1..*" Subshell : contains
+EnergySubshell --|> Subshell
+EnergyDiagram ..> EnergySubshell : input
+LayerRing ..> ElectronShell : input
+
+@enduml

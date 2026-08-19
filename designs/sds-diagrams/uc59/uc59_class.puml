@@ -1,0 +1,81 @@
+@startuml UC-59 View Molecule Structure - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-59 View Molecule Structure — Class Diagram
+
+class MoleculesPage <<client>> {
+  + render() : ReactNode
+}
+
+class MoleculeExplorer <<client>> {
+  - query : String
+  - family : Family
+  - molecule : Molecule
+  - mode : RenderMode
+  - rotating : boolean
+  - choices : Molecule [0..*]
+  + render() : ReactNode
+  + selectMolecule(item : Molecule) : void
+  - parseFormula(formula : String) : Composition[]
+  - getScientificDescription(molecule, generatedByAi) : String
+}
+
+class MoleculeCatalog <<client>> {
+  + MOLECULE_CATALOG : Molecule [0..*]
+  + findMolecules(query : String, family : Family) : Molecule[]
+}
+
+class MoleculeViewer <<client>> {
+  - mode : RenderMode
+  - rotating : boolean
+  - theme : String
+  + render() : ReactNode
+}
+
+class Scene <<client>> {
+  - geometry : PositionedMolecule
+  + render() : ReactNode
+}
+
+class MoleculeGeometry <<client>> {
+  + VALENCE : Map<ElementSymbol, int>
+  + buildGeometry(molecule : Molecule) : PositionedMolecule
+  - centerOnOrigin(atoms : MoleculeAtom[]) : MoleculeAtom[]
+}
+
+class Molecule <<dto>> {
+  + name : String
+  + formula : String
+}
+
+class MoleculeAtom <<dto>> {
+  + element : ElementSymbol
+  + position : [number, number, number]
+}
+
+class MoleculeBond <<dto>> {
+  + from : int
+  + to : int
+  + order : int
+}
+
+enum RenderMode {
+  ballAndStick
+  spaceFilling
+}
+
+MoleculesPage "1" *-- "1" MoleculeExplorer : contains
+MoleculeExplorer ..> MoleculeCatalog : uses
+MoleculeExplorer "1" *-- "1" MoleculeViewer : contains
+MoleculeExplorer ..> RenderMode : ball-and-stick or space-filling
+MoleculeViewer "1" *-- "1" Scene : contains
+Scene ..> MoleculeGeometry : uses
+MoleculeCatalog "1" *-- "0..*" Molecule : contains
+Molecule "1" *-- "1..*" MoleculeAtom : contains
+Molecule "1" *-- "0..*" MoleculeBond : contains
+
+@enduml

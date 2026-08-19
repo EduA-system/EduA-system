@@ -1,0 +1,168 @@
+@startuml
+title EDUA System - Package Diagram (Frontend)
+
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowFontSize 12
+skinparam nodesep 14
+skinparam ranksep 24
+skinparam PackageBackgroundColor #FFFFFF
+skinparam PackageBorderColor #333333
+skinparam RectangleBackgroundColor #FFFFFF
+
+package "fe (Next.js 16 App Router)" as FE {
+
+  package "app" as APP {
+    package "lesson plan routes\n(lesson-create, lesson-edit,\nlesson-plan-approval)" as A1 {
+    }
+    package "slide routes\n(slide-create, slide-maker,\nslide-present, slide-layout-gallery)" as A2 {
+    }
+    package "classroom and exam routes\n(list-class, class-detail, class-resource-*,\nexam-*-new, weekly-schedule)" as A3 {
+    }
+
+    package "content and community routes\n(blog, community-hub, hub-moderation,\nlibrary, molecules, periodic-table, sandbox)" as A4 {
+    }
+    package "account and admin routes\n(dashboard, statistics, notifications,\nuser-profile, user-management, it-staff, login)" as A5 {
+    }
+    package "api\n(Route Handlers for long AI calls)" as A6 {
+    }
+
+    A1 -[hidden]right- A2
+    A2 -[hidden]right- A3
+    A4 -[hidden]right- A5
+    A5 -[hidden]right- A6
+    A1 -[hidden]down- A4
+  }
+
+  package "components" as CMP {
+    package "LessonEditor" as C1 {
+    }
+    package "lesson-plan" as C2 {
+    }
+    package "outline-editor" as C3 {
+    }
+    package "slide-editor" as C4 {
+    }
+
+    package "slide-maker" as C5 {
+    }
+    package "slide-presentation" as C6 {
+    }
+    package "classroom" as C7 {
+    }
+    package "weeklytask" as C8 {
+    }
+
+    package "blog" as C9 {
+    }
+    package "hub" as C10 {
+    }
+    package "dashboard" as C11 {
+    }
+    package "user-profile" as C12 {
+    }
+
+    package "molecules" as C13 {
+    }
+    package "periodic-table" as C14 {
+    }
+    package "simulations" as C15 {
+    }
+    package "sandbox" as C16 {
+    }
+
+    package "layout" as C17 {
+    }
+    package "ui" as C18 {
+    }
+
+    C1 -[hidden]down- C5
+    C5 -[hidden]down- C9
+    C9 -[hidden]down- C13
+    C13 -[hidden]down- C17
+
+    C2 -[hidden]down- C6
+    C6 -[hidden]down- C10
+    C10 -[hidden]down- C14
+    C14 -[hidden]down- C18
+
+    C3 -[hidden]down- C7
+    C7 -[hidden]down- C11
+    C11 -[hidden]down- C15
+
+    C4 -[hidden]down- C8
+    C8 -[hidden]down- C12
+    C12 -[hidden]down- C16
+
+    C1 -[hidden]right- C2
+    C2 -[hidden]right- C3
+    C3 -[hidden]right- C4
+  }
+
+  package "lib" as LIB {
+    package "api\n(slides, slide-design,\nmolecule-build, sandbox)" as L1 {
+    }
+    package "ws\n(STOMP clients)" as L2 {
+    }
+    package "auth" as L3 {
+    }
+
+    package "slide-create" as L4 {
+    }
+    package "slide-layout" as L5 {
+    }
+    package "slide-assets" as L6 {
+    }
+
+    package "sandbox" as L7 {
+    }
+    package "periodic-table" as L8 {
+    }
+    package "domain helpers\n(blog, classroom, hub, library,\nnotifications, weekly-task, statistics)" as L9 {
+    }
+
+    L1 -[hidden]down- L4
+    L4 -[hidden]down- L7
+    L2 -[hidden]down- L5
+    L5 -[hidden]down- L8
+    L3 -[hidden]down- L6
+    L6 -[hidden]down- L9
+
+    L1 -[hidden]right- L2
+    L2 -[hidden]right- L3
+  }
+
+  package "services" as SVC {
+  }
+  package "stores" as STO {
+  }
+  package "data" as DAT {
+  }
+  package "next.config.ts\n(rewrite /api/* -> BACKEND_URL)" as CFG {
+  }
+
+  SVC -[hidden]right- STO
+  STO -[hidden]right- DAT
+  DAT -[hidden]right- CFG
+}
+
+rectangle "EDUA Backend\nSpring Boot REST API + STOMP /ws" as BE <<external>>
+
+APP ..> CMP : renders
+APP ..> LIB : uses
+APP ..> SVC : uses
+APP ..> STO : uses
+APP ..> DAT : uses
+CMP ..> LIB : uses
+CMP ..> STO : uses
+CMP ..> DAT : uses
+
+L1 ..> BE : HTTPS REST (direct)
+L2 ..> BE : WebSocket / STOMP
+L9 ..> BE : HTTPS REST via /api/*
+SVC ..> BE : HTTPS REST via /api/*
+A6 ..> BE : server-side proxy REST
+CFG ..> BE : rewrite target
+
+@enduml

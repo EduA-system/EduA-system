@@ -1,0 +1,101 @@
+@startuml feat07 Periodic Table - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.7.1 Periodic Table — Class Diagram
+class PeriodicTablePage <<user interaction>> {
+  - displayMode : DisplayMode
+  - groupMode : GroupMode
+  - colorMode : ColorMode
+  + handleSelectElement(el : Element)
+}
+
+class RouteGuard <<user interaction>> {
+  - pathname : String
+  - requiresAuth : Boolean
+  + render() : ReactNode
+}
+
+class PeriodicTableData <<user interaction>> {
+  + ELEMENTS : Element [0..*]
+  + ELEMENTS_BY_NUMBER : Map
+  + applyFilters(elements, filters, query, quickRange) : number [0..*]
+  + computeRange(elements : Element[], prop : String) : Range
+}
+
+class PeriodicTable <<user interaction>> {
+  - hoveredLegendKey : String
+  - openDropdown : DropdownKey
+  - selectedElement : Element
+  + render() : ReactNode
+}
+
+class FilterPanel <<user interaction>> {
+  - local : FilterState
+  + render() : ReactNode
+}
+
+class ElementDetailPanel <<user interaction>> {
+  - element : PeriodicElement
+  - shown : Element
+  - mode : ModelMode
+  + render() : ReactNode
+  - formatAtomicWeight(weight : AtomicWeight) : String
+  - formatTemp(c : number) : String
+  - formatVal(v : number, unit : String) : String
+}
+
+class OrbitalData <<user interaction>> {
+  + AUFBAU_ORDER : String [0..*]
+  + SUBSHELL_CAPACITY : Map
+  + getShellDistribution(config : String) : ElectronShell[]
+  + parseElectronConfig(config : String) : Subshell[]
+  + getEnergySubshells(config : String) : EnergySubshell[]
+}
+
+class AtomModel3D <<user interaction>> {
+  - atomicNumber : Integer
+  - protons : Integer
+  - neutrons : Integer
+  + render() : ReactNode
+}
+
+class LayerScene <<user interaction>> {
+  - shells : ElectronShell [0..*]
+  + render() : ReactNode
+}
+
+class LayerRing <<user interaction>> {
+  - shellIndex : Integer
+  - radius : number
+  - ringColor : String
+  + render() : ReactNode
+}
+
+class EnergyDiagram <<user interaction>> {
+  - subshells : EnergySubshell [0..*]
+  - activeSubshell : String
+  + render() : ReactNode
+}
+
+class ElementCard <<user interaction>> {
+  - isVisible : Boolean
+  - isSelected : Boolean
+  + render() : ReactNode
+}
+
+PeriodicTablePage "1" *-- "0..*" PeriodicTable : contains
+PeriodicTablePage "1" *-- "0..*" FilterPanel : contains
+PeriodicTable "1" *-- "0..*" ElementCard : contains
+ElementDetailPanel "1" *-- "0..*" AtomModel3D : contains
+ElementDetailPanel "1" *-- "0..*" EnergyDiagram : contains
+AtomModel3D "1" *-- "0..*" LayerScene : contains
+LayerScene "1" *-- "0..*" LayerRing : contains
+PeriodicTablePage "1" *-- "0..*" ElementDetailPanel : contains
+
+@enduml

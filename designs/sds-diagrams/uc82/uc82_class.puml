@@ -1,0 +1,85 @@
+@startuml UC-82 Deactivate Teacher Account - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-82 Deactivate Teacher Account — Class Diagram
+
+class UserManagementContent <<client>> {
+  - disableAccountTarget : DisableAccountTarget
+  - disablingAccount : boolean
+  - msg : String
+  + toggleTeacher(item : SubjectAccountItem) : void
+  + confirmDisableAccount() : void
+  + loadTeachers(page : number) : void
+}
+
+class ModeratorController <<controller>> {
+  - moderatorTeacherService : ModeratorTeacherService
+  + deleteTeacher(id : UUID) : void
+}
+
+class ModeratorTeacherService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - classRepository : ClassRepository
+  - refreshTokenRepository : RefreshTokenRepository
+  - activityLogService : ActivityLogService
+  + deleteTeacher(id : UUID) : void
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+}
+
+interface UserRoleRepository {
+  + findRolesByUserId(userId : UUID) : Set<Role>
+}
+
+interface ClassRepository {
+  + archiveActiveByOwnerId(ownerId : UUID) : int
+}
+
+interface RefreshTokenRepository {
+  + revokeAllByUserId(userId : UUID) : void
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  + record(actorId, actorRole, category, action, targetType, targetId) : void
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+  + isActiveOrInvited() : boolean
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+UserManagementContent ..> ModeratorController : calls API
+ModeratorController "1" --> "1" ModeratorTeacherService
+ModeratorTeacherService "1" --> "1" AppUserRepository
+ModeratorTeacherService "1" --> "1" UserRoleRepository
+ModeratorTeacherService "1" --> "1" ClassRepository
+ModeratorTeacherService "1" --> "1" RefreshTokenRepository
+ModeratorTeacherService "1" --> "1" ActivityLogService
+JpaAppUserRepository ..|> AppUserRepository : implements
+AppUserRepository ..> AppUser : output
+AppUser ..> UserStatus : set to DISABLED
+
+@enduml

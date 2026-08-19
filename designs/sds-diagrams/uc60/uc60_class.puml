@@ -1,0 +1,94 @@
+@startuml UC-60 Generate Molecule Structure - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-60 Generate Molecule Structure — Class Diagram
+
+class MoleculeExplorer <<client>> {
+  - aiInput : String
+  - loading : boolean
+  - generatedByAi : boolean
+  - message : String
+  + render() : ReactNode
+  + buildWithAi() : Promise<void>
+}
+
+class MoleculeAiDebug <<client>> {
+  + getMoleculeAiBuildDiagnostics(result) : MoleculeAiBuildDiagnostics
+  + logMoleculeAiBuildResponse(result) : void
+}
+
+class MoleculeViewer <<client>> {
+  - mode : RenderMode
+  - rotating : boolean
+  + render() : ReactNode
+}
+
+class MoleculeBuildRequest <<dto>> {
+  + input : String
+}
+
+class MoleculeBuildResponse <<dto>> {
+  + name : String
+  + atoms : MoleculeAtomResponse [0..*]
+  + bonds : MoleculeBondResponse [0..*]
+}
+
+class MoleculeController <<controller>> {
+  - moleculeService : MoleculeService
+  + build(request : MoleculeBuildRequest) : MoleculeBuildResponse
+}
+
+class MoleculeService <<service>> {
+  - aiClient : AiClient
+  - promptBuilder : MoleculePromptBuilder
+  - aiTimeoutSeconds : long
+  - MAX_VALENCE : Map<String, Integer>
+  - KNOWN_FORMULA_STRUCTURES : Map<String, MoleculeStructure>
+  + build(input : String) : MoleculeStructure
+}
+
+class MoleculePromptBuilder <<service>> {
+  - INSTRUCTION : String
+  + build(input : String) : String
+  + defaultInstruction() : String
+}
+
+interface AiClient {
+  + generate(prompt : String) : String
+  + generate(prompt, image, mimeType) : String
+}
+
+class MoleculeStructure {
+  + name : String
+}
+
+class MoleculeAtom {
+  + element : String
+}
+
+class MoleculeBond {
+  + from : int
+  + to : int
+  + order : int
+}
+
+MoleculeExplorer ..> MoleculeController : calls API
+MoleculeExplorer ..> MoleculeBuildRequest : input
+MoleculeExplorer ..> MoleculeAiDebug : uses
+MoleculeExplorer "1" *-- "1" MoleculeViewer : contains
+MoleculeController ..> MoleculeBuildRequest : input
+MoleculeController ..> MoleculeBuildResponse : output
+MoleculeController "1" --> "1" MoleculeService
+MoleculeService "1" --> "1" MoleculePromptBuilder
+MoleculeService "1" --> "1" AiClient
+MoleculeService ..> MoleculeStructure : output
+MoleculeStructure "1" *-- "1..*" MoleculeAtom : contains
+MoleculeStructure "1" *-- "0..*" MoleculeBond : contains
+MoleculeBond "0..*" --> "2" MoleculeAtom : links
+MoleculeBuildResponse ..> MoleculeStructure : mapped from
+
+@enduml

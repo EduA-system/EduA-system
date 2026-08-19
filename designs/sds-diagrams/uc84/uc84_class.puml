@@ -1,0 +1,104 @@
+@startuml UC-84 Assign Weekly Task - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-84 Assign Weekly Task — Class Diagram
+
+class WeeklyScheduleScreen <<client>> {
+  - modGrade : WeeklyTaskGrade
+  - createWeekStart : String
+  - createTitle : String
+  - createPicker : TextbookPicker
+  - createSaving : boolean
+  + openCreatePanel(weekStartDate : String) : void
+  + handleCreateLesson() : void
+}
+
+class BulkCreateWeeklyTaskRequest <<dto>> {
+  + weekStartDate : LocalDate
+  + grade : Integer
+  + textbookCode : String
+  + lessons : List<LessonSlot>
+}
+
+class "WeeklyTaskViews.BulkResult" as BulkResultView <<dto>> {
+  + created : List<Summary>
+  + teacherCount : int
+  + lessonCount : int
+}
+
+class WeeklyTaskController <<controller>> {
+  - service : WeeklyTaskService
+  + bulkCreate(request : BulkCreateWeeklyTaskRequest) : BulkResult
+}
+
+class WeeklyTaskService <<service>> {
+  - repository : WeeklyTaskRepository
+  - userRepository : AppUserRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - textbookCatalogRepository : TextbookCatalogRepository
+  + bulkCreate(weekStartDate, grade, textbookCode, lessons) : BulkResult
+}
+
+interface WeeklyTaskRepository {
+  + save(task : WeeklyTask) : WeeklyTask
+  + findBySubjectAndGrade(subject, grade, fromWeek, toWeek) : List<WeeklyTask>
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+interface AppUserRepository {
+  + findAllByRoleAndSubject(role, subject, pageable) : Page<AppUser>
+}
+
+interface TeacherGradeRepository {
+  + findGradesByUserIds(userIds) : Map<UUID, List<Integer>>
+}
+
+interface TextbookCatalogRepository {
+  + listBookNames(subjectCode : String) : List<BookName>
+  + listChapters(bookCode : String) : List<ChapterSummary>
+  + listLessons(bookCode, chapterCode) : List<LessonSummary>
+}
+
+class WeeklyTask <<entity>> {
+  - id : UUID
+  - moderatorId : UUID
+  - subject : Subject
+  - grade : Integer
+  - teacherId : UUID
+  - weekStartDate : LocalDate
+  - scopeDescription : String
+  - textbookCode : String
+  - chapterCode : String
+  - lessonCode : String
+  - deadline : Instant
+  - reviewStatus : WeeklyTaskReviewStatus
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+WeeklyScheduleScreen ..> WeeklyTaskController : calls API
+WeeklyScheduleScreen ..> BulkCreateWeeklyTaskRequest : input
+WeeklyTaskController ..> BulkCreateWeeklyTaskRequest : input
+WeeklyTaskController ..> BulkResultView : output
+WeeklyTaskController "1" --> "1" WeeklyTaskService
+WeeklyTaskService "1" --> "1" WeeklyTaskRepository
+WeeklyTaskService "1" --> "1" AppUserRepository
+WeeklyTaskService "1" --> "1" TeacherGradeRepository
+WeeklyTaskService "1" --> "1" TextbookCatalogRepository
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+WeeklyTaskRepository ..> WeeklyTask : output
+WeeklyTask ..> WeeklyTaskReviewStatus : created as NOT_SUBMITTED
+
+@enduml

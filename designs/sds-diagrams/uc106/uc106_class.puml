@@ -1,0 +1,100 @@
+@startuml UC-106 Reactivate Moderator Account - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-106 Reactivate Moderator Account — Class Diagram
+
+class UserManagementContent <<client>> {
+  - moderatorData : PageResponse<SubjectAccountItem>
+  - msg : String
+  + toggleModerator(item : SubjectAccountItem) : void
+  + loadModerators(page : int) : void
+}
+
+class ModeratorDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + subject : String
+  + status : String
+  + grantedAt : Instant
+}
+
+class PrincipalController <<controller>> {
+  - principalModeratorService : PrincipalModeratorService
+  + reactivateModerator(id : UUID) : ModeratorDto
+}
+
+class PrincipalModeratorService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - activityLogService : ActivityLogService
+  + reactivateModerator(id : UUID) : AppUser
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+  + existsActiveByRoleAndSubject(role : Role, subject : Subject) : boolean
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+interface UserRoleRepository {
+  + findRolesByUserId(userId : UUID) : Set<Role>
+  + replaceRole(userId, role, grantedBy, grantedAt) : void
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  + record(actorId, actorRole, category, action, targetType, targetId, metadata) : void
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+  + isActiveOrInvited() : boolean
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+enum Role {
+  TEACHER
+  MODERATOR
+  PRINCIPAL
+  IT_STAFF
+  STUDENT
+}
+
+enum Subject {
+  MATH
+  CHEMISTRY
+  PHYSICS
+}
+
+UserManagementContent ..> PrincipalController : calls API
+UserManagementContent ..> ModeratorDto : output
+PrincipalController ..> ModeratorDto : output
+PrincipalController "1" --> "1" PrincipalModeratorService
+PrincipalModeratorService "1" --> "1" AppUserRepository
+PrincipalModeratorService "1" --> "1" UserRoleRepository
+PrincipalModeratorService "1" --> "1" ActivityLogService
+JpaAppUserRepository ..|> AppUserRepository : implements
+AppUserRepository ..> AppUser : output
+AppUser "1" --> "1" UserStatus : has
+AppUser "0..1" --> "1" Subject : moderated subject
+UserRoleRepository ..> Role : uses
+
+@enduml

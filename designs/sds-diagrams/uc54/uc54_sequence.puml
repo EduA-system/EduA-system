@@ -1,0 +1,56 @@
+@startuml UC-54 Save Physics Simulation to Personal Library - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 210
+title UC-54 Save Physics Simulation to Personal Library — Sequence Diagram
+
+actor "Physics Teacher" as Teacher
+participant ":GenericDetailView" as GDV
+participant ":MoPhongHubContent" as HUB
+participant ":LibraryContentController" as CTL
+participant ":LibraryContentService" as SVC
+participant ":LibraryContentRepository" as REPO
+database DB
+
+autonumber
+Teacher -> GDV : Select "Save to Library" on the physics simulation open in the detail screen
+activate GDV
+GDV -> HUB : saveToLibrary(preset)
+activate HUB
+HUB -> HUB : accept the request only from a Physics teacher, for a simulation not opened from the library and not saved yet
+HUB -> HUB : capture the preset id, kind and the current value of every supported parameter
+HUB -> CTL : POST /api/library/contents
+activate CTL
+CTL -> SVC : create(type, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl)
+activate SVC
+SVC -> SVC : accept a physics preset payload only when the signed-in teacher is assigned to Physics
+
+alt the signed-in user is not a Physics teacher
+  SVC --> CTL : ForbiddenOperationException
+  CTL --> HUB : HTTP 403
+  HUB --> Teacher : Show the failure message and keep the simulation unsaved
+else the signed-in user is a Physics teacher
+  SVC -> REPO : save(content)
+  activate REPO
+  REPO -> DB : INSERT INTO library_contents (owner, simulation metadata, preset payload, status) VALUES (?, ?, ?, 'PRIVATE')
+  activate DB
+  DB --> REPO : Saved
+  deactivate DB
+  REPO --> SVC : LibraryContent
+  deactivate REPO
+  SVC --> CTL : LibraryViews.Detail
+  CTL --> HUB : HTTP 201 + LibraryViews.Detail
+  HUB -> GDV : render()
+  GDV --> Teacher : Show the button changed to "Saved" for the new Draft simulation in the Personal Library
+end
+deactivate SVC
+deactivate CTL
+deactivate HUB
+deactivate GDV
+@enduml

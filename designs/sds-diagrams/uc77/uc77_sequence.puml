@@ -1,0 +1,72 @@
+@startuml UC-77 View Teacher List - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 220
+title UC-77 View Teacher List — Sequence Diagram
+
+actor Moderator
+participant ":UserManagementContent" as UI
+participant ":ModeratorController" as CTL
+participant ":ModeratorTeacherService" as SVC
+participant ":AppUserRepository" as USERS
+participant ":UserRoleRepository" as ROLES
+participant ":TeacherGradeRepository" as GRADES
+database DB
+
+autonumber
+Moderator -> UI : Open "Account management" and select the teacher tab
+activate UI
+UI -> UI : loadTeachers(page)
+UI -> CTL : GET /api/moderator/teachers?page=0&size=20
+activate CTL
+CTL -> SVC : listTeachers(pageable)
+activate SVC
+SVC -> SVC : read the assigned subject of the signed-in moderator (BR-18)
+
+alt the moderator has no assigned subject
+  SVC --> CTL : ForbiddenOperationException
+  CTL --> UI : HTTP 403
+  UI --> Moderator : Show that the teacher list cannot be loaded (MSG25)
+else the moderator has an assigned subject
+  SVC -> USERS : findAllByRoleAndSubject(TEACHER, subject, pageable)
+  activate USERS
+  USERS -> DB : SELECT teacher rows FROM app_users JOIN user_roles WHERE role = 'TEACHER' AND subject = ?
+  activate DB
+  DB --> USERS : rows + total
+  deactivate DB
+  USERS --> SVC : Page<AppUser>
+  deactivate USERS
+  SVC -> ROLES : findGrantedByUserIdsByUserIds(userIds, TEACHER)
+  activate ROLES
+  ROLES -> DB : SELECT user_id, granted_by, granted_at FROM user_roles WHERE user_id IN (?) AND role = 'TEACHER'
+  SVC -> ROLES : findGrantedAtsByUserIds(userIds, TEACHER)
+  ROLES --> SVC : Map<UUID, UUID> and Map<UUID, Instant>
+  deactivate ROLES
+  SVC -> GRADES : findGradesByUserIds(userIds)
+  activate GRADES
+  GRADES -> DB : SELECT user_id, grade FROM teacher_grades WHERE user_id IN (?)
+  GRADES --> SVC : Map<UUID, List<Integer>>
+  deactivate GRADES
+  SVC -> USERS : findAllById(granterIds)
+  activate USERS
+  USERS --> SVC : List<AppUser>
+  deactivate USERS
+  SVC --> CTL : TeacherListResult
+  CTL -> CTL : map every teacher to a TeacherDto carrying the assigned grades, the granted time and the granting account
+  CTL --> UI : HTTP 200 + Page<TeacherDto>
+  UI --> Moderator : Show each teacher with name, email, subject, assigned grades and account status
+end
+deactivate SVC
+deactivate CTL
+
+opt the assigned subject has no teacher account
+  UI --> Moderator : Show the empty-state message (MSG01)
+end
+deactivate UI
+@enduml

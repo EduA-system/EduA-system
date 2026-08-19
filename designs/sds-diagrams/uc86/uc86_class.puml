@@ -1,0 +1,99 @@
+@startuml UC-86 View Assigned Task - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-86 View Assigned Task — Class Diagram
+
+class WeeklyScheduleScreen <<client>> {
+  - schedule : WeeklyTaskSchedule
+  - teacherGradeFilter : Integer
+  - submittingTask : WeeklyTaskSummary
+  - unsubmitTarget : UnsubmitTarget
+  + load() : void
+  + isCurrentWeek(weekStartDate : String) : boolean
+  + isPastDeadline(deadline : String) : boolean
+  + openSubmitPanel(task : WeeklyTaskSummary) : void
+}
+
+class "WeeklyTaskViews.Schedule" as ScheduleView <<dto>> {
+  + weeks : List<Week>
+}
+
+class "WeeklyTaskViews.Summary" as SummaryView <<dto>> {
+  + id : UUID
+  + subject : Subject
+  + grade : Integer
+  + weekStartDate : LocalDate
+  + scopeDescription : String
+  + chapterName : String
+  + lessonName : String
+  + deadline : Instant
+  + reviewStatus : WeeklyTaskReviewStatus
+  + submittedAt : Instant
+}
+
+class WeeklyTaskController <<controller>> {
+  - service : WeeklyTaskService
+  + schedule(from : LocalDate, to : LocalDate, grade : Integer) : Schedule
+}
+
+class WeeklyTaskService <<service>> {
+  - repository : WeeklyTaskRepository
+  - currentUser : CurrentUserProvider
+  + schedule(from : LocalDate, to : LocalDate, grade : Integer) : Schedule
+}
+
+interface WeeklyTaskRepository {
+  + findByTeacher(teacherId, fromWeek, toWeek) : List<WeeklyTask>
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+class WeeklyTask <<entity>> {
+  - id : UUID
+  - subject : Subject
+  - grade : Integer
+  - teacherId : UUID
+  - weekStartDate : LocalDate
+  - scopeDescription : String
+  - chapterName : String
+  - lessonName : String
+  - deadline : Instant
+  - reviewStatus : WeeklyTaskReviewStatus
+  - submittedAt : Instant
+}
+
+class WeeklyTaskEntity <<entity>> {
+  - id : UUID
+  - teacherId : UUID
+  - weekStartDate : LocalDate
+  - deadline : Instant
+  - reviewStatus : WeeklyTaskReviewStatus
+  - submittedAt : Instant
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+WeeklyScheduleScreen ..> WeeklyTaskController : calls API
+WeeklyTaskController ..> ScheduleView : output
+WeeklyTaskController "1" --> "1" WeeklyTaskService
+WeeklyTaskService "1" --> "1" WeeklyTaskRepository
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+JpaWeeklyTaskRepository ..> WeeklyTaskEntity : maps
+WeeklyTaskEntity "1" -- "1" WeeklyTask : mapped to
+WeeklyTaskRepository ..> WeeklyTask : output
+ScheduleView "1" *-- "0..*" SummaryView : contains
+WeeklyScheduleScreen ..> SummaryView : reads the selected assigned task
+SummaryView ..> WeeklyTaskReviewStatus : drives the available actions
+
+@enduml

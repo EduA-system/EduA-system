@@ -1,0 +1,93 @@
+@startuml UC-58 View Element Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-58 View Element Detail — Class Diagram
+
+class PeriodicTablePage <<client>> {
+  - selectedElement : Element
+  - visibleSet : Set<number>
+  - colorMode : ColorMode
+  + render() : ReactNode
+  + handleSelectElement(el : Element) : void
+}
+
+class PeriodicTable <<client>> {
+  - selectedElement : Element
+  + render() : ReactNode
+  + isElementVisible(el : Element) : boolean
+  + getColors(el : Element) : ElementColors
+}
+
+class ElementCard <<client>> {
+  - isVisible : boolean
+  - isSelected : boolean
+  + render() : ReactNode
+}
+
+class ElementDetailPanel <<client>> {
+  - shown : Element
+  - open : boolean
+  + render() : ReactNode
+  - formatAtomicWeight(weight : AtomicWeight) : String
+  - formatTemp(c : number) : String
+  - formatVal(v : number, unit : String) : String
+}
+
+class PeriodicTableData <<client>> {
+  + ELEMENTS : Element [0..*]
+  + ELEMENTS_BY_NUMBER : Map<number, Element>
+  + applyFilters(elements, filters, query, quickRange) : Set<number>
+}
+
+class Element <<dto>> {
+  + atomicNumber : int
+  + symbol : String
+  + name : String
+  + nameVi : String
+  + atomicWeight : AtomicWeight
+  + category : ElementCategory
+  + block : ElementBlock
+  + period : int
+  + group : Integer
+  + electronConfig : String
+  + protons : int
+  + electrons : int
+  + meltingPoint : number
+  + boilingPoint : number
+  + density : number
+  + electronegativity : number
+  + ionizationEnergy : number
+  + electronAffinity : number
+  + vanDerWaalsRadius : number
+  + state : ElementState
+}
+
+class AtomicWeight <<dto>> {
+  + kind : String
+  + value : number
+  + min : number
+  + max : number
+}
+
+class RepresentativeIsotope <<dto>> {
+  + massNumber : int
+  + neutronCount : int
+  + source : String
+}
+
+PeriodicTablePage ..> PeriodicTableData : uses
+PeriodicTablePage "1" *-- "1" PeriodicTable : contains
+PeriodicTablePage "1" *-- "1" ElementDetailPanel : contains
+PeriodicTable "1" *-- "0..*" ElementCard : contains
+ElementCard ..> Element : input
+ElementCard ..> PeriodicTablePage : reports the clicked element
+PeriodicTableData "1" *-- "118" Element : contains
+ElementDetailPanel ..> Element : input
+Element "1" --> "1" AtomicWeight
+Element "1" --> "0..1" RepresentativeIsotope
+
+@enduml

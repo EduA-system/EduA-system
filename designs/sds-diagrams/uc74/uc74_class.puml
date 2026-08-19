@@ -1,0 +1,102 @@
+@startuml UC-74 View Content Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-74 View Content Detail — Class Diagram
+
+class HubModerationPage <<client>> {
+  - selectedId : String
+  - detail : LibraryContent
+  - detailLoading : boolean
+  - toast : Toast
+  + load() : void
+}
+
+class ContentPreview <<client>> {
+  - content : LibraryContent
+  + resolveDocument(payload : unknown) : TiptapNode
+  + parseSlideDeck(payload : unknown) : Slide [0..*]
+  + inferGradeFromPayload(payload : unknown) : Integer
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + moderationDetail(id : UUID) : LibraryViews.Detail
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + getModerationDetail(id : UUID) : LibraryViews.Detail
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - grade : Integer
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - submittedAt : Instant
+  - deletedAt : Instant
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - deletedAt : Instant
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum LibraryContentType {
+  LESSON_PLAN
+  SLIDE_DECK
+  TEST
+  SIMULATION
+}
+
+enum Subject {
+  MATH
+  CHEMISTRY
+  PHYSICS
+}
+
+HubModerationPage ..> LibraryContentController : calls API
+HubModerationPage "1" --> "1" ContentPreview : renders
+ContentPreview ..> LibraryContent : input
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+JpaLibraryContentRepository ..> LibraryContentEntity : maps
+LibraryContentEntity "1" -- "1" LibraryContent : mapped to
+LibraryContentRepository ..> LibraryContent : output
+LibraryContent ..> LibraryContentStatus : readable only while SUBMITTED
+LibraryContent ..> LibraryContentType : preview mode
+LibraryContent ..> Subject : must match the assigned subject
+
+@enduml

@@ -1,0 +1,88 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 0
+skinparam shadowing false
+skinparam classFontSize 13
+skinparam nodesep 30
+skinparam ranksep 60
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #666666
+  ArrowColor #555555
+}
+skinparam class<<ref>> {
+  BackgroundColor #F0F0F0
+  BorderColor #AAAAAA
+}
+
+title Nhiem vu tuan & thong bao
+
+entity "weekly_tasks" as weekly_tasks {
+  *id : UUID <<PK>>
+  --
+  moderator_id : UUID <<FK>>
+  teacher_id : UUID <<FK>>
+  source_library_content_id : UUID <<FK>>
+  reviewed_by : UUID <<FK>>
+  subject : VARCHAR(20)
+  grade : INTEGER
+  week_start_date : DATE
+  scope_description : TEXT
+  textbook_code : VARCHAR(20)
+  chapter_code : VARCHAR(20)
+  chapter_name : VARCHAR(500)
+  lesson_code : VARCHAR(20)
+  lesson_name : VARCHAR(500)
+  deadline : TIMESTAMPTZ
+  review_status : VARCHAR(20)
+  source_library_content_title : VARCHAR(500)
+  source_library_content_payload : JSONB
+  source_document_url : TEXT
+  source_document_name : TEXT
+  submitted_at : TIMESTAMPTZ
+  reviewed_at : TIMESTAMPTZ
+  rejection_reason : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  version : BIGINT
+}
+
+entity "notifications" as notifications {
+  *id : UUID <<PK>>
+  --
+  sender_id : UUID <<FK>>
+  subject : VARCHAR(20)
+  title : VARCHAR(200)
+  content : VARCHAR(2000)
+  created_at : TIMESTAMPTZ
+  target_type : VARCHAR(50)
+  target_url : VARCHAR(1000)
+}
+
+entity "notification_recipients" as notification_recipients {
+  *id : UUID <<PK>>
+  --
+  notification_id : UUID <<FK UQ>>
+  recipient_id : UUID <<FK UQ>>
+  read_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+}
+
+entity "app_users" as app_users <<ref>> {
+  *id : UUID <<PK>>
+}
+
+entity "library_contents" as library_contents <<ref>> {
+  *id : UUID <<PK>>
+}
+
+
+app_users ||--o{ notifications
+notifications ||--o{ notification_recipients
+app_users ||--o{ notification_recipients
+app_users ||--o{ weekly_tasks
+app_users ||--o{ weekly_tasks
+library_contents |o--o{ weekly_tasks
+app_users |o--o{ weekly_tasks
+@enduml

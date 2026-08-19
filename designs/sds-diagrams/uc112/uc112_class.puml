@@ -1,0 +1,90 @@
+@startuml UC-112 Export Subject Performance Report - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-112 Export Subject Performance Report — Class Diagram
+
+class ModeratorStatisticsScreen <<client>> {
+  - filterMode : FilterMode
+  - weekStartDate : String
+  - exporting : boolean
+  - error : String
+  + exportReport() : void
+}
+
+class StatisticsReportDto <<dto>> {
+  + fileName : String
+  + downloadUrl : String
+}
+
+class ModeratorStatisticsController <<controller>> {
+  - reportService : ModeratorStatisticsReportService
+  + exportReport(weekStartDate, year, quarter) : StatisticsReportDto
+}
+
+class ModeratorStatisticsReportService <<service>> {
+  - statisticsService : ModeratorStatisticsService
+  - htmlBuilder : StatisticsReportHtmlBuilder
+  - pdfRenderer : DocumentPdfRenderer
+  - storageClient : StorageClient
+  + exportPdf(weekStartDate, year, quarter) : DocumentExportResult
+}
+
+class ModeratorStatisticsService <<service>> {
+  + overdueByTeacherForWeek(weekStartDate : LocalDate) : OverdueByTeacher
+  + overdueByTeacherForQuarter(year : int, quarter : int) : OverdueByTeacher
+  + weeklyTaskReviewSummary() : ReviewStatusCounts
+  + libraryContentReviewSummary() : ReviewStatusCounts
+}
+
+class SubjectStatisticsReport <<dto>> {
+  + subject : Subject
+  + periodLabel : String
+  + overdueByTeacher : OverdueByTeacher
+  + weeklyTaskReview : ReviewStatusCounts
+  + libraryContentReview : ReviewStatusCounts
+}
+
+class StatisticsReportHtmlBuilder <<service>> {
+  + build(report : SubjectStatisticsReport) : String
+}
+
+interface DocumentPdfRenderer {
+  + render(html : String) : byte[]
+}
+
+class OpenHtmlDocumentPdfRenderer <<adapter>> {
+  - fontResources : List<String>
+}
+
+interface StorageClient {
+  + store(key : String, data : byte[], contentType : String) : String
+}
+
+class R2StorageAdapter <<adapter>> {
+  - bucket : String
+  - publicUrl : String
+}
+
+class DocumentExportResult <<dto>> {
+  + fileName : String
+  + downloadUrl : String
+}
+
+ModeratorStatisticsScreen ..> ModeratorStatisticsController : calls API
+ModeratorStatisticsScreen ..> StatisticsReportDto : output
+ModeratorStatisticsController ..> StatisticsReportDto : output
+ModeratorStatisticsController "1" --> "1" ModeratorStatisticsReportService
+ModeratorStatisticsReportService "1" --> "1" ModeratorStatisticsService
+ModeratorStatisticsReportService "1" --> "1" StatisticsReportHtmlBuilder
+ModeratorStatisticsReportService "1" --> "1" DocumentPdfRenderer
+ModeratorStatisticsReportService "1" --> "1" StorageClient
+ModeratorStatisticsReportService ..> DocumentExportResult : output
+StatisticsReportHtmlBuilder ..> SubjectStatisticsReport : input
+OpenHtmlDocumentPdfRenderer ..|> DocumentPdfRenderer : implements
+R2StorageAdapter ..|> StorageClient : implements
+
+@enduml

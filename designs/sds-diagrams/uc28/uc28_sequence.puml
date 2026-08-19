@@ -18,14 +18,14 @@ participant ":BlogCommentRepository" as REPO
 database DB
 
 autonumber
-Teacher -> UI : Click "Sửa" on one of their own comments
+Teacher -> UI : Click "Edit" on one of their own comments
 activate UI
 UI -> UI : startEditComment(comment)
 UI --> Teacher : Show the comment in inline edit mode with its current text
-Teacher -> UI : Edit the comment text and click "Lưu"
+Teacher -> UI : Edit the comment text and click "Save"
 UI -> UI : requestUpdateComment()
 UI --> Teacher : Show the save confirmation dialog
-Teacher -> UI : Click "Lưu thay đổi" to confirm
+Teacher -> UI : Click "Save changes" to confirm
 UI -> UI : updateComment()
 UI -> CTL : PATCH /api/blog-comments/{commentId}
 activate CTL

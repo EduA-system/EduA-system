@@ -1,0 +1,95 @@
+@startuml UC-65 Delete Own Public Content - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-65 Delete Own Public Content — Class Diagram
+
+class CommunityHubDetailPage <<client>> {
+  - detail : ContentDetail
+  - canDeleteContent : boolean
+  - deleteContentPending : boolean
+  - deletingContent : boolean
+  - toast : Toast
+  + handleDeleteContent() : void
+}
+
+class ConfirmDialog <<client>> {
+  - title : String
+  - description : String
+  - confirmLabel : String
+  - loading : boolean
+  + onConfirm() : void
+  + onClose() : void
+}
+
+class HubContentController <<controller>> {
+  - contentService : HubContentService
+  + delete(id : UUID) : void
+}
+
+class HubContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + deleteByOwner(id : UUID) : void
+}
+
+interface LibraryContentRepository {
+  + findApprovedForHubById(id : UUID) : Optional<LibraryContent>
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - status : LibraryContentStatus
+  - updatedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - status : LibraryContentStatus
+  - updatedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+class HubCommentEntity <<entity>> {
+  - id : UUID
+  - libraryContentId : UUID
+  - authorId : UUID
+  - hiddenAt : Instant
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+CommunityHubDetailPage "1" --> "1" ConfirmDialog : asks for confirmation
+CommunityHubDetailPage ..> HubContentController : calls API
+HubContentController "1" --> "1" HubContentService
+HubContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+JpaLibraryContentRepository ..> LibraryContentEntity : maps
+LibraryContentRepository ..> LibraryContent : soft-deletes the hub row by setting deletedAt
+LibraryContentEntity "1" -- "1" LibraryContent : mapped to
+LibraryContentEntity "0..1" --> "0..*" LibraryContentEntity : hub snapshot of a library row
+LibraryContentEntity "1" -- "0..*" HubCommentEntity : keeps the discussion rows
+LibraryContent ..> LibraryContentStatus : publish status
+
+@enduml

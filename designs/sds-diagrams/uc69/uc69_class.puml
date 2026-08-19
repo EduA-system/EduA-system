@@ -1,0 +1,111 @@
+@startuml UC-69 Create Content Comment - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-69 Create Content Comment — Class Diagram
+
+class CommunityHubDetailPage <<client>> {
+  - detail : HubContentDetail
+  - comment : String
+  - wordCount : int
+  - replyTo : HubComment
+  - savingComment : boolean
+  + addComment() : void
+  + load() : void
+}
+
+class CreateHubCommentRequest <<dto>> {
+  + content : String
+  + parentCommentId : UUID
+}
+
+class "HubViews.CommentView" as HubCommentView <<dto>> {
+  + id : UUID
+  + content : String
+  + authorId : UUID
+  + parentCommentId : UUID
+  + authorName : String
+  + createdAt : Instant
+}
+
+class HubContentController <<controller>> {
+  - commentService : HubCommentService
+  + createComment(id : UUID, request : CreateHubCommentRequest) : HubViews.CommentView
+}
+
+class HubCommentService <<service>> {
+  - commentRepository : HubCommentRepository
+  - contentRepository : LibraryContentRepository
+  - userRepository : AppUserRepository
+  - sanitizer : BlogContentSanitizer
+  - currentUser : CurrentUserProvider
+  - COMMENT_MAX_WORDS : int
+  + create(contentId, content, parentCommentId) : HubViews.CommentView
+}
+
+class BlogContentSanitizer <<service>> {
+  - safelist : Safelist
+  + sanitize(html : String) : String
+  + isEmpty(sanitizedHtml : String) : boolean
+}
+
+interface LibraryContentRepository {
+  + findApprovedForHubById(id : UUID) : Optional<LibraryContent>
+}
+
+interface HubCommentRepository {
+  + findById(id : UUID) : Optional<HubComment>
+  + save(comment : HubComment) : HubComment
+}
+
+class JpaHubCommentRepository <<adapter>> {
+  - jpa : HubCommentJpaRepository
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - subject : Subject
+  - status : LibraryContentStatus
+}
+
+class HubComment <<entity>> {
+  - id : UUID
+  - libraryContentId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - createdAt : Instant
+  - updatedAt : Instant
+  - hiddenAt : Instant
+}
+
+class HubCommentEntity <<entity>> {
+  - id : UUID
+  - libraryContentId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+}
+
+CommunityHubDetailPage ..> HubContentController : calls API
+CommunityHubDetailPage ..> CreateHubCommentRequest : input
+CommunityHubDetailPage ..> HubCommentView : output
+HubContentController ..> CreateHubCommentRequest : input
+HubContentController ..> HubCommentView : output
+HubContentController "1" --> "1" HubCommentService
+HubCommentService "1" --> "1" HubCommentRepository
+HubCommentService "1" --> "1" LibraryContentRepository
+HubCommentService "1" --> "1" BlogContentSanitizer
+JpaHubCommentRepository ..|> HubCommentRepository : implements
+JpaHubCommentRepository ..> HubCommentEntity : maps
+HubCommentRepository ..> HubComment : saves
+LibraryContentRepository ..> LibraryContent : reads APPROVED content
+LibraryContent "1" -- "0..*" HubComment : has
+HubComment "0..*" --> "0..1" HubComment : replies to
+
+@enduml

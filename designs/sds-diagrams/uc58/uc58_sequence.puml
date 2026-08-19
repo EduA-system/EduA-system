@@ -1,0 +1,55 @@
+@startuml UC-58 View Element Detail - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-58 View Element Detail — Sequence Diagram
+
+actor "Chemistry Teacher" as Teacher
+participant ":PeriodicTablePage" as PAGE
+participant ":PeriodicTableData" as DATA
+participant ":PeriodicTable" as GRID
+participant ":ElementCard" as CARD
+participant ":ElementDetailPanel" as PANEL
+
+autonumber
+Teacher -> PAGE : Open the Periodic Table with the element to inspect visible
+activate PAGE
+PAGE -> DATA : applyFilters(ELEMENTS, filters, searchQuery, quickRange)
+activate DATA
+DATA --> PAGE : Set<number> of the visible atomic numbers
+deactivate DATA
+PAGE -> GRID : render(visibleSet, selectedElement)
+activate GRID
+GRID -> CARD : render()
+activate CARD
+CARD --> Teacher : Show the atomic number, the symbol and the Vietnamese name in the cell
+
+Teacher -> CARD : Click the cell of the element to inspect
+CARD -> PAGE : handleSelectElement(el)
+deactivate CARD
+deactivate GRID
+PAGE -> PAGE : keep the clicked element as the selected one, or clear it when the same cell is clicked again
+PAGE -> PANEL : render()
+activate PANEL
+
+alt the clicked element is the one already open
+  PANEL --> Teacher : Close the popup and return to the periodic table with no element selected
+else another one of the 118 reference elements is selected
+  PANEL -> PANEL : formatAtomicWeight(weight)
+  PANEL -> PANEL : formatTemp(meltingPoint)
+  PANEL -> PANEL : formatVal(density, unit)
+  PANEL --> Teacher : Show the standard atomic weight, the category, the block, the period, the group, the electron configuration, the physical constants and the representative isotope
+end
+
+opt the teacher closes the element detail
+  Teacher -> PANEL : Press Escape, click the backdrop or click "×"
+  PANEL -> PAGE : Request to clear the selected element
+  PAGE --> Teacher : Show the periodic table again with the reference data unchanged
+end
+deactivate PANEL
+deactivate PAGE
+@enduml

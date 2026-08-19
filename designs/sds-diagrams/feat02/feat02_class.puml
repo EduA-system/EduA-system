@@ -1,0 +1,111 @@
+@startuml feat02 Slide Outline - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.2.1 Slide Outline — Class Diagram
+class SlideCreateDashboard <<user interaction>> {
+  - lessons : LessonCard [0..*]
+  - previewDetail : LibraryContent
+  - creating : Boolean
+  + createSlideFromDetail(lesson : LessonCard, detail : LibraryContent)
+}
+
+class SlideOutlineScreen <<user interaction>> {
+  - session : SlideGenerationSession
+  - parts : OutlinePart [0..*]
+  - status : Status
+  + setParts(parts : OutlinePart[])
+  + handleConfirm(editedParts : OutlinePart[])
+}
+
+class SlideController <<coordinator>> {
+  - generateSlideOutlineUseCase : GenerateSlideOutlineUseCase
+  + generateOutline(request : GenerateOutlineRequest) : GenerateOutlineResponse
+  + startOutlineSession(sessionId : String)
+  + retryOutlineSessionSlide(request : RetryOutlineSessionSlideRequest)
+}
+
+class GenerateSlideOutlineUseCase <<business logic>> {
+  - aiClient : AiClient
+  - outlineStream : OutlineStreamPort
+  - sessions : OutlineGenerationSessionStore
+  + execute(request : GenerateOutlineRequest) : GenerateOutlineResponse
+  + start(sessionId : String)
+}
+
+class OutlineGenerationSessionStore <<business logic>> {
+  + create(sessionId, request, source, parts)
+  + find(sessionId : String) : Session
+}
+
+class AiClient <<interface>> {
+  {field}
+  --
+  + generate(prompt : String) : String
+}
+
+class OutlineStreamPort <<interface>> {
+  {field}
+  --
+  + publishPartSkeletonReady(sessionId : String, part : PartDto)
+  + publishSlideReady(sessionId, partId, slide)
+  + publishSlideError(sessionId, partId, slideId, message)
+  + publishPartReady(sessionId, partId, slides)
+  + publishDone(sessionId : String, partFailures : Integer)
+}
+
+class OutlineEditor <<user interaction>> {
+  - expandedKeys : String [0..*]
+  - dragPartIndex : Integer
+  - invalidSlides : SlideItem [0..*]
+  + updatePartTitle(partId : String, title : String)
+  + addSlide(partId : String)
+  + updateSlide(partId, slideId, patch)
+}
+
+class SlideDetailModal <<user interaction>> {
+  - slide : SlideItem
+  + onClose()
+}
+
+class SlideDetailPanel <<user interaction>> {
+  - errors : String [0..*]
+  + setBlocks(blocks : ContentBlock[])
+  + onChange(slide : SlideItem)
+}
+
+class SlideApi <<user interaction>> {
+  + validateContentPlan(plan : SlideContentPlan) : String [0..*]
+}
+
+class SlideCreateSession <<user interaction>> {
+  - SLIDE_CREATE_SESSION_KEY : String
+  - SLIDE_GENERATION_ACTIVE_KEY : String
+  + patchSlideCreateSession(patch : SlideGenerationSession)
+  + writeActiveGeneration(active : ActiveGeneration)
+}
+
+class StompOutlineStreamAdapter <<proxy>> {
+  - messagingTemplate : SimpMessagingTemplate
+  - TOPIC_PREFIX : String
+}
+
+SlideController "1" -- "1" GenerateSlideOutlineUseCase : Delegates to >
+GenerateSlideOutlineUseCase "1" -- "1" AiClient : Generates content through >
+GenerateSlideOutlineUseCase "1" -- "1" OutlineStreamPort : Publishes progress through >
+GenerateSlideOutlineUseCase "1" -- "1" OutlineGenerationSessionStore : Uses >
+SlideCreateDashboard "1" -- "1" SlideController : Sends requests to >
+SlideOutlineScreen "1" -- "1" SlideController : Sends requests to >
+OutlineEditor "1" -- "1" SlideController : Sends requests to >
+SlideDetailModal "1" -- "1" SlideController : Sends requests to >
+SlideDetailPanel "1" -- "1" SlideController : Sends requests to >
+SlideApi "1" -- "1" SlideController : Sends requests to >
+SlideCreateSession "1" -- "1" SlideController : Sends requests to >
+StompOutlineStreamAdapter ..|> OutlineStreamPort
+
+@enduml

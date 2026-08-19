@@ -1,0 +1,98 @@
+@startuml UC-45 Download Assigned Material - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-45 Download Assigned Material — Class Diagram
+
+class ResourceDetailPage <<client>> {
+  - resource : ClassResourceSummary
+  - accessRevoked : boolean
+  - error : String
+  + load() : void
+}
+
+class ClassResourceSummaryDto <<dto>> {
+  + id : UUID
+  + title : String
+  + attachment : AttachmentDto
+  + submissionEnabled : boolean
+  + deadline : Instant
+}
+
+class AttachmentDto <<dto>> {
+  + fileName : String
+  + url : String
+  + contentType : String
+  + sizeBytes : Long
+}
+
+class ClassController <<controller>> {
+  - classResourceService : ClassResourceService
+  + resources(id, page, size) : ClassResourcePageDto
+}
+
+class ClassResourceService <<service>> {
+  - classResourceRepository : ClassResourceRepository
+  - classMemberRepository : ClassMemberRepository
+  - classRepository : ClassRepository
+  + listResources(classId, page, size) : ClassResourceViews.Page
+}
+
+interface ClassResourceRepository {
+  + findByClassId(classId, page, size) : PageResult
+  + findById(id : UUID) : Optional<ClassResource>
+}
+
+class JpaClassResourceRepository <<adapter>> {
+  - jpa : ClassResourceJpaRepository
+}
+
+interface ClassMemberRepository {
+  + existsByClassIdAndStudentId(classId : UUID, studentId : UUID) : boolean
+}
+
+class ClassResourceEntity <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - attachmentUrl : String
+  - attachmentFileName : String
+  - attachmentContentType : String
+  - attachmentSizeBytes : Long
+}
+
+class ClassResource <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - title : String
+  - attachmentUrl : String
+  - attachmentFileName : String
+  - attachmentContentType : String
+  - attachmentSizeBytes : Long
+  + hasAttachment() : boolean
+}
+
+class Classroom <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - status : ClassStatus
+  + isActive() : boolean
+  + isOwnedBy(userId : UUID) : boolean
+}
+
+ResourceDetailPage ..> ClassController : calls API
+ClassController ..> ClassResourceSummaryDto : output
+ClassResourceSummaryDto "1" *-- "0..1" AttachmentDto : contains
+ClassController "1" --> "1" ClassResourceService
+ClassResourceService "1" --> "1" ClassResourceRepository
+ClassResourceService "1" --> "1" ClassMemberRepository
+JpaClassResourceRepository ..|> ClassResourceRepository : implements
+JpaClassResourceRepository ..> ClassResourceEntity : maps
+ClassResourceEntity "1" -- "1" ClassResource : mapped to
+ClassResourceRepository ..> ClassResource : output
+Classroom "1" -- "0..*" ClassResource : has
+ResourceDetailPage ..> AttachmentDto : downloads the file from the stored URL
+
+@enduml

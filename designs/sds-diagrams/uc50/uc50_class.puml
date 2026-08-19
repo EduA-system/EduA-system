@@ -1,0 +1,104 @@
+@startuml UC-50 Unsubmit Assignment - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-50 Unsubmit Assignment — Class Diagram
+
+class ResourceDetailPage <<client>> {
+  - submission : SubmissionDetail
+  - unsubmitConfirmOpen : boolean
+  - unsubmitting : boolean
+  - formError : String
+  + requestUnsubmit() : void
+  + handleUnsubmit() : void
+}
+
+class ConfirmDialog <<client>> {
+  - open : boolean
+  - title : String
+  - description : ReactNode
+  - loading : boolean
+  + onConfirm() : void
+  + onClose() : void
+}
+
+class ClassController <<controller>> {
+  - submissionService : SubmissionService
+  + unsubmit(id : UUID, resourceId : UUID) : void
+}
+
+class SubmissionService <<service>> {
+  - submissionRepository : SubmissionRepository
+  - classRepository : ClassRepository
+  - classMemberRepository : ClassMemberRepository
+  - classResourceRepository : ClassResourceRepository
+  + unsubmit(classId : UUID, resourceId : UUID) : void
+}
+
+interface SubmissionRepository {
+  + findByResourceAndStudent(resourceId : UUID, studentId : UUID) : Optional<SubmissionWithFiles>
+  + deleteByResourceAndStudent(resourceId : UUID, studentId : UUID) : void
+}
+
+class JpaSubmissionRepository <<adapter>> {
+  - submissionJpa : SubmissionJpaRepository
+  - fileJpa : SubmissionFileJpaRepository
+}
+
+interface ClassRepository {
+  + findById(id : UUID) : Optional<Classroom>
+}
+
+interface ClassMemberRepository {
+  + existsByClassIdAndStudentId(classId : UUID, studentId : UUID) : boolean
+}
+
+class Classroom <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - status : ClassStatus
+  + isActive() : boolean
+  + isOwnedBy(userId : UUID) : boolean
+}
+
+class ClassResource <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - submissionEnabled : boolean
+  - deadline : Instant
+}
+
+class Submission <<entity>> {
+  - id : UUID
+  - classResourceId : UUID
+  - studentId : UUID
+  - textContent : String
+  - status : SubmissionStatus
+  - submittedAt : Instant
+}
+
+class SubmissionFile <<entity>> {
+  - id : UUID
+  - submissionId : UUID
+  - url : String
+  - fileName : String
+  - sizeBytes : Long
+}
+
+ResourceDetailPage "1" *-- "1" ConfirmDialog : contains
+ResourceDetailPage ..> ClassController : calls API
+ClassController "1" --> "1" SubmissionService
+SubmissionService "1" --> "1" SubmissionRepository
+SubmissionService "1" --> "1" ClassRepository
+SubmissionService "1" --> "1" ClassMemberRepository
+JpaSubmissionRepository ..|> SubmissionRepository : implements
+ClassRepository ..> Classroom : output
+SubmissionRepository ..> Submission : uses
+Submission "1" *-- "0..*" SubmissionFile : contains
+ClassResource "1" -- "0..*" Submission : has
+Classroom "1" -- "0..*" ClassResource : has
+
+@enduml

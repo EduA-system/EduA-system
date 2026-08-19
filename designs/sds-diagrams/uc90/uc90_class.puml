@@ -1,0 +1,96 @@
+@startuml UC-90 View Lesson Plan Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-90 View Lesson Plan Detail — Class Diagram
+
+class LessonPlanApprovalScreen <<client>> {
+  - expandedId : String
+  - detail : WeeklyTaskDetail
+  - detailLoading : boolean
+  - preview : LessonPreview
+  - error : String
+  + handleExpand(id : String) : void
+  + openSubmittedLessonPreview(taskDetail : WeeklyTaskDetail) : void
+}
+
+class "WeeklyTaskViews.Detail" as DetailView <<dto>> {
+  + id : UUID
+  + teacherName : String
+  + scopeDescription : String
+  + chapterName : String
+  + lessonName : String
+  + deadline : Instant
+  + reviewStatus : WeeklyTaskReviewStatus
+  + sourceLibraryContentTitle : String
+  + sourceLibraryContentPayload : JsonNode
+  + sourceDocumentUrl : String
+  + submittedAt : Instant
+}
+
+class WeeklyTaskController <<controller>> {
+  - service : WeeklyTaskService
+  + get(id : UUID) : Detail
+}
+
+class WeeklyTaskService <<service>> {
+  - repository : WeeklyTaskRepository
+  - currentUser : CurrentUserProvider
+  + get(id : UUID) : Detail
+}
+
+interface WeeklyTaskRepository {
+  + findById(id : UUID) : Optional<WeeklyTask>
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+class WeeklyTask <<entity>> {
+  - id : UUID
+  - subject : Subject
+  - grade : Integer
+  - teacherId : UUID
+  - scopeDescription : String
+  - chapterName : String
+  - lessonName : String
+  - deadline : Instant
+  - reviewStatus : WeeklyTaskReviewStatus
+  - sourceLibraryContentId : UUID
+  - sourceLibraryContentPayload : JsonNode
+  - sourceDocumentUrl : String
+  - submittedAt : Instant
+}
+
+class WeeklyTaskEntity <<entity>> {
+  - id : UUID
+  - subject : Subject
+  - teacherId : UUID
+  - reviewStatus : WeeklyTaskReviewStatus
+  - sourceLibraryContentPayload : JsonNode
+  - sourceDocumentUrl : String
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+LessonPlanApprovalScreen ..> WeeklyTaskController : calls API
+LessonPlanApprovalScreen ..> DetailView : output
+WeeklyTaskController ..> DetailView : output
+WeeklyTaskController "1" --> "1" WeeklyTaskService
+WeeklyTaskService "1" --> "1" WeeklyTaskRepository
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+JpaWeeklyTaskRepository ..> WeeklyTaskEntity : maps
+WeeklyTaskEntity "1" -- "1" WeeklyTask : mapped to
+WeeklyTaskRepository ..> WeeklyTask : output
+WeeklyTask ..> WeeklyTaskReviewStatus : reviewable only while SUBMITTED
+
+@enduml

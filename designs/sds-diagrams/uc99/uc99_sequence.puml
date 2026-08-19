@@ -1,0 +1,69 @@
+@startuml UC-99 View and Filter Activity Log - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-99 View & Filter Activity Log — Sequence Diagram
+
+actor "IT Staff" as STAFF
+participant ":ActivityLogPage" as UI
+participant ":ActivityLogController" as CTL
+participant ":ActivityLogService" as SVC
+participant ":ActivityLogRepository" as REPO
+participant ":AppUserRepository" as USERS
+database DB
+
+autonumber
+STAFF -> UI : Open the Activity Log screen
+activate UI
+
+opt the IT Staff narrows the entries by action category, time range or actor
+  STAFF -> UI : Select an action category or a date range
+  UI -> UI : selectCategory(next)
+  STAFF -> UI : Select the actor name shown on an entry
+  UI -> UI : filterByActor(entry)
+end
+
+UI -> UI : load()
+UI -> CTL : GET /api/it-staff/activity-log?actorId=&category=&from=&to=&page=&size=
+activate CTL
+CTL -> SVC : search(actorId, category, from, to, page, size)
+activate SVC
+SVC -> REPO : search(actorId, category, from, to, page, size)
+activate REPO
+REPO -> DB : SELECT * FROM activity_logs WHERE the selected criteria ORDER BY created_at DESC LIMIT ? OFFSET ?
+activate DB
+DB --> REPO : rows
+deactivate DB
+REPO -> DB : SELECT COUNT(*) FROM activity_logs WHERE the same criteria
+activate DB
+DB --> REPO : total
+deactivate DB
+REPO --> SVC : ActivityLogRepository.SearchResult
+deactivate REPO
+SVC -> USERS : findAllById(actorIds)
+activate USERS
+USERS -> DB : SELECT * FROM app_users WHERE id IN (?)
+activate DB
+DB --> USERS : rows
+deactivate DB
+USERS --> SVC : List<AppUser>
+deactivate USERS
+SVC -> SVC : attach the display name of each actor to the matching entries
+SVC --> CTL : ActivityLogViews.Page
+deactivate SVC
+CTL --> UI : HTTP 200 + entries page
+deactivate CTL
+
+alt no audit entry matches the selected criteria
+  UI --> STAFF : Show MSG01 and leave the stored audit records untouched
+else at least one audit entry matches
+  UI --> STAFF : Show the entries newest first with category, action, actor, target and time, plus the page controls
+end
+deactivate UI
+@enduml

@@ -1,0 +1,104 @@
+@startuml UC-54 Save Physics Simulation to Personal Library - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-54 Save Physics Simulation to Personal Library — Class Diagram
+
+class GenericDetailView <<client>> {
+  + canSaveToLibrary : boolean
+  + saving : boolean
+  + saved : boolean
+  + render() : ReactNode
+}
+
+class MoPhongHubContent <<client>> {
+  - canSaveToLibrary : boolean
+  - savingPresetId : String
+  - savedPresetIds : Set<String>
+  - saveError : String
+  + saveToLibrary(preset : Preset) : void
+  + render() : ReactNode
+}
+
+class Preset <<dto>> {
+  + id : String
+  + title : String
+  + kind : String
+  + grade : number
+  + params : PresetParam [0..*]
+}
+
+class CreateLibraryContentRequest <<dto>> {
+  + type : String
+  + title : String
+  + subject : String
+  + grade : Integer
+  + payload : JsonNode
+  + thumbnailUrl : String
+}
+
+class "LibraryViews.Detail" as LibraryDetailView <<dto>> {
+  + id : UUID
+  + type : LibraryContentType
+  + title : String
+  + subject : Subject
+  + grade : Integer
+  + status : LibraryContentStatus
+  + payload : JsonNode
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + create(r : CreateLibraryContentRequest) : LibraryViews.Detail
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + create(type, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl) : LibraryViews.Detail
+}
+
+interface LibraryContentRepository {
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - grade : Integer
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - createdAt : Instant
+  - updatedAt : Instant
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+GenericDetailView ..> MoPhongHubContent : raises the save request
+MoPhongHubContent ..> Preset : input
+MoPhongHubContent ..> LibraryContentController : calls API
+MoPhongHubContent ..> CreateLibraryContentRequest : input
+LibraryContentController ..> CreateLibraryContentRequest : input
+LibraryContentController ..> LibraryDetailView : output
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+LibraryContentRepository ..> LibraryContent : uses
+LibraryContent ..> LibraryContentStatus : saved as PRIVATE draft
+
+@enduml

@@ -1,0 +1,366 @@
+@startuml
+
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 0
+skinparam shadowing false
+skinparam classFontSize 13
+skinparam nodesep 45
+skinparam ranksep 55
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #666666
+  ArrowColor #555555
+}
+
+entity "textbooks" as textbooks {
+  *id : UUID <<PK>>
+  --
+  code : VARCHAR(20) <<UQ>>
+  name : VARCHAR(200)
+  grade : INTEGER
+  source : VARCHAR(200)
+  publisher : VARCHAR(200)
+  series : VARCHAR(200)
+}
+
+entity "chapters" as chapters {
+  *id : UUID <<PK>>
+  --
+  textbook_id : UUID <<FK UQ>>
+  code : VARCHAR(20) <<UQ>>
+  name : VARCHAR(500)
+  sort_order : INTEGER
+}
+
+entity "lessons" as lessons {
+  *id : UUID <<PK>>
+  --
+  chapter_id : UUID <<FK UQ>>
+  code : VARCHAR(20) <<UQ>>
+  name : VARCHAR(500)
+  page : INTEGER
+  sort_order : INTEGER
+  knowledge_json : JSONB
+}
+
+entity "textbook_names" as textbook_names {
+  *id : UUID <<PK>>
+  --
+  textbook_id : UUID <<FK UQ>>
+  code : VARCHAR(20) <<UQ>>
+  name : VARCHAR(200)
+  grade : INTEGER
+  subject_code : VARCHAR(40)
+  subject_name : VARCHAR(100)
+  volume : INTEGER
+  publisher : VARCHAR(200)
+  series : VARCHAR(200)
+  sort_order : INTEGER
+}
+
+entity "roles" as roles {
+  *id : UUID <<PK>>
+  --
+  name : VARCHAR(20) <<UQ>>
+}
+
+entity "app_users" as app_users {
+  *id : UUID <<PK>>
+  --
+  email : VARCHAR(320) <<UQ>>
+  google_sub : VARCHAR(255) <<UQ>>
+  full_name : VARCHAR(255)
+  subject : VARCHAR(20)
+  status : VARCHAR(20)
+  created_at : TIMESTAMPTZ
+  last_login_at : TIMESTAMPTZ
+  avatar_url : VARCHAR(1024)
+  contact_info : VARCHAR(500)
+  bio : VARCHAR(1000)
+  phone_number : VARCHAR(30)
+  date_of_birth : DATE
+}
+
+entity "user_roles" as user_roles {
+  *id : UUID <<PK>>
+  --
+  user_id : UUID <<FK UQ>>
+  role_id : UUID <<FK UQ>>
+  granted_by : UUID <<FK>>
+  granted_at : TIMESTAMPTZ
+}
+
+entity "refresh_tokens" as refresh_tokens {
+  *id : UUID <<PK>>
+  --
+  user_id : UUID <<FK>>
+  token_hash : VARCHAR(64) <<UQ>>
+  expires_at : TIMESTAMPTZ
+  revoked : BOOLEAN
+  created_at : TIMESTAMPTZ
+}
+
+entity "teacher_grades" as teacher_grades {
+  *user_id : UUID <<PK FK>>
+  *grade : INTEGER <<PK>>
+}
+
+entity "blog_posts" as blog_posts {
+  *id : UUID <<PK>>
+  --
+  author_id : UUID <<FK>>
+  removed_by : UUID <<FK>>
+  title : VARCHAR(255)
+  content : TEXT
+  subject : VARCHAR(20)
+  status : VARCHAR(20)
+  removed_reason : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  thumbnail_url : VARCHAR(1000)
+}
+
+entity "blog_comments" as blog_comments {
+  *id : UUID <<PK>>
+  --
+  post_id : UUID <<FK>>
+  author_id : UUID <<FK>>
+  hidden_by : UUID <<FK>>
+  parent_comment_id : UUID <<FK>>
+  content : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  hidden_at : TIMESTAMPTZ
+}
+
+entity "library_contents" as library_contents {
+  *id : UUID <<PK>>
+  --
+  owner_id : UUID <<FK>>
+  reviewed_by : UUID <<FK>>
+  type : VARCHAR(20)
+  title : VARCHAR(255)
+  subject : VARCHAR(20)
+  status : VARCHAR(20)
+  payload : JSONB
+  thumbnail_url : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  deleted_at : TIMESTAMPTZ
+  grade : INTEGER
+  submitted_at : TIMESTAMPTZ
+  reviewed_at : TIMESTAMPTZ
+  rejection_reason : TEXT
+  textbook_code : VARCHAR(20)
+  chapter_code : VARCHAR(20)
+  version : BIGINT
+  source_library_content_id : UUID <<FK>>
+}
+
+entity "hub_content_comments" as hub_content_comments {
+  *id : UUID <<PK>>
+  --
+  library_content_id : UUID <<FK>>
+  author_id : UUID <<FK>>
+  parent_comment_id : UUID <<FK>>
+  hidden_by : UUID <<FK>>
+  content : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  hidden_at : TIMESTAMPTZ
+}
+
+entity "hub_content_reports" as hub_content_reports {
+  *id : UUID <<PK>>
+  --
+  library_content_id : UUID <<FK>>
+  reporter_id : UUID <<FK>>
+  reason : TEXT
+  created_at : TIMESTAMPTZ
+}
+
+entity "classes" as classes {
+  *id : UUID <<PK>>
+  --
+  owner_id : UUID <<FK>>
+  name : VARCHAR(255)
+  description : TEXT
+  subject : VARCHAR(20)
+  grade : INTEGER
+  status : VARCHAR(20)
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "class_members" as class_members {
+  *id : UUID <<PK>>
+  --
+  class_id : UUID <<FK UQ>>
+  student_id : UUID <<FK UQ>>
+  removed_by : UUID <<FK>>
+  joined_at : TIMESTAMPTZ
+  status : VARCHAR(20)
+  removed_at : TIMESTAMPTZ
+  removed_reason : VARCHAR(500)
+  rejoined_at : TIMESTAMPTZ
+}
+
+entity "class_resources" as class_resources {
+  *id : UUID <<PK>>
+  --
+  class_id : UUID <<FK>>
+  posted_by : UUID <<FK>>
+  source_library_content_id : UUID <<FK>>
+  title : VARCHAR(255)
+  description : TEXT
+  source_type : VARCHAR(20)
+  thumbnail_url : TEXT
+  attachment_file_id : VARCHAR(255)
+  attachment_url : TEXT
+  attachment_file_name : VARCHAR(255)
+  attachment_content_type : VARCHAR(100)
+  attachment_size_bytes : BIGINT
+  submission_enabled : BOOLEAN
+  deadline : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "submissions" as submissions {
+  *id : UUID <<PK>>
+  --
+  class_resource_id : UUID <<FK UQ>>
+  student_id : UUID <<FK UQ>>
+  text_content : TEXT
+  status : VARCHAR(20)
+  submitted_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "submission_files" as submission_files {
+  *id : UUID <<PK>>
+  --
+  submission_id : UUID <<FK>>
+  url : TEXT
+  file_name : VARCHAR(255)
+  content_type : VARCHAR(100)
+  size_bytes : BIGINT
+}
+
+entity "weekly_tasks" as weekly_tasks {
+  *id : UUID <<PK>>
+  --
+  moderator_id : UUID <<FK>>
+  teacher_id : UUID <<FK>>
+  source_library_content_id : UUID <<FK>>
+  reviewed_by : UUID <<FK>>
+  subject : VARCHAR(20)
+  grade : INTEGER
+  week_start_date : DATE
+  scope_description : TEXT
+  textbook_code : VARCHAR(20)
+  chapter_code : VARCHAR(20)
+  chapter_name : VARCHAR(500)
+  lesson_code : VARCHAR(20)
+  lesson_name : VARCHAR(500)
+  deadline : TIMESTAMPTZ
+  review_status : VARCHAR(20)
+  source_library_content_title : VARCHAR(500)
+  source_library_content_payload : JSONB
+  source_document_url : TEXT
+  source_document_name : TEXT
+  submitted_at : TIMESTAMPTZ
+  reviewed_at : TIMESTAMPTZ
+  rejection_reason : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  version : BIGINT
+}
+
+entity "notifications" as notifications {
+  *id : UUID <<PK>>
+  --
+  sender_id : UUID <<FK>>
+  subject : VARCHAR(20)
+  title : VARCHAR(200)
+  content : VARCHAR(2000)
+  created_at : TIMESTAMPTZ
+  target_type : VARCHAR(50)
+  target_url : VARCHAR(1000)
+}
+
+entity "notification_recipients" as notification_recipients {
+  *id : UUID <<PK>>
+  --
+  notification_id : UUID <<FK UQ>>
+  recipient_id : UUID <<FK UQ>>
+  read_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+}
+
+entity "activity_logs" as activity_logs {
+  *id : UUID <<PK>>
+  --
+  actor_id : UUID <<FK>>
+  actor_role : VARCHAR(20)
+  category : VARCHAR(20)
+  action : VARCHAR(40)
+  target_type : VARCHAR(40)
+  target_id : UUID
+  metadata : VARCHAR(1000)
+  created_at : TIMESTAMPTZ
+}
+
+entity "ai_system_prompts" as ai_system_prompts {
+  *prompt_key : VARCHAR(40) <<PK>>
+  --
+  updated_by : UUID <<FK>>
+  instruction : TEXT
+  updated_at : TIMESTAMPTZ
+}
+
+library_contents |o--o{ library_contents
+textbooks ||--o{ chapters
+chapters ||--o{ lessons
+app_users ||--o{ refresh_tokens
+app_users ||--o{ blog_posts
+app_users |o--o{ blog_posts
+blog_posts ||--o{ blog_comments
+app_users ||--o{ blog_comments
+app_users |o--o{ blog_comments
+blog_comments |o--o{ blog_comments
+app_users |o--o{ user_roles
+roles ||--o{ user_roles
+app_users |o--o{ user_roles
+textbooks |o--o{ textbook_names
+app_users ||--o{ library_contents
+app_users |o--o{ library_contents
+app_users |o--o{ ai_system_prompts
+app_users ||--o{ classes
+classes ||--o{ class_members
+app_users ||--o{ class_members
+app_users |o--o{ class_members
+app_users ||--o{ notifications
+notifications ||--o{ notification_recipients
+app_users ||--o{ notification_recipients
+library_contents ||--o{ hub_content_comments
+app_users ||--o{ hub_content_comments
+hub_content_comments |o--o{ hub_content_comments
+app_users |o--o{ hub_content_comments
+library_contents ||--o{ hub_content_reports
+app_users ||--o{ hub_content_reports
+app_users ||--o{ weekly_tasks
+app_users ||--o{ weekly_tasks
+library_contents |o--o{ weekly_tasks
+app_users |o--o{ weekly_tasks
+app_users ||--o{ activity_logs
+classes ||--o{ class_resources
+app_users ||--o{ class_resources
+library_contents |o--o{ class_resources
+class_resources ||--o{ submissions
+app_users ||--o{ submissions
+submissions ||--o{ submission_files
+app_users ||--o{ teacher_grades
+@enduml

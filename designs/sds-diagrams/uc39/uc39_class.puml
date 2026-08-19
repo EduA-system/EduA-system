@@ -1,0 +1,98 @@
+@startuml UC-39 Remove Student - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-39 Remove Student — Class Diagram
+
+class AddStudentPage <<client>> {
+  - selectedClass : ClassDetail
+  - members : ClassMember [0..*]
+  - memberToRemove : ClassMember
+  - removeReason : String
+  - removeBusy : boolean
+  + openRemoveDialog(member : ClassMember) : void
+  + handleRemoveStudent() : void
+  + loadMembers(id : String) : void
+}
+
+class RemoveStudentRequest <<dto>> {
+  + reason : String
+}
+
+class RemoveStudentResponse <<dto>> {
+  + mode : String
+  + notified : boolean
+}
+
+class ClassController <<controller>> {
+  - classEnrollmentService : ClassEnrollmentService
+  + removeStudent(id, studentId, request) : RemoveStudentResponse
+}
+
+class ClassEnrollmentService <<service>> {
+  - classRepository : ClassRepository
+  - classMemberRepository : ClassMemberRepository
+  - currentUserProvider : CurrentUserProvider
+  + removeStudent(classId, studentId, reason) : RemoveResult
+}
+
+interface ClassMemberRepository {
+  + findAnyByClassIdAndStudentId(classId : UUID, studentId : UUID) : Optional<ClassMember>
+  + save(member : ClassMember) : ClassMember
+}
+
+class JpaClassMemberRepository <<adapter>> {
+  - jpa : ClassMemberJpaRepository
+}
+
+class ClassMember <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - studentId : UUID
+  - status : ClassMemberStatus
+  - joinedAt : Instant
+  - removedAt : Instant
+  - removedBy : UUID
+  - removedReason : String
+}
+
+class ClassMemberEntity <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - studentId : UUID
+  - status : ClassMemberStatus
+  - removedAt : Instant
+  - removedBy : UUID
+  - removedReason : String
+}
+
+class SubmissionEntity <<entity>> {
+  - id : UUID
+  - classResourceId : UUID
+  - studentId : UUID
+  - status : SubmissionStatus
+  - submittedAt : Instant
+}
+
+enum ClassMemberStatus {
+  ENROLLED
+  REMOVED
+}
+
+AddStudentPage ..> ClassController : calls API
+AddStudentPage ..> RemoveStudentRequest : input
+ClassController ..> RemoveStudentRequest : input
+ClassController ..> RemoveStudentResponse : output
+ClassController "1" --> "1" ClassEnrollmentService
+ClassEnrollmentService "1" --> "1" ClassMemberRepository
+JpaClassMemberRepository ..|> ClassMemberRepository : implements
+JpaClassMemberRepository ..> ClassMemberEntity : maps
+ClassMemberEntity "1" -- "1" ClassMember : mapped to
+ClassMemberRepository ..> ClassMember : soft-removes by setting REMOVED
+ClassMemberEntity "1" ..> "0..*" SubmissionEntity : submission rows stay stored
+ClassMember ..> ClassMemberStatus : membership status
+
+@enduml

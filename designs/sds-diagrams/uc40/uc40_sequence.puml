@@ -1,0 +1,67 @@
+@startuml UC-40 Post Class Resource - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-40 Post Class Resource — Sequence Diagram
+
+actor Teacher
+participant ":ClassResourcesPage" as UI
+participant ":ResourceFormPanel" as FORM
+participant ":ClassController" as CTL
+participant ":ClassResourceService" as SVC
+participant ":LibraryContentRepository" as LIB
+participant ":ClassResourceRepository" as RES
+database DB
+
+autonumber
+Teacher -> UI : Select "Post resource" in the Resources area of an owned ACTIVE class
+activate UI
+UI -> FORM : Open the posting form for a new class resource
+activate FORM
+Teacher -> FORM : Choose an owned Personal Library item or upload a file, enter the title and description, enable submissions with a deadline, then click "Save"
+FORM -> FORM : handleSubmit(event)
+FORM -> CTL : POST /api/classes/{id}/resources
+activate CTL
+CTL -> SVC : postResource(classId, resourceDetails)
+activate SVC
+SVC -> SVC : resolve the class and accept only an owned class that is still ACTIVE, with a title and a chosen source
+SVC -> LIB : findActiveById(sourceLibraryContentId)
+activate LIB
+LIB -> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+activate DB
+DB --> LIB : row / none
+deactivate DB
+LIB --> SVC : Optional<LibraryContent>
+deactivate LIB
+SVC -> SVC : accept only a Personal Library item owned by the teacher or a stored uploaded file, and require a future deadline when submissions are enabled
+
+alt class is not owned or is INACTIVE, the source item is unavailable, or the entered resource information is invalid
+  SVC --> CTL : ForbiddenOperationException / ResourceNotFoundException / IllegalArgumentException
+  CTL --> FORM : HTTP 403 / 404 / 400
+  FORM --> Teacher : Show MSG23 or the unavailable-source and invalid-field messages, and keep the entered resource information in the form
+
+else the teacher owns an ACTIVE class and the selected source and settings are valid
+  SVC -> RES : save(ClassResource holding an independent snapshot of the chosen source)
+  activate RES
+  RES -> DB : INSERT INTO class_resources snapshot, attachment and assignment columns
+  activate DB
+  DB --> RES : Saved
+  deactivate DB
+  RES --> SVC : ClassResource
+  deactivate RES
+  SVC --> CTL : ResourceSummary
+  CTL --> FORM : HTTP 201 + ClassResourceSummaryDto
+  FORM -> UI : saved(resource)
+  deactivate FORM
+  UI --> Teacher : Show MSG08 and the newly posted resource in the class Resources list
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

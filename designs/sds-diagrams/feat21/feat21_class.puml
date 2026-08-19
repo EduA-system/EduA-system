@@ -1,0 +1,149 @@
+@startuml feat21 Statistics and Reporting - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.21.1 Statistics and Reporting — Class Diagram
+class ModeratorStatisticsScreen <<user interaction>> {
+  - filterMode : FilterMode
+  - weekStartDate : String
+  - exporting : Boolean
+  + exportReport()
+}
+
+class ModeratorStatisticsController <<coordinator>> {
+  - reportService : ModeratorStatisticsReportService
+  - service : ModeratorStatisticsService
+  + exportReport(weekStartDate, year, quarter) : StatisticsReportDto
+  + overdueByTeacherWeek(weekStartDate : Date) : OverdueByTeacher
+  + overdueByTeacherQuarter(year : Integer, quarter : Integer) : OverdueByTeacher
+  + weeklyTaskReviewSummary() : ReviewStatusCounts
+  + libraryContentReviewSummary() : ReviewStatusCounts
+}
+
+class ModeratorStatisticsService <<business logic>> {
+  - weeklyTaskRepository : WeeklyTaskRepository
+  - libraryContentRepository : LibraryContentRepository
+  + libraryContentReviewSummary() : ReviewStatusCounts
+  + overdueByTeacherForWeek(weekStartDate : Date) : OverdueByTeacher
+  + weeklyTaskReviewSummary() : ReviewStatusCounts
+}
+
+class LibraryContentRepository <<interface>> {
+  {field}
+  --
+  + countByStatusAndSubject(status : LibraryContentStatus, subject : Subject) : Integer
+  + countCreatedByMonthAndType(from, to) : MonthTypeAggregate [0..*]
+}
+
+class WeeklyTaskRepository <<interface>> {
+  {field}
+  --
+  + countOverdueByTeacher(subject, fromWeek, toWeek) : TeacherOverdueAggregate [0..*]
+  + countByWeekAndReviewStatus(fromWeek, toWeek, subject) : WeeklyStatusAggregate [0..*]
+}
+
+class PrincipalStatisticsScreen <<user interaction>> {
+  - trend : AiContentTrend
+  - weeklyStatus : WeeklyTaskStatus
+  - accounts : AccountsByRole
+  + exportReport()
+}
+
+class PrincipalStatisticsController <<coordinator>> {
+  - service : PrincipalStatisticsService
+  - reportService : PrincipalStatisticsReportService
+  + aiContentTrend(months : Integer) : AiContentTrend
+  + weeklyTaskStatus(from, to, subject) : WeeklyTaskStatus
+  + communityHubReview() : CommunityHubReview
+  + accountsByRole(subject : Subject) : AccountsByRole
+  + exportReport(from, to, subject) : StatisticsReportDto
+}
+
+class PrincipalStatisticsService <<business logic>> {
+  - libraryContentRepository : LibraryContentRepository
+  - weeklyTaskRepository : WeeklyTaskRepository
+  + aiContentTrend(rawMonths : Integer) : AiContentTrend
+  + weeklyTaskStatus(from, to, subject) : WeeklyTaskStatus
+}
+
+class PrincipalStatisticsReportService <<business logic>> {
+  - statisticsService : PrincipalStatisticsService
+  - htmlBuilder : StatisticsReportHtmlBuilder
+  - pdfRenderer : DocumentPdfRenderer
+  + exportPdf(from, to, subject) : DocumentExportResult
+}
+
+class StatisticsReportHtmlBuilder <<business logic>> {
+  + build(report : SchoolStatisticsReport) : String
+}
+
+class DocumentPdfRenderer <<interface>> {
+  {field}
+  --
+  + render(html : String) : byte[]
+}
+
+class ModeratorStatisticsReportService <<business logic>> {
+  - statisticsService : ModeratorStatisticsService
+  - htmlBuilder : StatisticsReportHtmlBuilder
+  - pdfRenderer : DocumentPdfRenderer
+  + exportPdf(weekStartDate, year, quarter) : DocumentExportResult
+}
+
+class JpaLibraryContentRepository <<database wrapper>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class JpaWeeklyTaskRepository <<database wrapper>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+class OpenHtmlDocumentPdfRenderer <<proxy>> {
+  - fontResources : String [0..*]
+}
+
+class LibraryContent <<entity>> {
+  - id : String
+  - ownerId : String
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+}
+
+class WeeklyTask <<entity>> {
+  - id : String
+  - moderatorId : String
+  - subject : Subject
+  - grade : Integer
+  - teacherId : String
+}
+
+ModeratorStatisticsController "1" -- "1" ModeratorStatisticsReportService : Delegates to >
+ModeratorStatisticsController "1" -- "1" ModeratorStatisticsService : Delegates to >
+ModeratorStatisticsService "1" -- "1" WeeklyTaskRepository : Accesses data through >
+ModeratorStatisticsService "1" -- "1" LibraryContentRepository : Accesses data through >
+PrincipalStatisticsController "1" -- "1" PrincipalStatisticsService : Delegates to >
+PrincipalStatisticsController "1" -- "1" PrincipalStatisticsReportService : Delegates to >
+PrincipalStatisticsService "1" -- "1" LibraryContentRepository : Accesses data through >
+PrincipalStatisticsService "1" -- "1" WeeklyTaskRepository : Accesses data through >
+PrincipalStatisticsReportService "1" -- "1" PrincipalStatisticsService : Uses >
+PrincipalStatisticsReportService "1" -- "1" StatisticsReportHtmlBuilder : Uses >
+PrincipalStatisticsReportService "1" -- "1" DocumentPdfRenderer : Renders documents through >
+ModeratorStatisticsReportService "1" -- "1" ModeratorStatisticsService : Uses >
+ModeratorStatisticsReportService "1" -- "1" StatisticsReportHtmlBuilder : Uses >
+ModeratorStatisticsReportService "1" -- "1" DocumentPdfRenderer : Renders documents through >
+ModeratorStatisticsScreen "1" -- "1" ModeratorStatisticsController : Sends requests to >
+PrincipalStatisticsScreen "1" -- "1" ModeratorStatisticsController : Sends requests to >
+JpaLibraryContentRepository ..|> LibraryContentRepository
+OpenHtmlDocumentPdfRenderer ..|> DocumentPdfRenderer
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository
+JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
+JpaWeeklyTaskRepository "1" -- "0..*" LibraryContent : Maps >
+
+@enduml

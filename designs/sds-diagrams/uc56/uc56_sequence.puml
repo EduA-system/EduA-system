@@ -1,0 +1,63 @@
+@startuml UC-56 View Periodic Table - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-56 View Periodic Table — Sequence Diagram
+
+actor "Chemistry Teacher" as Teacher
+participant ":PeriodicTablePage" as PAGE
+participant ":RouteGuard" as GUARD
+participant ":PeriodicTableData" as DATA
+participant ":PeriodicTable" as GRID
+participant ":FilterPanel" as FILTER
+
+autonumber
+Teacher -> PAGE : Open the Periodic Table from the Chemistry Lab
+activate PAGE
+PAGE -> GUARD : render()
+activate GUARD
+GUARD -> GUARD : check the signed-in session, the allowed roles and the assigned subject of /periodic-table
+
+alt not signed in, or the role and the assigned subject are not allowed for /periodic-table
+  GUARD --> Teacher : Show the access-denied screen, keep the reference data unchanged and end the use case
+else signed-in Chemistry teacher or Chemistry moderator
+  GUARD --> PAGE : Guarded screen
+  deactivate GUARD
+  PAGE -> DATA : applyFilters(ELEMENTS, filters, searchQuery, quickRange)
+  activate DATA
+  DATA --> PAGE : Set<number> of the visible atomic numbers
+  deactivate DATA
+  PAGE -> GRID : render(visibleSet, displayMode, groupMode, colorMode)
+  activate GRID
+  GRID -> DATA : computeRange(ELEMENTS, colorMode)
+  activate DATA
+  DATA --> GRID : Minimum and maximum of the coloured property
+  deactivate DATA
+  GRID --> Teacher : Show the 118 elements in the standard layout with the legend and the "118 elements" counter
+end
+
+Teacher -> GRID : Type a symbol, a name or an atomic number in the search box and click "Filters"
+GRID -> PAGE : Entered search text and the request to open the filter panel
+PAGE -> FILTER : render(filters)
+activate FILTER
+Teacher -> FILTER : Set the property ranges, the blocks, the states and the categories, then click "Apply"
+FILTER -> PAGE : Edited FilterState, then close the panel
+deactivate FILTER
+PAGE -> DATA : applyFilters(ELEMENTS, filters, searchQuery, quickRange)
+activate DATA
+DATA --> PAGE : Set<number> of the visible atomic numbers
+deactivate DATA
+PAGE -> GRID : render(visibleSet, displayMode, groupMode, colorMode)
+
+alt at least one element matches the search text and the filters
+  GRID --> Teacher : Show the matching elements highlighted, the other cells dimmed and the "N / 118 elements" counter
+else no element matches the entered criteria
+  GRID --> Teacher : Dim every cell, show "0 / 118 elements" and keep the "Reset" action — the screen shows no MSG01 text
+end
+deactivate GRID
+deactivate PAGE
+@enduml

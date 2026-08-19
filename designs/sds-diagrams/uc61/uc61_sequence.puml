@@ -1,0 +1,57 @@
+@startuml UC-61 View Community Hub - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-61 View Community Hub — Sequence Diagram
+
+actor Teacher
+participant ":CommunityHubPage" as UI
+participant ":HubContentController" as CTL
+participant ":HubContentService" as SVC
+participant ":LibraryContentRepository" as CONTENTS
+database DB
+
+autonumber
+Teacher -> UI : Open the Community Hub
+activate UI
+UI -> UI : load(page, append)
+UI -> CTL : GET /api/hub/contents?type&q&page&size
+activate CTL
+CTL -> SVC : list(type, subject, q, page, size)
+activate SVC
+SVC -> SVC : restrict the feed to the subject assigned to the signed-in teacher
+SVC -> CONTENTS : searchApprovedHubSummaries(type, subject, q, page, size)
+activate CONTENTS
+CONTENTS -> DB : SELECT * FROM library_contents WHERE status = 'APPROVED' AND deleted_at IS NULL AND is the published hub row ORDER BY updated_at DESC LIMIT ? OFFSET ?
+activate DB
+DB --> CONTENTS : page rows + owner names + visible comment counts + total
+deactivate DB
+CONTENTS --> SVC : HubSearchResult
+deactivate CONTENTS
+SVC --> CTL : Page<ContentSummary>
+deactivate SVC
+CTL --> UI : HTTP 200 + Page<ContentSummary>
+deactivate CTL
+
+alt no approved content matches the current filters
+  UI --> Teacher : Show MSG01 and an empty Community Hub without changing stored data
+else approved content is available
+  UI --> Teacher : Show the approved content cards with type, subject, author, comment count and total
+end
+
+opt teacher searches or filters the feed
+  Teacher -> UI : Enter a title keyword or select a content type tab
+  UI -> UI : load(0, false)
+  UI --> Teacher : Show the matching approved content or MSG01 when nothing matches
+end
+
+Teacher -> UI : Click "Load more" or open one content card
+UI --> Teacher : Append the next page of approved content or open its Public Content Detail
+deactivate UI
+@enduml

@@ -1,0 +1,105 @@
+@startuml UC-48 Download Submission File - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-48 Download Submission File — Class Diagram
+
+class SubmissionDetailPanel <<client>> {
+  - detail : TeacherSubmissionDetail
+  - loading : boolean
+  - error : String
+  + load() : void
+}
+
+class TeacherSubmissionDetailDto <<dto>> {
+  + studentId : UUID
+  + studentName : String
+  + files : List<FileDto>
+  + status : SubmissionStatus
+  + submittedAt : Instant
+}
+
+class FileDto <<dto>> {
+  + fileName : String
+  + url : String
+  + contentType : String
+  + sizeBytes : Long
+}
+
+class ClassController <<controller>> {
+  - submissionService : SubmissionService
+  + submissionDetail(id, resourceId, studentId) : TeacherSubmissionDetailDto
+}
+
+class SubmissionService <<service>> {
+  - submissionRepository : SubmissionRepository
+  - classRepository : ClassRepository
+  - classResourceRepository : ClassResourceRepository
+  + getSubmissionDetail(classId, resourceId, studentId) : SubmissionViews.TeacherDetail
+}
+
+interface SubmissionRepository {
+  + findByResourceAndStudent(resourceId : UUID, studentId : UUID) : Optional<SubmissionWithFiles>
+}
+
+class JpaSubmissionRepository <<adapter>> {
+  - submissionJpa : SubmissionJpaRepository
+  - fileJpa : SubmissionFileJpaRepository
+}
+
+interface ClassRepository {
+  + findById(id : UUID) : Optional<Classroom>
+}
+
+class SubmissionFileEntity <<entity>> {
+  - id : UUID
+  - submissionId : UUID
+  - url : String
+  - fileName : String
+  - contentType : String
+  - sizeBytes : Long
+}
+
+class Submission <<entity>> {
+  - id : UUID
+  - classResourceId : UUID
+  - studentId : UUID
+  - status : SubmissionStatus
+  - submittedAt : Instant
+}
+
+class SubmissionFile <<entity>> {
+  - id : UUID
+  - submissionId : UUID
+  - url : String
+  - fileName : String
+  - contentType : String
+  - sizeBytes : Long
+}
+
+class Classroom <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - status : ClassStatus
+  + isActive() : boolean
+  + isOwnedBy(userId : UUID) : boolean
+}
+
+SubmissionDetailPanel ..> ClassController : calls API
+ClassController ..> TeacherSubmissionDetailDto : output
+TeacherSubmissionDetailDto "1" *-- "0..*" FileDto : contains
+ClassController "1" --> "1" SubmissionService
+SubmissionService "1" --> "1" SubmissionRepository
+SubmissionService "1" --> "1" ClassRepository
+JpaSubmissionRepository ..|> SubmissionRepository : implements
+JpaSubmissionRepository ..> SubmissionFileEntity : maps
+SubmissionFileEntity "1" -- "1" SubmissionFile : mapped to
+SubmissionRepository ..> Submission : output
+Submission "1" *-- "0..*" SubmissionFile : contains
+ClassRepository ..> Classroom : output
+SubmissionDetailPanel ..> FileDto : downloads the file from the stored URL
+
+@enduml

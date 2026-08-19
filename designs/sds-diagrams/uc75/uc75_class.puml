@@ -1,0 +1,102 @@
+@startuml UC-75 Approve Content - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-75 Approve Content — Class Diagram
+
+class HubModerationPage <<client>> {
+  - detail : LibraryContent
+  - acting : boolean
+  - toast : Toast
+  + handleApprove() : void
+  + load() : void
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + approve(id : UUID) : LibraryViews.Detail
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  - activityLogService : ActivityLogService
+  + approve(id : UUID) : LibraryViews.Detail
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+  + findActiveSnapshotsBySourceId(sourceId : UUID) : List<LibraryContent>
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  + record(actorId, actorRole, category, action, targetType, targetId, metadata) : void
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - subject : Subject
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - submittedAt : Instant
+  - reviewedBy : UUID
+  - reviewedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - reviewedBy : UUID
+  - reviewedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum ActivityLogAction {
+  APPROVE_LIBRARY_CONTENT
+  REJECT_LIBRARY_CONTENT
+}
+
+enum Subject {
+  MATH
+  CHEMISTRY
+  PHYSICS
+}
+
+HubModerationPage ..> LibraryContentController : calls API
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+LibraryContentService "1" --> "1" ActivityLogService
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+JpaLibraryContentRepository ..> LibraryContentEntity : maps
+LibraryContentEntity "1" -- "1" LibraryContent : mapped to
+LibraryContentRepository ..> LibraryContent : output
+LibraryContent "1" --> "0..*" LibraryContent : published snapshot via sourceLibraryContentId
+LibraryContent ..> LibraryContentStatus : SUBMITTED becomes APPROVED
+LibraryContent ..> Subject : approvable only in the assigned subject
+ActivityLogService ..> ActivityLogAction : uses
+
+@enduml

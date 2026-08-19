@@ -1,0 +1,110 @@
+@startuml UC-102 View Staff List - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-102 View Staff List — Class Diagram
+
+class UserManagementPage <<client>> {
+  - moderatorData : PageResponse<SubjectAccountItem>
+  - itStaffData : PageResponse<AccountItem>
+  - activeTab : Tab
+  - msg : String
+  + loadModerators(page : int) : void
+  + loadItStaff(page : int) : void
+  + loadPrincipalStats() : void
+}
+
+class ModeratorDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + subject : String
+  + status : String
+  + grantedAt : Instant
+  + grantedByEmail : String
+}
+
+class ItStaffDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + status : String
+}
+
+class PrincipalController <<controller>> {
+  - principalModeratorService : PrincipalModeratorService
+  - principalItStaffService : PrincipalItStaffService
+  + listModerators(page : int, size : int) : Page<ModeratorDto>
+  + listItStaffs(page : int, size : int) : Page<ItStaffDto>
+}
+
+class PrincipalModeratorService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  + listModerators(pageable : Pageable) : ModeratorListResult
+  + countModeratorsByStatus() : AccountStatusStats
+}
+
+class PrincipalItStaffService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  + list(pageable : Pageable) : Page<AppUser>
+  + countByStatus() : AccountStatusStats
+}
+
+interface AppUserRepository {
+  + findAllByRole(role : Role, pageable : Pageable) : Page<AppUser>
+  + findAllById(ids : Collection<UUID>) : List<AppUser>
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+interface UserRoleRepository {
+  + findGrantedAtsByUserIds(userIds : Collection<UUID>, role : Role) : Map<UUID, Instant>
+  + findGrantedByUserIdsByUserIds(userIds : Collection<UUID>, role : Role) : Map<UUID, UUID>
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+  - createdAt : Instant
+}
+
+class AppUserEntity <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+  - createdAt : Instant
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+UserManagementPage ..> PrincipalController : calls API
+PrincipalController ..> ModeratorDto : output
+PrincipalController ..> ItStaffDto : output
+PrincipalController "1" --> "1" PrincipalModeratorService
+PrincipalController "1" --> "1" PrincipalItStaffService
+PrincipalModeratorService "1" --> "1" AppUserRepository
+PrincipalModeratorService "1" --> "1" UserRoleRepository
+PrincipalItStaffService "1" --> "1" AppUserRepository
+JpaAppUserRepository ..|> AppUserRepository : implements
+JpaAppUserRepository ..> AppUserEntity : maps
+AppUserEntity "1" -- "1" AppUser : mapped to
+AppUserRepository ..> AppUser : output
+AppUser ..> UserStatus : account status
+
+@enduml

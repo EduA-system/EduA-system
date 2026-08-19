@@ -1,0 +1,98 @@
+@startuml UC-91 Approve Lesson Plan - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-91 Approve Lesson Plan — Class Diagram
+
+class LessonPlanApprovalScreen <<client>> {
+  - items : WeeklyTaskSummary [0..*]
+  - approveTarget : WeeklyTaskSummary
+  - reviewingId : String
+  - msg : String
+  + handleApprove(id : String) : void
+  + load() : void
+}
+
+class ConfirmDialog <<client>> {
+  - open : boolean
+  - title : String
+  - description : ReactNode
+  - confirmLabel : String
+  - loading : boolean
+  + onConfirm() : void
+  + onClose() : void
+}
+
+class "WeeklyTaskViews.Detail" as DetailView <<dto>> {
+  + id : UUID
+  + teacherName : String
+  + scopeDescription : String
+  + reviewStatus : WeeklyTaskReviewStatus
+  + reviewedByName : String
+  + reviewedAt : Instant
+}
+
+class WeeklyTaskController <<controller>> {
+  - service : WeeklyTaskService
+  + approve(id : UUID) : Detail
+}
+
+class WeeklyTaskService <<service>> {
+  - repository : WeeklyTaskRepository
+  - currentUser : CurrentUserProvider
+  - activityLogService : ActivityLogService
+  + approve(id : UUID) : Detail
+}
+
+interface WeeklyTaskRepository {
+  + findById(id : UUID) : Optional<WeeklyTask>
+  + save(task : WeeklyTask) : WeeklyTask
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+class WeeklyTask <<entity>> {
+  - id : UUID
+  - subject : Subject
+  - teacherId : UUID
+  - scopeDescription : String
+  - reviewStatus : WeeklyTaskReviewStatus
+  - reviewedBy : UUID
+  - reviewedAt : Instant
+  - rejectionReason : String
+  - updatedAt : Instant
+}
+
+class WeeklyTaskEntity <<entity>> {
+  - id : UUID
+  - subject : Subject
+  - reviewStatus : WeeklyTaskReviewStatus
+  - reviewedBy : UUID
+  - reviewedAt : Instant
+  - updatedAt : Instant
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+LessonPlanApprovalScreen "1" --> "1" ConfirmDialog : asks for confirmation
+LessonPlanApprovalScreen ..> WeeklyTaskController : calls API
+WeeklyTaskController ..> DetailView : output
+WeeklyTaskController "1" --> "1" WeeklyTaskService
+WeeklyTaskService "1" --> "1" WeeklyTaskRepository
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+JpaWeeklyTaskRepository ..> WeeklyTaskEntity : maps
+WeeklyTaskEntity "1" -- "1" WeeklyTask : mapped to
+WeeklyTaskRepository ..> WeeklyTask : approves by setting APPROVED
+WeeklyTask ..> WeeklyTaskReviewStatus : SUBMITTED becomes APPROVED
+
+@enduml

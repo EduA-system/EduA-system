@@ -1,0 +1,68 @@
+@startuml UC-64 View Own Content Detail - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-64 View Own Content Detail — Sequence Diagram
+
+actor Teacher
+participant ":CommunityHubDetailPage" as UI
+participant ":HubContentController" as CTL
+participant ":HubContentService" as SVC
+participant ":LibraryContentRepository" as CONTENTS
+participant ":HubCommentRepository" as COMMENTS
+participant ":AppUserRepository" as USERS
+database DB
+
+autonumber
+Teacher -> UI : Open one of their own published items from the Community Hub
+activate UI
+UI -> UI : load()
+UI -> CTL : GET /api/hub/contents/{id}
+activate CTL
+CTL -> SVC : get(id)
+activate SVC
+SVC -> CONTENTS : findApprovedForHubById(id)
+activate CONTENTS
+CONTENTS -> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
+activate DB
+DB --> CONTENTS : row / none
+deactivate DB
+CONTENTS --> SVC : Optional<LibraryContent>
+deactivate CONTENTS
+SVC -> COMMENTS : findByLibraryContentId(id)
+activate COMMENTS
+COMMENTS -> DB : SELECT * FROM hub_content_comments WHERE library_content_id = ? AND hidden_at IS NULL ORDER BY created_at
+activate DB
+DB --> COMMENTS : comment rows
+deactivate DB
+COMMENTS --> SVC : List<HubComment>
+deactivate COMMENTS
+SVC -> USERS : findById(ownerId)
+activate USERS
+USERS -> DB : SELECT * FROM app_users WHERE id = ?
+activate DB
+DB --> USERS : author row
+deactivate DB
+USERS --> SVC : Optional<AppUser>
+deactivate USERS
+SVC --> CTL : ContentDetail
+deactivate SVC
+CTL --> UI : HTTP 200 + ContentDetail
+deactivate CTL
+UI -> UI : compare the signed-in user id with the content ownerId
+
+alt the item is unavailable or no longer published
+  UI --> Teacher : Show the unavailable content message without changing stored data (MSG25)
+else the signed-in teacher is the author
+  UI --> Teacher : Show the owned published version, its discussion and the owner-only "Delete post" action
+else the signed-in teacher is not the author
+  UI --> Teacher : Show the published version and its discussion without the owner-only actions
+end
+deactivate UI
+@enduml

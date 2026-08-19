@@ -1,0 +1,99 @@
+@startuml UC-104 Add Moderator Account - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-104 Add Moderator Account — Class Diagram
+
+class UserManagementPage <<client>> {
+  - moderatorEmail : String
+  - moderatorFullName : String
+  - moderatorSubject : String
+  - msg : String
+  + addModerator() : void
+  + loadModerators(page : int) : void
+}
+
+class AddModeratorRequest <<dto>> {
+  + email : String
+  + subject : String
+  + fullName : String
+}
+
+class ModeratorDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + subject : String
+  + status : String
+  + grantedAt : Instant
+}
+
+class PrincipalController <<controller>> {
+  - principalModeratorService : PrincipalModeratorService
+  + addModerator(request : AddModeratorRequest) : ModeratorDto
+}
+
+class PrincipalModeratorService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - activityLogService : ActivityLogService
+  + addModerator(email, subject, fullName) : AppUser
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  + record(actorId, actorRole, category, action, target) : void
+}
+
+interface AppUserRepository {
+  + findByEmail(email : String) : Optional<AppUser>
+  + existsActiveByRoleAndSubject(role : Role, subject : Subject) : boolean
+  + save(user : AppUser) : AppUser
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+interface UserRoleRepository {
+  + replaceRole(userId, role, grantedBy, grantedAt) : void
+  + findRolesByUserId(userId : UUID) : Set<Role>
+}
+
+interface TeacherGradeRepository {
+  + replaceGrades(userId : UUID, grades : Collection<Integer>) : void
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+  - createdAt : Instant
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+UserManagementPage ..> PrincipalController : calls API
+UserManagementPage ..> AddModeratorRequest : input
+PrincipalController ..> AddModeratorRequest : input
+PrincipalController ..> ModeratorDto : output
+PrincipalController "1" --> "1" PrincipalModeratorService
+PrincipalModeratorService "1" --> "1" AppUserRepository
+PrincipalModeratorService "1" --> "1" UserRoleRepository
+PrincipalModeratorService "1" --> "1" TeacherGradeRepository
+PrincipalModeratorService "1" --> "1" ActivityLogService
+JpaAppUserRepository ..|> AppUserRepository : implements
+AppUserRepository ..> AppUser : output
+AppUser ..> UserStatus : created as INVITED
+
+@enduml

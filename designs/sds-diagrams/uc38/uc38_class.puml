@@ -1,0 +1,103 @@
+@startuml UC-38 Add Student - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-38 Add Student — Class Diagram
+
+class AddStudentPage <<client>> {
+  - selectedClass : ClassDetail
+  - members : ClassMember [0..*]
+  - addForm : AddStudentForm
+  - addBusy : boolean
+  - addInlineError : String
+  + handleAddStudent(event : FormEvent) : void
+  + loadMembers(id : String) : void
+}
+
+class AddStudentRequest <<dto>> {
+  + fullName : String
+  + phoneNumber : String
+  + dateOfBirth : LocalDate
+  + email : String
+}
+
+class ClassMemberDto <<dto>> {
+  + id : UUID
+  + studentId : UUID
+  + studentEmail : String
+  + studentName : String
+  + studentStatus : UserStatus
+  + membershipStatus : ClassMemberStatus
+  + joinedAt : Instant
+}
+
+class ClassController <<controller>> {
+  - classEnrollmentService : ClassEnrollmentService
+  + addStudent(id : UUID, request : AddStudentRequest) : ClassMemberDto
+}
+
+class ClassEnrollmentService <<service>> {
+  - classRepository : ClassRepository
+  - classMemberRepository : ClassMemberRepository
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - currentUserProvider : CurrentUserProvider
+  + addStudent(classId, fullName, phoneNumber, dateOfBirth, email) : MemberSummary
+}
+
+interface ClassMemberRepository {
+  + existsByClassIdAndStudentId(classId : UUID, studentId : UUID) : boolean
+  + findAnyByClassIdAndStudentId(classId : UUID, studentId : UUID) : Optional<ClassMember>
+  + countByClassId(classId : UUID) : long
+  + save(member : ClassMember) : ClassMember
+}
+
+class JpaClassMemberRepository <<adapter>> {
+  - jpa : ClassMemberJpaRepository
+}
+
+interface AppUserRepository {
+  + findByEmail(email : String) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+}
+
+class ClassMember <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - studentId : UUID
+  - status : ClassMemberStatus
+  - joinedAt : Instant
+  - rejoinedAt : Instant
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - phoneNumber : String
+  - dateOfBirth : LocalDate
+  - status : UserStatus
+}
+
+enum ClassMemberStatus {
+  ENROLLED
+  REMOVED
+}
+
+AddStudentPage ..> ClassController : calls API
+AddStudentPage ..> AddStudentRequest : input
+ClassController ..> AddStudentRequest : input
+ClassController ..> ClassMemberDto : output
+ClassController "1" --> "1" ClassEnrollmentService
+ClassEnrollmentService "1" --> "1" ClassMemberRepository
+ClassEnrollmentService "1" --> "1" AppUserRepository
+JpaClassMemberRepository ..|> ClassMemberRepository : implements
+ClassMemberRepository ..> ClassMember : output
+AppUserRepository ..> AppUser : resolves or creates the student account
+ClassMember "0..*" -- "1" AppUser : enrolled student
+ClassMember ..> ClassMemberStatus : membership status
+
+@enduml

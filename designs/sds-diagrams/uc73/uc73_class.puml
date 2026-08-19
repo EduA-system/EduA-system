@@ -1,0 +1,97 @@
+@startuml UC-73 View Content List - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-73 View Content List — Class Diagram
+
+class HubModerationPage <<client>> {
+  - items : LibraryContent [0..*]
+  - q : String
+  - type : LibraryType
+  - grade : Integer
+  - loading : boolean
+  - toast : Toast
+  + load() : void
+}
+
+class LibraryContentController <<controller>> {
+  - service : LibraryContentService
+  + moderationQueue(page : int, size : int) : LibraryViews.Page
+}
+
+class LibraryContentService <<service>> {
+  - repository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + listModerationQueue(page : int, size : int) : LibraryViews.Page
+}
+
+interface LibraryContentRepository {
+  + searchSummariesByStatusAndSubject(status, subject, page, size) : SummarySearchResult
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContentSummary <<dto>> {
+  + id : UUID
+  + type : LibraryContentType
+  + title : String
+  + subject : Subject
+  + grade : Integer
+  + status : LibraryContentStatus
+  + submittedAt : Instant
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - subject : Subject
+  - grade : Integer
+  - status : LibraryContentStatus
+  - submittedAt : Instant
+  - deletedAt : Instant
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - subject : Subject
+  - grade : Integer
+  - status : LibraryContentStatus
+  - submittedAt : Instant
+  - deletedAt : Instant
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum Subject {
+  MATH
+  CHEMISTRY
+  PHYSICS
+}
+
+HubModerationPage ..> LibraryContentController : calls API
+LibraryContentController "1" --> "1" LibraryContentService
+LibraryContentService "1" --> "1" LibraryContentRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+JpaLibraryContentRepository ..> LibraryContentEntity : maps
+LibraryContentEntity "1" -- "1" LibraryContent : mapped to
+LibraryContentRepository ..> LibraryContentSummary : output
+LibraryContentSummary ..> LibraryContentStatus : queue lists SUBMITTED only
+LibraryContent ..> LibraryContentStatus : publish status
+LibraryContent ..> Subject : visible only in the assigned subject
+
+@enduml

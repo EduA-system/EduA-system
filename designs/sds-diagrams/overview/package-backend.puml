@@ -1,0 +1,146 @@
+@startuml
+title EDUA System - Package Diagram (Backend)
+
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowFontSize 12
+skinparam nodesep 14
+skinparam ranksep 24
+skinparam PackageBackgroundColor #FFFFFF
+skinparam PackageBorderColor #333333
+
+package "com.edua.beeduasystem" as ROOT {
+
+  package "config" as CFG {
+  }
+
+  package "presentation" as PRE {
+    package "controller" as PRE_C {
+    }
+    package "dto" as PRE_D {
+    }
+    package "advice" as PRE_A {
+    }
+    PRE_C -[hidden]right- PRE_D
+    PRE_D -[hidden]right- PRE_A
+  }
+
+  package "service" as SER {
+    package "activitylog" as S1 {
+    }
+    package "ai" as S2 {
+    }
+    package "auth" as S3 {
+    }
+    package "blog" as S4 {
+    }
+
+    package "classroom" as S5 {
+    }
+    package "documentexport" as S6 {
+    }
+    package "lessonplan" as S7 {
+    }
+    package "library" as S8 {
+    }
+
+    package "molecule" as S9 {
+    }
+    package "notification" as S10 {
+    }
+    package "physicssimulation" as S11 {
+    }
+    package "practiceexam" as S12 {
+    }
+
+    package "slidedesign" as S13 {
+    }
+    package "slides" as S14 {
+    }
+    package "statistics" as S15 {
+    }
+    package "textbook" as S16 {
+    }
+
+    package "upload" as S17 {
+    }
+    package "weeklytask" as S18 {
+    }
+
+    S1 -[hidden]down- S2
+    S2 -[hidden]down- S3
+    S3 -[hidden]down- S4
+    S4 -[hidden]down- S5
+
+    S6 -[hidden]down- S7
+    S7 -[hidden]down- S8
+    S8 -[hidden]down- S9
+    S9 -[hidden]down- S10
+
+    S11 -[hidden]down- S12
+    S12 -[hidden]down- S13
+    S13 -[hidden]down- S14
+    S14 -[hidden]down- S15
+
+    S16 -[hidden]down- S17
+    S17 -[hidden]down- S18
+
+    S1 -[hidden]right- S6
+    S6 -[hidden]right- S11
+    S11 -[hidden]right- S16
+  }
+
+  package "domain" as DOM {
+    package "model" as DOM_M {
+    }
+    package "exception" as DOM_E {
+    }
+    DOM_M -[hidden]right- DOM_E
+  }
+
+  package "repository" as REP {
+    package "repositories\n(persistence interfaces)" as REP_R {
+    }
+    package "gateways\n(AiClient, StorageClient, TokenService,\nGoogleIdentityVerifier, stream ports)" as REP_G {
+    }
+    REP_R -[hidden]right- REP_G
+  }
+
+  package "infrastructure" as INF {
+    package "persistence\n(entity, repository, adapters)" as INF_P {
+    }
+    package "ai\n(adapter, config)" as INF_A {
+    }
+    package "messaging\n(STOMP adapters)" as INF_M {
+    }
+    package "security" as INF_S {
+    }
+
+    package "storage" as INF_ST {
+    }
+    package "documentexport" as INF_D {
+    }
+    package "logging" as INF_L {
+    }
+
+    INF_P -[hidden]right- INF_A
+    INF_A -[hidden]right- INF_M
+    INF_M -[hidden]right- INF_S
+    INF_S -[hidden]right- INF_ST
+    INF_ST -[hidden]right- INF_D
+    INF_D -[hidden]right- INF_L
+  }
+}
+
+PRE ..> SER : uses
+PRE ..> DOM : uses
+SER ..> DOM : uses
+SER ..> REP : depends on
+INF ..> REP : implements
+INF ..> DOM : uses
+CFG ..> PRE : wires
+CFG ..> SER : wires
+CFG ..> INF : wires
+
+@enduml

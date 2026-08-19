@@ -1,0 +1,80 @@
+@startuml UC-95 Manage Notification Read State - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-95 Manage Notification Read State — Class Diagram
+
+class NotificationsScreen <<client>> {
+  - items : NotificationSummary [0..*]
+  - unreadCount : long
+  - error : String
+  + handleOpenNotification(notification : NotificationSummary) : void
+  + handleMarkRead(id : String) : void
+  + handleMarkAllRead() : void
+}
+
+class "NotificationViews.NotificationSummary" as SummaryView <<dto>> {
+  + id : UUID
+  + title : String
+  + content : String
+  + senderName : String
+  + createdAt : Instant
+  + targetUrl : String
+  + read : boolean
+}
+
+class NotificationController <<controller>> {
+  - notificationService : NotificationService
+  + markRead(id : UUID) : void
+  + markAllRead() : void
+}
+
+class NotificationService <<service>> {
+  - notificationRepository : NotificationRepository
+  - currentUser : CurrentUserProvider
+  + markRead(notificationId : UUID) : void
+  + markAllRead() : void
+  + unreadCount() : long
+}
+
+interface NotificationRepository {
+  + markRead(notificationId : UUID, recipientId : UUID) : boolean
+  + markAllRead(recipientId : UUID) : void
+  + countUnreadForRecipient(recipientId : UUID) : long
+}
+
+class JpaNotificationRepository <<adapter>> {
+  - notificationJpa : NotificationJpaRepository
+  - recipientJpa : NotificationRecipientJpaRepository
+}
+
+class NotificationEntity <<entity>> {
+  - id : UUID
+  - senderId : UUID
+  - title : String
+  - content : String
+  - createdAt : Instant
+}
+
+class NotificationRecipientEntity <<entity>> {
+  - id : UUID
+  - notificationId : UUID
+  - recipientId : UUID
+  - readAt : Instant
+  - createdAt : Instant
+}
+
+NotificationsScreen ..> NotificationController : calls API
+NotificationsScreen ..> SummaryView : reads the selected notification
+NotificationController "1" --> "1" NotificationService
+NotificationService "1" --> "1" NotificationRepository
+JpaNotificationRepository ..|> NotificationRepository : implements
+JpaNotificationRepository ..> NotificationRecipientEntity : maps
+NotificationEntity "1" -- "0..*" NotificationRecipientEntity : keeps one read state per recipient
+NotificationRepository ..> NotificationRecipientEntity : stamps read_at of the signed-in recipient
+SummaryView ..> NotificationRecipientEntity : read flag comes from read_at
+
+@enduml

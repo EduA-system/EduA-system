@@ -1,0 +1,69 @@
+@startuml UC-98 View Subject Statistics Dashboard - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 220
+title UC-98 View Subject Statistics Dashboard — Sequence Diagram
+
+actor Moderator
+participant ":ModeratorStatisticsScreen" as UI
+participant ":ModeratorStatisticsController" as CTL
+participant ":ModeratorStatisticsService" as SVC
+participant ":LibraryContentRepository" as HUB
+participant ":WeeklyTaskRepository" as TASKS
+database DB
+
+autonumber
+Moderator -> UI : Open "Statistics" from the administration navigation
+activate UI
+UI -> CTL : GET /api/moderator/statistics/library-content-review-summary
+activate CTL
+CTL -> SVC : libraryContentReviewSummary()
+activate SVC
+SVC -> SVC : scope every query to the subject assigned to the signed-in Moderator
+
+alt the signed-in account has no assigned subject
+  SVC --> CTL : ForbiddenOperationException
+  CTL --> UI : HTTP 403
+  UI --> Moderator : Show the error banner and leave every chart empty
+else the signed-in account has an assigned subject
+  SVC -> HUB : countByStatusAndSubject(status, subject)
+  activate HUB
+  HUB -> DB : SELECT COUNT(*) FROM library_contents WHERE status = ? AND subject = ?
+  activate DB
+  DB --> HUB : approved and rejected totals
+  deactivate DB
+  HUB --> SVC : long
+  deactivate HUB
+  SVC --> CTL : ReviewStatusCounts
+  CTL --> UI : HTTP 200 + ReviewStatusCounts
+end
+deactivate SVC
+deactivate CTL
+
+Moderator -> UI : Switch the overdue chart between the week and quarter filters
+UI -> CTL : GET /api/moderator/statistics/overdue-by-teacher/week
+activate CTL
+CTL -> SVC : overdueByTeacherForWeek(weekStartDate : LocalDate)
+activate SVC
+SVC -> SVC : normalise the selected date to the Monday of its week
+SVC -> TASKS : countOverdueByTeacher(subject, fromWeek, toWeek)
+activate TASKS
+TASKS -> DB : SELECT teacher_id, COUNT(*) FROM weekly_tasks WHERE review_status = 'NOT_SUBMITTED' AND deadline < now
+activate DB
+DB --> TASKS : one row per teacher
+deactivate DB
+TASKS --> SVC : List<TeacherOverdueAggregate>
+deactivate TASKS
+SVC --> CTL : OverdueByTeacher
+deactivate SVC
+CTL --> UI : HTTP 200 + OverdueByTeacher
+deactivate CTL
+UI --> Moderator : Show the review donuts, the summary metrics and the overdue bar chart
+deactivate UI
+@enduml

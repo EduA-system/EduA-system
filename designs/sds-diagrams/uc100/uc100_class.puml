@@ -1,0 +1,94 @@
+@startuml UC-100 View System Prompts - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-100 View System Prompts — Class Diagram
+
+class ItStaffPage <<client>> {
+  - prompts : EditablePrompt [0..*]
+  - query : String
+  - activeGroup : String
+  - loading : boolean
+  + load() : void
+  + save(prompt : EditablePrompt) : void
+}
+
+class PromptCard <<client>> {
+  - prompt : EditablePrompt
+  - saving : boolean
+  + onChange(instruction : String) : void
+  + onSave() : void
+}
+
+class AiSystemPromptDto <<dto>> {
+  + key : String
+  + instruction : String
+  + updatedAt : Instant
+}
+
+class ItStaffController <<controller>> {
+  - service : AiSystemPromptService
+  + list() : List<AiSystemPromptDto>
+}
+
+class AiSystemPromptService <<service>> {
+  - repository : AiSystemPromptRepository
+  - templateCatalog : AiPromptTemplateCatalog
+  + list() : List<AiSystemPrompt>
+}
+
+class AiPromptTemplateCatalog <<service>> {
+  + defaultInstruction(key : AiPromptKey) : String
+  + replaceableInstructionPrefix(key : AiPromptKey) : String
+}
+
+interface AiSystemPromptRepository {
+  + findAll() : List<AiSystemPrompt>
+  + findByKey(key : AiPromptKey) : Optional<AiSystemPrompt>
+  + save(prompt : AiSystemPrompt) : AiSystemPrompt
+}
+
+class JpaAiSystemPromptRepository <<adapter>> {
+  - jpa : AiSystemPromptJpaRepository
+}
+
+class AiSystemPrompt <<entity>> {
+  - key : AiPromptKey
+  - instruction : String
+  - updatedBy : UUID
+  - updatedAt : Instant
+}
+
+class AiSystemPromptEntity <<entity>> {
+  - promptKey : String
+  - instruction : String
+  - updatedBy : UUID
+  - updatedAt : Instant
+}
+
+enum AiPromptKey {
+  LESSON_PLAN_OBJECTIVES
+  LESSON_PLAN_ACTIVITY_DETAIL
+  SLIDE_OUTLINE_STRUCTURE
+  SLIDE_DESIGN_CONTENT_FILL
+  MOLECULE_STRUCTURE
+  PHYSICS_SIMULATION_EDIT
+}
+
+ItStaffPage "1" *-- "0..*" PromptCard : renders one card per prompt
+ItStaffPage ..> ItStaffController : calls API
+ItStaffController ..> AiSystemPromptDto : output
+ItStaffController "1" --> "1" AiSystemPromptService
+AiSystemPromptService "1" --> "1" AiSystemPromptRepository
+AiSystemPromptService "1" --> "1" AiPromptTemplateCatalog
+JpaAiSystemPromptRepository ..|> AiSystemPromptRepository : implements
+JpaAiSystemPromptRepository ..> AiSystemPromptEntity : maps
+AiSystemPromptEntity "1" -- "1" AiSystemPrompt : mapped to
+AiSystemPromptRepository ..> AiSystemPrompt : output
+AiSystemPrompt ..> AiPromptKey : identified by
+AiPromptTemplateCatalog ..> AiPromptKey : input
+
+@enduml

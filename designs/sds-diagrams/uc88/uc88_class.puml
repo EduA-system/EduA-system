@@ -1,0 +1,94 @@
+@startuml UC-88 Unsubmit Lesson Plan for Weekly Task - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-88 Unsubmit Lesson Plan for Weekly Task — Class Diagram
+
+class WeeklyScheduleScreen <<client>> {
+  - unsubmitTarget : UnsubmitTarget
+  - schedule : WeeklyTaskSchedule
+  - msg : String
+  - error : String
+  + handleUnsubmit(taskId : String) : void
+  + load() : void
+}
+
+class ConfirmDialog <<client>> {
+  - open : boolean
+  - title : String
+  - confirmLabel : String
+  + onConfirm() : void
+  + onClose() : void
+}
+
+class "WeeklyTaskViews.Detail" as DetailView <<dto>> {
+  + id : UUID
+  + reviewStatus : WeeklyTaskReviewStatus
+  + sourceLibraryContentId : UUID
+  + submittedAt : Instant
+  + rejectionReason : String
+}
+
+class WeeklyTaskController <<controller>> {
+  - service : WeeklyTaskService
+  + unsubmit(id : UUID) : Detail
+}
+
+class WeeklyTaskService <<service>> {
+  - repository : WeeklyTaskRepository
+  - currentUser : CurrentUserProvider
+  + unsubmit(id : UUID) : Detail
+}
+
+interface WeeklyTaskRepository {
+  + findById(id : UUID) : Optional<WeeklyTask>
+  + save(task : WeeklyTask) : WeeklyTask
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+class WeeklyTask <<entity>> {
+  - id : UUID
+  - teacherId : UUID
+  - deadline : Instant
+  - reviewStatus : WeeklyTaskReviewStatus
+  - sourceLibraryContentId : UUID
+  - sourceLibraryContentPayload : JsonNode
+  - sourceDocumentUrl : String
+  - submittedAt : Instant
+  - rejectionReason : String
+}
+
+class WeeklyTaskEntity <<entity>> {
+  - id : UUID
+  - reviewStatus : WeeklyTaskReviewStatus
+  - sourceLibraryContentId : UUID
+  - sourceDocumentUrl : String
+  - submittedAt : Instant
+  - updatedAt : Instant
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+WeeklyScheduleScreen "1" --> "1" ConfirmDialog : confirms the withdrawal
+WeeklyScheduleScreen ..> WeeklyTaskController : calls API
+WeeklyTaskController ..> DetailView : output
+WeeklyTaskController "1" --> "1" WeeklyTaskService
+WeeklyTaskService "1" --> "1" WeeklyTaskRepository
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+JpaWeeklyTaskRepository ..> WeeklyTaskEntity : maps
+WeeklyTaskEntity "1" -- "1" WeeklyTask : mapped to
+WeeklyTaskRepository ..> WeeklyTask : output
+WeeklyTask ..> WeeklyTaskReviewStatus : reverts to REJECTED or NOT_SUBMITTED
+
+@enduml

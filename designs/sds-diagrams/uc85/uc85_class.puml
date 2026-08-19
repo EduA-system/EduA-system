@@ -1,0 +1,114 @@
+@startuml UC-85 Edit Weekly Task - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-85 Edit Weekly Task — Class Diagram
+
+class WeeklyScheduleScreen <<client>> {
+  - editingId : String
+  - formTeacherId : String
+  - formWeekStart : String
+  - formTitle : String
+  - formGrade : WeeklyTaskGrade
+  - saving : boolean
+  + openEditForm(task : WeeklyTaskSummary) : void
+  + handleSaveTask() : void
+}
+
+class UpdateWeeklyTaskRequest <<dto>> {
+  + teacherId : UUID
+  + weekStartDate : LocalDate
+  + scopeDescription : String
+  + textbookCode : String
+  + chapterCode : String
+  + lessonCode : String
+}
+
+class "WeeklyTaskViews.Detail" as DetailView <<dto>> {
+  + id : UUID
+  + teacherName : String
+  + grade : Integer
+  + weekStartDate : LocalDate
+  + scopeDescription : String
+  + chapterName : String
+  + lessonName : String
+  + deadline : Instant
+  + reviewStatus : WeeklyTaskReviewStatus
+}
+
+class WeeklyTaskController <<controller>> {
+  - service : WeeklyTaskService
+  + update(id : UUID, request : UpdateWeeklyTaskRequest) : Detail
+}
+
+class WeeklyTaskService <<service>> {
+  - repository : WeeklyTaskRepository
+  - textbookCatalogRepository : TextbookCatalogRepository
+  - currentUser : CurrentUserProvider
+  + update(id, teacherId, weekStartDate, title, textbookCode, chapterCode, lessonCode) : Detail
+}
+
+interface WeeklyTaskRepository {
+  + findById(id : UUID) : Optional<WeeklyTask>
+  + findBySubjectAndGrade(subject, grade, fromWeek, toWeek) : List<WeeklyTask>
+  + save(task : WeeklyTask) : WeeklyTask
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+interface TextbookCatalogRepository {
+  + listChapters(bookCode : String) : List<ChapterSummary>
+  + listLessons(bookCode, chapterCode) : List<LessonSummary>
+}
+
+class WeeklyTask <<entity>> {
+  - id : UUID
+  - moderatorId : UUID
+  - subject : Subject
+  - grade : Integer
+  - teacherId : UUID
+  - weekStartDate : LocalDate
+  - scopeDescription : String
+  - chapterCode : String
+  - lessonCode : String
+  - deadline : Instant
+  - reviewStatus : WeeklyTaskReviewStatus
+  - updatedAt : Instant
+}
+
+class WeeklyTaskEntity <<entity>> {
+  - id : UUID
+  - weekStartDate : LocalDate
+  - scopeDescription : String
+  - chapterCode : String
+  - lessonCode : String
+  - deadline : Instant
+  - updatedAt : Instant
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+WeeklyScheduleScreen ..> WeeklyTaskController : calls API
+WeeklyScheduleScreen ..> UpdateWeeklyTaskRequest : input
+WeeklyTaskController ..> UpdateWeeklyTaskRequest : input
+WeeklyTaskController ..> DetailView : output
+WeeklyTaskController "1" --> "1" WeeklyTaskService
+WeeklyTaskService "1" --> "1" WeeklyTaskRepository
+WeeklyTaskService "1" --> "1" TextbookCatalogRepository
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+JpaWeeklyTaskRepository ..> WeeklyTaskEntity : maps
+WeeklyTaskEntity "1" -- "1" WeeklyTask : mapped to
+WeeklyTaskRepository ..> WeeklyTask : output
+WeeklyTask ..> WeeklyTaskReviewStatus : locked once the group is APPROVED
+
+@enduml

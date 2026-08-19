@@ -1,0 +1,105 @@
+@startuml UC-92 Reject Lesson Plan - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-92 Reject Lesson Plan — Class Diagram
+
+class LessonPlanApprovalScreen <<client>> {
+  - items : WeeklyTaskSummary [0..*]
+  - rejectTarget : WeeklyTaskSummary
+  - reviewingId : String
+  - msg : String
+  + handleReject(id : String, reason : String) : void
+  + load() : void
+}
+
+class TextPromptDialog <<client>> {
+  - open : boolean
+  - title : String
+  - label : String
+  - placeholder : String
+  - minLength : int
+  - loading : boolean
+  + onConfirm(value : String) : void
+  + onClose() : void
+}
+
+class RejectWeeklyTaskRequest <<dto>> {
+  + reason : String
+}
+
+class "WeeklyTaskViews.Detail" as DetailView <<dto>> {
+  + id : UUID
+  + scopeDescription : String
+  + reviewStatus : WeeklyTaskReviewStatus
+  + reviewedByName : String
+  + reviewedAt : Instant
+  + rejectionReason : String
+}
+
+class WeeklyTaskController <<controller>> {
+  - service : WeeklyTaskService
+  + reject(id : UUID, request : RejectWeeklyTaskRequest) : Detail
+}
+
+class WeeklyTaskService <<service>> {
+  - repository : WeeklyTaskRepository
+  - currentUser : CurrentUserProvider
+  - activityLogService : ActivityLogService
+  + reject(id : UUID, rawReason : String) : Detail
+}
+
+interface WeeklyTaskRepository {
+  + findById(id : UUID) : Optional<WeeklyTask>
+  + save(task : WeeklyTask) : WeeklyTask
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+class WeeklyTask <<entity>> {
+  - id : UUID
+  - subject : Subject
+  - teacherId : UUID
+  - scopeDescription : String
+  - reviewStatus : WeeklyTaskReviewStatus
+  - reviewedBy : UUID
+  - reviewedAt : Instant
+  - rejectionReason : String
+  - updatedAt : Instant
+}
+
+class WeeklyTaskEntity <<entity>> {
+  - id : UUID
+  - subject : Subject
+  - reviewStatus : WeeklyTaskReviewStatus
+  - reviewedBy : UUID
+  - reviewedAt : Instant
+  - rejectionReason : String
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+LessonPlanApprovalScreen "1" --> "1" TextPromptDialog : asks for the rejection reason
+LessonPlanApprovalScreen ..> WeeklyTaskController : calls API
+LessonPlanApprovalScreen ..> RejectWeeklyTaskRequest : input
+WeeklyTaskController ..> RejectWeeklyTaskRequest : input
+WeeklyTaskController ..> DetailView : output
+WeeklyTaskController "1" --> "1" WeeklyTaskService
+WeeklyTaskService "1" --> "1" WeeklyTaskRepository
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+JpaWeeklyTaskRepository ..> WeeklyTaskEntity : maps
+WeeklyTaskEntity "1" -- "1" WeeklyTask : mapped to
+WeeklyTaskRepository ..> WeeklyTask : rejects by setting REJECTED with the reason
+WeeklyTask ..> WeeklyTaskReviewStatus : SUBMITTED becomes REJECTED
+
+@enduml

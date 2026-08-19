@@ -1,0 +1,141 @@
+@startuml feat19 Staff Account Management - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.19.1 Staff Account Management — Class Diagram
+class UserManagementPage <<user interaction>> {
+  - moderatorData : PageResponse<SubjectAccountItem>
+  - itStaffData : PageResponse<AccountItem>
+  - activeTab : Tab
+  + loadModerators(page : Integer)
+  + loadItStaff(page : Integer)
+  + addModerator()
+  + openReplacement(item : SubjectAccountItem)
+  + replaceModerator()
+}
+
+class PrincipalController <<coordinator>> {
+  - principalModeratorService : PrincipalModeratorService
+  - principalItStaffService : PrincipalItStaffService
+  + listModerators(page : Integer, size : Integer) : ModeratorDtoPage
+  + listItStaffs(page : Integer, size : Integer) : ItStaffDtoPage
+  + addModerator(request : AddModeratorRequest) : ModeratorDto
+  + replaceModerator(id : String, request : ReplaceModeratorRequest) : ModeratorDto
+  + reactivateModerator(id : String) : ModeratorDto
+}
+
+class PrincipalModeratorService <<business logic>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - activityLogService : ActivityLogService
+  + listModerators(pageable : page : Integer, size : Integer) : ModeratorListResult
+  + addModerator(email, subject, fullName) : AppUser
+  + replaceModerator(id, replacementEmail, disablePrevious, grades) : AppUser
+  + reactivateModerator(id : String) : AppUser
+}
+
+class PrincipalItStaffService <<business logic>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - activityLogService : ActivityLogService
+  + list(pageable : page : Integer, size : Integer) : AppUserPage
+  + add(email : String, fullName : String) : AppUser
+  + replace(id, replacementEmail, fullName) : AppUser
+}
+
+class AppUserRepository <<interface>> {
+  {field}
+  --
+  + findAllByRole(role : Role, pageable : page : Integer, size : Integer) : AppUserPage
+  + findById(id : String) : AppUser
+  + existsActiveByRoleAndSubject(role : Role, subject : Subject) : Boolean
+  + findByEmail(email : String) : AppUser
+  + save(user : AppUser) : AppUser
+  + existsActiveByRole(role : Role) : Boolean
+}
+
+class UserRoleRepository <<interface>> {
+  {field}
+  --
+  + findGrantedAtsByUserIds(userIds : String [0..*], role : Role) : Map
+  + findRolesByUserId(userId : String) : Role [0..*]
+  + replaceRole(userId, role, grantedBy, grantedAt)
+}
+
+class UserProfileViewPage <<user interaction>> {
+  - userId : String
+  - profile : UserProfileView
+  - loading : Boolean
+  + load()
+}
+
+class UserController <<coordinator>> {
+  - profileViewService : UserProfileViewService
+  + updateMe(request : UpdateProfileRequest) : UserDto
+  + viewProfile(id : String) : UserProfileViewDto
+}
+
+class UserProfileViewService <<business logic>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  + view(targetId : String) : UserProfileViewDto
+}
+
+class ActivityLogService <<business logic>> {
+  - userRepository : AppUserRepository
+  + record(actorId, actorRole, category, action, target)
+}
+
+class UserManagementContent <<user interaction>> {
+  - moderatorData : PageResponse<SubjectAccountItem>
+  - msg : String
+  - itStaffEmail : String
+  + toggleModerator(item : SubjectAccountItem)
+  + addItStaff()
+  + openItStaffReplacement(item : AccountItem)
+  + replaceItStaff()
+}
+
+class JpaAppUserRepository <<database wrapper>> {
+  - jpa : AppUserJpaRepository
+}
+
+class JpaUserRoleRepository <<database wrapper>> {
+  - jpa : UserRoleJpaRepository
+}
+
+class AppUser <<entity>> {
+  - id : String
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  + isActiveOrInvited() : Boolean
+}
+
+PrincipalController "1" -- "1" PrincipalModeratorService : Delegates to >
+PrincipalController "1" -- "1" PrincipalItStaffService : Delegates to >
+PrincipalModeratorService "1" -- "1" AppUserRepository : Accesses data through >
+PrincipalModeratorService "1" -- "1" UserRoleRepository : Accesses data through >
+PrincipalModeratorService "1" -- "1" ActivityLogService : Uses >
+PrincipalItStaffService "1" -- "1" AppUserRepository : Accesses data through >
+PrincipalItStaffService "1" -- "1" UserRoleRepository : Accesses data through >
+PrincipalItStaffService "1" -- "1" ActivityLogService : Uses >
+UserController "1" -- "1" UserProfileViewService : Delegates to >
+UserProfileViewService "1" -- "1" AppUserRepository : Accesses data through >
+UserProfileViewService "1" -- "1" UserRoleRepository : Accesses data through >
+ActivityLogService "1" -- "1" AppUserRepository : Accesses data through >
+UserManagementPage "1" -- "1" PrincipalController : Sends requests to >
+UserProfileViewPage "1" -- "1" PrincipalController : Sends requests to >
+UserManagementContent "1" -- "1" PrincipalController : Sends requests to >
+JpaAppUserRepository ..|> AppUserRepository
+JpaUserRoleRepository ..|> UserRoleRepository
+JpaAppUserRepository "1" -- "0..*" AppUser : Maps >
+JpaUserRoleRepository "1" -- "0..*" AppUser : Maps >
+
+@enduml

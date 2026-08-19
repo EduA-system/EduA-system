@@ -1,0 +1,129 @@
+@startuml feat05 Practice Exam Management - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.5.1 Practice Exam Management — Class Diagram
+class PracticeExamCreateDashboard <<user interaction>> {
+  - subject : Subject
+  - grade : Integer
+  - durationMinutes : Integer
+  + generate()
+}
+
+class PracticeExamEditDashboard <<user interaction>> {
+  - streamedExam : PracticeExam
+  - libraryId : String
+  - libraryTitle : String
+  + saveDraft(exam : PracticeExam)
+  + exportPdf()
+}
+
+class PracticeExamController <<coordinator>> {
+  - practiceExamService : PracticeExamService
+  - streamUseCase : GeneratePracticeExamStreamUseCase
+  + generateStream(request : GeneratePracticeExamStreamRequest)
+  + validate(request : PracticeExamRequest) : PracticeExamValidation
+  + regenerateQuestion(request : RegenerateQuestionRequest) : PracticeExam.Question
+}
+
+class GeneratePracticeExamStreamUseCase <<business logic>> {
+  - practiceExamService : PracticeExamService
+  - stream : PracticeExamStreamPort
+  + start(request : GeneratePracticeExamStreamRequest)
+}
+
+class PracticeExamService <<business logic>> {
+  - aiClient : AiClient
+  + generateStreaming(request, sessionId)
+  + validate(request : PracticeExamRequest) : PracticeExamValidation
+}
+
+class AiClient <<interface>> {
+  {field}
+  --
+  + generate(prompt : String) : String
+}
+
+class PracticeExamStreamPort <<interface>> {
+  {field}
+  --
+  + publishPlanReady(sessionId, title, instructions, durationMinutes, totalScoreCentiPoints, stubs)
+  + publishBatchReady(sessionId, questions)
+  + publishBatchFailed(sessionId : String, orders : Integer [0..*], reason : String)
+  + publishDone(sessionId : String)
+}
+
+class LibraryContentController <<coordinator>> {
+  - service : LibraryContentService
+  + list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort) : Page
+  + get(id : String) : Detail
+  + update(id : String, request : UpdateLibraryContentRequest) : Detail
+  + delete(id : String)
+  + create(r : CreateLibraryContentRequest) : Detail
+}
+
+class LibraryContentService <<business logic>> {
+  - repository : LibraryContentRepository
+  + get(id : String) : Detail
+  + update(id : String, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl) : Detail
+}
+
+class LibraryContentRepository <<interface>> {
+  {field}
+  --
+  + findActiveById(id : String) : LibraryContent
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class LessonPlanPdfExport <<user interaction>> {
+  + openDocumentPrintDialog(title : String, documentHtml : String, options : PrintOptions) : Boolean
+}
+
+class StompPracticeExamStreamAdapter <<proxy>> {
+  - messagingTemplate : SimpMessagingTemplate
+  - TOPIC_PREFIX : String
+}
+
+class JpaLibraryContentRepository <<database wrapper>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class PracticeExam <<entity>> {
+  - title : String
+  - instructions : String
+  - durationMinutes : Integer
+  - totalScoreCentiPoints : Integer
+  - questions : Question [0..*]
+}
+
+class LibraryContent <<entity>> {
+  - id : String
+  - ownerId : String
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+}
+
+PracticeExamEditDashboard "1" -- "1" PracticeExam : Uses >
+PracticeExamController "1" -- "1" PracticeExamService : Delegates to >
+PracticeExamController "1" -- "1" GeneratePracticeExamStreamUseCase : Delegates to >
+GeneratePracticeExamStreamUseCase "1" -- "1" PracticeExamService : Uses >
+GeneratePracticeExamStreamUseCase "1" -- "1" PracticeExamStreamPort : Publishes progress through >
+PracticeExamService "1" -- "1" AiClient : Generates content through >
+LibraryContentController "1" -- "1" LibraryContentService : Delegates to >
+LibraryContentService "1" -- "1" LibraryContentRepository : Accesses data through >
+PracticeExamCreateDashboard "1" -- "1" PracticeExamController : Sends requests to >
+PracticeExamEditDashboard "1" -- "1" PracticeExamController : Sends requests to >
+LessonPlanPdfExport "1" -- "1" PracticeExamController : Sends requests to >
+JpaLibraryContentRepository ..|> LibraryContentRepository
+StompPracticeExamStreamAdapter ..|> PracticeExamStreamPort
+LibraryContent "1" *-- "0..*" PracticeExam : payload contains
+JpaLibraryContentRepository "1" -- "0..*" PracticeExam : Maps >
+
+@enduml

@@ -1,0 +1,97 @@
+@startuml UC-98 View Subject Statistics Dashboard - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-98 View Subject Statistics Dashboard — Class Diagram
+
+class ModeratorStatisticsScreen <<client>> {
+  - weeklyTaskSummary : ReviewStatusCounts
+  - libraryContentSummary : ReviewStatusCounts
+  - filterMode : FilterMode
+  - weekStartDate : String
+  - chartResult : OverdueByTeacher
+  - error : String
+}
+
+class ModeratorStatisticsController <<controller>> {
+  - service : ModeratorStatisticsService
+  + overdueByTeacherWeek(weekStartDate : LocalDate) : OverdueByTeacher
+  + overdueByTeacherQuarter(year : Integer, quarter : Integer) : OverdueByTeacher
+  + weeklyTaskReviewSummary() : ReviewStatusCounts
+  + libraryContentReviewSummary() : ReviewStatusCounts
+}
+
+class ModeratorStatisticsService <<service>> {
+  - weeklyTaskRepository : WeeklyTaskRepository
+  - libraryContentRepository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + overdueByTeacherForWeek(weekStartDate : LocalDate) : OverdueByTeacher
+  + overdueByTeacherForQuarter(year : int, quarter : int) : OverdueByTeacher
+  + weeklyTaskReviewSummary() : ReviewStatusCounts
+  + libraryContentReviewSummary() : ReviewStatusCounts
+}
+
+class CurrentUserProvider <<service>> {
+  + require() : AccessTokenClaims
+}
+
+class OverdueByTeacher <<dto>> {
+  + items : List<TeacherOverdueCount>
+}
+
+class TeacherOverdueCount <<dto>> {
+  + teacherId : UUID
+  + teacherName : String
+  + overdueCount : long
+}
+
+class ReviewStatusCounts <<dto>> {
+  + approved : long
+  + rejected : long
+}
+
+interface WeeklyTaskRepository {
+  + countOverdueByTeacher(subject, fromWeek, toWeek) : List<TeacherOverdueAggregate>
+  + countBySubjectAndReviewStatus(subject : Subject, status : WeeklyTaskReviewStatus) : long
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+interface LibraryContentRepository {
+  + countByStatusAndSubject(status : LibraryContentStatus, subject : Subject) : long
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+ModeratorStatisticsScreen ..> ModeratorStatisticsController : calls API
+ModeratorStatisticsScreen ..> OverdueByTeacher : output
+ModeratorStatisticsScreen ..> ReviewStatusCounts : output
+ModeratorStatisticsController "1" --> "1" ModeratorStatisticsService
+ModeratorStatisticsController ..> OverdueByTeacher : output
+ModeratorStatisticsController ..> ReviewStatusCounts : output
+ModeratorStatisticsService "1" --> "1" CurrentUserProvider
+ModeratorStatisticsService "1" --> "1" WeeklyTaskRepository
+ModeratorStatisticsService "1" --> "1" LibraryContentRepository
+OverdueByTeacher "1" *-- "0..*" TeacherOverdueCount : contains
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+WeeklyTaskRepository ..> WeeklyTaskReviewStatus : uses
+LibraryContentRepository ..> LibraryContentStatus : uses
+
+@enduml

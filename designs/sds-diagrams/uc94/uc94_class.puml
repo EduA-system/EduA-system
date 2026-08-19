@@ -1,0 +1,99 @@
+@startuml UC-94 View Notifications - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-94 View Notifications — Class Diagram
+
+class NotificationsScreen <<client>> {
+  - items : NotificationSummary [0..*]
+  - unreadCount : long
+  - unreadOnly : boolean
+  - loading : boolean
+  - error : String
+  + load() : void
+}
+
+class "NotificationViews.Page" as PageView <<dto>> {
+  + items : List<NotificationSummary>
+  + page : int
+  + size : int
+  + total : long
+  + unreadCount : long
+}
+
+class "NotificationViews.NotificationSummary" as SummaryView <<dto>> {
+  + id : UUID
+  + title : String
+  + content : String
+  + subject : Subject
+  + senderName : String
+  + createdAt : Instant
+  + targetUrl : String
+  + read : boolean
+}
+
+class NotificationController <<controller>> {
+  - notificationService : NotificationService
+  + list(unread : boolean, page : int, size : int) : Page
+}
+
+class NotificationService <<service>> {
+  - notificationRepository : NotificationRepository
+  - userRepository : AppUserRepository
+  - currentUser : CurrentUserProvider
+  + listMine(unreadOnly : boolean, pageable : Pageable) : Page
+}
+
+interface NotificationRepository {
+  + findForRecipient(recipientId, unreadOnly, pageable) : Page<RecipientNotification>
+  + countUnreadForRecipient(recipientId : UUID) : long
+}
+
+class JpaNotificationRepository <<adapter>> {
+  - notificationJpa : NotificationJpaRepository
+  - recipientJpa : NotificationRecipientJpaRepository
+}
+
+interface NotificationStreamPort {
+  + publishNew(recipientUserId : UUID, event : NotificationEvent) : void
+}
+
+class StompNotificationStreamAdapter <<adapter>> {
+  - messagingTemplate : SimpMessagingTemplate
+  - DESTINATION : String
+}
+
+class NotificationEvent <<dto>> {
+  + id : UUID
+  + title : String
+  + content : String
+  + senderName : String
+  + createdAt : Instant
+  + targetUrl : String
+}
+
+class NotificationRecipientEntity <<entity>> {
+  - id : UUID
+  - notificationId : UUID
+  - recipientId : UUID
+  - readAt : Instant
+}
+
+NotificationsScreen ..> NotificationController : calls API
+NotificationsScreen ..> PageView : output
+NotificationsScreen ..> NotificationEvent : receives the pushed event
+PageView "1" *-- "0..*" SummaryView : contains
+NotificationController ..> PageView : output
+NotificationController "1" --> "1" NotificationService
+NotificationService "1" --> "1" NotificationRepository
+NotificationService "1" --> "1" NotificationStreamPort
+JpaNotificationRepository ..|> NotificationRepository : implements
+StompNotificationStreamAdapter ..|> NotificationStreamPort : implements
+JpaNotificationRepository ..> NotificationRecipientEntity : maps
+NotificationRepository ..> NotificationRecipientEntity : reads the per-recipient read state
+NotificationStreamPort ..> NotificationEvent : input
+
+@enduml

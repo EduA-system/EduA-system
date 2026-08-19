@@ -1,0 +1,152 @@
+@startuml feat10 Community Hub - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.10.1 Community Hub — Class Diagram
+class CommunityHubPage <<user interaction>> {
+  - items : HubContentSummary [0..*]
+  - type : LibraryContentType
+  - q : String
+  + load(page : Integer, append : Boolean)
+}
+
+class HubContentController <<coordinator>> {
+  - contentService : HubContentService
+  - commentService : HubCommentService
+  + list(type, subject, q, page, size) : ContentSummaryPage
+  + get(id : String) : ContentDetail
+  + customize(id : String) : Detail
+  + delete(id : String)
+  + createComment(id : String, request : CreateHubCommentRequest) : CommentView
+}
+
+class HubContentService <<business logic>> {
+  - repository : LibraryContentRepository
+  - commentRepository : HubCommentRepository
+  - userRepository : AppUserRepository
+  + list(rawType, rawSubject, q, page, size) : ContentSummaryPage
+  + get(id : String) : ContentDetail
+  + customize(id : String) : Detail
+  + deleteByOwner(id : String)
+}
+
+class LibraryContentRepository <<interface>> {
+  {field}
+  --
+  + searchApprovedHubSummaries(type, subject, q, page, size) : HubSearchResult
+  + findApprovedForHubById(id : String) : LibraryContent
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class CommunityHubDetailPage <<user interaction>> {
+  - contentId : String
+  - detail : ContentDetail
+  - loading : Boolean
+  + load()
+  + handleCustomize()
+  + handleDeleteContent()
+  + addComment()
+  + startEditComment(item : HubComment)
+  + requestSaveEditComment(item : HubComment)
+  + saveEditComment()
+  + confirmDeleteComment()
+}
+
+class HubCommentRepository <<interface>> {
+  {field}
+  --
+  + findByLibraryContentId(libraryContentId : String) : HubComment [0..*]
+  + save(comment : HubComment) : HubComment
+  + findById(id : String) : HubComment
+  + deleteById(id : String)
+}
+
+class AppUserRepository <<interface>> {
+  {field}
+  --
+  + findById(id : String) : AppUser
+}
+
+class ConfirmDialog <<user interaction>> {
+  - title : String
+  - description : ReactNode
+  - confirmLabel : String
+  + onConfirm()
+  + onClose()
+}
+
+class HubCommentService <<business logic>> {
+  - commentRepository : HubCommentRepository
+  - contentRepository : LibraryContentRepository
+  - userRepository : AppUserRepository
+  + create(contentId, content, parentCommentId) : CommentView
+  + update(commentId : String, content : String) : CommentView
+  + delete(commentId : String)
+  + hideByContentOwner(commentId : String)
+}
+
+class JpaLibraryContentRepository <<database wrapper>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class JpaHubCommentRepository <<database wrapper>> {
+  - jpa : HubCommentJpaRepository
+}
+
+class JpaAppUserRepository <<database wrapper>> {
+  - jpa : AppUserJpaRepository
+}
+
+class LibraryContent <<entity>> {
+  - id : String
+  - ownerId : String
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+}
+
+class HubComment <<entity>> {
+  - id : String
+  - libraryContentId : String
+  - authorId : String
+  - parentCommentId : String
+  - content : String
+}
+
+class AppUser <<entity>> {
+  - id : String
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  + isActiveOrInvited() : Boolean
+}
+
+HubContentController "1" -- "1" HubContentService : Delegates to >
+HubContentController "1" -- "1" HubCommentService : Delegates to >
+HubContentService "1" -- "1" LibraryContentRepository : Accesses data through >
+HubContentService "1" -- "1" HubCommentRepository : Accesses data through >
+HubContentService "1" -- "1" AppUserRepository : Accesses data through >
+CommunityHubDetailPage "1" -- "1" HubComment : Uses >
+HubCommentService "1" -- "1" HubCommentRepository : Accesses data through >
+HubCommentService "1" -- "1" LibraryContentRepository : Accesses data through >
+HubCommentService "1" -- "1" AppUserRepository : Accesses data through >
+CommunityHubPage "1" -- "1" HubContentController : Sends requests to >
+CommunityHubDetailPage "1" -- "1" HubContentController : Sends requests to >
+ConfirmDialog "1" -- "1" HubContentController : Sends requests to >
+JpaLibraryContentRepository ..|> LibraryContentRepository
+JpaAppUserRepository ..|> AppUserRepository
+AppUser "1" -- "0..*" LibraryContent : authors
+JpaHubCommentRepository ..|> HubCommentRepository
+LibraryContent "1" -- "0..*" HubComment : has
+JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
+JpaHubCommentRepository "1" -- "0..*" LibraryContent : Maps >
+JpaAppUserRepository "1" -- "0..*" LibraryContent : Maps >
+
+@enduml

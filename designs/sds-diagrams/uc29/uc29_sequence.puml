@@ -18,16 +18,16 @@ participant ":BlogCommentRepository" as REPO
 database DB
 
 autonumber
-Teacher -> UI : Click "Xóa" on one of their own comments
+Teacher -> UI : Click "Delete" on one of their own comments
 activate UI
 UI --> Teacher : Show the delete confirmation dialog warning that direct replies go with it (MSG09)
 
 opt the teacher cancels the deletion
-  Teacher -> UI : Click "Để tôi suy nghĩ lại"
+  Teacher -> UI : Click "Let me think again"
   UI --> Teacher : Close the dialog, change nothing stored, and end the use case
 end
 
-Teacher -> UI : Click "Xóa bình luận" to confirm
+Teacher -> UI : Click "Delete comment" to confirm
 UI -> UI : deleteComment(cid)
 UI -> CTL : DELETE /api/blog-comments/{commentId}
 activate CTL

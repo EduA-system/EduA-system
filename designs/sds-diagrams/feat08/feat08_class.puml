@@ -1,0 +1,120 @@
+@startuml feat08 Molecule Modeling - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.8.1 Molecule Modeling — Class Diagram
+class MoleculeExplorer <<user interaction>> {
+  - molecule : Molecule
+  - mode : RenderMode
+  - rotating : Boolean
+  + save()
+  + render() : ReactNode
+  + selectMolecule(item : Molecule)
+  + buildWithAi() : Promise<void>
+}
+
+class LibraryContentController <<coordinator>> {
+  - service : LibraryContentService
+  + list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort) : Page
+  + get(id : String) : Detail
+  + update(id : String, request : UpdateLibraryContentRequest) : Detail
+  + delete(id : String)
+  + create(r : CreateLibraryContentRequest) : Detail
+}
+
+class LibraryContentService <<business logic>> {
+  - repository : LibraryContentRepository
+  + create(type, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl) : Detail
+}
+
+class LibraryContentRepository <<interface>> {
+  {field}
+  --
+  + findActiveByOwnerTypeSubjectAndPayload(ownerId, type, subject, payloadJson) : LibraryContent
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class MoleculesPage <<user interaction>> {
+  + render() : ReactNode
+}
+
+class MoleculeCatalog <<user interaction>> {
+  + MOLECULE_CATALOG : Molecule [0..*]
+  + findMolecules(query : String, family : Family) : Molecule[]
+}
+
+class MoleculeViewer <<user interaction>> {
+  - mode : RenderMode
+  - rotating : Boolean
+  - theme : String
+  + render() : ReactNode
+}
+
+class MoleculeGeometry <<user interaction>> {
+  + VALENCE : Map
+  + buildGeometry(molecule : Molecule) : PositionedMolecule
+}
+
+class Scene <<data abstraction>> {
+  + bodies : Body [0..*]
+  + forces : Force [0..*]
+  + constraints : Constraint [0..*]
+  + render() : ReactNode
+}
+
+class MoleculeController <<coordinator>> {
+  - moleculeService : MoleculeService
+  + build(request : MoleculeBuildRequest) : MoleculeBuildResponse
+}
+
+class MoleculeService <<business logic>> {
+  - aiClient : AiClient
+  - promptBuilder : MoleculePromptBuilder
+  + build(input : String) : MoleculeStructure
+}
+
+class MoleculePromptBuilder <<business logic>> {
+  + build(input : String) : String
+}
+
+class AiClient <<interface>> {
+  {field}
+  --
+  + generate(prompt : String) : String
+}
+
+class JpaLibraryContentRepository <<database wrapper>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : String
+  - ownerId : String
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+}
+
+LibraryContentController "1" -- "1" LibraryContentService : Delegates to >
+LibraryContentService "1" -- "1" LibraryContentRepository : Accesses data through >
+MoleculeController "1" -- "1" MoleculeService : Delegates to >
+MoleculeService "1" -- "1" AiClient : Generates content through >
+MoleculeService "1" -- "1" MoleculePromptBuilder : Uses >
+MoleculeExplorer "1" -- "1" LibraryContentController : Sends requests to >
+MoleculesPage "1" -- "1" LibraryContentController : Sends requests to >
+MoleculeCatalog "1" -- "1" LibraryContentController : Sends requests to >
+MoleculeViewer "1" -- "1" LibraryContentController : Sends requests to >
+MoleculeGeometry "1" -- "1" LibraryContentController : Sends requests to >
+JpaLibraryContentRepository ..|> LibraryContentRepository
+MoleculesPage "1" *-- "0..*" MoleculeExplorer : contains
+MoleculeExplorer "1" *-- "0..*" MoleculeViewer : contains
+MoleculeViewer "1" *-- "0..*" Scene : contains
+JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
+
+@enduml

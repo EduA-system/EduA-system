@@ -1,0 +1,58 @@
+@startuml UC-100 View System Prompts - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-100 View System Prompts — Sequence Diagram
+
+actor "IT Staff" as STAFF
+participant ":ItStaffPage" as UI
+participant ":ItStaffController" as CTL
+participant ":AiSystemPromptService" as SVC
+participant ":AiSystemPromptRepository" as REPO
+participant ":AiPromptTemplateCatalog" as CATALOG
+database DB
+
+autonumber
+STAFF -> UI : Open the AI configuration screen
+activate UI
+UI -> UI : load()
+UI -> CTL : GET /api/it-staff/system-prompts
+activate CTL
+CTL -> SVC : list()
+activate SVC
+SVC -> SVC : walk every prompt key used by the generation features
+SVC -> REPO : findByKey(key)
+activate REPO
+REPO -> DB : SELECT * FROM ai_system_prompts WHERE prompt_key = ?
+activate DB
+DB --> REPO : row / none
+deactivate DB
+REPO --> SVC : Optional<AiSystemPrompt>
+deactivate REPO
+
+opt no instruction is stored for the key yet
+  SVC -> CATALOG : defaultInstruction(key)
+  activate CATALOG
+  CATALOG --> SVC : built-in instruction of that feature
+  deactivate CATALOG
+end
+
+SVC --> CTL : List<AiSystemPrompt>
+deactivate SVC
+CTL --> UI : HTTP 200 + List<AiSystemPromptDto>
+deactivate CTL
+UI -> UI : group the prompts by feature and keep only the ones matching the search text
+
+alt no prompt matches the selected feature group or the search text
+  UI --> STAFF : Show MSG01
+else at least one prompt is available
+  UI --> STAFF : Show every prompt grouped by feature with its key, complete instruction, word count, last-updated time and the Edit action
+end
+deactivate UI
+@enduml

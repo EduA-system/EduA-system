@@ -19,10 +19,10 @@ participant ":BlogPostRepository" as PREPO
 database DB
 
 autonumber
-Teacher -> UI : Click "Ẩn bình luận" on another teacher's comment on their own post
+Teacher -> UI : Click "Hide comment" on another teacher's comment on their own post
 activate UI
 UI --> Teacher : Show the hide confirmation dialog (MSG44)
-Teacher -> UI : Click "Ẩn bình luận" to confirm
+Teacher -> UI : Click "Hide comment" to confirm
 UI -> UI : hideComment()
 UI -> CTL : POST /api/blog-comments/{commentId}/hide
 activate CTL

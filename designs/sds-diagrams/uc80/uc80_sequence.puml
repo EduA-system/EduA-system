@@ -1,0 +1,72 @@
+@startuml UC-80 Update Teacher Account - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-80 Update Teacher Account — Sequence Diagram
+
+actor Moderator
+participant ":UserManagementContent" as UI
+participant ":ModeratorController" as CTL
+participant ":ModeratorTeacherService" as SVC
+participant ":AppUserRepository" as USERS
+participant ":TeacherGradeRepository" as GRADES
+participant ":ClassRepository" as CLASSES
+database DB
+
+autonumber
+Moderator -> UI : Select "Edit" on a teacher account of the assigned subject to open the edit form
+activate UI
+Moderator -> UI : Change full name, phone number, date of birth or grades, then select "Save"
+UI --> Moderator : Show the update confirmation popup once the phone number, the date of birth and at least one grade are valid
+Moderator -> UI : Confirm the update
+UI -> UI : saveTeacherEdit()
+UI -> CTL : PATCH /api/moderator/teachers/{id}
+activate CTL
+CTL -> SVC : updateTeacher(id, fullName, phoneNumber, dateOfBirth, grades)
+activate SVC
+SVC -> USERS : findById(id)
+activate USERS
+USERS -> DB : SELECT * FROM app_users WHERE id = ?
+activate DB
+DB --> USERS : row / none
+deactivate DB
+USERS --> SVC : Optional<AppUser>
+deactivate USERS
+SVC -> SVC : accept only an existing account that holds the Teacher role in the moderator subject (BR-18)
+
+alt the account does not exist, is not a teacher or belongs to another subject
+  SVC --> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL --> UI : HTTP 404 / 403
+  UI --> Moderator : Show the unavailable or not-permitted message and keep the stored account unchanged
+else the account is a teacher of the moderator subject
+  SVC -> USERS : save(AppUser with the updated staff fields)
+  activate USERS
+  USERS -> DB : UPDATE app_users SET full_name, phone_number, date_of_birth WHERE id = ?
+  activate DB
+  DB --> USERS : Saved
+  deactivate DB
+  USERS --> SVC : AppUser
+  deactivate USERS
+  SVC -> GRADES : replaceGrades(userId, grades)
+  activate GRADES
+  GRADES -> DB : DELETE the removed rows and INSERT the selected grades in teacher_grades
+  deactivate GRADES
+  SVC -> CLASSES : deactivateActiveByOwnerIdExcludingGrades(ownerId, keepGrades)
+  activate CLASSES
+  CLASSES -> DB : UPDATE classes SET status = 'INACTIVE' WHERE owner_id = ? AND grade NOT IN ?
+  deactivate CLASSES
+  SVC -> SVC : record the UPDATE_TEACHER entry of the account-management activity log
+  SVC --> CTL : AppUser
+  CTL --> UI : HTTP 200 + TeacherDto
+  UI --> Moderator : Show MSG08 and the updated account information, with email and subject unchanged
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

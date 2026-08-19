@@ -1,0 +1,101 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 0
+skinparam shadowing false
+skinparam classFontSize 13
+skinparam nodesep 30
+skinparam ranksep 60
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #666666
+  ArrowColor #555555
+}
+skinparam class<<ref>> {
+  BackgroundColor #F0F0F0
+  BorderColor #AAAAAA
+}
+
+title Tai khoan & phan quyen
+
+entity "app_users" as app_users {
+  *id : UUID <<PK>>
+  --
+  email : VARCHAR(320) <<UQ>>
+  google_sub : VARCHAR(255) <<UQ>>
+  full_name : VARCHAR(255)
+  subject : VARCHAR(20)
+  status : VARCHAR(20)
+  created_at : TIMESTAMPTZ
+  last_login_at : TIMESTAMPTZ
+  avatar_url : VARCHAR(1024)
+  contact_info : VARCHAR(500)
+  bio : VARCHAR(1000)
+  phone_number : VARCHAR(30)
+  date_of_birth : DATE
+}
+
+entity "roles" as roles {
+  *id : UUID <<PK>>
+  --
+  name : VARCHAR(20) <<UQ>>
+}
+
+entity "user_roles" as user_roles {
+  *id : UUID <<PK>>
+  --
+  user_id : UUID <<FK UQ>>
+  role_id : UUID <<FK UQ>>
+  granted_by : UUID <<FK>>
+  granted_at : TIMESTAMPTZ
+}
+
+entity "refresh_tokens" as refresh_tokens {
+  *id : UUID <<PK>>
+  --
+  user_id : UUID <<FK>>
+  token_hash : VARCHAR(64) <<UQ>>
+  expires_at : TIMESTAMPTZ
+  revoked : BOOLEAN
+  created_at : TIMESTAMPTZ
+}
+
+entity "teacher_grades" as teacher_grades {
+  *user_id : UUID <<PK FK>>
+  *grade : INTEGER <<PK>>
+}
+
+entity "activity_logs" as activity_logs {
+  *id : UUID <<PK>>
+  --
+  actor_id : UUID <<FK>>
+  actor_role : VARCHAR(20)
+  category : VARCHAR(20)
+  action : VARCHAR(40)
+  target_type : VARCHAR(40)
+  target_id : UUID
+  metadata : VARCHAR(1000)
+  created_at : TIMESTAMPTZ
+}
+
+entity "ai_system_prompts" as ai_system_prompts {
+  *prompt_key : VARCHAR(40) <<PK>>
+  --
+  updated_by : UUID <<FK>>
+  instruction : TEXT
+  updated_at : TIMESTAMPTZ
+}
+
+
+app_users ||--o{ refresh_tokens
+app_users |o--o{ user_roles
+roles ||--o{ user_roles
+app_users |o--o{ user_roles
+app_users |o--o{ ai_system_prompts
+app_users ||--o{ activity_logs
+app_users ||--o{ teacher_grades
+roles -[hidden]down- user_roles
+user_roles -[hidden]down- refresh_tokens
+refresh_tokens -[hidden]down- teacher_grades
+activity_logs -[hidden]down- ai_system_prompts
+@enduml

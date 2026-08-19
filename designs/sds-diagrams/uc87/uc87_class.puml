@@ -1,0 +1,102 @@
+@startuml UC-87 Submit Lesson Plan for Weekly Task - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-87 Submit Lesson Plan for Weekly Task — Class Diagram
+
+class WeeklyScheduleScreen <<client>> {
+  - submittingTask : WeeklyTaskSummary
+  - ownedLessonPlans : LibraryContent [0..*]
+  - selectedLessonPlanId : String
+  - showAllLessonPlans : boolean
+  - submitting : boolean
+  + loadOwnedLessonPlans(task, all) : void
+  + handleSubmitTask() : void
+}
+
+class SubmitWeeklyTaskRequest <<dto>> {
+  + libraryContentId : UUID
+  + documentUrl : String
+  + documentName : String
+}
+
+class "WeeklyTaskViews.Detail" as DetailView <<dto>> {
+  + id : UUID
+  + reviewStatus : WeeklyTaskReviewStatus
+  + sourceLibraryContentId : UUID
+  + sourceLibraryContentTitle : String
+  + sourceDocumentUrl : String
+  + submittedAt : Instant
+}
+
+class WeeklyTaskController <<controller>> {
+  - service : WeeklyTaskService
+  + submit(id : UUID, request : SubmitWeeklyTaskRequest) : Detail
+}
+
+class WeeklyTaskService <<service>> {
+  - repository : WeeklyTaskRepository
+  - libraryContentRepository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + submit(id, libraryContentId, documentUrl, documentName) : Detail
+}
+
+interface WeeklyTaskRepository {
+  + findById(id : UUID) : Optional<WeeklyTask>
+  + save(task : WeeklyTask) : WeeklyTask
+}
+
+class JpaWeeklyTaskRepository <<adapter>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+interface LibraryContentRepository {
+  + findActiveById(id : UUID) : Optional<LibraryContent>
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - grade : Integer
+  - chapterCode : String
+  - payload : JsonNode
+}
+
+class WeeklyTask <<entity>> {
+  - id : UUID
+  - teacherId : UUID
+  - deadline : Instant
+  - reviewStatus : WeeklyTaskReviewStatus
+  - sourceLibraryContentId : UUID
+  - sourceLibraryContentTitle : String
+  - sourceLibraryContentPayload : JsonNode
+  - sourceDocumentUrl : String
+  - submittedAt : Instant
+}
+
+enum WeeklyTaskReviewStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+WeeklyScheduleScreen ..> WeeklyTaskController : calls API
+WeeklyScheduleScreen ..> SubmitWeeklyTaskRequest : input
+WeeklyTaskController ..> SubmitWeeklyTaskRequest : input
+WeeklyTaskController ..> DetailView : output
+WeeklyTaskController "1" --> "1" WeeklyTaskService
+WeeklyTaskService "1" --> "1" WeeklyTaskRepository
+WeeklyTaskService "1" --> "1" LibraryContentRepository
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository : implements
+LibraryContentRepository ..> LibraryContent : output
+WeeklyTaskRepository ..> WeeklyTask : output
+WeeklyTask "0..*" ..> "1" LibraryContent : snapshots the submitted lesson plan
+WeeklyTask ..> WeeklyTaskReviewStatus : becomes SUBMITTED
+
+@enduml

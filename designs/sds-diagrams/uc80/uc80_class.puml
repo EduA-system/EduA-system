@@ -1,0 +1,97 @@
+@startuml UC-80 Update Teacher Account - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-80 Update Teacher Account — Class Diagram
+
+class UserManagementContent <<client>> {
+  - teacherEditTarget : SubjectAccountItem
+  - teacherEditFullName : String
+  - teacherEditPhoneNumber : String
+  - teacherEditDateOfBirth : String
+  - teacherEditGrades : number[]
+  - teacherEditConfirmOpen : boolean
+  + openTeacherEdit(item : SubjectAccountItem) : void
+  + requestTeacherEditSave(event : FormEvent) : void
+  + saveTeacherEdit() : void
+}
+
+class UpdateTeacherRequest <<dto>> {
+  + fullName : String
+  + phoneNumber : String
+  + dateOfBirth : LocalDate
+  + grades : List<Integer>
+}
+
+class TeacherDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + phoneNumber : String
+  + dateOfBirth : LocalDate
+  + subject : String
+  + grades : List<Integer>
+  + status : String
+}
+
+class ModeratorController <<controller>> {
+  - moderatorTeacherService : ModeratorTeacherService
+  + updateTeacher(id : UUID, request : UpdateTeacherRequest) : TeacherDto
+}
+
+class ModeratorTeacherService <<service>> {
+  - userRepository : AppUserRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - classRepository : ClassRepository
+  - activityLogService : ActivityLogService
+  + updateTeacher(id, fullName, phoneNumber, dateOfBirth, grades) : AppUser
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+}
+
+interface TeacherGradeRepository {
+  + replaceGrades(userId : UUID, grades : Collection<Integer>) : void
+}
+
+interface ClassRepository {
+  + deactivateActiveByOwnerIdExcludingGrades(ownerId, keepGrades) : int
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  + record(actorId, actorRole, category, action, targetType, targetId) : void
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - phoneNumber : String
+  - dateOfBirth : LocalDate
+  - subject : Subject
+  - status : UserStatus
+}
+
+UserManagementContent ..> ModeratorController : calls API
+UserManagementContent ..> UpdateTeacherRequest : input
+ModeratorController ..> UpdateTeacherRequest : input
+ModeratorController ..> TeacherDto : output
+ModeratorController "1" --> "1" ModeratorTeacherService
+ModeratorTeacherService "1" --> "1" AppUserRepository
+ModeratorTeacherService "1" --> "1" TeacherGradeRepository
+ModeratorTeacherService "1" --> "1" ClassRepository
+ModeratorTeacherService "1" --> "1" ActivityLogService
+JpaAppUserRepository ..|> AppUserRepository : implements
+AppUserRepository ..> AppUser : output
+
+@enduml

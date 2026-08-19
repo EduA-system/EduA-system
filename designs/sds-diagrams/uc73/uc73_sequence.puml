@@ -1,0 +1,58 @@
+@startuml UC-73 View Content List - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 220
+title UC-73 View Content List — Sequence Diagram
+
+actor Moderator
+participant ":HubModerationPage" as UI
+participant ":LibraryContentController" as CTL
+participant ":LibraryContentService" as SVC
+participant ":LibraryContentRepository" as REPO
+database DB
+
+autonumber
+Moderator -> UI : Open "Hub moderation" from the sidebar
+activate UI
+UI -> UI : load()
+UI -> CTL : GET /api/library/contents/moderation-queue?size=100
+activate CTL
+CTL -> SVC : listModerationQueue(page, size)
+activate SVC
+SVC -> SVC : read the assigned subject of the signed-in moderator (BR-18)
+
+alt the moderator has no assigned subject
+  SVC --> CTL : ForbiddenOperationException
+  CTL --> UI : HTTP 403
+  UI --> Moderator : Show that the moderation queue cannot be loaded (MSG25) and keep the list empty
+else the moderator has an assigned subject
+  SVC -> REPO : searchSummariesByStatusAndSubject(SUBMITTED, subject, page, size)
+  activate REPO
+  REPO -> DB : SELECT summary columns FROM library_contents WHERE deleted_at IS NULL AND status = 'SUBMITTED' AND subject = ? ORDER BY submitted_at
+  activate DB
+  DB --> REPO : rows + total
+  deactivate DB
+  REPO --> SVC : SummarySearchResult
+  deactivate REPO
+  SVC --> CTL : LibraryViews.Page
+  CTL --> UI : HTTP 200 + LibraryViews.Page
+  UI --> Moderator : Show each pending item with its type, subject, grade and submission time
+end
+deactivate SVC
+deactivate CTL
+
+Moderator -> UI : Enter a title keyword or pick a content type and a grade
+UI -> UI : keep only the queued items matching the keyword, the content type and the grade
+UI --> Moderator : Show the matching pending items and the filtered / total counter
+
+opt no pending item matches the current criteria
+  UI --> Moderator : Show the empty-state message (MSG01)
+end
+deactivate UI
+@enduml

@@ -1,0 +1,130 @@
+@startuml feat01 Lesson Plan Management - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.1.1 Lesson Plan Management — Class Diagram
+class LessonPlanController <<coordinator>> {
+  - lessonPlanService : LessonPlanService
+  - generateLessonPlanStreamUseCase : GenerateLessonPlanStreamUseCase
+  + generateStream(request : GenerateLessonPlanStreamRequest)
+  + editSection(request : EditLessonSectionRequest) : EditLessonSectionResponse [0..*]
+}
+
+class GenerateLessonPlanStreamUseCase <<business logic>> {
+  - lessonPlanService : LessonPlanService
+  - stream : LessonPlanStreamPort
+  + start(request : GenerateLessonPlanStreamRequest)
+}
+
+class LessonPlanService <<business logic>> {
+  - aiClient : AiClient
+  - promptBuilder : LessonPlan5512PromptBuilder
+  + generateObjectives(request) : LessonPlan5512
+  + loadKnowledge(bookId, chapterId, lessonId) : String
+  + detailOne(activity, knowledge, objectivesJson, materialsJson, frameJson, userPrompt) : Activity5512
+}
+
+class AiClient <<interface>> {
+  {field}
+  --
+  + generate(prompt : String) : String
+}
+
+class LessonPlanStreamPort <<interface>> {
+  {field}
+  --
+  + publishFailed(sessionId : String, message : String)
+  + publishFrameReady(sessionId : String, frame : LessonPlan5512)
+  + publishActivityReady(sessionId : String, activityId : String, activity : Activity5512)
+  + publishActivityFailed(sessionId : String, activityId : String, reasons : String [0..*])
+  + publishDone(sessionId : String, lessonPlanId : String)
+}
+
+class LessonEditDashboard <<user interaction>> {
+  - isGeneratingLesson : Boolean
+  - saveStatus : SaveStatus
+  - libraryContentId : String
+  + saveLesson(session : LessonPlanSession, allowDuringGeneration : Boolean)
+}
+
+class AssistantPanel <<user interaction>> {
+  - input : String
+  - pendingDiffs : PendingSectionDiff [0..*]
+  + handleSubmit(event : FormEvent)
+}
+
+class LibraryContentService <<business logic>> {
+  - repository : LibraryContentRepository
+  + update(id : String, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl) : Detail
+  + list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort) : Page
+  + get(id : String) : Detail
+  + delete(id : String)
+  - requireOwner(id : String) : LibraryContent
+}
+
+class LibraryContentRepository <<interface>> {
+  {field}
+  --
+  + findActiveById(id : String) : LibraryContent
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class Editor <<user interaction>> {
+  - state : EditorState
+  + getHTML() : String
+}
+
+class LessonPlanPdfExport <<user interaction>> {
+  + openDocumentPrintDialog(title : String, documentHtml : String, options : PrintOptions) : Boolean
+}
+
+class Katex <<user interaction>> {
+  + renderToString(latex : String, options : KatexOptions) : String
+}
+
+class StompLessonPlanStreamAdapter <<proxy>> {
+  - messagingTemplate : SimpMessagingTemplate
+  - topicPrefix : String
+}
+
+class JpaLibraryContentRepository <<database wrapper>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LessonPlan5512 <<entity>> {
+  - title : String
+  - objectives : Objectives
+  - equipmentAndMaterials : Materials
+  - activities : Activity5512 [0..*]
+}
+
+class LibraryContent <<entity>> {
+  - id : String
+  - ownerId : String
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+}
+
+LessonPlanController "1" -- "1" LessonPlanService : Delegates to >
+LessonPlanController "1" -- "1" GenerateLessonPlanStreamUseCase : Delegates to >
+GenerateLessonPlanStreamUseCase "1" -- "1" LessonPlanService : Uses >
+GenerateLessonPlanStreamUseCase "1" -- "1" LessonPlanStreamPort : Publishes progress through >
+LessonPlanService "1" -- "1" AiClient : Generates content through >
+LibraryContentService "1" -- "1" LibraryContentRepository : Accesses data through >
+LessonEditDashboard "1" -- "1" LessonPlanController : Sends requests to >
+AssistantPanel "1" -- "1" LessonPlanController : Sends requests to >
+Editor "1" -- "1" LessonPlanController : Sends requests to >
+LessonPlanPdfExport "1" -- "1" LessonPlanController : Sends requests to >
+Katex "1" -- "1" LessonPlanController : Sends requests to >
+StompLessonPlanStreamAdapter ..|> LessonPlanStreamPort
+JpaLibraryContentRepository ..|> LibraryContentRepository
+JpaLibraryContentRepository "1" -- "0..*" LessonPlan5512 : Maps >
+
+@enduml

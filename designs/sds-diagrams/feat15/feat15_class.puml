@@ -1,0 +1,158 @@
+@startuml feat15 Weekly Task Management - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.15.1 Weekly Task Management — Class Diagram
+class WeeklyScheduleScreen <<user interaction>> {
+  - schedule : WeeklyTaskSchedule
+  - viewYear : Integer
+  - viewMonth : Integer
+  + load()
+  + buildMonthSchedule(weeks, year, month) : WeeklyTaskWeek[]
+  + openCreatePanel(weekStartDate : String)
+  + handleCreateLesson()
+  + openEditForm(task : WeeklyTaskSummary)
+  + handleSaveTask()
+  + isCurrentWeek(weekStartDate : String) : Boolean
+  + isPastDeadline(deadline : String) : Boolean
+  + loadOwnedLessonPlans(task, all)
+  + handleSubmitTask()
+  + handleUnsubmit(taskId : String)
+}
+
+class WeeklyTaskController <<coordinator>> {
+  - service : WeeklyTaskService
+  + schedule(from : Date, to : Date, grade : Integer) : Schedule
+  + bulkCreate(request : BulkCreateWeeklyTaskRequest) : BulkResult
+  + update(id : String, request : UpdateWeeklyTaskRequest) : Detail
+  + submit(id : String, request : SubmitWeeklyTaskRequest) : Detail
+  + unsubmit(id : String) : Detail
+}
+
+class WeeklyTaskService <<business logic>> {
+  - repository : WeeklyTaskRepository
+  - userRepository : AppUserRepository
+  - libraryContentRepository : LibraryContentRepository
+  + schedule(from : Date, to : Date, grade : Integer) : Schedule
+  + bulkCreate(weekStartDate, grade, textbookCode, lessons) : BulkResult
+  + update(id, teacherId, weekStartDate, title, textbookCode, chapterCode, lessonCode) : Detail
+  + submit(id, libraryContentId, documentUrl, documentName) : Detail
+  + unsubmit(id : String) : Detail
+  + listModerationQueue(page, size, grade, chapterCode, lessonCode) : Page
+  + get(id : String) : Detail
+  + approve(id : String) : Detail
+  + reject(id : String, rawReason : String) : Detail
+}
+
+class WeeklyTaskRepository <<interface>> {
+  {field}
+  --
+  + findBySubjectAndGrade(subject, grade, fromWeek, toWeek) : WeeklyTask [0..*]
+  + findByTeacher(teacherId, fromWeek, toWeek) : WeeklyTask [0..*]
+  + save(task : WeeklyTask) : WeeklyTask
+  + findById(id : String) : WeeklyTask
+  + searchModerationQueue(subject, status, grade, chapterCode, lessonCode, pageable) : WeeklyTaskPage
+}
+
+class AppUserRepository <<interface>> {
+  {field}
+  --
+  + findAllById(ids : String [0..*]) : AppUser [0..*]
+  + findAllByRoleAndSubject(role, subject, pageable) : AppUserPage
+}
+
+class LibraryContentRepository <<interface>> {
+  {field}
+  --
+  + findActiveById(id : String) : LibraryContent
+}
+
+class ConfirmDialog <<user interaction>> {
+  - title : String
+  - description : ReactNode
+  - confirmLabel : String
+  + onConfirm()
+  + onClose()
+}
+
+class LessonPlanApprovalScreen <<user interaction>> {
+  - items : WeeklyTaskSummary [0..*]
+  - gradeFilter : Integer
+  - chapterCode : String
+  + load()
+  + handleGradeChange(grade : Integer)
+  + handleExpand(id : String)
+  + openSubmittedLessonPreview(taskDetail : WeeklyTaskDetail)
+  + handleApprove(id : String)
+  + handleReject(id : String, reason : String)
+}
+
+class TextPromptDialog <<user interaction>> {
+  - open : Boolean
+  - title : String
+  - label : String
+  + onConfirm(value : String)
+  + onClose()
+}
+
+class JpaWeeklyTaskRepository <<database wrapper>> {
+  - jpa : WeeklyTaskJpaRepository
+}
+
+class JpaAppUserRepository <<database wrapper>> {
+  - jpa : AppUserJpaRepository
+}
+
+class JpaLibraryContentRepository <<database wrapper>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class WeeklyTask <<entity>> {
+  - id : String
+  - moderatorId : String
+  - subject : Subject
+  - grade : Integer
+  - teacherId : String
+}
+
+class AppUser <<entity>> {
+  - id : String
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  + isActiveOrInvited() : Boolean
+}
+
+class LibraryContent <<entity>> {
+  - id : String
+  - ownerId : String
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+}
+
+WeeklyScheduleScreen "1" -- "1" LibraryContent : Uses >
+WeeklyTaskController "1" -- "1" WeeklyTaskService : Delegates to >
+WeeklyTaskService "1" -- "1" WeeklyTaskRepository : Accesses data through >
+WeeklyTaskService "1" -- "1" AppUserRepository : Accesses data through >
+WeeklyTaskService "1" -- "1" LibraryContentRepository : Accesses data through >
+WeeklyScheduleScreen "1" -- "1" WeeklyTaskController : Sends requests to >
+ConfirmDialog "1" -- "1" WeeklyTaskController : Sends requests to >
+LessonPlanApprovalScreen "1" -- "1" WeeklyTaskController : Sends requests to >
+TextPromptDialog "1" -- "1" WeeklyTaskController : Sends requests to >
+JpaLibraryContentRepository ..|> LibraryContentRepository
+JpaAppUserRepository ..|> AppUserRepository
+AppUser "1" -- "0..*" LibraryContent : authors
+JpaWeeklyTaskRepository ..|> WeeklyTaskRepository
+JpaWeeklyTaskRepository "1" -- "0..*" WeeklyTask : Maps >
+JpaAppUserRepository "1" -- "0..*" WeeklyTask : Maps >
+JpaLibraryContentRepository "1" -- "0..*" WeeklyTask : Maps >
+
+@enduml

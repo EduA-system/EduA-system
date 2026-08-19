@@ -1,0 +1,151 @@
+@startuml feat06 Physics Simulation Library - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.6.1 Physics Simulation Library — Class Diagram
+class MoPhongHubPage <<user interaction>> {
+  + render() : ReactNode
+}
+
+class MoPhongHubContent <<user interaction>> {
+  - query : String
+  - domainFilter : Domain [0..*]
+  - selected : Preset
+  + render() : ReactNode
+  + countInDomain(d : Domain) : number
+  + matches(domain : Domain, title : String) : Boolean
+  + toggleDomain(d : Domain)
+  + openPreset(preset : Preset)
+  + saveToLibrary(preset : Preset)
+}
+
+class DomainChip <<user interaction>> {
+  + label : String
+  + count : number
+  + active : Boolean
+  + render() : ReactNode
+}
+
+class Thumb <<user interaction>> {
+  + id : String
+  + render() : ReactNode
+}
+
+class DetailView <<user interaction>> {
+  + preset : Preset
+  + canSaveToLibrary : Boolean
+  + id : String
+  + render() : ReactNode
+}
+
+class GenericDetailView <<user interaction>> {
+  - params : Record<String, number>
+  - running : Boolean
+  - speed : number
+  + render() : ReactNode
+  + handleReadout(readout : SceneReadout)
+  + markEdited()
+  + revertAll()
+  + jumpTo(mark : JumpMark)
+}
+
+class Preset <<data abstraction>> {
+  + id : String
+  + title : String
+  + domain : Domain
+  + applyParams(p : Record) : Scene
+}
+
+class ParamPanel <<user interaction>> {
+  + schema : ParamDef [0..*]
+  + values : Record<String, number>
+  + render() : ReactNode
+}
+
+class SceneKonva2D <<user interaction>> {
+  + scene : Scene
+  + running : Boolean
+  + speed : number
+  + render() : ReactNode
+}
+
+class SceneKernel <<algorithm>> {
+  + initialState : StateVec
+  + project(s : StateVec) : StateVec
+  + derivs(s : StateVec) : StateVec
+}
+
+class LandmarksPanel <<user interaction>> {
+  + analysis : PresetAnalysis
+  + params : Record<String, number>
+  + active : JumpMark
+  + render() : ReactNode
+}
+
+class Landmark <<data abstraction>> {
+  + key : String
+  + label : String
+  + description : String
+  + values(p : Record) : LandmarkValue []
+  + atTime(p : Record) : number
+}
+
+class LibraryContentController <<coordinator>> {
+  - service : LibraryContentService
+  + list(type, subject, grade, textbookCode, chapterCode, q, status, page, size, sort) : Page
+  + get(id : String) : Detail
+  + update(id : String, request : UpdateLibraryContentRequest) : Detail
+  + delete(id : String)
+  + create(r : CreateLibraryContentRequest) : Detail
+}
+
+class LibraryContentService <<business logic>> {
+  - repository : LibraryContentRepository
+  + create(type, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl) : Detail
+}
+
+class LibraryContentRepository <<interface>> {
+  {field}
+  --
+  + save(content : LibraryContent) : LibraryContent
+}
+
+class JpaLibraryContentRepository <<database wrapper>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class LibraryContent <<entity>> {
+  - id : String
+  - ownerId : String
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+}
+
+MoPhongHubContent "1" -- "1" Preset : Uses >
+DetailView "1" -- "1" Preset : Uses >
+LibraryContentController "1" -- "1" LibraryContentService : Delegates to >
+LibraryContentService "1" -- "1" LibraryContentRepository : Accesses data through >
+MoPhongHubPage "1" -- "1" LibraryContentController : Sends requests to >
+MoPhongHubContent "1" -- "1" LibraryContentController : Sends requests to >
+DomainChip "1" -- "1" LibraryContentController : Sends requests to >
+Thumb "1" -- "1" LibraryContentController : Sends requests to >
+DetailView "1" -- "1" LibraryContentController : Sends requests to >
+GenericDetailView "1" -- "1" LibraryContentController : Sends requests to >
+ParamPanel "1" -- "1" LibraryContentController : Sends requests to >
+SceneKonva2D "1" -- "1" LibraryContentController : Sends requests to >
+LandmarksPanel "1" -- "1" LibraryContentController : Sends requests to >
+JpaLibraryContentRepository ..|> LibraryContentRepository
+MoPhongHubContent "1" *-- "0..*" DomainChip : contains
+GenericDetailView "1" *-- "0..*" ParamPanel : contains
+GenericDetailView "1" *-- "0..*" SceneKonva2D : contains
+GenericDetailView "1" *-- "0..*" LandmarksPanel : contains
+JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
+
+@enduml

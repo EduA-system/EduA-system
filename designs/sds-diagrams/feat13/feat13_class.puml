@@ -1,0 +1,182 @@
+@startuml feat13 Class Resources - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.13.1 Class Resources — Class Diagram
+class ClassResourcesPage <<user interaction>> {
+  - detail : ClassDetail
+  - resources : ClassResourceSummary [0..*]
+  - target : FormTarget
+  + saved(resource : ClassResourceSummary)
+  + remove(resource : ClassResourceSummary)
+}
+
+class ResourceFormPanel <<user interaction>> {
+  - title : String
+  - description : String
+  - sourceType : ResourceSourceType
+  + handleSubmit(event : FormEvent)
+}
+
+class ClassController <<coordinator>> {
+  - classResourceService : ClassResourceService
+  - submissionService : SubmissionService
+  + list(subject, grade, status, q, page, size) : ClassPageDto
+  + create(request : CreateClassRequest) : ClassDetailDto
+  + detail(id : String) : ClassDetailDto
+  + update(id : String, request : UpdateClassRequest) : ClassDetailDto
+  + updateStatus(id : String, request : UpdateClassStatusRequest) : ClassDetailDto
+}
+
+class ClassResourceService <<business logic>> {
+  - classResourceRepository : ClassResourceRepository
+  - libraryContentRepository : LibraryContentRepository
+  - classMemberRepository : ClassMemberRepository
+  - submissionRepository : SubmissionRepository
+  + postResource(classId, resourceDetails) : ResourceSummary
+  + updateResource(classId, resourceId, resourceChanges) : ResourceSummary
+  + deleteResource(classId : String, resourceId : String)
+  + listResources(classId : String, page : Integer, size : Integer) : Page
+}
+
+class LibraryContentRepository <<interface>> {
+  {field}
+  --
+  + findActiveById(id : String) : LibraryContent
+}
+
+class ClassResourceRepository <<interface>> {
+  {field}
+  --
+  + save(resource : ClassResource) : ClassResource
+  + findById(id : String) : ClassResource
+  + deleteById(id : String)
+  + findByClassId(classId : String, page : Integer, size : Integer) : PageResult
+}
+
+class ConfirmDialog <<user interaction>> {
+  - title : String
+  - description : ReactNode
+  - confirmLabel : String
+  + onConfirm()
+  + onClose()
+}
+
+class StudentClassResourcesPage <<user interaction>> {
+  - selectedClass : ClassDetail
+  - accessRevoked : Boolean
+  - classes : ClassSummary [0..*]
+  + loadResources(id : String)
+}
+
+class ClassMemberRepository <<interface>> {
+  {field}
+  --
+  + existsByClassIdAndStudentId(classId : String, studentId : String) : Boolean
+}
+
+class SubmissionRepository <<interface>> {
+  {field}
+  --
+  + findStatusesByResourceIds(resourceIds, studentId) : Map
+  + findByResourceAndStudent(resourceId : String, studentId : String) : SubmissionWithFiles
+}
+
+class ResourceDetailPage <<user interaction>> {
+  - resource : ClassResourceSummary
+  - submission : SubmissionDetail
+  - accessRevoked : Boolean
+  + load()
+}
+
+class SubmissionService <<business logic>> {
+  - submissionRepository : SubmissionRepository
+  - classResourceRepository : ClassResourceRepository
+  - classMemberRepository : ClassMemberRepository
+  + getOwnSubmission(classId : String, resourceId : String) : Detail
+}
+
+class JpaLibraryContentRepository <<database wrapper>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+class JpaClassResourceRepository <<database wrapper>> {
+  - jpa : ClassResourceJpaRepository
+}
+
+class JpaClassMemberRepository <<database wrapper>> {
+  - jpa : ClassMemberJpaRepository
+}
+
+class JpaSubmissionRepository <<database wrapper>> {
+  - submissionJpa : SubmissionJpaRepository
+  - fileJpa : SubmissionFileJpaRepository
+  - jpa : SubmissionJpaRepository
+}
+
+class LibraryContent <<entity>> {
+  - id : String
+  - ownerId : String
+  - type : LibraryContentType
+  - title : String
+  - status : LibraryContentStatus
+}
+
+class ClassResource <<entity>> {
+  - id : String
+  - classId : String
+  - postedBy : String
+  - title : String
+  - description : String
+  + hasAttachment() : Boolean
+}
+
+class ClassMember <<entity>> {
+  - id : String
+  - classId : String
+  - studentId : String
+  - status : ClassMemberStatus
+  - joinedAt : Date
+}
+
+class Submission <<entity>> {
+  - id : String
+  - classResourceId : String
+  - studentId : String
+  - status : SubmissionStatus
+  - submittedAt : Date
+}
+
+ClassController "1" -- "1" ClassResourceService : Delegates to >
+ClassController "1" -- "1" SubmissionService : Delegates to >
+ClassResourceService "1" -- "1" ClassResourceRepository : Accesses data through >
+ClassResourceService "1" -- "1" LibraryContentRepository : Accesses data through >
+ClassResourceService "1" -- "1" ClassMemberRepository : Accesses data through >
+ClassResourceService "1" -- "1" SubmissionRepository : Accesses data through >
+SubmissionService "1" -- "1" SubmissionRepository : Accesses data through >
+SubmissionService "1" -- "1" ClassResourceRepository : Accesses data through >
+SubmissionService "1" -- "1" ClassMemberRepository : Accesses data through >
+ClassResourcesPage "1" -- "1" ClassController : Sends requests to >
+ResourceFormPanel "1" -- "1" ClassController : Sends requests to >
+ConfirmDialog "1" -- "1" ClassController : Sends requests to >
+StudentClassResourcesPage "1" -- "1" ClassController : Sends requests to >
+ResourceDetailPage "1" -- "1" ClassController : Sends requests to >
+JpaLibraryContentRepository ..|> LibraryContentRepository
+JpaClassMemberRepository ..|> ClassMemberRepository
+JpaClassResourceRepository ..|> ClassResourceRepository
+ClassResource "1" -- "0..*" Submission : assignment submissions
+ClassResource "1" -- "0..*" Submission : has
+JpaSubmissionRepository ..|> SubmissionRepository
+ResourceDetailPage "1" *-- "0..*" ConfirmDialog : contains
+JpaLibraryContentRepository "1" -- "0..*" LibraryContent : Maps >
+JpaClassResourceRepository "1" -- "0..*" LibraryContent : Maps >
+JpaClassMemberRepository "1" -- "0..*" LibraryContent : Maps >
+JpaSubmissionRepository "1" -- "0..*" LibraryContent : Maps >
+
+@enduml

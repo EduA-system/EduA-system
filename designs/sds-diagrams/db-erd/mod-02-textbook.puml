@@ -1,0 +1,71 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 0
+skinparam shadowing false
+skinparam classFontSize 13
+skinparam nodesep 30
+skinparam ranksep 60
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #666666
+  ArrowColor #555555
+}
+skinparam class<<ref>> {
+  BackgroundColor #F0F0F0
+  BorderColor #AAAAAA
+}
+
+title Danh muc SGK
+
+entity "textbooks" as textbooks {
+  *id : UUID <<PK>>
+  --
+  code : VARCHAR(20) <<UQ>>
+  name : VARCHAR(200)
+  grade : INTEGER
+  source : VARCHAR(200)
+  publisher : VARCHAR(200)
+  series : VARCHAR(200)
+}
+
+entity "textbook_names" as textbook_names {
+  *id : UUID <<PK>>
+  --
+  textbook_id : UUID <<FK UQ>>
+  code : VARCHAR(20) <<UQ>>
+  name : VARCHAR(200)
+  grade : INTEGER
+  subject_code : VARCHAR(40)
+  subject_name : VARCHAR(100)
+  volume : INTEGER
+  publisher : VARCHAR(200)
+  series : VARCHAR(200)
+  sort_order : INTEGER
+}
+
+entity "chapters" as chapters {
+  *id : UUID <<PK>>
+  --
+  textbook_id : UUID <<FK UQ>>
+  code : VARCHAR(20) <<UQ>>
+  name : VARCHAR(500)
+  sort_order : INTEGER
+}
+
+entity "lessons" as lessons {
+  *id : UUID <<PK>>
+  --
+  chapter_id : UUID <<FK UQ>>
+  code : VARCHAR(20) <<UQ>>
+  name : VARCHAR(500)
+  page : INTEGER
+  sort_order : INTEGER
+  knowledge_json : JSONB
+}
+
+
+textbooks ||--o{ chapters
+chapters ||--o{ lessons
+textbooks |o--o{ textbook_names
+@enduml

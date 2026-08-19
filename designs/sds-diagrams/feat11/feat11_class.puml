@@ -1,0 +1,170 @@
+@startuml feat11 Community Blog - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.11.1 Community Blog — Class Diagram
+class BlogCommunityPage <<user interaction>> {
+  - posts : Summary [0..*]
+  - activeSubjectFilter : String
+  - isPostsLoading : Boolean
+  + loadPosts(subject : String)
+  + openDetail(id : String)
+  + loadDetail(id : String)
+  + handleModeratorRemoved()
+  + openEdit(id : String)
+  + deletePost(id : String)
+  + addComment()
+  + startEditComment(comment : Comment)
+  + requestUpdateComment()
+  + updateComment()
+  + deleteComment(cid : String)
+  + hideComment()
+}
+
+class BlogController <<coordinator>> {
+  - postService : BlogPostService
+  - commentService : BlogCommentService
+  + list(subject, authorId, q, page, size) : Page
+  + detail(id : String) : PostDetail
+  + create(request : CreateBlogPostRequest) : PostDetail
+  + update(id : String, request : UpdateBlogPostRequest) : PostDetail
+  + delete(id : String)
+}
+
+class BlogPostService <<business logic>> {
+  - postRepository : BlogPostRepository
+  - commentRepository : BlogCommentRepository
+  - authorResolver : BlogAuthorResolver
+  + list(subject, authorId, q, page, size) : Page
+  + getDetail(id : String) : PostDetail
+  + create(title, content, subject, thumbnailUrl) : PostDetail
+  + update(id, title, content, subject, thumbnailUrl) : PostDetail
+  + delete(id : String)
+  + removeByModerator(id : String, reason : String)
+}
+
+class BlogPostRepository <<interface>> {
+  {field}
+  --
+  + search(subject, authorId, q, page, size) : SearchResult
+  + findPublishedById(id : String) : BlogPost
+  + save(post : BlogPost) : BlogPost
+}
+
+class BlogCommentRepository <<interface>> {
+  {field}
+  --
+  + countByPostIds(postIds : String [0..*]) : Map
+  + findByPostId(postId : String) : BlogComment [0..*]
+  + save(comment : BlogComment) : BlogComment
+  + findById(id : String) : BlogComment
+  + deleteById(id : String)
+}
+
+class CreateBlogPostPage <<user interaction>> {
+  - title : String
+  - subject : SubjectValue
+  - content : String
+  + handleCoverFile(file : File)
+  + handleSubmit()
+}
+
+class UploadController <<coordinator>> {
+  + upload(file : MultipartFile) : UploadResponse
+}
+
+class CreatePostModal <<user interaction>> {
+  - title : String
+  - subject : SubjectValue
+  - content : String
+  + handleSubmit()
+}
+
+class BlogConfirmationDialog <<user interaction>> {
+  - title : String
+  - description : String
+  - confirmLabel : String
+  + onConfirm()
+  + onCancel()
+}
+
+class BlogCommentService <<business logic>> {
+  - commentRepository : BlogCommentRepository
+  - postRepository : BlogPostRepository
+  - authorResolver : BlogAuthorResolver
+  + create(postId, content, parentCommentId) : CommentView
+  + update(commentId : String, content : String) : CommentView
+  + delete(commentId : String)
+  + hideByPostAuthor(commentId : String)
+}
+
+class BlogModerationPage <<user interaction>> {
+  - posts : Summary [0..*]
+  - filterType : String
+  - selectedDay : String
+  + loadPosts()
+  + removePost()
+}
+
+class BlogAuthorResolver <<business logic>> {
+  + profiles(authorIds : String [0..*]) : Map
+}
+
+class RemovePostDialog <<user interaction>> {
+  - reason : String
+  + onReasonChange(value : String)
+  + onConfirm()
+  + onCancel()
+}
+
+class JpaBlogPostRepository <<database wrapper>> {
+  - jpa : BlogPostJpaRepository
+}
+
+class JpaBlogCommentRepository <<database wrapper>> {
+  - jpa : BlogCommentJpaRepository
+}
+
+class BlogPost <<entity>> {
+  - id : String
+  - authorId : String
+  - title : String
+  - content : String
+  - thumbnailUrl : String
+  + isPublished() : Boolean
+}
+
+class BlogComment <<entity>> {
+  - id : String
+  - postId : String
+  - authorId : String
+  - parentCommentId : String
+  - content : String
+}
+
+BlogController "1" -- "1" BlogPostService : Delegates to >
+BlogController "1" -- "1" BlogCommentService : Delegates to >
+BlogPostService "1" -- "1" BlogPostRepository : Accesses data through >
+BlogPostService "1" -- "1" BlogCommentRepository : Accesses data through >
+BlogPostService "1" -- "1" BlogAuthorResolver : Uses >
+BlogCommentService "1" -- "1" BlogCommentRepository : Accesses data through >
+BlogCommentService "1" -- "1" BlogPostRepository : Accesses data through >
+BlogCommentService "1" -- "1" BlogAuthorResolver : Uses >
+BlogCommunityPage "1" -- "1" BlogController : Sends requests to >
+CreateBlogPostPage "1" -- "1" BlogController : Sends requests to >
+CreatePostModal "1" -- "1" BlogController : Sends requests to >
+BlogConfirmationDialog "1" -- "1" BlogController : Sends requests to >
+BlogModerationPage "1" -- "1" BlogController : Sends requests to >
+RemovePostDialog "1" -- "1" BlogController : Sends requests to >
+JpaBlogPostRepository ..|> BlogPostRepository
+JpaBlogCommentRepository ..|> BlogCommentRepository
+BlogPost "1" -- "0..*" BlogComment : has
+JpaBlogPostRepository "1" -- "0..*" BlogPost : Maps >
+JpaBlogCommentRepository "1" -- "0..*" BlogPost : Maps >
+
+@enduml

@@ -1,0 +1,84 @@
+@startuml UC-72 Hide Comment on Own Content - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-72 Hide Comment on Own Content — Class Diagram
+
+class CommunityHubDetailPage <<client>> {
+  - detail : HubContentDetail
+  - moderationTarget : ModerationTarget
+  - moderatingComment : boolean
+  + confirmDeleteComment() : void
+}
+
+class HubContentController <<controller>> {
+  - commentService : HubCommentService
+  + hideComment(commentId : UUID) : void
+}
+
+class HubCommentService <<service>> {
+  - commentRepository : HubCommentRepository
+  - contentRepository : LibraryContentRepository
+  - currentUser : CurrentUserProvider
+  + hideByContentOwner(commentId : UUID) : void
+}
+
+interface HubCommentRepository {
+  + findById(id : UUID) : Optional<HubComment>
+  + findByLibraryContentId(libraryContentId : UUID) : List<HubComment>
+  + save(comment : HubComment) : HubComment
+}
+
+interface LibraryContentRepository {
+  + findApprovedForHubById(id : UUID) : Optional<LibraryContent>
+}
+
+class JpaHubCommentRepository <<adapter>> {
+  - jpa : HubCommentJpaRepository
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+}
+
+class HubComment <<entity>> {
+  - id : UUID
+  - libraryContentId : UUID
+  - authorId : UUID
+  - parentCommentId : UUID
+  - content : String
+  - hiddenAt : Instant
+  - hiddenBy : UUID
+}
+
+class HubCommentEntity <<entity>> {
+  - id : UUID
+  - parentCommentId : UUID
+  - hiddenAt : Instant
+  - hiddenBy : UUID
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - subject : Subject
+  - status : LibraryContentStatus
+}
+
+CommunityHubDetailPage ..> HubContentController : calls API
+HubContentController "1" --> "1" HubCommentService
+HubCommentService "1" --> "1" HubCommentRepository
+HubCommentService "1" --> "1" LibraryContentRepository
+JpaHubCommentRepository ..|> HubCommentRepository : implements
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+JpaHubCommentRepository ..> HubCommentEntity : maps
+HubCommentRepository ..> HubComment : soft-hides by setting hiddenAt
+LibraryContentRepository ..> LibraryContent : reads APPROVED content
+LibraryContent "1" -- "0..*" HubComment : has
+HubComment "0..*" --> "0..1" HubComment : replies to, hidden together
+
+@enduml

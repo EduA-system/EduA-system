@@ -1,0 +1,66 @@
+@startuml feat03 Slide Deck Generation - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.3.1 Slide Deck Generation — Class Diagram
+class SlideMakerClient <<user interaction>> {
+  - steps : StepStates
+  - libraryId : String
+  - saving : Boolean
+  + handleSlideFrames(slideId : String, result : LayoutRender)
+  + handleSlideFailed(slideId : String, message : String)
+  + handleSlideReady(slideId, result, title)
+  + saveDeck(metadata : DeckMetadata, auto : Boolean)
+}
+
+class SlideDesignPipeline <<user interaction>> {
+  - SLIDE_CONCURRENCY : Integer
+  - CONTENT_SLOT_BATCH_SIZE : Integer
+  - MAX_GENERATED_IMAGES_PER_DECK : Integer
+  + runDeckSkinStep(input : DesignPipelineInput, cb : StepCallbacks)
+  + runStructuralStep(cb : StepCallbacks) : StepRunResult
+  + runContentFillStep(cb : StepCallbacks) : StepRunResult
+}
+
+class SlideLayoutEngine <<user interaction>> {
+  + generateSlideLayout(input : SlideLayoutInput) : SlideLayoutResult
+}
+
+class SlideDesignController <<coordinator>> {
+  - generateSlideHtmlDesignUseCase : GenerateSlideHtmlDesignUseCase
+  - fillSlideContentUseCase : FillSlideContentUseCase
+  + generateHtml(req : SlideHtmlDesignRequest) : SlideHtmlDesignResponse
+  + fillContent(req : SlideContentFillRequest) : SlideContentFillResponse
+  + generateImage(req : SlideImageGenerateRequest) : SlideImageGenerateResponse
+}
+
+class GenerateSlideHtmlDesignUseCase <<business logic>> {
+  - aiClient : AiClient
+  + execute(req : SlideHtmlDesignRequest) : SlideHtmlDesignResponse
+}
+
+class FillSlideContentUseCase <<business logic>> {
+  - aiClient : AiClient
+  + execute(req : SlideContentFillRequest) : SlideContentFillResponse
+}
+
+class AiClient <<interface>> {
+  {field}
+  --
+  + generate(prompt : String) : String
+}
+
+SlideDesignController "1" -- "1" GenerateSlideHtmlDesignUseCase : Delegates to >
+SlideDesignController "1" -- "1" FillSlideContentUseCase : Delegates to >
+GenerateSlideHtmlDesignUseCase "1" -- "1" AiClient : Generates content through >
+FillSlideContentUseCase "1" -- "1" AiClient : Generates content through >
+SlideMakerClient "1" -- "1" SlideDesignController : Sends requests to >
+SlideDesignPipeline "1" -- "1" SlideDesignController : Sends requests to >
+SlideLayoutEngine "1" -- "1" SlideDesignController : Sends requests to >
+
+@enduml

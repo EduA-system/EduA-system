@@ -1,0 +1,139 @@
+@startuml feat14 Assignment Submissions - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+skinparam classAttributeIconSize 0
+hide circle
+title 2.14.1 Assignment Submissions — Class Diagram
+class SubmissionsRosterPanel <<user interaction>> {
+  - roster : SubmissionRoster
+  - loading : Boolean
+  - error : String
+  + load()
+}
+
+class ClassController <<coordinator>> {
+  - submissionService : SubmissionService
+  + list(subject, grade, status, q, page, size) : ClassPageDto
+  + create(request : CreateClassRequest) : ClassDetailDto
+  + detail(id : String) : ClassDetailDto
+  + update(id : String, request : UpdateClassRequest) : ClassDetailDto
+  + updateStatus(id : String, request : UpdateClassStatusRequest) : ClassDetailDto
+}
+
+class SubmissionService <<business logic>> {
+  - submissionRepository : SubmissionRepository
+  - classMemberRepository : ClassMemberRepository
+  - userRepository : AppUserRepository
+  + listSubmissions(classId : String, resourceId : String) : Roster
+  + getSubmissionDetail(classId, resourceId, studentId) : TeacherDetail
+  + submit(classId, resourceId, textContent, files) : Detail
+  + unsubmit(classId, resourceId)
+}
+
+class SubmissionRepository <<interface>> {
+  {field}
+  --
+  + findAllByResource(resourceId : String) : SubmissionWithFiles [0..*]
+  + findByResourceAndStudent(resourceId : String, studentId : String) : SubmissionWithFiles
+  + upsert(submission, files) : SubmissionWithFiles
+  + deleteByResourceAndStudent(resourceId : String, studentId : String)
+}
+
+class ClassMemberRepository <<interface>> {
+  {field}
+  --
+  + findAllStudentIds(classId : String) : String [0..*]
+}
+
+class AppUserRepository <<interface>> {
+  {field}
+  --
+  + findAllById(ids : String [0..*]) : AppUser [0..*]
+  + findById(id : String) : AppUser
+}
+
+class SubmissionDetailPanel <<user interaction>> {
+  - detail : TeacherSubmissionDetail
+  - loading : Boolean
+  - error : String
+  + load()
+}
+
+class ResourceDetailPage <<user interaction>> {
+  - resource : ClassResourceSummary
+  - submission : SubmissionDetail
+  - accessRevoked : Boolean
+  + requestUnsubmit()
+  + handleUnsubmit()
+}
+
+class ConfirmDialog <<user interaction>> {
+  - title : String
+  - description : ReactNode
+  - confirmLabel : String
+  + onConfirm()
+  + onClose()
+}
+
+class JpaSubmissionRepository <<database wrapper>> {
+  - submissionJpa : SubmissionJpaRepository
+  - fileJpa : SubmissionFileJpaRepository
+  - jpa : SubmissionJpaRepository
+}
+
+class JpaClassMemberRepository <<database wrapper>> {
+  - jpa : ClassMemberJpaRepository
+}
+
+class JpaAppUserRepository <<database wrapper>> {
+  - jpa : AppUserJpaRepository
+}
+
+class Submission <<entity>> {
+  - id : String
+  - classResourceId : String
+  - studentId : String
+  - status : SubmissionStatus
+  - submittedAt : Date
+}
+
+class ClassMember <<entity>> {
+  - id : String
+  - classId : String
+  - studentId : String
+  - status : ClassMemberStatus
+  - joinedAt : Date
+}
+
+class AppUser <<entity>> {
+  - id : String
+  - email : String
+  - googleSub : String
+  - fullName : String
+  - subject : Subject
+  + isActiveOrInvited() : Boolean
+}
+
+ClassController "1" -- "1" SubmissionService : Delegates to >
+SubmissionService "1" -- "1" SubmissionRepository : Accesses data through >
+SubmissionService "1" -- "1" ClassMemberRepository : Accesses data through >
+SubmissionService "1" -- "1" AppUserRepository : Accesses data through >
+SubmissionsRosterPanel "1" -- "1" ClassController : Sends requests to >
+SubmissionDetailPanel "1" -- "1" ClassController : Sends requests to >
+ResourceDetailPage "1" -- "1" ClassController : Sends requests to >
+ConfirmDialog "1" -- "1" ClassController : Sends requests to >
+JpaAppUserRepository ..|> AppUserRepository
+JpaClassMemberRepository ..|> ClassMemberRepository
+ClassMember "1" -- "0..*" AppUser : enrolled student
+JpaSubmissionRepository ..|> SubmissionRepository
+AppUser "1" -- "0..*" Submission : submitted
+ResourceDetailPage "1" *-- "0..*" ConfirmDialog : contains
+JpaSubmissionRepository "1" -- "0..*" Submission : Maps >
+JpaClassMemberRepository "1" -- "0..*" Submission : Maps >
+JpaAppUserRepository "1" -- "0..*" Submission : Maps >
+
+@enduml

@@ -1,0 +1,98 @@
+@startuml UC-105 Replace Moderator Account - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-105 Replace Moderator Account — Class Diagram
+
+class UserManagementPage <<client>> {
+  - replacementTarget : SubjectAccountItem
+  - replacementEmail : String
+  - disablePrevious : boolean
+  - previousTeacherGrades : int [0..*]
+  - replacementError : String
+  + openReplacement(item : SubjectAccountItem) : void
+  + replaceModerator() : void
+}
+
+class ReplaceModeratorRequest <<dto>> {
+  + replacementEmail : String
+  + disablePrevious : boolean
+  + previousTeacherGrades : List<Integer>
+}
+
+class ModeratorDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + subject : String
+  + status : String
+}
+
+class PrincipalController <<controller>> {
+  - principalModeratorService : PrincipalModeratorService
+  + replaceModerator(id : UUID, request : ReplaceModeratorRequest) : ModeratorDto
+}
+
+class PrincipalModeratorService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - teacherGradeRepository : TeacherGradeRepository
+  - classRepository : ClassRepository
+  - refreshTokenRepository : RefreshTokenRepository
+  - activityLogService : ActivityLogService
+  + replaceModerator(id, replacementEmail, disablePrevious, grades) : AppUser
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  + record(actorId, actorRole, category, action, target) : void
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+  + findByEmail(email : String) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+}
+
+interface UserRoleRepository {
+  + findRolesByUserId(userId : UUID) : Set<Role>
+  + replaceRole(userId, role, grantedBy, grantedAt) : void
+}
+
+interface TeacherGradeRepository {
+  + replaceGrades(userId : UUID, grades : Collection<Integer>) : void
+}
+
+interface ClassRepository {
+  + archiveActiveByOwnerId(ownerId : UUID) : int
+}
+
+interface RefreshTokenRepository {
+  + revokeAllByUserId(userId : UUID) : void
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+}
+
+UserManagementPage ..> PrincipalController : calls API
+UserManagementPage ..> ReplaceModeratorRequest : input
+PrincipalController ..> ReplaceModeratorRequest : input
+PrincipalController ..> ModeratorDto : output
+PrincipalController "1" --> "1" PrincipalModeratorService
+PrincipalModeratorService "1" --> "1" AppUserRepository
+PrincipalModeratorService "1" --> "1" UserRoleRepository
+PrincipalModeratorService "1" --> "1" TeacherGradeRepository
+PrincipalModeratorService "1" --> "1" ClassRepository
+PrincipalModeratorService "1" --> "1" RefreshTokenRepository
+PrincipalModeratorService "1" --> "1" ActivityLogService
+AppUserRepository ..> AppUser : output
+
+@enduml

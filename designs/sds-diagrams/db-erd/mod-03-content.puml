@@ -1,0 +1,115 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 0
+skinparam shadowing false
+skinparam classFontSize 13
+skinparam nodesep 14
+skinparam ranksep 120
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #666666
+  ArrowColor #555555
+}
+skinparam class<<ref>> {
+  BackgroundColor #F0F0F0
+  BorderColor #AAAAAA
+}
+
+title Blog & Community Hub
+
+entity "blog_posts" as blog_posts {
+  *id : UUID <<PK>>
+  --
+  author_id : UUID <<FK>>
+  removed_by : UUID <<FK>>
+  title : VARCHAR(255)
+  content : TEXT
+  subject : VARCHAR(20)
+  status : VARCHAR(20)
+  removed_reason : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  thumbnail_url : VARCHAR(1000)
+}
+
+entity "blog_comments" as blog_comments {
+  *id : UUID <<PK>>
+  --
+  post_id : UUID <<FK>>
+  author_id : UUID <<FK>>
+  hidden_by : UUID <<FK>>
+  parent_comment_id : UUID <<FK>>
+  content : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  hidden_at : TIMESTAMPTZ
+}
+
+entity "library_contents" as library_contents {
+  *id : UUID <<PK>>
+  --
+  owner_id : UUID <<FK>>
+  reviewed_by : UUID <<FK>>
+  type : VARCHAR(20)
+  title : VARCHAR(255)
+  subject : VARCHAR(20)
+  status : VARCHAR(20)
+  payload : JSONB
+  thumbnail_url : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  deleted_at : TIMESTAMPTZ
+  grade : INTEGER
+  submitted_at : TIMESTAMPTZ
+  reviewed_at : TIMESTAMPTZ
+  rejection_reason : TEXT
+  textbook_code : VARCHAR(20)
+  chapter_code : VARCHAR(20)
+  version : BIGINT
+  source_library_content_id : UUID <<FK>>
+}
+
+entity "hub_content_comments" as hub_content_comments {
+  *id : UUID <<PK>>
+  --
+  library_content_id : UUID <<FK>>
+  author_id : UUID <<FK>>
+  parent_comment_id : UUID <<FK>>
+  hidden_by : UUID <<FK>>
+  content : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  hidden_at : TIMESTAMPTZ
+}
+
+entity "hub_content_reports" as hub_content_reports {
+  *id : UUID <<PK>>
+  --
+  library_content_id : UUID <<FK>>
+  reporter_id : UUID <<FK>>
+  reason : TEXT
+  created_at : TIMESTAMPTZ
+}
+
+entity "app_users" as app_users <<ref>> {
+  *id : UUID <<PK>>
+}
+
+
+library_contents |o--o{ library_contents
+app_users ||--o{ blog_posts
+app_users |o--o{ blog_posts
+blog_posts ||--o{ blog_comments
+app_users ||--o{ blog_comments
+app_users |o--o{ blog_comments
+blog_comments |o--o{ blog_comments
+app_users ||--o{ library_contents
+app_users |o--o{ library_contents
+library_contents ||--o{ hub_content_comments
+app_users ||--o{ hub_content_comments
+hub_content_comments |o--o{ hub_content_comments
+app_users |o--o{ hub_content_comments
+library_contents ||--o{ hub_content_reports
+app_users ||--o{ hub_content_reports
+@enduml

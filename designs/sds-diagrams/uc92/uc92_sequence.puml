@@ -1,0 +1,72 @@
+@startuml UC-92 Reject Lesson Plan - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-92 Reject Lesson Plan — Sequence Diagram
+
+actor Moderator
+participant ":LessonPlanApprovalScreen" as UI
+participant ":TextPromptDialog" as PROMPT
+participant ":WeeklyTaskController" as CTL
+participant ":WeeklyTaskService" as SVC
+participant ":WeeklyTaskRepository" as REPO
+database DB
+
+autonumber
+Moderator -> UI : Click "Reject" on an eligible submission of the approval list
+activate UI
+UI -> PROMPT : Show the rejection popup with the required reason field
+activate PROMPT
+
+opt the reason is still empty or the moderator cancels the rejection
+  Moderator -> PROMPT : Leave the reason field empty or click "Cancel"
+  PROMPT --> Moderator : Keep the "Reject" action disabled with MSG02 under the field, or close the popup and record no decision
+end
+
+Moderator -> PROMPT : Enter the rejection reason and click "Reject"
+PROMPT -> UI : Report the confirmed rejection with the entered reason
+deactivate PROMPT
+UI -> UI : handleReject(id, reason)
+UI -> CTL : POST /api/weekly-tasks/{id}/rejection
+activate CTL
+CTL -> SVC : reject(id, rawReason)
+activate SVC
+SVC -> REPO : findById(id)
+activate REPO
+REPO -> DB : SELECT * FROM weekly_tasks WHERE id = ?
+activate DB
+DB --> REPO : row / none
+deactivate DB
+REPO --> SVC : Optional<WeeklyTask>
+deactivate REPO
+SVC -> SVC : require a non-empty reason and accept only a submission still in SUBMITTED status inside the moderator assigned subject (BR-18)
+
+alt the reason is empty, or the submission is unavailable, already processed or outside the assigned subject
+  SVC --> CTL : IllegalArgumentException / ResourceNotFoundException / ForbiddenOperationException
+  CTL --> UI : HTTP 400 / 404 / 403
+  UI --> Moderator : Show MSG02 for the empty reason or MSG25 for the unavailable submission, and keep every status unchanged
+else the reason is entered and the submission is SUBMITTED in the assigned subject
+  SVC -> REPO : save(task with REJECTED status, the reason, the reviewing moderator and the review time)
+  activate REPO
+  REPO -> DB : UPDATE weekly_tasks SET review_status = 'REJECTED', rejection_reason = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ?
+  activate DB
+  DB --> REPO : Saved
+  deactivate DB
+  REPO --> SVC : WeeklyTask
+  deactivate REPO
+  SVC -> SVC : record the rejection with its reason in the activity log and inform the assigned teacher of the review result (see UC-93)
+  SVC --> CTL : WeeklyTaskViews.Detail
+  CTL --> UI : HTTP 200 + WeeklyTaskViews.Detail
+  UI -> UI : load()
+  UI --> Moderator : Show MSG08, leave the Community Hub publish status untouched and refresh the approval list
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

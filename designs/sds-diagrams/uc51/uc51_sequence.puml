@@ -1,0 +1,63 @@
+@startuml UC-51 View Physics Simulation Library - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-51 View Physics Simulation Library — Sequence Diagram
+
+actor "Physics Teacher" as Teacher
+participant ":MoPhongHubPage" as PAGE
+participant ":MoPhongHubContent" as HUB
+participant ":DomainChip" as CHIP
+participant ":Thumb" as THUMB
+participant ":DetailView" as DETAIL
+
+autonumber
+Teacher -> PAGE : Open the Physics Simulation Library from the main navigation
+activate PAGE
+PAGE -> HUB : render()
+activate HUB
+HUB -> HUB : load the curated PRESETS catalog and select every physics domain by default
+HUB -> HUB : countInDomain(d)
+HUB -> CHIP : render()
+activate CHIP
+CHIP --> HUB : domain filter chip carrying its simulation count
+deactivate CHIP
+HUB -> HUB : matches(domain, title)
+HUB -> THUMB : render()
+activate THUMB
+THUMB --> HUB : simulation preview drawing
+deactivate THUMB
+HUB --> Teacher : Show the simulation cards with grade, domain, title and short description
+
+Teacher -> HUB : Enter a keyword or toggle a physics domain chip
+HUB -> HUB : toggleDomain(d)
+HUB -> CHIP : render()
+activate CHIP
+CHIP --> HUB : chip redrawn as selected or cleared
+deactivate CHIP
+HUB -> THUMB : render()
+activate THUMB
+THUMB --> HUB : previews of the remaining simulations
+deactivate THUMB
+
+alt no simulation matches the keyword and the selected domains
+  HUB --> Teacher : Show the empty-state message MSG01 suggesting another keyword or fewer domain filters
+else at least one simulation matches
+  HUB --> Teacher : Show the number of matching simulations above the refreshed card grid
+end
+
+opt teacher selects a simulation card
+  Teacher -> HUB : Select a simulation card
+  HUB -> HUB : openPreset(preset)
+  HUB -> DETAIL : render()
+  activate DETAIL
+  DETAIL --> Teacher : Open the Physics Simulation Detail screen of the selected simulation
+  deactivate DETAIL
+end
+deactivate HUB
+deactivate PAGE
+@enduml

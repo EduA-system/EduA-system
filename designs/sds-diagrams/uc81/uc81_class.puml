@@ -1,0 +1,92 @@
+@startuml UC-81 Reactivate Teacher Account - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-81 Reactivate Teacher Account — Class Diagram
+
+class UserManagementContent <<client>> {
+  - teacherData : PageResponse<SubjectAccountItem>
+  - msg : String
+  + toggleTeacher(item : SubjectAccountItem) : void
+  + loadTeachers(page : number) : void
+}
+
+class TeacherDto <<dto>> {
+  + id : UUID
+  + email : String
+  + fullName : String
+  + subject : String
+  + status : String
+  + grantedAt : Instant
+}
+
+class ModeratorController <<controller>> {
+  - moderatorTeacherService : ModeratorTeacherService
+  + reactivateTeacher(id : UUID) : TeacherDto
+}
+
+class ModeratorTeacherService <<service>> {
+  - userRepository : AppUserRepository
+  - userRoleRepository : UserRoleRepository
+  - activityLogService : ActivityLogService
+  + reactivateTeacher(id : UUID) : AppUser
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+  + save(user : AppUser) : AppUser
+}
+
+interface UserRoleRepository {
+  + findRolesByUserId(userId : UUID) : Set<Role>
+  + replaceRole(userId, role, grantedBy, grantedAt) : void
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  + record(actorId, actorRole, category, action, targetType, targetId) : void
+}
+
+class JpaAppUserRepository <<adapter>> {
+  - jpa : AppUserJpaRepository
+}
+
+class AppUserEntity <<entity>> {
+  - id : UUID
+  - email : String
+  - subject : Subject
+  - status : UserStatus
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+  - subject : Subject
+  - status : UserStatus
+  + isActiveOrInvited() : boolean
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+UserManagementContent ..> ModeratorController : calls API
+UserManagementContent ..> TeacherDto : uses
+ModeratorController ..> TeacherDto : output
+ModeratorController "1" --> "1" ModeratorTeacherService
+ModeratorTeacherService "1" --> "1" AppUserRepository
+ModeratorTeacherService "1" --> "1" UserRoleRepository
+ModeratorTeacherService "1" --> "1" ActivityLogService
+JpaAppUserRepository ..|> AppUserRepository : implements
+JpaAppUserRepository ..> AppUserEntity : maps
+AppUserEntity "1" -- "1" AppUser : mapped to
+AppUserRepository ..> AppUser : output
+AppUser ..> UserStatus : DISABLED restored to INVITED
+
+@enduml

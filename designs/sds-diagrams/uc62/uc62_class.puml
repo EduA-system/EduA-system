@@ -1,0 +1,103 @@
+@startuml UC-62 View Public Content Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-62 View Public Content Detail — Class Diagram
+
+class CommunityHubDetailPage <<client>> {
+  - contentId : String
+  - detail : ContentDetail
+  - loading : boolean
+  - error : String
+  - canSaveToLibrary : boolean
+  + load() : void
+}
+
+class HubContentController <<controller>> {
+  - contentService : HubContentService
+  + get(id : UUID) : ContentDetail
+}
+
+class HubContentService <<service>> {
+  - repository : LibraryContentRepository
+  - commentRepository : HubCommentRepository
+  - userRepository : AppUserRepository
+  - currentUser : CurrentUserProvider
+  + get(id : UUID) : ContentDetail
+}
+
+interface LibraryContentRepository {
+  + findApprovedForHubById(id : UUID) : Optional<LibraryContent>
+}
+
+class JpaLibraryContentRepository <<adapter>> {
+  - jpa : LibraryContentJpaRepository
+  - entityManager : EntityManager
+}
+
+interface HubCommentRepository {
+  + findByLibraryContentId(libraryContentId : UUID) : List<HubComment>
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+}
+
+class ContentDetail <<dto>> {
+  - id : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - ownerId : UUID
+  - ownerName : String
+  - payload : JsonNode
+  - reviewedAt : Instant
+  - comments : CommentView [0..*]
+}
+
+class LibraryContent <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - type : LibraryContentType
+  - title : String
+  - subject : Subject
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - reviewedAt : Instant
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+class LibraryContentEntity <<entity>> {
+  - id : UUID
+  - ownerId : UUID
+  - title : String
+  - status : LibraryContentStatus
+  - payload : JsonNode
+  - deletedAt : Instant
+  - sourceLibraryContentId : UUID
+}
+
+enum LibraryContentStatus {
+  PRIVATE
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+CommunityHubDetailPage ..> HubContentController : calls API
+HubContentController "1" --> "1" HubContentService
+HubContentService "1" --> "1" LibraryContentRepository
+HubContentService "1" --> "1" HubCommentRepository
+HubContentService "1" --> "1" AppUserRepository
+JpaLibraryContentRepository ..|> LibraryContentRepository : implements
+JpaLibraryContentRepository ..> LibraryContentEntity : maps
+LibraryContentEntity "1" -- "1" LibraryContent : mapped to
+LibraryContentRepository ..> LibraryContent : output
+HubContentService ..> ContentDetail : output
+LibraryContent ..> LibraryContentStatus : publish status
+
+@enduml

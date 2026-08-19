@@ -1,0 +1,86 @@
+@startuml UC-53 View Physics Simulation Analysis - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-53 View Physics Simulation Analysis — Class Diagram
+
+class GenericDetailView <<client>> {
+  - tab : String
+  - params : Record<String, number>
+  - activeMark : JumpMark
+  - prevMark : JumpMark
+  - seekToken : number
+  - readout : SceneReadout
+  - velocityHistory : VelocityPoint [0..*]
+  + jumpTo(mark : JumpMark) : void
+  + handleReadout(readout : SceneReadout) : void
+  + render() : ReactNode
+}
+
+class LandmarksPanel <<client>> {
+  + analysis : PresetAnalysis
+  + params : Record<String, number>
+  + active : JumpMark
+  + showGhostHint : boolean
+  + render() : ReactNode
+}
+
+class JumpMark <<dto>> {
+  + seconds : number
+  + label : String
+}
+
+class PresetAnalysis <<dto>> {
+  + landmarks : Landmark [0..*]
+}
+
+class Landmark <<dto>> {
+  + key : String
+  + label : String
+  + description : String
+  + values(p : Record) : LandmarkValue []
+  + atTime(p : Record) : number
+}
+
+class LandmarkValue <<dto>> {
+  + label : String
+  + value : String
+  + unit : String
+}
+
+class SceneKonva2D <<client>> {
+  + scene : Scene
+  + seekSeconds : number
+  + seekToken : number
+  + markLabel : String
+  + ghostSeconds : number
+  + render() : ReactNode
+}
+
+class SceneKernel {
+  + initialState : StateVec
+  + derivs(s : StateVec) : StateVec
+  + project(s : StateVec) : StateVec
+}
+
+class SceneReadout <<dto>> {
+  + time : number
+  + bodies [0..*] : id, x, y, vx, vy, speed
+  + energy : ke, pe, total
+}
+
+GenericDetailView "1" *-- "1" LandmarksPanel : contains
+GenericDetailView "1" *-- "1" SceneKonva2D : contains
+GenericDetailView "1" --> "0..1" JumpMark : active and previous mark
+LandmarksPanel ..> PresetAnalysis : input
+LandmarksPanel ..> JumpMark : output
+PresetAnalysis "1" *-- "0..*" Landmark : contains
+Landmark ..> LandmarkValue : output
+SceneKonva2D "1" --> "1" SceneKernel : compiled kernel
+SceneKonva2D ..> SceneReadout : output
+GenericDetailView ..> SceneReadout : input
+
+@enduml

@@ -196,3 +196,89 @@ Giữ nguyên theo yêu cầu: mọi mô tả **auto-save** (BR-19, 2.4.3, 2.3.3
 | UC-110 / UC-112 xuất báo cáo | Phải code trước bảo vệ |
 
 Bảng 5.2 System Messages **đã có nội dung đầy đủ** (MSG01–MSG82) — mục này trong danh sách trên đã xử lý xong.
+
+---
+
+# Đợt vẽ 3 — 73 UC còn lại (18/08/2026)
+
+9 subagent vẽ nốt UC-38…UC-112. Toàn bộ 112 UC đã có class + sequence, checker 0 lỗi. Dưới đây là các chỗ lệch mới phát hiện. Ký hiệu như phần đầu file (🔧 sửa code · 📄 sửa tài liệu · 💬 giữ nhưng phải giải thích được).
+
+## K. Mã MSG — vấn đề lớn nhất của đợt này
+
+Bảng **5.2 System Messages** (dựng từ chuỗi thật trong FE, MSG01–MSG82) và các mã trích trong **luồng UC ở mục 2** là **hai hệ đánh số khác nhau**. Chỉ MSG01, MSG02, MSG80 là trùng nghĩa.
+
+| Mã | Mục 2 dùng làm | Bảng 5.2 định nghĩa |
+|---|---|---|
+| MSG25 | lỗi thao tác chung — **78 lần** | popup xác nhận ẩn bình luận blog |
+| MSG08 | thông báo thành công — **28 lần** | thiếu cấu hình Google Client ID |
+| MSG09 | popup xác nhận xoá | script Google Sign-In lỗi |
+| MSG10 | xoá thành công | ảnh đại diện sai định dạng |
+| MSG23 | lớp Inactive / read-only | popup xác nhận xoá bình luận blog |
+| MSG13 | tệp tải lên sai định dạng | cập nhật hồ sơ thất bại |
+
+Tổng **243 chỗ trích dẫn** trong mục 1–3. 📄 Đề xuất: sửa mục 2 theo bảng 5.2 (bảng đang khớp code), đồng thời patch mã trong 224 file `.puml`. Hiện tất cả hình đang trích theo mục 2 để đồng nhất với 39 hình vẽ trước.
+
+## L. Code chạy khác đặc tả — bổ sung đợt 3
+
+| UC | SRS nói | Code làm | Đề xuất |
+|---|---|---|---|
+| UC-42 Delete Class Resource | Học sinh được thông báo khi tài nguyên bị gỡ (BR-46) | `deleteResource` không gọi notify (post/update thì có) | 📄 hoặc 🔧 |
+| UC-45 / UC-48 Download | Đi qua File Storage Service | URL R2 public lưu sẵn trong DB, trình duyệt tải thẳng, backend không tham gia | 📄 |
+| UC-47 View Submission Detail | File Storage Service cung cấp thông tin file | Metadata lấy từ bảng `submission_files`, không có preview | 📄 |
+| UC-50 Unsubmit | — | Xoá cứng `submission_files` rồi `submissions` | 💬 |
+| UC-51/52/53 Physics | Có nhánh lỗi tải dữ liệu (MSG80) | Thuần client, preset tĩnh trong `fe/components/simulations/presets/`, không có backend | 📄 |
+| UC-55 Save Molecule | Secondary actor AI/LLM Service | `save()` không gọi AI; có bước **chống trùng** (trả lại bản đã lưu); Moderator Hoá cũng lưu được | 📄 |
+| UC-56 View Periodic Table | Lọc không ra kết quả thì hiện MSG01 | Làm mờ toàn bộ ô + bộ đếm `0 / 118`, không có text nào | 📄 |
+| UC-57 / UC-58 | Hai use case tách rời | Một popup `ElementDetailPanel` gồm cả thuộc tính lẫn mô hình 3D | 📄 |
+| UC-60 Generate Molecule | Parse công thức trực tiếp, thiếu input hiện MSG02 | Chỉ tra bảng 7 công thức đơn chất (H2, N2, O2, F2, Cl2, Br2, I2); `parseFormula` chỉ đối chiếu lại kết quả AI; thiếu input thì **disable nút** | 📄 |
+| **UC-65 Delete Own Public Content** | Xoá khỏi cả Hub lẫn Thư viện cá nhân | Chỉ soft-delete **hàng snapshot Hub**, bản gốc còn nguyên | 📄 (popup FE cũng chỉ nói "gỡ khỏi Hub") |
+| UC-61 View Community Hub | Không nêu ràng buộc môn | Ép lọc theo môn của tài khoản đăng nhập | 📄 |
+| UC-66 Publish Hub Content | — | Chặn gửi duyệt nội dung `SIMULATION` môn Vật lý | 📄 |
+| UC-67 Unpublish | Secondary actor Notification Service, báo moderator | `unsubmit()` không gửi thông báo | 📄 |
+| UC-68 View Content Comments | Bình luận mới nhất trước | `ORDER BY created_at ASC` (cũ trước), FE gom reply bên dưới | 📄 |
+| **UC-111 Edit Own Public Content** | Giữ Published, bản Hub cập nhật ngay | Hạ về `PRIVATE`, xoá `submittedAt/reviewedBy/reviewedAt`; snapshot cũ vẫn công khai với nội dung cũ | 🔧 hoặc 📄 |
+| UC-73 View Content List | Hiện tác giả và nguồn; tìm kiếm/lọc | API không trả `ownerName`; lọc chạy **phía client** trên 100 bản ghi đã tải | 📄 |
+| UC-75 Approve Content | Có popup xác nhận | Bấm "Duyệt lên Hub" là chạy thẳng | 📄 hoặc 🔧 |
+| UC-76 Reject Content | Nhập lý do rồi popup xác nhận | Một panel lý do inline, nút xác nhận disable khi rỗng | 📄 |
+| UC-77 View Teacher List | Có Alternative Flow tìm kiếm/lọc | Chỉ có phân trang, không có ô tìm kiếm | 📄 |
+| UC-78 View Teacher Detail | — | Không có `GET /api/moderator/teachers/{id}`; chi tiết lấy từ danh sách | 📄 |
+| UC-80 Update Teacher Account | Lớp và task hiện có được giữ nguyên | `deactivateActiveByOwnerIdExcludingGrades` — lớp ACTIVE thuộc khối bị bỏ tự chuyển INACTIVE | 📄 hoặc 🔧 |
+| UC-81 Reactivate Teacher | Có popup xác nhận | Gọi thẳng, không popup; đưa về `INVITED` chứ không `ACTIVE` | 📄 |
+| UC-87 Submit Lesson Plan | Chọn giáo án hoặc upload file | FE đã bỏ upload, chỉ chọn từ thư viện; BE vẫn nhận `documentUrl` (code chết) | 📄 + 🔧 xoá code chết |
+| UC-88 Unsubmit Weekly Task | Bước 6 báo moderator | Không gửi (đúng BR-48) — **SRS tự mâu thuẫn** | 📄 |
+| UC-84 Assign Weekly Task | Giao cho từng giáo viên | FE luôn gọi `/bulk`; endpoint đơn lẻ và `createWeeklyTask` ở FE là code chết | 🔧 |
+| UC-85 Edit Weekly Task | — | Chặn sửa cụm đã có giáo án `APPROVED`; không đổi giáo viên riêng lẻ khi cụm nhiều task | 📄 |
+| UC-89 Approval List | Moderator tìm kiếm hoặc lọc | Chỉ có lọc theo khối/chương/bài, không có ô tìm tự do | 📄 |
+| UC-90 Lesson Plan Detail | Secondary actor File Storage Service | Trình duyệt mở thẳng URL R2 | 📄 |
+| **UC-97 Remove Blog Post** | Xoá bài và toàn bộ bình luận | Soft-delete `REMOVED_BY_MODERATOR`; `blog_comments` còn nguyên trong DB | 🔧 cùng kiểu với UC-11 và UC-25 |
+| UC-99 Activity Log | Lọc theo feature | Chỉ lọc theo actor, category, khoảng thời gian | 📄 |
+| UC-103 View Staff Detail | Có màn chi tiết riêng kèm hành động | Dùng chung `/user-profile/{id}` read-only; hành động nằm ở màn danh sách | 📄 |
+| UC-104 Add Moderator | Secondary actor Google Identity Service | Luồng thêm không gọi Google (chỉ UC-02 mới gọi) | 📄 |
+| UC-105 / UC-108 Replace | Popup xác nhận riêng sau khi submit | Một modal vừa là form vừa là xác nhận | 📄 |
+| UC-105 | Moderator cũ về làm Teacher khối 10, 11, 12 | Principal tự chọn khối (`previousTeacherGrades`, mặc định 10/11/12) | 📄 |
+| UC-109 School Statistics | Lọc theo khoảng ngày và môn | UI chỉ truyền `subject`; `from/to` có ở API nhưng không dùng | 📄 |
+| UC-98 Subject Statistics | Bảng 1.3 ghi lọc theo khoảng ngày | Code lọc theo tuần / quý | 📄 |
+
+## M. Luật chỉ có trong code — bổ sung đợt 3
+
+| Chức năng | Bằng chứng |
+|---|---|
+| Lớp tối đa **60 học sinh**, học sinh tối thiểu **16 tuổi** | `MAX_CLASS_SIZE`, `MIN_STUDENT_AGE_YEARS` trong `ClassEnrollmentService` |
+| Thêm học sinh bằng Gmail chưa có thì **tự tạo tài khoản** và gán role STUDENT | `resolveOrCreateStudent`; email đã có nhưng họ tên/SĐT/ngày sinh khác thì `PROFILE_MISMATCH` |
+| Thêm / sửa / kích hoạt lại giáo viên đều gọi `assignOpenCurrentWeekTasks` | `ModeratorTeacherService` — giao weekly task tuần hiện tại cho giáo viên |
+| Bình luận Hub cũng có giới hạn 200 từ, trả lời 1 cấp, soft-hide | `HubCommentService`, migration V40 |
+| Thông báo gửi theo role + môn, **không lọc trạng thái tài khoản** | Tài khoản `DISABLED` vẫn nhận thông báo — 🔧 nên lọc |
+| System prompt rỗng vẫn lưu được ở backend | Chỉ FE disable nút; `@NotNull` không chặn chuỗi rỗng — 🔧 nhẹ |
+
+## N. Vấn đề nội tại của SRS — bổ sung
+
+| Vấn đề | Chi tiết |
+|---|---|
+| Tên UC lệch giữa bảng 1.3 và mục 2.11 | Bảng ghi "Reactivate Teacher Account" (UC-81) / "Deactivate Teacher Account" (UC-82); mục 2.11.9–2.11.10 ghi "Ban Teacher" / "Reactivate Teacher" và đảo thứ tự. Hình vẽ theo bảng 1.3 |
+| Mã BR trong javadoc lệch SRS | Javadoc weekly task dùng BR-51/52/53, SRS mới đánh BR-50…53 — 🔧 sửa javadoc |
+| Javadoc `HubCommentService` lệch code | Ghi chủ nội dung xoá được bình luận, code chỉ cho tác giả — 🔧 sửa javadoc |
+| UC-88 tự mâu thuẫn | Bước 6 của mục 2.12.6 trái với BR-48 |
+
+## O. Hai UC vẽ theo thiết kế vì chưa có code
+
+UC-110 và UC-112 (xuất báo cáo) chưa có code. Hình vẽ theo SRS, tái dùng hạ tầng export có thật (`DocumentPdfRenderer`, `StorageClient`) với các tên **mới đặt**: `PrincipalStatisticsReportService`, `ModeratorStatisticsReportService`, `StatisticsReportHtmlBuilder`, `SchoolStatisticsReport`, `SubjectStatisticsReport`, endpoint `GET /api/principal/statistics/report/pdf` và bản moderator tương ứng. Nếu code thật khác thiết kế này thì phải vẽ lại 4 hình.

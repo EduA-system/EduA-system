@@ -1,0 +1,120 @@
+@startuml UC-99 View and Filter Activity Log - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-99 View & Filter Activity Log — Class Diagram
+
+class ActivityLogPage <<client>> {
+  - items : ActivityLogSummary [0..*]
+  - actorId : String
+  - category : ActivityLogCategory
+  - from : String
+  - to : String
+  - page : int
+  - loading : boolean
+  + load() : void
+  + selectCategory(next : ActivityLogCategory) : void
+  + filterByActor(entry : ActivityLogSummary) : void
+  + clearActorFilter() : void
+}
+
+class ActivityLogViews.Page <<dto>> {
+  + items : List<Summary>
+  + page : int
+  + size : int
+  + total : long
+}
+
+class ActivityLogViews.Summary <<dto>> {
+  + id : UUID
+  + actorId : UUID
+  + actorName : String
+  + actorRole : String
+  + category : ActivityLogCategory
+  + action : ActivityLogAction
+  + targetType : String
+  + targetId : UUID
+  + createdAt : Instant
+}
+
+class ActivityLogController <<controller>> {
+  - service : ActivityLogService
+  + list(actorId, category, from, to, page, size) : ActivityLogViews.Page
+}
+
+class ActivityLogService <<service>> {
+  - repository : ActivityLogRepository
+  - userRepository : AppUserRepository
+  + search(actorId, category, from, to, page, size) : ActivityLogViews.Page
+  + record(actorId, actorRole, category, action, target) : void
+}
+
+interface ActivityLogRepository {
+  + search(actorId, category, from, to, page, size) : SearchResult
+  + record(entry : ActivityLog) : void
+}
+
+class JpaActivityLogRepository <<adapter>> {
+  - jpa : ActivityLogJpaRepository
+}
+
+interface AppUserRepository {
+  + findAllById(ids : Collection<UUID>) : List<AppUser>
+}
+
+class ActivityLog <<entity>> {
+  - id : UUID
+  - actorId : UUID
+  - actorRole : String
+  - category : ActivityLogCategory
+  - action : ActivityLogAction
+  - targetType : String
+  - targetId : UUID
+  - metadata : String
+  - createdAt : Instant
+}
+
+class ActivityLogEntity <<entity>> {
+  - id : UUID
+  - actorId : UUID
+  - actorRole : String
+  - category : ActivityLogCategory
+  - action : ActivityLogAction
+  - targetType : String
+  - targetId : UUID
+  - createdAt : Instant
+}
+
+enum ActivityLogCategory {
+  AUTH
+  ACCOUNT
+  MODERATION
+  CONFIG
+}
+
+enum ActivityLogAction {
+  LOGIN
+  LOGOUT
+  GRANT_MODERATOR
+  REPLACE_MODERATOR
+  REMOVE_BLOG_POST
+  UPDATE_SYSTEM_PROMPT
+}
+
+ActivityLogPage ..> ActivityLogController : calls API
+ActivityLogController ..> ActivityLogViews.Page : output
+ActivityLogController "1" --> "1" ActivityLogService
+ActivityLogService "1" --> "1" ActivityLogRepository
+ActivityLogService "1" --> "1" AppUserRepository
+JpaActivityLogRepository ..|> ActivityLogRepository : implements
+JpaActivityLogRepository ..> ActivityLogEntity : maps
+ActivityLogEntity "1" -- "1" ActivityLog : mapped to
+ActivityLogRepository ..> ActivityLog : output
+ActivityLogViews.Page "1" *-- "0..*" ActivityLogViews.Summary : contains
+ActivityLog ..> ActivityLogCategory : filter dimension
+ActivityLog ..> ActivityLogAction : recorded action
+
+@enduml

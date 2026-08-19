@@ -20,7 +20,7 @@ participant ":BlogCommentRepository" as CREPO
 database DB
 
 autonumber
-Moderator -> UI : Open the Blog screen and select "Quản lý Blog"
+Moderator -> UI : Open the Blog screen and select "Blog Management"
 activate UI
 UI -> UI : loadPosts()
 UI -> CTL : GET /api/blog-posts?subject={assignedSubject}&size=50

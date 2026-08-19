@@ -1,0 +1,95 @@
+@startuml UC-52 View Physics Simulation Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-52 View Physics Simulation Detail — Class Diagram
+
+class DetailView <<client>> {
+  + preset : Preset
+  + canSaveToLibrary : boolean
+  + render() : ReactNode
+}
+
+class GenericDetailView <<client>> {
+  - params : Record<String, number>
+  - running : boolean
+  - speed : number
+  - edited : boolean
+  - resetSignal : number
+  - readout : SceneReadout
+  + markEdited() : void
+  + revertAll() : void
+  + handleReadout(readout : SceneReadout) : void
+  + render() : ReactNode
+}
+
+class Preset <<dto>> {
+  + id : String
+  + title : String
+  + objective : String
+  + sgkRef : String
+  + startPaused : boolean
+  + params : PresetParam [0..*]
+  + applyParams(p : Record) : Scene
+}
+
+class PresetParam <<dto>> {
+  + key : String
+  + label : String
+  + min : number
+  + max : number
+  + step : number
+  + unit : String
+  + default : number
+}
+
+class ParamPanel <<client>> {
+  + schema : ParamDef [0..*]
+  + values : Record<String, number>
+  + render() : ReactNode
+}
+
+class Scene <<dto>> {
+  + bodies : Body [0..*]
+  + forces : Force [0..*]
+  + constraints : Constraint [0..*]
+  + restitution : number
+}
+
+class SceneKonva2D <<client>> {
+  + scene : Scene
+  + running : boolean
+  + speed : number
+  + resetSignal : number
+  + render() : ReactNode
+}
+
+class SceneKernel {
+  + initialState : StateVec
+  + derivs(s : StateVec) : StateVec
+  + project(s : StateVec) : StateVec
+}
+
+class SceneReadout <<dto>> {
+  + time : number
+  + bodies [0..*] : id, x, y, vx, vy, speed
+  + energy : ke, pe, total
+}
+
+DetailView ..> GenericDetailView : renders the default detail view
+DetailView ..> Preset : input
+GenericDetailView "1" --> "1" Preset : opened simulation
+GenericDetailView "1" *-- "1" ParamPanel : contains
+GenericDetailView "1" *-- "1" SceneKonva2D : contains
+Preset "1" *-- "0..*" PresetParam : contains
+ParamPanel ..> PresetParam : uses
+Preset ..> Scene : output
+SceneKonva2D ..> Scene : input
+SceneKonva2D "1" --> "1" SceneKernel : compiled kernel
+SceneKonva2D ..> SceneReadout : output
+GenericDetailView ..> SceneReadout : input
+
+@enduml

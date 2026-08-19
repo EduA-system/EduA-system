@@ -1,0 +1,74 @@
+@startuml UC-106 Reactivate Moderator Account - Sequence Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+title UC-106 Reactivate Moderator Account — Sequence Diagram
+
+actor Principal
+participant ":UserManagementContent" as UI
+participant ":PrincipalController" as CTL
+participant ":PrincipalModeratorService" as SVC
+participant ":AppUserRepository" as USERS
+participant ":UserRoleRepository" as ROLES
+participant ":ActivityLogService" as LOG
+database DB
+
+autonumber
+Principal -> UI : Open the Moderator tab of Account Management and click "Reactivate" on a disabled Moderator
+activate UI
+UI -> UI : toggleModerator(item)
+UI -> CTL : PATCH /api/principal/moderators/{id}/reactivate
+activate CTL
+CTL -> SVC : reactivateModerator(id)
+activate SVC
+SVC -> USERS : findById(id)
+activate USERS
+USERS -> DB : SELECT * FROM app_users WHERE id = ?
+activate DB
+DB --> USERS : row / none
+deactivate DB
+USERS --> SVC : Optional<AppUser>
+deactivate USERS
+SVC -> USERS : existsActiveByRoleAndSubject(MODERATOR, subject)
+activate USERS
+USERS --> SVC : boolean
+deactivate USERS
+SVC -> SVC : accept only a DISABLED account that still holds the MODERATOR role and whose subject has no active Moderator
+
+alt the account is not a disabled Moderator or its subject already has an active Moderator
+  SVC --> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL --> UI : HTTP 404 / 403
+  UI --> Principal : Show the rejection message and keep the account DISABLED
+else the account is a disabled Moderator and its subject has no active Moderator
+  SVC -> USERS : save(reactivated AppUser with status INVITED)
+  activate USERS
+  USERS -> DB : UPDATE app_users SET status = 'INVITED' WHERE id = ?
+  activate DB
+  DB --> USERS : Saved
+  deactivate DB
+  deactivate USERS
+  SVC -> ROLES : replaceRole(userId, MODERATOR, grantedBy, grantedAt)
+  activate ROLES
+  ROLES -> DB : INSERT INTO user_roles (user_id, role_id, granted_by, granted_at)
+  activate DB
+  DB --> ROLES : Saved
+  deactivate DB
+  deactivate ROLES
+  SVC -> LOG : record(actorId, actorRole, category, action, targetType, targetId, metadata)
+  activate LOG
+  LOG --> SVC : REACTIVATE_MODERATOR entry written
+  deactivate LOG
+  SVC --> CTL : AppUser
+  CTL --> UI : HTTP 200 + ModeratorDto
+  UI --> Principal : Show the reactivation success message and refresh the Moderator list
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

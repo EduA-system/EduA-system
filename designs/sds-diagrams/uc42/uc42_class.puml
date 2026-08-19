@@ -1,0 +1,91 @@
+@startuml UC-42 Delete Class Resource - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-42 Delete Class Resource — Class Diagram
+
+class ClassResourcesPage <<client>> {
+  - detail : ClassDetail
+  - resources : ClassResourceSummary [0..*]
+  - deleteTarget : ClassResourceSummary
+  - deleting : String
+  - successMessage : String
+  + remove(resource : ClassResourceSummary) : void
+  + load() : void
+}
+
+class ConfirmDialog <<client>> {
+  - title : String
+  - description : ReactNode
+  - confirmLabel : String
+  - loading : boolean
+  + onConfirm() : void
+  + onClose() : void
+}
+
+class ClassController <<controller>> {
+  - classResourceService : ClassResourceService
+  + deleteResource(id : UUID, resourceId : UUID) : void
+}
+
+class ClassResourceService <<service>> {
+  - classRepository : ClassRepository
+  - classResourceRepository : ClassResourceRepository
+  - currentUserProvider : CurrentUserProvider
+  + deleteResource(classId : UUID, resourceId : UUID) : void
+}
+
+interface ClassResourceRepository {
+  + findById(id : UUID) : Optional<ClassResource>
+  + deleteById(id : UUID) : void
+}
+
+class JpaClassResourceRepository <<adapter>> {
+  - jpa : ClassResourceJpaRepository
+}
+
+class ClassResource <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - postedBy : UUID
+  - title : String
+  - submissionEnabled : boolean
+  - deadline : Instant
+}
+
+class ClassResourceEntity <<entity>> {
+  - id : UUID
+  - classId : UUID
+  - title : String
+  - submissionEnabled : boolean
+  - deadline : Instant
+}
+
+class SubmissionEntity <<entity>> {
+  - id : UUID
+  - classResourceId : UUID
+  - studentId : UUID
+  - status : SubmissionStatus
+  - submittedAt : Instant
+}
+
+enum ClassStatus {
+  ACTIVE
+  INACTIVE
+}
+
+ClassResourcesPage "1" --> "1" ConfirmDialog : asks for confirmation
+ClassResourcesPage ..> ClassController : calls API
+ClassController "1" --> "1" ClassResourceService
+ClassResourceService "1" --> "1" ClassResourceRepository
+JpaClassResourceRepository ..|> ClassResourceRepository : implements
+JpaClassResourceRepository ..> ClassResourceEntity : maps
+ClassResourceEntity "1" -- "1" ClassResource : mapped to
+ClassResourceRepository ..> ClassResource : permanently deletes
+ClassResourceEntity "1" *-- "0..*" SubmissionEntity : submissions deleted on cascade
+ClassResource ..> ClassStatus : deletable only while the class is ACTIVE
+
+@enduml

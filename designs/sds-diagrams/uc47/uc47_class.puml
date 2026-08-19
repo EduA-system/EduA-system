@@ -1,0 +1,103 @@
+@startuml UC-47 View Submission Detail - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-47 View Submission Detail — Class Diagram
+
+class SubmissionDetailPanel <<client>> {
+  - detail : TeacherSubmissionDetail
+  - loading : boolean
+  - error : String
+  + load() : void
+}
+
+class TeacherSubmissionDetailDto <<dto>> {
+  + studentId : UUID
+  + studentName : String
+  + textContent : String
+  + files : List<FileDto>
+  + status : SubmissionStatus
+  + firstSubmittedAt : Instant
+  + submittedAt : Instant
+}
+
+class FileDto <<dto>> {
+  + fileName : String
+  + url : String
+  + contentType : String
+  + sizeBytes : Long
+}
+
+class ClassController <<controller>> {
+  - submissionService : SubmissionService
+  + submissionDetail(id, resourceId, studentId) : TeacherSubmissionDetailDto
+}
+
+class SubmissionService <<service>> {
+  - submissionRepository : SubmissionRepository
+  - classResourceRepository : ClassResourceRepository
+  - classRepository : ClassRepository
+  - userRepository : AppUserRepository
+  + getSubmissionDetail(classId, resourceId, studentId) : SubmissionViews.TeacherDetail
+}
+
+interface SubmissionRepository {
+  + findByResourceAndStudent(resourceId : UUID, studentId : UUID) : Optional<SubmissionWithFiles>
+}
+
+class JpaSubmissionRepository <<adapter>> {
+  - submissionJpa : SubmissionJpaRepository
+  - fileJpa : SubmissionFileJpaRepository
+}
+
+interface AppUserRepository {
+  + findById(id : UUID) : Optional<AppUser>
+}
+
+class Submission <<entity>> {
+  - id : UUID
+  - classResourceId : UUID
+  - studentId : UUID
+  - textContent : String
+  - status : SubmissionStatus
+  - submittedAt : Instant
+  - createdAt : Instant
+}
+
+class SubmissionFile <<entity>> {
+  - id : UUID
+  - submissionId : UUID
+  - url : String
+  - fileName : String
+  - contentType : String
+  - sizeBytes : Long
+}
+
+class AppUser <<entity>> {
+  - id : UUID
+  - email : String
+  - fullName : String
+}
+
+enum SubmissionStatus {
+  ON_TIME
+  LATE
+}
+
+SubmissionDetailPanel ..> ClassController : calls API
+ClassController ..> TeacherSubmissionDetailDto : output
+TeacherSubmissionDetailDto "1" *-- "0..*" FileDto : contains
+ClassController "1" --> "1" SubmissionService
+SubmissionService "1" --> "1" SubmissionRepository
+SubmissionService "1" --> "1" AppUserRepository
+JpaSubmissionRepository ..|> SubmissionRepository : implements
+SubmissionRepository ..> Submission : output
+Submission "1" *-- "0..*" SubmissionFile : contains
+AppUserRepository ..> AppUser : output
+AppUser "1" -- "0..1" Submission : submitted
+Submission ..> SubmissionStatus : delivery tag
+
+@enduml

@@ -1,0 +1,74 @@
+@startuml UC-51 View Physics Simulation Library - Class Diagram
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam wrapWidth 320
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #000000
+skinparam ArrowColor #000000
+title UC-51 View Physics Simulation Library — Class Diagram
+
+class MoPhongHubPage <<client>> {
+  + render() : ReactNode
+}
+
+class MoPhongHubContent <<client>> {
+  - query : String
+  - domainFilter : Set<Domain>
+  - selected : Preset
+  - total : number
+  + countInDomain(d : Domain) : number
+  + matches(domain : Domain, title : String) : boolean
+  + toggleDomain(d : Domain) : void
+  + openPreset(preset : Preset) : void
+  + render() : ReactNode
+}
+
+class Sidebar <<client>> {
+  + activeHref : String
+  + render() : ReactNode
+}
+
+class DomainChip <<client>> {
+  + label : String
+  + count : number
+  + active : boolean
+  + render() : ReactNode
+}
+
+class Thumb <<client>> {
+  + id : String
+  + render() : ReactNode
+}
+
+class Badge <<client>> {
+  + tone : String
+  + render() : ReactNode
+}
+
+class Preset <<dto>> {
+  + id : String
+  + title : String
+  + domain : Domain
+  + grade : number
+  + desc : String
+  + objective : String
+  + sgkRef : String
+  + params : PresetParam [0..*]
+}
+
+class DetailView <<client>> {
+  + preset : Preset
+  + canSaveToLibrary : boolean
+  + render() : ReactNode
+}
+
+MoPhongHubPage ..> MoPhongHubContent : renders
+MoPhongHubContent *-- Sidebar : contains
+MoPhongHubContent "1" *-- "0..*" DomainChip : contains
+MoPhongHubContent ..> Thumb : renders card preview
+MoPhongHubContent ..> Badge : renders grade and domain
+MoPhongHubContent "1" --> "0..*" Preset : curated PRESETS catalog
+MoPhongHubContent ..> DetailView : opens the selected simulation
+DetailView ..> Preset : input
+
+@enduml
