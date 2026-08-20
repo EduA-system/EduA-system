@@ -18,6 +18,7 @@ participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> GDV : Select "Save to Library" on the physics simulation open in the detail screen
 activate GDV
 GDV ->> HUB : saveToLibrary(preset)
@@ -52,4 +53,5 @@ deactivate SVC
 deactivate CTL
 deactivate HUB
 deactivate GDV
+deactivate Teacher
 @enduml

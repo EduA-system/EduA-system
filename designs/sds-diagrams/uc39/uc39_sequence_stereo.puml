@@ -17,6 +17,7 @@ participant ":ClassMemberRepository" as MEM <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Open the actions of an enrolled student in the Class Members list of an owned ACTIVE class and select "Remove"
 activate UI
 UI ->> UI : openRemoveDialog(member)
@@ -66,4 +67,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

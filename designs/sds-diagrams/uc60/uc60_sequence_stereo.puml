@@ -9,13 +9,14 @@ skinparam maxMessageSize 280
 
 actor "Chemistry Teacher" as Teacher
 participant ":MoleculeExplorer" as EXP <<user interaction>>
+participant ":MoleculeViewer" as VIEW <<user interaction>>
 participant ":MoleculeController" as CTL <<coordinator>>
 participant ":MoleculeService" as SVC <<business logic>>
 participant ":MoleculePromptBuilder" as PB <<business logic>>
 participant ":AiClient" as AI <<interface>>
-participant ":MoleculeViewer" as VIEW <<user interaction>>
 
 autonumber
+activate Teacher
 Teacher ->> EXP : Enter a substance name or a chemical formula and click "Generate molecule"
 activate EXP
 EXP ->> EXP : buildWithAi()
@@ -57,4 +58,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate EXP
+deactivate Teacher
 @enduml

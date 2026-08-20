@@ -15,6 +15,7 @@ participant ":PeriodicTable" as GRID <<user interaction>>
 participant ":FilterPanel" as FILTER <<user interaction>>
 
 autonumber
+activate Teacher
 Teacher ->> PAGE : Open the Periodic Table from the Chemistry Lab
 activate PAGE
 PAGE ->> GUARD : render()
@@ -59,4 +60,5 @@ else no element matches the entered criteria
 end
 deactivate GRID
 deactivate PAGE
+deactivate Teacher
 @enduml

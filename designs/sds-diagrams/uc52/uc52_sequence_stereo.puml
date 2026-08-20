@@ -10,12 +10,13 @@ skinparam maxMessageSize 280
 actor "Physics Teacher" as Teacher
 participant ":DetailView" as DV <<user interaction>>
 participant ":GenericDetailView" as GDV <<user interaction>>
-participant ":Preset" as PRESET <<data abstraction>>
 participant ":ParamPanel" as PANEL <<user interaction>>
 participant ":SceneKonva2D" as CANVAS <<user interaction>>
+participant ":Preset" as PRESET <<data abstraction>>
 participant ":SceneKernel" as KERNEL <<algorithm>>
 
 autonumber
+activate Teacher
 Teacher ->> DV : Select a simulation from the Physics Simulation Library
 activate DV
 DV ->> DV : dispatch the opened preset to the matching detail view by its id and kind
@@ -66,4 +67,5 @@ opt teacher restores the reviewed original
 end
 deactivate GDV
 deactivate DV
+deactivate Teacher
 @enduml

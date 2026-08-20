@@ -18,6 +18,7 @@ participant ":WeeklyTaskRepository" as TASKS <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Open "Statistics" from the administration navigation
 activate UI
 UI ->> CTL : GET /api/moderator/statistics/library-content-review-summary
@@ -65,4 +66,5 @@ CTL -->> UI : HTTP 200 + OverdueByTeacher
 deactivate CTL
 UI -->> Moderator : Show the review donuts, the summary metrics and the overdue bar chart
 deactivate UI
+deactivate Moderator
 @enduml

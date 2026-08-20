@@ -12,6 +12,7 @@ participant ":HeaderBar" as NAV
 participant ":AuthContext" as AUTH <<user interaction>>
 
 autonumber
+activate User
 User ->> PAGE : Open the platform URL
 activate PAGE
 PAGE ->> PAGE : render hero section, feature highlights and demo previews
@@ -39,4 +40,5 @@ opt user selects "Sign in"
   NAV -->> User : Open the Login screen (no session created yet)
   deactivate NAV
 end
+deactivate User
 @enduml

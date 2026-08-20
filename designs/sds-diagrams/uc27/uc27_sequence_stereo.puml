@@ -18,6 +18,7 @@ participant ":BlogCommentRepository" as CREPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Click "Reply" on a root comment
 activate UI
 UI -->> Teacher : Show the reply banner naming the author of the root comment
@@ -69,4 +70,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

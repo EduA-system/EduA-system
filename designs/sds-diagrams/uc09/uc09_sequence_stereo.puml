@@ -18,6 +18,7 @@ participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Select an owned item and click "Open"
 activate UI
 UI ->> UI : open(content)
@@ -53,4 +54,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate EDT
+deactivate Teacher
 @enduml

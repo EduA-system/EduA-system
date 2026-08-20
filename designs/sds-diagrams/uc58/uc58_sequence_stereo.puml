@@ -15,6 +15,7 @@ participant ":ElementCard" as CARD <<user interaction>>
 participant ":ElementDetailPanel" as PANEL <<user interaction>>
 
 autonumber
+activate Teacher
 Teacher ->> PAGE : Open the Periodic Table with the element to inspect visible
 activate PAGE
 PAGE ->> DATA : applyFilters(ELEMENTS, filters, searchQuery, quickRange)
@@ -51,4 +52,5 @@ opt the teacher closes the element detail
 end
 deactivate PANEL
 deactivate PAGE
+deactivate Teacher
 @enduml

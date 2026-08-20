@@ -19,6 +19,7 @@ participant ":AppUserRepository" as USERS <<interface>>
 database DB
 
 autonumber
+activate User
 User ->> UI : Open the profile screen and edit fields
 activate UI
 
@@ -69,4 +70,5 @@ else profile data is valid
   UI -->> User : Show the success message and refresh the profile (MSG12)
 end
 deactivate UI
+deactivate User
 @enduml

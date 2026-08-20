@@ -17,6 +17,7 @@ participant ":NotificationRepository" as NOTIFS <<interface>>
 database DB
 
 autonumber
+activate User
 User ->> UI : Click an unread notification in the list
 activate UI
 UI ->> UI : handleOpenNotification(notification)
@@ -68,4 +69,5 @@ opt the user marks every notification as read
   UI -->> User : Show every notification as read and reset the unread counter to zero
 end
 deactivate UI
+deactivate User
 @enduml

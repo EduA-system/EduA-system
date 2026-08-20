@@ -12,11 +12,11 @@ title 2.5.2.3 UC-20 Export Test — Sequence Diagram
 
 actor Teacher
 participant ":PracticeExamEditDashboard" as EDT
+participant ":LessonPlanPdfExport" as PRINT
 participant ":LibraryContentController" as CTL
 participant ":LibraryContentService" as SVC
 participant ":LibraryContentRepository" as REPO
 database DB
-participant ":LessonPlanPdfExport" as PRINT
 
 autonumber
 Teacher ->> EDT : Open the test to export

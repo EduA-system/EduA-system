@@ -18,6 +18,7 @@ participant ":RefreshTokenRepository" as TOKENS <<interface>>
 database DB
 
 autonumber
+activate User
 User ->> UI : Click "Sign in with Google"
 activate UI
 UI ->> GIS : Open the Google sign-in prompt
@@ -70,4 +71,5 @@ else account allowed
   UI -->> User : Open the workspace for the assigned role
 end
 deactivate UI
+deactivate User
 @enduml

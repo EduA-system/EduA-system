@@ -18,6 +18,7 @@ participant ":BlogPostRepository" as POSTS <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Open a post of "My Subject Blogs" and click "Remove post"
 activate UI
 UI ->> DIALOG : Show the removal dialog requesting the removal reason
@@ -68,4 +69,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

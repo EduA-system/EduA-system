@@ -19,6 +19,7 @@ participant ":RefreshTokenRepository" as TOKENS <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Select "Revoke" on an active teacher account of the assigned subject
 activate UI
 UI ->> UI : toggleTeacher(item)
@@ -68,4 +69,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

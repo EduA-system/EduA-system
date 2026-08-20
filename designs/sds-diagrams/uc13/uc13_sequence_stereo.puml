@@ -11,11 +11,12 @@ actor Teacher
 participant ":OutlineEditor" as OE <<user interaction>>
 participant ":SlideDetailModal" as MODAL <<user interaction>>
 participant ":SlideDetailPanel" as PANEL <<user interaction>>
-participant ":SlideApi" as API <<user interaction>>
+participant ":SlideApi" as API <<business logic>>
 participant ":SlideOutlineScreen" as SCR <<user interaction>>
-participant ":SlideCreateSession" as SESSION <<user interaction>>
+participant ":SlideCreateSession" as SESSION <<data abstraction>>
 
 autonumber
+activate Teacher
 Teacher ->> OE : Rename a part, add or delete a slide, or drag a part to reorder the outline
 activate OE
 OE ->> OE : updatePartTitle(partId, title)
@@ -62,4 +63,5 @@ SCR ->> SESSION : writeActiveGeneration(active)
 SCR ->> Teacher : Open the Slide Deck Editor with the confirmed outline
 deactivate SCR
 deactivate OE
+deactivate Teacher
 @enduml

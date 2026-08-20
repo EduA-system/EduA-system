@@ -17,6 +17,7 @@ participant ":LibraryContentRepository" as CONTENTS <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Click "Withdraw from the review queue" on an owned item that is Pending Publish
 activate UI
 UI ->> UI : requestAction(content, kind)
@@ -64,4 +65,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

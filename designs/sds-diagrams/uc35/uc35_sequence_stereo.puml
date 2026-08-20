@@ -18,6 +18,7 @@ participant ":ClassMemberRepository" as MEM <<interface>>
 database DB
 
 autonumber
+activate User
 User ->> UI : Select an accessible class to open its Class Hub
 activate UI
 UI ->> UI : load()
@@ -64,4 +65,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate User
 @enduml

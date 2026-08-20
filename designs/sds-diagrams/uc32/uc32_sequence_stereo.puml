@@ -18,6 +18,7 @@ participant ":ClassRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Select "Create class" from the Class List
 activate UI
 UI -->> Teacher : Show the creation form with name, subject, grade and description
@@ -66,4 +67,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

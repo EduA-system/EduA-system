@@ -15,6 +15,7 @@ participant ":SlidePresentationOverlay" as OVL <<user interaction>>
 participant ":ElementView" as EV <<user interaction>>
 
 autonumber
+activate Teacher
 Teacher ->> TB : Click "Present" for the slide deck
 activate TB
 TB ->> SMC : openPresentation()
@@ -51,4 +52,5 @@ deactivate OVL
 SMC ->> Teacher : Return to the Slide Deck Editor with the stored deck unchanged
 deactivate SMC
 deactivate TB
+deactivate Teacher
 @enduml

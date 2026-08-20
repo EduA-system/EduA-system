@@ -18,6 +18,7 @@ participant ":BlogPostRepository" as PREPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Click "Hide comment" on another teacher's comment on their own post
 activate UI
 UI -->> Teacher : Show the hide confirmation dialog (MSG44)
@@ -69,4 +70,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

@@ -16,6 +16,7 @@ participant ":LayerRing" as RING <<user interaction>>
 participant ":EnergyDiagram" as DIAG <<user interaction>>
 
 autonumber
+activate Teacher
 Teacher ->> PANEL : Select an element in the periodic table to open its electron model
 activate PANEL
 PANEL ->> ORB : getShellDistribution(electronConfig)
@@ -63,4 +64,5 @@ opt the teacher stops the animation
 end
 deactivate ATOM
 deactivate PANEL
+deactivate Teacher
 @enduml

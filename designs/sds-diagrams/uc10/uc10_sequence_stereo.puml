@@ -17,6 +17,7 @@ participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> EDT : Modify the opened content and click "Save"
 activate EDT
 EDT ->> EDT : saveLesson(allowDuringGeneration)
@@ -64,4 +65,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate EDT
+deactivate Teacher
 @enduml

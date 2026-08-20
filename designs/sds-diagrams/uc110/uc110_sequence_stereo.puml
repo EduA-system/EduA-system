@@ -19,6 +19,7 @@ participant ":DocumentPdfRenderer" as PDF <<interface>>
 participant "File Storage Service" as STORE
 
 autonumber
+activate Principal
 Principal ->> UI : Click "Export report" on the school-wide statistics dashboard
 activate UI
 UI ->> UI : exportReport()
@@ -61,4 +62,5 @@ end
 deactivate RSVC
 deactivate CTL
 deactivate UI
+deactivate Principal
 @enduml

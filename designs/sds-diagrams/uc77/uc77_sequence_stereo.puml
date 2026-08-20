@@ -19,6 +19,7 @@ participant ":TeacherGradeRepository" as GRADES <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Open "Account management" and select the teacher tab
 activate UI
 UI ->> UI : loadTeachers(page)
@@ -68,4 +69,5 @@ opt the assigned subject has no teacher account
   UI -->> Moderator : Show the empty-state message (MSG01)
 end
 deactivate UI
+deactivate Moderator
 @enduml

@@ -17,6 +17,7 @@ participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Select "Save to Library" for the molecule model open on screen
 activate UI
 UI ->> UI : save()
@@ -60,4 +61,5 @@ opt the save request fails
   UI -->> Teacher : Show the save-failure message and keep the button available for another attempt
 end
 deactivate UI
+deactivate Teacher
 @enduml

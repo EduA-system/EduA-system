@@ -15,6 +15,7 @@ participant ":Thumb" as THUMB <<user interaction>>
 participant ":DetailView" as DETAIL <<user interaction>>
 
 autonumber
+activate Teacher
 Teacher ->> PAGE : Open the Physics Simulation Library from the main navigation
 activate PAGE
 PAGE ->> HUB : render()
@@ -59,4 +60,5 @@ opt teacher selects a simulation card
 end
 deactivate HUB
 deactivate PAGE
+deactivate Teacher
 @enduml

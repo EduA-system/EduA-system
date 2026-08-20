@@ -18,6 +18,7 @@ participant ":AppUserRepository" as USERS <<interface>>
 database DB
 
 autonumber
+activate STAFF
 STAFF ->> UI : Open the Activity Log screen
 activate UI
 
@@ -65,4 +66,5 @@ else at least one audit entry matches
   UI -->> STAFF : Show the entries newest first with category, action, actor, target and time, plus the page controls
 end
 deactivate UI
+deactivate STAFF
 @enduml

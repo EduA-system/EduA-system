@@ -17,6 +17,7 @@ participant ":LibraryContentRepository" as CONTENTS <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Click "Save to Library" on the opened public content
 activate UI
 UI ->> UI : handleCustomize()
@@ -55,4 +56,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

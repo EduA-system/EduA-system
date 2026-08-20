@@ -19,6 +19,7 @@ participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> ED : Edit slide text, replace an image, move an element or drag a slide to reorder the deck
 activate ED
 ED ->> STORE : updateElement(id, patch)
@@ -66,4 +67,5 @@ else the slide deck is owned by the teacher
   deactivate SMC
 end
 deactivate ED
+deactivate Teacher
 @enduml

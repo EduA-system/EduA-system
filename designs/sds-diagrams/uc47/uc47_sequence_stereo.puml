@@ -18,6 +18,7 @@ participant ":AppUserRepository" as USERS <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Select a submitted student entry from the Submissions List
 activate UI
 UI ->> UI : load()
@@ -60,4 +61,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

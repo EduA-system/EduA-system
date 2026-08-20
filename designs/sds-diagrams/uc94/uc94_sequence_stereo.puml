@@ -18,6 +18,7 @@ participant ":NotificationStreamPort" as STREAM <<interface>>
 database DB
 
 autonumber
+activate User
 User ->> UI : Click the notification bell and choose the unread filter
 activate UI
 UI ->> UI : load()
@@ -60,4 +61,5 @@ deactivate STREAM
 UI ->> UI : load()
 UI -->> User : Show the newly received notification at the top of the list without a page reload
 deactivate UI
+deactivate User
 @enduml

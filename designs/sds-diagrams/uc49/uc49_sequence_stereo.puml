@@ -17,6 +17,7 @@ participant ":SubmissionRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Student
 Student ->> UI : Enter answer text, attach files and click "Submit"
 activate UI
 UI ->> CTL : POST /api/classes/{id}/resources/{rid}/submission
@@ -59,4 +60,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Student
 @enduml

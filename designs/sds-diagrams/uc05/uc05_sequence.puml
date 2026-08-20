@@ -11,12 +11,12 @@ skinparam maxMessageSize 280
 title 2.1.2.1 UC-05 Create Lesson Plan — Sequence Diagram
 
 actor Teacher
+participant ":LessonEditDashboard" as EDIT
 participant ":LessonPlanController" as CTL
 participant ":GenerateLessonPlanStreamUseCase" as UCASE
 participant ":LessonPlanService" as SVC
 participant ":AiClient" as AI
 participant ":LessonPlanStreamPort" as STREAM
-participant ":LessonEditDashboard" as EDIT
 database DB
 
 autonumber

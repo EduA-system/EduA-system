@@ -19,6 +19,7 @@ participant ":AppUserRepository" as USERS <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Open one of their own published items from the Community Hub
 activate UI
 UI ->> UI : load()
@@ -64,4 +65,5 @@ else the signed-in teacher is not the author
   UI -->> Teacher : Show the published version and its discussion without the owner-only actions
 end
 deactivate UI
+deactivate Teacher
 @enduml

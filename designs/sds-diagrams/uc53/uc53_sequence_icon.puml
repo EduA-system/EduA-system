@@ -11,8 +11,8 @@ title 2.6.2.3 UC-53 View Physics Simulation Analysis — Sequence Diagram
 actor "Physics Teacher" as Teacher
 boundary ":GenericDetailView" as GDV
 boundary ":LandmarksPanel" as PANEL
-entity ":Landmark" as MARK
 boundary ":SceneKonva2D" as CANVAS
+entity ":Landmark" as MARK
 control ":SceneKernel" as KERNEL
 
 autonumber

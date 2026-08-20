@@ -18,6 +18,7 @@ participant ":LibraryContentRepository" as CONTENTS <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Click "Delete post" on an own published Community Hub item
 activate UI
 UI ->> CONFIRM : Show the confirmation popup stating the item will be removed from the Community Hub (MSG09)
@@ -67,4 +68,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

@@ -11,12 +11,12 @@ skinparam maxMessageSize 280
 title 2.1.2.1 UC-05 Create Lesson Plan — Sequence Diagram
 
 actor Teacher
+boundary ":LessonEditDashboard" as EDIT
 control ":LessonPlanController" as CTL
 control ":GenerateLessonPlanStreamUseCase" as UCASE
 control ":LessonPlanService" as SVC
 boundary ":AiClient" as AI
 boundary ":LessonPlanStreamPort" as STREAM
-boundary ":LessonEditDashboard" as EDIT
 database DB
 
 autonumber

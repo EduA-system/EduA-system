@@ -19,6 +19,7 @@ participant ":ActivityLogService" as AUDIT <<business logic>>
 database DB
 
 autonumber
+activate Principal
 Principal ->> UI : Enter the account email and an optional full name, select a subject and click "Add"
 activate UI
 UI ->> UI : addModerator()
@@ -73,4 +74,5 @@ else the entered information is valid
   UI -->> Principal : Show MSG08 and refresh the Moderator list with the invited account
 end
 deactivate UI
+deactivate Principal
 @enduml

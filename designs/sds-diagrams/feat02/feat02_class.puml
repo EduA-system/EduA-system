@@ -80,11 +80,11 @@ class SlideDetailPanel <<user interaction>> {
   + onChange(slide : SlideItem)
 }
 
-class SlideApi <<user interaction>> {
+class SlideApi <<business logic>> {
   + validateContentPlan(plan : SlideContentPlan) : String [0..*]
 }
 
-class SlideCreateSession <<user interaction>> {
+class SlideCreateSession <<data abstraction>> {
   - SLIDE_CREATE_SESSION_KEY : String
   - SLIDE_GENERATION_ACTIVE_KEY : String
   + patchSlideCreateSession(patch : SlideGenerationSession)

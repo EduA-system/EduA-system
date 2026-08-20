@@ -17,6 +17,7 @@ participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> EDT : Open an owned test from the personal library
 activate EDT
 EDT ->> CTL : GET /api/library/contents/{id}
@@ -67,4 +68,5 @@ else test exists and belongs to the teacher
   EDT -->> Teacher : Show the updated test and the save confirmation
 end
 deactivate EDT
+deactivate Teacher
 @enduml

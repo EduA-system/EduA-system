@@ -18,6 +18,7 @@ participant ":WeeklyTaskRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Click "Unsubmit" on a submitted task of the current week
 activate UI
 UI ->> DLG : open the withdrawal confirmation with the task title
@@ -62,4 +63,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

@@ -17,6 +17,7 @@ participant ":WeeklyTaskRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Open the Weekly Schedule and pick the month and the grade filter
 activate UI
 UI ->> UI : load()
@@ -51,4 +52,5 @@ else the task lies outside the current week or the deadline has passed
   UI -->> Teacher : Show the task read-only, marked as not yet started, already past or overdue
 end
 deactivate UI
+deactivate Teacher
 @enduml

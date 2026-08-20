@@ -16,6 +16,7 @@ participant ":MoleculeGeometry" as GEO <<user interaction>>
 participant ":Scene" as SCENE <<data abstraction>>
 
 autonumber
+activate Teacher
 Teacher ->> PAGE : Open "Molecular Structure" from the Chemistry Lab
 activate PAGE
 PAGE ->> EXP : render()
@@ -61,4 +62,5 @@ deactivate SCENE
 deactivate VIEW
 deactivate EXP
 deactivate PAGE
+deactivate Teacher
 @enduml

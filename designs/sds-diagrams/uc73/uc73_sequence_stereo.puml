@@ -17,6 +17,7 @@ participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Open "Hub moderation" from the sidebar
 activate UI
 UI ->> UI : load()
@@ -54,4 +55,5 @@ opt no pending item matches the current criteria
   UI -->> Moderator : Show the empty-state message (MSG01)
 end
 deactivate UI
+deactivate Moderator
 @enduml

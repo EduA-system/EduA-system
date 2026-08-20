@@ -19,6 +19,7 @@ participant ":ActivityLogService" as LOG <<business logic>>
 database DB
 
 autonumber
+activate Principal
 Principal ->> UI : Open the IT Support tab, enter the account email and an optional full name, then click "Grant access"
 activate UI
 UI ->> UI : addItStaff()
@@ -71,4 +72,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Principal
 @enduml

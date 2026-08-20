@@ -18,6 +18,7 @@ participant ":AppUserRepository" as USERS <<interface>>
 database DB
 
 autonumber
+activate User
 User ->> UI : Open the Class Members area of a class
 activate UI
 UI ->> UI : load()
@@ -65,4 +66,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate User
 @enduml

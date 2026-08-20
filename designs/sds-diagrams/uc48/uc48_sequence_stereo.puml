@@ -18,6 +18,7 @@ database DB
 participant "File Storage Service" as STORAGE
 
 autonumber
+activate Teacher
 Teacher ->> UI : Open a student submission from the Submissions List
 activate UI
 UI ->> UI : load()
@@ -56,4 +57,5 @@ else the storage service returns the file
   UI -->> Teacher : Save the file to the chosen or default download folder
 end
 deactivate UI
+deactivate Teacher
 @enduml

@@ -19,6 +19,7 @@ participant ":ActivityLogService" as AUDIT <<business logic>>
 database DB
 
 autonumber
+activate STAFF
 STAFF ->> CARD : Edit the instruction of an open prompt
 activate CARD
 CARD ->> UI : keep the edited instruction and mark the card as unsaved
@@ -63,4 +64,5 @@ else the instruction was changed and is not empty
   UI -->> STAFF : Show the saved confirmation and the new last-updated time (MSG08)
 end
 deactivate UI
+deactivate STAFF
 @enduml

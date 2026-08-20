@@ -10,11 +10,11 @@ title 2.8.2.3 UC-60 Generate Molecule Structure — Sequence Diagram
 
 actor "Chemistry Teacher" as Teacher
 boundary ":MoleculeExplorer" as EXP
+boundary ":MoleculeViewer" as VIEW
 control ":MoleculeController" as CTL
 control ":MoleculeService" as SVC
 control ":MoleculePromptBuilder" as PB
 boundary ":AiClient" as AI
-boundary ":MoleculeViewer" as VIEW
 
 autonumber
 Teacher ->> EXP : Enter a substance name or a chemical formula and click "Generate molecule"

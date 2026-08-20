@@ -18,6 +18,7 @@ database DB
 participant "File Storage Service" as FS
 
 autonumber
+activate Moderator
 Moderator ->> UI : Click "View detail" on a submission of the approval list
 activate UI
 UI ->> UI : handleExpand(id)
@@ -60,4 +61,5 @@ opt the submission carries an uploaded lesson-plan document
   UI -->> Moderator : Show the uploaded lesson-plan document in a new browser tab
 end
 deactivate UI
+deactivate Moderator
 @enduml

@@ -18,6 +18,7 @@ participant ":AppUserRepository" as USERS <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Select "Add Student" on the Class Members screen of an owned ACTIVE class, then enter the student full name, phone number, date of birth and Gmail and click "Add"
 activate UI
 UI ->> UI : handleAddStudent(event)
@@ -67,4 +68,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

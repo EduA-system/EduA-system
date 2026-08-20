@@ -18,6 +18,7 @@ participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Select a pending item from the Hub moderation queue
 activate UI
 UI ->> UI : open the review pane for the selected submission
@@ -57,4 +58,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

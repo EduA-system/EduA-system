@@ -18,6 +18,7 @@ participant ":UserRoleRepository" as ROLES <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Select "Reactivate" on a revoked teacher account of the assigned subject
 activate UI
 UI ->> UI : toggleTeacher(item)
@@ -68,4 +69,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

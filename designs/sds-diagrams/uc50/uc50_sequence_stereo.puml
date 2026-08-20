@@ -18,6 +18,7 @@ participant ":SubmissionRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Student
 Student ->> UI : Open the current submission and select "Unsubmit"
 activate UI
 UI ->> UI : requestUnsubmit()
@@ -65,4 +66,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Student
 @enduml

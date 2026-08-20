@@ -17,6 +17,7 @@ participant ":BlogCommentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Click "Delete" on one of their own comments
 activate UI
 UI -->> Teacher : Show the delete confirmation dialog warning that direct replies go with it (MSG09)
@@ -65,4 +66,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

@@ -18,6 +18,7 @@ participant ":HubCommentRepository" as COMMENTS <<interface>>
 database DB
 
 autonumber
+activate User
 User ->> UI : Enter the comment text in the comment box of the Community Hub content detail screen
 activate UI
 User ->> UI : Click the send button
@@ -68,4 +69,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate User
 @enduml

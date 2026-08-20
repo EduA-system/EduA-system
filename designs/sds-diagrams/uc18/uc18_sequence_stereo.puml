@@ -19,6 +19,7 @@ participant ":AiClient" as AI <<interface>>
 participant ":PracticeExamStreamPort" as STREAM <<interface>>
 
 autonumber
+activate Teacher
 Teacher ->> CFG : Select subject, grade, textbook lessons, duration, difficulty and question types
 activate CFG
 
@@ -71,4 +72,5 @@ deactivate STREAM
 EDT ->> EDT : save the exam and its answer key to the personal library as a draft
 EDT -->> Teacher : Show the complete exam and its answer key for review
 deactivate EDT
+deactivate Teacher
 @enduml

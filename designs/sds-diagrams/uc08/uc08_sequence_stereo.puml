@@ -17,6 +17,7 @@ participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Open the Personal Library from the main navigation
 activate UI
 UI ->> UI : load()
@@ -55,4 +56,5 @@ opt teacher searches or filters the library
   UI -->> Teacher : Refresh the Personal Library list with the matching items
 end
 deactivate UI
+deactivate Teacher
 @enduml

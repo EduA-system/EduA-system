@@ -17,6 +17,7 @@ participant ":WeeklyTaskRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Click "Edit" on a lesson card of a week that has not ended
 activate UI
 UI ->> UI : openEditForm(task)
@@ -67,4 +68,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

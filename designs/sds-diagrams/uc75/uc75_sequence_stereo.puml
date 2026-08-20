@@ -18,6 +18,7 @@ participant ":ActivityLogService" as LOG <<business logic>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Click "Approve to Hub" on the opened submission
 activate UI
 UI ->> UI : handleApprove()
@@ -64,4 +65,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

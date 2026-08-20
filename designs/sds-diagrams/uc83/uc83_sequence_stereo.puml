@@ -18,6 +18,7 @@ participant ":AppUserRepository" as USERS <<interface>>
 database DB
 
 autonumber
+activate USER
 USER ->> UI : Open the Weekly Schedule and choose the month and the grade
 activate UI
 UI ->> UI : load()
@@ -68,4 +69,5 @@ else at least one task is visible
   UI -->> USER : Show every week with its tasks: title, chapter and lesson, assignee, deadline and review status
 end
 deactivate UI
+deactivate USER
 @enduml

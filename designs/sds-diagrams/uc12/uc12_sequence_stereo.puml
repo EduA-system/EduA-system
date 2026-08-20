@@ -19,6 +19,7 @@ participant ":AiClient" as AI <<interface>>
 participant ":OutlineStreamPort" as STREAM <<interface>>
 
 autonumber
+activate Teacher
 Teacher ->> DASH : Open an owned lesson plan and click "Create Slide Outline"
 activate DASH
 DASH ->> SCR : verify that the lesson plan exists and belongs to the teacher, then open the Slide Outline screen
@@ -78,4 +79,5 @@ deactivate STREAM
 deactivate UCASE
 SCR ->> Teacher : Show the full Slide Outline Preview, ready for review
 deactivate SCR
+deactivate Teacher
 @enduml

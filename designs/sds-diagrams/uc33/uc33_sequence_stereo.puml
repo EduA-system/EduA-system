@@ -17,6 +17,7 @@ participant ":ClassRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Open "Class settings" from the Class Hub of an owned class
 activate UI
 UI ->> UI : load()
@@ -66,4 +67,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

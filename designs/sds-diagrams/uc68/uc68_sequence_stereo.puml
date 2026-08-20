@@ -18,6 +18,7 @@ participant ":HubCommentRepository" as COMMENTS <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Open a published Community Hub item and read its comment section
 activate UI
 UI ->> UI : load()
@@ -59,4 +60,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

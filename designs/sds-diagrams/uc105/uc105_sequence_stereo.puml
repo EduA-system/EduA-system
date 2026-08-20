@@ -19,6 +19,7 @@ participant ":ActivityLogService" as AUDIT <<business logic>>
 database DB
 
 autonumber
+activate Principal
 Principal ->> UI : Click "Replace Moderator" on the current Moderator of a subject
 activate UI
 UI ->> UI : openReplacement(item)
@@ -66,4 +67,5 @@ else the replacement form is valid
   UI -->> Principal : Show MSG31 / MSG33 and refresh the Staff List with the new Moderator
 end
 deactivate UI
+deactivate Principal
 @enduml

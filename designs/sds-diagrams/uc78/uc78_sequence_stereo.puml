@@ -19,6 +19,7 @@ participant ":TeacherGradeRepository" as GRADES <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Open "User management" and select the Teacher tab
 activate UI
 UI ->> UI : loadTeachers(page)
@@ -67,4 +68,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

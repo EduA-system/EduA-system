@@ -18,6 +18,7 @@ participant ":AiPromptTemplateCatalog" as CATALOG <<business logic>>
 database DB
 
 autonumber
+activate STAFF
 STAFF ->> UI : Open the AI configuration screen
 activate UI
 UI ->> UI : load()
@@ -54,4 +55,5 @@ else at least one prompt is available
   UI -->> STAFF : Show every prompt grouped by feature with its key, complete instruction, word count, last-updated time and the Edit action
 end
 deactivate UI
+deactivate STAFF
 @enduml

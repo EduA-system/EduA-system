@@ -12,9 +12,9 @@ actor Teacher
 boundary ":OutlineEditor" as OE
 boundary ":SlideDetailModal" as MODAL
 boundary ":SlideDetailPanel" as PANEL
-boundary ":SlideApi" as API
+control ":SlideApi" as API
 boundary ":SlideOutlineScreen" as SCR
-boundary ":SlideCreateSession" as SESSION
+entity ":SlideCreateSession" as SESSION
 
 autonumber
 Teacher ->> OE : Rename a part, add or delete a slide, or drag a part to reorder the outline

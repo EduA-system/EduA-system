@@ -11,9 +11,9 @@ title 2.6.2.2 UC-52 View Physics Simulation Detail — Sequence Diagram
 actor "Physics Teacher" as Teacher
 boundary ":DetailView" as DV
 boundary ":GenericDetailView" as GDV
-entity ":Preset" as PRESET
 boundary ":ParamPanel" as PANEL
 boundary ":SceneKonva2D" as CANVAS
+entity ":Preset" as PRESET
 control ":SceneKernel" as KERNEL
 
 autonumber

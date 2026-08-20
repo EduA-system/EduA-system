@@ -11,9 +11,9 @@ title 2.6.2.2 UC-52 View Physics Simulation Detail — Sequence Diagram
 actor "Physics Teacher" as Teacher
 participant ":DetailView" as DV
 participant ":GenericDetailView" as GDV
-participant ":Preset" as PRESET
 participant ":ParamPanel" as PANEL
 participant ":SceneKonva2D" as CANVAS
+participant ":Preset" as PRESET
 participant ":SceneKernel" as KERNEL
 
 autonumber

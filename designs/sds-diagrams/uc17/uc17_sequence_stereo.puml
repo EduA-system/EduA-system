@@ -14,6 +14,7 @@ participant ":SlideHtmlExport" as EXP <<user interaction>>
 participant ":JSZip" as ZIP <<user interaction>>
 
 autonumber
+activate Teacher
 Teacher ->> TB : Open the export menu and choose the offline HTML package
 activate TB
 TB ->> TB : exportHtml()
@@ -51,4 +52,5 @@ else the export package is ready
   TB ->> Teacher : Show the export result, including the assets replaced by placeholders
   deactivate TB
 end
+deactivate Teacher
 @enduml

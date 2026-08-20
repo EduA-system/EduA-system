@@ -18,6 +18,7 @@ participant ":ClassMemberRepository" as MEM <<interface>>
 database DB
 
 autonumber
+activate Student
 Student ->> UI : Open the Enrolled Classes List from the main navigation
 activate UI
 UI ->> UI : loadClasses()
@@ -64,4 +65,5 @@ opt student searches or filters the list
   UI -->> Student : Refresh the list with the matching enrolled classes
 end
 deactivate UI
+deactivate Student
 @enduml

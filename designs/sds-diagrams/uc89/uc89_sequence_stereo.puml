@@ -17,6 +17,7 @@ participant ":WeeklyTaskRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Open "Weekly Lesson Plan Approval" from the sidebar
 activate UI
 UI ->> UI : load()
@@ -51,4 +52,5 @@ UI ->> UI : handleGradeChange(grade)
 UI ->> UI : load()
 UI -->> Moderator : Show only the submissions of the assigned subject that match the chosen filters
 deactivate UI
+deactivate Moderator
 @enduml

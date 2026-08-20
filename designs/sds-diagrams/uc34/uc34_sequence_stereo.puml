@@ -17,6 +17,7 @@ participant ":ClassRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Open "Class settings" of an owned class and select "Archive class" or "Reactivate class"
 activate UI
 UI ->> UI : requestToggle()
@@ -63,4 +64,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

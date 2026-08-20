@@ -19,6 +19,7 @@ participant ":BlogCommentRepository" as CREPO <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Open the Blog screen and select "Blog Management"
 activate UI
 UI ->> UI : loadPosts()
@@ -69,4 +70,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

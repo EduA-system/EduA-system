@@ -19,6 +19,7 @@ participant ":SubmissionRepository" as SREPO <<interface>>
 database DB
 
 autonumber
+activate Student
 Student ->> UI : Select a resource of an enrolled class to open its detail
 activate UI
 UI ->> UI : load()
@@ -67,4 +68,5 @@ else the student is enrolled and the resource exists
   UI -->> Student : Show the instructions, attachment, deadline and the submission state with the actions allowed by the class status
 end
 deactivate UI
+deactivate Student
 @enduml

@@ -17,6 +17,7 @@ participant ":FillSlideContentUseCase" as FILL <<business logic>>
 participant ":AiClient" as AI <<interface>>
 
 autonumber
+activate Teacher
 Teacher ->> SMC : Confirm the slide outline and submit the slide-deck generation request
 activate SMC
 SMC ->> PIPE : runDeckSkinStep(input, cb)
@@ -71,4 +72,5 @@ else the slide content is ready
   SMC ->> Teacher : Show the generated deck, auto-saved to the Personal Library as Draft
 end
 deactivate SMC
+deactivate Teacher
 @enduml

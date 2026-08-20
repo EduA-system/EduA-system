@@ -17,6 +17,7 @@ participant ":LibraryContentRepository" as CONTENTS <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Open the Community Hub
 activate UI
 UI ->> UI : load(page, append)
@@ -53,4 +54,5 @@ end
 Teacher ->> UI : Click "Load more" or open one content card
 UI -->> Teacher : Append the next page of approved content or open its Public Content Detail
 deactivate UI
+deactivate Teacher
 @enduml

@@ -10,11 +10,12 @@ skinparam maxMessageSize 280
 actor "Physics Teacher" as Teacher
 participant ":GenericDetailView" as GDV <<user interaction>>
 participant ":LandmarksPanel" as PANEL <<user interaction>>
-participant ":Landmark" as MARK <<data abstraction>>
 participant ":SceneKonva2D" as CANVAS <<user interaction>>
+participant ":Landmark" as MARK <<data abstraction>>
 participant ":SceneKernel" as KERNEL <<algorithm>>
 
 autonumber
+activate Teacher
 Teacher ->> GDV : Open the Analysis tab of the simulation currently running
 activate GDV
 GDV ->> PANEL : render()
@@ -65,4 +66,5 @@ opt teacher changes a parameter while the Analysis tab is open
   deactivate PANEL
 end
 deactivate GDV
+deactivate Teacher
 @enduml

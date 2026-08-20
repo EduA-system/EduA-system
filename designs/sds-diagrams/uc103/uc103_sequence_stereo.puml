@@ -19,6 +19,7 @@ participant ":UserRoleRepository" as ROLES <<interface>>
 database DB
 
 autonumber
+activate Principal
 Principal ->> LIST : Select the name of a Moderator or of the IT Supporter in the Staff List
 activate LIST
 LIST ->> UI : open the read-only profile route of the selected account
@@ -63,4 +64,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Principal
 @enduml

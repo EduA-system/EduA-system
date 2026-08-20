@@ -10,15 +10,16 @@ skinparam sequenceMessageAlign left
 skinparam maxMessageSize 280
 
 actor Teacher
+participant ":LessonEditDashboard" as EDIT <<user interaction>>
 participant ":LessonPlanController" as CTL <<coordinator>>
 participant ":GenerateLessonPlanStreamUseCase" as UCASE <<business logic>>
 participant ":LessonPlanService" as SVC <<business logic>>
 participant ":AiClient" as AI <<interface>>
 participant ":LessonPlanStreamPort" as STREAM <<interface>>
-participant ":LessonEditDashboard" as EDIT <<user interaction>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> EDIT : Select the subject, grade, textbook, chapter and lesson, add an optional AI instruction and click "Create lesson plan"
 activate EDIT
 EDIT ->> CTL : POST /api/lesson-plans/generate-stream
@@ -88,4 +89,5 @@ deactivate UCASE
 EDIT ->> EDIT : saveLesson(session, true)
 EDIT ->> Teacher : Show the finished lesson plan, stored in the Personal Library as Draft
 deactivate EDIT
+deactivate Teacher
 @enduml

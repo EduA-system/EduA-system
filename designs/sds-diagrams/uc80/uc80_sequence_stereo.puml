@@ -19,6 +19,7 @@ participant ":ClassRepository" as CLASSES <<interface>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Select "Edit" on a teacher account of the assigned subject to open the edit form
 activate UI
 Moderator ->> UI : Change full name, phone number, date of birth or grades, then select "Save"
@@ -68,4 +69,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

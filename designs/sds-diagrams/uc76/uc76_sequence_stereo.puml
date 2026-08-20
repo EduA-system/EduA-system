@@ -18,6 +18,7 @@ participant ":ActivityLogService" as LOG <<business logic>>
 database DB
 
 autonumber
+activate Moderator
 Moderator ->> UI : Click "Reject" on the opened submission
 activate UI
 UI -->> Moderator : Show the rejection reason panel with a "Confirm rejection" action
@@ -67,4 +68,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Moderator
 @enduml

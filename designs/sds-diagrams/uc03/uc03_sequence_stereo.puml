@@ -16,6 +16,7 @@ participant ":RefreshTokenRepository" as TOKENS <<interface>>
 database DB
 
 autonumber
+activate User
 User ->> UI : Open the account menu and select "Log out"
 activate UI
 UI ->> CTL : POST /api/auth/logout (refresh token cookie)
@@ -51,4 +52,5 @@ deactivate CTL
 UI ->> UI : clear access token and cached user
 UI -->> User : Redirect to the public landing page
 deactivate UI
+deactivate User
 @enduml

@@ -17,6 +17,7 @@ participant ":BlogCommentRepository" as REPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Click "Edit" on one of their own comments
 activate UI
 UI ->> UI : startEditComment(comment)
@@ -63,4 +64,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

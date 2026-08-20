@@ -19,6 +19,7 @@ participant ":LibraryContentRepository" as LIBREPO <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> EDIT : Edit objectives, materials, sections and teaching activities directly in the editor
 activate EDIT
 
@@ -76,4 +77,5 @@ else saving the lesson plan fails
   EDIT ->> Teacher : Show MSG80 and keep the current edits in the editor
 end
 deactivate EDIT
+deactivate Teacher
 @enduml

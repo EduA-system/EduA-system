@@ -14,6 +14,7 @@ participant ":LessonPlanPdfExport" as PDF <<user interaction>>
 participant ":Katex" as KATEX <<user interaction>>
 
 autonumber
+activate Teacher
 Teacher ->> EDIT : Open the lesson plan and click "Export PDF"
 activate EDIT
 EDIT ->> EDIT : check that the lesson plan is fully loaded and no generation is running
@@ -47,4 +48,5 @@ else the print dialog opened
 end
 deactivate PDF
 deactivate EDIT
+deactivate Teacher
 @enduml

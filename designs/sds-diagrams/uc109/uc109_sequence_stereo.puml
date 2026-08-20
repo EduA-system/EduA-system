@@ -18,6 +18,7 @@ participant ":WeeklyTaskRepository" as TASKS <<interface>>
 database DB
 
 autonumber
+activate Principal
 Principal ->> UI : Open "Statistics" from the main navigation
 activate UI
 UI ->> CTL : GET /api/principal/statistics/ai-content-trend?months=6
@@ -66,4 +67,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Principal
 @enduml

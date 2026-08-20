@@ -11,13 +11,14 @@ skinparam maxMessageSize 260
 
 actor Teacher
 participant ":PracticeExamEditDashboard" as EDT <<user interaction>>
+participant ":LessonPlanPdfExport" as PRINT <<user interaction>>
 participant ":LibraryContentController" as CTL <<coordinator>>
 participant ":LibraryContentService" as SVC <<business logic>>
 participant ":LibraryContentRepository" as REPO <<interface>>
 database DB
-participant ":LessonPlanPdfExport" as PRINT <<user interaction>>
 
 autonumber
+activate Teacher
 Teacher ->> EDT : Open the test to export
 activate EDT
 
@@ -61,4 +62,5 @@ else the browser blocks the print frame
 end
 deactivate PRINT
 deactivate EDT
+deactivate Teacher
 @enduml

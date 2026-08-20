@@ -18,6 +18,7 @@ participant ":ClassResourceRepository" as RES <<interface>>
 database DB
 
 autonumber
+activate Teacher
 Teacher ->> UI : Select "Edit" on a resource of an owned ACTIVE class
 activate UI
 UI ->> FORM : Open the form filled with the stored resource information
@@ -62,4 +63,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Teacher
 @enduml

@@ -12,11 +12,11 @@ title 2.5.2.3 UC-20 Export Test — Sequence Diagram
 
 actor Teacher
 boundary ":PracticeExamEditDashboard" as EDT
+boundary ":LessonPlanPdfExport" as PRINT
 control ":LibraryContentController" as CTL
 control ":LibraryContentService" as SVC
 boundary ":LibraryContentRepository" as REPO
 database DB
-boundary ":LessonPlanPdfExport" as PRINT
 
 autonumber
 Teacher ->> EDT : Open the test to export

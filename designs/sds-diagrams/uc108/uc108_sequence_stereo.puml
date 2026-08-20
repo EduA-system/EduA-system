@@ -18,6 +18,7 @@ participant ":UserRoleRepository" as ROLES <<interface>>
 database DB
 
 autonumber
+activate Principal
 Principal ->> UI : Click "Replace IT Support" on the current IT Support account
 activate UI
 UI ->> UI : openItStaffReplacement(item)
@@ -69,4 +70,5 @@ end
 deactivate SVC
 deactivate CTL
 deactivate UI
+deactivate Principal
 @enduml
