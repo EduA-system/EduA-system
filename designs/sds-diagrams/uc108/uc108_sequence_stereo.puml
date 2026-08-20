@@ -1,0 +1,72 @@
+@startuml UC-108 Replace IT Support Account - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 220
+
+actor Principal
+participant ":UserManagementContent" as UI <<user interaction>>
+participant ":PrincipalController" as CTL <<coordinator>>
+participant ":PrincipalItStaffService" as SVC <<business logic>>
+participant ":AppUserRepository" as USERS <<interface>>
+participant ":UserRoleRepository" as ROLES <<interface>>
+database DB
+
+autonumber
+Principal ->> UI : Click "Replace IT Support" on the current IT Support account
+activate UI
+UI ->> UI : openItStaffReplacement(item)
+Principal ->> UI : Enter the replacement email and confirm the replacement dialog (MSG41)
+UI ->> UI : replaceItStaff()
+UI ->> CTL : POST /api/principal/it-staff/{id}/replacement
+activate CTL
+CTL ->> SVC : replace(id, replacementEmail, fullName)
+activate SVC
+SVC ->> USERS : findById(id)
+activate USERS
+USERS ->> DB : SELECT * FROM app_users WHERE id = ?
+activate DB
+DB -->> USERS : row / none
+deactivate DB
+USERS -->> SVC : AppUser
+deactivate USERS
+SVC ->> SVC : look up the replacement by email and accept only an active IT Support account and an eligible, different replacement email
+
+alt the IT Support account is no longer active or the replacement email is not eligible
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException / DuplicateEmailException
+  CTL -->> UI : HTTP 404 / 403 / 409
+  UI -->> Principal : Show MSG34 / MSG28 / MSG39 and keep both accounts unchanged
+else the current IT Support is active and the replacement is eligible
+  SVC ->> USERS : save(former IT Support with status DISABLED)
+  activate USERS
+  USERS ->> DB : UPDATE app_users SET status = 'DISABLED' WHERE id = ?
+  activate DB
+  DB -->> USERS : Saved
+  deactivate DB
+  deactivate USERS
+  SVC ->> SVC : revoke the former IT Support refresh tokens and record the revocation in the activity log
+  SVC ->> USERS : save(replacement AppUser with status INVITED)
+  activate USERS
+  USERS -->> SVC : AppUser
+  deactivate USERS
+  SVC ->> ROLES : replaceRole(userId, IT_STAFF, grantedBy, grantedAt)
+  activate ROLES
+  ROLES ->> DB : INSERT INTO user_roles (user_id, role_id, granted_by, granted_at)
+  activate DB
+  DB -->> ROLES : Saved
+  deactivate DB
+  deactivate ROLES
+  SVC ->> SVC : record the replacement in the activity log as one complete operation
+  SVC -->> CTL : AppUser
+  CTL -->> UI : HTTP 200 + ItStaff
+  UI -->> Principal : Show MSG42 and refresh the IT Support list
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

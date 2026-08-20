@@ -1,0 +1,72 @@
+@startuml UC-27 Reply to Blog Comment - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":BlogCommunityPage" as UI <<user interaction>>
+participant ":BlogController" as CTL <<coordinator>>
+participant ":BlogCommentService" as SVC <<business logic>>
+participant ":BlogPostRepository" as PREPO <<interface>>
+participant ":BlogCommentRepository" as CREPO <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Click "Reply" on a root comment
+activate UI
+UI -->> Teacher : Show the reply banner naming the author of the root comment
+Teacher ->> UI : Enter the reply text and click "Send"
+UI ->> UI : addComment()
+UI ->> CTL : POST /api/blog-posts/{id}/comments with parentCommentId
+activate CTL
+CTL ->> SVC : create(postId, content, parentCommentId)
+activate SVC
+
+SVC ->> PREPO : findPublishedById(postId)
+activate PREPO
+PREPO ->> DB : SELECT * FROM blog_posts WHERE id = ? AND status = 'PUBLISHED'
+activate DB
+DB -->> PREPO : row / none
+deactivate DB
+PREPO -->> SVC : BlogPost
+deactivate PREPO
+
+SVC ->> CREPO : findById(parentCommentId)
+activate CREPO
+CREPO ->> DB : SELECT * FROM blog_comments WHERE id = ?
+activate DB
+DB -->> CREPO : row / none
+deactivate DB
+CREPO -->> SVC : BlogComment
+deactivate CREPO
+
+alt the post is no longer published or the reply target is not a root comment of that post
+  SVC -->> CTL : ResourceNotFoundException / IllegalArgumentException
+  CTL -->> UI : HTTP 404 / 400
+  UI -->> Teacher : Show that the reply cannot be posted and keep the typed text
+
+else the reply target is a valid root comment of the published post
+  SVC ->> SVC : sanitize the reply text and reject it when empty or over 200 words
+  SVC ->> CREPO : save(comment)
+  activate CREPO
+  CREPO ->> DB : INSERT INTO blog_comments with parent_comment_id set to the root comment
+  activate DB
+  DB -->> CREPO : Saved
+  deactivate DB
+  CREPO -->> SVC : BlogComment
+  deactivate CREPO
+  SVC -->> CTL : CommentView
+  CTL -->> UI : HTTP 201 + CommentView
+  UI -->> Teacher : Show MSG08, reload the discussion and display the reply nested under the root comment
+end
+
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

@@ -1,0 +1,69 @@
+@startuml UC-33 Edit Class Information - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":ClassSettingsPage" as UI <<user interaction>>
+participant ":ClassController" as CTL <<coordinator>>
+participant ":ClassManagementService" as SVC <<business logic>>
+participant ":ClassRepository" as REPO <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Open "Class settings" from the Class Hub of an owned class
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/classes/{id}
+activate CTL
+CTL ->> SVC : getDetail(id)
+activate SVC
+SVC -->> CTL : ClassDetail
+deactivate SVC
+CTL -->> UI : HTTP 200 + ClassDetail
+deactivate CTL
+UI -->> Teacher : Show the current class details in an editable form, read-only when the class is INACTIVE
+
+Teacher ->> UI : Change the class name, grade or description and select "Save"
+UI ->> UI : submit(event)
+UI ->> CTL : PATCH /api/classes/{id}
+activate CTL
+CTL ->> SVC : updateClass(id, name, subject, grade, description)
+activate SVC
+SVC ->> REPO : findById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM classes WHERE id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : Classroom
+deactivate REPO
+SVC ->> SVC : accept only an existing class owned by the teacher, still ACTIVE, with a valid name and an assigned grade
+
+alt class does not exist, is not owned by the teacher or is INACTIVE
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> Teacher : Show the read-only or access-denied message (MSG23) and keep the stored details unchanged
+else the teacher owns an ACTIVE class and the entered details are valid
+  SVC ->> REPO : save(Classroom with the updated class information)
+  activate REPO
+  REPO ->> DB : UPDATE classes SET class information fields, updated_at = ? WHERE id = ?
+  activate DB
+  DB -->> REPO : Saved
+  deactivate DB
+  REPO -->> SVC : Classroom
+  deactivate REPO
+  SVC -->> CTL : ClassDetail
+  CTL -->> UI : HTTP 200 + ClassDetail
+  UI -->> Teacher : Show MSG08 and the updated class information
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

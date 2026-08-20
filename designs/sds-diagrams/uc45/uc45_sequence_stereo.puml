@@ -1,0 +1,55 @@
+@startuml UC-45 Download Assigned Material - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Student
+participant ":ResourceDetailPage" as UI <<user interaction>>
+participant ":ClassController" as CTL <<coordinator>>
+participant ":ClassResourceService" as SVC <<business logic>>
+participant ":ClassResourceRepository" as REPO <<interface>>
+database DB
+participant "File Storage Service" as STORAGE
+
+autonumber
+Student ->> UI : Open a class resource that carries an attached material
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/classes/{id}/resources
+activate CTL
+CTL ->> SVC : listResources(classId, page, size)
+activate SVC
+SVC ->> SVC : allow only the class owner or a student still enrolled in the class
+SVC ->> REPO : findByClassId(classId, page, size)
+activate REPO
+REPO ->> DB : SELECT * FROM class_resources WHERE class_id = ? ORDER BY created_at DESC
+activate DB
+DB -->> REPO : resource rows with the stored attachment URL
+deactivate DB
+REPO -->> SVC : PageResult
+deactivate REPO
+SVC -->> CTL : ClassResourcePage
+deactivate SVC
+CTL -->> UI : HTTP 200 + ClassResourcePage
+deactivate CTL
+UI -->> Student : Show the attachment name and size with a Download action, also when the class is INACTIVE
+
+Student ->> UI : Click Download on the attached material
+UI ->> STORAGE : Request the material from the stored attachment URL
+activate STORAGE
+STORAGE -->> UI : File content with its content type / retrieval error
+deactivate STORAGE
+
+alt the resource carries no attachment or the storage service cannot return the file
+  UI -->> Student : Hide the Download action or show the failure message (MSG25), leaving the resource unchanged
+else the storage service returns the file
+  UI -->> Student : Save the file to the chosen or default download folder
+end
+deactivate UI
+@enduml

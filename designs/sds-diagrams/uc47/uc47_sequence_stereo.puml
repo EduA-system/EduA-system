@@ -1,0 +1,63 @@
+@startuml UC-47 View Submission Detail - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":SubmissionDetailPanel" as UI <<user interaction>>
+participant ":ClassController" as CTL <<coordinator>>
+participant ":SubmissionService" as SVC <<business logic>>
+participant ":SubmissionRepository" as REPO <<interface>>
+participant ":AppUserRepository" as USERS <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Select a submitted student entry from the Submissions List
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/classes/{id}/resources/{rid}/submissions/{studentId}
+activate CTL
+CTL ->> SVC : getSubmissionDetail(classId, resourceId, studentId)
+activate SVC
+SVC ->> SVC : allow only the owner of the class and a resource that belongs to that class
+SVC ->> REPO : findByResourceAndStudent(resourceId, studentId)
+activate REPO
+REPO ->> DB : SELECT * FROM submissions WHERE class_resource_id = ? AND student_id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO ->> DB : SELECT * FROM submission_files WHERE submission_id = ?
+activate DB
+DB -->> REPO : file rows with the stored file URLs
+deactivate DB
+REPO -->> SVC : SubmissionWithFiles
+deactivate REPO
+
+alt the teacher does not own the class or the submission has been withdrawn
+  SVC -->> CTL : ForbiddenOperationException / ResourceNotFoundException
+  CTL -->> UI : HTTP 403 / 404
+  UI -->> Teacher : Show that the submission is unavailable (MSG25), leaving the submission data unchanged
+else the student still has an active submission
+  SVC ->> USERS : findById(studentId)
+  activate USERS
+  USERS ->> DB : SELECT * FROM app_users WHERE id = ?
+  activate DB
+  DB -->> USERS : student row
+  deactivate DB
+  USERS -->> SVC : AppUser
+  deactivate USERS
+  SVC ->> SVC : add the student display name and the stored file metadata to the submission
+  SVC -->> CTL : SubmissionTeacherDetail
+  CTL -->> UI : HTTP 200 + TeacherSubmissionDetail
+  UI -->> Teacher : Show the answer text, the submitted files, the first and last submitted time and the On Time or Late status
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

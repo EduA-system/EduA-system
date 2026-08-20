@@ -1,0 +1,72 @@
+@startuml UC-42 Delete Class Resource - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":ClassResourcesPage" as UI <<user interaction>>
+participant ":ConfirmDialog" as CONFIRM <<user interaction>>
+participant ":ClassController" as CTL <<coordinator>>
+participant ":ClassResourceService" as SVC <<business logic>>
+participant ":ClassResourceRepository" as RES <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Select "Delete" on a resource in the Resources area of an owned ACTIVE class
+activate UI
+UI ->> CONFIRM : Show the confirmation popup stating that the related student submissions are removed too (MSG09)
+activate CONFIRM
+
+opt teacher cancels the deletion
+  Teacher ->> CONFIRM : Click "Cancel"
+  CONFIRM ->> UI : Report the cancelled confirmation
+  UI -->> Teacher : Close the popup and leave the resource unchanged
+end
+
+Teacher ->> CONFIRM : Click "Delete resource" to confirm
+CONFIRM ->> UI : Report the confirmed deletion
+deactivate CONFIRM
+UI ->> UI : remove(resource)
+UI ->> CTL : DELETE /api/classes/{id}/resources/{resourceId}
+activate CTL
+CTL ->> SVC : deleteResource(classId, resourceId)
+activate SVC
+SVC ->> SVC : resolve the class and accept only an owned class that is still ACTIVE
+SVC ->> RES : findById(resourceId)
+activate RES
+RES ->> DB : SELECT * FROM class_resources WHERE id = ?
+activate DB
+DB -->> RES : row / none
+deactivate DB
+RES -->> SVC : ClassResource
+deactivate RES
+SVC ->> SVC : accept only a resource that belongs to that class
+
+alt class is not owned or is INACTIVE, or the resource is not in the class
+  SVC -->> CTL : ForbiddenOperationException / ResourceNotFoundException
+  CTL -->> UI : HTTP 403 / 404
+  UI -->> Teacher : Show MSG23 or the unavailable-resource message and keep the Resources list unchanged
+
+else the teacher owns an ACTIVE class and the resource belongs to it
+  SVC ->> RES : deleteById(resourceId)
+  activate RES
+  RES ->> DB : DELETE FROM class_resources WHERE id = ? — the related submission rows are cascaded
+  activate DB
+  DB -->> RES : Deleted with the related submissions
+  deactivate DB
+  RES -->> SVC : void
+  deactivate RES
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204 No Content
+  UI -->> Teacher : Show MSG10 and the Resources list without the deleted resource
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

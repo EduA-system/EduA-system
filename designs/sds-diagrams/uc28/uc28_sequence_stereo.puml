@@ -1,0 +1,66 @@
+@startuml UC-28 Edit Own Blog Comment - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":BlogCommunityPage" as UI <<user interaction>>
+participant ":BlogController" as CTL <<coordinator>>
+participant ":BlogCommentService" as SVC <<business logic>>
+participant ":BlogCommentRepository" as REPO <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Click "Edit" on one of their own comments
+activate UI
+UI ->> UI : startEditComment(comment)
+UI -->> Teacher : Show the comment in inline edit mode with its current text
+Teacher ->> UI : Edit the comment text and click "Save"
+UI ->> UI : requestUpdateComment()
+UI -->> Teacher : Show the save confirmation dialog
+Teacher ->> UI : Click "Save changes" to confirm
+UI ->> UI : updateComment()
+UI ->> CTL : PATCH /api/blog-comments/{commentId}
+activate CTL
+CTL ->> SVC : update(commentId, content)
+activate SVC
+
+SVC ->> REPO : findById(commentId)
+activate REPO
+REPO ->> DB : SELECT * FROM blog_comments WHERE id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : BlogComment
+deactivate REPO
+
+alt the comment is missing or hidden, the teacher is not its author, or the new text is empty or over 200 words
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException / IllegalArgumentException
+  CTL -->> UI : HTTP 404 / 403 / 400
+  UI -->> Teacher : Show MSG25 and keep the edited text in the inline editor
+
+else the teacher owns the comment and the new text is valid
+  SVC ->> SVC : sanitize the new text, keep createdAt and set updatedAt to now
+  SVC ->> REPO : save(comment)
+  activate REPO
+  REPO ->> DB : UPDATE blog_comments SET content = ?, updated_at = ? WHERE id = ?
+  activate DB
+  DB -->> REPO : Saved
+  deactivate DB
+  REPO -->> SVC : BlogComment
+  deactivate REPO
+  SVC -->> CTL : CommentView
+  CTL -->> UI : HTTP 200 + CommentView
+  UI -->> Teacher : Show MSG08, reload the discussion and display the updated comment
+end
+
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

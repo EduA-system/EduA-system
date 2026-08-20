@@ -1,0 +1,68 @@
+@startuml UC-50 Unsubmit Assignment - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Student
+participant ":ResourceDetailPage" as UI <<user interaction>>
+participant ":ConfirmDialog" as DLG <<user interaction>>
+participant ":ClassController" as CTL <<coordinator>>
+participant ":SubmissionService" as SVC <<business logic>>
+participant ":SubmissionRepository" as REPO <<interface>>
+database DB
+
+autonumber
+Student ->> UI : Open the current submission and select "Unsubmit"
+activate UI
+UI ->> UI : requestUnsubmit()
+UI ->> DLG : Open the withdrawal confirmation popup
+activate DLG
+DLG -->> Student : Show the confirmation popup warning that the submission will be removed
+Student ->> DLG : Confirm the withdrawal
+DLG ->> UI : handleUnsubmit()
+deactivate DLG
+UI ->> CTL : DELETE /api/classes/{id}/resources/{rid}/submission
+activate CTL
+CTL ->> SVC : unsubmit(classId, resourceId)
+activate SVC
+SVC ->> SVC : allow only a student enrolled in an ACTIVE class and a resource that belongs to that class
+SVC ->> REPO : findByResourceAndStudent(resourceId, studentId)
+activate REPO
+REPO ->> DB : SELECT * FROM submissions WHERE class_resource_id = ? AND student_id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : SubmissionWithFiles
+deactivate REPO
+
+alt the class is INACTIVE, the student is not enrolled or there is no active submission
+  SVC -->> CTL : ForbiddenOperationException / ResourceNotFoundException
+  CTL -->> UI : HTTP 403 / 404
+  UI -->> Student : Show MSG23 or the unavailable-submission message and keep the active submission unchanged
+else the student has an active submission in an ACTIVE class
+  SVC ->> REPO : deleteByResourceAndStudent(resourceId, studentId)
+  activate REPO
+  REPO ->> DB : DELETE FROM submission_files WHERE submission_id = ?
+  activate DB
+  DB -->> REPO : Deleted
+  deactivate DB
+  REPO ->> DB : DELETE FROM submissions WHERE id = ?
+  activate DB
+  DB -->> REPO : Deleted
+  deactivate DB
+  REPO -->> SVC : void
+  deactivate REPO
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204
+  UI -->> Student : Show MSG08 and refresh the resource detail without an active submission
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

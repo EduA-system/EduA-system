@@ -1,0 +1,74 @@
+@startuml UC-14 Create Slide Deck - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":SlideMakerClient" as SMC <<user interaction>>
+participant ":SlideDesignPipeline" as PIPE <<user interaction>>
+participant ":SlideLayoutEngine" as ENGINE <<user interaction>>
+participant ":SlideDesignController" as CTL <<coordinator>>
+participant ":GenerateSlideHtmlDesignUseCase" as DESIGN <<business logic>>
+participant ":FillSlideContentUseCase" as FILL <<business logic>>
+participant ":AiClient" as AI <<interface>>
+
+autonumber
+Teacher ->> SMC : Confirm the slide outline and submit the slide-deck generation request
+activate SMC
+SMC ->> PIPE : runDeckSkinStep(input, cb)
+activate PIPE
+PIPE ->> CTL : POST /api/slide-design/generate-html
+activate CTL
+CTL ->> DESIGN : execute(req)
+activate DESIGN
+DESIGN ->> AI : generate(prompt)
+activate AI
+AI -->> DESIGN : deck skin HTML for the shared visual theme
+deactivate AI
+DESIGN -->> CTL : SlideHtmlDesignResponse
+deactivate DESIGN
+CTL -->> PIPE : HTTP 200 + shared theme HTML
+deactivate CTL
+PIPE -->> SMC : shared visual theme applied to every slide of the deck
+deactivate PIPE
+
+SMC ->> PIPE : runStructuralStep(cb)
+activate PIPE
+PIPE ->> ENGINE : generateSlideLayout(input)
+activate ENGINE
+ENGINE -->> PIPE : SlideLayoutResult with structures and content slots
+deactivate ENGINE
+PIPE ->> SMC : handleSlideFrames(slideId, result) — the layout is rendered into editor elements on the client
+deactivate PIPE
+
+SMC ->> PIPE : runContentFillStep(cb)
+activate PIPE
+PIPE ->> CTL : POST /api/slide-design/fill-content
+activate CTL
+CTL ->> FILL : execute(req)
+activate FILL
+FILL ->> AI : generate(prompt)
+activate AI
+AI -->> FILL : slot text, styles and image prompts as JSON
+deactivate AI
+FILL ->> FILL : generate the slot illustrations and store them, keeping a placeholder when it fails
+FILL -->> CTL : SlideContentFillResponse
+deactivate FILL
+CTL -->> PIPE : HTTP 200 + filled slots
+deactivate CTL
+
+alt the layout or the content of the slide failed
+  PIPE ->> SMC : handleSlideFailed(slideId, message)
+  SMC ->> Teacher : Mark the failed slide in the editor and offer "Retry" for that slide alone
+else the slide content is ready
+  PIPE ->> SMC : handleSlideReady(slideId, result, title)
+  deactivate PIPE
+  SMC ->> SMC : saveDeck(metadata, auto)
+  SMC ->> Teacher : Show the generated deck, auto-saved to the Personal Library as Draft
+end
+deactivate SMC
+@enduml

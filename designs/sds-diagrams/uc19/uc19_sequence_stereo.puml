@@ -1,0 +1,70 @@
+@startuml UC-19 Edit Test - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 260
+
+actor Teacher
+participant ":PracticeExamEditDashboard" as EDT <<user interaction>>
+participant ":LibraryContentController" as CTL <<coordinator>>
+participant ":LibraryContentService" as SVC <<business logic>>
+participant ":LibraryContentRepository" as REPO <<interface>>
+database DB
+
+autonumber
+Teacher ->> EDT : Open an owned test from the personal library
+activate EDT
+EDT ->> CTL : GET /api/library/contents/{id}
+activate CTL
+CTL ->> SVC : get(id)
+activate SVC
+SVC ->> REPO : findActiveById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+activate DB
+DB -->> REPO : row / null
+deactivate DB
+REPO -->> SVC : LibraryContent
+deactivate REPO
+
+alt test is missing, not owned by the teacher or is a published snapshot
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> EDT : HTTP 404 / 403
+  EDT -->> Teacher : Show that the test is unavailable and keep the stored test unchanged
+
+else test exists and belongs to the teacher
+  SVC -->> CTL : LibraryDetail
+  deactivate SVC
+  CTL -->> EDT : HTTP 200 with the stored document and answer key
+  deactivate CTL
+  EDT ->> EDT : load the stored document into the rich-text editor
+  EDT -->> Teacher : Show the questions, options, answer key, scores and instructions
+
+  Teacher ->> EDT : Edit questions, answers, scoring information and instructions
+  Teacher ->> EDT : Click "Save to library"
+  EDT ->> CTL : PATCH /api/library/contents/{id}
+  activate CTL
+  CTL ->> SVC : update(id, title, subject, payload, thumbnailUrl)
+  activate SVC
+  SVC ->> SVC : move the publish status back to PRIVATE when a published snapshot exists
+  SVC ->> REPO : save(content)
+  activate REPO
+  REPO ->> DB : UPDATE library_contents SET title, payload, status, updated_at
+  activate DB
+  DB -->> REPO : Saved
+  deactivate DB
+  REPO -->> SVC : LibraryContent
+  deactivate REPO
+  SVC -->> CTL : LibraryDetail
+  deactivate SVC
+  CTL -->> EDT : HTTP 200 with the updated test
+  deactivate CTL
+  EDT -->> Teacher : Show the updated test and the save confirmation
+end
+deactivate EDT
+@enduml

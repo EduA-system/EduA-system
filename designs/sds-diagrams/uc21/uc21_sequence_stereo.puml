@@ -1,0 +1,65 @@
+@startuml UC-21 View Blog List - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor "Teacher or Moderator" as User
+participant ":BlogCommunityPage" as UI <<user interaction>>
+participant ":BlogController" as CTL <<coordinator>>
+participant ":BlogPostService" as SVC <<business logic>>
+participant ":BlogPostRepository" as POSTS <<interface>>
+participant ":BlogCommentRepository" as COMMENTS <<interface>>
+database DB
+
+autonumber
+User ->> UI : Open the Blog screen from the main navigation
+activate UI
+UI ->> UI : loadPosts(subject)
+UI ->> CTL : GET /api/blog-posts?subject=&size=
+activate CTL
+CTL ->> SVC : list(subject, authorId, q, page, size)
+activate SVC
+SVC ->> SVC : parse the subject filter and keep the paging window
+SVC ->> POSTS : search(subject, authorId, q, page, size)
+activate POSTS
+POSTS ->> DB : SELECT * FROM blog_posts WHERE status = 'PUBLISHED' AND filters\nORDER BY created_at DESC LIMIT ? OFFSET ?
+activate DB
+DB -->> POSTS : rows + total
+deactivate DB
+POSTS -->> SVC : SearchResult
+deactivate POSTS
+SVC ->> COMMENTS : countByPostIds(postIds)
+activate COMMENTS
+COMMENTS ->> DB : SELECT visible comment count FROM blog_comments\nWHERE post_id IN (?) AND hidden_at IS NULL GROUP BY post_id
+activate DB
+DB -->> COMMENTS : counts
+deactivate DB
+COMMENTS -->> SVC : Map<String, Long>
+deactivate COMMENTS
+SVC ->> SVC : resolve the author display names and build each summary with its excerpt and thumbnail
+SVC -->> CTL : BlogPage of PostSummary
+deactivate SVC
+CTL -->> UI : HTTP 200 + BlogPage
+deactivate CTL
+
+alt the published posts cannot be retrieved
+  UI -->> User : Show MSG25 and let the user reload the Blog screen
+else no published post matches the selected subject
+  UI -->> User : Show MSG01 and the action that creates a new blog post
+else at least one published post is found
+  UI -->> User : Show each post with its title, author, subject tag and publication date
+end
+
+opt user selects one of the listed posts
+  User ->> UI : Click a post card in the Blog list
+  UI ->> UI : openDetail(id)
+  UI -->> User : Open the Blog Post Detail screen of the selected post
+end
+deactivate UI
+@enduml

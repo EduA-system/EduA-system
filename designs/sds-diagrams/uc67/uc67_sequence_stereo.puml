@@ -1,0 +1,67 @@
+@startuml UC-67 Unpublish Hub Content - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":LibraryScreen" as UI <<user interaction>>
+participant ":LibraryContentController" as CTL <<coordinator>>
+participant ":LibraryContentService" as SVC <<business logic>>
+participant ":LibraryContentRepository" as CONTENTS <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Click "Withdraw from the review queue" on an owned item that is Pending Publish
+activate UI
+UI ->> UI : requestAction(content, kind)
+UI -->> Teacher : Show the confirmation popup with the item title
+
+opt teacher cancels the withdrawal
+  Teacher ->> UI : Click "Cancel"
+  UI -->> Teacher : Close the popup and keep the item Pending Publish in the Hub moderation queue
+end
+
+Teacher ->> UI : Click "Withdraw" to confirm
+UI ->> UI : performAction()
+UI ->> CTL : DELETE /api/library/contents/{id}/submission
+activate CTL
+CTL ->> SVC : unsubmit(id)
+activate SVC
+SVC ->> CONTENTS : findActiveById(id)
+activate CONTENTS
+CONTENTS ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+activate DB
+DB -->> CONTENTS : row / none
+deactivate DB
+CONTENTS -->> SVC : LibraryContent
+deactivate CONTENTS
+SVC ->> SVC : check that the item is owned by the teacher and still has Publish Status SUBMITTED
+
+alt the item is unavailable, not owned or no longer Pending Publish
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException / StateConflictException
+  CTL -->> UI : HTTP 404 / HTTP 403 / HTTP 409
+  UI -->> Teacher : Show that only a pending publication request can be withdrawn and change nothing stored
+else the item is owned and still Pending Publish
+  SVC ->> CONTENTS : save(content with status PRIVATE and submittedAt cleared)
+  activate CONTENTS
+  CONTENTS ->> DB : UPDATE library_contents SET status = 'PRIVATE', submitted_at = NULL, updated_at = ? WHERE id = ?
+  activate DB
+  DB -->> CONTENTS : Saved
+  deactivate DB
+  CONTENTS -->> SVC : LibraryContent
+  deactivate CONTENTS
+  SVC -->> CTL : Detail
+  CTL -->> UI : HTTP 200 + Detail
+  UI ->> UI : load()
+  UI -->> Teacher : Show MSG21 and the updated Publish Status Draft, editable again outside the Hub queue
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

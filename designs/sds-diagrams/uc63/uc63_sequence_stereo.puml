@@ -1,0 +1,58 @@
+@startuml UC-63 Customize Public Content - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":CommunityHubDetailPage" as UI <<user interaction>>
+participant ":HubContentController" as CTL <<coordinator>>
+participant ":HubContentService" as SVC <<business logic>>
+participant ":LibraryContentRepository" as CONTENTS <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Click "Save to Library" on the opened public content
+activate UI
+UI ->> UI : handleCustomize()
+UI ->> CTL : POST /api/hub/contents/{id}/customize
+activate CTL
+CTL ->> SVC : customize(id)
+activate SVC
+SVC ->> CONTENTS : findApprovedForHubById(id)
+activate CONTENTS
+CONTENTS ->> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
+activate DB
+DB -->> CONTENTS : row / none
+deactivate DB
+CONTENTS -->> SVC : LibraryContent
+deactivate CONTENTS
+SVC ->> SVC : check that the item is still published and matches the teacher assigned subject
+
+alt the item is no longer published or the copy cannot be created
+  SVC -->> CTL : ResourceNotFoundException
+  CTL -->> UI : HTTP 404 / HTTP 500
+  UI -->> Teacher : Show MSG25 and add no item to the Personal Library
+else the item is still published
+  SVC ->> SVC : build an independent copy owned by the teacher, marked as a copy in the title
+  SVC ->> CONTENTS : save(copy)
+  activate CONTENTS
+  CONTENTS ->> DB : INSERT INTO library_contents new owner copy with status = 'PRIVATE'
+  activate DB
+  DB -->> CONTENTS : Saved
+  deactivate DB
+  CONTENTS -->> SVC : LibraryContent
+  deactivate CONTENTS
+  SVC -->> CTL : Detail
+  CTL -->> UI : HTTP 200 + Detail
+  UI -->> Teacher : Show MSG08 confirming the copy is stored in the Personal Library and ready for editing
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

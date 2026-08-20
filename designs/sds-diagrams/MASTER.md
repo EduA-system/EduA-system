@@ -236,6 +236,24 @@ Render: `java -jar plantuml.jar -charset UTF-8 -tpng feat<NN>/*.puml`
 
 Vì tên thư mục `feat01 … feat15` sắp xếp tăng dần trùng thứ tự mục trong tài liệu, và trong mỗi feature các file `uc<MM>_sequence` sắp theo thứ tự đã khai trong `features.json`, khi thay ảnh hàng loạt trong `word/media/` chỉ cần sắp theo tên là khớp đúng vị trí.
 
+## Ba bản của mỗi hình sequence
+
+Mỗi UC có ba file `.puml`, cùng một luồng, chỉ khác cách vẽ lifeline. Hai bản sau **sinh ra từ bản đầu**, không sửa tay:
+
+| File | Lifeline | Sinh bởi |
+|---|---|---|
+| `uc<MM>_sequence.puml` | `participant` — hộp chữ nhật trơn | viết tay (bản gốc) |
+| `uc<MM>_sequence_icon.puml` | `boundary` / `control` / `entity` — ký hiệu Jacobson | `make-icon-variants.mjs` |
+| `uc<MM>_sequence_stereo.puml` | hộp chữ nhật + `«stereotype»` | `make-stereo-variants.mjs` |
+
+Vai trò của cả hai bản sinh đều đọc từ `feat<NN>_class.puml`, nên luôn khớp class diagram. Khác nhau: bản `icon` gom 9 stereotype về 3 hình, bản `stereo` giữ nguyên cả 9 nhãn nên sequence khớp 1-1 với class diagram cùng mục 2.x.
+
+**Report 4 hiện dùng bản `stereo`** (thay cho bản `icon`, 19/08/2026). Bản `stereo` đã bỏ dòng `title` — tên hình lấy từ heading `2.x.2.y` của tài liệu, nên ảnh chèn vào Word **không cần crop** (`srcRect t="0"`).
+
+Cú pháp PlantUML: stereotype phải đứng **sau** alias — `participant ":X" as Y <<business logic>>`. Đặt trước alias là lỗi cú pháp.
+
+Render riêng một bản: `ONLY=sequence_stereo node render.mjs`.
+
 ## Quy trình và cửa kiểm bắt buộc
 
 ```bash
@@ -273,7 +291,7 @@ Chạy lại được bằng `word-rebuild-section2.ps1 -InDocx <ban goc> -OutDo
 - Object được tạo giữa luồng thì dùng `«create»` trỏ vào đầu lifeline; bị huỷ thì đánh dấu `X` ở cuối.
 - Thời gian chạy từ trên xuống, **không có mũi tên đi ngược lên**.
 - **Một hệ đánh số duy nhất cho cả 107 sequence**: phẳng `1…N`, chỉ nhánh trong `alt` mới thụt (`7.1`, `7.2`). Không trộn hai kiểu.
-- Khung `sd` bao ngoài: PlantUML không vẽ, chấp nhận bỏ vì tiêu đề hình đã ghi rõ `UC-49 Submit Assignment — Sequence Diagram`.
+- Khung `sd` bao ngoài: PlantUML không vẽ, chấp nhận bỏ. Tên hình lấy từ heading `2.x.2.y` của tài liệu — bản `_stereo` đang dùng trong Report 4 đã bỏ dòng `title` trong ảnh.
 
 ## Truy vết ngược về SRS
 

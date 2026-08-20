@@ -1,0 +1,74 @@
+@startuml UC-111 Edit Own Public Content - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":LibraryScreen" as LIB <<user interaction>>
+participant ":LessonEditDashboard" as EDT <<user interaction>>
+participant ":LibraryContentController" as CTL <<coordinator>>
+participant ":LibraryContentService" as SVC <<business logic>>
+participant ":LibraryContentRepository" as REPO <<interface>>
+database DB
+
+autonumber
+Teacher ->> LIB : Open the Personal Library and click "Open" on an owned item published on the Hub
+activate LIB
+LIB ->> LIB : open(content)
+LIB ->> EDT : Navigate to the editor, which loads the published content by library id
+deactivate LIB
+activate EDT
+Teacher ->> EDT : Update the published content in the editor and click "Save"
+EDT ->> EDT : saveLesson(allowDuringGeneration)
+EDT ->> CTL : PATCH /api/library/contents/{id}
+activate CTL
+CTL ->> SVC : update(id, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl)
+activate SVC
+
+SVC ->> REPO : findActiveById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : LibraryContent
+deactivate REPO
+
+alt the item is missing, is not owned by the teacher, or the new title is blank
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException / IllegalArgumentException
+  CTL -->> EDT : HTTP 404 / 403 / 400
+  EDT -->> Teacher : Keep the edits in the editor, change nothing stored and show MSG25
+
+else the teacher owns the published item and the changes are valid
+  SVC ->> REPO : hasAnySnapshotBySourceId(id)
+  activate REPO
+  REPO ->> DB : SELECT 1 FROM library_contents WHERE source_library_content_id = ?
+  activate DB
+  DB -->> REPO : true / false
+  deactivate DB
+  REPO -->> SVC : boolean
+  deactivate REPO
+  SVC ->> SVC : set the publish status back to PRIVATE and clear the review fields when a published Hub snapshot exists
+  SVC ->> REPO : save(content)
+  activate REPO
+  REPO ->> DB : UPDATE library_contents SET payload, metadata, status and updated_at WHERE id = ?
+  activate DB
+  DB -->> REPO : Saved
+  deactivate DB
+  REPO -->> SVC : LibraryContent
+  deactivate REPO
+  SVC -->> CTL : LibraryDetail
+  CTL -->> EDT : HTTP 200 + LibraryDetail
+  EDT -->> Teacher : Show MSG08 and the new publish status of the item
+end
+
+deactivate SVC
+deactivate CTL
+deactivate EDT
+@enduml

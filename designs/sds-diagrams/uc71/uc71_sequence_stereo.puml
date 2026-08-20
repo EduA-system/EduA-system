@@ -1,0 +1,67 @@
+@startuml UC-71 Delete Content Comment - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":CommunityHubDetailPage" as UI <<user interaction>>
+participant ":HubContentController" as CTL <<coordinator>>
+participant ":HubCommentService" as SVC <<business logic>>
+participant ":HubCommentRepository" as REPO <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Click "Delete" on one of their own comments
+activate UI
+UI -->> Teacher : Show the delete confirmation dialog warning that the replies below go with it (MSG09)
+
+opt the user cancels the deletion
+  Teacher ->> UI : Close the confirmation dialog
+  UI -->> Teacher : Keep the comment in the discussion, change nothing stored, and end the use case
+end
+
+Teacher ->> UI : Click "Delete comment" to confirm
+UI ->> UI : confirmDeleteComment()
+UI ->> CTL : DELETE /api/hub/comments/{commentId}
+activate CTL
+CTL ->> SVC : delete(commentId)
+activate SVC
+
+SVC ->> REPO : findById(commentId)
+activate REPO
+REPO ->> DB : SELECT * FROM hub_content_comments WHERE id = ?
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : HubComment
+deactivate REPO
+
+alt the comment is missing or hidden, or the user is not its author
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> Teacher : Show MSG25 and leave the discussion unchanged
+
+else the user owns the comment
+  SVC ->> REPO : deleteById(commentId)
+  activate REPO
+  REPO ->> DB : DELETE FROM hub_content_comments WHERE id = ?
+  activate DB
+  DB -->> REPO : Deleted, direct replies removed by ON DELETE CASCADE
+  deactivate DB
+  REPO -->> SVC : void
+  deactivate REPO
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204 No Content
+  UI -->> Teacher : Show MSG10 and the discussion without the deleted comment and its replies
+end
+
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

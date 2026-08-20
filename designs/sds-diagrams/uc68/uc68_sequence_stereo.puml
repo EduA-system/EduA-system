@@ -1,0 +1,62 @@
+@startuml UC-68 View Content Comments - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":CommunityHubDetailPage" as UI <<user interaction>>
+participant ":HubContentController" as CTL <<coordinator>>
+participant ":HubContentService" as SVC <<business logic>>
+participant ":LibraryContentRepository" as CONTENTS <<interface>>
+participant ":HubCommentRepository" as COMMENTS <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Open a published Community Hub item and read its comment section
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/hub/contents/{id}
+activate CTL
+CTL ->> SVC : get(id)
+activate SVC
+
+SVC ->> CONTENTS : findApprovedForHubById(id)
+activate CONTENTS
+CONTENTS ->> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
+activate DB
+DB -->> CONTENTS : row / none
+deactivate DB
+CONTENTS -->> SVC : LibraryContent
+deactivate CONTENTS
+
+alt the content is unavailable or outside the teacher's assigned subject
+  SVC -->> CTL : ResourceNotFoundException
+  CTL -->> UI : HTTP 404
+  UI -->> Teacher : Show that the content is unavailable and no discussion
+
+else the content is published and visible to the teacher
+  SVC ->> COMMENTS : findByLibraryContentId(contentId)
+  activate COMMENTS
+  COMMENTS ->> DB : SELECT * FROM hub_content_comments WHERE library_content_id = ? AND hidden_at IS NULL ORDER BY created_at ASC
+  activate DB
+  DB -->> COMMENTS : rows
+  deactivate DB
+  COMMENTS -->> SVC : HubComment [0..*]
+  deactivate COMMENTS
+  SVC ->> SVC : drop replies whose root comment is hidden and resolve the author display name and avatar of each comment
+  SVC -->> CTL : HubContentDetail
+  CTL -->> UI : HTTP 200 + HubContentDetail
+  UI ->> UI : group the comments into root comments each followed by its own replies
+  UI -->> Teacher : Show the comment count and every comment with its author, time and available actions, or the empty-state message when there is none (MSG01)
+end
+
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

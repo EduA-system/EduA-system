@@ -1,0 +1,50 @@
+@startuml UC-07 Export Lesson Plan - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":LessonEditDashboard" as EDIT <<user interaction>>
+participant ":Editor" as DOC <<user interaction>>
+participant ":LessonPlanPdfExport" as PDF <<user interaction>>
+participant ":Katex" as KATEX <<user interaction>>
+
+autonumber
+Teacher ->> EDIT : Open the lesson plan and click "Export PDF"
+activate EDIT
+EDIT ->> EDIT : check that the lesson plan is fully loaded and no generation is running
+
+opt the lesson plan is still loading or still being generated
+  EDIT ->> Teacher : Ask the teacher to wait until the lesson plan is ready and keep it unchanged
+end
+
+EDIT ->> DOC : getHTML()
+activate DOC
+DOC -->> EDIT : lesson-plan HTML of the current document
+deactivate DOC
+EDIT ->> PDF : openDocumentPrintDialog(title, documentHtml, options)
+activate PDF
+PDF ->> PDF : create the hidden print frame and copy the editor stylesheets
+PDF ->> KATEX : renderToString(latex, options)
+activate KATEX
+KATEX -->> PDF : rendered formula markup
+deactivate KATEX
+PDF ->> PDF : write the A4 print document and call the browser print function
+
+alt the browser blocked the print window
+  PDF -->> EDIT : false
+  EDIT ->> Teacher : Show MSG80 and keep the lesson plan open for a retry
+else the print dialog opened
+  PDF -->> EDIT : true
+  EDIT ->> Teacher : Show the browser print dialog with the print-ready lesson plan
+  Teacher ->> PDF : Select "Save as PDF" and confirm the destination
+  PDF ->> PDF : remove the hidden print frame after the print job ends
+  PDF -->> Teacher : PDF file saved on the device; the stored lesson plan stays unchanged
+end
+deactivate PDF
+deactivate EDIT
+@enduml

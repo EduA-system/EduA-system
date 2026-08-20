@@ -1,0 +1,72 @@
+@startuml UC-04 Update Profile Information - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 260
+
+actor User
+participant ":UserProfilePage" as UI <<user interaction>>
+participant ":UploadService" as UPSVC <<business logic>>
+participant ":StorageClient" as STORE <<interface>>
+participant ":UserController" as CTL <<coordinator>>
+participant ":ProfileService" as SVC <<business logic>>
+participant ":AppUserRepository" as USERS <<interface>>
+database DB
+
+autonumber
+User ->> UI : Open the profile screen and edit fields
+activate UI
+
+opt user changes the avatar
+  User ->> UI : Select an avatar image
+  UI ->> UPSVC : POST /api/uploads (multipart)
+  activate UPSVC
+  UPSVC ->> UPSVC : check file type and size (MSG13)
+  UPSVC ->> STORE : store(key, data, contentType)
+  activate STORE
+  STORE -->> UPSVC : public URL
+  deactivate STORE
+  UPSVC -->> UI : uploaded file metadata
+  deactivate UPSVC
+end
+
+User ->> UI : Click "Save"
+UI ->> CTL : PATCH /api/users/me
+activate CTL
+
+alt profile data is not valid
+  CTL -->> UI : HTTP 400 with field errors
+  UI -->> User : Highlight the invalid field and keep the edits (MSG02)
+else profile data is valid
+  CTL ->> SVC : updateCurrentUserProfile(profile fields)
+  activate SVC
+  SVC ->> USERS : findById(userId)
+  activate USERS
+  USERS ->> DB : SELECT * FROM app_users WHERE id = ?
+  activate DB
+  DB -->> USERS : row
+  deactivate DB
+  USERS -->> SVC : AppUser
+  deactivate USERS
+  SVC ->> SVC : apply field rules by role (Student keeps phone and date of birth)
+  SVC ->> USERS : save(updated AppUser)
+  activate USERS
+  USERS ->> DB : UPDATE app_users SET profile fields
+  activate DB
+  DB -->> USERS : Saved
+  deactivate DB
+  USERS -->> SVC : AppUser
+  deactivate USERS
+  SVC -->> CTL : ProfileResult (user, roles)
+  deactivate SVC
+  CTL -->> UI : HTTP 200 + User
+  deactivate CTL
+  UI -->> User : Show the success message and refresh the profile (MSG12)
+end
+deactivate UI
+@enduml

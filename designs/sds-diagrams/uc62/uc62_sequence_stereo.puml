@@ -1,0 +1,59 @@
+@startuml UC-62 View Public Content Detail - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":CommunityHubDetailPage" as UI <<user interaction>>
+participant ":HubContentController" as CTL <<coordinator>>
+participant ":HubContentService" as SVC <<business logic>>
+participant ":LibraryContentRepository" as CONTENTS <<interface>>
+participant ":HubCommentRepository" as COMMENTS <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Select a shared content card on the Community Hub
+activate UI
+UI ->> UI : load()
+UI ->> CTL : GET /api/hub/contents/{id}
+activate CTL
+CTL ->> SVC : get(id)
+activate SVC
+SVC ->> CONTENTS : findApprovedForHubById(id)
+activate CONTENTS
+CONTENTS ->> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
+activate DB
+DB -->> CONTENTS : row / none
+deactivate DB
+CONTENTS -->> SVC : LibraryContent
+deactivate CONTENTS
+SVC ->> SVC : check that the item is still the published hub row and matches the reader assigned subject
+
+alt the item is unpublished, deleted or outside the reader subject
+  SVC -->> CTL : ResourceNotFoundException
+  CTL -->> UI : HTTP 404
+  UI -->> Teacher : Show the unavailable content message and offer the link back to the Community Hub
+else the item is still published
+  SVC ->> COMMENTS : findByLibraryContentId(id)
+  activate COMMENTS
+  COMMENTS ->> DB : SELECT * FROM hub_content_comments WHERE library_content_id = ? AND hidden_at IS NULL ORDER BY created_at
+  activate DB
+  DB -->> COMMENTS : comment rows
+  deactivate DB
+  COMMENTS -->> SVC : HubComment [0..*]
+  deactivate COMMENTS
+  SVC ->> SVC : drop replies whose parent comment is hidden and resolve author display names
+  SVC -->> CTL : ContentDetail
+  CTL -->> UI : HTTP 200 + ContentDetail
+  UI -->> Teacher : Show the full content, subject, author, review time, discussion and the "Save to Library" action
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

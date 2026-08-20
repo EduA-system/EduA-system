@@ -1,0 +1,71 @@
+@startuml UC-82 Deactivate Teacher Account - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Moderator
+participant ":UserManagementContent" as UI <<user interaction>>
+participant ":ModeratorController" as CTL <<coordinator>>
+participant ":ModeratorTeacherService" as SVC <<business logic>>
+participant ":AppUserRepository" as USERS <<interface>>
+participant ":ClassRepository" as CLASSES <<interface>>
+participant ":RefreshTokenRepository" as TOKENS <<interface>>
+database DB
+
+autonumber
+Moderator ->> UI : Select "Revoke" on an active teacher account of the assigned subject
+activate UI
+UI ->> UI : toggleTeacher(item)
+UI -->> Moderator : Show the confirmation popup stating that the account becomes Inactive while its content is preserved
+Moderator ->> UI : Confirm the operation
+UI ->> UI : confirmDisableAccount()
+UI ->> CTL : DELETE /api/moderator/teachers/{id}
+activate CTL
+CTL ->> SVC : deleteTeacher(id)
+activate SVC
+SVC ->> USERS : findById(id)
+activate USERS
+USERS ->> DB : SELECT * FROM app_users WHERE id = ?
+activate DB
+DB -->> USERS : row / none
+deactivate DB
+USERS -->> SVC : AppUser
+deactivate USERS
+SVC ->> SVC : accept only an account that is not yet revoked and holds the Teacher role in the moderator subject (BR-18)
+
+alt the account is missing, already revoked, not a teacher or in another subject
+  SVC -->> CTL : ResourceNotFoundException / ForbiddenOperationException
+  CTL -->> UI : HTTP 404 / 403
+  UI -->> Moderator : Show the unavailable or not-permitted message and leave the account unchanged
+else the account is an active teacher of the moderator subject
+  SVC ->> USERS : save(AppUser with status DISABLED)
+  activate USERS
+  USERS ->> DB : UPDATE app_users SET status = 'DISABLED' WHERE id = ?
+  activate DB
+  DB -->> USERS : Saved
+  deactivate DB
+  USERS -->> SVC : AppUser
+  deactivate USERS
+  SVC ->> CLASSES : archiveActiveByOwnerId(ownerId)
+  activate CLASSES
+  CLASSES ->> DB : UPDATE classes SET status = 'INACTIVE' WHERE owner_id = ? AND status = 'ACTIVE'
+  deactivate CLASSES
+  SVC ->> TOKENS : revokeAllByUserId(userId)
+  activate TOKENS
+  TOKENS ->> DB : UPDATE refresh_tokens SET revoked = true WHERE user_id = ? AND revoked = false
+  deactivate TOKENS
+  SVC ->> SVC : record the REVOKE_TEACHER entry of the account-management activity log
+  SVC -->> CTL : void
+  CTL -->> UI : HTTP 204 No Content
+  UI -->> Moderator : Show the success message and the refreshed list with the account marked revoked
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

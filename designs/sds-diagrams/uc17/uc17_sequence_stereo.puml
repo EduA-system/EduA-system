@@ -1,0 +1,54 @@
+@startuml UC-17 Export Slide - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor Teacher
+participant ":TopBar" as TB <<user interaction>>
+participant ":SlideEditorStore" as STORE <<user interaction>>
+participant ":SlideHtmlExport" as EXP <<user interaction>>
+participant ":JSZip" as ZIP <<user interaction>>
+
+autonumber
+Teacher ->> TB : Open the export menu and choose the offline HTML package
+activate TB
+TB ->> TB : exportHtml()
+TB ->> STORE : read the slides and the deck title from the editor
+activate STORE
+STORE -->> TB : Slide [0..*] with their elements
+deactivate STORE
+TB ->> EXP : exportOfflineZip(slides, title)
+activate EXP
+EXP ->> EXP : download every image used by the deck from the file storage service
+
+alt an image or a simulation cannot be packaged
+  EXP ->> EXP : replace the asset with an offline placeholder and record an export warning
+else the asset is packaged
+  EXP ->> EXP : store the asset in the images folder and point its element at the relative path
+end
+
+EXP ->> EXP : capture molecule, periodic-table and physics simulations as static images
+EXP ->> EXP : buildOfflineHtml(slides, title, imageSources, simulationSources)
+EXP ->> ZIP : file(path, html)
+activate ZIP
+EXP ->> ZIP : folder(name)
+EXP ->> ZIP : generateAsync(options)
+ZIP -->> EXP : ZIP blob with the HTML presentation and its images
+deactivate ZIP
+
+alt the export package cannot be generated
+  EXP -->> TB : export failure
+  TB ->> Teacher : Show MSG80 and keep the slide deck open for a retry
+else the export package is ready
+  EXP -->> TB : OfflineZipExport
+  TB ->> EXP : downloadOfflineZip(blob, title)
+  EXP ->> Teacher : Download the ZIP package to the teacher's device
+  deactivate EXP
+  TB ->> Teacher : Show the export result, including the assets replaced by placeholders
+  deactivate TB
+end
+@enduml

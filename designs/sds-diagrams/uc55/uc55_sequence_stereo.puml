@@ -1,0 +1,63 @@
+@startuml UC-55 Save Molecule Model to Personal Library - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 210
+
+actor "Chemistry Teacher" as Teacher
+participant ":MoleculeExplorer" as UI <<user interaction>>
+participant ":LibraryContentController" as CTL <<coordinator>>
+participant ":LibraryContentService" as SVC <<business logic>>
+participant ":LibraryContentRepository" as REPO <<interface>>
+database DB
+
+autonumber
+Teacher ->> UI : Select "Save to Library" for the molecule model open on screen
+activate UI
+UI ->> UI : save()
+UI ->> UI : refuse the request when the model was opened read-only from the library or is already saved
+UI ->> UI : capture the molecule structure, the render mode and the rotation setting as the payload
+UI ->> CTL : POST /api/library/contents
+activate CTL
+CTL ->> SVC : create(type, title, subject, grade, textbookCode, chapterCode, payload, thumbnailUrl)
+activate SVC
+SVC ->> SVC : accept a molecule payload only from a teacher or moderator assigned to Chemistry
+SVC ->> REPO : findActiveByOwnerTypeSubjectAndPayload(ownerId, type, subject, payloadJson)
+activate REPO
+REPO ->> DB : SELECT * FROM library_contents WHERE owner_id = ? AND type = ? AND subject = ? AND payload = CAST(? AS jsonb) AND deleted_at IS NULL LIMIT 1
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : LibraryContent
+deactivate REPO
+
+alt an identical molecule model is already stored for this teacher
+  SVC -->> CTL : LibraryDetail of the stored item
+  CTL -->> UI : HTTP 201 + LibraryDetail
+  UI -->> Teacher : Show the saved confirmation and reuse the stored item instead of creating a duplicate
+else no stored item carries the same structure and display settings
+  SVC ->> REPO : save(content)
+  activate REPO
+  REPO ->> DB : INSERT INTO library_contents (owner, molecule metadata, molecule payload, status) VALUES (?, ?, ?, 'PRIVATE')
+  activate DB
+  DB -->> REPO : Saved
+  deactivate DB
+  REPO -->> SVC : LibraryContent
+  deactivate REPO
+  SVC -->> CTL : LibraryDetail
+  CTL -->> UI : HTTP 201 + LibraryDetail
+  UI -->> Teacher : Show the saved confirmation and the button changed to "Saved" for the new Draft model
+end
+deactivate SVC
+deactivate CTL
+
+opt the save request fails
+  UI -->> Teacher : Show the save-failure message and keep the button available for another attempt
+end
+deactivate UI
+@enduml

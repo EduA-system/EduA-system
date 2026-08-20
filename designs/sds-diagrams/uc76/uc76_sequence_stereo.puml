@@ -1,0 +1,70 @@
+@startuml UC-76 Reject Content - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 220
+
+actor Moderator
+participant ":HubModerationPage" as UI
+participant ":LibraryContentController" as CTL <<coordinator>>
+participant ":LibraryContentService" as SVC <<business logic>>
+participant ":LibraryContentRepository" as REPO <<interface>>
+participant ":ActivityLogService" as LOG <<business logic>>
+database DB
+
+autonumber
+Moderator ->> UI : Click "Reject" on the opened submission
+activate UI
+UI -->> Moderator : Show the rejection reason panel with a "Confirm rejection" action
+
+opt the rejection reason is still empty
+  UI -->> Moderator : Keep "Confirm rejection" disabled and highlight the empty reason field (MSG02)
+end
+
+Moderator ->> UI : Enter the rejection reason and click "Confirm rejection"
+UI ->> UI : handleReject()
+UI ->> CTL : POST /api/library/contents/{id}/rejection
+activate CTL
+CTL ->> SVC : reject(id, reason)
+activate SVC
+SVC ->> REPO : findActiveById(id)
+activate REPO
+REPO ->> DB : SELECT * FROM library_contents WHERE id = ? AND deleted_at IS NULL
+activate DB
+DB -->> REPO : row / none
+deactivate DB
+REPO -->> SVC : LibraryContent
+deactivate REPO
+SVC ->> SVC : require a non-blank reason and accept only a submission that is still SUBMITTED and carries the assigned subject of the moderator (BR-18)
+
+alt the reason is blank, or the item is missing, already reviewed or outside the assigned subject
+  SVC -->> CTL : IllegalArgumentException / ResourceNotFoundException / StateConflictException / ForbiddenOperationException
+  CTL -->> UI : HTTP 400 / 404 / 409 / 403
+  UI -->> Moderator : Show that the submission cannot be rejected (MSG25) and leave every status unchanged
+else the reason is given and the submission is SUBMITTED in the assigned subject
+  SVC ->> REPO : save(LibraryContent with status REJECTED, rejectionReason, reviewedBy and reviewedAt)
+  activate REPO
+  REPO ->> DB : UPDATE library_contents SET status = 'REJECTED', rejection_reason = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ?
+  activate DB
+  DB -->> REPO : Saved
+  deactivate DB
+  REPO -->> SVC : LibraryContent
+  deactivate REPO
+  SVC ->> LOG : record(moderatorId, MODERATION, REJECT_LIBRARY_CONTENT, contentId, reason)
+  activate LOG
+  LOG ->> DB : INSERT INTO activity_logs (moderation rejection entry carrying the reason)
+  deactivate LOG
+  SVC -->> CTL : LibraryDetail
+  CTL -->> UI : HTTP 200 + LibraryDetail
+  UI ->> UI : load()
+  UI -->> Moderator : Show MSG12 and refresh the moderation queue without the rejected item
+end
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

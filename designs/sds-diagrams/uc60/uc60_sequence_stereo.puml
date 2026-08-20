@@ -1,0 +1,60 @@
+@startuml UC-60 Generate Molecule Structure - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor "Chemistry Teacher" as Teacher
+participant ":MoleculeExplorer" as EXP <<user interaction>>
+participant ":MoleculeController" as CTL <<coordinator>>
+participant ":MoleculeService" as SVC <<business logic>>
+participant ":MoleculePromptBuilder" as PB <<business logic>>
+participant ":AiClient" as AI <<interface>>
+participant ":MoleculeViewer" as VIEW <<user interaction>>
+
+autonumber
+Teacher ->> EXP : Enter a substance name or a chemical formula and click "Generate molecule"
+activate EXP
+EXP ->> EXP : buildWithAi()
+EXP ->> EXP : keep the "Generate molecule" button disabled while the input is empty or a previous request is still running, instead of showing MSG02
+EXP ->> CTL : POST /api/molecules/build
+activate CTL
+CTL ->> SVC : build(input)
+activate SVC
+
+alt the input is one of the known diatomic formulas H2, N2, O2, F2, Cl2, Br2 and I2
+  SVC ->> SVC : return the stored two-atom structure without calling the AI service
+else any other substance name or chemical formula
+  SVC ->> PB : build(input)
+  activate PB
+  PB -->> SVC : JSON-only prompt with the request wrapped as data
+  deactivate PB
+  SVC ->> AI : generate(prompt)
+  activate AI
+  AI -->> SVC : Connection table as JSON, or an errorCode for a request that is not one specific chemical
+  deactivate AI
+  SVC ->> SVC : extract the JSON payload, drop the hydrogen atoms, remap the bond indexes and check the valence and the requested formula
+end
+
+alt the generated structure is valid
+  SVC -->> CTL : MoleculeStructure
+  CTL -->> EXP : HTTP 200 + MoleculeBuildResponse
+  EXP ->> EXP : take the returned name, atoms and bonds as the displayed molecule and mark it as AI-generated
+  EXP ->> VIEW : render()
+  activate VIEW
+  VIEW -->> Teacher : Show the interactive three-dimensional ball-and-stick model
+  deactivate VIEW
+  EXP -->> Teacher : Show "The model of [substance] has been generated." with the model kept unsaved
+else the AI timed out, returned an errorCode or the structure fails validation
+  SVC -->> CTL : MoleculeBuildException
+  CTL -->> EXP : HTTP 502 + ErrorResponse
+  EXP ->> EXP : map the returned reason to a Vietnamese failure message
+  EXP -->> Teacher : Show "The structure could not be generated." or the specific reason and keep the current model
+end
+deactivate SVC
+deactivate CTL
+deactivate EXP
+@enduml

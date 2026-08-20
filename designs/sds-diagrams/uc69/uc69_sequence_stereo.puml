@@ -1,0 +1,71 @@
+@startuml UC-69 Create Content Comment - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor "Teacher or Moderator" as User
+participant ":CommunityHubDetailPage" as UI <<user interaction>>
+participant ":HubContentController" as CTL <<coordinator>>
+participant ":HubCommentService" as SVC <<business logic>>
+participant ":LibraryContentRepository" as CONTENTS <<interface>>
+participant ":HubCommentRepository" as COMMENTS <<interface>>
+database DB
+
+autonumber
+User ->> UI : Enter the comment text in the comment box of the Community Hub content detail screen
+activate UI
+User ->> UI : Click the send button
+UI ->> UI : addComment()
+UI ->> CTL : POST /api/hub/contents/{id}/comments
+activate CTL
+CTL ->> SVC : create(contentId, content, parentCommentId)
+activate SVC
+
+SVC ->> CONTENTS : findApprovedForHubById(contentId)
+activate CONTENTS
+CONTENTS ->> DB : SELECT * FROM library_contents WHERE id = ? AND status = 'APPROVED' AND deleted_at IS NULL
+activate DB
+DB -->> CONTENTS : row / none
+deactivate DB
+CONTENTS -->> SVC : LibraryContent
+deactivate CONTENTS
+SVC ->> SVC : sanitize the comment HTML and check that it is not empty and stays within 200 words
+
+alt the content is no longer published on the Community Hub
+  SVC -->> CTL : ResourceNotFoundException
+  CTL -->> UI : HTTP 404
+  UI -->> User : Show that the content is unavailable and keep the entered text
+
+else the comment text is empty or exceeds 200 words
+  SVC -->> CTL : IllegalArgumentException
+  CTL -->> UI : HTTP 400
+  UI -->> User : Highlight the comment box, show MSG02 and keep the entered text
+
+else the comment cannot be saved
+  UI -->> User : Show MSG25 and keep the entered comment text
+
+else the content accepts comments and the text is valid
+  SVC ->> COMMENTS : save(comment)
+  activate COMMENTS
+  COMMENTS ->> DB : INSERT INTO hub_content_comments with library_content_id = ? and parent_comment_id NULL for a root comment
+  activate DB
+  DB -->> COMMENTS : Saved
+  deactivate DB
+  COMMENTS -->> SVC : HubComment
+  deactivate COMMENTS
+  SVC ->> SVC : build the comment view with the author display name, avatar and timestamps
+  SVC -->> CTL : HubCommentView
+  CTL -->> UI : HTTP 201 + HubCommentView
+  UI -->> User : Show MSG08 and append the new comment with its author name and time to the discussion
+end
+
+deactivate SVC
+deactivate CTL
+deactivate UI
+@enduml

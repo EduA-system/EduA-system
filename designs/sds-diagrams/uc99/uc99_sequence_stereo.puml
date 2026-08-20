@@ -1,0 +1,68 @@
+@startuml UC-99 View and Filter Activity Log - Sequence Diagram (stereo)
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #000000
+skinparam DatabaseBackgroundColor #FFFFFF
+skinparam DatabaseBorderColor #000000
+skinparam ArrowColor #000000
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+
+actor "IT Staff" as STAFF
+participant ":ActivityLogPage" as UI <<user interaction>>
+participant ":ActivityLogController" as CTL <<coordinator>>
+participant ":ActivityLogService" as SVC <<business logic>>
+participant ":ActivityLogRepository" as REPO <<interface>>
+participant ":AppUserRepository" as USERS <<interface>>
+database DB
+
+autonumber
+STAFF ->> UI : Open the Activity Log screen
+activate UI
+
+opt the IT Staff narrows the entries by action category, time range or actor
+  STAFF ->> UI : Select an action category or a date range
+  UI ->> UI : selectCategory(next)
+  STAFF ->> UI : Select the actor name shown on an entry
+  UI ->> UI : filterByActor(entry)
+end
+
+UI ->> UI : load()
+UI ->> CTL : GET /api/it-staff/activity-log?actorId=&category=&from=&to=&page=&size=
+activate CTL
+CTL ->> SVC : search(actorId, category, from, to, page, size)
+activate SVC
+SVC ->> REPO : search(actorId, category, from, to, page, size)
+activate REPO
+REPO ->> DB : SELECT * FROM activity_logs WHERE the selected criteria ORDER BY created_at DESC LIMIT ? OFFSET ?
+activate DB
+DB -->> REPO : rows
+deactivate DB
+REPO ->> DB : SELECT COUNT(*) FROM activity_logs WHERE the same criteria
+activate DB
+DB -->> REPO : total
+deactivate DB
+REPO -->> SVC : ActivityLogRepository.SearchResult
+deactivate REPO
+SVC ->> USERS : findAllById(actorIds)
+activate USERS
+USERS ->> DB : SELECT * FROM app_users WHERE id IN (?)
+activate DB
+DB -->> USERS : rows
+deactivate DB
+USERS -->> SVC : AppUser [0..*]
+deactivate USERS
+SVC ->> SVC : attach the display name of each actor to the matching entries
+SVC -->> CTL : ActivityLogPage
+deactivate SVC
+CTL -->> UI : HTTP 200 + entries page
+deactivate CTL
+
+alt no audit entry matches the selected criteria
+  UI -->> STAFF : Show MSG01 and leave the stored audit records untouched
+else at least one audit entry matches
+  UI -->> STAFF : Show the entries newest first with category, action, actor, target and time, plus the page controls
+end
+deactivate UI
+@enduml
