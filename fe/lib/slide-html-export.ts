@@ -29,11 +29,34 @@ function baseStyle(element: SlideElement): string {
   return `position:absolute;left:${element.x}px;top:${element.y}px;width:${element.w}px;height:${element.h}px;z-index:${element.zIndex};opacity:${element.opacity};${transform ? `transform:${transform};` : ""}`;
 }
 
+const INLINE_MATH_PATTERN = /(\$\$)([\s\S]+?)\1|(?<!\\)(\$)([^\n$]+?)(?<!\\)\3|\\\(([\s\S]+?)\\\)|\\\[([\s\S]+?)\\\]/g;
+
+function textWithInlineMathHtml(value: string): string {
+  let output = "";
+  let cursor = 0;
+  for (const match of value.matchAll(INLINE_MATH_PATTERN)) {
+    const index = match.index;
+    output += escapeHtml(value.slice(cursor, index)).replace(/\n/g, "<br>");
+    const latex = match[2] ?? match[4] ?? match[5] ?? match[6] ?? "";
+    const displayMode = match[1] === "$$" || match[6] != null;
+    const rendered = katex.renderToString(latex.trim(), {
+      displayMode,
+      output: "mathml",
+      throwOnError: false,
+      strict: "ignore",
+    });
+    output += displayMode ? `<span style="display:block">${rendered}</span>` : rendered;
+    cursor = index + match[0].length;
+  }
+  output += escapeHtml(value.slice(cursor)).replace(/\n/g, "<br>");
+  return output;
+}
+
 function textHtml(element: Extract<SlideElement, { type: "text" }>): string {
-  const text = escapeHtml(element.text).replace(/\n/g, "<br>");
+  const text = textWithInlineMathHtml(element.text);
   const decoration = [element.underline && "underline", element.strikethrough && "line-through"].filter(Boolean).join(" ") || "none";
   const style = `${baseStyle(element)}display:flex;align-items:${element.listStyle ? "flex-start" : "center"};justify-content:${element.align === "center" ? "center" : element.align === "right" ? "flex-end" : "flex-start"};box-sizing:border-box;padding:4px 0;overflow:visible;background:${css(element.textBg)};font-family:${css(element.fontFamily)};font-size:${element.fontSize}px;font-weight:${element.bold ? 700 : 400};font-style:${element.italic ? "italic" : "normal"};text-decoration:${decoration};color:${css(element.color)};text-align:${element.align};line-height:${element.lineHeight ?? 1.2};letter-spacing:${normalizedLetterSpacing(element.letterSpacing)}px;text-transform:${element.textTransform === "capitalize-words" ? "capitalize" : element.textTransform ?? "none"};text-shadow:${css(element.textShadow)};white-space:pre-wrap;overflow-wrap:anywhere;`;
-  return `<div style="${style}">${text}</div>`;
+  return `<div style="${style}"><div style="width:100%">${text}</div></div>`;
 }
 
 function simulationCaption(element: SimulationElement): string {
@@ -124,6 +147,35 @@ function guessExtension(source: string, blob: Blob): string {
   return CONTENT_TYPE_EXT[blob.type] ?? extFromUrl(source) ?? "png";
 }
 
+async function fetchImageBlob(source: string): Promise<Blob> {
+  if (source.startsWith("data:")) return (await fetch(source)).blob();
+
+  try {
+    const response = await fetch(source);
+    if (!response.ok) throw new Error(`Không thể tải ảnh (HTTP ${response.status})`);
+    return response.blob();
+  } catch (directError) {
+    let url: URL;
+    try {
+      url = new URL(source);
+    } catch {
+      throw directError;
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") throw directError;
+
+    const response = await fetch("/api/slide-export-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source }),
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null) as { message?: string } | null;
+      throw new Error(detail?.message || `Không thể tải ảnh qua proxy (HTTP ${response.status})`);
+    }
+    return response.blob();
+  }
+}
+
 async function collectImageFiles(slides: Slide[]): Promise<{ sources: Map<string, string>; files: Map<string, Blob>; warnings: HtmlExportWarning[] }> {
   const sources = new Map<string, string>();
   const files = new Map<string, Blob>();
@@ -133,10 +185,7 @@ async function collectImageFiles(slides: Slide[]): Promise<{ sources: Map<string
   await Promise.all(urls.map(async (source) => {
     try {
       if (!source || source.startsWith("blob:")) throw new Error("URL tạm thời không thể đóng gói");
-      const blob = source.startsWith("data:") ? await (await fetch(source)).blob() : await fetch(source).then((response) => {
-        if (!response.ok) throw new Error(`Không thể tải ảnh (HTTP ${response.status})`);
-        return response.blob();
-      });
+      const blob = await fetchImageBlob(source);
       counter += 1;
       const relativePath = `images/img-${counter}.${guessExtension(source, blob)}`;
       files.set(relativePath, blob);
@@ -281,7 +330,7 @@ export async function exportOfflineZip(slides: Slide[], title: string): Promise<
   zip.file(`${safeFileBase(title)}.html`, html);
   const imagesFolder = zip.folder("images");
   for (const [path, blob] of [...imageResult.files, ...simulationResult.files]) {
-    imagesFolder?.file(path.replace(/^images\//, ""), blob);
+    imagesFolder?.file(path.replace(/^images\//, ""), new Uint8Array(await blob.arrayBuffer()));
   }
   const blob = await zip.generateAsync({ type: "blob" });
   return { blob, warnings: [...imageResult.warnings, ...simulationResult.warnings] };

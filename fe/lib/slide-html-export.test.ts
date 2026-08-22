@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { buildOfflineHtml } from "@/lib/slide-html-export";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { buildOfflineHtml, exportOfflineZip } from "@/lib/slide-html-export";
+import JSZip from "jszip";
 import type { Slide } from "@/components/slide-editor/types";
 
 const slide: Slide = {
@@ -15,6 +16,10 @@ const slide: Slide = {
 };
 
 describe("offline slide HTML export", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders a standalone deck with escaped content and presenter controls", () => {
     const html = buildOfflineHtml([slide], "Bộ slide <demo>", new Map([["data:image/png;base64,test", "data:image/png;base64,test"]]));
 
@@ -25,6 +30,27 @@ describe("offline slide HTML export", () => {
     expect(html).toContain("requestFullscreen");
     expect(html).toContain("arrow-arrow");
     expect(html).toContain(".slide.active .canvas");
+  });
+
+  it("renders LaTeX delimiters embedded in normal text as inline MathML", () => {
+    const textSlide: Slide = {
+      id: "inline-math",
+      bg: "#fff",
+      elements: [{
+        id: "answer", type: "text", x: 0, y: 0, w: 600, h: 200,
+        rotation: 0, zIndex: 1, opacity: 1, locked: false,
+        text: "Đáp án: $\\mathrm{C_6H_6}$\n• Benzene là hydrocarbon thơm.",
+        fontSize: 24, bold: false, italic: false, color: "#000", align: "left",
+      }],
+    };
+
+    const html = buildOfflineHtml([textSlide], "Demo");
+
+    expect(html).toContain("Đáp án:");
+    expect(html).toContain("<math");
+    expect(html).toContain("C");
+    expect(html).toContain("<mn>6</mn>");
+    expect(html).toContain("<br>• Benzene là hydrocarbon thơm.");
   });
 
   it("renders a static poster for a simulation element (no live runtime offline)", () => {
@@ -41,5 +67,32 @@ describe("offline slide HTML export", () => {
     expect(html).toContain('src="images/sim-molecule-1.png"');
     expect(html).toContain("Nước &lt;3 · H₂O");
     expect(html).not.toContain("🧪");
+  });
+
+  it("falls back to the same-origin proxy when a remote image is blocked by CORS", async () => {
+    const imageOnlySlide: Slide = {
+      id: "image-slide",
+      bg: "#fff",
+      elements: [{
+        id: "remote-image", type: "image", x: 0, y: 0, w: 320, h: 180,
+        rotation: 0, zIndex: 1, opacity: 1, locked: false,
+        src: "https://r2.example.test/slide.png", fit: "cover", borderRadius: 0,
+      }],
+    };
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), {
+        headers: { "Content-Type": "image/png" },
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await exportOfflineZip([imageOnlySlide], "Demo");
+    const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+    const html = await zip.file("Demo.html")?.async("string");
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/slide-export-image", expect.objectContaining({ method: "POST" }));
+    expect(zip.file("images/img-1.png")).not.toBeNull();
+    expect(html).toContain('src="images/img-1.png"');
+    expect(result.warnings).toEqual([]);
   });
 });
