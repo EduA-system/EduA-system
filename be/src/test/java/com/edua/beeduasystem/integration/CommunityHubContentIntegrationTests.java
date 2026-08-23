@@ -203,7 +203,13 @@ class CommunityHubContentIntegrationTests {
 
         assertThat(requireLibraryContent(approvedId).get("deleted_at")).isNotNull();
         assertThat(requireLibraryContent(approvedId).get("source_library_content_id")).isEqualTo(sourceId);
-        assertThat(requireLibraryContent(sourceId).get("deleted_at")).isNull();
+        Map<String, Object> source = requireLibraryContent(sourceId);
+        assertThat(source.get("deleted_at")).isNull();
+        assertThat(source.get("status")).isEqualTo("PRIVATE");
+        assertThat(source.get("submitted_at")).isNull();
+        assertThat(source.get("reviewed_by")).isNull();
+        assertThat(source.get("reviewed_at")).isNull();
+        assertThat(source.get("rejection_reason")).isNull();
         mockMvc.perform(get("/api/hub/contents/{id}", approvedId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER)))
                 .andExpect(status().isNotFound());

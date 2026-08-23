@@ -12,6 +12,7 @@ import com.edua.beeduasystem.repository.repositories.HubCommentRepository;
 import com.edua.beeduasystem.repository.repositories.LibraryContentRepository;
 import com.edua.beeduasystem.service.auth.CurrentUserProvider;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.stream.Collectors;
@@ -66,16 +67,26 @@ public class HubContentService {
                 saved.updatedAt(), saved.submittedAt(), saved.rejectionReason());
     }
 
-    /** Chủ nội dung gỡ bài đã duyệt khỏi Community Hub bằng soft-delete. */
+    /** Chủ nội dung gỡ bài đã duyệt khỏi Community Hub và đưa bản gốc về PRIVATE để có thể gửi lại. */
+    @Transactional
     public void deleteByOwner(UUID id) {
         LibraryContent content = requireApproved(id);
         if (!content.ownerId().equals(currentUser.requireUserId())) {
             throw new ForbiddenOperationException("Bạn chỉ có thể xóa nội dung do mình đăng.");
         }
+        Instant now = Instant.now();
         repository.save(new LibraryContent(content.id(), content.ownerId(), content.type(), content.title(), content.subject(),
                 content.grade(), content.textbookCode(), content.chapterCode(), content.status(), content.payload(), content.thumbnailUrl(),
-                content.createdAt(), Instant.now(), content.submittedAt(), Instant.now(), content.reviewedBy(), content.reviewedAt(),
+                content.createdAt(), now, content.submittedAt(), now, content.reviewedBy(), content.reviewedAt(),
                 content.rejectionReason(), content.version(), content.sourceLibraryContentId()));
+        if (content.sourceLibraryContentId() == null) return;
+
+        repository.findActiveById(content.sourceLibraryContentId())
+                .filter(source -> source.status() == LibraryContentStatus.APPROVED)
+                .ifPresent(source -> repository.save(new LibraryContent(source.id(), source.ownerId(), source.type(), source.title(),
+                        source.subject(), source.grade(), source.textbookCode(), source.chapterCode(), LibraryContentStatus.PRIVATE,
+                        source.payload(), source.thumbnailUrl(), source.createdAt(), now, null, null, null, null, null,
+                        source.version(), source.sourceLibraryContentId())));
     }
 
     private LibraryContent requireApproved(UUID id) {

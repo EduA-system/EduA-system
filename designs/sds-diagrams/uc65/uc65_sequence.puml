@@ -61,6 +61,24 @@ else the teacher owns the published item
   deactivate DB
   CONTENTS -->> SVC : LibraryContent
   deactivate CONTENTS
+  SVC ->> CONTENTS : findActiveById(sourceLibraryContentId)
+  activate CONTENTS
+  CONTENTS ->> DB : SELECT source row WHERE id = ? AND deleted_at IS NULL
+  activate DB
+  DB -->> CONTENTS : source row / none
+  deactivate DB
+  CONTENTS -->> SVC : LibraryContent / none
+  deactivate CONTENTS
+  opt the active source is still APPROVED
+    SVC ->> CONTENTS : save(source with status PRIVATE and cleared review metadata)
+    activate CONTENTS
+    CONTENTS ->> DB : UPDATE source status, submission and review fields
+    activate DB
+    DB -->> CONTENTS : Saved
+    deactivate DB
+    CONTENTS -->> SVC : LibraryContent
+    deactivate CONTENTS
+  end
   SVC -->> CTL : void
   CTL -->> UI : HTTP 204 No Content
   UI -->> Teacher : Show MSG10 and return to the Community Hub without the deleted item

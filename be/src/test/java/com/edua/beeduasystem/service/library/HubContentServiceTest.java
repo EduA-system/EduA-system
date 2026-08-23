@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -162,21 +163,33 @@ class HubContentServiceTest {
     }
 
     @Test
-    void deleteByOwner_softDeletesSnapshotWithoutLosingSourceLink() {
+    void deleteByOwner_softDeletesSnapshotAndReturnsApprovedSourceToPrivate() {
         UUID id = UUID.randomUUID();
         UUID sourceId = UUID.randomUUID();
         Instant now = Instant.now();
+        UUID moderatorId = UUID.randomUUID();
         LibraryContent snapshot = new LibraryContent(id, ownerId, LibraryContentType.LESSON_PLAN, "Bai giang", Subject.MATH,
                 null, null, null, LibraryContentStatus.APPROVED, JsonNodeFactory.instance.objectNode(), null,
-                now, now, now, null, UUID.randomUUID(), now, null, 1L, sourceId);
+                now, now, now, null, moderatorId, now, null, 1L, sourceId);
+        LibraryContent source = new LibraryContent(sourceId, ownerId, LibraryContentType.LESSON_PLAN, "Bai giang", Subject.MATH,
+                null, null, null, LibraryContentStatus.APPROVED, JsonNodeFactory.instance.objectNode(), null,
+                now, now, now, null, moderatorId, now, null, 2L, null);
         when(currentUserProvider.requireUserId()).thenReturn(ownerId);
         when(repository.findApprovedForHubById(id)).thenReturn(Optional.of(snapshot));
+        when(repository.findActiveById(sourceId)).thenReturn(Optional.of(source));
 
         service.deleteByOwner(id);
 
         ArgumentCaptor<LibraryContent> saved = ArgumentCaptor.forClass(LibraryContent.class);
-        verify(repository).save(saved.capture());
-        assertThat(saved.getValue().deletedAt()).isNotNull();
-        assertThat(saved.getValue().sourceLibraryContentId()).isEqualTo(sourceId);
+        verify(repository, times(2)).save(saved.capture());
+        LibraryContent deletedSnapshot = saved.getAllValues().get(0);
+        LibraryContent privateSource = saved.getAllValues().get(1);
+        assertThat(deletedSnapshot.deletedAt()).isNotNull();
+        assertThat(deletedSnapshot.sourceLibraryContentId()).isEqualTo(sourceId);
+        assertThat(privateSource.status()).isEqualTo(LibraryContentStatus.PRIVATE);
+        assertThat(privateSource.submittedAt()).isNull();
+        assertThat(privateSource.reviewedBy()).isNull();
+        assertThat(privateSource.reviewedAt()).isNull();
+        assertThat(privateSource.rejectionReason()).isNull();
     }
 }
