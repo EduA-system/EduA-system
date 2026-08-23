@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Check, ExternalLink, Users } from "lucide-react";
+import { BookOpen, Check, ExternalLink, Plus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -302,9 +302,9 @@ function WeeklyScheduleScreen() {
   const [ownedLessonPlans, setOwnedLessonPlans] = useState<LibraryContent[]>([]);
   const [selectedLessonPlanId, setSelectedLessonPlanId] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  // Popup mặc định chỉ lọc đúng Khối/Môn/Chương được giao; bật cờ này khi GV chủ động mở rộng vì
-  // giáo án cũ (tạo trước khi có lọc theo chương) chưa có metadata nên không khớp filter.
-  const [showAllLessonPlans, setShowAllLessonPlans] = useState(false);
+  // Chương chưa có giáo án nào trong thư viện của GV — hiện popup mời tạo giáo án thay vì mở
+  // modal chọn giáo án rỗng.
+  const [noLessonPlanTask, setNoLessonPlanTask] = useState<WeeklyTaskSummary | null>(null);
   const [unsubmitTarget, setUnsubmitTarget] = useState<{ id: string; title: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -399,29 +399,28 @@ function WeeklyScheduleScreen() {
     }
   }
 
-  function loadOwnedLessonPlans(t: WeeklyTaskSummary, all: boolean) {
-    const params = all
-      ? new URLSearchParams({ type: "LESSON_PLAN", size: "100" })
-      : new URLSearchParams({
-          type: "LESSON_PLAN",
-          subject: t.subject,
-          grade: String(t.grade),
-          textbookCode: t.textbookCode,
-          chapterCode: t.chapterCode,
-          size: "100",
-        });
-    listLibrary(authFetch, params)
-      .then((data) => setOwnedLessonPlans(data.items))
-      .catch(() => setOwnedLessonPlans([]));
-  }
-
   function openSubmitPanel(t: WeeklyTaskSummary) {
-    setSubmittingTask(t);
-    setSelectedLessonPlanId("");
-    setShowAllLessonPlans(false);
     // Lọc tự động theo đúng Khối + Môn + Chương Mod đã giao (BR-53/BR-51) — giáo viên chỉ cần bấm
     // "Nộp giáo án" là thấy ngay các giáo án phù hợp, không phải tự lọc giữa toàn bộ thư viện.
-    loadOwnedLessonPlans(t, false);
+    const params = new URLSearchParams({
+      type: "LESSON_PLAN",
+      subject: t.subject,
+      grade: String(t.grade),
+      textbookCode: t.textbookCode,
+      chapterCode: t.chapterCode,
+      size: "100",
+    });
+    listLibrary(authFetch, params)
+      .then((data) => {
+        if (data.items.length === 0) {
+          setNoLessonPlanTask(t);
+          return;
+        }
+        setOwnedLessonPlans(data.items);
+        setSelectedLessonPlanId("");
+        setSubmittingTask(t);
+      })
+      .catch(() => setError("Không thể tải danh sách giáo án."));
   }
 
   async function handleSubmitTask() {
@@ -672,73 +671,49 @@ function WeeklyScheduleScreen() {
             title="Chọn giáo án để nộp"
             description={
               submittingTask
-                ? showAllLessonPlans
-                  ? `Nộp cho "${submittingTask.scopeDescription}" · Khối ${submittingTask.grade} — chọn 1 giáo án trong thư viện của bạn.`
-                  : `Nộp cho "${submittingTask.scopeDescription}" · Khối ${submittingTask.grade} — chỉ hiện giáo án thuộc "${submittingTask.chapterName}".`
+                ? `Nộp cho "${submittingTask.scopeDescription}" · Khối ${submittingTask.grade} — chỉ hiện giáo án thuộc "${submittingTask.chapterName}".`
                 : undefined
             }
             maxWidthClassName="max-w-4xl"
           >
-            {ownedLessonPlans.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-6 text-center text-sm text-[#8a8178]">
-                <p>
-                  {showAllLessonPlans
-                    ? "Chưa có giáo án nào trong thư viện của bạn."
-                    : "Không có giáo án nào thuộc chương này trong thư viện của bạn."}
-                </p>
-                {!showAllLessonPlans && (
+            <div className="grid gap-3 p-1 sm:grid-cols-2">
+              {ownedLessonPlans.map((c) => {
+                const isSelected = selectedLessonPlanId === c.id;
+                return (
                   <button
+                    key={c.id}
                     type="button"
-                    onClick={() => {
-                      setShowAllLessonPlans(true);
-                      if (submittingTask) loadOwnedLessonPlans(submittingTask, true);
-                    }}
-                    className="mt-2 text-[#e8724a] underline"
+                    onClick={() => setSelectedLessonPlanId(c.id)}
+                    className={`relative rounded-2xl border p-3 text-left transition ${
+                      isSelected ? "border-[#e8724a] bg-[#fff7f2] ring-2 ring-[#e8724a]/30" : "border-[#e4ddd4] bg-white hover:border-[#e8724a]/50"
+                    }`}
                   >
-                    Xem tất cả giáo án của tôi
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid gap-3 p-1 sm:grid-cols-2">
-                {ownedLessonPlans.map((c) => {
-                  const isSelected = selectedLessonPlanId === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setSelectedLessonPlanId(c.id)}
-                      className={`relative rounded-2xl border p-3 text-left transition ${
-                        isSelected ? "border-[#e8724a] bg-[#fff7f2] ring-2 ring-[#e8724a]/30" : "border-[#e4ddd4] bg-white hover:border-[#e8724a]/50"
+                    <span
+                      aria-hidden
+                      className={`absolute right-3 top-3 z-10 flex size-5 items-center justify-center rounded-full border-2 ${
+                        isSelected ? "border-[#e8724a] bg-[#e8724a] text-white" : "border-[#d8d1c9] bg-white"
                       }`}
                     >
-                      <span
-                        aria-hidden
-                        className={`absolute right-3 top-3 z-10 flex size-5 items-center justify-center rounded-full border-2 ${
-                          isSelected ? "border-[#e8724a] bg-[#e8724a] text-white" : "border-[#d8d1c9] bg-white"
-                        }`}
-                      >
-                        {isSelected ? <Check className="size-3" strokeWidth={3} /> : null}
-                      </span>
-                      <div className="aspect-[16/9] overflow-hidden rounded-xl bg-gradient-to-br from-amber-100 via-orange-50 to-stone-100">
-                        {c.thumbnailUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.thumbnailUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-[#c9a98a]">
-                            <BookOpen className="size-8" />
-                          </div>
-                        )}
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-sm font-semibold text-[#2b2926]">{c.title}</p>
-                      <p className="mt-1 text-xs text-[#8a8178]">
-                        {c.grade ? `Khối ${c.grade} · ` : ""}Cập nhật {formatShortDate(c.updatedAt)}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                      {isSelected ? <Check className="size-3" strokeWidth={3} /> : null}
+                    </span>
+                    <div className="aspect-[16/9] overflow-hidden rounded-xl bg-gradient-to-br from-amber-100 via-orange-50 to-stone-100">
+                      {c.thumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.thumbnailUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[#c9a98a]">
+                          <BookOpen className="size-8" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm font-semibold text-[#2b2926]">{c.title}</p>
+                    <p className="mt-1 text-xs text-[#8a8178]">
+                      {c.grade ? `Khối ${c.grade} · ` : ""}Cập nhật {formatShortDate(c.updatedAt)}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
             <div className="mt-4 flex justify-end gap-2 border-t border-[#f0ece5] pt-4">
               <button onClick={() => setSubmittingTask(null)} className="rounded-xl px-4 py-2 text-sm hover:bg-[#f5f1ec]">
                 Hủy
@@ -749,6 +724,34 @@ function WeeklyScheduleScreen() {
                 className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white transition hover:bg-[#d9633b] disabled:opacity-50"
               >
                 {submitting ? "Đang nộp..." : "Nộp"}
+              </button>
+            </div>
+          </Modal>
+
+          <Modal
+            open={noLessonPlanTask !== null}
+            onClose={() => setNoLessonPlanTask(null)}
+            title="Chưa có giáo án nào thuộc chương này"
+            maxWidthClassName="max-w-md"
+          >
+            <p className="text-sm leading-6 text-[#6b6b6b]">
+              Thư viện của bạn chưa có giáo án nào thuộc{" "}
+              <span className="font-semibold text-[#2b2926]">&quot;{noLessonPlanTask?.chapterName}&quot;</span>.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[#6b6b6b]">Mời bạn tạo giáo án cho chương này:</p>
+            <button
+              type="button"
+              onClick={() => router.push("/lesson-create")}
+              className="mt-4 flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-[#d8d1c9] py-8 text-[#8a8178] transition hover:border-[#e8724a] hover:bg-[#fff7f2] hover:text-[#e8724a]"
+            >
+              <span className="flex size-12 items-center justify-center rounded-full border-2 border-current">
+                <Plus className="size-6" />
+              </span>
+              <span className="text-sm font-medium">Tạo giáo án mới</span>
+            </button>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setNoLessonPlanTask(null)} className="rounded-xl px-4 py-2 text-sm hover:bg-[#f5f1ec]">
+                Hủy
               </button>
             </div>
           </Modal>

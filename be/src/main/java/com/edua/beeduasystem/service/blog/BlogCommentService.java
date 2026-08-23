@@ -112,6 +112,11 @@ public class BlogCommentService {
     public void delete(UUID commentId) {
         BlogComment comment = requireComment(commentId);
         requireOwner(comment.authorId());
+        if (comment.parentCommentId() == null) {
+            commentRepository.findByPostId(comment.postId()).stream()
+                    .filter(reply -> commentId.equals(reply.parentCommentId()))
+                    .forEach(reply -> commentRepository.deleteById(reply.id()));
+        }
         commentRepository.deleteById(commentId);
     }
 
