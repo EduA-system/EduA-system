@@ -1,6 +1,8 @@
 package com.edua.beeduasystem.presentation.controller;
 
 import com.edua.beeduasystem.domain.model.auth.Subject;
+import com.edua.beeduasystem.presentation.dto.statistics.StatisticsReportDto;
+import com.edua.beeduasystem.service.statistics.PrincipalStatisticsReportService;
 import com.edua.beeduasystem.service.statistics.PrincipalStatisticsService;
 import com.edua.beeduasystem.service.statistics.PrincipalStatisticsViews;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class PrincipalStatisticsController {
 
     private final PrincipalStatisticsService service;
+    private final PrincipalStatisticsReportService reportService;
 
-    public PrincipalStatisticsController(PrincipalStatisticsService service) {
+    public PrincipalStatisticsController(PrincipalStatisticsService service, PrincipalStatisticsReportService reportService) {
         this.service = service;
+        this.reportService = reportService;
     }
 
     @GetMapping("/ai-content-trend")
@@ -54,5 +58,12 @@ public class PrincipalStatisticsController {
     @Operation(summary = "Quản lý tài khoản theo vai trò và trạng thái")
     public PrincipalStatisticsViews.AccountsByRole accountsByRole(@RequestParam(required = false) Subject subject) {
         return service.accountsByRole(subject);
+    }
+
+    @GetMapping("/report/pdf")
+    @Operation(summary = "Xuất báo cáo thống kê toàn trường hiện tại thành PDF")
+    public StatisticsReportDto exportReport(@RequestParam(required = false) Subject weeklySubject,
+                                            @RequestParam(required = false) Subject accountSubject) {
+        return StatisticsReportDto.from(reportService.exportPdf(weeklySubject, accountSubject));
     }
 }

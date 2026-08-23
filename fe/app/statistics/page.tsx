@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, UsersRound } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Download, Loader2, UsersRound } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
+import { openExportedPdf } from "@/lib/document-export";
 import {
+  exportModeratorStatisticsReport,
   getLibraryContentReviewSummary,
   getOverdueByTeacherQuarter,
   getOverdueByTeacherWeek,
@@ -15,6 +17,7 @@ import {
   type ReviewStatusCounts,
 } from "@/lib/moderator-statistics";
 import {
+  exportPrincipalStatisticsReport,
   getAccountsByRole,
   getAiContentTrend,
   getCommunityHubReview,
@@ -178,6 +181,7 @@ function ModeratorStatisticsScreen() {
   const requestKey = filterMode === "WEEK" ? `week:${weekStartDate}` : `quarter:${year}:${quarter}`;
   const [chartResult, setChartResult] = useState<{ key: string; data: OverdueByTeacher } | null>(null);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,17 +226,42 @@ function ModeratorStatisticsScreen() {
     return chartResult.data.items.map((item) => ({ name: item.teacherName ?? "—", overdueCount: item.overdueCount }));
   }, [chartResult, requestKey]);
 
+  async function exportReport() {
+    if (exporting) return;
+    setExporting(true);
+    setError("");
+    try {
+      const result = await exportModeratorStatisticsReport(authFetch, filterMode, weekStartDate, year, quarter);
+      openExportedPdf(result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không thể xuất báo cáo PDF.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f5f2] text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/statistics" />
         <section className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-10">
-          <header className="border-b border-[#e4ddd4] pb-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#d97757]">Quản trị</p>
-            <h1 className="mt-1 text-[30px] font-semibold leading-tight">Thống kê</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b6b6b]">
-              Theo dõi tiến độ nộp giáo án theo tuần và tỉ lệ duyệt nội dung của giáo viên cùng môn.
-            </p>
+          <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[#e4ddd4] pb-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-[#d97757]">Quản trị</p>
+              <h1 className="mt-1 text-[30px] font-semibold leading-tight">Thống kê</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b6b6b]">
+                Theo dõi tiến độ nộp giáo án theo tuần và tỉ lệ duyệt nội dung của giáo viên cùng môn.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void exportReport()}
+              disabled={exporting}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#343434] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              {exporting ? "Đang xuất..." : "Xuất PDF"}
+            </button>
           </header>
 
           {error && (
@@ -421,6 +450,7 @@ function PrincipalStatisticsScreen() {
   const [weeklySubject, setWeeklySubject] = useState<Subject | "">("");
   const [accountSubject, setAccountSubject] = useState<Subject | "">("");
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -481,17 +511,42 @@ function PrincipalStatisticsScreen() {
   const accountData = useMemo(() => accounts?.items.map((item) => ({ ...item, label: ROLE_LABELS[item.role] ?? item.role })) ?? [], [accounts]);
   const activeAccounts = accounts?.items.reduce((sum, item) => sum + item.active, 0);
 
+  async function exportReport() {
+    if (exporting) return;
+    setExporting(true);
+    setError("");
+    try {
+      const result = await exportPrincipalStatisticsReport(authFetch, weeklySubject, accountSubject);
+      openExportedPdf(result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không thể xuất báo cáo PDF.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f5f2] text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/statistics" />
         <section className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-10">
-          <header className="border-b border-[#e4ddd4] pb-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#d97757]">Quản trị</p>
-            <h1 className="mt-1 text-[30px] font-semibold leading-tight">Thống kê toàn trường</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b6b6b]">
-              Theo dõi xu hướng tạo học liệu, tiến độ Weekly Task, kiểm duyệt Community Hub và tình trạng tài khoản.
-            </p>
+          <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[#e4ddd4] pb-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-[#d97757]">Quản trị</p>
+              <h1 className="mt-1 text-[30px] font-semibold leading-tight">Thống kê toàn trường</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b6b6b]">
+                Theo dõi xu hướng tạo học liệu, tiến độ Weekly Task, kiểm duyệt Community Hub và tình trạng tài khoản.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void exportReport()}
+              disabled={exporting}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#343434] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              {exporting ? "Đang xuất..." : "Xuất PDF"}
+            </button>
           </header>
 
           {error && <div className="mt-4 rounded-lg border border-[#f0c9c4] bg-[#fdeceb] px-4 py-3 text-sm text-[#c2483c]">{error}</div>}

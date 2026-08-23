@@ -1,3 +1,5 @@
+import type { ExportPdfResponse } from "@/lib/document-export";
+
 export type Subject = "MATH" | "PHYSICS" | "CHEMISTRY";
 export type Role = "TEACHER" | "MODERATOR" | "IT_STAFF" | "STUDENT";
 
@@ -79,4 +81,12 @@ export function getCommunityHubReview(authFetch: AuthFetch) {
 export function getAccountsByRole(authFetch: AuthFetch, subject?: Subject | "") {
   const qs = subject ? `?subject=${subject}` : "";
   return authFetch(`/api/principal/statistics/accounts-by-role${qs}`).then(unpack<AccountsByRole>);
+}
+
+export function exportPrincipalStatisticsReport(authFetch: AuthFetch, weeklySubject?: Subject | "", accountSubject?: Subject | "") {
+  const params = new URLSearchParams();
+  if (weeklySubject) params.set("weeklySubject", weeklySubject);
+  if (accountSubject) params.set("accountSubject", accountSubject);
+  const qs = params.toString();
+  return authFetch(`/api/principal/statistics/report/pdf${qs ? `?${qs}` : ""}`).then(unpack<ExportPdfResponse>);
 }

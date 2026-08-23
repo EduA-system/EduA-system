@@ -279,6 +279,6 @@ Tổng **243 chỗ trích dẫn** trong mục 1–3. 📄 Đề xuất: sửa m�
 | Javadoc `HubCommentService` lệch code | Ghi chủ nội dung xoá được bình luận, code chỉ cho tác giả — 🔧 sửa javadoc |
 | UC-88 tự mâu thuẫn | Bước 6 của mục 2.12.6 trái với BR-48 |
 
-## O. Hai UC vẽ theo thiết kế vì chưa có code
+## O. Hai UC xuất báo cáo thống kê
 
-UC-110 và UC-112 (xuất báo cáo) chưa có code. Hình vẽ theo SRS, tái dùng hạ tầng export có thật (`DocumentPdfRenderer`, `StorageClient`) với các tên **mới đặt**: `PrincipalStatisticsReportService`, `ModeratorStatisticsReportService`, `StatisticsReportHtmlBuilder`, `SchoolStatisticsReport`, `SubjectStatisticsReport`, endpoint `GET /api/principal/statistics/report/pdf` và bản moderator tương ứng. Nếu code thật khác thiết kế này thì phải vẽ lại 4 hình.
+UC-110 và UC-112 đã được code theo thiết kế: tái dùng `DocumentPdfRenderer` và `StorageClient` qua `PrincipalStatisticsReportService`, `ModeratorStatisticsReportService`, `StatisticsReportHtmlBuilder`, `SchoolStatisticsReport`, `SubjectStatisticsReport`, endpoint `GET /api/principal/statistics/report/pdf` và `GET /api/moderator/statistics/report/pdf`. Báo cáo PDF chứa số liệu, bảng và biểu đồ CSS; Principal giữ hai bộ lọc môn độc lập đang có trên màn hình, Moderator giữ kỳ tuần/quý và luôn scope theo subject từ token.

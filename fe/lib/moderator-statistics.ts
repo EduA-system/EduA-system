@@ -1,3 +1,7 @@
+import type { ExportPdfResponse } from "@/lib/document-export";
+
+export type StatisticsPeriodMode = "WEEK" | "QUARTER";
+
 export type TeacherOverdueCount = {
   teacherId: string;
   teacherName: string | null;
@@ -43,4 +47,21 @@ export function getWeeklyTaskReviewSummary(authFetch: AuthFetch) {
 /** Donut — Duyệt/Từ chối Community Hub, tổng từ trước đến nay. */
 export function getLibraryContentReviewSummary(authFetch: AuthFetch) {
   return authFetch("/api/moderator/statistics/library-content-review-summary").then(unpack<ReviewStatusCounts>);
+}
+
+export function exportModeratorStatisticsReport(
+  authFetch: AuthFetch,
+  mode: StatisticsPeriodMode,
+  weekStartDate: string,
+  year: number,
+  quarter: number,
+) {
+  const params = new URLSearchParams({ mode });
+  if (mode === "WEEK") {
+    params.set("weekStartDate", weekStartDate);
+  } else {
+    params.set("year", String(year));
+    params.set("quarter", String(quarter));
+  }
+  return authFetch(`/api/moderator/statistics/report/pdf?${params}`).then(unpack<ExportPdfResponse>);
 }

@@ -1,7 +1,10 @@
 package com.edua.beeduasystem.presentation.controller;
 
+import com.edua.beeduasystem.presentation.dto.statistics.StatisticsReportDto;
+import com.edua.beeduasystem.service.statistics.ModeratorStatisticsReportService;
 import com.edua.beeduasystem.service.statistics.ModeratorStatisticsService;
 import com.edua.beeduasystem.service.statistics.ModeratorStatisticsViews;
+import com.edua.beeduasystem.service.statistics.StatisticsReportViews;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
@@ -22,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ModeratorStatisticsController {
 
     private final ModeratorStatisticsService service;
+    private final ModeratorStatisticsReportService reportService;
 
-    public ModeratorStatisticsController(ModeratorStatisticsService service) {
+    public ModeratorStatisticsController(ModeratorStatisticsService service, ModeratorStatisticsReportService reportService) {
         this.service = service;
+        this.reportService = reportService;
     }
 
     @GetMapping("/overdue-by-teacher/week")
@@ -55,5 +60,15 @@ public class ModeratorStatisticsController {
     @Operation(summary = "Donut — Duyệt vs Từ chối (Community Hub), tổng từ trước đến nay")
     public ModeratorStatisticsViews.ReviewStatusCounts libraryContentReviewSummary() {
         return service.libraryContentReviewSummary();
+    }
+
+    @GetMapping("/report/pdf")
+    @Operation(summary = "Xuất báo cáo thống kê môn hiện tại thành PDF")
+    public StatisticsReportDto exportReport(
+            @RequestParam(defaultValue = "WEEK") StatisticsReportViews.PeriodMode mode,
+            @RequestParam(required = false) LocalDate weekStartDate,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer quarter) {
+        return StatisticsReportDto.from(reportService.exportPdf(mode, weekStartDate, year, quarter));
     }
 }
