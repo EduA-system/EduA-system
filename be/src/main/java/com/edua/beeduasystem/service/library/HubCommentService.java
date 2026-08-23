@@ -115,6 +115,11 @@ public class HubCommentService {
         if (!comment.authorId().equals(userId)) {
             throw new ForbiddenOperationException("You can only delete your own comment.");
         }
+        if (comment.parentCommentId() == null) {
+            commentRepository.findByLibraryContentId(comment.libraryContentId()).stream()
+                    .filter(reply -> commentId.equals(reply.parentCommentId()))
+                    .forEach(reply -> commentRepository.deleteById(reply.id()));
+        }
         commentRepository.deleteById(commentId);
     }
 

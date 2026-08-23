@@ -14,7 +14,6 @@ const tabs: [string, LibraryType | ""][] = [
   ["Bài giảng", "LESSON_PLAN"],
   ["Slide", "SLIDE_DECK"],
   ["Bài tập về nhà", "TEST"],
-  ["Mô phỏng", "SIMULATION"],
 ];
 
 const PAGE_SIZE = 30;
