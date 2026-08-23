@@ -160,4 +160,23 @@ class HubContentServiceTest {
         assertThat(saved.getValue().status()).isEqualTo(LibraryContentStatus.PRIVATE);
         assertThat(result.status()).isEqualTo(LibraryContentStatus.PRIVATE);
     }
+
+    @Test
+    void deleteByOwner_softDeletesSnapshotWithoutLosingSourceLink() {
+        UUID id = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        Instant now = Instant.now();
+        LibraryContent snapshot = new LibraryContent(id, ownerId, LibraryContentType.LESSON_PLAN, "Bai giang", Subject.MATH,
+                null, null, null, LibraryContentStatus.APPROVED, JsonNodeFactory.instance.objectNode(), null,
+                now, now, now, null, UUID.randomUUID(), now, null, 1L, sourceId);
+        when(currentUserProvider.requireUserId()).thenReturn(ownerId);
+        when(repository.findApprovedForHubById(id)).thenReturn(Optional.of(snapshot));
+
+        service.deleteByOwner(id);
+
+        ArgumentCaptor<LibraryContent> saved = ArgumentCaptor.forClass(LibraryContent.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().deletedAt()).isNotNull();
+        assertThat(saved.getValue().sourceLibraryContentId()).isEqualTo(sourceId);
+    }
 }

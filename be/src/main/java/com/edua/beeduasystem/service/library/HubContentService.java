@@ -75,7 +75,7 @@ public class HubContentService {
         repository.save(new LibraryContent(content.id(), content.ownerId(), content.type(), content.title(), content.subject(),
                 content.grade(), content.textbookCode(), content.chapterCode(), content.status(), content.payload(), content.thumbnailUrl(),
                 content.createdAt(), Instant.now(), content.submittedAt(), Instant.now(), content.reviewedBy(), content.reviewedAt(),
-                content.rejectionReason(), content.version()));
+                content.rejectionReason(), content.version(), content.sourceLibraryContentId()));
     }
 
     private LibraryContent requireApproved(UUID id) {

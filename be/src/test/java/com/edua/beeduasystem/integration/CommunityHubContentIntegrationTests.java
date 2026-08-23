@@ -187,8 +187,11 @@ class CommunityHubContentIntegrationTests {
     void IT_HC_004_ownerDeletesApprovedHubContentAndOtherTeacherIsDenied() throws Exception {
         AppUser owner = user("owner-004@community-hub-content-it.edua.local", "Delete Owner", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
         AppUser otherTeacher = user("other-004@community-hub-content-it.edua.local", "Other Teacher", Subject.MATH, UserStatus.ACTIVE, Role.TEACHER);
+        UUID sourceId = seedLibraryContent("Delete From Hub", owner.id(), "LESSON_PLAN", Subject.MATH, "APPROVED",
+                "{\"source\":\"library\"}", null);
         UUID approvedId = seedLibraryContent("Delete From Hub", owner.id(), "LESSON_PLAN", Subject.MATH, "APPROVED",
                 "{\"source\":\"delete\"}", null);
+        jdbc.update("UPDATE library_contents SET source_library_content_id = ? WHERE id = ?", sourceId, approvedId);
 
         mockMvc.perform(delete("/api/hub/contents/{id}", approvedId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(otherTeacher, Role.TEACHER)))
@@ -199,6 +202,8 @@ class CommunityHubContentIntegrationTests {
                 .andExpect(status().isNoContent());
 
         assertThat(requireLibraryContent(approvedId).get("deleted_at")).isNotNull();
+        assertThat(requireLibraryContent(approvedId).get("source_library_content_id")).isEqualTo(sourceId);
+        assertThat(requireLibraryContent(sourceId).get("deleted_at")).isNull();
         mockMvc.perform(get("/api/hub/contents/{id}", approvedId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(owner, Role.TEACHER)))
                 .andExpect(status().isNotFound());
