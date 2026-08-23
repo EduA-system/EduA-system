@@ -34,7 +34,7 @@ export const navGroups: NavGroup[] = [
       { label: "Lớp học", icon: "sidebarClass", href: "/list-class", requiredRole: ["STUDENT"] },
       { label: "T\u1ea1o gi\u00e1o \u00e1n", icon: "book", href: "/lesson-create", active: true, requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "T\u1ea1o slide", icon: "slides", href: "/slide-create", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "T\u1ea1o \u0111\u1ec1 ki\u1ec3m tra", icon: "check", href: "/exam-create-new", requiredRole: ["TEACHER", "MODERATOR"] },
+      { label: "Tạo bài tập về nhà", icon: "check", href: "/exam-create-new", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "Lịch nộp giáo án", icon: "sidebarCalendar", href: "/weekly-schedule", requiredRole: ["TEACHER", "MODERATOR"] },
     ],
   },

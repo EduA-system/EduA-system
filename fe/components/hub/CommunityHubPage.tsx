@@ -13,7 +13,7 @@ const tabs: [string, LibraryType | ""][] = [
   ["Tất cả", ""],
   ["Bài giảng", "LESSON_PLAN"],
   ["Slide", "SLIDE_DECK"],
-  ["Bài kiểm tra", "TEST"],
+  ["Bài tập về nhà", "TEST"],
   ["Mô phỏng", "SIMULATION"],
 ];
 
@@ -22,7 +22,7 @@ const PAGE_SIZE = 30;
 const contentMeta: Record<LibraryType, { label: string; icon: typeof BookOpen; color: string; iconColor: string }> = {
   LESSON_PLAN: { label: "Bài giảng", icon: BookOpen, color: "from-amber-100 via-orange-50 to-stone-100", iconColor: "text-amber-800" },
   SLIDE_DECK: { label: "Slide", icon: Presentation, color: "from-rose-100 via-orange-50 to-amber-50", iconColor: "text-rose-800" },
-  TEST: { label: "Bài kiểm tra", icon: FileText, color: "from-sky-100 via-cyan-50 to-stone-100", iconColor: "text-sky-800" },
+  TEST: { label: "Bài tập về nhà", icon: FileText, color: "from-sky-100 via-cyan-50 to-stone-100", iconColor: "text-sky-800" },
   SIMULATION: { label: "Mô phỏng", icon: Atom, color: "from-violet-100 via-fuchsia-50 to-stone-100", iconColor: "text-violet-800" },
 };
 

@@ -33,7 +33,7 @@ const linuxLibertine = localFont({
 export const metadata: Metadata = {
   title: "EDUA — Trợ lý AI cho giáo viên Khoa học tự nhiên",
   description:
-    "Tạo giáo án theo Công văn 5512, slide bài giảng, mô phỏng khoa học, đề kiểm tra và quản lý lớp học trong một quy trình liền mạch.",
+    "Tạo giáo án theo Công văn 5512, slide bài giảng, mô phỏng khoa học, bài tập về nhà và quản lý lớp học trong một quy trình liền mạch.",
 };
 
 export default function RootLayout({

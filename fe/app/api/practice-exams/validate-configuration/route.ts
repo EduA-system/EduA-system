@@ -18,6 +18,6 @@ export async function POST(request: Request) {
       headers: { "Content-Type": upstream.headers.get("Content-Type") ?? "application/json" },
     });
   } catch {
-    return Response.json({ message: "Không kết nối được backend kiểm tra cấu hình đề." }, { status: 502 });
+    return Response.json({ message: "Không kết nối được backend đánh giá cấu hình bài tập." }, { status: 502 });
   }
 }

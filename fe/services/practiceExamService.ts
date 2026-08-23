@@ -50,7 +50,7 @@ export async function startPracticeExamStream(
     body: JSON.stringify(session),
   });
   if (!res.ok) {
-    let message = `Khởi tạo tạo đề thất bại (HTTP ${res.status}).`;
+    let message = `Khởi tạo bài tập thất bại (HTTP ${res.status}).`;
     try {
       const body = (await res.json()) as { message?: string };
       if (body?.message) message = body.message;

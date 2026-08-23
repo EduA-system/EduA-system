@@ -7,7 +7,7 @@ import styles from "./landing.module.css";
 export const metadata: Metadata = {
   title: "EDUA — Từ giáo án 5512 đến lớp học trong một luồng",
   description:
-    "Khám phá cách EDUA giúp giáo viên tạo giáo án, slide, mô phỏng khoa học, đề kiểm tra và quản lý hoạt động lớp học trong cùng một hệ thống.",
+    "Khám phá cách EDUA giúp giáo viên tạo giáo án, slide, mô phỏng khoa học, bài tập về nhà và quản lý hoạt động lớp học trong cùng một hệ thống.",
 };
 
 export default function HomePage() {

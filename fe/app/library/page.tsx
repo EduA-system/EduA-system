@@ -37,7 +37,7 @@ import { getWeeklySchedule } from "@/lib/weekly-task";
 const tabs: [string, LibraryType][] = [
   ["Bài giảng", "LESSON_PLAN"],
   ["Slide", "SLIDE_DECK"],
-  ["Bài kiểm tra", "TEST"],
+  ["Bài tập về nhà", "TEST"],
   ["Mô phỏng", "SIMULATION"],
 ];
 
@@ -57,14 +57,14 @@ const createPaths: Partial<Record<LibraryType, string>> = {
 const contentMeta: Record<LibraryType, { label: string; icon: typeof BookOpen; color: string }> = {
   LESSON_PLAN: { label: "Bài giảng", icon: BookOpen, color: "from-amber-100 via-orange-50 to-stone-100" },
   SLIDE_DECK: { label: "Slide deck", icon: Presentation, color: "from-rose-100 via-orange-50 to-amber-50" },
-  TEST: { label: "Bài kiểm tra", icon: FileText, color: "from-sky-100 via-cyan-50 to-stone-100" },
+  TEST: { label: "Bài tập về nhà", icon: FileText, color: "from-sky-100 via-cyan-50 to-stone-100" },
   SIMULATION: { label: "Mô phỏng", icon: Atom, color: "from-violet-100 via-fuchsia-50 to-stone-100" },
 };
 
 const emptyContentLabel: Record<LibraryType, string> = {
   LESSON_PLAN: "bài giảng",
   SLIDE_DECK: "slide",
-  TEST: "bài kiểm tra",
+  TEST: "bài tập về nhà",
   SIMULATION: "mô phỏng",
 };
 
@@ -255,7 +255,7 @@ function LibraryScreen() {
   const visibleTotal = status === "WEEKLY_TASK_APPROVED" ? visibleItems.length : total;
   const createTile = createPath
     ? <Link href={createPath} className="group flex aspect-[4/3] flex-col items-center justify-center rounded-[14px] border border-dashed border-[#d9a58f] bg-[#fffaf7] p-6 text-center transition hover:border-[#e8724a] hover:bg-[#fff4ee]"><span className="flex size-12 items-center justify-center rounded-full bg-[#fbe1d5] text-3xl font-light leading-none text-[#c65838] transition group-hover:scale-110 group-hover:bg-[#e8724a] group-hover:text-white">+</span><span className="mt-4 font-semibold text-[#75402e]">Tạo {contentMeta[type].label.toLowerCase()} mới</span><span className="mt-1 text-sm text-stone-500">Bắt đầu một nội dung mới</span></Link>
-    : <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-6 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-stone-200 text-3xl font-light leading-none text-stone-500">+</span><span className="mt-4 font-semibold text-stone-600">Tạo bài kiểm tra</span><span className="mt-1 text-sm text-stone-500">Tính năng đang được phát triển</span></div>;
+    : <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-6 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-stone-200 text-3xl font-light leading-none text-stone-500">+</span><span className="mt-4 font-semibold text-stone-600">Tạo bài tập về nhà</span><span className="mt-1 text-sm text-stone-500">Tính năng đang được phát triển</span></div>;
 
   return (
     <main className="min-h-screen bg-white text-[#171717]">

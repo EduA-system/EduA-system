@@ -46,7 +46,7 @@ const helpGuides: Record<HelpRole, HelpGuide> = {
     actions: [
       { title: "Soạn giáo án", description: "Chọn môn học, nội dung và hoàn thiện giáo án với AI.", href: "/lesson-create", action: "Tạo giáo án", icon: FilePenLine },
       { title: "Tạo slide", description: "Chuyển giáo án thành bộ trình chiếu, rồi rà soát từng slide.", href: "/slide-create", action: "Tạo slide", icon: Presentation },
-      { title: "Tạo đề kiểm tra", description: "Lập đề, cấu hình câu hỏi và lưu vào thư viện cá nhân.", href: "/exam-create-new", action: "Tạo đề", icon: ClipboardCheck },
+      { title: "Tạo bài tập về nhà", description: "Cấu hình câu hỏi và lưu bài tập vào thư viện cá nhân.", href: "/exam-create-new", action: "Tạo bài tập", icon: ClipboardCheck },
       { title: "Theo dõi lịch nộp", description: "Xem giáo án được giao và tiến độ nộp theo tuần.", href: "/weekly-schedule", action: "Mở lịch nộp", icon: CalendarDays },
     ],
     tips: ["Lưu học liệu vào Thư viện trước khi dùng cho lớp.", "Kiểm tra lại mục tiêu, nội dung và đáp án AI tạo trước khi sử dụng.", "Mở Lịch nộp giáo án đầu tuần để không bỏ sót yêu cầu của người kiểm duyệt."],

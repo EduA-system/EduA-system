@@ -79,7 +79,7 @@ export function ClassResourceDocumentViewer({ kind }: { kind: DocumentKind }) {
       .then((item) => {
         if (cancelled) return;
         const resolved = resolveDocument(item, kind);
-        if (!resolved) throw new Error(kind === "lesson" ? "Giáo án này không có nội dung để hiển thị." : "Bài kiểm tra này không có nội dung để hiển thị.");
+        if (!resolved) throw new Error(kind === "lesson" ? "Giáo án này không có nội dung để hiển thị." : "Bài tập này không có nội dung để hiển thị.");
         setViewer({ key: requestKey, content: item, document: resolved, error: "" });
       })
       .catch((reason: unknown) => {

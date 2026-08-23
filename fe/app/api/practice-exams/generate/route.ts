@@ -25,6 +25,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[practice-exam-route] BACKEND_PROXY_FAILED", error);
-    return Response.json({ message: "Không kết nối được backend tạo đề kiểm tra." }, { status: 502 });
+    return Response.json({ message: "Không kết nối được backend tạo bài tập về nhà." }, { status: 502 });
   }
 }

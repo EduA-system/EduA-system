@@ -28,7 +28,7 @@ import type { TiptapNode } from "@/lib/tiptap-to-text";
 const typeLabels: Record<LibraryType, string> = {
   LESSON_PLAN: "Bài giảng",
   SLIDE_DECK: "Slide",
-  TEST: "Bài kiểm tra",
+  TEST: "Bài tập về nhà",
   SIMULATION: "Mô phỏng",
 };
 
@@ -50,7 +50,7 @@ const types: [string, LibraryType | ""][] = [
   ["Tất cả loại", ""],
   ["Bài giảng", "LESSON_PLAN"],
   ["Slide", "SLIDE_DECK"],
-  ["Bài kiểm tra", "TEST"],
+  ["Bài tập về nhà", "TEST"],
   ["Mô phỏng", "SIMULATION"],
 ];
 

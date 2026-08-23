@@ -3,5 +3,5 @@ import { ClassResourceDocumentViewer } from "@/components/classroom/ClassResourc
 import { RouteGuard } from "@/lib/auth/RouteGuard";
 
 export default function ClassResourceExamPage() {
-  return <RouteGuard pathname="/class-resource-exam"><Suspense fallback={<main>Đang mở bài kiểm tra...</main>}><ClassResourceDocumentViewer kind="exam" /></Suspense></RouteGuard>;
+  return <RouteGuard pathname="/class-resource-exam"><Suspense fallback={<main>Đang mở bài tập...</main>}><ClassResourceDocumentViewer kind="exam" /></Suspense></RouteGuard>;
 }

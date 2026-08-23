@@ -96,11 +96,11 @@ export function PracticeExamEditDashboard() {
         subject: content.subject ?? current.subject,
         grade: payload.grade ? String(payload.grade) : current.grade,
       }));
-      setNotice("Đang mở bài kiểm tra đã lưu từ thư viện.");
+      setNotice("Đang mở bài tập về nhà đã lưu từ thư viện.");
       if (readOnlyClassResource) editor.setEditable(false);
       setDocumentReady(true);
     }).catch(() => {
-      setNotice("Không thể mở bài kiểm tra đã lưu.");
+      setNotice("Không thể mở bài tập về nhà đã lưu.");
       setDocumentReady(false);
     });
   }, [authFetch, classId, editor, readOnlyClassResource, resourceId, searchParams]);
@@ -108,9 +108,9 @@ export function PracticeExamEditDashboard() {
   async function saveDraft(examToSave?: PracticeExam) {
     if (savingRef.current) return;
     const exam = examToSave ?? savedExam ?? streamedExam;
-    if (!exam || !editor) { setNotice("Chưa có đề để lưu."); return; }
+    if (!exam || !editor) { setNotice("Chưa có bài tập để lưu."); return; }
     const grade = Number(metadata.grade);
-    if (![10, 11, 12].includes(grade)) { setNotice("Không xác định được lớp của đề. Vui lòng tạo đề lại từ màn cấu hình."); return; }
+    if (![10, 11, 12].includes(grade)) { setNotice("Không xác định được lớp của bài tập. Vui lòng tạo lại từ màn cấu hình."); return; }
     savingRef.current = true;
     setSaving(true);
     try {
@@ -122,9 +122,9 @@ export function PracticeExamEditDashboard() {
         : await createLibraryContent(authFetch, { type: "TEST", title, subject, payload });
       setLibraryId(saved.id);
       setIsDirty(false);
-      setNotice("Đề đã được lưu vào Thư viện của tôi · Bài kiểm tra.");
+      setNotice("Bài tập đã được lưu vào Thư viện của tôi · Bài tập về nhà.");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Không thể lưu đề vào thư viện.");
+      setNotice(error instanceof Error ? error.message : "Không thể lưu bài tập vào thư viện.");
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -148,18 +148,18 @@ export function PracticeExamEditDashboard() {
   }, [isDirty, readOnlyClassResource]);
 
   async function exportPdf() {
-    if (!editor) { setNotice("Chưa có đề để xuất PDF."); return; }
-    if (!documentReady) { setNotice("Đề kiểm tra đang tải, vui lòng đợi trong giây lát rồi xuất PDF."); return; }
-    const title = editor.state.doc.firstChild?.textContent.trim() || savedExam?.title || streamedExam?.title || "Đề kiểm tra";
+    if (!editor) { setNotice("Chưa có bài tập để xuất PDF."); return; }
+    if (!documentReady) { setNotice("Bài tập đang tải, vui lòng đợi trong giây lát rồi xuất PDF."); return; }
+    const title = editor.state.doc.firstChild?.textContent.trim() || savedExam?.title || streamedExam?.title || "Bài tập về nhà";
     setExportingPdf(true);
     setNotice(null);
     try {
       if (!openDocumentPrintDialog(title, editor.getHTML(), { marginLeft: margins.left, marginRight: margins.right })) {
         throw new Error("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup và thử lại.");
       }
-      setNotice("Đã xuất PDF bài kiểm tra.");
+      setNotice("Đã xuất PDF bài tập về nhà.");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Không thể xuất PDF bài kiểm tra.");
+      setNotice(error instanceof Error ? error.message : "Không thể xuất PDF bài tập về nhà.");
     } finally {
       setExportingPdf(false);
     }
@@ -197,7 +197,7 @@ export function PracticeExamEditDashboard() {
                     disabled={exportingPdf || !documentReady}
                     className="rounded-lg bg-[#d97757] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#c96545] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {!documentReady ? "Đang tải..." : exportingPdf ? "Đang xuất..." : "Xuất đề"}
+                    {!documentReady ? "Đang tải..." : exportingPdf ? "Đang xuất..." : "Xuất bài tập"}
                   </button>
                 </div>
               )}
@@ -234,7 +234,7 @@ export function PracticeExamEditDashboard() {
                       Soạn thảo trực tiếp
                     </p>
                     <h1 className="font-libertine mt-2 text-3xl sm:text-4xl">
-                      Đề kiểm tra luyện tập
+                      Bài tập về nhà
                     </h1>
                     <p className="mt-2 text-xs text-[#81776e]">
                       Dùng thanh công cụ để định dạng, chèn bảng, công thức, ảnh

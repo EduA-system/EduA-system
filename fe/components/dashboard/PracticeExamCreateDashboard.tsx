@@ -244,7 +244,7 @@ export function PracticeExamCreateDashboard() {
       const request: PracticeExamRequest = {
         // Đây là nhãn kỹ thuật cho luồng tạo AI. Tên giáo viên đặt được giữ
         // riêng trong display.libraryTitle và tuyệt đối không gửi vào API này.
-        title: `Kiểm tra ${durationMinutes} phút`,
+        title: "Bài tập về nhà",
         subject: effectiveSubject,
         grade,
         durationMinutes,
@@ -287,7 +287,7 @@ export function PracticeExamCreateDashboard() {
       });
       router.push("/exam-edit-new");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không thể tạo đề.");
+      setError(reason instanceof Error ? reason.message : "Không thể tạo bài tập về nhà.");
       setLoading(false);
     }
   }
@@ -298,11 +298,11 @@ export function PracticeExamCreateDashboard() {
         <section className="min-w-0 flex-1 p-6 sm:p-10">
           <div className="mx-auto max-w-5xl">
             <p className="text-xs font-bold uppercase tracking-widest text-[#d97757]">
-              AI practice exam
+              AI homework
             </p>
-            <h1 className="font-libertine mt-3 text-5xl">Tạo đề kiểm tra</h1>
+            <h1 className="font-libertine mt-3 text-5xl">Tạo bài tập về nhà</h1>
             <p className="mt-3 text-sm text-[#70675f]">
-              Tạo đề kiểm tra tự động bằng AI, bám sát phạm vi kiến thức SGK bạn chọn.
+              Tạo bài tập về nhà bằng AI, bám sát phạm vi kiến thức SGK bạn chọn.
             </p>
             {error && (
               <p
@@ -314,7 +314,7 @@ export function PracticeExamCreateDashboard() {
             )}
             <div className="mt-8 space-y-4">
               {openStep === 1 ? (
-                <Card title="1. Thông tin đề">
+                <Card title="1. Thông tin bài tập">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <p className="text-xs font-semibold">Môn học</p>
@@ -357,19 +357,19 @@ export function PracticeExamCreateDashboard() {
                     </label>
                   </div>
                   <label className="mt-4 block text-xs font-semibold">
-                    Tên bài kiểm tra <span className="text-[#bf5139]">*</span>
+                    Tên bài tập <span className="text-[#bf5139]">*</span>
                     <input
                       type="text"
                       value={libraryTitle}
                       disabled={loading}
                       onChange={(event) => setLibraryTitle(event.target.value)}
-                      placeholder="Ví dụ: Kiểm tra chương 2 - Hàm số bậc hai"
+                      placeholder="Ví dụ: Bài tập chương 2 - Hàm số bậc hai"
                       required
                       aria-required="true"
                       className="mt-2 h-10 w-full rounded-lg border border-[#ddd5cc] px-3 text-sm"
                     />
                     <span className="mt-1 block font-normal text-[#81776e]">
-                      Hãy nhập tiêu đề cho bài kiểm tra.
+                      Hãy nhập tiêu đề cho bài tập.
                     </span>
                   </label>
                   <div className="mt-4">
@@ -415,7 +415,7 @@ export function PracticeExamCreateDashboard() {
                     )}
                   </div>
                   <div className="mt-4">
-                    <p className="text-xs font-semibold">Độ khó đề</p>
+                    <p className="text-xs font-semibold">Mức độ bài tập</p>
                     <div className="mt-2 flex gap-2">
                       {(["EASY", "MEDIUM", "HARD"] as const).map((item) => (
                         <button
@@ -431,7 +431,7 @@ export function PracticeExamCreateDashboard() {
                     <p className="mt-2 text-xs text-[#81776e]">{DIFFICULTY_HINTS[difficulty]}</p>
                   </div>
                   <label className="mt-4 block text-xs font-semibold">
-                    Mục tiêu bài kiểm tra (không bắt buộc)
+                    Mục tiêu bài tập (không bắt buộc)
                     <textarea
                       rows={2}
                       placeholder="Bạn muốn học sinh củng cố kiến thức gì?"
@@ -454,7 +454,7 @@ export function PracticeExamCreateDashboard() {
                 </Card>
               ) : (
                 <StepSummary
-                  title="1. Thông tin đề"
+                  title="1. Thông tin bài tập"
                   summary={`${libraryTitle.trim() || "Chưa đặt tên"} · ${SUBJECT_LABELS[subject]} · Lớp ${grade} · ${duration || "?"} phút · ${DIFFICULTY_LABELS[difficulty]}${objective.trim() ? " · Có mục tiêu riêng" : ""}`}
                   onEdit={() => goToStep(1)}
                 />
@@ -652,7 +652,7 @@ export function PracticeExamCreateDashboard() {
                     </Card>
                     <aside className="h-fit rounded-2xl border border-[#e4dcd3] bg-white p-5 lg:sticky lg:top-5">
                       <p className="text-xs font-bold uppercase tracking-wider text-[#8b8178]">
-                        Kiểm tra khả thi
+                        Đánh giá tính khả thi
                       </p>
                       <p
                         className={`mt-3 text-lg font-semibold ${status === "FEASIBLE" ? "text-[#297548]" : status === "WARNING" ? "text-[#9a6514]" : "text-[#bf5139]"}`}
@@ -666,7 +666,7 @@ export function PracticeExamCreateDashboard() {
                       <p className="mt-2 text-xs leading-5">
                         {!hasValidDuration
                           ? "Thời lượng phải là số nguyên từ 1 đến 90 phút."
-                          : <>Ước tính {estimated.toFixed(1)} phút / đề {duration} phút
+                          : <>Ước tính {estimated.toFixed(1)} phút / thời lượng {duration} phút
                         {durationMinutes > 0 && durationMinutes <= 90
                           ? ` (tối đa ${maximumEstimatedMinutes} phút được phép).`
                           : "."}</>}
@@ -702,11 +702,11 @@ export function PracticeExamCreateDashboard() {
                         onClick={() => void generate()}
                         className="mt-6 w-full rounded-lg bg-[#d97757] px-4 py-3 text-sm font-semibold text-white disabled:bg-[#d9d2cb]"
                       >
-                        {loading ? "Đang khởi tạo..." : "Tạo đề bằng AI →"}
+                        {loading ? "Đang khởi tạo..." : "Tạo bài tập bằng AI →"}
                       </button>
                       {loading && (
                         <p className="mt-2 text-center text-[11px] text-[#8b8178]">
-                          Bạn sẽ được chuyển sang trình soạn đề để xem AI soạn từng câu.
+                          Bạn sẽ được chuyển sang trình soạn bài tập để xem AI soạn từng câu.
                         </p>
                       )}
                     </aside>

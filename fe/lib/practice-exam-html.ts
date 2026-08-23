@@ -122,10 +122,10 @@ export function examHtml(metadata: Metadata, generated: PracticeExam | null) {
       })
       .join("");
     const answers = generated.questions.map(answerHtml).join("");
-    return `<h1>${generated.title}</h1><p class="document-meta">${generated.instructions} · Tổng điểm: 10 điểm</p><section><h2>I. ĐỀ KIỂM TRA</h2>${sections}</section><section><h2>II. ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM</h2>${answers}</section>`;
+    return `<h1>${generated.title}</h1><p class="document-meta">${generated.instructions} · Tổng điểm: 10 điểm</p><section><h2>I. BÀI TẬP VỀ NHÀ</h2>${sections}</section><section><h2>II. ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM</h2>${answers}</section>`;
   }
   return `
-    <h1>KIỂM TRA ${metadata.duration} PHÚT</h1>
+    <h1>BÀI TẬP VỀ NHÀ</h1>
     <p class="document-meta">Môn ${metadata.subject} · Lớp ${metadata.grade} · Thời gian làm bài: ${metadata.duration} phút · Tổng điểm: 10 điểm</p>
     <section>
       <h2>PHẦN I. TRẮC NGHIỆM NHIỀU LỰA CHỌN</h2>
@@ -184,7 +184,7 @@ export function examSkeletonSectionsHtml(stubs: PracticeExamQuestionStub[]) {
  * bằng `node.type.name === "pendingSection"` là đủ, không cần thêm attribute định danh.
  */
 export function examSkeletonHtml(title: string, instructions: string, stubs: PracticeExamQuestionStub[]) {
-  return `<h1>${escapeHtml(title)}</h1><p class="document-meta">${escapeHtml(instructions)} · Tổng điểm: 10 điểm</p><section><h2>I. ĐỀ KIỂM TRA</h2>${examSkeletonSectionsHtml(stubs)}</section><h2>II. ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM</h2><div data-pending-section data-label="Đáp án và hướng dẫn chấm"></div>`;
+  return `<h1>${escapeHtml(title)}</h1><p class="document-meta">${escapeHtml(instructions)} · Tổng điểm: 10 điểm</p><section><h2>I. BÀI TẬP VỀ NHÀ</h2>${examSkeletonSectionsHtml(stubs)}</section><h2>II. ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM</h2><div data-pending-section data-label="Đáp án và hướng dẫn chấm"></div>`;
 }
 
 /** Phần II (đáp án) đầy đủ — build 1 lần khi nhận DONE, từ toàn bộ câu đã tích luỹ. */
@@ -203,9 +203,9 @@ export function examLoadingSkeletonHtml(display?: Metadata) {
     ? `Môn ${escapeHtml(display.subject)} · Lớp ${escapeHtml(display.grade)} · ${escapeHtml(String(display.duration))} phút`
     : "";
   return `
-    <h1>Đang chuẩn bị đề kiểm tra…</h1>
+    <h1>Đang chuẩn bị bài tập về nhà…</h1>
     ${meta ? `<p class="document-meta">${meta}</p>` : ""}
-    <div data-pending-section data-label="Đề kiểm tra"></div>
+    <div data-pending-section data-label="Bài tập về nhà"></div>
   `;
 }
 
@@ -218,10 +218,10 @@ export function examErrorHtml(display?: Metadata, message?: string) {
     ? `Môn ${escapeHtml(display.subject)} · Lớp ${escapeHtml(display.grade)} · ${escapeHtml(String(display.duration))} phút`
     : "";
   const note = message
-    ? `⚠️ Không tạo được đề tự động (${escapeHtml(message)}) — mời soạn thủ công bên dưới.`
-    : "⚠️ Không tạo được đề tự động — mời soạn thủ công bên dưới.";
+    ? `⚠️ Không tạo được bài tập tự động (${escapeHtml(message)}) — mời soạn thủ công bên dưới.`
+    : "⚠️ Không tạo được bài tập tự động — mời soạn thủ công bên dưới.";
   return `
-    <h1>KIỂM TRA${display ? ` ${escapeHtml(String(display.duration))} PHÚT` : ""}</h1>
+    <h1>BÀI TẬP VỀ NHÀ</h1>
     ${meta ? `<p class="document-meta">${meta}</p>` : ""}
     <p class="lp-failed">${note}</p>
     <p></p>
