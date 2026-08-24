@@ -51,7 +51,7 @@ function renderedDocumentHtml(documentHtml: string): string {
   return documentForPrint.body.innerHTML;
 }
 
-function currentPageStyles(): string {
+export function currentPageStyles(): string {
   return Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
     .map((style) => style.outerHTML)
     .join("");

@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Download, Loader2, UsersRound } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Printer, UsersRound } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RouteGuard } from "@/lib/auth/RouteGuard";
-import { openExportedPdf } from "@/lib/document-export";
+import { printByline, printStatisticsReport } from "@/lib/statistics-print";
 import {
-  exportModeratorStatisticsReport,
   getLibraryContentReviewSummary,
   getOverdueByTeacherQuarter,
   getOverdueByTeacherWeek,
@@ -17,7 +16,6 @@ import {
   type ReviewStatusCounts,
 } from "@/lib/moderator-statistics";
 import {
-  exportPrincipalStatisticsReport,
   getAccountsByRole,
   getAiContentTrend,
   getCommunityHubReview,
@@ -165,7 +163,8 @@ function ReviewDonut({ title, counts }: { title: string; counts: ReviewStatusCou
 type FilterMode = "WEEK" | "QUARTER";
 
 function ModeratorStatisticsScreen() {
-  const { authFetch } = useAuth();
+  const { authFetch, user } = useAuth();
+  const reportRef = useRef<HTMLElement>(null);
 
   // 3 ô số liệu + 2 donut: luôn phản ánh tuần/quý hiện tại, độc lập với filter của bar chart bên dưới.
   const [weeklyTaskSummary, setWeeklyTaskSummary] = useState<ReviewStatusCounts | null>(null);
@@ -181,7 +180,6 @@ function ModeratorStatisticsScreen() {
   const requestKey = filterMode === "WEEK" ? `week:${weekStartDate}` : `quarter:${year}:${quarter}`;
   const [chartResult, setChartResult] = useState<{ key: string; data: OverdueByTeacher } | null>(null);
   const [error, setError] = useState("");
-  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -226,25 +224,21 @@ function ModeratorStatisticsScreen() {
     return chartResult.data.items.map((item) => ({ name: item.teacherName ?? "—", overdueCount: item.overdueCount }));
   }, [chartResult, requestKey]);
 
-  async function exportReport() {
-    if (exporting) return;
-    setExporting(true);
-    setError("");
-    try {
-      const result = await exportModeratorStatisticsReport(authFetch, filterMode, weekStartDate, year, quarter);
-      openExportedPdf(result);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể xuất báo cáo PDF.");
-    } finally {
-      setExporting(false);
-    }
+  function printReport() {
+    if (!reportRef.current) return;
+    const period = filterMode === "WEEK" ? `tuần ${weekLabel(weekStartDate)}` : `quý ${quarter}-${year}`;
+    const printed = printStatisticsReport(reportRef.current, {
+      title: `Thống kê ${period}`,
+      byline: printByline(user?.fullName ?? user?.email ?? "hệ thống"),
+    });
+    if (!printed) setError("Không mở được hộp thoại in. Vui lòng thử lại.");
   }
 
   return (
     <main className="min-h-screen bg-[#f7f5f2] text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/statistics" />
-        <section className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-10">
+        <section ref={reportRef} className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-10">
           <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[#e4ddd4] pb-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-[#d97757]">Quản trị</p>
@@ -255,17 +249,19 @@ function ModeratorStatisticsScreen() {
             </div>
             <button
               type="button"
-              onClick={() => void exportReport()}
-              disabled={exporting}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#343434] disabled:cursor-not-allowed disabled:opacity-60"
+              data-print="hide"
+              onClick={printReport}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#343434]"
             >
-              {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-              {exporting ? "Đang xuất..." : "Xuất PDF"}
+              <Printer className="size-4" />
+              In / Xuất PDF
             </button>
           </header>
 
           {error && (
-            <div className="mt-4 rounded-lg border border-[#f0c9c4] bg-[#fdeceb] px-4 py-3 text-sm text-[#c2483c]">{error}</div>
+            <div data-print="hide" className="mt-4 rounded-lg border border-[#f0c9c4] bg-[#fdeceb] px-4 py-3 text-sm text-[#c2483c]">
+              {error}
+            </div>
           )}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -313,6 +309,7 @@ function ModeratorStatisticsScreen() {
                   <div className="flex items-center gap-1 text-sm">
                     <button
                       type="button"
+                      data-print="hide"
                       onClick={() => setWeekStartDate((w) => addWeeks(w, -1))}
                       className="rounded-md border border-[#d8d1c9] p-1 hover:bg-[#f4efe9]"
                       aria-label="Tuần trước"
@@ -322,6 +319,7 @@ function ModeratorStatisticsScreen() {
                     <span className="min-w-[110px] text-center font-medium text-[#4f4943]">{weekLabel(weekStartDate)}</span>
                     <button
                       type="button"
+                      data-print="hide"
                       onClick={() => setWeekStartDate((w) => addWeeks(w, 1))}
                       className="rounded-md border border-[#d8d1c9] p-1 hover:bg-[#f4efe9]"
                       aria-label="Tuần sau"
@@ -441,7 +439,8 @@ function PrincipalReviewDonut({ review }: { review: CommunityHubReview | null })
 }
 
 function PrincipalStatisticsScreen() {
-  const { authFetch } = useAuth();
+  const { authFetch, user } = useAuth();
+  const reportRef = useRef<HTMLElement>(null);
   const [trend, setTrend] = useState<AiContentTrend | null>(null);
   const [bySubject, setBySubject] = useState<ContentBySubject | null>(null);
   const [weeklyStatus, setWeeklyStatus] = useState<WeeklyTaskStatus | null>(null);
@@ -450,7 +449,6 @@ function PrincipalStatisticsScreen() {
   const [weeklySubject, setWeeklySubject] = useState<Subject | "">("");
   const [accountSubject, setAccountSubject] = useState<Subject | "">("");
   const [error, setError] = useState("");
-  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -511,25 +509,20 @@ function PrincipalStatisticsScreen() {
   const accountData = useMemo(() => accounts?.items.map((item) => ({ ...item, label: ROLE_LABELS[item.role] ?? item.role })) ?? [], [accounts]);
   const activeAccounts = accounts?.items.reduce((sum, item) => sum + item.active, 0);
 
-  async function exportReport() {
-    if (exporting) return;
-    setExporting(true);
-    setError("");
-    try {
-      const result = await exportPrincipalStatisticsReport(authFetch, weeklySubject, accountSubject);
-      openExportedPdf(result);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể xuất báo cáo PDF.");
-    } finally {
-      setExporting(false);
-    }
+  function printReport() {
+    if (!reportRef.current) return;
+    const printed = printStatisticsReport(reportRef.current, {
+      title: "Thống kê toàn trường",
+      byline: printByline(user?.fullName ?? user?.email ?? "hệ thống"),
+    });
+    if (!printed) setError("Không mở được hộp thoại in. Vui lòng thử lại.");
   }
 
   return (
     <main className="min-h-screen bg-[#f7f5f2] text-[#2b2926]">
       <div className="flex min-h-screen">
         <Sidebar activeHref="/statistics" />
-        <section className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-10">
+        <section ref={reportRef} className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-10">
           <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[#e4ddd4] pb-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-[#d97757]">Quản trị</p>
@@ -540,16 +533,20 @@ function PrincipalStatisticsScreen() {
             </div>
             <button
               type="button"
-              onClick={() => void exportReport()}
-              disabled={exporting}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#343434] disabled:cursor-not-allowed disabled:opacity-60"
+              data-print="hide"
+              onClick={printReport}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#1f1f1f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#343434]"
             >
-              {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-              {exporting ? "Đang xuất..." : "Xuất PDF"}
+              <Printer className="size-4" />
+              In / Xuất PDF
             </button>
           </header>
 
-          {error && <div className="mt-4 rounded-lg border border-[#f0c9c4] bg-[#fdeceb] px-4 py-3 text-sm text-[#c2483c]">{error}</div>}
+          {error && (
+            <div data-print="hide" className="mt-4 rounded-lg border border-[#f0c9c4] bg-[#fdeceb] px-4 py-3 text-sm text-[#c2483c]">
+              {error}
+            </div>
+          )}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <Metric icon={<CalendarClock className="size-4" aria-hidden />} label="Nội dung AI (6 tháng)" value={trend ? String(totalContent(trend)) : "…"} />
