@@ -414,6 +414,9 @@ Trước khi coi là hoàn thành, kiểm tra:
 - Đơn vị vật lý rõ ràng, ưu tiên SI trong engine.
 - Không đặt công thức vật lý lõi trong renderer.
 - Không tạo engine/renderer mới nếu engine/renderer cũ đáp ứng được.
+- Import chỉ dùng đường dẫn tương đối, alias `@/components/simulations/...`, hoặc 4 package
+  `react`, `konva`, `tweakpane`, `lucide-react`. Mọi thứ khác sẽ không chạy trong `/sandbox`
+  (xem mục 11).
 - Chạy được:
 
 ```powershell
@@ -421,6 +424,7 @@ cd fe
 npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd run build
+npm.cmd test -- lib/sandbox
 ```
 
 ## 11. Lỗi thường gặp
@@ -432,6 +436,18 @@ Nguyên nhân thường gặp:
 - quên thêm preset vào `PRESETS`;
 - `id` bị trùng;
 - file export sai tên so với import.
+
+### `/sandbox` báo `ModuleNotFoundError`
+
+`/sandbox` (và element sandbox trong slide) không build bằng webpack của Next mà gửi mã nguồn
+sang bundler của Sandpack. Bundler đó chỉ hiểu import tương đối và các package khai trong
+`lib/sandbox/sandpack-project.ts`; `lib/sandbox/collect-files.ts` là nơi đi theo cây import,
+đổi alias `@/components/simulations/...` thành đường dẫn tương đối và thay
+`@/components/layout/Sidebar`, `next/dynamic`, `next/image` bằng shim.
+
+Thêm một import kiểu khác (alias `@/lib/...`, `next/*` chưa có shim, package chưa khai) thì Next
+vẫn build sạch nhưng iframe sẽ chết. Chạy `npm.cmd test -- lib/sandbox` để bắt trước —
+test đó dựng danh sách file của toàn bộ thí nghiệm và kiểm mọi import có resolve được không.
 
 ### Renderer không chạy đúng
 

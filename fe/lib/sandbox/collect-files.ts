@@ -175,10 +175,24 @@ function assetDataUri(filePath: string, mime: string): string | null {
 
 const EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
 
-/** Đổi một specifier tương đối thành file thật trên đĩa. */
+/**
+ * Alias `@/` của tsconfig Next trỏ vào chính cây simulations.
+ *
+ * Bundler Sandpack không biết alias, nên các import kiểu
+ * `@/components/simulations/shared/typography` phải được (1) đi theo để file
+ * đích lọt vào danh sách gửi đi, và (2) viết lại thành đường dẫn tương đối.
+ * Thiếu bất kỳ vế nào là iframe ném ModuleNotFoundError.
+ */
+const SIM_ALIAS = "@/components/simulations/";
+
+/** Đổi một specifier tương đối (hoặc alias trong cây sim) thành file thật trên đĩa. */
 function resolveImport(fromFile: string, spec: string): string | null {
-  if (!spec.startsWith(".")) return null; // package npm — Sandpack tự cài
-  const base = resolve(dirname(fromFile), spec);
+  const base = spec.startsWith(".")
+    ? resolve(dirname(fromFile), spec)
+    : spec.startsWith(SIM_ALIAS)
+      ? resolve(SIM_ROOT, spec.slice(SIM_ALIAS.length))
+      : null;
+  if (base === null) return null; // package npm — Sandpack tự cài
   const candidates = [
     base,
     ...EXTENSIONS.map((ext) => base + ext),
@@ -226,6 +240,26 @@ function rewriteShimImports(code: string, relativeFilePath: string): string {
   return out;
 }
 
+// Bắt cặp nháy quanh alias để giữ nguyên loại nháy của dòng gốc.
+const SIM_ALIAS_RE = /(["'])@\/components\/simulations\/([^"']+)\1/g;
+
+/**
+ * Đổi alias `@/components/simulations/...` thành đường dẫn tương đối.
+ *
+ * Cấu trúc thư mục trong Sandpack giống hệt repo, nên chỉ cần tính đường đi từ
+ * thư mục của file hiện tại tới file đích:
+ * `renderers/wave/scene-konva-wave-2d.tsx` + `shared/typography`
+ *   → `../../shared/typography`
+ */
+function rewriteSimAliasImports(code: string, relativeFilePath: string): string {
+  if (!code.includes(SIM_ALIAS)) return code;
+  const fromDir = dirname(relativeFilePath);
+  return code.replace(SIM_ALIAS_RE, (_match, quote: string, target: string) => {
+    const rel = relative(fromDir, target).split("\\").join("/");
+    return quote + (rel.startsWith(".") ? rel : "./" + rel) + quote;
+  });
+}
+
 /**
  * Đi từ các file gốc, gom toàn bộ bao đóng phụ thuộc tương đối.
  * Khoá trả về là đường dẫn trong Sandpack (`/simulations/...`).
@@ -247,7 +281,7 @@ export function collectSimulationFiles(entries: string[]): SandboxFileMap {
     if (Object.keys(SPECIFIER_SHIMS).some((spec) => code.includes(spec))) {
       needsShims = true;
     }
-    out[SIM_PREFIX + "/" + rel] = rewriteShimImports(code, rel);
+    out[SIM_PREFIX + "/" + rel] = rewriteShimImports(rewriteSimAliasImports(code, rel), rel);
 
     for (const match of code.matchAll(IMPORT_RE)) {
       const dep = resolveImport(file, match[1]!);
