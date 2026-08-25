@@ -10,6 +10,13 @@ import type { Element as PeriodicElement } from "@/components/periodic-table/typ
 import { defaultPeriodicSimulationElement } from "./lib/periodic-selection";
 import { normalizedLetterSpacing } from "./lib/text-spacing";
 
+/**
+ * Tỉ lệ mô hình phân tử 3D bên trong khung canvas khi đang trình chiếu (1 = đúng như trong editor).
+ * Không nâng quá ~1.1: camera cố định ở z=7 với fov 45, phân tử ba nguyên tử C (propan, propen) đã
+ * gần chạm mép khung vuông mặc định, và mô hình còn tự xoay nên phần nhô ra sẽ bị overflow cắt.
+ */
+const PRESENTATION_MOLECULE_SCALE = 1;
+
 const MoleculeViewer = dynamic(
   () => import("@/components/molecules/MoleculeViewer").then((m) => m.MoleculeViewer),
   {
@@ -151,8 +158,9 @@ function SimulationBlock({
 }) {
   const [activated, setActivated] = useState(false);
   const isPeriodic = el.kind === "periodic-element" || el.kind === "periodic-table";
-  // Trong editor (`previewLive`) mô hình giữ kích thước bình thường; khi trình chiếu thật
-  // (không có `previewLive`, chỉ kích hoạt qua click) thu nhỏ còn 1/4 theo yêu cầu.
+  // Mô hình 3D giữ nguyên kích thước ở mọi ngữ cảnh (editor lẫn trình chiếu thật): bản trước thu
+  // còn 1/4 khi trình chiếu nên nhìn quá nhỏ trên máy chiếu. Đây chỉ là scale nội dung BÊN TRONG
+  // Canvas — w/h của element trên slide không đổi.
   const isLivePresentation = !previewLive && interactive && activated;
   // Mount Canvas ngay từ khi slide còn ở editor/trình chiếu (không đợi click) để nó layout
   // cùng lúc với cả slide, trước khi stage trình chiếu áp CSS transform — mount muộn ngay lúc
@@ -245,7 +253,7 @@ function SimulationBlock({
             mode={el.mode}
             rotating={el.rotating}
             pannable={false}
-            contentScale={isLivePresentation ? 0.25 : 1}
+            contentScale={isLivePresentation ? PRESENTATION_MOLECULE_SCALE : 1}
           />
         </div>
         {/* Poster chỉ là lớp phủ tuyệt đối bên trên — Canvas bên dưới đã mount và layout
