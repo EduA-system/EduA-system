@@ -15,8 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 /**
- * Community Hub cho tài khoản Teacher, Moderator và Principal xem nội dung đã duyệt.
- * Tùy biến, bình luận và báo cáo tiếp tục chỉ dành cho Teacher/Moderator.
+ * Community Hub cho tài khoản Teacher và Moderator xem nội dung đã duyệt.
  */
 @RestController
 @RequestMapping("/api/hub")
@@ -33,7 +32,7 @@ public class HubContentController {
     }
 
     @GetMapping("/contents")
-    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR','PRINCIPAL')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     public HubViews.Page<HubViews.ContentSummary> list(
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String subject,
@@ -44,7 +43,7 @@ public class HubContentController {
     }
 
     @GetMapping("/contents/{id}")
-    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR','PRINCIPAL')")
+    @PreAuthorize("hasAnyRole('TEACHER','MODERATOR')")
     public HubViews.ContentDetail get(@PathVariable UUID id) {
         return contentService.get(id);
     }

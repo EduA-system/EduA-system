@@ -41,6 +41,8 @@ const statusClasses: Record<WeeklyTaskReviewStatus, string> = {
   REJECTED: "bg-red-100 text-red-800",
 };
 
+const MAX_TASK_TITLE_LENGTH = 300;
+
 type LessonGroup = {
   key: string;
   scopeDescription: string;
@@ -347,6 +349,7 @@ function WeeklyScheduleScreen() {
       !formTeacherId ||
       !formWeekStart ||
       !formTitle.trim() ||
+      formTitle.length > MAX_TASK_TITLE_LENGTH ||
       !editPicker.bookCode ||
       !editPicker.chapterCode ||
       !editPicker.lessonCode
@@ -380,7 +383,15 @@ function WeeklyScheduleScreen() {
   }
 
   async function handleCreateLesson() {
-    if (!createWeekStart || !createTitle.trim() || !createPicker.bookCode || !createPicker.chapterCode || !createPicker.lessonCode) return;
+    if (
+      !createWeekStart ||
+      !createTitle.trim() ||
+      createTitle.length > MAX_TASK_TITLE_LENGTH ||
+      !createPicker.bookCode ||
+      !createPicker.chapterCode ||
+      !createPicker.lessonCode
+    )
+      return;
     setCreateSaving(true);
     try {
       await bulkCreateWeeklyTasks(authFetch, {
@@ -512,14 +523,25 @@ function WeeklyScheduleScreen() {
                   · Hạn nộp:{" "}
                   <span className="font-semibold text-[#2b2926]">{weekDeadlinePreview(createWeekStart)}</span>
                 </p>
-                <label className="text-xs font-medium text-[#6b6b6b]">Tiêu đề</label>
+                <label className="text-xs font-medium text-[#6b6b6b]">Tiêu đề <span className="text-red-600" aria-hidden="true">*</span></label>
                 <textarea
+                  required
                   value={createTitle}
                   onChange={(e) => setCreateTitle(e.target.value)}
+                  aria-invalid={createTitle.length > MAX_TASK_TITLE_LENGTH}
                   placeholder="Vd: Ôn tập cuối chương, Kiểm tra 15 phút..."
                   rows={7}
-                  className="mt-1.5 w-full resize-none rounded-xl border border-[#d8d1c9] bg-[#fffdfb] p-3 text-sm leading-6 outline-none transition focus:border-[#e8724a] focus:ring-2 focus:ring-[#e8724a]/15"
+                  className={`mt-1.5 w-full resize-none rounded-xl border bg-[#fffdfb] p-3 text-sm leading-6 outline-none transition focus:ring-2 ${
+                    createTitle.length > MAX_TASK_TITLE_LENGTH
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
+                      : "border-[#d8d1c9] focus:border-[#e8724a] focus:ring-[#e8724a]/15"
+                  }`}
                 />
+                {createTitle.length > MAX_TASK_TITLE_LENGTH ? (
+                  <p className="mt-1.5 text-xs text-red-600" role="alert">
+                    Tiêu đề không được vượt quá {MAX_TASK_TITLE_LENGTH} ký tự.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-4 rounded-xl border border-[#ebe4dc] bg-[#fffdfb] p-4">
                 {createPicker.matchingBooks.length > 1 ? (
@@ -568,7 +590,12 @@ function WeeklyScheduleScreen() {
               <button
                 onClick={() => void handleCreateLesson()}
                 disabled={
-                  createSaving || !createTitle.trim() || !createPicker.bookCode || !createPicker.chapterCode || !createPicker.lessonCode
+                  createSaving ||
+                  !createTitle.trim() ||
+                  createTitle.length > MAX_TASK_TITLE_LENGTH ||
+                  !createPicker.bookCode ||
+                  !createPicker.chapterCode ||
+                  !createPicker.lessonCode
                 }
                 className="rounded-xl bg-[#e8724a] px-4 py-2 text-sm text-white transition hover:bg-[#d9633b] disabled:opacity-50"
               >
@@ -594,14 +621,27 @@ function WeeklyScheduleScreen() {
                   · Hạn nộp:{" "}
                   <span className="font-semibold text-[#2b2926]">{weekDeadlinePreview(formWeekStart)}</span>
                 </p>
-                <label className="text-xs font-medium text-[#6b6b6b]">Tiêu đề</label>
+                <label className="text-xs font-medium text-[#6b6b6b]">
+                  Tiêu đề <span className="text-red-600" aria-hidden="true">*</span>
+                </label>
                 <textarea
+                  required
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
+                  aria-invalid={formTitle.length > MAX_TASK_TITLE_LENGTH}
                   placeholder="Vd: Ôn tập cuối chương, Kiểm tra 15 phút..."
                   rows={7}
-                  className="mt-1.5 w-full resize-none rounded-xl border border-[#d8d1c9] bg-[#fffdfb] p-3 text-sm leading-6 outline-none transition focus:border-[#e8724a] focus:ring-2 focus:ring-[#e8724a]/15"
+                  className={`mt-1.5 w-full resize-none rounded-xl border bg-[#fffdfb] p-3 text-sm leading-6 outline-none transition focus:ring-2 ${
+                    formTitle.length > MAX_TASK_TITLE_LENGTH
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
+                      : "border-[#d8d1c9] focus:border-[#e8724a] focus:ring-[#e8724a]/15"
+                  }`}
                 />
+                {formTitle.length > MAX_TASK_TITLE_LENGTH ? (
+                  <p className="mt-1.5 text-xs text-red-600" role="alert">
+                    Tiêu đề không được vượt quá {MAX_TASK_TITLE_LENGTH} ký tự.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-4 rounded-xl border border-[#ebe4dc] bg-[#fffdfb] p-4">
                 {editPicker.matchingBooks.length > 1 ? (
@@ -654,6 +694,7 @@ function WeeklyScheduleScreen() {
                   !formTeacherId ||
                   !formWeekStart ||
                   !formTitle.trim() ||
+                  formTitle.length > MAX_TASK_TITLE_LENGTH ||
                   !editPicker.bookCode ||
                   !editPicker.chapterCode ||
                   !editPicker.lessonCode

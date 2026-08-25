@@ -50,6 +50,8 @@ import { SubmissionDetailPanel } from "./SubmissionDetailPanel";
 import { SubmissionsRosterPanel } from "./SubmissionsRosterPanel";
 
 const GRADES = [10, 11, 12] as const;
+const RESOURCE_TITLE_MAX_LENGTH = 255;
+const RESOURCE_DESCRIPTION_MAX_LENGTH = 2000;
 
 type FormState = {
   name: string;
@@ -98,6 +100,8 @@ export function ResourceFormPanel({
 
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
+  const titleTooLong = title.length > RESOURCE_TITLE_MAX_LENGTH;
+  const descriptionTooLong = description.length > RESOURCE_DESCRIPTION_MAX_LENGTH;
   const [sourceType, setSourceType] = useState<ResourceSourceType>(initial?.sourceType ?? "LIBRARY_SNAPSHOT");
   const [sourceLibraryContentId, setSourceLibraryContentId] = useState<string | null>(null);
   const [libraryQuery, setLibraryQuery] = useState("");
@@ -223,6 +227,14 @@ export function ResourceFormPanel({
     }
     if (!title.trim()) {
       setError("Vui lòng nhập tiêu đề.");
+      return;
+    }
+    if (titleTooLong) {
+      setError(`Tiêu đề không được vượt quá ${RESOURCE_TITLE_MAX_LENGTH} ký tự.`);
+      return;
+    }
+    if (descriptionTooLong) {
+      setError(`Mô tả không được vượt quá ${RESOURCE_DESCRIPTION_MAX_LENGTH} ký tự.`);
       return;
     }
     if (!isEdit && sourceType === "FILE_UPLOAD" && !attachment) {
@@ -376,10 +388,19 @@ export function ResourceFormPanel({
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             required
-            maxLength={255}
+            aria-invalid={titleTooLong}
             placeholder="Ví dụ: Bài tập chương 1 - Phản ứng oxi hóa khử"
-            className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
+            className={`mt-2 h-11 w-full rounded-lg border bg-[#faf9f7] px-3 text-[13px] outline-none transition placeholder:text-[#a8a097] ${
+              titleTooLong
+                ? "border-red-500 focus:border-red-500"
+                : "border-[#d8d1c9] focus:border-[#d97757]"
+            }`}
           />
+          {titleTooLong ? (
+            <span className="mt-1.5 block text-xs text-red-600" role="alert">
+              Tiêu đề không được vượt quá {RESOURCE_TITLE_MAX_LENGTH} ký tự.
+            </span>
+          ) : null}
         </label>
 
         <label className="block text-[12px] font-medium text-[#6b6b6b]">
@@ -387,10 +408,20 @@ export function ResourceFormPanel({
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
+            aria-invalid={descriptionTooLong}
             rows={3}
             placeholder="Hướng dẫn hoặc ghi chú cho học sinh..."
-            className="mt-2 w-full resize-none rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
+            className={`mt-2 w-full resize-none rounded-lg border bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 outline-none transition placeholder:text-[#a8a097] ${
+              descriptionTooLong
+                ? "border-red-500 focus:border-red-500"
+                : "border-[#d8d1c9] focus:border-[#d97757]"
+            }`}
           />
+          {descriptionTooLong ? (
+            <span className="mt-1.5 block text-xs text-red-600" role="alert">
+              Mô tả không được vượt quá {RESOURCE_DESCRIPTION_MAX_LENGTH} ký tự.
+            </span>
+          ) : null}
         </label>
 
         {editableAttachment && (sourceType === "FILE_UPLOAD" || isEdit) && (
@@ -469,7 +500,7 @@ export function ResourceFormPanel({
           <div className="flex items-center gap-3 border-t border-[#ede8e1] px-6 py-4">
             <button
               type="submit"
-              disabled={saving || uploading}
+              disabled={saving || uploading || titleTooLong || descriptionTooLong}
               className="flex h-11 items-center justify-center gap-2 rounded-[11px] bg-[#d97757] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]"
             >
               {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}

@@ -23,7 +23,7 @@ export const navGroups: NavGroup[] = [
     label: "Kh\u00f4ng gian chung",
     items: [
       { label: "Thư viện của tôi", icon: "sidebarLibrary", href: "/library", requiredRole: ["TEACHER", "MODERATOR"] },
-      { label: "Cộng đồng", icon: "community", href: "/community-hub", requiredRole: ["TEACHER", "MODERATOR", "PRINCIPAL"] },
+      { label: "Cộng đồng", icon: "community", href: "/community-hub", requiredRole: ["TEACHER", "MODERATOR"] },
       { label: "Blog", icon: "sidebarBlog", href: "/blog", requiredRole: ["TEACHER", "MODERATOR"] },
     ],
   },

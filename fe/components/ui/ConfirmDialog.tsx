@@ -172,8 +172,9 @@ export function TextPromptDialog({
         </div>
         <div className="px-5 py-4">
           <label className="block text-sm font-medium text-[#4f4943]">
-            {label}
+            {label} <span className="text-red-600" aria-hidden="true">*</span>
             <textarea
+              required
               value={value}
               onChange={(event) => setValue(event.target.value)}
               placeholder={placeholder}

@@ -18,6 +18,13 @@ import {
 import { ClassHubFrame } from "./ClassHubFrame";
 
 const GRADES = [10, 11, 12] as const;
+const MAX_CLASS_NAME_LENGTH = 255;
+const MAX_CLASS_DESCRIPTION_LENGTH = 2000;
+
+type FieldErrors = {
+  name?: string;
+  description?: string;
+};
 
 export function ClassSettingsPage() {
   const { authFetch, user } = useAuth();
@@ -30,6 +37,7 @@ export function ClassSettingsPage() {
   const [pendingUpdate, setPendingUpdate] = useState<UpdateClassPayload | null>(null);
   const [pendingStatus, setPendingStatus] = useState<ClassStatus | null>(null);
   const [selectedGrade, setSelectedGrade] = useState<number | "">("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const ownSubject = isClassSubject(user?.subject) ? user.subject : null;
   const legacySubject = detail && detail.subject !== ownSubject ? detail.subject : null;
   const allowedGrades = useMemo(
@@ -42,6 +50,7 @@ export function ClassSettingsPage() {
     setLoading(true);
     try {
       setDetail(await getClassDetail(authFetch, classId));
+      setFieldErrors({});
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tải cài đặt lớp.");
     } finally {
@@ -67,10 +76,21 @@ export function ClassSettingsPage() {
     event.preventDefault();
     if (!detail || detail.status === "INACTIVE" || !ownSubject) return;
     const data = new FormData(event.currentTarget);
-    const name = String(data.get("name") ?? "").trim();
+    const rawName = String(data.get("name") ?? "");
+    const rawDescription = String(data.get("description") ?? "");
+    const name = rawName.trim();
     const grade = selectedGrade;
     if (!name) {
       setError("Tên lớp là trường bắt buộc.");
+      return;
+    }
+    const validationErrors: FieldErrors = {
+      name: rawName.length > MAX_CLASS_NAME_LENGTH ? `Tên lớp không được vượt quá ${MAX_CLASS_NAME_LENGTH} ký tự.` : undefined,
+      description: rawDescription.length > MAX_CLASS_DESCRIPTION_LENGTH ? `Mô tả không được vượt quá ${MAX_CLASS_DESCRIPTION_LENGTH} ký tự.` : undefined,
+    };
+    if (validationErrors.name || validationErrors.description) {
+      setFieldErrors(validationErrors);
+      setError("");
       return;
     }
     if (grade === "" || !allowedGrades.includes(grade)) {
@@ -81,7 +101,7 @@ export function ClassSettingsPage() {
     setPendingUpdate({
       name,
       grade,
-      description: String(data.get("description") ?? "").trim() || null,
+      description: rawDescription.trim() || null,
       ...(ownSubject === detail.subject ? { subject: ownSubject } : {}),
     });
   }
@@ -93,6 +113,7 @@ export function ClassSettingsPage() {
     try {
       const updated = await updateClass(authFetch, detail.id, pendingUpdate);
       setDetail(updated);
+      setFieldErrors({});
       setMessage("Đã lưu thay đổi lớp.");
       setPendingUpdate(null);
     } catch (reason) {
@@ -130,16 +151,16 @@ export function ClassSettingsPage() {
           <div className="mt-6 rounded-[14px] border border-dashed border-[#d8d1c9] px-5 py-14 text-center text-[13px] text-[#6b6b6b]">Không tìm thấy lớp học.</div>
         ) : (
           <form onSubmit={submit} className="mt-6 rounded-[14px] border border-[#d8d1c9] bg-white p-5">
-            <label className="block text-[12px] font-medium text-[#6b6b6b]">Tên lớp <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><input name="name" defaultValue={detail.name} disabled={detail.status === "INACTIVE"} required className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] disabled:text-[#8a837b]" /></label>
+            <label className="block text-[12px] font-medium text-[#6b6b6b]">Tên lớp <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><input name="name" defaultValue={detail.name} disabled={detail.status === "INACTIVE"} required onChange={(event) => setFieldErrors((current) => ({ ...current, name: event.target.value.length > MAX_CLASS_NAME_LENGTH ? `Tên lớp không được vượt quá ${MAX_CLASS_NAME_LENGTH} ký tự.` : undefined }))} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? "edit-class-name-error" : undefined} className={`mt-2 h-10 w-full rounded-lg border bg-[#faf9f7] px-3 text-[13px] disabled:text-[#8a837b] ${fieldErrors.name ? "border-[#c0492b]" : "border-[#d8d1c9]"}`} />{fieldErrors.name && <span id="edit-class-name-error" className="mt-1.5 block text-[12px] text-[#c0492b]" role="alert">{fieldErrors.name}</span>}</label>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <label className="text-[12px] font-medium text-[#6b6b6b]">Môn <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><div className="mt-2 flex h-10 items-center rounded-lg border border-[#d8d1c9] bg-[#f3f0ec] px-3 text-[13px] text-[#4f4943]">{subjectLabel(detail.subject)}</div></label>
               <label className="text-[12px] font-medium text-[#6b6b6b]">Khối <span className="text-[#c0492b]" aria-label="Bắt buộc">*</span><select name="grade" value={selectedGrade} onChange={(event) => setSelectedGrade(event.target.value ? Number(event.target.value) : "")} disabled={detail.status === "INACTIVE" || allowedGrades.length === 0} required className="mt-2 h-10 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px]"><option value="">{allowedGrades.length === 0 ? "Chưa được phân công khối" : "Chọn khối phụ trách"}</option>{allowedGrades.map((grade) => <option key={grade} value={grade}>Khối {grade}</option>)}</select></label>
             </div>
             {legacySubject && <p className="mt-3 text-[12px] text-[#8a5a35]">Lớp này được tạo trước khi giới hạn chuyên ngành được áp dụng; môn học hiện tại được giữ nguyên.</p>}
             {detail.grade && !allowedGrades.includes(detail.grade) && <p className="mt-3 text-[12px] text-[#8a5a35]">Khối hiện tại của lớp là {detail.grade}, nhưng tài khoản của bạn không còn được phân công khối này. Hãy chọn một khối đang phụ trách để lưu thay đổi.</p>}
-            <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">Mô tả<textarea name="description" defaultValue={detail.description ?? ""} disabled={detail.status === "INACTIVE"} rows={5} className="mt-2 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2 text-[13px] disabled:text-[#8a837b]" /></label>
+            <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">Mô tả<textarea name="description" defaultValue={detail.description ?? ""} disabled={detail.status === "INACTIVE"} rows={5} onChange={(event) => setFieldErrors((current) => ({ ...current, description: event.target.value.length > MAX_CLASS_DESCRIPTION_LENGTH ? `Mô tả không được vượt quá ${MAX_CLASS_DESCRIPTION_LENGTH} ký tự.` : undefined }))} aria-invalid={Boolean(fieldErrors.description)} aria-describedby={fieldErrors.description ? "edit-class-description-error" : undefined} className={`mt-2 w-full rounded-lg border bg-[#faf9f7] px-3 py-2 text-[13px] disabled:text-[#8a837b] ${fieldErrors.description ? "border-[#c0492b]" : "border-[#d8d1c9]"}`} />{fieldErrors.description && <span id="edit-class-description-error" className="mt-1.5 block text-[12px] text-[#c0492b]" role="alert">{fieldErrors.description}</span>}</label>
             <div className="mt-5 flex flex-wrap gap-3">
-              <button disabled={saving || detail.status === "INACTIVE" || ownSubject === null || selectedGrade === ""} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#1f1f1f] px-4 text-[13px] font-medium text-white disabled:opacity-50"><Save className="size-4" /> Lưu thông tin</button>
+              <button disabled={saving || detail.status === "INACTIVE" || ownSubject === null || selectedGrade === "" || Boolean(fieldErrors.name) || Boolean(fieldErrors.description)} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#1f1f1f] px-4 text-[13px] font-medium text-white disabled:opacity-50"><Save className="size-4" /> Lưu thông tin</button>
               <button type="button" onClick={requestToggle} disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#d8d1c9] px-4 text-[13px] font-medium"><>{detail.status === "ACTIVE" ? <Archive className="size-4" /> : <RefreshCw className="size-4" />}</> {detail.status === "ACTIVE" ? "Lưu trữ lớp" : "Kích hoạt lại lớp"}</button>
             </div>
             {ownSubject === null && <p className="mt-4 text-[12px] text-[#c0492b]">Tài khoản chưa có chuyên ngành nên chưa thể chỉnh sửa lớp.</p>}

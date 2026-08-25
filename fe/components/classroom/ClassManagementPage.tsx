@@ -29,6 +29,8 @@ import {
 } from "@/lib/classroom";
 
 const GRADES = [10, 11, 12] as const;
+const MAX_CLASS_NAME_LENGTH = 255;
+const MAX_CLASS_DESCRIPTION_LENGTH = 2000;
 
 type StatusFilter = ClassStatus | "";
 
@@ -192,6 +194,14 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
       setError("Tên lớp là trường bắt buộc.");
       return;
     }
+    if (createForm.name.length > MAX_CLASS_NAME_LENGTH) {
+      setError(`Tên lớp không được vượt quá ${MAX_CLASS_NAME_LENGTH} ký tự.`);
+      return;
+    }
+    if (createForm.description.length > MAX_CLASS_DESCRIPTION_LENGTH) {
+      setError(`Mô tả không được vượt quá ${MAX_CLASS_DESCRIPTION_LENGTH} ký tự.`);
+      return;
+    }
     if (!allowedGrades.includes(createForm.grade)) {
       setError("Bạn chỉ được tạo lớp thuộc khối mình phụ trách.");
       return;
@@ -276,6 +286,12 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
 
   const allowedSubjects = isClassSubject(user.subject) ? [user.subject] : [];
   const canCreateClass = allowedSubjects.length > 0 && allowedGrades.length > 0;
+  const createNameError = createForm.name.length > MAX_CLASS_NAME_LENGTH
+    ? `Tên lớp không được vượt quá ${MAX_CLASS_NAME_LENGTH} ký tự.`
+    : "";
+  const createDescriptionError = createForm.description.length > MAX_CLASS_DESCRIPTION_LENGTH
+    ? `Mô tả không được vượt quá ${MAX_CLASS_DESCRIPTION_LENGTH} ký tự.`
+    : "";
 
   const createFormElement = (
     <form ref={createFormRef} onSubmit={handleCreate} className="rounded-[14px] border border-[#d8d1c9] bg-white p-5">
@@ -288,11 +304,13 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
         <input
           value={createForm.name}
           onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
-          maxLength={255}
           required
           placeholder="Ví dụ: 10A1 - Hóa học"
-          className="mt-2 h-11 w-full rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
+          aria-invalid={Boolean(createNameError)}
+          aria-describedby={createNameError ? "create-class-name-error" : undefined}
+          className={`mt-2 h-11 w-full rounded-lg border bg-[#faf9f7] px-3 text-[13px] text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757] ${createNameError ? "border-[#c0492b]" : "border-[#d8d1c9]"}`}
         />
+        {createNameError && <span id="create-class-name-error" className="mt-1.5 block text-[12px] text-[#c0492b]" role="alert">{createNameError}</span>}
       </label>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
@@ -324,11 +342,13 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
         <textarea
           value={createForm.description}
           onChange={(event) => setCreateForm((current) => ({ ...current, description: event.target.value }))}
-          maxLength={2000}
           rows={5}
           placeholder="Mục tiêu, ghi chú hoặc quy ước lớp..."
-          className="mt-2 w-full resize-none rounded-lg border border-[#d8d1c9] bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757]"
+          aria-invalid={Boolean(createDescriptionError)}
+          aria-describedby={createDescriptionError ? "create-class-description-error" : undefined}
+          className={`mt-2 w-full resize-none rounded-lg border bg-[#faf9f7] px-3 py-2.5 text-[13px] leading-5 text-[#1f1f1f] outline-none transition placeholder:text-[#a8a097] focus:border-[#d97757] ${createDescriptionError ? "border-[#c0492b]" : "border-[#d8d1c9]"}`}
         />
+        {createDescriptionError && <span id="create-class-description-error" className="mt-1.5 block text-[12px] text-[#c0492b]" role="alert">{createDescriptionError}</span>}
       </label>
 
       <div className="mt-5 flex gap-2">
@@ -344,7 +364,7 @@ export function ClassManagementPage({ view = "create" }: { view?: "create" | "li
         )}
         <button
           type="submit"
-          disabled={creating || !createForm.name.trim() || !canCreateClass}
+          disabled={creating || !createForm.name.trim() || !canCreateClass || Boolean(createNameError) || Boolean(createDescriptionError)}
           className="h-11 flex-1 items-center justify-center gap-2 rounded-[11px] bg-[#d97757] px-5 text-[13px] font-medium text-white shadow-[0_4px_8px_rgba(217,119,87,0.25)] transition hover:bg-[#c96545] disabled:cursor-not-allowed disabled:bg-[#e8b9a7]"
         >
           <span className="flex items-center justify-center gap-2">

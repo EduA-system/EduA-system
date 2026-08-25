@@ -295,6 +295,7 @@ function UserProfileContent() {
                     <div><dt className="text-[11px] text-[#8a837b]">Email</dt><dd className="mt-1 break-all font-medium text-[#1f1f1f]">{user.email}</dd></div>
                     <div><dt className="text-[11px] text-[#8a837b]">Vai trò</dt><dd className="mt-1 font-medium text-[#1f1f1f]">{roleLabel(user.role)}</dd></div>
                     {showsSubject ? <div><dt className="text-[11px] text-[#8a837b]">Môn phụ trách</dt><dd className="mt-1 font-medium text-[#1f1f1f]">{subjectLabel(user.subject)}</dd></div> : null}
+                    {user.role === "TEACHER" ? <div><dt className="text-[11px] text-[#8a837b]">Khối phụ trách</dt><dd className="mt-1 font-medium text-[#1f1f1f]">{user.grades?.length ? user.grades.join(", ") : "Chưa cập nhật"}</dd></div> : null}
                   </dl>
                 </div>
                 <div className="rounded-[14px] border border-[#d8d1c9] bg-[#faf9f7] p-5">

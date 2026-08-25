@@ -11,6 +11,7 @@ import { RichEditor } from "./RichEditor";
 
 // Legacy key from before drafts were scoped per account; only used to purge stale data.
 const LEGACY_DRAFT_STORAGE_KEY = "edua:blog-create-draft";
+const MAX_TITLE_LENGTH = 255;
 
 // Scoped per account so a draft typed by one user on a shared browser is never
 // restored into another account signing in on the same device.
@@ -30,6 +31,13 @@ type FormErrors = {
   content?: string;
   title?: string;
 };
+
+function hasRequiredEditorContent(value: string): boolean {
+  if (!value.trim()) return false;
+  const document = new DOMParser().parseFromString(value, "text/html");
+  const text = document.body.textContent?.replace(/\u00a0/g, " ").trim();
+  return Boolean(text || document.body.querySelector("img, video, iframe"));
+}
 
 function readStoredDraft(userId: string): BlogDraft | null {
   if (typeof window === "undefined") return null;
@@ -126,8 +134,12 @@ function CreateBlogPostForm() {
 
   async function handleSubmit() {
     const validationErrors: FormErrors = {
-      title: title.trim() ? undefined : "Vui lòng nhập tiêu đề bài viết.",
-      content: content.trim() ? undefined : "Vui lòng nhập nội dung bài viết.",
+      title: !title.trim()
+        ? "Vui lòng nhập tiêu đề bài viết."
+        : title.length > MAX_TITLE_LENGTH
+          ? `Tiêu đề không được vượt quá ${MAX_TITLE_LENGTH} ký tự.`
+          : undefined,
+      content: hasRequiredEditorContent(content) ? undefined : "Vui lòng nhập nội dung bài viết.",
     };
     if (validationErrors.title || validationErrors.content) {
       setErrors((current) => ({ ...current, ...validationErrors }));
@@ -186,8 +198,8 @@ function CreateBlogPostForm() {
             <div className="rounded-2xl border border-[#eaeae7] bg-white p-5 shadow-sm sm:p-7">
               <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_260px]">
                 <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Tiêu đề</span>
-              <input value={title} onChange={(event) => { setTitle(event.target.value); setErrors((current) => ({ ...current, title: undefined })); }} placeholder="Nhập tiêu đề bài viết..." aria-invalid={Boolean(errors.title)} aria-describedby={errors.title ? "blog-title-error" : undefined} className="mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] placeholder:text-[#c0c1d0] focus:outline-none" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Tiêu đề <span className="text-red-600" aria-hidden="true">*</span></span>
+              <input required value={title} onChange={(event) => { const value = event.target.value; setTitle(value); setErrors((current) => ({ ...current, title: value.length > MAX_TITLE_LENGTH ? `Tiêu đề không được vượt quá ${MAX_TITLE_LENGTH} ký tự.` : undefined })); }} placeholder="Nhập tiêu đề bài viết..." aria-invalid={Boolean(errors.title)} aria-describedby={errors.title ? "blog-title-error" : undefined} className={`mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] placeholder:text-[#c0c1d0] focus:outline-none ${errors.title ? "border-red-500" : "border-[#eaeae7]"}`} />
               {errors.title && <p id="blog-title-error" className="mt-1.5 text-[13px] text-red-600" role="alert">{errors.title}</p>}
                 </label>
 
@@ -216,9 +228,9 @@ function CreateBlogPostForm() {
             </div>
 
             <div className="mt-7">
-              <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Nội dung</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Nội dung <span className="text-red-600" aria-hidden="true">*</span></span>
               <p className="mt-1 text-[13px] text-[#9b9caf]">Soạn bài viết chi tiết như một tài liệu. Bạn có thể chèn tiêu đề, danh sách, bảng, công thức và dán ảnh trực tiếp.</p>
-              <div className="mt-3 rounded-2xl border border-[#e8e2d9] bg-[#f3efe9] p-2 shadow-sm sm:p-3">
+              <div className={`mt-3 rounded-2xl border bg-[#f3efe9] p-2 shadow-sm sm:p-3 ${errors.content ? "border-red-500" : "border-[#e8e2d9]"}`} aria-invalid={Boolean(errors.content)} aria-describedby={errors.content ? "blog-content-error" : undefined}>
                 <RichEditor
                   authFetch={authFetch}
                   initialContent={initialEditorContent}
@@ -229,7 +241,7 @@ function CreateBlogPostForm() {
                   editorClassName="bg-white px-6 py-8 text-[16px] shadow-[0_1px_2px_rgba(43,41,38,0.06),0_4px_14px_rgba(43,41,38,0.05)] sm:px-12 sm:py-12"
                 />
               </div>
-              {errors.content && <p className="mt-1.5 text-[13px] text-red-600" role="alert">{errors.content}</p>}
+              {errors.content && <p id="blog-content-error" className="mt-1.5 text-[13px] text-red-600" role="alert">{errors.content}</p>}
             </div>
 
             {submitError && <p className="mt-4 text-[13px] text-red-600" role="alert">{submitError}</p>}

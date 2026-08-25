@@ -4,6 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import { api, optimizeBlogCover, SUBJECTS, subjectLabel, uploadFile, type AuthFetch, type Detail, type SubjectValue } from "@/lib/blog";
 import { RichEditor } from "./RichEditor";
 
+const MAX_TITLE_LENGTH = 255;
+
+type FieldErrors = {
+  title?: string;
+  content?: string;
+};
+
+function hasRequiredEditorContent(value: string): boolean {
+  if (!value.trim()) return false;
+  const document = new DOMParser().parseFromString(value, "text/html");
+  const text = document.body.textContent?.replace(/\u00a0/g, " ").trim();
+  return Boolean(text || document.body.querySelector("img, video, iframe"));
+}
+
 export function CreatePostModal({
   open,
   onClose,
@@ -25,6 +39,7 @@ export function CreatePostModal({
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -35,6 +50,8 @@ export function CreatePostModal({
       setSubject((post?.subject as SubjectValue | undefined) ?? SUBJECTS[0]);
       setContent(post?.content ?? "");
       setCoverImageUrl(post?.thumbnailUrl ?? null);
+      setFieldErrors({});
+      setError("");
     });
     document.body.style.overflow = "hidden";
     function onKeyDown(e: KeyboardEvent) {
@@ -52,6 +69,7 @@ export function CreatePostModal({
     setSubject(SUBJECTS[0]);
     setContent("");
     setCoverImageUrl(null);
+    setFieldErrors({});
     setError("");
   }
 
@@ -77,8 +95,17 @@ export function CreatePostModal({
   }
 
   async function handleSubmit() {
-    if (!title.trim() || !content.trim()) {
-      setError("Vui lòng nhập tiêu đề và nội dung.");
+    const validationErrors: FieldErrors = {
+      title: !title.trim()
+        ? "Vui lòng nhập tiêu đề bài viết."
+        : title.length > MAX_TITLE_LENGTH
+          ? `Tiêu đề không được vượt quá ${MAX_TITLE_LENGTH} ký tự.`
+          : undefined,
+      content: hasRequiredEditorContent(content) ? undefined : "Vui lòng nhập nội dung bài viết.",
+    };
+    if (validationErrors.title || validationErrors.content) {
+      setFieldErrors(validationErrors);
+      setError("");
       return;
     }
     setSubmitting(true);
@@ -123,13 +150,17 @@ export function CreatePostModal({
 
         <div className="max-h-[60vh] overflow-y-auto p-6">
           <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Tiêu đề</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Tiêu đề <span className="text-red-600" aria-hidden="true">*</span></span>
             <input
+              required
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => { const value = e.target.value; setTitle(value); setFieldErrors((current) => ({ ...current, title: value.length > MAX_TITLE_LENGTH ? `Tiêu đề không được vượt quá ${MAX_TITLE_LENGTH} ký tự.` : undefined })); }}
               placeholder="Nhập tiêu đề bài viết..."
-              className="mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] border-[#eaeae7] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] placeholder:text-[#c0c1d0] focus:outline-none"
+              aria-invalid={Boolean(fieldErrors.title)}
+              aria-describedby={fieldErrors.title ? "edit-blog-title-error" : undefined}
+              className={`mt-1.5 h-11 w-full rounded-[14px] border-[0.8px] bg-[#f7f7f5] px-4 text-[15px] text-[#1c1e2e] placeholder:text-[#c0c1d0] focus:outline-none ${fieldErrors.title ? "border-red-500" : "border-[#eaeae7]"}`}
             />
+            {fieldErrors.title && <p id="edit-blog-title-error" className="mt-1.5 text-[13px] text-red-600" role="alert">{fieldErrors.title}</p>}
           </label>
 
           <label className="mt-4 block">
@@ -196,10 +227,11 @@ export function CreatePostModal({
           </div>
 
           <div className="mt-4">
-            <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Nội dung</span>
-            <div className="mt-1.5">
-              <RichEditor authFetch={authFetch} initialContent={post?.content ?? ""} onChange={setContent} />
+            <span className="text-[11px] font-bold uppercase tracking-[0.55px] text-[#9b9caf]">Nội dung <span className="text-red-600" aria-hidden="true">*</span></span>
+            <div className={`mt-1.5 rounded-[14px] border ${fieldErrors.content ? "border-red-500" : "border-transparent"}`} aria-invalid={Boolean(fieldErrors.content)} aria-describedby={fieldErrors.content ? "edit-blog-content-error" : undefined}>
+              <RichEditor authFetch={authFetch} initialContent={post?.content ?? ""} onChange={(value) => { setContent(value); setFieldErrors((current) => ({ ...current, content: undefined })); }} />
             </div>
+            {fieldErrors.content && <p id="edit-blog-content-error" className="mt-1.5 text-[13px] text-red-600" role="alert">{fieldErrors.content}</p>}
           </div>
 
           {error && <p className="mt-3 text-[13px] text-red-600">{error}</p>}

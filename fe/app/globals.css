@@ -591,6 +591,38 @@ body::-webkit-scrollbar {
   border-radius: 14px;
 }
 
+.blog-detail-prose .tableWrapper {
+  margin-top: 20px;
+  overflow-x: auto;
+}
+
+.blog-detail-prose table {
+  width: 100%;
+  min-width: 480px;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.blog-detail-prose th,
+.blog-detail-prose td {
+  min-width: 3em;
+  padding: 9px 12px;
+  border: 1px solid #d9d2c7;
+  vertical-align: top;
+  text-align: left;
+}
+
+.blog-detail-prose th {
+  background: #f6f1ea;
+  color: #1c1e2e;
+  font-weight: 650;
+}
+
+.blog-detail-prose th > *,
+.blog-detail-prose td > * {
+  margin: 0;
+}
+
 .blog-comment-content p,
 .blog-comment-content ul,
 .blog-comment-content ol {
