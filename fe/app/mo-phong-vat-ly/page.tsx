@@ -4190,7 +4190,10 @@ function MoPhongHubContent() {
   };
 
   // Bản mở từ thư viện hoặc snapshot trong lớp là nội dung đã lưu; không cho lưu chồng thêm bản sao.
-  const canSaveToLibrary = !savedSimulationId && user?.roles.includes("TEACHER") === true && user.subject === "PHYSICS";
+  const canSaveToLibrary =
+    !savedSimulationId &&
+    user?.roles.some((role) => role === "TEACHER" || role === "MODERATOR") === true &&
+    user.subject === "PHYSICS";
 
   useEffect(() => {
     if (!savedSimulationId) return;

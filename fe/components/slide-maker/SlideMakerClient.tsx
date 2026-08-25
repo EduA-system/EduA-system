@@ -350,6 +350,7 @@ export function SlideMakerClient() {
               <div className="grid h-full place-items-center bg-white text-sm text-[#6b625a]">Đang mở bộ slide...</div>
             ) : (
               <SlideEditor
+                subject={subjectRestriction}
                 skipInitialLoad={generating || Boolean(requestedLibraryId)}
                 designSteps={designSteps}
                 onSaveToLibrary={openSaveDialog}

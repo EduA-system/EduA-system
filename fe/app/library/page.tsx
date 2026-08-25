@@ -51,7 +51,7 @@ const paths: Record<LibraryType, string> = {
 const createPaths: Partial<Record<LibraryType, string>> = {
   LESSON_PLAN: "/lesson-create",
   SLIDE_DECK: "/slide-create",
-  SIMULATION: "/molecules",
+  TEST: "/exam-create-new",
 };
 
 const contentMeta: Record<LibraryType, { label: string; icon: typeof BookOpen; color: string }> = {
@@ -255,7 +255,7 @@ function LibraryScreen() {
   const visibleTotal = status === "WEEKLY_TASK_APPROVED" ? visibleItems.length : total;
   const createTile = createPath
     ? <Link href={createPath} className="group flex aspect-[4/3] flex-col items-center justify-center rounded-[14px] border border-dashed border-[#d9a58f] bg-[#fffaf7] p-6 text-center transition hover:border-[#e8724a] hover:bg-[#fff4ee]"><span className="flex size-12 items-center justify-center rounded-full bg-[#fbe1d5] text-3xl font-light leading-none text-[#c65838] transition group-hover:scale-110 group-hover:bg-[#e8724a] group-hover:text-white">+</span><span className="mt-4 font-semibold text-[#75402e]">Tạo {contentMeta[type].label.toLowerCase()} mới</span><span className="mt-1 text-sm text-stone-500">Bắt đầu một nội dung mới</span></Link>
-    : <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-6 text-center"><span className="flex size-12 items-center justify-center rounded-full bg-stone-200 text-3xl font-light leading-none text-stone-500">+</span><span className="mt-4 font-semibold text-stone-600">Tạo bài tập về nhà</span><span className="mt-1 text-sm text-stone-500">Tính năng đang được phát triển</span></div>;
+    : null;
 
   return (
     <main className="min-h-screen bg-white text-[#171717]">
@@ -292,7 +292,7 @@ function LibraryScreen() {
 
           {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           {loading ? <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-80 animate-pulse rounded-[14px] bg-[#f0ece7]" />)}</div>
-            : visibleItems.length === 0 ? <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{createTile}<div className="flex min-h-[220px] items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-8 text-center text-sm text-stone-600 sm:col-span-1 xl:col-span-2">Chưa có {emptyContentLabel[type]} trong thư viện cá nhân.</div></div>
+            : visibleItems.length === 0 ? <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{createTile}<div className={`flex min-h-[220px] items-center justify-center rounded-[14px] border border-dashed border-[#d8d1c9] bg-[#faf9f7] p-8 text-center text-sm text-stone-600 ${createTile ? "sm:col-span-1 xl:col-span-2" : "sm:col-span-2 xl:col-span-3"}`}>Chưa có {emptyContentLabel[type]} trong thư viện cá nhân.</div></div>
             : <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{createTile}{visibleItems.map((content) => {
               const meta = contentMeta[content.type];
               const Icon = meta.icon;

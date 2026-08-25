@@ -13,6 +13,7 @@ import type { Molecule } from "@/components/molecules/types";
 import { LayersContent, LayersIcon, PropertiesContent, PropertiesIcon } from "./LayersPanel";
 import { listSandboxExperiments } from "@/lib/api/sandbox-experiments";
 import type { ExperimentSummary } from "@/lib/sandbox/react-experiments";
+import type { SubjectCode } from "@/lib/auth/subject-access";
 import dynamic from "next/dynamic";
 
 // Hơn 3400 dòng SVG — tách chunk để chỉ tải khi mở tab Mô phỏng.
@@ -262,6 +263,7 @@ const TEXT_PRESETS: { label: string; fontSize: number; bold: boolean; italic?: b
 ];
 
 interface LeftPanelProps {
+  subject: SubjectCode | null;
   activeTool: ActiveTool;
   onToolChange: (t: ActiveTool) => void;
   drawColor: string;
@@ -470,6 +472,7 @@ function RailButton({ tabId, tab, label, icon, disabled, onClick }: {
 }
 
 export function LeftPanel({
+  subject,
   activeTool,
   onToolChange,
   drawColor,
@@ -521,7 +524,7 @@ export function LeftPanel({
   // trả giá cho nó ở mọi lần mở editor. `listSandboxExperiments` tự cache nên
   // đóng/mở tab lại không bắn thêm request.
   useEffect(() => {
-    if (visibleTab !== "simulation" || experimentsRequested.current) return;
+    if (visibleTab !== "simulation" || subject !== "PHYSICS" || experimentsRequested.current) return;
     experimentsRequested.current = true;
     let cancelled = false;
     listSandboxExperiments()
@@ -532,7 +535,7 @@ export function LeftPanel({
       })
       .catch(() => { if (!cancelled) setExperimentsState("error"); });
     return () => { cancelled = true; };
-  }, [visibleTab, experimentsRetry]);
+  }, [visibleTab, experimentsRetry, subject]);
 
   const experimentsByDomain = useMemo(() => {
     // Giữ thứ tự xuất hiện để không phải chép cứng danh sách lĩnh vực.
@@ -941,6 +944,8 @@ export function LeftPanel({
 
           {visibleTab === "simulation" && (
             <div className="p-3">
+              {subject === "CHEMISTRY" && (
+                <>
               <div className="mb-1 text-[10px] font-bold uppercase tracking-[1px] text-[#2b2926]">Bảng tuần hoàn</div>
               <div className="mb-4 grid grid-cols-2 gap-2">
                 <button
@@ -976,7 +981,11 @@ export function LeftPanel({
                   </button>
                 ))}
               </div>
+                </>
+              )}
 
+              {subject === "PHYSICS" && (
+                <>
               <div className="mb-1 mt-4 text-[10px] font-bold uppercase tracking-[1px] text-[#2b2926]">Thí nghiệm vật lý</div>
               <p className="mb-3 text-[10px] text-[#8a8178]">
                 Chạy mã nguồn thật của mô phỏng. Cần mạng và vài giây biên dịch khi kích hoạt.
@@ -1020,6 +1029,14 @@ export function LeftPanel({
                   </div>
                 </div>
               ))}
+                </>
+              )}
+
+              {subject !== "CHEMISTRY" && subject !== "PHYSICS" && (
+                <p className="rounded-[10px] border border-dashed border-[#d8d1c9] bg-[#fbfaf8] px-3 py-6 text-center text-[11px] leading-5 text-[#8a8178]">
+                  Không có mô phỏng phù hợp với môn phụ trách.
+                </p>
+              )}
             </div>
           )}
 

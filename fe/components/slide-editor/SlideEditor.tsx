@@ -10,6 +10,7 @@ import { Canvas, type ActiveTool } from "./Canvas";
 import { SlideTray } from "./SlideTray";
 import { BottomBar } from "./BottomBar";
 import { loadSlides, saveSlides } from "./lib/storage";
+import type { SubjectCode } from "@/lib/auth/subject-access";
 
 interface DragState {
   kind: "move" | "resize" | "rotate";
@@ -26,6 +27,7 @@ export const dragRefGlobal = {
 };
 
 export function SlideEditor({
+  subject,
   skipInitialLoad = false,
   designSteps,
   onSaveToLibrary,
@@ -33,6 +35,7 @@ export function SlideEditor({
   onPresent,
   closeLeftPanelSignal = 0,
 }: {
+  subject: SubjectCode | null;
   skipInitialLoad?: boolean;
   designSteps?: DesignStepControls;
   onSaveToLibrary?: () => void;
@@ -256,6 +259,7 @@ export function SlideEditor({
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <LeftPanel
+          subject={subject}
           activeTool={activeTool}
           onToolChange={setActiveTool}
           drawColor={drawColor}
